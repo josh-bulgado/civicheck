@@ -72,7 +72,7 @@ export function NavFooter({
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <TooltipProvider delayDuration={0}>
+              <TooltipProvider delay={0}>
                 <Tooltip>
                   <TooltipTrigger render={<CircleHelp size={16} aria-hidden="true" className="cursor-pointer opacity-60 hover:opacity-100" />}></TooltipTrigger>
                   <TooltipContent

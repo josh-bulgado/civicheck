@@ -33,6 +33,11 @@ export const loginFn = createServerFn({ method: "POST" })
         message: error.message,
       };
     }
+
+    return {
+      error: false,
+      message: "Success",
+    };
   });
 
 export const Route = createFileRoute("/_authed")({

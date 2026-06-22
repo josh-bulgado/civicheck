@@ -1,15 +1,18 @@
 import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "../hooks/useMutation";
-import { loginFn } from "../routes/_authed/_authed";
+import { loginFn } from "../routes/_authed/route";
 import { signupFn } from "../routes/signup";
 import { Auth } from "./Auth";
 
 export function Login() {
   const router = useRouter();
 
-  const loginMutation = useMutation({
-    fn: loginFn,
+  const loginMutation = useMutation<
+    { data: { email: string; password: string } },
+    { error: boolean; message: string }
+  >({
+    fn: useServerFn(loginFn),
     onSuccess: async (ctx) => {
       if (!ctx.data?.error) {
         await router.invalidate();
