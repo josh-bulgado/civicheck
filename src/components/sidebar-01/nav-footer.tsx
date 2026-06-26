@@ -30,6 +30,7 @@ import {
   Settings,
   User,
 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 export function NavFooter({
   user,
@@ -47,7 +48,12 @@ export function NavFooter({
           <div className="flex items-center gap-2 justify-between">
             <div className="flex items-center gap-2">
               <DropdownMenu>
-                <DropdownMenuTrigger render={<Avatar className="h-8 w-8 rounded-full" />}><AvatarImage src={user.avatar} alt={user.name} /><AvatarFallback className="rounded-full">CN</AvatarFallback></DropdownMenuTrigger>
+                <DropdownMenuTrigger
+                  render={<Avatar className="h-8 w-8 rounded-full" />}
+                >
+                  <AvatarImage src={user.avatar} alt={user.name} />
+                  <AvatarFallback className="rounded-full">CN</AvatarFallback>
+                </DropdownMenuTrigger>
                 <DropdownMenuContent className="m-2">
                   <DropdownMenuItem>
                     <User size={16} className="opacity-80" aria-hidden="true" />
@@ -61,20 +67,30 @@ export function NavFooter({
                     />
                     Settings
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <LogOut
-                      size={16}
-                      className="opacity-80"
-                      aria-hidden="true"
-                    />
-                    Logout
-                  </DropdownMenuItem>
+                  <Link to="/logout">
+                    <DropdownMenuItem variant="destructive">
+                      <LogOut
+                        size={16}
+                        className="opacity-80"
+                        aria-hidden="true"
+                      />
+                      Logout
+                    </DropdownMenuItem>
+                  </Link>
                 </DropdownMenuContent>
               </DropdownMenu>
 
               <TooltipProvider delay={0}>
                 <Tooltip>
-                  <TooltipTrigger render={<CircleHelp size={16} aria-hidden="true" className="cursor-pointer opacity-60 hover:opacity-100" />}></TooltipTrigger>
+                  <TooltipTrigger
+                    render={
+                      <CircleHelp
+                        size={16}
+                        aria-hidden="true"
+                        className="cursor-pointer opacity-60 hover:opacity-100"
+                      />
+                    }
+                  ></TooltipTrigger>
                   <TooltipContent
                     side="top"
                     className="py-1 px-2 m-2 max-w-[150px] border bg-popover text-popover-foreground"
@@ -91,7 +107,18 @@ export function NavFooter({
               </TooltipProvider>
             </div>
             <DropdownMenu>
-              <DropdownMenuTrigger render={<Button size="icon" variant="ghost" className="rounded-full shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" aria-label="Open edit menu" />}><Plus size={16} aria-hidden="true" /></DropdownMenuTrigger>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="rounded-full shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                    aria-label="Open edit menu"
+                  />
+                }
+              >
+                <Plus size={16} aria-hidden="true" />
+              </DropdownMenuTrigger>
               <DropdownMenuContent className="pb-2">
                 <DropdownMenuLabel>Add New</DropdownMenuLabel>
                 <DropdownMenuItem>

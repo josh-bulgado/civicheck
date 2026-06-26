@@ -16,6 +16,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AuthedRouteRouteImport } from './routes/_authed/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as AuthedStaffDashboardRouteImport } from './routes/_authed/staff-dashboard'
 import { Route as AuthedPostsRouteImport } from './routes/_authed/posts'
 import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
@@ -55,6 +56,11 @@ const AuthedRouteRoute = AuthedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedStaffDashboardRoute = AuthedStaffDashboardRouteImport.update({
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthedDashboardRoute
   '/posts': typeof AuthedPostsRouteWithChildren
   '/staff-dashboard': typeof AuthedStaffDashboardRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/posts/$postId': typeof AuthedPostsPostIdRoute
   '/posts/': typeof AuthedPostsIndexRoute
 }
@@ -112,6 +119,7 @@ export interface FileRoutesByTo {
   '/admin-dashboard': typeof AuthedAdminDashboardRoute
   '/dashboard': typeof AuthedDashboardRoute
   '/staff-dashboard': typeof AuthedStaffDashboardRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/posts/$postId': typeof AuthedPostsPostIdRoute
   '/posts': typeof AuthedPostsIndexRoute
 }
@@ -128,6 +136,7 @@ export interface FileRoutesById {
   '/_authed/dashboard': typeof AuthedDashboardRoute
   '/_authed/posts': typeof AuthedPostsRouteWithChildren
   '/_authed/staff-dashboard': typeof AuthedStaffDashboardRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/_authed/posts/$postId': typeof AuthedPostsPostIdRoute
   '/_authed/posts/': typeof AuthedPostsIndexRoute
 }
@@ -144,6 +153,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/posts'
     | '/staff-dashboard'
+    | '/auth/callback'
     | '/posts/$postId'
     | '/posts/'
   fileRoutesByTo: FileRoutesByTo
@@ -157,6 +167,7 @@ export interface FileRouteTypes {
     | '/admin-dashboard'
     | '/dashboard'
     | '/staff-dashboard'
+    | '/auth/callback'
     | '/posts/$postId'
     | '/posts'
   id:
@@ -172,6 +183,7 @@ export interface FileRouteTypes {
     | '/_authed/dashboard'
     | '/_authed/posts'
     | '/_authed/staff-dashboard'
+    | '/auth/callback'
     | '/_authed/posts/$postId'
     | '/_authed/posts/'
   fileRoutesById: FileRoutesById
@@ -184,6 +196,7 @@ export interface RootRouteChildren {
   LogoutRoute: typeof LogoutRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -235,6 +248,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed/staff-dashboard': {
@@ -322,6 +342,7 @@ const rootRouteChildren: RootRouteChildren = {
   LogoutRoute: LogoutRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

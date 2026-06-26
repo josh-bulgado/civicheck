@@ -23,6 +23,7 @@
   },
   "registries": {
     "@blocks-so": "https://blocks.so/r/{name}.json",
-    "@blockus": "https://blockus.lndevui.com/r/{name}.json"
+    "@blockus": "https://blockus.lndevui.com/r/{name}.json",
+    "@flx": "https://ui.flexnative.com/r/{name}.json"
   }
 }

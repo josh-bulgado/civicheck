@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import CivicheckHome from "~/components/civicheck-home";
+
+import LandingPage from "~/features/landing/LandingPage";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -8,7 +9,7 @@ export const Route = createFileRoute("/")({
 function Home() {
   return (
     <div>
-      <CivicheckHome />
+      <LandingPage />
     </div>
   );
 }
