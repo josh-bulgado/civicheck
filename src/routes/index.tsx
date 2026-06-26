@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import Hero01 from "~/components/blocks/hero-01";
+import CivicheckHome from "~/components/civicheck-home";
+
 export const Route = createFileRoute("/")({
   component: Home,
 });
@@ -7,7 +8,7 @@ export const Route = createFileRoute("/")({
 function Home() {
   return (
     <div>
-      <Hero01 />
+      <CivicheckHome />
     </div>
   );
 }

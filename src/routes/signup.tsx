@@ -1,62 +1,78 @@
-import { redirect, createFileRoute } from '@tanstack/react-router'
-import { createServerFn, useServerFn } from '@tanstack/react-start'
-import { useMutation } from '../hooks/useMutation'
-import { Auth } from '../components/Auth'
-import { getSupabaseServerClient } from '../utils/supabase'
+import { createFileRoute } from "@tanstack/react-router";
+import { createServerFn, useServerFn } from "@tanstack/react-start";
+import { useMutation } from "~/hooks/useMutation";
+import { getSupabaseServerClient } from "~/utils/supabase";
+import { RegisterForm } from "~/components/auth/register-form";
 
-export const signupFn = createServerFn({ method: 'POST' })
+const signupFn = createServerFn({ method: "POST" })
   .validator(
-    (d: { email: string; password: string; redirectUrl?: string }) => d,
+    (d: {
+      email: string;
+      password: string;
+      firstName: string;
+      lastName: string;
+    }) => d,
   )
   .handler(async ({ data }) => {
-    const supabase = getSupabaseServerClient()
+    const supabase = getSupabaseServerClient();
     const { error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
-    })
+      options: {
+        data: {
+          first_name: data.firstName,
+          last_name: data.lastName,
+        },
+      },
+    });
+
     if (error) {
       return {
         error: true,
         message: error.message,
-      }
+      };
     }
 
-    // Redirect to the prev page stored in the "redirect" search param
-    throw redirect({
-      href: data.redirectUrl || '/',
-    })
-  })
+    return {
+      error: false,
+      message:
+        "Please check your email to confirm your account before signing in.",
+    };
+  });
 
-export const Route = createFileRoute('/signup')({
-  component: SignupComp,
-})
+export const Route = createFileRoute("/signup")({
+  component: SignupPage,
+});
 
-function SignupComp() {
-  const signupMutation = useMutation({
+function SignupPage() {
+  const signupMutation = useMutation<
+    {
+      data: {
+        email: string;
+        password: string;
+        firstName: string;
+        lastName: string;
+      };
+    },
+    { error: boolean; message: string }
+  >({
     fn: useServerFn(signupFn),
-  })
+  });
 
   return (
-    <Auth
-      actionText="Sign Up"
-      status={signupMutation.status}
-      onSubmit={(e) => {
-        const formData = new FormData(e.target as HTMLFormElement)
-
+    <RegisterForm
+      onSubmit={(formData) => {
         signupMutation.mutate({
-          data: {
-            email: formData.get('email') as string,
-            password: formData.get('password') as string,
-          },
-        })
+          data: formData,
+        });
       }}
-      afterSubmit={
-        signupMutation.data?.error ? (
-          <>
-            <div className="text-red-400">{signupMutation.data.message}</div>
-          </>
-        ) : null
+      status={signupMutation.status}
+      serverError={signupMutation.data?.error ? signupMutation.data.message : null}
+      successMessage={
+        signupMutation.data && !signupMutation.data.error
+          ? signupMutation.data.message
+          : null
       }
     />
-  )
+  );
 }

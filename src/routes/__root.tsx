@@ -1,7 +1,6 @@
 /// <reference types="vite/client" />
 import {
   HeadContent,
-  Link,
   Outlet,
   Scripts,
   createRootRoute,
@@ -25,8 +24,18 @@ const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
     return null;
   }
 
+  // Fetch role from profiles table
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, first_name, last_name")
+    .eq("id", data.user.id)
+    .single();
+
   return {
     email: data.user.email,
+    role: profile?.role ?? "applicant",
+    firstName: profile?.first_name ?? "",
+    lastName: profile?.last_name ?? "",
   };
 });
 
@@ -48,9 +57,9 @@ export const Route = createRootRoute({
         content: "width=device-width, initial-scale=1",
       },
       ...seo({
-        title:
-          "TanStack Start | Type-Safe, Client-First, Full-Stack React Framework",
-        description: `TanStack Start is a type-safe, client-first, full-stack React framework. `,
+        title: "CiviCheck — City Civil Registrar Office, Legazpi City",
+        description:
+          "Check your requirements, submit your request, and track it from submission to release — all online.",
       }),
     ],
     links: [
@@ -97,15 +106,12 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { user } = Route.useRouteContext();
-
   return (
     <html>
       <head>
         <HeadContent />
       </head>
       <body>
-        <TanStackRouterDevtools position="bottom-right" />
         <TooltipProvider>{children}</TooltipProvider>
         <Scripts />
       </body>

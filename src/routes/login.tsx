@@ -1,11 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Login } from "../components/Login";
-import Login07 from "~/components/login-07";
+import { LoginForm } from "~/components/auth/login-form";
+
+type LoginSearch = {
+  redirect?: string;
+};
 
 export const Route = createFileRoute("/login")({
-  component: LoginComp,
+  component: LoginPage,
+  validateSearch: (search: Record<string, unknown>): LoginSearch => ({
+    redirect: (search.redirect as string) || undefined,
+  }),
 });
 
-function LoginComp() {
-  return <Login07 />;
+function LoginPage() {
+  const { redirect } = Route.useSearch();
+  return <LoginForm redirect={redirect} />;
 }
