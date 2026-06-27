@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn, useServerFn } from "@tanstack/react-start";
+import RegisterForm from "~/features/auth/components/RegisterForm";
 import { useMutation } from "~/hooks/useMutation";
 import { getSupabaseServerClient } from "~/utils/supabase";
-import { RegisterForm } from "~/components/auth/register-form";
 
 const signupFn = createServerFn({ method: "POST" })
   .validator(
@@ -64,19 +64,21 @@ function SignupPage() {
   });
 
   return (
-    <RegisterForm
-      onSubmit={(formData) => {
-        signupMutation.mutate({
-          data: formData,
-        });
-      }}
-      status={signupMutation.status}
-      serverError={signupMutation.data?.error ? signupMutation.data.message : null}
-      successMessage={
-        signupMutation.data && !signupMutation.data.error
-          ? signupMutation.data.message
-          : null
-      }
-    />
+    <RegisterForm />
+
+    // <RegisterForm
+    //   onSubmit={(formData) => {
+    //     signupMutation.mutate({
+    //       data: formData,
+    //     });
+    //   }}
+    //   status={signupMutation.status}
+    //   serverError={signupMutation.data?.error ? signupMutation.data.message : null}
+    //   successMessage={
+    //     signupMutation.data && !signupMutation.data.error
+    //       ? signupMutation.data.message
+    //       : null
+    //   }
+    // />
   );
 }

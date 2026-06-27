@@ -124,10 +124,27 @@ relational design, not a document store.
 - **Applicant flow** — browse services → view checklist → (optional) pre-validate upload →
   submit request intent → tracking number → status tracker → notifications → QR for
   payment → release info
-- **Staff dashboard** — request queue, pre-validation review, validate/process/approve,
-  release prep
-- **Admin dashboard** — user management, document-type & requirement config, request
-  monitoring, reports/analytics, system settings
+- **Dashboard** — single `/dashboard` route; what renders inside is determined by the
+  authenticated user's role (applicant / staff / admin). Do **not** create separate route
+  files for each role (no `admin-dashboard`, `staff-dashboard`, `citizen-dashboard`
+  routes). Role-specific UI components live in the feature folder (e.g.
+  `features/dashboard/AdminDashboard.tsx`, `features/dashboard/StaffDashboard.tsx`,
+  `features/dashboard/CitizenDashboard.tsx`) and the route file switches between them
+  using the RBAC role from the auth session.
+
+  ```tsx
+  // routes/dashboard.tsx — the only dashboard route
+  const roleMap = {
+    admin: AdminDashboard,
+    staff: StaffDashboard,
+    applicant: CitizenDashboard,
+  };
+  const Dashboard = roleMap[user.role];
+  return <Dashboard />;
+  ```
+
+  Any route guard (redirect unauthenticated users away, restrict page-level access) is
+  also done here using the role from the session — not via separate route files per role.
 
 ## 9. Landing page copy (ready to paste in — replace the placeholder text with this)
 

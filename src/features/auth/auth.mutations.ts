@@ -59,6 +59,7 @@ export const signupFn = createServerFn({ method: "POST" })
       email: data.email,
       password: data.password,
     });
+
     if (error) {
       const isJsonEmpty = error.message === "{}" || !error.message;
       const cleanMessage = isJsonEmpty
@@ -71,9 +72,7 @@ export const signupFn = createServerFn({ method: "POST" })
     }
 
     // Redirect to the prev page stored in the "redirect" search param
-    throw redirect({
-      href: data.redirectUrl || "/",
-    });
+    return { error: false, redirectUrl: data.redirectUrl || "/" };
   });
 
 export const resetPasswordFn = createServerFn({ method: "POST" })
