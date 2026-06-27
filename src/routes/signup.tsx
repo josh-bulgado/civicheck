@@ -27,9 +27,13 @@ const signupFn = createServerFn({ method: "POST" })
     });
 
     if (error) {
+      const isJsonEmpty = error.message === "{}" || !error.message;
+      const cleanMessage = isJsonEmpty
+        ? "An unexpected registration error occurred. Please check your SMTP configuration in the Supabase Dashboard."
+        : error.message;
       return {
         error: true,
-        message: error.message,
+        message: cleanMessage,
       };
     }
 

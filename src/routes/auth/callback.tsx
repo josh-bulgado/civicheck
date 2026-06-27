@@ -11,12 +11,30 @@ const handleCallback = createServerFn({ method: "GET" }).handler(async () => {
   if (code) {
     const supabase = getSupabaseServerClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error) throw redirect({ to: "/login" });
+    if (error) {
+      console.error("OAuth exchangeCodeForSession error:", error);
+      const isJsonEmpty = error.message === "{}" || !error.message;
+      const cleanMessage = isJsonEmpty 
+        ? "An unexpected authentication server error occurred. Please check your SMTP / Auth settings in the Supabase Dashboard."
+        : error.message;
+      return { error: true, message: cleanMessage };
+    }
   }
 
-  throw redirect({ to: "/dashboard" });
+  return { error: false };
 });
 
 export const Route = createFileRoute("/auth/callback")({
-  loader: () => handleCallback(),
+  loader: async () => {
+    const res = await handleCallback();
+    if (res.error) {
+      throw redirect({
+        to: "/login",
+        search: {
+          error: res.message,
+        },
+      });
+    }
+    throw redirect({ to: "/dashboard" });
+  },
 });

@@ -12,9 +12,13 @@ export const loginWithEmailFn = createServerFn({ method: "POST" })
     });
 
     if (error) {
+      const isJsonEmpty = error.message === "{}" || !error.message;
+      const cleanMessage = isJsonEmpty
+        ? "An unexpected login server error occurred. Please check your Supabase connection."
+        : error.message;
       return {
         error: true,
-        message: error.message,
+        message: cleanMessage,
       };
     }
   });
@@ -24,15 +28,22 @@ export const loginWithOAuthFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient();
 
+    const devFallback = process.env.NODE_ENV === "development" ? "http://localhost:3000" : "";
+    const redirectTo = `${process.env.APP_URL || devFallback}/auth/callback`;
+
     const { error, data: authData } = await supabase.auth.signInWithOAuth({
       provider: data.provider,
       options: {
-        redirectTo: `${process.env.APP_URL}/auth/callback`,
+        redirectTo,
       },
     });
 
     if (error) {
-      return { error: true, message: error.message };
+      const isJsonEmpty = error.message === "{}" || !error.message;
+      const cleanMessage = isJsonEmpty
+        ? "An unexpected OAuth provider error occurred. Please check your Supabase configuration."
+        : error.message;
+      return { error: true, message: cleanMessage };
     }
 
     return { url: authData.url };
@@ -49,9 +60,13 @@ export const signupFn = createServerFn({ method: "POST" })
       password: data.password,
     });
     if (error) {
+      const isJsonEmpty = error.message === "{}" || !error.message;
+      const cleanMessage = isJsonEmpty
+        ? "An unexpected registration error occurred. Please check your SMTP configuration in the Supabase Dashboard."
+        : error.message;
       return {
         error: true,
-        message: error.message,
+        message: cleanMessage,
       };
     }
 
@@ -70,9 +85,13 @@ export const resetPasswordFn = createServerFn({ method: "POST" })
     });
 
     if (error) {
+      const isJsonEmpty = error.message === "{}" || !error.message;
+      const cleanMessage = isJsonEmpty
+        ? "An unexpected password reset server error occurred."
+        : error.message;
       return {
         error: true,
-        message: error.message,
+        message: cleanMessage,
       };
     }
 
@@ -91,9 +110,13 @@ export const forgotPasswordFn = createServerFn({ method: "POST" })
     });
 
     if (error) {
+      const isJsonEmpty = error.message === "{}" || !error.message;
+      const cleanMessage = isJsonEmpty
+        ? "An unexpected forgot password request server error occurred."
+        : error.message;
       return {
         error: true,
-        message: error.message,
+        message: cleanMessage,
       };
     }
 

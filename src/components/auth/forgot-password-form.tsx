@@ -49,21 +49,21 @@ export function ForgotPasswordForm({
   const showSuccess = submitted && status === "success";
 
   return (
-    <div className="flex min-h-dvh">
+    <div className="auth-page flex min-h-dvh bg-[#f9fafb]">
       {/* Left — Form */}
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
         <div className="w-full max-w-[420px] space-y-8">
           {/* Logo / Brand */}
           <div className="space-y-2">
             <Link to="/" className="inline-flex items-center gap-2 group">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#003366] text-white">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#1a4480] text-white">
                 <CheckCircle className="w-5 h-5" />
               </div>
-              <span className="text-xl font-bold text-[#003366] tracking-tight">
+              <span className="text-xl font-bold text-[#1a4480] tracking-tight">
                 CiviCheck
               </span>
             </Link>
-            <h1 className="text-2xl font-semibold text-gray-900 pt-4">
+            <h1 className="text-2xl font-semibold text-[#1b1b1b] pt-4">
               {showSuccess ? "Check your email" : "Forgot your password?"}
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -75,7 +75,7 @@ export function ForgotPasswordForm({
 
           {showSuccess ? (
             <div className="space-y-5">
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+              <div className="rounded-lg border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-800">
                 <div className="flex items-start gap-3">
                   <CheckCircle className="w-5 h-5 shrink-0 mt-0.5 text-emerald-600" />
                   <div>
@@ -101,7 +101,7 @@ export function ForgotPasswordForm({
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Server error */}
               {serverError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">
                   {serverError}
                 </div>
               )}
@@ -159,7 +159,7 @@ export function ForgotPasswordForm({
       </div>
 
       {/* Right — Brand panel (hidden on small screens) */}
-      <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-[#003366] via-[#004080] to-[#1a5276] items-center justify-center relative overflow-hidden">
+      <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-[#1a4480] via-[#005ea2] to-[#0b4778] items-center justify-center relative overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute top-20 left-20 w-64 h-64 rounded-full bg-white/5 blur-xl" />
           <div className="absolute bottom-32 right-16 w-80 h-80 rounded-full bg-white/5 blur-xl" />

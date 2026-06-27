@@ -55,6 +55,22 @@ field, not an implicit one:
 5. **Release** — payment confirmed via QR (cashier handles the actual transaction), document
    handed over, release recorded
 
+The `requests.status` field stores the exact state of the request using this vocabulary:
+
+| Status Code | Label / UI Text | Stage | Description |
+| :--- | :--- | :--- | :--- |
+| `pending_frontdesk` | Pending Review | **1. Submission** | Initial state after applicant submits online. Awaiting front-desk check. |
+| `under_validation` | Under Validation | **2. Validation** | Staff are verifying uploaded documents or walk-in physical papers. |
+| `incomplete` | Incomplete | **2. Validation** | Requirements check failed; applicant needs to upload or bring missing files. |
+| `rejected` | Rejected | **2. Validation** | Request denied (e.g. incorrect details, invalid eligibility). |
+| `processing` | Processing | **3. Processing** | Requirements validated; staff are actively preparing/locating the record. |
+| `pending_approval` | Pending Approval | **4. Approval** | Document prepared; awaiting registrar's final signature/approval. |
+| `ready_for_release` | Ready for Release | **5. Release** | Signed and approved. Awaiting cashier payment/verification. |
+| `released` | Released | **5. Release** | Payment verified and document handed over to the applicant. |
+
+*Note: Payment Status is tracked separately in `payment_status` (either `'unpaid'` or `'verified'`).*
+
+
 ## 5. Core features to build
 
 1. Requirement checklist viewer per document type, with inter-office dependency notes

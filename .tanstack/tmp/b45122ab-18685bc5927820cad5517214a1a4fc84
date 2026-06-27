@@ -14,6 +14,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as DebugEnvRouteImport } from './routes/debug-env'
 import { Route as AuthedRouteRouteImport } from './routes/_authed/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
@@ -50,6 +51,11 @@ const LoginRoute = LoginRouteImport.update({
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DebugEnvRoute = DebugEnvRouteImport.update({
+  id: '/debug-env',
+  path: '/debug-env',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedRouteRoute = AuthedRouteRouteImport.update({
@@ -115,6 +121,7 @@ const AuthedChecklistServiceCodeRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/debug-env': typeof DebugEnvRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
@@ -133,6 +140,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/debug-env': typeof DebugEnvRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
@@ -152,6 +160,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteRouteWithChildren
+  '/debug-env': typeof DebugEnvRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
@@ -172,6 +181,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/debug-env'
     | '/forgot-password'
     | '/login'
     | '/logout'
@@ -190,6 +200,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/debug-env'
     | '/forgot-password'
     | '/login'
     | '/logout'
@@ -208,6 +219,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authed'
+    | '/debug-env'
     | '/forgot-password'
     | '/login'
     | '/logout'
@@ -228,6 +240,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthedRouteRoute: typeof AuthedRouteRouteWithChildren
+  DebugEnvRoute: typeof DebugEnvRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
@@ -271,6 +284,13 @@ declare module '@tanstack/react-router' {
       path: '/forgot-password'
       fullPath: '/forgot-password'
       preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/debug-env': {
+      id: '/debug-env'
+      path: '/debug-env'
+      fullPath: '/debug-env'
+      preLoaderRoute: typeof DebugEnvRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed': {
@@ -401,6 +421,7 @@ const AuthedRouteRouteWithChildren = AuthedRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRouteRoute: AuthedRouteRouteWithChildren,
+  DebugEnvRoute: DebugEnvRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,

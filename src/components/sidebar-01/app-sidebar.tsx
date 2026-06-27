@@ -124,19 +124,55 @@ const data: SidebarData = {
   },
 };
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sidebar> & { user?: any }) {
+  const sidebarUser = user ? {
+    name: `${user.firstName} ${user.lastName}`.trim() || user.email.split("@")[0],
+    email: user.email,
+    avatar: "/avatar-01.png",
+  } : data.user;
+
+  // Build navMain dynamically based on role
+  const navMain = [];
+  const role = user?.role ?? "applicant";
+
+  if (role === "admin") {
+    navMain.push({
+      id: "admin-dashboard",
+      title: "Admin Dashboard",
+      url: "/admin-dashboard",
+      icon: LayoutDashboard,
+    });
+  } else if (role !== "applicant") {
+    // frontdesk, staff, archive, legal, cashier
+    navMain.push({
+      id: "staff-dashboard",
+      title: "Staff Dashboard",
+      url: "/staff-dashboard",
+      icon: LayoutDashboard,
+    });
+  } else {
+    // applicant
+    navMain.push({
+      id: "services",
+      title: "Browse Services",
+      url: "/services",
+      icon: IconListDetails,
+    });
+    navMain.push({
+      id: "my-requests",
+      title: "My Requests",
+      url: "/my-requests",
+      icon: IconProgressCheck,
+    });
+  }
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <NavHeader data={data} />
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavCollapsible
-          favorites={data.navCollapsible.favorites}
-          teams={data.navCollapsible.teams}
-          topics={data.navCollapsible.topics}
-        />
+        <NavMain items={navMain} />
       </SidebarContent>
-      <NavFooter user={data.user} />
+      <NavFooter user={sidebarUser} />
     </Sidebar>
   );
 }

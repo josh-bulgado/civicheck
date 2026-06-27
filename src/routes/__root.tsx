@@ -81,7 +81,7 @@ export const Route = createRootRoute({
         sizes: "16x16",
         href: "/favicon-16x16.png",
       },
-      { rel: "manifest", href: "/site.webmanifest", color: "#fffff" },
+      { rel: "manifest", href: "/site.webmanifest" },
       { rel: "icon", href: "/favicon.ico" },
     ],
   }),
@@ -97,10 +97,17 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
+  const [mounted, setMounted] = React.useState(false);
+  
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <RootDocument>
       <Outlet />
       <Toaster />
+      {mounted && import.meta.env.DEV && <TanStackRouterDevtools position="bottom-right" />}
     </RootDocument>
   );
 }
@@ -110,24 +117,37 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const apply = (dark: boolean) =>
-      document.documentElement.classList.toggle("dark", dark);
-    apply(mq.matches);
-    mq.addEventListener("change", (e) => apply(e.matches));
-    return () => mq.removeEventListener("change", (e) => apply(e.matches));
+    const apply = (e: MediaQueryListEvent) =>
+      document.documentElement.classList.toggle("dark", e.matches);
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
+  // Add in-page console (Eruda) for debugging when the real console is hidden
+  React.useEffect(() => {
+    if (import.meta.env.DEV) {
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/eruda";
+      script.onload = () => {
+        if ((window as any).eruda) {
+          (window as any).eruda.init();
+        }
+      };
+      document.head.appendChild(script);
+    }
   }, []);
 
   return (
-    <html>
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var d=window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.classList.toggle('dark',d)})()`,
+            __html: `(function(){try{var d=window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.classList.toggle('dark',d);document.documentElement.style.colorScheme=d?'dark':'light'}catch(e){}})()`
           }}
         />
         <HeadContent />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <TooltipProvider>{children}</TooltipProvider>
         <Scripts />
       </body>
