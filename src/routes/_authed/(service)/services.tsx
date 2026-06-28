@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import ServiceCard from "~/features/services/components/ServiceCard";
 import { getServices } from "~/features/services/services.queries";
 
-export const Route = createFileRoute("/_authed/services")({
+export const Route = createFileRoute("/_authed/(service)/services")({
   loader: () => getServices(),
   component: ServicesPage,
 });

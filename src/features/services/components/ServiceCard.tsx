@@ -30,7 +30,7 @@ const ServiceCard = (service: ServiceProps) => {
   const label = service.classification.replace("_", " ");
 
   return (
-    <Card key={service.service_code} className="group">
+    <Card className="group">
       <CardHeader className="gap-4 ">
         <div className="flex items-start justify-between gap-4">
           <div className="w-10 h-10 rounded-lg bg-[#1a4480]/10 flex items-center justify-center shrink-0">
@@ -71,8 +71,8 @@ const ServiceCard = (service: ServiceProps) => {
       <CardFooter>
         <CardAction className="w-full">
           <Link
-            to="/checklist/$serviceCode"
-            params={{ serviceCode: service.service_code }}
+            to="/service/$serviceCode"
+            params={{ serviceCode: service.display_group ?? service.service_code }}
             className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-gray-50 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-[#1a4480] hover:text-white transition-colors group-hover:bg-[#1a4480] group-hover:text-white"
           >
             View Requirements

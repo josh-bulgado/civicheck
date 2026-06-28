@@ -18,14 +18,14 @@ import { Route as AuthedRouteRouteImport } from './routes/_authed/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as AuthedStaffDashboardRouteImport } from './routes/_authed/staff-dashboard'
-import { Route as AuthedServicesRouteImport } from './routes/_authed/services'
 import { Route as AuthedPostsRouteImport } from './routes/_authed/posts'
 import { Route as AuthedMyRequestsRouteImport } from './routes/_authed/my-requests'
 import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
 import { Route as AuthedAdminDashboardRouteImport } from './routes/_authed/admin-dashboard'
 import { Route as AuthedPostsIndexRouteImport } from './routes/_authed/posts.index'
 import { Route as AuthedPostsPostIdRouteImport } from './routes/_authed/posts.$postId'
-import { Route as AuthedChecklistServiceCodeRouteImport } from './routes/_authed/checklist.$serviceCode'
+import { Route as AuthedserviceServicesRouteImport } from './routes/_authed/(service)/services'
+import { Route as AuthedserviceServiceServiceCodeRouteImport } from './routes/_authed/(service)/service.$serviceCode'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -71,11 +71,6 @@ const AuthedStaffDashboardRoute = AuthedStaffDashboardRouteImport.update({
   path: '/staff-dashboard',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
-const AuthedServicesRoute = AuthedServicesRouteImport.update({
-  id: '/services',
-  path: '/services',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
 const AuthedPostsRoute = AuthedPostsRouteImport.update({
   id: '/posts',
   path: '/posts',
@@ -106,10 +101,15 @@ const AuthedPostsPostIdRoute = AuthedPostsPostIdRouteImport.update({
   path: '/$postId',
   getParentRoute: () => AuthedPostsRoute,
 } as any)
-const AuthedChecklistServiceCodeRoute =
-  AuthedChecklistServiceCodeRouteImport.update({
-    id: '/checklist/$serviceCode',
-    path: '/checklist/$serviceCode',
+const AuthedserviceServicesRoute = AuthedserviceServicesRouteImport.update({
+  id: '/(service)/services',
+  path: '/services',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
+const AuthedserviceServiceServiceCodeRoute =
+  AuthedserviceServiceServiceCodeRouteImport.update({
+    id: '/(service)/service/$serviceCode',
+    path: '/service/$serviceCode',
     getParentRoute: () => AuthedRouteRoute,
   } as any)
 
@@ -124,12 +124,12 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthedDashboardRoute
   '/my-requests': typeof AuthedMyRequestsRoute
   '/posts': typeof AuthedPostsRouteWithChildren
-  '/services': typeof AuthedServicesRoute
   '/staff-dashboard': typeof AuthedStaffDashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
-  '/checklist/$serviceCode': typeof AuthedChecklistServiceCodeRoute
+  '/services': typeof AuthedserviceServicesRoute
   '/posts/$postId': typeof AuthedPostsPostIdRoute
   '/posts/': typeof AuthedPostsIndexRoute
+  '/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -141,12 +141,12 @@ export interface FileRoutesByTo {
   '/admin-dashboard': typeof AuthedAdminDashboardRoute
   '/dashboard': typeof AuthedDashboardRoute
   '/my-requests': typeof AuthedMyRequestsRoute
-  '/services': typeof AuthedServicesRoute
   '/staff-dashboard': typeof AuthedStaffDashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
-  '/checklist/$serviceCode': typeof AuthedChecklistServiceCodeRoute
+  '/services': typeof AuthedserviceServicesRoute
   '/posts/$postId': typeof AuthedPostsPostIdRoute
   '/posts': typeof AuthedPostsIndexRoute
+  '/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -161,12 +161,12 @@ export interface FileRoutesById {
   '/_authed/dashboard': typeof AuthedDashboardRoute
   '/_authed/my-requests': typeof AuthedMyRequestsRoute
   '/_authed/posts': typeof AuthedPostsRouteWithChildren
-  '/_authed/services': typeof AuthedServicesRoute
   '/_authed/staff-dashboard': typeof AuthedStaffDashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
-  '/_authed/checklist/$serviceCode': typeof AuthedChecklistServiceCodeRoute
+  '/_authed/(service)/services': typeof AuthedserviceServicesRoute
   '/_authed/posts/$postId': typeof AuthedPostsPostIdRoute
   '/_authed/posts/': typeof AuthedPostsIndexRoute
+  '/_authed/(service)/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -181,12 +181,12 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/my-requests'
     | '/posts'
-    | '/services'
     | '/staff-dashboard'
     | '/auth/callback'
-    | '/checklist/$serviceCode'
+    | '/services'
     | '/posts/$postId'
     | '/posts/'
+    | '/service/$serviceCode'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -198,12 +198,12 @@ export interface FileRouteTypes {
     | '/admin-dashboard'
     | '/dashboard'
     | '/my-requests'
-    | '/services'
     | '/staff-dashboard'
     | '/auth/callback'
-    | '/checklist/$serviceCode'
+    | '/services'
     | '/posts/$postId'
     | '/posts'
+    | '/service/$serviceCode'
   id:
     | '__root__'
     | '/'
@@ -217,12 +217,12 @@ export interface FileRouteTypes {
     | '/_authed/dashboard'
     | '/_authed/my-requests'
     | '/_authed/posts'
-    | '/_authed/services'
     | '/_authed/staff-dashboard'
     | '/auth/callback'
-    | '/_authed/checklist/$serviceCode'
+    | '/_authed/(service)/services'
     | '/_authed/posts/$postId'
     | '/_authed/posts/'
+    | '/_authed/(service)/service/$serviceCode'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -301,13 +301,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedStaffDashboardRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
-    '/_authed/services': {
-      id: '/_authed/services'
-      path: '/services'
-      fullPath: '/services'
-      preLoaderRoute: typeof AuthedServicesRouteImport
-      parentRoute: typeof AuthedRouteRoute
-    }
     '/_authed/posts': {
       id: '/_authed/posts'
       path: '/posts'
@@ -350,11 +343,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedPostsPostIdRouteImport
       parentRoute: typeof AuthedPostsRoute
     }
-    '/_authed/checklist/$serviceCode': {
-      id: '/_authed/checklist/$serviceCode'
-      path: '/checklist/$serviceCode'
-      fullPath: '/checklist/$serviceCode'
-      preLoaderRoute: typeof AuthedChecklistServiceCodeRouteImport
+    '/_authed/(service)/services': {
+      id: '/_authed/(service)/services'
+      path: '/services'
+      fullPath: '/services'
+      preLoaderRoute: typeof AuthedserviceServicesRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/(service)/service/$serviceCode': {
+      id: '/_authed/(service)/service/$serviceCode'
+      path: '/service/$serviceCode'
+      fullPath: '/service/$serviceCode'
+      preLoaderRoute: typeof AuthedserviceServiceServiceCodeRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
   }
@@ -379,9 +379,9 @@ interface AuthedRouteRouteChildren {
   AuthedDashboardRoute: typeof AuthedDashboardRoute
   AuthedMyRequestsRoute: typeof AuthedMyRequestsRoute
   AuthedPostsRoute: typeof AuthedPostsRouteWithChildren
-  AuthedServicesRoute: typeof AuthedServicesRoute
   AuthedStaffDashboardRoute: typeof AuthedStaffDashboardRoute
-  AuthedChecklistServiceCodeRoute: typeof AuthedChecklistServiceCodeRoute
+  AuthedserviceServicesRoute: typeof AuthedserviceServicesRoute
+  AuthedserviceServiceServiceCodeRoute: typeof AuthedserviceServiceServiceCodeRoute
 }
 
 const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
@@ -389,9 +389,9 @@ const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
   AuthedDashboardRoute: AuthedDashboardRoute,
   AuthedMyRequestsRoute: AuthedMyRequestsRoute,
   AuthedPostsRoute: AuthedPostsRouteWithChildren,
-  AuthedServicesRoute: AuthedServicesRoute,
   AuthedStaffDashboardRoute: AuthedStaffDashboardRoute,
-  AuthedChecklistServiceCodeRoute: AuthedChecklistServiceCodeRoute,
+  AuthedserviceServicesRoute: AuthedserviceServicesRoute,
+  AuthedserviceServiceServiceCodeRoute: AuthedserviceServiceServiceCodeRoute,
 }
 
 const AuthedRouteRouteWithChildren = AuthedRouteRoute._addFileChildren(
