@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { FileText, Clock, CircleDollarSign, ArrowRight } from "lucide-react";
 import ServiceCard from "~/features/services/components/ServiceCard";
 import { getServices } from "~/features/services/services.queries";
 

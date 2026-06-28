@@ -14,6 +14,15 @@ export const getServices = createServerFn({ method: "GET" }).handler(
     if (error) {
       throw new Error(error.message);
     }
-    return data || [];
+
+    const rows = data || [];
+    const seen = new Set<string>();
+
+    return rows.filter((row) => {
+      if (!row.display_group) return true; // standalone, always show
+      if (seen.has(row.display_group)) return false; // already have a card for this group
+      seen.add(row.display_group);
+      return true;
+    });
   },
 );

@@ -16,10 +16,10 @@ export interface ServiceProps {
   service_code: string;
   name: string;
   classification: string;
-  fee: number | string; // Use string if it comes as a decimal/numeric type from DB
+  fee: number | string;
   processing_time: string;
-  display_group: string;
-  display_name: string;
+  display_group: string | null;
+  display_name: string | null;
 }
 
 const ServiceCard = (service: ServiceProps) => {
@@ -41,7 +41,9 @@ const ServiceCard = (service: ServiceProps) => {
             {label}
           </Badge>
         </div>
-        <CardTitle className="font-bold">{service.name}</CardTitle>
+        <CardTitle className="font-bold">
+          {service.display_name ?? service.name}
+        </CardTitle>
         <Separator />
       </CardHeader>
       <CardContent className="flex flex-col gap-2 grow">
@@ -57,9 +59,11 @@ const ServiceCard = (service: ServiceProps) => {
           <span>
             Service Fee: {""}
             <strong>
-              {Number(service.fee) === 0
-                ? "Free"
-                : `₱${Number(service.fee).toFixed(2)}`}
+              {service.display_group
+                ? "Varies"
+                : Number(service.fee) === 0
+                  ? "Free"
+                  : `₱${Number(service.fee).toFixed(2)}`}
             </strong>
           </span>
         </div>
