@@ -1,6 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { ChevronDown, Search, X, Menu } from "lucide-react";
 import { useState } from "react";
+import { Button } from "~/components/ui/button";
+import { Separator } from "~/components/ui/separator";
 
 const SiteHeader = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -8,8 +10,8 @@ const SiteHeader = () => {
   return (
     <header>
       {/* Top Utility Bar */}
-      <div className="bg-[#112e51]">
-        <div className="max-w-[1200px] mx-auto px-4 py-[6px] flex justify-end items-center gap-1 text-[13px] text-white">
+      <div className="bg-[#112e51] ">
+        <div className="max-w-[1200px] mx-auto px-4 py-1.5 flex justify-end items-center gap-1 text-[13px] text-white ">
           <a href="#" className="px-2 py-1 hover:underline">
             Help
           </a>
@@ -17,14 +19,11 @@ const SiteHeader = () => {
           <a href="#" className="px-2 py-1 hover:underline">
             Contact
           </a>
+
           <span className="text-white/30">|</span>
           <button className="flex items-center gap-1 px-2 py-1 hover:underline">
             Filipino <ChevronDown className="w-3 h-3" />
           </button>
-          <span className="text-white/30">|</span>
-          <Link to="/login" className="px-2 py-1 hover:underline">
-            CCRO Staff
-          </Link>
           <span className="text-white/30">|</span>
           <Link
             to="/login"
@@ -32,6 +31,12 @@ const SiteHeader = () => {
           >
             Sign in
           </Link>
+          <span className="text-white/30">|</span>
+
+          <Link to="/signup" className="px-2 py-1 hover:underline">
+            Get Started
+          </Link>
+          <span className="text-white/30">|</span>
         </div>
       </div>
 

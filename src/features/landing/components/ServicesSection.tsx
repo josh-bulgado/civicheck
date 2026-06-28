@@ -1,4 +1,13 @@
+import { Link } from "@tanstack/react-router";
 import { Baby, Gem, Heart, ScrollText } from "lucide-react";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
 
 const ServicesSection = () => {
   const services = [
@@ -39,6 +48,38 @@ const ServicesSection = () => {
         </div>
 
         {/* Cards */}
+
+        {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 px-4">
+          {services.map((service, index) => (
+            <a href="#" key={service.title} className="group hover:shadow-md ">
+              <Card className="pt-0 h-full rounded ">
+                <div
+                  key={index}
+                  className="h-35 flex items-center justify-center"
+                  style={{ backgroundColor: service.bgColor }}
+                >
+                  <div className="text-center p-4">
+                    <div className="w-14 h-14 mx-auto bg-[#003366]/10 rounded-lg flex items-center justify-center">
+                      <div className="text-[#003366]">{service.icon}</div>
+                    </div>
+                  </div>
+                </div>
+                <CardHeader>
+                  <CardTitle className="font-bold group-hover:text-[#205493] transition-colors text-black">
+                    {service.title}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm flex-grow">
+                  {service.desc}
+                </CardContent>
+                <CardFooter className="text-sm text-[#205493] hover:underline">
+                  <CardAction>Check requirements →</CardAction>
+                </CardFooter>
+              </Card>
+            </a>
+          ))}
+        </div> */}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 px-4">
           {services.map((service) => (
             <a

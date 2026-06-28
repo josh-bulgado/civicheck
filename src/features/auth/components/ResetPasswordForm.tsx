@@ -79,7 +79,7 @@ const ResetPasswordForm = () => {
             <p className="text-sm text-muted-foreground">
               {isSuccess
                 ? "Your password has been reset successfully. You can now sign in with your new password."
-                : "Enter your new password below. Make sure it's at least 6 characters."}
+                : "Enter your new password below. Make sure it's at least 8 characters."}
             </p>
           </div>
 

@@ -1,4 +1,3 @@
-import { redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getSupabaseServerClient } from "~/utils/supabase";
 
@@ -28,7 +27,8 @@ export const loginWithOAuthFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient();
 
-    const devFallback = process.env.NODE_ENV === "development" ? "http://localhost:3000" : "";
+    const devFallback =
+      process.env.NODE_ENV === "development" ? "http://localhost:3000" : "";
     const redirectTo = `${process.env.APP_URL || devFallback}/auth/callback`;
 
     const { error, data: authData } = await supabase.auth.signInWithOAuth({
