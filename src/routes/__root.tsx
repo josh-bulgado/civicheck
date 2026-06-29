@@ -116,11 +116,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const { user } = Route.useRouteContext();
 
   React.useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const apply = (e: MediaQueryListEvent) =>
-      document.documentElement.classList.toggle("dark", e.matches);
-    mq.addEventListener("change", apply);
-    return () => mq.removeEventListener("change", apply);
+    document.documentElement.classList.remove("dark");
+    document.documentElement.style.colorScheme = "light";
   }, []);
 
   // Add in-page console (Eruda) for debugging when the real console is hidden
@@ -142,7 +139,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var d=window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.classList.toggle('dark',d);document.documentElement.style.colorScheme=d?'dark':'light'}catch(e){}})()`
+            __html: `(function(){try{document.documentElement.classList.remove('dark');document.documentElement.style.colorScheme='light'}catch(e){}})()`
           }}
         />
         <HeadContent />
