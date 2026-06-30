@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+import { ServicesDataTable } from "~/features/admin/services/components/ServicesDataTable";
 import ServiceCard from "~/features/services/components/ServiceCard";
 import { getServices } from "~/features/services/services.queries";
 
@@ -11,7 +12,7 @@ function ServicesPage() {
   const services = Route.useLoaderData();
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto py-4">
+    <div className="space-y-6 py-4">
       <div className="space-y-2">
         <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
           Browse Document Services

@@ -1,6 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSupabaseServerClient } from "~/utils/supabase";
 
+export type ServiceSummary = Pick<
+  import("~/features/admin/services/services.types").Service,
+  "service_code" | "name" | "classification" | "fee" | "processing_time" | "display_group" | "display_name"
+>;
+
 export const getServices = createServerFn({ method: "GET" }).handler(
   async () => {
     const supabase = getSupabaseServerClient();
@@ -77,3 +82,4 @@ export const getServiceDetail = createServerFn({ method: "GET" })
       requirements: requirements || [],
     };
   });
+
