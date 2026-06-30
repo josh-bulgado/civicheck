@@ -43,6 +43,8 @@ pids
 # Tools & Temp
 .kiro/
 .agent/
+.agents/
+.gemini/
 tmp/
 temp/
 *.tsbuildinfo
