@@ -24,7 +24,7 @@ export function ServicesTableToolbar({
   onClassificationFilterChange,
 }: ServicesTableToolbarProps) {
   return (
-    <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center bg-white p-4 rounded-xl border border-slate-100 shadow-xs">
+    <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center">
       <div className="relative flex-1 max-w-md">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <Input

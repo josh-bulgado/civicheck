@@ -21,9 +21,9 @@ import { Route as AuthedStaffDashboardRouteImport } from './routes/_authed/staff
 import { Route as AuthedPostsRouteImport } from './routes/_authed/posts'
 import { Route as AuthedMyRequestsRouteImport } from './routes/_authed/my-requests'
 import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
-import { Route as AuthedAdminDashboardRouteImport } from './routes/_authed/admin-dashboard'
 import { Route as AuthedPostsIndexRouteImport } from './routes/_authed/posts.index'
 import { Route as AuthedPostsPostIdRouteImport } from './routes/_authed/posts.$postId'
+import { Route as AuthedAdminServicesRouteImport } from './routes/_authed/admin/services'
 import { Route as AuthedserviceServicesRouteImport } from './routes/_authed/(service)/services'
 import { Route as AuthedserviceServiceServiceCodeRouteImport } from './routes/_authed/(service)/service.$serviceCode'
 
@@ -86,11 +86,6 @@ const AuthedDashboardRoute = AuthedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
-const AuthedAdminDashboardRoute = AuthedAdminDashboardRouteImport.update({
-  id: '/admin-dashboard',
-  path: '/admin-dashboard',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
 const AuthedPostsIndexRoute = AuthedPostsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -100,6 +95,11 @@ const AuthedPostsPostIdRoute = AuthedPostsPostIdRouteImport.update({
   id: '/$postId',
   path: '/$postId',
   getParentRoute: () => AuthedPostsRoute,
+} as any)
+const AuthedAdminServicesRoute = AuthedAdminServicesRouteImport.update({
+  id: '/admin/services',
+  path: '/admin/services',
+  getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedserviceServicesRoute = AuthedserviceServicesRouteImport.update({
   id: '/(service)/services',
@@ -120,13 +120,13 @@ export interface FileRoutesByFullPath {
   '/logout': typeof LogoutRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/admin-dashboard': typeof AuthedAdminDashboardRoute
   '/dashboard': typeof AuthedDashboardRoute
   '/my-requests': typeof AuthedMyRequestsRoute
   '/posts': typeof AuthedPostsRouteWithChildren
   '/staff-dashboard': typeof AuthedStaffDashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/services': typeof AuthedserviceServicesRoute
+  '/admin/services': typeof AuthedAdminServicesRoute
   '/posts/$postId': typeof AuthedPostsPostIdRoute
   '/posts/': typeof AuthedPostsIndexRoute
   '/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
@@ -138,12 +138,12 @@ export interface FileRoutesByTo {
   '/logout': typeof LogoutRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/admin-dashboard': typeof AuthedAdminDashboardRoute
   '/dashboard': typeof AuthedDashboardRoute
   '/my-requests': typeof AuthedMyRequestsRoute
   '/staff-dashboard': typeof AuthedStaffDashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/services': typeof AuthedserviceServicesRoute
+  '/admin/services': typeof AuthedAdminServicesRoute
   '/posts/$postId': typeof AuthedPostsPostIdRoute
   '/posts': typeof AuthedPostsIndexRoute
   '/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
@@ -157,13 +157,13 @@ export interface FileRoutesById {
   '/logout': typeof LogoutRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/_authed/admin-dashboard': typeof AuthedAdminDashboardRoute
   '/_authed/dashboard': typeof AuthedDashboardRoute
   '/_authed/my-requests': typeof AuthedMyRequestsRoute
   '/_authed/posts': typeof AuthedPostsRouteWithChildren
   '/_authed/staff-dashboard': typeof AuthedStaffDashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/_authed/(service)/services': typeof AuthedserviceServicesRoute
+  '/_authed/admin/services': typeof AuthedAdminServicesRoute
   '/_authed/posts/$postId': typeof AuthedPostsPostIdRoute
   '/_authed/posts/': typeof AuthedPostsIndexRoute
   '/_authed/(service)/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
@@ -177,13 +177,13 @@ export interface FileRouteTypes {
     | '/logout'
     | '/reset-password'
     | '/signup'
-    | '/admin-dashboard'
     | '/dashboard'
     | '/my-requests'
     | '/posts'
     | '/staff-dashboard'
     | '/auth/callback'
     | '/services'
+    | '/admin/services'
     | '/posts/$postId'
     | '/posts/'
     | '/service/$serviceCode'
@@ -195,12 +195,12 @@ export interface FileRouteTypes {
     | '/logout'
     | '/reset-password'
     | '/signup'
-    | '/admin-dashboard'
     | '/dashboard'
     | '/my-requests'
     | '/staff-dashboard'
     | '/auth/callback'
     | '/services'
+    | '/admin/services'
     | '/posts/$postId'
     | '/posts'
     | '/service/$serviceCode'
@@ -213,13 +213,13 @@ export interface FileRouteTypes {
     | '/logout'
     | '/reset-password'
     | '/signup'
-    | '/_authed/admin-dashboard'
     | '/_authed/dashboard'
     | '/_authed/my-requests'
     | '/_authed/posts'
     | '/_authed/staff-dashboard'
     | '/auth/callback'
     | '/_authed/(service)/services'
+    | '/_authed/admin/services'
     | '/_authed/posts/$postId'
     | '/_authed/posts/'
     | '/_authed/(service)/service/$serviceCode'
@@ -322,13 +322,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedDashboardRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
-    '/_authed/admin-dashboard': {
-      id: '/_authed/admin-dashboard'
-      path: '/admin-dashboard'
-      fullPath: '/admin-dashboard'
-      preLoaderRoute: typeof AuthedAdminDashboardRouteImport
-      parentRoute: typeof AuthedRouteRoute
-    }
     '/_authed/posts/': {
       id: '/_authed/posts/'
       path: '/'
@@ -342,6 +335,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/posts/$postId'
       preLoaderRoute: typeof AuthedPostsPostIdRouteImport
       parentRoute: typeof AuthedPostsRoute
+    }
+    '/_authed/admin/services': {
+      id: '/_authed/admin/services'
+      path: '/admin/services'
+      fullPath: '/admin/services'
+      preLoaderRoute: typeof AuthedAdminServicesRouteImport
+      parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/(service)/services': {
       id: '/_authed/(service)/services'
@@ -375,22 +375,22 @@ const AuthedPostsRouteWithChildren = AuthedPostsRoute._addFileChildren(
 )
 
 interface AuthedRouteRouteChildren {
-  AuthedAdminDashboardRoute: typeof AuthedAdminDashboardRoute
   AuthedDashboardRoute: typeof AuthedDashboardRoute
   AuthedMyRequestsRoute: typeof AuthedMyRequestsRoute
   AuthedPostsRoute: typeof AuthedPostsRouteWithChildren
   AuthedStaffDashboardRoute: typeof AuthedStaffDashboardRoute
   AuthedserviceServicesRoute: typeof AuthedserviceServicesRoute
+  AuthedAdminServicesRoute: typeof AuthedAdminServicesRoute
   AuthedserviceServiceServiceCodeRoute: typeof AuthedserviceServiceServiceCodeRoute
 }
 
 const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
-  AuthedAdminDashboardRoute: AuthedAdminDashboardRoute,
   AuthedDashboardRoute: AuthedDashboardRoute,
   AuthedMyRequestsRoute: AuthedMyRequestsRoute,
   AuthedPostsRoute: AuthedPostsRouteWithChildren,
   AuthedStaffDashboardRoute: AuthedStaffDashboardRoute,
   AuthedserviceServicesRoute: AuthedserviceServicesRoute,
+  AuthedAdminServicesRoute: AuthedAdminServicesRoute,
   AuthedserviceServiceServiceCodeRoute: AuthedserviceServiceServiceCodeRoute,
 }
 

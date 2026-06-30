@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import {
   ColumnFiltersState,
   SortingState,
@@ -20,7 +20,6 @@ import {
 import { SlidersHorizontal } from "lucide-react";
 import { Service } from "../services.types";
 import { columns } from "./ServicesColumn";
-import { ServicesStatsCards } from "./ServicesStatsCards";
 import { ServicesTableToolbar, type ClassificationFilter } from "./ServicesTableToolbar";
 import { Button } from "~/components/ui/button";
 import { DataTablePagination } from "~/components/ui/data-table-pagination";
@@ -73,8 +72,7 @@ export function ServicesDataTable({ data, onView }: ServicesDataTableProps) {
   };
 
   return (
-    <div className="space-y-6">
-      <ServicesStatsCards data={data} />
+    <div className="space-y-4">
 
       <ServicesTableToolbar
         globalFilter={globalFilter}

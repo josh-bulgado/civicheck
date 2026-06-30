@@ -2,6 +2,7 @@
 
 import { Search } from "lucide-react";
 import * as React from "react";
+import { useEffect } from "react";
 
 import {
   CommandDialog,
@@ -12,9 +13,8 @@ import {
   CommandList,
   CommandSeparator,
 } from "~/components/ui/command";
-import { SidebarHeader } from "~/components/ui/sidebar";
+import { SidebarHeader, useSidebar } from "~/components/ui/sidebar";
 import { cn } from "~/lib/utils";
-import { useEffect } from "react";
 import { SidebarData } from "~/components/sidebar-01/types";
 
 interface NavHeaderProps {
@@ -23,6 +23,8 @@ interface NavHeaderProps {
 
 export function NavHeader({ data }: NavHeaderProps) {
   const [open, setOpen] = React.useState(false);
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -39,20 +41,27 @@ export function NavHeader({ data }: NavHeaderProps) {
     <>
       <SidebarHeader>
         <div
-          className="flex items-center justify-between px-2 pb-0 pt-3 cursor-pointer"
+          className={cn(
+            "flex items-center px-2 pb-0 pt-3 cursor-pointer overflow-hidden",
+            isCollapsed ? "justify-center" : "justify-between"
+          )}
           onClick={() => setOpen(true)}
         >
-          <div className="flex items-center flex-1 gap-3">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground font-normal">
-              Search
-            </span>
+          <div className="flex items-center gap-3 min-w-0">
+            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+            {!isCollapsed && (
+              <span className="text-sm text-muted-foreground font-normal truncate">
+                Search
+              </span>
+            )}
           </div>
-          <div className="flex items-center justify-center px-2 py-1 border border-border rounded-md">
-            <kbd className="text-muted-foreground inline-flex font-[inherit] text-xs font-medium">
-              <span className="opacity-70">⌘K</span>
-            </kbd>
-          </div>
+          {!isCollapsed && (
+            <div className="flex items-center justify-center px-2 py-1 border border-border rounded-md shrink-0">
+              <kbd className="text-muted-foreground inline-flex font-[inherit] text-xs font-medium">
+                <span className="opacity-70">⌘K</span>
+              </kbd>
+            </div>
+          )}
         </div>
       </SidebarHeader>
 
@@ -65,9 +74,7 @@ export function NavHeader({ data }: NavHeaderProps) {
               <CommandItem
                 className="py-2!"
                 key={item.id}
-                onSelect={() => {
-                  setOpen(false);
-                }}
+                onSelect={() => setOpen(false)}
               >
                 <item.icon className="mr-2 h-4 w-4" />
                 <span>{item.title}</span>
@@ -80,9 +87,7 @@ export function NavHeader({ data }: NavHeaderProps) {
               <CommandItem
                 className="py-2!"
                 key={item.id}
-                onSelect={() => {
-                  setOpen(false);
-                }}
+                onSelect={() => setOpen(false)}
               >
                 <div className={cn("mr-2 h-3 w-3 rounded-full", item.color)} />
                 <span>{item.title}</span>
@@ -95,9 +100,7 @@ export function NavHeader({ data }: NavHeaderProps) {
               <CommandItem
                 className="py-2!"
                 key={item.id}
-                onSelect={() => {
-                  setOpen(false);
-                }}
+                onSelect={() => setOpen(false)}
               >
                 <item.icon className="mr-2 h-4 w-4" />
                 <span>{item.title}</span>
@@ -110,9 +113,7 @@ export function NavHeader({ data }: NavHeaderProps) {
               <CommandItem
                 className="py-2!"
                 key={item.id}
-                onSelect={() => {
-                  setOpen(false);
-                }}
+                onSelect={() => setOpen(false)}
               >
                 <item.icon className="mr-2 h-4 w-4" />
                 <span>{item.title}</span>
