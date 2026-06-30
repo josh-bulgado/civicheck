@@ -11,6 +11,7 @@ export type Permission =
   // services
   | "services:view"
   | "services:manage"
+
   // requests
   | "requests:view_own"
   | "requests:view_all"
@@ -19,8 +20,10 @@ export type Permission =
   | "requests:archive"
   | "requests:legal"
   | "requests:collect_payment"
+
   // users
   | "users:manage"
+
   // dashboard
   | "dashboard:applicant"
   | "dashboard:staff"

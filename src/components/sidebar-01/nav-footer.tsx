@@ -1,7 +1,6 @@
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
-import { Button } from "~/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,24 +11,11 @@ import {
 import {
   SidebarFooter,
   SidebarMenu,
+  SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "~/components/ui/sidebar";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "~/components/ui/tooltip";
-import {
-  BookmarkPlus,
-  CircleHelp,
-  LogOut,
-  Plus,
-  PlusCircle,
-  Puzzle,
-  Settings,
-  User,
-} from "lucide-react";
+import { LogOut, Settings, User } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
 export function NavFooter({
@@ -41,113 +27,63 @@ export function NavFooter({
     avatar: string;
   };
 }) {
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
+
   return (
-    <SidebarFooter className="p-4">
+    <SidebarFooter className="p-2">
       <SidebarMenu>
         <SidebarMenuItem>
-          <div className="flex items-center gap-2 justify-between">
-            <div className="flex items-center gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={<Avatar className="h-8 w-8 rounded-full" />}
-                >
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-full">CN</AvatarFallback>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="m-2">
-                  <DropdownMenuItem>
-                    <User size={16} className="opacity-80" aria-hidden="true" />
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Settings
-                      size={16}
-                      className="opacity-80"
-                      aria-hidden="true"
-                    />
-                    Settings
-                  </DropdownMenuItem>
-                  <Link to="/logout">
-                    <DropdownMenuItem variant="destructive">
-                      <LogOut
-                        size={16}
-                        className="opacity-80"
-                        aria-hidden="true"
-                      />
-                      Logout
-                    </DropdownMenuItem>
-                  </Link>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <TooltipProvider delay={0}>
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <CircleHelp
-                        size={16}
-                        aria-hidden="true"
-                        className="cursor-pointer opacity-60 hover:opacity-100"
-                      />
-                    }
-                  ></TooltipTrigger>
-                  <TooltipContent
-                    side="top"
-                    className="py-1 px-2 m-2 max-w-[150px] border bg-popover text-popover-foreground"
-                  >
-                    <div className="space-y-1 text-xs">
-                      <p className="font-medium">User Information</p>
-                      <p className="text-muted-foreground">
-                        More details about the current user or section can be
-                        displayed here.
-                      </p>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="rounded-full shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                    aria-label="Open edit menu"
-                  />
-                }
-              >
-                <Plus size={16} aria-hidden="true" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="pb-2">
-                <DropdownMenuLabel>Add New</DropdownMenuLabel>
-                <DropdownMenuItem>
-                  <PlusCircle
-                    size={16}
-                    className="mr-2 opacity-80"
-                    aria-hidden="true"
-                  />
-                  Add New Item
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <SidebarMenuButton
+                  size="lg"
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  tooltip={isCollapsed ? user.name : undefined}
+                />
+              }
+            >
+              <Avatar className="h-8 w-8 rounded-full shrink-0">
+                <AvatarImage src={user.avatar} alt={user.name} />
+                <AvatarFallback className="rounded-full">
+                  {user.name.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              {!isCollapsed && (
+                <div className="flex flex-col min-w-0 text-left">
+                  <span className="truncate text-sm font-medium leading-tight">
+                    {user.name}
+                  </span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {user.email}
+                  </span>
+                </div>
+              )}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="start" className="w-52 m-2">
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium">{user.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuItem>
+                <User size={16} className="opacity-80" aria-hidden="true" />
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Settings size={16} className="opacity-80" aria-hidden="true" />
+                Settings
+              </DropdownMenuItem>
+              <Link to="/logout">
+                <DropdownMenuItem variant="destructive">
+                  <LogOut size={16} className="opacity-80" aria-hidden="true" />
+                  Logout
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <BookmarkPlus
-                    size={16}
-                    className="mr-2 opacity-80"
-                    aria-hidden="true"
-                  />
-                  Add Bookmark
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Puzzle
-                    size={16}
-                    className="mr-2 opacity-80"
-                    aria-hidden="true"
-                  />
-                  Add Integration
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+              </Link>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </SidebarMenuItem>
       </SidebarMenu>
     </SidebarFooter>

@@ -17,6 +17,7 @@ import { NavCollapsible } from "~/components/sidebar-01/nav-collapsible";
 import { NavFooter } from "~/components/sidebar-01/nav-footer";
 import { NavHeader } from "~/components/sidebar-01/nav-header";
 import { NavMain } from "~/components/sidebar-01/nav-main";
+import { usePermissions } from "~/hooks/usePermissions";
 import type { SidebarData } from "./types";
 
 const data: SidebarData = {
@@ -131,38 +132,53 @@ export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sideb
     avatar: "/avatar-01.png",
   } : data.user;
 
-  // Build navMain dynamically based on role
-  const navMain = [];
-  const role = user?.role ?? "applicant";
+  const { can } = usePermissions();
 
-  if (role === "admin") {
+  // Build navMain dynamically based on permissions
+  const navMain = [];
+
+  if (can("services:manage")) {
     navMain.push({
-      id: "admin-dashboard",
-      title: "Admin Dashboard",
-      url: "/admin-dashboard",
+      id: "admin-services",
+      title: "Services Registry",
+      url: "/admin/services",
       icon: LayoutDashboard,
     });
-  } else if (role !== "applicant") {
-    // frontdesk, staff, archive, legal, cashier
+  }
+
+  if (can("dashboard:staff")) {
     navMain.push({
       id: "staff-dashboard",
       title: "Staff Dashboard",
       url: "/staff-dashboard",
       icon: LayoutDashboard,
     });
-  } else {
-    // applicant
+  }
+
+  if (can("services:view")) {
     navMain.push({
       id: "services",
       title: "Browse Services",
       url: "/services",
       icon: IconListDetails,
     });
+  }
+
+  if (can("requests:view_own")) {
     navMain.push({
       id: "my-requests",
       title: "My Requests",
       url: "/my-requests",
       icon: IconProgressCheck,
+    });
+  }
+
+  if (can("requests:view_all")) {
+    navMain.push({
+      id: "request-queue",
+      title: "Request Queue",
+      url: "/requests",
+      icon: IconListDetails,
     });
   }
 

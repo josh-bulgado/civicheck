@@ -1,6 +1,12 @@
 import { useMemo } from "react";
 import { FileText, Settings } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "~/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "~/components/ui/card";
 import { Service } from "../services.types";
 
 interface ServicesStatsCardsProps {
@@ -8,12 +14,17 @@ interface ServicesStatsCardsProps {
 }
 
 export function ServicesStatsCards({ data }: ServicesStatsCardsProps) {
-  const stats = useMemo(() => ({
-    total: data.length,
-    simple: data.filter((s) => s.classification === "simple").length,
-    complex: data.filter((s) => s.classification === "complex").length,
-    highlyTechnical: data.filter((s) => s.classification === "highly_technical").length,
-  }), [data]);
+  const stats = useMemo(
+    () => ({
+      total: data.length,
+      simple: data.filter((s) => s.classification === "simple").length,
+      complex: data.filter((s) => s.classification === "complex").length,
+      highlyTechnical: data.filter(
+        (s) => s.classification === "highly_technical",
+      ).length,
+    }),
+    [data],
+  );
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -27,7 +38,9 @@ export function ServicesStatsCards({ data }: ServicesStatsCardsProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-3xl font-bold text-indigo-950 font-heading">{stats.total}</p>
+          <p className="text-3xl font-bold text-indigo-950 font-heading">
+            {stats.total}
+          </p>
           <CardDescription className="mt-1 text-indigo-600">
             Active services in the Legazpi CCRO system
           </CardDescription>
@@ -41,7 +54,9 @@ export function ServicesStatsCards({ data }: ServicesStatsCardsProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-3xl font-bold text-emerald-950 font-heading">{stats.simple}</p>
+          <p className="text-3xl font-bold text-emerald-950 font-heading">
+            {stats.simple}
+          </p>
           <CardDescription className="mt-1 text-emerald-600">
             Fast turnaround (typically 1–2 hours)
           </CardDescription>
@@ -55,7 +70,9 @@ export function ServicesStatsCards({ data }: ServicesStatsCardsProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-3xl font-bold text-amber-950 font-heading">{stats.complex}</p>
+          <p className="text-3xl font-bold text-amber-950 font-heading">
+            {stats.complex}
+          </p>
           <CardDescription className="mt-1 text-amber-600">
             Requires posting/verification periods
           </CardDescription>
@@ -72,7 +89,9 @@ export function ServicesStatsCards({ data }: ServicesStatsCardsProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-3xl font-bold text-rose-950 font-heading">{stats.highlyTechnical}</p>
+          <p className="text-3xl font-bold text-rose-950 font-heading">
+            {stats.highlyTechnical}
+          </p>
           <CardDescription className="mt-1 text-rose-600">
             Requires court decree or custom reviews
           </CardDescription>
