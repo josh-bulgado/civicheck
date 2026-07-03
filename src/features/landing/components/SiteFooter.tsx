@@ -2,16 +2,16 @@ import { Link } from "@tanstack/react-router";
 
 const SiteFooter = () => {
   return (
-    <footer>
+    <footer className="bg-basalt">
       {/* Main Footer Links */}
-      <div className="bg-[#f1f1f1] border-t border-gray-300">
-        <div className="max-w-[1200px] mx-auto px-4 py-10 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+      <div className="border-b border-white/8">
+        <div className="max-w-[1120px] mx-auto px-5 py-12 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
           {/* Services */}
           <div>
-            <h4 className="font-bold text-[13px] text-[#1b1b1b] uppercase tracking-wider mb-4">
+            <h4 className="font-semibold text-[12px] text-white/40 uppercase tracking-wider mb-5">
               Services
             </h4>
-            <ul className="space-y-2">
+            <ul className="space-y-2.5">
               {[
                 "Birth Certificate",
                 "Marriage Certificate",
@@ -21,7 +21,7 @@ const SiteFooter = () => {
                 <li key={link}>
                   <a
                     href="#"
-                    className="text-[14px] text-[#205493] hover:underline"
+                    className="text-[14px] text-white/60 hover:text-white transition-colors"
                   >
                     {link}
                   </a>
@@ -32,14 +32,14 @@ const SiteFooter = () => {
 
           {/* For Applicants */}
           <div>
-            <h4 className="font-bold text-[13px] text-[#1b1b1b] uppercase tracking-wider mb-4">
+            <h4 className="font-semibold text-[12px] text-white/40 uppercase tracking-wider mb-5">
               For Applicants
             </h4>
-            <ul className="space-y-2">
+            <ul className="space-y-2.5">
               <li>
                 <Link
                   to="/signup"
-                  className="text-[14px] text-[#205493] hover:underline"
+                  className="text-[14px] text-white/60 hover:text-white transition-colors"
                 >
                   Check Requirements
                 </Link>
@@ -47,7 +47,7 @@ const SiteFooter = () => {
               <li>
                 <Link
                   to="/signup"
-                  className="text-[14px] text-[#205493] hover:underline"
+                  className="text-[14px] text-white/60 hover:text-white transition-colors"
                 >
                   Submit a Request
                 </Link>
@@ -56,7 +56,7 @@ const SiteFooter = () => {
                 <Link
                   to="/login"
                   search={{ redirect: "/dashboard" }}
-                  className="text-[14px] text-[#205493] hover:underline"
+                  className="text-[14px] text-white/60 hover:text-white transition-colors"
                 >
                   Track Your Request
                 </Link>
@@ -64,28 +64,20 @@ const SiteFooter = () => {
               <li>
                 <Link
                   to="/signup"
-                  className="text-[14px] text-[#205493] hover:underline"
+                  className="text-[14px] text-white/60 hover:text-white transition-colors"
                 >
                   Create an Account
                 </Link>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="text-[14px] text-[#205493] hover:underline"
-                >
-                  Help &amp; FAQs
-                </a>
               </li>
             </ul>
           </div>
 
           {/* About */}
           <div>
-            <h4 className="font-bold text-[13px] text-[#1b1b1b] uppercase tracking-wider mb-4">
+            <h4 className="font-semibold text-[12px] text-white/40 uppercase tracking-wider mb-5">
               About
             </h4>
-            <ul className="space-y-2">
+            <ul className="space-y-2.5">
               {[
                 "About CCRO",
                 "About CiviCheck",
@@ -95,7 +87,7 @@ const SiteFooter = () => {
                 <li key={link}>
                   <a
                     href="#"
-                    className="text-[14px] text-[#205493] hover:underline"
+                    className="text-[14px] text-white/60 hover:text-white transition-colors"
                   >
                     {link}
                   </a>
@@ -106,15 +98,15 @@ const SiteFooter = () => {
 
           {/* Contact */}
           <div>
-            <h4 className="font-bold text-[13px] text-[#1b1b1b] uppercase tracking-wider mb-4">
+            <h4 className="font-semibold text-[12px] text-white/40 uppercase tracking-wider mb-5">
               Contact
             </h4>
-            <p className="text-[14px] text-[#444] leading-relaxed mb-2">
+            <p className="text-[14px] text-white/60 leading-relaxed mb-2">
               City Civil Registrar Office
               <br />
               City Government of Legazpi
             </p>
-            <p className="text-[13px] text-[#5b616b] italic">
+            <p className="text-[13px] text-white/35 italic">
               Office address, hours, and contact number to be confirmed with
               CCRO.
             </p>
@@ -123,55 +115,50 @@ const SiteFooter = () => {
       </div>
 
       {/* Bottom Bar */}
-      <div className="bg-[#1b1b1b]">
-        <div className="max-w-[1200px] mx-auto px-4 py-5 flex flex-col md:flex-row justify-between items-center gap-4">
-          {/* Logo */}
-          <div className="flex items-center gap-2">
-            <svg
-              className="w-7 h-7 text-white"
-              viewBox="0 0 40 40"
-              fill="currentColor"
-            >
-              <circle
-                cx="20"
-                cy="20"
-                r="18"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              />
-              <path
-                d="M12 20 L18 26 L28 14"
-                stroke="currentColor"
-                strokeWidth="3"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <span
-              className="text-white text-xl font-bold"
-              style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
-            >
-              CiviCheck
-            </span>
-          </div>
+      <div className="max-w-[1120px] mx-auto px-5 py-5 flex flex-col md:flex-row justify-between items-center gap-4">
+        {/* Logo */}
+        <div className="flex items-center gap-2">
+          <svg
+            className="w-6 h-6 text-lagoon"
+            viewBox="0 0 40 40"
+            fill="none"
+          >
+            <rect
+              x="2"
+              y="2"
+              width="36"
+              height="36"
+              rx="8"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            />
+            <path
+              d="M12 20 L18 26 L28 14"
+              stroke="currentColor"
+              strokeWidth="3"
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span className="text-white/70 text-[15px] font-bold tracking-tight">
+            CiviCheck
+          </span>
+        </div>
 
-          {/* Office info */}
-          <p className="text-sm text-white/70 text-center">
-            City Civil Registrar Office · City Government of Legazpi
-          </p>
+        {/* Office info */}
+        <p className="text-[13px] text-white/35 text-center">
+          City Civil Registrar Office · City Government of Legazpi
+        </p>
 
-          {/* Legal Links */}
-          <div className="flex items-center gap-3 text-sm text-white/80">
-            <a href="#" className="hover:underline hover:text-white">
-              Privacy Policy
-            </a>
-            <span className="text-white/30">|</span>
-            <a href="#" className="hover:underline hover:text-white">
-              Accessibility
-            </a>
-          </div>
+        {/* Legal Links */}
+        <div className="flex items-center gap-4 text-[13px] text-white/40">
+          <a href="#" className="hover:text-white/70 transition-colors">
+            Privacy
+          </a>
+          <a href="#" className="hover:text-white/70 transition-colors">
+            Accessibility
+          </a>
         </div>
       </div>
     </footer>

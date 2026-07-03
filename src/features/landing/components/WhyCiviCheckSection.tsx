@@ -10,62 +10,68 @@ import {
 const WhyCiviCheckSection = () => {
   const features = [
     {
-      icon: <ClipboardCheck className="w-7 h-7" />,
-      title: "Clear Requirement Checklists",
-      desc: "Stop guessing. See exactly what to bring, before you leave the house.",
+      icon: <ClipboardCheck className="w-5 h-5" />,
+      title: "Clear requirement checklists",
+      desc: "See exactly what to bring before you leave the house.",
     },
     {
-      icon: <Monitor className="w-7 h-7" />,
-      title: "Real-Time Status Tracking",
-      desc: "Check where your request stands, anytime, online.",
+      icon: <Monitor className="w-5 h-5" />,
+      title: "Real-time status tracking",
+      desc: "Check where your request stands, anytime, from any device.",
     },
     {
-      icon: <Users className="w-7 h-7" />,
-      title: "Online or Walk-In",
-      desc: "Submit digitally, or have CCRO staff encode your request in person. Either way works.",
+      icon: <Users className="w-5 h-5" />,
+      title: "Online or walk-in",
+      desc: "Submit digitally or have staff encode it in person. Either way works.",
     },
     {
-      icon: <CheckCircle2 className="w-7 h-7" />,
-      title: "Fewer Repeat Trips",
-      desc: "Pre-validation catches missing documents early, so you're not turned away at the counter.",
+      icon: <CheckCircle2 className="w-5 h-5" />,
+      title: "Fewer repeat trips",
+      desc: "Pre-validation catches missing documents before you're turned away.",
     },
     {
-      icon: <Bell className="w-7 h-7" />,
-      title: "Timely Notifications",
+      icon: <Bell className="w-5 h-5" />,
+      title: "Timely notifications",
       desc: "Get updates by email and in-system as your request moves forward.",
     },
     {
-      icon: <ShieldCheck className="w-7 h-7" />,
-      title: "Role-Based Access",
+      icon: <ShieldCheck className="w-5 h-5" />,
+      title: "Role-based access",
       desc: "Your information is only visible to authorized CCRO personnel.",
     },
   ];
 
   return (
-    <section className="bg-[#f1f1f1]">
-      <div className="max-w-[1200px] mx-auto px-4 py-14">
-        <div className="text-center mb-10">
-          <h2 className="text-[28px] font-bold text-[#1b1b1b] inline-block relative pb-3">
+    <section className="bg-ash border-t border-basalt/5">
+      <div className="max-w-[1120px] mx-auto px-5 py-20">
+        {/* Section header */}
+        <div className="mb-14">
+          <p className="text-[12px] font-semibold tracking-widest uppercase text-lagoon mb-3">
             Why CiviCheck
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-[3px] bg-[#d4a017]" />
+          </p>
+          <h2 className="font-display text-[clamp(1.75rem,3vw,2.5rem)] text-basalt leading-tight max-w-[400px]">
+            Built to save you a trip
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8">
           {features.map((feature) => (
-            <a
+            <div
               key={feature.title}
-              href="#"
-              className="bg-white p-6 rounded border border-gray-200 hover:shadow-md hover:border-gray-300 transition-all group block"
+              className="flex items-start gap-4"
             >
-              <div className="text-[#205493] mb-4">{feature.icon}</div>
-              <h3 className="text-lg font-bold text-[#1b1b1b] mb-2 group-hover:text-[#205493] transition-colors">
-                {feature.title}
-              </h3>
-              <p className="text-sm text-[#5b616b] leading-relaxed">
-                {feature.desc}
-              </p>
-            </a>
+              <div className="w-10 h-10 rounded-lg bg-lagoon-light flex items-center justify-center text-lagoon shrink-0 mt-0.5">
+                {feature.icon}
+              </div>
+              <div>
+                <h3 className="font-semibold text-[15px] text-basalt mb-1">
+                  {feature.title}
+                </h3>
+                <p className="text-[14px] text-slate leading-relaxed">
+                  {feature.desc}
+                </p>
+              </div>
+            </div>
           ))}
         </div>
       </div>

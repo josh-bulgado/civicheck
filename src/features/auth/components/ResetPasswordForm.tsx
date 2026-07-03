@@ -28,6 +28,7 @@ import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Alert, AlertTitle, AlertDescription } from "~/components/ui/alert";
 import { useState } from "react";
+import TopoPattern from "./TopoPattern";
 
 const formSchema = z
   .object({
@@ -59,21 +60,21 @@ const ResetPasswordForm = () => {
   function onSubmit(data: FormValues) {}
 
   return (
-    <div className="flex min-h-dvh">
+    <div className="auth-page flex min-h-dvh bg-ash">
       {/* Left — Form */}
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
         <div className="w-full max-w-[420px] space-y-8">
           {/* Logo / Brand */}
           <div className="space-y-2">
-            <Link to="/" className="inline-flex items-center gap-2 group">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#003366] text-white">
-                <CheckCircle className="w-5 h-5" />
+            <Link to="/" className="inline-flex items-center gap-2.5 group">
+              <div className="flex items-center justify-center w-9 h-9 rounded-lg border-2 border-lagoon text-lagoon">
+                <CheckCircle className="w-4.5 h-4.5" />
               </div>
-              <span className="text-xl font-bold text-[#003366] tracking-tight">
+              <span className="text-xl font-bold text-basalt tracking-tight">
                 CiviCheck
               </span>
             </Link>
-            <h1 className="text-2xl font-semibold text-gray-900 pt-4">
+            <h1 className="text-2xl font-semibold text-basalt pt-4">
               {isSuccess ? "Password updated!" : "Set a new password"}
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -233,25 +234,21 @@ const ResetPasswordForm = () => {
       </div>
 
       {/* Right — Brand panel (hidden on small screens) */}
-      <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-[#003366] via-[#004080] to-[#1a5276] items-center justify-center relative overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-20 w-64 h-64 rounded-full bg-white/5 blur-xl" />
-          <div className="absolute bottom-32 right-16 w-80 h-80 rounded-full bg-white/5 blur-xl" />
-          <div className="absolute top-1/2 left-1/3 w-40 h-40 rounded-full bg-yellow-400/10 blur-2xl" />
-        </div>
+      <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-basalt via-[#1A3A35] to-lagoon items-center justify-center relative overflow-hidden">
+        <TopoPattern />
         <div className="relative z-10 max-w-md px-12 text-white text-center">
           <div className="flex justify-center mb-8">
-            <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur flex items-center justify-center">
-              <ShieldCheck className="w-10 h-10 text-white/90" />
+            <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur flex items-center justify-center">
+              <ShieldCheck className="w-8 h-8 text-white/90" />
             </div>
           </div>
-          <h2 className="text-3xl font-bold mb-4">Secure Your Account</h2>
-          <p className="text-white/70 text-sm leading-relaxed">
+          <h2 className="font-display text-3xl mb-4">Secure Your Account</h2>
+          <p className="text-white/60 text-sm leading-relaxed">
             Choose a strong password to keep your CiviCheck account secure. Your
             personal information and document requests are protected by
             role-based access controls.
           </p>
-          <div className="mt-8 flex items-center justify-center gap-4 text-xs text-white/50">
+          <div className="mt-8 flex items-center justify-center gap-4 text-xs text-white/35">
             <span>City Civil Registrar Office</span>
             <span>·</span>
             <span>City Government of Legazpi</span>

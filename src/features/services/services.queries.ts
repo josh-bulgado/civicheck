@@ -83,3 +83,27 @@ export const getServiceDetail = createServerFn({ method: "GET" })
     };
   });
 
+export const getAllServicesWithRequirements = createServerFn({ method: "GET" }).handler(
+  async () => {
+    const supabase = getSupabaseServerClient();
+    const { data: services, error: sErr } = await supabase
+      .from("services_registry")
+      .select("*")
+      .order("name", { ascending: true });
+
+    if (sErr) throw new Error(sErr.message);
+
+    const { data: reqs, error: rErr } = await supabase
+      .from("service_requirements_metadata")
+      .select("*");
+
+    if (rErr) throw new Error(rErr.message);
+
+    return {
+      services: services || [],
+      requirements: reqs || [],
+    };
+  }
+);
+
+

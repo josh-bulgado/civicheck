@@ -24,6 +24,7 @@ import {
 } from "~/components/ui/input-group";
 import { Spinner } from "~/components/ui/spinner";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import TopoPattern from "./TopoPattern";
 
 const formSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -48,22 +49,22 @@ const ForgotPasswordForm = () => {
   function onSubmit(data: FormValues) {}
 
   return (
-    <div className="auth-page flex min-h-dvh bg-[#f9fafb]">
+    <div className="auth-page flex min-h-dvh bg-ash">
       {/* Left — Form */}
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
         <div className="w-full max-w-[420px] space-y-8">
           {/* Logo / Brand */}
           <div className="space-y-2">
-            <Link to="/" className="inline-flex items-center gap-2 group">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#1a4480] text-white">
-                <CheckCircle className="w-5 h-5" />
+            <Link to="/" className="inline-flex items-center gap-2.5 group">
+              <div className="flex items-center justify-center w-9 h-9 rounded-lg border-2 border-lagoon text-lagoon">
+                <CheckCircle className="w-4.5 h-4.5" />
               </div>
-              <span className="text-xl font-bold text-[#1a4480] tracking-tight">
+              <span className="text-xl font-bold text-basalt tracking-tight">
                 CiviCheck
               </span>
             </Link>
 
-            <h1 className="text-2xl font-semibold text-[#1b1b1b] pt-4">
+            <h1 className="text-2xl font-semibold text-basalt pt-4">
               {isSuccess ? "Check your email" : "Forgot your password?"}
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -159,25 +160,21 @@ const ForgotPasswordForm = () => {
       </div>
 
       {/* Right — Brand panel (hidden on small screens) */}
-      <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-[#1a4480] via-[#005ea2] to-[#0b4778] items-center justify-center relative overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-20 w-64 h-64 rounded-full bg-white/5 blur-xl" />
-          <div className="absolute bottom-32 right-16 w-80 h-80 rounded-full bg-white/5 blur-xl" />
-          <div className="absolute top-1/2 left-1/3 w-40 h-40 rounded-full bg-yellow-400/10 blur-2xl" />
-        </div>
+      <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-basalt via-[#1A3A35] to-lagoon items-center justify-center relative overflow-hidden">
+        <TopoPattern />
         <div className="relative z-10 max-w-md px-12 text-white text-center">
           <div className="flex justify-center mb-8">
-            <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur flex items-center justify-center">
-              <KeyRound className="w-10 h-10 text-white/90" />
+            <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur flex items-center justify-center">
+              <KeyRound className="w-8 h-8 text-white/90" />
             </div>
           </div>
-          <h2 className="text-3xl font-bold mb-4">Reset Your Password</h2>
-          <p className="text-white/70 text-sm leading-relaxed">
+          <h2 className="font-display text-3xl mb-4">Reset Your Password</h2>
+          <p className="text-white/60 text-sm leading-relaxed">
             We'll help you get back into your account. Just enter the email
             address you registered with and we'll send you a secure link to
             create a new password.
           </p>
-          <div className="mt-8 flex items-center justify-center gap-4 text-xs text-white/50">
+          <div className="mt-8 flex items-center justify-center gap-4 text-xs text-white/35">
             <span>City Civil Registrar Office</span>
             <span>·</span>
             <span>City Government of Legazpi</span>

@@ -28,6 +28,7 @@ import {
 import { useSignUp } from "../hooks/useSignUp";
 import { Spinner } from "~/components/ui/spinner";
 import { Button } from "~/components/ui/button";
+import TopoPattern from "./TopoPattern";
 
 const formSchema = z
   .object({
@@ -64,23 +65,19 @@ const RegisterForm = () => {
   function onSubmit(data: FormValues) {}
 
   return (
-    <div className="auth-page flex min-h-dvh bg-[#f9fafb]">
+    <div className="auth-page flex min-h-dvh bg-ash">
       {/* Left — Brand panel (hidden on small screens) */}
-      <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-[#1a4480] via-[#005ea2] to-[#0b4778] items-center justify-center relative overflow-hidden">
-        {/* Decorative elements */}
-        <div className="absolute inset-0">
-          <div className="absolute top-20 right-20 w-64 h-64 rounded-full bg-white/5 blur-xl" />
-          <div className="absolute bottom-32 left-16 w-80 h-80 rounded-full bg-white/5 blur-xl" />
-          <div className="absolute top-1/3 right-1/4 w-40 h-40 rounded-full bg-yellow-400/10 blur-2xl" />
-        </div>
+      <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-basalt via-[#1A3A35] to-lagoon items-center justify-center relative overflow-hidden">
+        {/* Topographic contour pattern */}
+        <TopoPattern />
         <div className="relative z-10 max-w-md px-12 text-white text-center">
           <div className="flex justify-center mb-8">
-            <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur flex items-center justify-center">
-              <ShieldCheck className="w-10 h-10 text-white/90" />
+            <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur flex items-center justify-center">
+              <ShieldCheck className="w-8 h-8 text-white/90" />
             </div>
           </div>
-          <h2 className="text-3xl font-bold mb-4">Create Your Account</h2>
-          <p className="text-white/70 text-sm leading-relaxed">
+          <h2 className="font-display text-3xl mb-4">Create Your Account</h2>
+          <p className="text-white/60 text-sm leading-relaxed">
             Join CiviCheck to check your requirements before your visit, submit
             requests online, and track their status from submission to release —
             no more repeat trips to the CCRO.
@@ -93,14 +90,14 @@ const RegisterForm = () => {
             ].map((item) => (
               <div
                 key={item}
-                className="flex items-center gap-3 text-sm text-white/80"
+                className="flex items-center gap-3 text-sm text-white/70"
               >
-                <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                <CheckCircle className="w-4 h-4 text-lagoon shrink-0" />
                 <span>{item}</span>
               </div>
             ))}
           </div>
-          <div className="mt-8 flex items-center justify-center gap-4 text-xs text-white/50">
+          <div className="mt-8 flex items-center justify-center gap-4 text-xs text-white/35">
             <span>City Civil Registrar Office</span>
             <span>·</span>
             <span>City Government of Legazpi</span>
@@ -113,15 +110,15 @@ const RegisterForm = () => {
         <div className="w-full max-w-[420px] space-y-8">
           {/* Logo / Brand */}
           <div className="space-y-2">
-            <Link to="/" className="inline-flex items-center gap-2 group">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#1a4480] text-white">
-                <CheckCircle className="w-5 h-5" />
+            <Link to="/" className="inline-flex items-center gap-2.5 group">
+              <div className="flex items-center justify-center w-9 h-9 rounded-lg border-2 border-lagoon text-lagoon">
+                <CheckCircle className="w-4.5 h-4.5" />
               </div>
-              <span className="text-xl font-bold text-[#1a4480] tracking-tight">
+              <span className="text-xl font-bold text-basalt tracking-tight">
                 CiviCheck
               </span>
             </Link>
-            <h1 className="text-2xl font-semibold text-[#1b1b1b] pt-4">
+            <h1 className="text-2xl font-semibold text-basalt pt-4">
               Create your account
             </h1>
             <p className="text-sm text-muted-foreground">
