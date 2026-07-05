@@ -122,9 +122,10 @@ export function CaseSelector({ services, selectedCode, onSelect }: CaseSelectorP
                 key={a}
                 className={`flex items-center gap-3 rounded-lg border p-3.5 cursor-pointer transition-colors ${
                   age === a
-                    ? "border-[#1a4480] bg-[#1a4480]/5"
+                    ? "border-gray-200"
                     : "border-gray-200 hover:bg-gray-50"
                 }`}
+                style={age === a ? { borderColor: "var(--svc-primary)", background: "var(--svc-primary-soft)" } : undefined}
               >
                 <RadioGroupItem value={a} id={`age-${a}`} />
                 <Label htmlFor={`age-${a}`} className="cursor-pointer font-medium text-sm">
@@ -152,9 +153,10 @@ export function CaseSelector({ services, selectedCode, onSelect }: CaseSelectorP
                 key={p}
                 className={`flex items-center gap-3 rounded-lg border p-3.5 cursor-pointer transition-colors ${
                   program === p
-                    ? "border-[#1a4480] bg-[#1a4480]/5"
+                    ? "border-gray-200"
                     : "border-gray-200 hover:bg-gray-50"
                 }`}
+                style={program === p ? { borderColor: "var(--svc-primary)", background: "var(--svc-primary-soft)" } : undefined}
               >
                 <RadioGroupItem value={p} id={`prog-${p}`} />
                 <Label htmlFor={`prog-${p}`} className="cursor-pointer text-sm">
@@ -189,9 +191,10 @@ export function CaseSelector({ services, selectedCode, onSelect }: CaseSelectorP
                   key={m}
                   className={`flex items-center gap-3 rounded-lg border p-3.5 cursor-pointer transition-colors ${
                     marital === m
-                      ? "border-[#1a4480] bg-[#1a4480]/5"
+                      ? "border-gray-200"
                       : "border-gray-200 hover:bg-gray-50"
                   }`}
+                  style={marital === m ? { borderColor: "var(--svc-primary)", background: "var(--svc-primary-soft)" } : undefined}
                 >
                   <RadioGroupItem value={m} id={`marital-${m}`} />
                   <Label htmlFor={`marital-${m}`} className="cursor-pointer text-sm">
@@ -211,7 +214,7 @@ export function CaseSelector({ services, selectedCode, onSelect }: CaseSelectorP
 
       {/* Selected result summary */}
       {selectedService && (
-        <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">
+        <div className="rounded-lg px-4 py-3 text-sm" style={{ background: "var(--svc-cta-soft)", border: "1px solid var(--svc-cta)", color: "var(--svc-cta)" }}>
           <span className="font-semibold">Selected: </span>
           {selectedService.name} —{" "}
           <span className="font-semibold">

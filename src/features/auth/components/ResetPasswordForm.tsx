@@ -57,7 +57,13 @@ const ResetPasswordForm = () => {
     },
   });
 
-  function onSubmit(data: FormValues) {}
+  function onSubmit(data: FormValues) {
+    resetPasswordMutation.mutate({
+      data: {
+        password: data.password,
+      },
+    });
+  }
 
   return (
     <div className="auth-page flex min-h-dvh bg-ash">

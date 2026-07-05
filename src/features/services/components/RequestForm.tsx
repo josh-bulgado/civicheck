@@ -175,7 +175,14 @@ export function RequestForm({ values, onChange, onSubmit, submitting }: RequestF
           </div>
         </div>
 
-        <Button type="submit" disabled={submitting} className="w-full mt-4">
+        <Button
+          type="submit"
+          disabled={submitting}
+          className="w-full mt-4 text-white border-transparent hover:opacity-90 transition-opacity"
+          style={{
+            background: submitting ? undefined : "var(--svc-cta)",
+          }}
+        >
           {submitting ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />

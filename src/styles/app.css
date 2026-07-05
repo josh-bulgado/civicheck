@@ -3,6 +3,7 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/manrope";
 @import "@fontsource/dm-serif-text";
+@import "./service-tokens.css";
 
 @custom-variant dark (&:is(.dark *));
 

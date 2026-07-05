@@ -62,7 +62,16 @@ const RegisterForm = () => {
     },
   });
 
-  function onSubmit(data: FormValues) {}
+  function onSubmit(data: FormValues) {
+    signupMutation.mutate({
+      data: {
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+      },
+    });
+  }
 
   return (
     <div className="auth-page flex min-h-dvh bg-ash">
@@ -127,13 +136,15 @@ const RegisterForm = () => {
           </div>
 
           {/* Success message */}
-          {signupMutation.status === "success" && (
+          {signupMutation.status === "success" && signupMutation.data && !signupMutation.data.error && (
             <div className="rounded-lg border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-800">
               <div className="flex items-start gap-3">
                 <CheckCircle className="w-5 h-5 shrink-0 mt-0.5 text-emerald-600" />
                 <div>
                   <p className="font-medium">Account created!</p>
-                  <p className="mt-1">{signupMutation.data?.message}</p>
+                  <p className="mt-1">
+                    {signupMutation.data.message || "Please check your email to confirm your account."}
+                  </p>
                 </div>
               </div>
             </div>
@@ -141,6 +152,12 @@ const RegisterForm = () => {
 
           {/* Form */}
           <form onSubmit={form.handleSubmit(onSubmit)}>
+            {/* Server error */}
+            {signupMutation.data?.error && (
+              <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800 mb-4">
+                {signupMutation.data.message}
+              </div>
+            )}
             <FieldGroup>
               <div className="grid grid-cols-2 gap-4">
                 <Controller
@@ -307,10 +324,10 @@ const RegisterForm = () => {
                 disabled={signupMutation.status === "pending"}
               >
                 {signupMutation.status === "pending" ? (
-                  <div>
-                    <Spinner />
-                    Creating account
-                  </div>
+                  <span className="flex items-center justify-center gap-2">
+                    <Spinner className="h-4 w-4 shrink-0" />
+                    Creating account...
+                  </span>
                 ) : (
                   "Create account"
                 )}

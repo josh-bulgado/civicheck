@@ -13,8 +13,10 @@ export function useSignUp() {
       // Check for your custom return object
       if (ctx.data && !ctx.data.error) {
         await router.invalidate();
-        // Use the returned URL
-        await router.navigate({ to: ctx.data.redirectUrl });
+        if (ctx.data.redirectUrl) {
+          // Use the returned URL
+          await router.navigate({ to: ctx.data.redirectUrl });
+        }
         return;
       }
 

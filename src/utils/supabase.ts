@@ -1,5 +1,6 @@
 import { getCookies, setCookie } from "@tanstack/react-start/server";
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 
 export function getSupabaseServerClient() {
   return createServerClient(
@@ -22,3 +23,17 @@ export function getSupabaseServerClient() {
     },
   );
 }
+
+export function getSupabaseAdminClient() {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceRoleKey) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is not defined in the environment variables");
+  }
+  return createClient(process.env.SUPABASE_URL!, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+}
+

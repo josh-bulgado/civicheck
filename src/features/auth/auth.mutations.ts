@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getSupabaseServerClient } from "~/utils/supabase";
+import { getSupabaseServerClient, getSupabaseAdminClient } from "~/utils/supabase";
+import { sendEmail } from "~/utils/resend";
 
 export const loginWithEmailFn = createServerFn({ method: "POST" })
   .validator((d: { email: string; password: string }) => d)
@@ -51,13 +52,24 @@ export const loginWithOAuthFn = createServerFn({ method: "POST" })
 
 export const signupFn = createServerFn({ method: "POST" })
   .validator(
-    (d: { email: string; password: string; redirectUrl?: string }) => d,
+    (d: {
+      email: string;
+      password: string;
+      firstName: string;
+      lastName: string;
+      redirectUrl?: string;
+    }) => d,
   )
   .handler(async ({ data }) => {
-    const supabase = getSupabaseServerClient();
-    const { error } = await supabase.auth.signUp({
+    const adminSupabase = getSupabaseAdminClient();
+    const { data: signUpData, error } = await adminSupabase.auth.admin.createUser({
       email: data.email,
       password: data.password,
+      email_confirm: false,
+      user_metadata: {
+        first_name: data.firstName,
+        last_name: data.lastName,
+      },
     });
 
     if (error) {
@@ -71,8 +83,59 @@ export const signupFn = createServerFn({ method: "POST" })
       };
     }
 
-    // Redirect to the prev page stored in the "redirect" search param
-    return { error: false, redirectUrl: data.redirectUrl || "/" };
+    // Generate signup verification link
+    const { data: linkData, error: linkError } = await adminSupabase.auth.admin.generateLink({
+      type: "signup",
+      email: data.email,
+      password: data.password,
+      options: {
+        redirectTo: `${process.env.APP_URL || "http://localhost:3000"}/auth/callback`,
+      },
+    });
+
+    if (linkError) {
+      return {
+        error: true,
+        message: linkError.message || "Failed to generate email confirmation link.",
+      };
+    }
+
+    try {
+      const actionLink = linkData.properties?.action_link;
+      if (!actionLink) {
+        throw new Error("No action link was returned from Supabase Auth.");
+      }
+
+      await sendEmail({
+        to: data.email,
+        subject: "Confirm your CiviCheck Account",
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+            <h2 style="color: #0D5E53;">Confirm your CiviCheck account</h2>
+            <p>Thank you for signing up for CiviCheck. Please click the button below to confirm your email address and activate your account:</p>
+            <div style="margin: 30px 0;">
+              <a href="${actionLink}" style="background-color: #0D5E53; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Confirm Email Address</a>
+            </div>
+            <p style="color: #6b7280; font-size: 14px;">If the button doesn't work, you can copy and paste the following link into your browser:</p>
+            <p style="color: #6b7280; font-size: 14px; word-break: break-all;">${actionLink}</p>
+            <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+            <p style="color: #9ca3af; font-size: 12px;">City Civil Registrar Office · City Government of Legazpi</p>
+          </div>
+        `,
+      });
+    } catch (sendError: any) {
+      console.error("Resend sending error:", sendError);
+      return {
+        error: true,
+        message: `Account created, but failed to send verification email: ${sendError.message}`,
+      };
+    }
+
+    return {
+      error: false,
+      message: "Please check your email to confirm your account before signing in.",
+      redirectUrl: undefined,
+    };
   });
 
 export const resetPasswordFn = createServerFn({ method: "POST" })
@@ -103,9 +166,15 @@ export const resetPasswordFn = createServerFn({ method: "POST" })
 export const forgotPasswordFn = createServerFn({ method: "POST" })
   .validator((d: { email: string }) => d)
   .handler(async ({ data }) => {
-    const supabase = getSupabaseServerClient();
-    const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
-      redirectTo: `${process.env.SUPABASE_URL ? "http://localhost:3000" : "http://localhost:3000"}/reset-password`,
+    const adminSupabase = getSupabaseAdminClient();
+    
+    // Generate recovery link
+    const { data: linkData, error } = await adminSupabase.auth.admin.generateLink({
+      type: "recovery",
+      email: data.email,
+      options: {
+        redirectTo: `${process.env.APP_URL || "http://localhost:3000"}/reset-password`,
+      },
     });
 
     if (error) {
@@ -116,6 +185,37 @@ export const forgotPasswordFn = createServerFn({ method: "POST" })
       return {
         error: true,
         message: cleanMessage,
+      };
+    }
+
+    try {
+      const actionLink = linkData.properties?.action_link;
+      if (!actionLink) {
+        throw new Error("No action link was returned from Supabase Auth.");
+      }
+
+      await sendEmail({
+        to: data.email,
+        subject: "Reset your CiviCheck Password",
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+            <h2 style="color: #0D5E53;">Reset your CiviCheck password</h2>
+            <p>We received a request to reset your password. Please click the button below to set a new password:</p>
+            <div style="margin: 30px 0;">
+              <a href="${actionLink}" style="background-color: #0D5E53; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Reset Password</a>
+            </div>
+            <p style="color: #6b7280; font-size: 14px;">If the button doesn't work, you can copy and paste the following link into your browser:</p>
+            <p style="color: #6b7280; font-size: 14px; word-break: break-all;">${actionLink}</p>
+            <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+            <p style="color: #9ca3af; font-size: 12px;">City Civil Registrar Office · City Government of Legazpi</p>
+          </div>
+        `,
+      });
+    } catch (sendError: any) {
+      console.error("Resend sending error:", sendError);
+      return {
+        error: true,
+        message: `Failed to send reset password email: ${sendError.message}`,
       };
     }
 

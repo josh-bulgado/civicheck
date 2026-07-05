@@ -46,7 +46,13 @@ const ForgotPasswordForm = () => {
 
   const email = form.watch("email");
 
-  function onSubmit(data: FormValues) {}
+  function onSubmit(data: FormValues) {
+    forgotPasswordMutation.mutate({
+      data: {
+        email: data.email,
+      },
+    });
+  }
 
   return (
     <div className="auth-page flex min-h-dvh bg-ash">

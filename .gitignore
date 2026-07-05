@@ -45,6 +45,7 @@ pids
 .agent/
 .agents/
 .gemini/
+skills-lock.json
 tmp/
 temp/
 *.tsbuildinfo
