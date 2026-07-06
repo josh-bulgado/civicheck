@@ -2,6 +2,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -42,157 +43,169 @@ const PURPOSES = [
 
 export function RequestForm({ values, onChange, onSubmit, submitting }: RequestFormProps) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-xs">
-      <form onSubmit={onSubmit} className="space-y-4">
-        <h2 className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-2">
+    <Card size="sm">
+      <CardHeader className="pb-3 border-b border-border">
+        <CardTitle className="font-bold text-base">
           Request Details
-        </h2>
+        </CardTitle>
+      </CardHeader>
+      
+      <CardContent className="pt-4">
+        <form onSubmit={onSubmit} className="space-y-4">
+          {/* Subject Name */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              Subject of the document
+            </h3>
 
-        {/* Subject Name */}
-        <div className="space-y-3">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            Subject of the Document
-          </p>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="firstName" className="text-xs font-medium text-muted-foreground">First Name <span className="text-primary">*</span></Label>
+                <Input
+                  id="firstName"
+                  value={values.subjectFirstName}
+                  onChange={(e) => onChange("subjectFirstName", e.target.value)}
+                  placeholder="e.g. Juan"
+                  required
+                  className="h-9 text-xs"
+                />
+              </div>
 
-          <div className="space-y-1">
-            <Label htmlFor="firstName">First Name <span className="text-red-500">*</span></Label>
-            <Input
-              id="firstName"
-              value={values.subjectFirstName}
-              onChange={(e) => onChange("subjectFirstName", e.target.value)}
-              placeholder="e.g. Juan"
-              required
-            />
+              <div className="space-y-1.5">
+                <Label htmlFor="middleName" className="text-xs font-medium text-muted-foreground">Middle Name</Label>
+                <Input
+                  id="middleName"
+                  value={values.subjectMiddleName}
+                  onChange={(e) => onChange("subjectMiddleName", e.target.value)}
+                  placeholder="e.g. Santos"
+                  className="h-9 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="lastName" className="text-xs font-medium text-muted-foreground">Last Name <span className="text-primary">*</span></Label>
+                <Input
+                  id="lastName"
+                  value={values.subjectLastName}
+                  onChange={(e) => onChange("subjectLastName", e.target.value)}
+                  placeholder="e.g. Dela Cruz"
+                  required
+                  className="h-9 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="suffix" className="text-xs font-medium text-muted-foreground">Suffix</Label>
+                <Input
+                  id="suffix"
+                  value={values.subjectSuffix}
+                  onChange={(e) => onChange("subjectSuffix", e.target.value)}
+                  placeholder="e.g. Jr."
+                  className="h-9 text-xs"
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label htmlFor="middleName">Middle Name</Label>
-              <Input
-                id="middleName"
-                value={values.subjectMiddleName}
-                onChange={(e) => onChange("subjectMiddleName", e.target.value)}
-                placeholder="e.g. Santos"
+          {/* Event Details */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              Event information
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="eventDate" className="text-xs font-medium text-muted-foreground">Date of Event <span className="text-primary">*</span></Label>
+                <Input
+                  id="eventDate"
+                  type="date"
+                  value={values.eventDate}
+                  onChange={(e) => onChange("eventDate", e.target.value)}
+                  required
+                  className="h-9 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="eventPlace" className="text-xs font-medium text-muted-foreground">Place of Event <span className="text-primary">*</span></Label>
+                <Input
+                  id="eventPlace"
+                  value={values.eventPlace}
+                  onChange={(e) => onChange("eventPlace", e.target.value)}
+                  placeholder="e.g. Legazpi City, Albay"
+                  required
+                  className="h-9 text-xs"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Purpose */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              Purpose & notes
+            </h3>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="purpose" className="text-xs font-medium text-muted-foreground">Purpose of Request</Label>
+              <Select
+                value={values.purpose}
+                onValueChange={(val) => onChange("purpose", val ?? "")}
+              >
+                <SelectTrigger id="purpose" className="h-9 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PURPOSES.map((p) => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {values.purpose === "Other" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="otherPurpose" className="text-xs font-medium text-muted-foreground">Specify Purpose <span className="text-primary">*</span></Label>
+                <Input
+                  id="otherPurpose"
+                  value={values.otherPurpose}
+                  onChange={(e) => onChange("otherPurpose", e.target.value)}
+                  placeholder="Describe purpose"
+                  required
+                  className="h-9 text-xs"
+                />
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <Label htmlFor="notes" className="text-xs font-medium text-muted-foreground">Additional Notes (optional)</Label>
+              <Textarea
+                id="notes"
+                value={values.additionalNotes}
+                onChange={(e) => onChange("additionalNotes", e.target.value)}
+                placeholder="Any special requests or instructions..."
+                rows={2}
+                className="text-xs"
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="lastName">Last Name <span className="text-red-500">*</span></Label>
-              <Input
-                id="lastName"
-                value={values.subjectLastName}
-                onChange={(e) => onChange("subjectLastName", e.target.value)}
-                placeholder="e.g. Dela Cruz"
-                required
-              />
-            </div>
           </div>
 
-          <div className="space-y-1">
-            <Label htmlFor="suffix">Suffix (optional)</Label>
-            <Input
-              id="suffix"
-              value={values.subjectSuffix}
-              onChange={(e) => onChange("subjectSuffix", e.target.value)}
-              placeholder="e.g. Jr., III"
-            />
-          </div>
-        </div>
-
-        {/* Event Details */}
-        <div className="space-y-3 pt-2">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            Event Information
-          </p>
-
-          <div className="space-y-1">
-            <Label htmlFor="eventDate">Date of Event <span className="text-red-500">*</span></Label>
-            <Input
-              id="eventDate"
-              type="date"
-              value={values.eventDate}
-              onChange={(e) => onChange("eventDate", e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="eventPlace">Place of Event <span className="text-red-500">*</span></Label>
-            <Input
-              id="eventPlace"
-              value={values.eventPlace}
-              onChange={(e) => onChange("eventPlace", e.target.value)}
-              placeholder="e.g. Legazpi City, Albay"
-              required
-            />
-          </div>
-        </div>
-
-        {/* Purpose */}
-        <div className="space-y-3 pt-2">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            Purpose & Notes
-          </p>
-
-          <div className="space-y-1">
-            <Label htmlFor="purpose">Purpose of Request</Label>
-            <Select
-              value={values.purpose}
-              onValueChange={(val) => onChange("purpose", val ?? "")}
-            >
-              <SelectTrigger id="purpose">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PURPOSES.map((p) => (
-                  <SelectItem key={p} value={p}>{p}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {values.purpose === "Other" && (
-            <div className="space-y-1">
-              <Label htmlFor="otherPurpose">Specify Purpose <span className="text-red-500">*</span></Label>
-              <Input
-                id="otherPurpose"
-                value={values.otherPurpose}
-                onChange={(e) => onChange("otherPurpose", e.target.value)}
-                placeholder="Describe purpose"
-                required
-              />
-            </div>
-          )}
-
-          <div className="space-y-1">
-            <Label htmlFor="notes">Additional Notes (optional)</Label>
-            <Textarea
-              id="notes"
-              value={values.additionalNotes}
-              onChange={(e) => onChange("additionalNotes", e.target.value)}
-              placeholder="Any special requests or instructions..."
-              rows={2}
-            />
-          </div>
-        </div>
-
-        <Button
-          type="submit"
-          disabled={submitting}
-          className="w-full mt-4 text-white border-transparent hover:opacity-90 transition-opacity"
-          style={{
-            background: submitting ? undefined : "var(--svc-cta)",
-          }}
-        >
-          {submitting ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Submitting Request...
-            </>
-          ) : (
-            "Submit Request Intent"
-          )}
-        </Button>
-      </form>
-    </div>
+          <Button
+            type="submit"
+            disabled={submitting}
+            className="w-full mt-4"
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Submitting Request...
+              </>
+            ) : (
+              "Submit Request Intent"
+            )}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

@@ -62,7 +62,7 @@ export const signupFn = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const adminSupabase = getSupabaseAdminClient();
-    const { data: signUpData, error } = await adminSupabase.auth.admin.createUser({
+    let signUpResult = await adminSupabase.auth.admin.createUser({
       email: data.email,
       password: data.password,
       email_confirm: false,
@@ -72,11 +72,40 @@ export const signupFn = createServerFn({ method: "POST" })
       },
     });
 
-    if (error) {
-      const isJsonEmpty = error.message === "{}" || !error.message;
+    if (signUpResult.error) {
+      const isAlreadyRegistered = signUpResult.error.message.includes("already been registered") || 
+                                  signUpResult.error.message.includes("already exists");
+      
+      if (isAlreadyRegistered) {
+        // Fetch users to check if this existing user is unconfirmed
+        const { data: { users }, error: listError } = await adminSupabase.auth.admin.listUsers({
+          perPage: 1000
+        });
+
+        const existingUser = users?.find(u => u.email?.toLowerCase() === data.email.toLowerCase());
+        
+        // If the user exists but has not confirmed their email, delete it so they can retry registration
+        if (existingUser && !existingUser.email_confirmed_at) {
+          await adminSupabase.auth.admin.deleteUser(existingUser.id);
+          
+          signUpResult = await adminSupabase.auth.admin.createUser({
+            email: data.email,
+            password: data.password,
+            email_confirm: false,
+            user_metadata: {
+              first_name: data.firstName,
+              last_name: data.lastName,
+            },
+          });
+        }
+      }
+    }
+
+    if (signUpResult.error) {
+      const isJsonEmpty = signUpResult.error.message === "{}" || !signUpResult.error.message;
       const cleanMessage = isJsonEmpty
         ? "An unexpected registration error occurred. Please check your SMTP configuration in the Supabase Dashboard."
-        : error.message;
+        : signUpResult.error.message;
       return {
         error: true,
         message: cleanMessage,
@@ -116,7 +145,7 @@ export const signupFn = createServerFn({ method: "POST" })
             <div style="margin: 30px 0;">
               <a href="${actionLink}" style="background-color: #0D5E53; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Confirm Email Address</a>
             </div>
-            <p style="color: #6b7280; font-size: 14px;">If the button doesn't work, you can copy and paste the following link into your browser:</p>
+            <p style="color: #6b7280; font-size: 14px;">If the button doesn't work, you can <a href="${actionLink}" style="color: #0D5E53; text-decoration: underline;">click here</a> or copy and paste the following link into your browser:</p>
             <p style="color: #6b7280; font-size: 14px; word-break: break-all;">${actionLink}</p>
             <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
             <p style="color: #9ca3af; font-size: 12px;">City Civil Registrar Office · City Government of Legazpi</p>
@@ -204,7 +233,7 @@ export const forgotPasswordFn = createServerFn({ method: "POST" })
             <div style="margin: 30px 0;">
               <a href="${actionLink}" style="background-color: #0D5E53; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Reset Password</a>
             </div>
-            <p style="color: #6b7280; font-size: 14px;">If the button doesn't work, you can copy and paste the following link into your browser:</p>
+            <p style="color: #6b7280; font-size: 14px;">If the button doesn't work, you can <a href="${actionLink}" style="color: #0D5E53; text-decoration: underline;">click here</a> or copy and paste the following link into your browser:</p>
             <p style="color: #6b7280; font-size: 14px; word-break: break-all;">${actionLink}</p>
             <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
             <p style="color: #9ca3af; font-size: 12px;">City Civil Registrar Office · City Government of Legazpi</p>

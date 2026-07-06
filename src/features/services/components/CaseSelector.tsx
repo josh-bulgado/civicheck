@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
 import { Label } from "~/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 
 interface Service {
   service_code: string;
@@ -98,130 +99,129 @@ export function CaseSelector({ services, selectedCode, onSelect }: CaseSelectorP
   const selectedService = services.find((s) => s.service_code === selectedCode);
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-xs space-y-6">
-      <div>
-        <h2 className="text-lg font-bold text-gray-900">Select Your Case</h2>
-        <p className="text-xs text-muted-foreground mt-1">
+    <Card size="sm">
+      <CardHeader className="pb-3 border-b border-border">
+        <CardTitle className="font-bold text-base text-foreground">Select Your Case</CardTitle>
+        <p className="text-xs text-muted-foreground">
           Answer the questions below to find the right service for your situation.
         </p>
-      </div>
+      </CardHeader>
 
-      {/* Step 1: Age */}
-      {steps.hasAge && (
-        <div className="space-y-3">
-          <p className="text-sm font-semibold text-gray-700">
-            1. Age of the person to be registered
-          </p>
-          <RadioGroup
-            value={age ?? ""}
-            onValueChange={handleAge}
-            className="grid grid-cols-2 gap-3"
-          >
-            {steps.ages.map((a) => (
-              <label
-                key={a}
-                className={`flex items-center gap-3 rounded-lg border p-3.5 cursor-pointer transition-colors ${
-                  age === a
-                    ? "border-gray-200"
-                    : "border-gray-200 hover:bg-gray-50"
-                }`}
-                style={age === a ? { borderColor: "var(--svc-primary)", background: "var(--svc-primary-soft)" } : undefined}
-              >
-                <RadioGroupItem value={a} id={`age-${a}`} />
-                <Label htmlFor={`age-${a}`} className="cursor-pointer font-medium text-sm">
-                  {a === "0-79" ? "0 – 79 years old" : "80 years old and above"}
-                </Label>
-              </label>
-            ))}
-          </RadioGroup>
-        </div>
-      )}
-
-      {/* Step 2: Program (only after age picked) */}
-      {steps.hasProgram && age && (
-        <div className="space-y-3">
-          <p className="text-sm font-semibold text-gray-700">
-            2. Registration program
-          </p>
-          <RadioGroup
-            value={program ?? ""}
-            onValueChange={handleProgram}
-            className="grid grid-cols-2 gap-3"
-          >
-            {steps.programs.map((p) => (
-              <label
-                key={p}
-                className={`flex items-center gap-3 rounded-lg border p-3.5 cursor-pointer transition-colors ${
-                  program === p
-                    ? "border-gray-200"
-                    : "border-gray-200 hover:bg-gray-50"
-                }`}
-                style={program === p ? { borderColor: "var(--svc-primary)", background: "var(--svc-primary-soft)" } : undefined}
-              >
-                <RadioGroupItem value={p} id={`prog-${p}`} />
-                <Label htmlFor={`prog-${p}`} className="cursor-pointer text-sm">
-                  <span className="font-medium">
-                    {p === "brap" ? "Under BRAP" : "Normal"}
-                  </span>
-                  <span className="block text-xs text-gray-500 mt-0.5">
-                    {p === "brap" ? "Free — PSA assisted program" : "Standard registration"}
-                  </span>
-                </Label>
-              </label>
-            ))}
-          </RadioGroup>
-        </div>
-      )}
-
-      {/* Step 3: Marital status — shown after program=normal, OR directly if no age/program steps */}
-      {steps.hasMarital && (program === "normal" || (!steps.hasAge && !steps.hasProgram)) && (
-        <div className="space-y-3">
-          <p className="text-sm font-semibold text-gray-700">
-            {steps.hasAge || steps.hasProgram ? "3." : "1."} Status of the child
-          </p>
-          <RadioGroup
-            value={marital ?? ""}
-            onValueChange={handleMarital}
-            className="grid grid-cols-2 gap-3"
-          >
-            {steps.maritalStatuses.map((m) => {
-              const match = services.find((s) => matches(s.name, age, program, m));
-              return (
+      <CardContent className="pt-4 space-y-6">
+        {/* Step 1: Age */}
+        {steps.hasAge && (
+          <div className="space-y-3">
+            <p className="text-sm font-semibold text-gray-700">
+              1. Age of the person to be registered
+            </p>
+            <RadioGroup
+              value={age ?? ""}
+              onValueChange={handleAge}
+              className="grid grid-cols-2 gap-3"
+            >
+              {steps.ages.map((a) => (
                 <label
-                  key={m}
+                  key={a}
                   className={`flex items-center gap-3 rounded-lg border p-3.5 cursor-pointer transition-colors ${
-                    marital === m
-                      ? "border-gray-200"
-                      : "border-gray-200 hover:bg-gray-50"
+                    age === a
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border hover:bg-accent hover:text-accent-foreground text-foreground"
                   }`}
-                  style={marital === m ? { borderColor: "var(--svc-primary)", background: "var(--svc-primary-soft)" } : undefined}
                 >
-                  <RadioGroupItem value={m} id={`marital-${m}`} />
-                  <Label htmlFor={`marital-${m}`} className="cursor-pointer text-sm">
-                    <span className="font-medium capitalize">{m} Child</span>
-                    {match && (
-                      <span className="block text-xs text-gray-500 mt-0.5">
-                        {Number(match.fee) === 0 ? "Free" : `₱${Number(match.fee).toFixed(2)}`}
-                      </span>
-                    )}
+                  <RadioGroupItem value={a} id={`age-${a}`} />
+                  <Label htmlFor={`age-${a}`} className="cursor-pointer font-medium text-sm">
+                    {a === "0-79" ? "0 – 79 years old" : "80 years old and above"}
                   </Label>
                 </label>
-              );
-            })}
-          </RadioGroup>
-        </div>
-      )}
+              ))}
+            </RadioGroup>
+          </div>
+        )}
 
-      {/* Selected result summary */}
-      {selectedService && (
-        <div className="rounded-lg px-4 py-3 text-sm" style={{ background: "var(--svc-cta-soft)", border: "1px solid var(--svc-cta)", color: "var(--svc-cta)" }}>
-          <span className="font-semibold">Selected: </span>
-          {selectedService.name} —{" "}
-          <span className="font-semibold">
-            {Number(selectedService.fee) === 0 ? "Free" : `₱${Number(selectedService.fee).toFixed(2)}`}
-          </span>
-        </div>
-      )}
-    </div>
+        {/* Step 2: Program (only after age picked) */}
+        {steps.hasProgram && age && (
+          <div className="space-y-3">
+            <p className="text-sm font-semibold text-gray-700">
+              2. Registration program
+            </p>
+            <RadioGroup
+              value={program ?? ""}
+              onValueChange={handleProgram}
+              className="grid grid-cols-2 gap-3"
+            >
+              {steps.programs.map((p) => (
+                <label
+                  key={p}
+                  className={`flex items-center gap-3 rounded-lg border p-3.5 cursor-pointer transition-colors ${
+                    program === p
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border hover:bg-accent hover:text-accent-foreground text-foreground"
+                  }`}
+                >
+                  <RadioGroupItem value={p} id={`prog-${p}`} />
+                  <Label htmlFor={`prog-${p}`} className="cursor-pointer text-sm">
+                    <span className="font-medium">
+                      {p === "brap" ? "Under BRAP" : "Normal"}
+                    </span>
+                    <span className="block text-xs text-gray-500 mt-0.5">
+                      {p === "brap" ? "Free — PSA assisted program" : "Standard registration"}
+                    </span>
+                  </Label>
+                </label>
+              ))}
+            </RadioGroup>
+          </div>
+        )}
+
+        {/* Step 3: Marital status — shown after program=normal, OR directly if no age/program steps */}
+        {steps.hasMarital && (program === "normal" || (!steps.hasAge && !steps.hasProgram)) && (
+          <div className="space-y-3">
+            <p className="text-sm font-semibold text-gray-700">
+              {steps.hasAge || steps.hasProgram ? "3." : "1."} Status of the child
+            </p>
+            <RadioGroup
+              value={marital ?? ""}
+              onValueChange={handleMarital}
+              className="grid grid-cols-2 gap-3"
+            >
+              {steps.maritalStatuses.map((m) => {
+                const match = services.find((s) => matches(s.name, age, program, m));
+                return (
+                  <label
+                    key={m}
+                    className={`flex items-center gap-3 rounded-lg border p-3.5 cursor-pointer transition-colors ${
+                      marital === m
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-border hover:bg-accent hover:text-accent-foreground text-foreground"
+                    }`}
+                  >
+                    <RadioGroupItem value={m} id={`marital-${m}`} />
+                    <Label htmlFor={`marital-${m}`} className="cursor-pointer text-sm">
+                      <span className="font-medium capitalize">{m} Child</span>
+                      {match && (
+                        <span className="block text-xs text-gray-500 mt-0.5">
+                          {Number(match.fee) === 0 ? "Free" : `₱${Number(match.fee).toFixed(2)}`}
+                        </span>
+                      )}
+                    </Label>
+                  </label>
+                );
+              })}
+            </RadioGroup>
+          </div>
+        )}
+
+        {/* Selected result summary */}
+        {selectedService && (
+          <div className="rounded-lg px-4 py-3 text-sm bg-primary/10 border border-primary/20 text-primary">
+            <span className="font-semibold">Selected: </span>
+            {selectedService.name} —{" "}
+            <span className="font-semibold">
+              {Number(selectedService.fee) === 0 ? "Free" : `₱${Number(selectedService.fee).toFixed(2)}`}
+            </span>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

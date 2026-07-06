@@ -50,6 +50,7 @@ export function ServiceDetailSheet({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [conditionalOpen, setConditionalOpen] = useState(false);
+  const [stepsOpen, setStepsOpen] = useState(true);
 
   useEffect(() => {
     if (!service || !open) return;
@@ -75,6 +76,7 @@ export function ServiceDetailSheet({
   // Reset conditional collapse when switching services
   useEffect(() => {
     setConditionalOpen(false);
+    setStepsOpen(true);
   }, [service?.service_code]);
 
   if (!service) return null;
@@ -88,24 +90,21 @@ export function ServiceDetailSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-md w-full h-full flex flex-col p-0 border-l border-border bg-white shadow-2xl overflow-hidden">
-        {/* Header Section with gradient background */}
-        <div className="relative p-6 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 text-white">
-          <div className="absolute top-0 right-0 p-4">
-            {/* Close button handled by SheetContent */}
-          </div>
-          <div className="space-y-3 pr-8">
+        {/* Header Section - clean and neutral */}
+        <div className="relative p-6 bg-card border-b border-border">
+          <div className="space-y-2 pr-8">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant={service.classification === "simple" ? "simple" : "complex"} className="capitalize">
                 {service.classification}
               </Badge>
-              <code className="text-xs font-mono font-bold bg-white/10 px-2 py-0.5 rounded text-slate-300">
-                {service.service_code}
-              </code>
             </div>
-            <SheetTitle className="text-xl font-bold font-heading text-white leading-tight">
+            <SheetTitle className="text-lg font-bold font-heading text-foreground leading-tight">
               {service.name}
             </SheetTitle>
-            <SheetDescription className="text-slate-400 text-xs">
+            <p className="text-xs text-muted-foreground">
+              Service Code: {service.service_code}
+            </p>
+            <SheetDescription className="text-muted-foreground text-xs">
               Registry and requirements metadata for administrative review.
             </SheetDescription>
           </div>
@@ -113,142 +112,83 @@ export function ServiceDetailSheet({
 
         {/* Scrollable Content Area */}
         <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
-          {/* ── Key Metrics Grid ─────────────────────────────────────── */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Fee */}
-            <div
-              className="rounded-xl p-4 border-l-4 flex items-center space-x-3 transition-shadow hover:shadow-sm"
-              style={{
-                background: "var(--svc-primary-soft)",
-                borderLeftColor: "var(--svc-primary)",
-                borderTop: "1px solid var(--svc-primary-border)",
-                borderRight: "1px solid var(--svc-primary-border)",
-                borderBottom: "1px solid var(--svc-primary-border)",
-              }}
-            >
-              <div
-                className="p-2 rounded-lg"
-                style={{ background: "var(--svc-primary)", color: "#fff" }}
-              >
-                <CircleDollarSign className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--svc-text-secondary)" }}>
-                  Standard Fee
-                </p>
-                <p
-                  className="text-base font-bold"
-                  style={{
-                    fontFamily: "var(--svc-font-display)",
-                    color: "var(--svc-text-primary)",
-                  }}
-                >
-                  {formatFee(service.fee)}
-                </p>
-              </div>
-            </div>
-
-            {/* Processing Time */}
-            <div
-              className="rounded-xl p-4 border-l-4 flex items-center space-x-3 transition-shadow hover:shadow-sm"
-              style={{
-                background: "var(--svc-primary-soft)",
-                borderLeftColor: "var(--svc-primary)",
-                borderTop: "1px solid var(--svc-primary-border)",
-                borderRight: "1px solid var(--svc-primary-border)",
-                borderBottom: "1px solid var(--svc-primary-border)",
-              }}
-            >
-              <div
-                className="p-2 rounded-lg"
-                style={{ background: "var(--svc-primary)", color: "#fff" }}
-              >
-                <Clock className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--svc-text-secondary)" }}>
-                  Processing Time
-                </p>
-                <p
-                  className="text-sm font-bold truncate max-w-[120px]"
-                  title={service.processing_time}
-                  style={{
-                    fontFamily: "var(--svc-font-display)",
-                    color: "var(--svc-text-primary)",
-                  }}
-                >
-                  {service.processing_time || "N/A"}
-                </p>
-              </div>
-            </div>
+          {/* ── Key Metrics inline row ───────────────────────────────── */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg border border-border">
+            <span className="flex items-center gap-1.5">
+              <CircleDollarSign className="size-3.5 text-muted-foreground" />
+              <span className="font-semibold text-foreground">{formatFee(service.fee)}</span>
+            </span>
+            <span aria-hidden className="text-border">·</span>
+            <span className="flex items-center gap-1.5">
+              <Clock className="size-3.5 text-muted-foreground" />
+              <span className="font-semibold text-foreground">{service.processing_time || "N/A"}</span>
+            </span>
           </div>
 
           {/* ── Group Relationships ──────────────────────────────────── */}
-          <div className="bg-slate-50/50 rounded-xl p-4 border border-slate-100 space-y-3">
-            <h4 className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 uppercase tracking-wider">
+          <div className="bg-muted/50 rounded-lg p-4 border border-border space-y-3">
+            <h4 className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wider">
               <Layers className="w-3.5 h-3.5" /> Grouping & Relationships
             </h4>
             <div className="grid grid-cols-1 gap-2 text-xs">
-              <div className="flex justify-between py-1 border-b border-dashed border-slate-200">
+              <div className="flex justify-between py-1 border-b border-dashed border-border">
                 <span className="text-muted-foreground">Display Group:</span>
-                <span className="font-medium text-slate-900">{service.display_group || "None (Standalone)"}</span>
+                <span className="font-medium text-foreground">{service.display_group || "None (Standalone)"}</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-dashed border-slate-200">
+              <div className="flex justify-between py-1 border-b border-dashed border-border">
                 <span className="text-muted-foreground">Display Name:</span>
-                <span className="font-medium text-slate-900">{service.display_name || "None"}</span>
+                <span className="font-medium text-foreground">{service.display_name || "None"}</span>
               </div>
               <div className="flex justify-between py-1">
                 <span className="text-muted-foreground">Requirement Group:</span>
-                <span className="font-mono text-slate-900 font-medium">{service.requirement_group || service.service_code}</span>
+                <span className="font-mono text-foreground font-medium">{service.requirement_group || service.service_code}</span>
               </div>
             </div>
           </div>
 
           {/* ── Steps Description ───────────────────────────────────── */}
           {cleanedSteps.length > 0 && (
-            <div className="space-y-3">
-              <h4
-                className="text-[11px] font-bold uppercase tracking-[0.08em] flex items-center gap-1.5"
-                style={{ color: "var(--svc-primary)" }}
-              >
-                <ArrowRight className="w-3.5 h-3.5" /> Process Steps ({cleanedSteps.length})
-              </h4>
-              <div className="relative ml-2 space-y-0">
-                {cleanedSteps.map((step, idx) => (
-                  <div key={idx} className="relative flex gap-3 pb-4 last:pb-0">
-                    {idx < cleanedSteps.length - 1 && (
-                      <div
-                        className="absolute left-[11px] top-6 bottom-0 w-[2px]"
-                        style={{ background: "var(--svc-primary-border)" }}
-                      />
-                    )}
-                    <span
-                      className="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
-                      style={{ background: "var(--svc-primary)", color: "#fff" }}
-                    >
-                      {idx + 1}
-                    </span>
-                    <p className="text-xs leading-relaxed font-medium" style={{ color: "var(--svc-text-primary)" }}>
-                      {step}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <Collapsible open={stepsOpen} onOpenChange={setStepsOpen} className="space-y-3">
+              <CollapsibleTrigger className="flex items-center justify-between w-full cursor-pointer group/trigger select-none">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                  How It Works
+                </h3>
+                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${stepsOpen ? "rotate-180" : ""}`} />
+              </CollapsibleTrigger>
+              
+              <CollapsibleContent className="pt-1">
+                <div className="relative ml-1.5 space-y-0">
+                  {cleanedSteps.map((step, idx) => (
+                    <div key={idx} className="relative flex gap-3 pb-3 last:pb-0">
+                      {/* Timeline connector */}
+                      {idx < cleanedSteps.length - 1 && (
+                        <div className="absolute left-[9px] top-5 bottom-0 w-[1px] bg-border" />
+                      )}
+                      {/* Step number */}
+                      <div className="relative z-10 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-bold">
+                        {idx + 1}
+                      </div>
+                      {/* Step text */}
+                      <p className="text-xs text-foreground leading-relaxed pt-0.5">
+                        {step}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           )}
 
           {/* ── Requirements Metadata ───────────────────────────────── */}
           <div className="space-y-4">
-            <h4
-              className="text-[11px] font-bold uppercase tracking-[0.08em] flex items-center gap-1.5"
-              style={{ color: "var(--svc-primary)" }}
-            >
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
               <FileText className="w-3.5 h-3.5" /> Requirements Metadata
             </h4>
 
             {loading ? (
               <div className="flex flex-col items-center justify-center py-8 space-y-2">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" style={{ borderColor: "var(--svc-primary)", borderTopColor: "transparent" }} />
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" style={{ borderColor: "var(--primary)", borderTopColor: "transparent" }} />
                 <span className="text-xs text-muted-foreground">Loading requirements...</span>
               </div>
             ) : error ? (
@@ -256,7 +196,7 @@ export function ServiceDetailSheet({
                 {error}
               </div>
             ) : requirements.length === 0 ? (
-              <div className="p-4 border border-dashed border-slate-200 text-center rounded-lg">
+              <div className="p-4 border border-dashed border-border text-center rounded-lg">
                 <p className="text-xs text-muted-foreground">No specific requirements defined for this service.</p>
               </div>
             ) : (
@@ -264,31 +204,22 @@ export function ServiceDetailSheet({
                 {/* Mandatory List */}
                 {mandatoryReqs.length > 0 && (
                   <div className="space-y-2">
-                    <div
-                      className="flex items-center space-x-1.5 text-xs font-bold px-2.5 py-1 rounded-md w-fit"
-                      style={{
-                        background: "var(--svc-primary-soft)",
-                        color: "var(--svc-primary)",
-                        border: "1px solid var(--svc-primary-border)",
-                      }}
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Required Documents ({mandatoryReqs.length})</span>
+                    <div className="text-xs font-bold text-muted-foreground">
+                      Required Documents ({mandatoryReqs.length})
                     </div>
-                    <ul className="space-y-2 pl-1">
+                    <ul className="space-y-0 divide-y divide-border">
                       {mandatoryReqs.map((req) => {
                         const { primary, secondary } = parseRequirementName(req.requirement_name);
                         return (
                           <li
                             key={req.id}
-                            className="border-l-[3px] pl-2.5 py-1"
-                            style={{ borderLeftColor: "var(--svc-primary-border)" }}
+                            className="py-2.5 list-none"
                           >
-                            <p className="text-xs font-semibold leading-snug" style={{ color: "var(--svc-text-primary)" }}>
+                            <p className="text-xs font-semibold leading-snug text-foreground">
                               {primary}
                             </p>
                             {secondary && (
-                              <p className="text-[11px] leading-snug mt-0.5" style={{ color: "var(--svc-text-secondary)" }}>
+                              <p className="text-[11px] leading-snug mt-0.5 text-muted-foreground">
                                 {secondary}
                               </p>
                             )}
@@ -302,36 +233,28 @@ export function ServiceDetailSheet({
                 {/* Conditional List — collapsed */}
                 {conditionalReqs.length > 0 && (
                   <Collapsible open={conditionalOpen} onOpenChange={setConditionalOpen}>
-                    <CollapsibleTrigger
-                      className="flex items-center justify-between w-full gap-2 px-2.5 py-1.5 rounded-md text-xs font-bold cursor-pointer transition-colors"
-                      style={{
-                        background: "var(--svc-caution-soft)",
-                        color: "var(--svc-caution)",
-                        border: "1px solid var(--svc-caution-border)",
-                      }}
-                    >
+                    <CollapsibleTrigger className="flex items-center justify-between w-full py-2 text-xs font-semibold text-muted-foreground hover:text-foreground border-t border-border mt-2 cursor-pointer select-none group/trigger">
                       <span className="flex items-center gap-1.5">
-                        <AlertTriangle className="w-3.5 h-3.5" />
+                        <AlertTriangle className="w-3.5 h-3.5 text-muted-foreground" />
                         If Applicable ({conditionalReqs.length})
                       </span>
                       <ChevronDown
                         className={`h-3.5 w-3.5 transition-transform duration-200 ${conditionalOpen ? "rotate-180" : ""}`}
                       />
                     </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-2 pl-1 pt-2">
+                    <CollapsibleContent className="divide-y divide-border pt-1">
                       {conditionalReqs.map((req) => {
                         const { primary, secondary } = parseRequirementName(req.requirement_name);
                         return (
                           <li
                             key={req.id}
-                            className="list-none border-l-[3px] pl-2.5 py-1"
-                            style={{ borderLeftColor: "var(--svc-caution-border)" }}
+                            className="py-2.5 list-none"
                           >
-                            <p className="text-xs font-medium leading-snug" style={{ color: "var(--svc-text-primary)" }}>
+                            <p className="text-xs font-medium leading-snug text-foreground">
                               {primary}
                             </p>
                             {secondary && (
-                              <p className="text-[11px] leading-snug mt-0.5" style={{ color: "var(--svc-text-secondary)" }}>
+                              <p className="text-[11px] leading-snug mt-0.5 text-muted-foreground">
                                 {secondary}
                               </p>
                             )}
@@ -347,11 +270,10 @@ export function ServiceDetailSheet({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-border bg-slate-50 flex justify-end">
+        <div className="p-4 border-t border-border bg-muted/30 flex justify-end">
           <button
             onClick={() => onOpenChange(false)}
-            className="px-4 py-2 text-white rounded-lg text-xs font-medium hover:opacity-90 active:opacity-100 transition-opacity shadow-sm"
-            style={{ background: "var(--svc-cta)" }}
+            className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg text-xs font-medium transition-colors shadow-sm cursor-pointer"
           >
             Close Panel
           </button>

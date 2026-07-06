@@ -12,7 +12,7 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions) {
 
   // Use the verified domain address if configured, or fallback to onboarding@resend.dev for testing.
   // Note: onboarding@resend.dev can only send to the email address that created the Resend account.
-  const fromAddress = "CiviCheck <onboarding@resend.dev>";
+  const fromAddress = "CiviCheck <noreply@civicheck.abrdns.com>";
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
