@@ -57,7 +57,7 @@ export function LoginForm({
   error?: string;
 }) {
   const [showPassword, setShowPassword] = useState(false);
-  const loginMutation = useLogin();
+  const loginMutation = useLogin(redirectTo);
   const oauthLoginMutation = useOAuthLogin();
 
   const form = useForm<FormValues>({

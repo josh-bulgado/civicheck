@@ -11,6 +11,7 @@ import {
   CreditCard
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "~/components/ui/dialog";
+import { getStatusDetails, getPaymentDetails } from "~/features/services/request-status";
 
 // Fetch applicant's requests
 const getMyRequests = createServerFn({ method: "GET" }).handler(async () => {
@@ -62,41 +63,6 @@ function MyRequestsPage() {
   const unpaidCount = requests.filter(
     (request: any) => request.payment_status === "unpaid",
   ).length;
-
-  // Status mapping
-  const getStatusDetails = (status: string | null) => {
-    switch (status) {
-      case "pending_frontdesk":
-        return { label: "Pending Review", styles: "status-warning" };
-      case "under_validation":
-        return { label: "Under Validation", styles: "border-primary/20 bg-primary-soft text-primary" };
-      case "incomplete":
-        return { label: "Incomplete", styles: "status-warning" };
-      case "rejected":
-        return { label: "Rejected", styles: "status-error" };
-      case "processing":
-        return { label: "Processing", styles: "border-primary/20 bg-primary-soft text-primary" };
-      case "pending_approval":
-        return { label: "Pending Approval", styles: "status-warning" };
-      case "ready_for_release":
-        return { label: "Ready for Release", styles: "status-success" };
-      case "released":
-        return { label: "Released", styles: "status-success" };
-      default:
-        return { label: status || "Unknown", styles: "status-neutral" };
-    }
-  };
-
-  const getPaymentDetails = (paymentStatus: string | null) => {
-    switch (paymentStatus) {
-      case "unpaid":
-        return { label: "Unpaid", styles: "status-error" };
-      case "verified":
-        return { label: "Paid", styles: "status-success" };
-      default:
-        return { label: paymentStatus || "Unpaid", styles: "status-neutral" };
-    }
-  };
 
   const formatFormDataKey = (key: string) => {
     return key

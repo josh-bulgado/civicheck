@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { CityGovernmentIdentity, CiviCheckIdentity } from "~/components/brand/civic-identity";
 
 const publicLinks = [
-  { label: "Services", to: "/requirements" as const },
-  { label: "How it works", href: "/#how-it-works" },
-  { label: "About", href: "/#about" },
+  { label: "Requirements", to: "/requirements" as const },
+  { label: "Apply online", to: "/apply" as const },
+  { label: "Queue", to: "/queue" as const },
+  { label: "Track request", to: "/track" as const },
 ];
 
 const SiteHeader = () => {
@@ -22,12 +23,12 @@ const SiteHeader = () => {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-white/95 backdrop-blur-md">
-      <div className="hidden border-b border-border bg-background sm:block">
+      <div className="hidden border-b border-border-light bg-background sm:block">
         <div className="civic-container flex h-9 items-center justify-between">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          <p className="text-[13px] font-bold uppercase tracking-[0.09em] text-muted-2">
             Official civil registry service
           </p>
-          <CityGovernmentIdentity compact className="[&>span:first-child]:size-6" />
+          <CityGovernmentIdentity compact className="[&>span:first-child]:size-5.5" />
         </div>
       </div>
 
@@ -36,23 +37,17 @@ const SiteHeader = () => {
           <CiviCheckIdentity />
         </Link>
 
-        <nav className="hidden items-center gap-1 md:flex" aria-label="Primary navigation">
-          {publicLinks.map((item) =>
-            item.to ? (
-              <Link key={item.label} to={item.to} className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-primary-soft hover:text-primary">
-                {item.label}
-              </Link>
-            ) : (
-              <a key={item.label} href={item.href} className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-primary-soft hover:text-primary">
-                {item.label}
-              </a>
-            ),
-          )}
-          <span className="mx-2 h-5 w-px bg-border" aria-hidden="true" />
-          <Link to="/login" className="rounded-lg px-3 py-2 text-sm font-semibold text-primary hover:bg-primary-soft">
+        <nav className="hidden items-center gap-5 md:flex" aria-label="Primary navigation">
+          {publicLinks.map((item) => (
+            <Link key={item.label} to={item.to} className="text-base font-medium text-body-strong transition-colors hover:text-primary">
+              {item.label}
+            </Link>
+          ))}
+          <span className="h-6 w-px bg-border-light" aria-hidden="true" />
+          <Link to="/login" className="text-base font-bold text-primary hover:text-primary-hover">
             Sign in
           </Link>
-          <Link to="/signup" className="ml-1 inline-flex min-h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-white transition-colors hover:bg-primary-hover">
+          <Link to="/signup" className="inline-flex min-h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-white transition-colors hover:bg-primary-hover">
             Get started
           </Link>
         </nav>
@@ -72,17 +67,11 @@ const SiteHeader = () => {
       {mobileMenuOpen ? (
         <nav id="mobile-navigation" className="border-t border-border bg-white px-5 py-4 md:hidden" aria-label="Mobile navigation">
           <div className="mx-auto flex max-w-6xl flex-col gap-1">
-            {publicLinks.map((item) =>
-              item.to ? (
-                <Link key={item.label} to={item.to} className="rounded-lg px-3 py-3 text-sm font-medium hover:bg-primary-soft hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
-                  {item.label}
-                </Link>
-              ) : (
-                <a key={item.label} href={item.href} className="rounded-lg px-3 py-3 text-sm font-medium hover:bg-primary-soft hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
-                  {item.label}
-                </a>
-              ),
-            )}
+            {publicLinks.map((item) => (
+              <Link key={item.label} to={item.to} className="rounded-lg px-3 py-3 text-sm font-medium hover:bg-primary-soft hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
+                {item.label}
+              </Link>
+            ))}
             <div className="my-2 h-px bg-border" />
             <Link to="/login" className="rounded-lg px-3 py-3 text-center text-sm font-semibold text-primary" onClick={() => setMobileMenuOpen(false)}>Sign in</Link>
             <Link to="/signup" className="rounded-lg bg-primary px-3 py-3 text-center text-sm font-semibold text-white" onClick={() => setMobileMenuOpen(false)}>Get started</Link>

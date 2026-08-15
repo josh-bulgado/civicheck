@@ -4,7 +4,7 @@ import { useMutation } from "~/hooks/useMutation";
 import { loginWithEmailFn } from "../auth.mutations";
 import { toast } from "sonner";
 
-export function useLogin() {
+export function useLogin(redirectTo?: string) {
   const router = useRouter();
 
   return useMutation({
@@ -12,7 +12,7 @@ export function useLogin() {
     onSuccess: async (ctx) => {
       if (!ctx.data?.error) {
         await router.invalidate();
-        await router.navigate({ to: "/dashboard" });
+        await router.navigate({ to: redirectTo || "/dashboard" });
         return;
       }
 

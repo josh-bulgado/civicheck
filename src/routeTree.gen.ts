@@ -9,24 +9,38 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TrackRouteImport } from './routes/track'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RequirementsRouteImport } from './routes/requirements'
+import { Route as QueueRouteImport } from './routes/queue'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AcceptInvitationRouteImport } from './routes/accept-invitation'
 import { Route as AuthedRouteRouteImport } from './routes/_authed/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApplyIndexRouteImport } from './routes/apply/index'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as AuthedStaffDashboardRouteImport } from './routes/_authed/staff-dashboard'
 import { Route as AuthedMyRequestsRouteImport } from './routes/_authed/my-requests'
 import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
+import { Route as ApplyServiceCodeRouteRouteImport } from './routes/apply/$serviceCode/route'
+import { Route as ApplyServiceCodeIndexRouteImport } from './routes/apply/$serviceCode/index'
+import { Route as ApplyServiceCodeReviewRouteImport } from './routes/apply/$serviceCode/review'
+import { Route as ApplyServiceCodeDocumentsRouteImport } from './routes/apply/$serviceCode/documents'
+import { Route as ApplyServiceCodeDetailsRouteImport } from './routes/apply/$serviceCode/details'
+import { Route as ApplyServiceCodeCaseRouteImport } from './routes/apply/$serviceCode/case'
 import { Route as AuthedAdminStaffRouteImport } from './routes/_authed/admin/staff'
 import { Route as AuthedAdminServicesRouteImport } from './routes/_authed/admin/services'
 import { Route as AuthedserviceServicesRouteImport } from './routes/_authed/(service)/services'
 import { Route as AuthedserviceServiceServiceCodeRouteImport } from './routes/_authed/(service)/service.$serviceCode'
 
+const TrackRoute = TrackRouteImport.update({
+  id: '/track',
+  path: '/track',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -40,6 +54,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const RequirementsRoute = RequirementsRouteImport.update({
   id: '/requirements',
   path: '/requirements',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QueueRoute = QueueRouteImport.update({
+  id: '/queue',
+  path: '/queue',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LogoutRoute = LogoutRouteImport.update({
@@ -71,6 +90,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApplyIndexRoute = ApplyIndexRouteImport.update({
+  id: '/apply/',
+  path: '/apply/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/auth/callback',
   path: '/auth/callback',
@@ -90,6 +114,37 @@ const AuthedDashboardRoute = AuthedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AuthedRouteRoute,
+} as any)
+const ApplyServiceCodeRouteRoute = ApplyServiceCodeRouteRouteImport.update({
+  id: '/apply/$serviceCode',
+  path: '/apply/$serviceCode',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApplyServiceCodeIndexRoute = ApplyServiceCodeIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ApplyServiceCodeRouteRoute,
+} as any)
+const ApplyServiceCodeReviewRoute = ApplyServiceCodeReviewRouteImport.update({
+  id: '/review',
+  path: '/review',
+  getParentRoute: () => ApplyServiceCodeRouteRoute,
+} as any)
+const ApplyServiceCodeDocumentsRoute =
+  ApplyServiceCodeDocumentsRouteImport.update({
+    id: '/documents',
+    path: '/documents',
+    getParentRoute: () => ApplyServiceCodeRouteRoute,
+  } as any)
+const ApplyServiceCodeDetailsRoute = ApplyServiceCodeDetailsRouteImport.update({
+  id: '/details',
+  path: '/details',
+  getParentRoute: () => ApplyServiceCodeRouteRoute,
+} as any)
+const ApplyServiceCodeCaseRoute = ApplyServiceCodeCaseRouteImport.update({
+  id: '/case',
+  path: '/case',
+  getParentRoute: () => ApplyServiceCodeRouteRoute,
 } as any)
 const AuthedAdminStaffRoute = AuthedAdminStaffRouteImport.update({
   id: '/admin/staff',
@@ -119,16 +174,25 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/queue': typeof QueueRoute
   '/requirements': typeof RequirementsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/track': typeof TrackRoute
+  '/apply/$serviceCode': typeof ApplyServiceCodeRouteRouteWithChildren
   '/dashboard': typeof AuthedDashboardRoute
   '/my-requests': typeof AuthedMyRequestsRoute
   '/staff-dashboard': typeof AuthedStaffDashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/apply/': typeof ApplyIndexRoute
   '/services': typeof AuthedserviceServicesRoute
   '/admin/services': typeof AuthedAdminServicesRoute
   '/admin/staff': typeof AuthedAdminStaffRoute
+  '/apply/$serviceCode/case': typeof ApplyServiceCodeCaseRoute
+  '/apply/$serviceCode/details': typeof ApplyServiceCodeDetailsRoute
+  '/apply/$serviceCode/documents': typeof ApplyServiceCodeDocumentsRoute
+  '/apply/$serviceCode/review': typeof ApplyServiceCodeReviewRoute
+  '/apply/$serviceCode/': typeof ApplyServiceCodeIndexRoute
   '/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
 }
 export interface FileRoutesByTo {
@@ -137,16 +201,24 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/queue': typeof QueueRoute
   '/requirements': typeof RequirementsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/track': typeof TrackRoute
   '/dashboard': typeof AuthedDashboardRoute
   '/my-requests': typeof AuthedMyRequestsRoute
   '/staff-dashboard': typeof AuthedStaffDashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/apply': typeof ApplyIndexRoute
   '/services': typeof AuthedserviceServicesRoute
   '/admin/services': typeof AuthedAdminServicesRoute
   '/admin/staff': typeof AuthedAdminStaffRoute
+  '/apply/$serviceCode/case': typeof ApplyServiceCodeCaseRoute
+  '/apply/$serviceCode/details': typeof ApplyServiceCodeDetailsRoute
+  '/apply/$serviceCode/documents': typeof ApplyServiceCodeDocumentsRoute
+  '/apply/$serviceCode/review': typeof ApplyServiceCodeReviewRoute
+  '/apply/$serviceCode': typeof ApplyServiceCodeIndexRoute
   '/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
 }
 export interface FileRoutesById {
@@ -157,16 +229,25 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/queue': typeof QueueRoute
   '/requirements': typeof RequirementsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/track': typeof TrackRoute
+  '/apply/$serviceCode': typeof ApplyServiceCodeRouteRouteWithChildren
   '/_authed/dashboard': typeof AuthedDashboardRoute
   '/_authed/my-requests': typeof AuthedMyRequestsRoute
   '/_authed/staff-dashboard': typeof AuthedStaffDashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/apply/': typeof ApplyIndexRoute
   '/_authed/(service)/services': typeof AuthedserviceServicesRoute
   '/_authed/admin/services': typeof AuthedAdminServicesRoute
   '/_authed/admin/staff': typeof AuthedAdminStaffRoute
+  '/apply/$serviceCode/case': typeof ApplyServiceCodeCaseRoute
+  '/apply/$serviceCode/details': typeof ApplyServiceCodeDetailsRoute
+  '/apply/$serviceCode/documents': typeof ApplyServiceCodeDocumentsRoute
+  '/apply/$serviceCode/review': typeof ApplyServiceCodeReviewRoute
+  '/apply/$serviceCode/': typeof ApplyServiceCodeIndexRoute
   '/_authed/(service)/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
 }
 export interface FileRouteTypes {
@@ -177,16 +258,25 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/logout'
+    | '/queue'
     | '/requirements'
     | '/reset-password'
     | '/signup'
+    | '/track'
+    | '/apply/$serviceCode'
     | '/dashboard'
     | '/my-requests'
     | '/staff-dashboard'
     | '/auth/callback'
+    | '/apply/'
     | '/services'
     | '/admin/services'
     | '/admin/staff'
+    | '/apply/$serviceCode/case'
+    | '/apply/$serviceCode/details'
+    | '/apply/$serviceCode/documents'
+    | '/apply/$serviceCode/review'
+    | '/apply/$serviceCode/'
     | '/service/$serviceCode'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -195,16 +285,24 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/logout'
+    | '/queue'
     | '/requirements'
     | '/reset-password'
     | '/signup'
+    | '/track'
     | '/dashboard'
     | '/my-requests'
     | '/staff-dashboard'
     | '/auth/callback'
+    | '/apply'
     | '/services'
     | '/admin/services'
     | '/admin/staff'
+    | '/apply/$serviceCode/case'
+    | '/apply/$serviceCode/details'
+    | '/apply/$serviceCode/documents'
+    | '/apply/$serviceCode/review'
+    | '/apply/$serviceCode'
     | '/service/$serviceCode'
   id:
     | '__root__'
@@ -214,16 +312,25 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/logout'
+    | '/queue'
     | '/requirements'
     | '/reset-password'
     | '/signup'
+    | '/track'
+    | '/apply/$serviceCode'
     | '/_authed/dashboard'
     | '/_authed/my-requests'
     | '/_authed/staff-dashboard'
     | '/auth/callback'
+    | '/apply/'
     | '/_authed/(service)/services'
     | '/_authed/admin/services'
     | '/_authed/admin/staff'
+    | '/apply/$serviceCode/case'
+    | '/apply/$serviceCode/details'
+    | '/apply/$serviceCode/documents'
+    | '/apply/$serviceCode/review'
+    | '/apply/$serviceCode/'
     | '/_authed/(service)/service/$serviceCode'
   fileRoutesById: FileRoutesById
 }
@@ -234,14 +341,25 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
+  QueueRoute: typeof QueueRoute
   RequirementsRoute: typeof RequirementsRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
+  TrackRoute: typeof TrackRoute
+  ApplyServiceCodeRouteRoute: typeof ApplyServiceCodeRouteRouteWithChildren
   AuthCallbackRoute: typeof AuthCallbackRoute
+  ApplyIndexRoute: typeof ApplyIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/track': {
+      id: '/track'
+      path: '/track'
+      fullPath: '/track'
+      preLoaderRoute: typeof TrackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
@@ -261,6 +379,13 @@ declare module '@tanstack/react-router' {
       path: '/requirements'
       fullPath: '/requirements'
       preLoaderRoute: typeof RequirementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/queue': {
+      id: '/queue'
+      path: '/queue'
+      fullPath: '/queue'
+      preLoaderRoute: typeof QueueRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/logout': {
@@ -305,6 +430,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/apply/': {
+      id: '/apply/'
+      path: '/apply'
+      fullPath: '/apply/'
+      preLoaderRoute: typeof ApplyIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/callback': {
       id: '/auth/callback'
       path: '/auth/callback'
@@ -332,6 +464,48 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthedDashboardRouteImport
       parentRoute: typeof AuthedRouteRoute
+    }
+    '/apply/$serviceCode': {
+      id: '/apply/$serviceCode'
+      path: '/apply/$serviceCode'
+      fullPath: '/apply/$serviceCode'
+      preLoaderRoute: typeof ApplyServiceCodeRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/apply/$serviceCode/': {
+      id: '/apply/$serviceCode/'
+      path: '/'
+      fullPath: '/apply/$serviceCode/'
+      preLoaderRoute: typeof ApplyServiceCodeIndexRouteImport
+      parentRoute: typeof ApplyServiceCodeRouteRoute
+    }
+    '/apply/$serviceCode/review': {
+      id: '/apply/$serviceCode/review'
+      path: '/review'
+      fullPath: '/apply/$serviceCode/review'
+      preLoaderRoute: typeof ApplyServiceCodeReviewRouteImport
+      parentRoute: typeof ApplyServiceCodeRouteRoute
+    }
+    '/apply/$serviceCode/documents': {
+      id: '/apply/$serviceCode/documents'
+      path: '/documents'
+      fullPath: '/apply/$serviceCode/documents'
+      preLoaderRoute: typeof ApplyServiceCodeDocumentsRouteImport
+      parentRoute: typeof ApplyServiceCodeRouteRoute
+    }
+    '/apply/$serviceCode/details': {
+      id: '/apply/$serviceCode/details'
+      path: '/details'
+      fullPath: '/apply/$serviceCode/details'
+      preLoaderRoute: typeof ApplyServiceCodeDetailsRouteImport
+      parentRoute: typeof ApplyServiceCodeRouteRoute
+    }
+    '/apply/$serviceCode/case': {
+      id: '/apply/$serviceCode/case'
+      path: '/case'
+      fullPath: '/apply/$serviceCode/case'
+      preLoaderRoute: typeof ApplyServiceCodeCaseRouteImport
+      parentRoute: typeof ApplyServiceCodeRouteRoute
     }
     '/_authed/admin/staff': {
       id: '/_authed/admin/staff'
@@ -388,6 +562,27 @@ const AuthedRouteRouteWithChildren = AuthedRouteRoute._addFileChildren(
   AuthedRouteRouteChildren,
 )
 
+interface ApplyServiceCodeRouteRouteChildren {
+  ApplyServiceCodeCaseRoute: typeof ApplyServiceCodeCaseRoute
+  ApplyServiceCodeDetailsRoute: typeof ApplyServiceCodeDetailsRoute
+  ApplyServiceCodeDocumentsRoute: typeof ApplyServiceCodeDocumentsRoute
+  ApplyServiceCodeReviewRoute: typeof ApplyServiceCodeReviewRoute
+  ApplyServiceCodeIndexRoute: typeof ApplyServiceCodeIndexRoute
+}
+
+const ApplyServiceCodeRouteRouteChildren: ApplyServiceCodeRouteRouteChildren = {
+  ApplyServiceCodeCaseRoute: ApplyServiceCodeCaseRoute,
+  ApplyServiceCodeDetailsRoute: ApplyServiceCodeDetailsRoute,
+  ApplyServiceCodeDocumentsRoute: ApplyServiceCodeDocumentsRoute,
+  ApplyServiceCodeReviewRoute: ApplyServiceCodeReviewRoute,
+  ApplyServiceCodeIndexRoute: ApplyServiceCodeIndexRoute,
+}
+
+const ApplyServiceCodeRouteRouteWithChildren =
+  ApplyServiceCodeRouteRoute._addFileChildren(
+    ApplyServiceCodeRouteRouteChildren,
+  )
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRouteRoute: AuthedRouteRouteWithChildren,
@@ -395,10 +590,14 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
+  QueueRoute: QueueRoute,
   RequirementsRoute: RequirementsRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
+  TrackRoute: TrackRoute,
+  ApplyServiceCodeRouteRoute: ApplyServiceCodeRouteRouteWithChildren,
   AuthCallbackRoute: AuthCallbackRoute,
+  ApplyIndexRoute: ApplyIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

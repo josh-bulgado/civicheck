@@ -1,15 +1,9 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Search,
   ChevronDown,
-  Clock,
-  CircleDollarSign,
-  CheckCircle2,
-  AlertTriangle,
   ArrowRight,
-  FileText,
-  ClipboardList,
 } from "lucide-react";
 import SiteHeader from "~/features/landing/components/SiteHeader";
 import SiteFooter from "~/features/landing/components/SiteFooter";
@@ -25,330 +19,382 @@ interface ServicesPageProps {
   selectedCode?: string;
 }
 
+type PillKey = "all" | "birth" | "marriage" | "death" | "corrections";
+
+const pills: { key: PillKey; label: string; test?: RegExp }[] = [
+  { key: "all", label: "All" },
+  { key: "birth", label: "Birth", test: /birth/i },
+  { key: "marriage", label: "Marriage", test: /marriage/i },
+  { key: "death", label: "Death", test: /death/i },
+  {
+    key: "corrections",
+    label: "Corrections",
+    test: /correction|legitimation|surname|court decree|petition|r\.?a\.?\s*904[58]|r\.?a\.?\s*10172|r\.?a\.?\s*9255/i,
+  },
+];
+
+const HEADER_CLEARANCE = 96;
+
+function scrollWithinPage(id: string) {
+  const element = document.getElementById(id);
+  if (!element) return;
+  const top = element.getBoundingClientRect().top + window.scrollY - HEADER_CLEARANCE;
+  window.scrollTo({ top, behavior: "smooth" });
+}
+
 export default function ServicesPage({ selectedCode }: ServicesPageProps) {
   const [services, setServices] = useState<Service[]>([]);
   const [requirements, setRequirements] = useState<ServiceRequirement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+  const [reloadToken, setReloadToken] = useState(0);
+
   const [searchQuery, setSearchQuery] = useState("");
+  const [activePill, setActivePill] = useState<PillKey>("all");
   const [expandedCodes, setExpandedCodes] = useState<Record<string, boolean>>({});
   const [conditionalOpen, setConditionalOpen] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadData() {
       try {
         setLoading(true);
+        setError(null);
         const data = await getAllServicesWithRequirements();
+        if (cancelled) return;
         setServices(data.services as Service[]);
         setRequirements(data.requirements as ServiceRequirement[]);
-        
-        // If a code is passed in URL query, expand it by default
+
         if (selectedCode) {
           setExpandedCodes({ [selectedCode]: true });
-          // Scroll to the selected element after rendering
-          setTimeout(() => {
-            const element = document.getElementById(`service-${selectedCode}`);
-            if (element) {
-              element.scrollIntoView({ behavior: "smooth", block: "center" });
-            }
-          }, 300);
+          setTimeout(() => scrollWithinPage(`service-${selectedCode}`), 300);
         }
-      } catch (err: any) {
-        setError(err.message || "Failed to load services data.");
+      } catch (err) {
+        if (cancelled) return;
+        console.error("Failed to load services", err);
+        setError("We couldn't load the requirements list. Please try again.");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
+
     loadData();
-  }, [selectedCode]);
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCode, reloadToken]);
 
   const toggleExpand = (code: string) => {
-    setExpandedCodes((prev) => ({
-      ...prev,
-      [code]: !prev[code],
-    }));
+    setExpandedCodes((prev) => ({ ...prev, [code]: !prev[code] }));
   };
 
   const toggleConditional = (code: string) => {
-    setConditionalOpen((prev) => ({
-      ...prev,
-      [code]: !prev[code],
-    }));
+    setConditionalOpen((prev) => ({ ...prev, [code]: !prev[code] }));
   };
 
-  // Filter services based on search query
-  const filteredServices = services.filter((service) => {
-    const query = searchQuery.toLowerCase();
-    return (
-      service.name.toLowerCase().includes(query) ||
-      service.service_code.toLowerCase().includes(query) ||
-      (service.display_name && service.display_name.toLowerCase().includes(query))
-    );
-  });
+  const requirementsByService = useMemo(() => {
+    const map = new Map<string, ServiceRequirement[]>();
+    for (const service of services) {
+      const groupOrCode = service.requirement_group ?? service.service_code;
+      map.set(
+        service.service_code,
+        requirements.filter(
+          (r) => r.service_code === groupOrCode || r.requirement_group === groupOrCode,
+        ),
+      );
+    }
+    return map;
+  }, [services, requirements]);
+
+  const filteredServices = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    const pill = pills.find((p) => p.key === activePill);
+
+    return services.filter((service) => {
+      if (pill?.test && !pill.test.test(service.name)) return false;
+      if (!query) return true;
+
+      const nameMatch =
+        service.name.toLowerCase().includes(query) ||
+        service.service_code.toLowerCase().includes(query) ||
+        (service.display_name?.toLowerCase().includes(query) ?? false);
+      if (nameMatch) return true;
+
+      const serviceReqs = requirementsByService.get(service.service_code) ?? [];
+      return serviceReqs.some((r) => r.requirement_name.toLowerCase().includes(query));
+    });
+  }, [services, requirementsByService, searchQuery, activePill]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader />
 
-      <main className="flex-1 max-w-[900px] w-full mx-auto px-5 py-12 md:py-16">
-        {/* Page Title */}
-        <div className="text-center mb-10">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4 bg-primary/10 text-primary">
-            <ClipboardList className="w-6 h-6" />
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground mb-2">
-            List of Requirements
+      <main className="mx-auto w-full max-w-225 flex-1 px-5 pb-14 pt-12 sm:px-8 sm:pt-14">
+        <div className="mx-auto mb-8 max-w-190 text-center">
+          <h1 className="civic-title text-[clamp(1.75rem,4vw,2.625rem)] leading-tight">
+            List of requirements
           </h1>
-          <p className="text-sm text-muted-foreground max-w-lg mx-auto leading-relaxed">
-            Select a civil registry service below to see its exact required documents, fees, processing times, and step-by-step procedures.
+          <p className="mt-3.5 text-lg leading-relaxed text-body">
+            Search or browse every civil registry service the CCRO offers,
+            and see the exact documents, fees, and steps involved before
+            you visit.
           </p>
         </div>
 
-        {/* Search Box */}
-        <div className="relative mb-8">
+        <div className="relative mb-5">
+          <Search className="pointer-events-none absolute left-5 top-1/2 size-4.5 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search for civil registry documents or services..."
-            className="w-full h-11 pl-10 pr-4 bg-card border border-border rounded-lg text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-[3px] focus:ring-primary/20 shadow-xs"
+            placeholder="Search for a service or requirement..."
+            className="h-13.5 w-full rounded-[10px] border border-control-border bg-white pl-12 pr-4 text-[17px] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-[3px] focus:ring-primary/15"
           />
-          <Search className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-muted-foreground" />
         </div>
 
-        {/* Loading State */}
-        {loading && (
-          <div className="flex flex-col items-center justify-center py-20 space-y-3">
-            <div className="h-8 w-8 animate-spin rounded-full border-3 border-primary border-t-transparent" />
-            <span className="text-sm text-muted-foreground">Loading services...</span>
-          </div>
-        )}
-
-        {/* Error State */}
-        {error && (
-          <div className="bg-destructive/10 border border-destructive/20 text-destructive text-[14px] p-4 rounded-xl text-center mb-6 font-medium">
-            {error}
-          </div>
-        )}
-
-        {/* No Results */}
-        {!loading && !error && filteredServices.length === 0 && (
-          <div className="bg-card border border-border rounded-lg p-10 text-center">
-            <p className="text-sm font-semibold mb-1 text-foreground">
-              No services found
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Try searching for other keywords like "birth", "marriage", "death", or "CTC".
-            </p>
-          </div>
-        )}
-
-        {/* Accordion List */}
-        <div className="space-y-3">
-          {filteredServices.map((service) => {
-            const isExpanded = !!expandedCodes[service.service_code];
-            const groupOrCode = service.requirement_group ?? service.service_code;
-            const isConditionalOpen = !!conditionalOpen[service.service_code];
-            
-            // Filter requirements belonging to this service/group
-            const serviceReqs = requirements.filter(
-              (r) => r.service_code === groupOrCode || r.requirement_group === groupOrCode
-            );
-            
-            const mandatoryReqs = serviceReqs.filter((r) => r.is_mandatory);
-            const conditionalReqs = serviceReqs.filter((r) => !r.is_mandatory);
-
-            // Clean step text
-            const cleanedSteps = (service.steps_description ?? [])
-              .map(cleanStepText)
-              .filter((s) => s.length > 0);
-
+        <div className="mb-8 flex flex-wrap gap-2.5">
+          {pills.map((pill) => {
+            const active = activePill === pill.key;
             return (
-              <div
-                key={service.service_code}
-                id={`service-${service.service_code}`}
-                className="bg-card border border-border rounded-lg overflow-hidden transition-all duration-200"
+              <button
+                key={pill.key}
+                type="button"
+                onClick={() => setActivePill(pill.key)}
+                className={
+                  active
+                    ? "rounded-full bg-foreground px-4.5 py-2.5 text-[15px] font-bold text-white"
+                    : "rounded-full border border-control-border bg-white px-4.5 py-2.5 text-[15px] text-body-strong transition-colors hover:border-dashed-border"
+                }
               >
-                {/* Accordion Header */}
-                <button
-                  onClick={() => toggleExpand(service.service_code)}
-                  className={`w-full px-5 py-4 flex items-center justify-between text-left transition-colors cursor-pointer ${
-                    isExpanded ? "bg-muted/40 border-b border-border" : "hover:bg-muted/10"
-                  }`}
-                >
-                  <div className="flex-1 pr-4">
-                    <span className="font-bold text-sm md:text-base leading-snug block text-foreground">
-                      {service.name}
-                    </span>
-                  </div>
-                  <ChevronDown
-                    className={`w-4 h-4 shrink-0 transition-transform duration-200 ${
-                      isExpanded ? "rotate-180 text-primary" : "text-muted-foreground"
-                    }`}
-                  />
-                </button>
-
-                {/* Accordion Content */}
-                <div
-                  className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                    isExpanded ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
-                  }`}
-                >
-                  <div className="p-5 space-y-6">
-                    {/* ── Key Metrics inline row ───────────────────────────────── */}
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg border border-border">
-                      <span className="flex items-center gap-1.5">
-                        <CircleDollarSign className="size-3.5 text-muted-foreground" />
-                        <span className="font-semibold text-foreground">
-                          {service.fee === 0 || service.fee === null
-                            ? "Free of Charge"
-                            : `₱${Number(service.fee).toLocaleString(undefined, {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}`}
-                        </span>
-                      </span>
-                      <span aria-hidden className="text-border">·</span>
-                      <span className="flex items-center gap-1.5">
-                        <Clock className="size-3.5 text-muted-foreground" />
-                        <span className="font-semibold text-foreground">{service.processing_time || "Varies / Case by case"}</span>
-                      </span>
-                    </div>
-
-                    {/* ── Requirements ─────────────────────────────────────── */}
-                    <div className="space-y-3">
-                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                        <FileText className="w-3.5 h-3.5" /> Required Documents
-                      </h4>
-
-                      {serviceReqs.length === 0 ? (
-                        <p className="text-xs italic p-3 rounded-lg border border-dashed text-muted-foreground border-border bg-muted/10">
-                          No specific required documents defined in the citizen's charter.
-                        </p>
-                      ) : (
-                        <div className="space-y-4">
-                          {/* Mandatory requirements */}
-                          {mandatoryReqs.length > 0 && (
-                            <div className="space-y-2">
-                              <div className="text-xs font-bold text-muted-foreground">
-                                Required Documents ({mandatoryReqs.length})
-                              </div>
-                              <ul className="space-y-0 divide-y divide-border">
-                                {mandatoryReqs.map((req) => {
-                                  const { primary, secondary } = parseRequirementName(req.requirement_name);
-                                  return (
-                                    <li
-                                      key={req.id}
-                                      className="py-2 list-none"
-                                    >
-                                      <p className="text-xs font-semibold leading-snug text-foreground">
-                                        {primary}
-                                      </p>
-                                      {secondary && (
-                                        <p className="text-[11px] leading-snug mt-0.5 text-muted-foreground">
-                                          {secondary}
-                                        </p>
-                                      )}
-                                    </li>
-                                  );
-                                })}
-                              </ul>
-                            </div>
-                          )}
-
-                          {/* Conditional requirements — collapsed */}
-                          {conditionalReqs.length > 0 && (
-                            <div className="space-y-2">
-                              <button
-                                onClick={() => toggleConditional(service.service_code)}
-                                className="flex items-center justify-between w-full py-2 text-xs font-semibold text-muted-foreground hover:text-foreground border-t border-border mt-2 cursor-pointer select-none group/trigger"
-                              >
-                                <span className="flex items-center gap-1.5">
-                                  <AlertTriangle className="h-3.5 w-3.5 text-muted-foreground" />
-                                  If Applicable ({conditionalReqs.length})
-                                </span>
-                                <ChevronDown
-                                  className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
-                                    isConditionalOpen ? "rotate-180" : ""
-                                  }`}
-                                />
-                              </button>
-
-                              <div
-                                className={`overflow-hidden transition-all duration-200 ${
-                                  isConditionalOpen ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
-                                }`}
-                              >
-                                <ul className="space-y-0 divide-y divide-border pt-1">
-                                  {conditionalReqs.map((req) => {
-                                    const { primary, secondary } = parseRequirementName(req.requirement_name);
-                                    return (
-                                      <li
-                                        key={req.id}
-                                        className="py-2 list-none"
-                                      >
-                                        <p className="text-xs font-medium leading-snug text-foreground">
-                                          {primary}
-                                        </p>
-                                        {secondary && (
-                                          <p className="text-[11px] leading-snug mt-0.5 text-muted-foreground">
-                                            {secondary}
-                                          </p>
-                                        )}
-                                      </li>
-                                    );
-                                  })}
-                                </ul>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* ── Process Steps ────────────────────────────────────── */}
-                    {cleanedSteps.length > 0 && (
-                      <div className="space-y-3 pt-2">
-                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                          <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" /> Step-by-step Procedure
-                        </h4>
-                        <div className="relative ml-1.5 space-y-0">
-                          {cleanedSteps.map((step, idx) => (
-                            <div key={idx} className="relative flex gap-3 pb-3 last:pb-0">
-                              {/* Timeline connector */}
-                              {idx < cleanedSteps.length - 1 && (
-                                <div className="absolute left-[9px] top-5 bottom-0 w-[1px] bg-border" />
-                              )}
-                              <span className="relative z-10 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-bold">
-                                {idx + 1}
-                              </span>
-                              <p className="text-xs text-foreground leading-relaxed pt-0.5">
-                                {step}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* ── CTA Button ───────────────────────────────────────── */}
-                    <div className="pt-4 border-t border-border flex justify-end">
-                      <Link
-                        to="/service/$serviceCode"
-                        params={{ serviceCode: service.service_code }}
-                        className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 font-medium text-xs px-4 py-2 rounded-lg transition-colors shadow-sm"
-                      >
-                        Submit request intent online
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                {pill.label}
+              </button>
             );
           })}
         </div>
+
+        {loading && (
+          <div className="space-y-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-18 animate-pulse rounded-xl bg-muted" />
+            ))}
+          </div>
+        )}
+
+        {!loading && error && (
+          <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-8 text-center">
+            <p className="mb-3 text-sm font-medium text-destructive">{error}</p>
+            <button
+              type="button"
+              onClick={() => setReloadToken((n) => n + 1)}
+              className="inline-flex items-center rounded-lg border border-control-border bg-white px-4 py-2 text-sm font-semibold text-foreground hover:bg-background"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && filteredServices.length === 0 && (
+          <div className="rounded-xl border border-border bg-white p-10 text-center">
+            <p className="mb-1 text-sm font-semibold text-foreground">
+              No services found
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Try clearing the search or filters and browse the full list
+              instead.
+            </p>
+          </div>
+        )}
+
+        {!loading && !error && filteredServices.length > 0 && (
+          <div className="space-y-4">
+            {filteredServices.map((service) => {
+              const isExpanded = !!expandedCodes[service.service_code];
+              const isConditionalOpen = !!conditionalOpen[service.service_code];
+              const serviceReqs = requirementsByService.get(service.service_code) ?? [];
+              const mandatoryReqs = serviceReqs.filter((r) => r.is_mandatory);
+              const conditionalReqs = serviceReqs.filter((r) => !r.is_mandatory);
+              const cleanedSteps = (service.steps_description ?? [])
+                .map(cleanStepText)
+                .filter((s) => s.length > 0);
+
+              return (
+                <div
+                  key={service.service_code}
+                  id={`service-${service.service_code}`}
+                  className="overflow-hidden rounded-xl border border-border bg-white"
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleExpand(service.service_code)}
+                    className={`flex w-full items-center justify-between gap-4 px-5 py-4.5 text-left transition-colors ${
+                      isExpanded ? "border-b border-border-light" : "hover:bg-background"
+                    }`}
+                  >
+                    <div>
+                      <span className="block text-base font-bold leading-snug text-foreground">
+                        {service.name}
+                      </span>
+                      {service.classification && (
+                        <span className="mt-1 block text-xs text-muted-foreground capitalize">
+                          {service.classification.replace("_", " ")} transaction
+                        </span>
+                      )}
+                    </div>
+                    <ChevronDown
+                      className={`size-4.5 shrink-0 text-muted-foreground transition-transform duration-200 ${
+                        isExpanded ? "rotate-180 text-primary" : ""
+                      }`}
+                    />
+                  </button>
+
+                  <div
+                    className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                      isExpanded ? "max-h-[3000px] opacity-100" : "max-h-0 opacity-0"
+                    }`}
+                  >
+                    <div className="flex flex-col gap-5 px-5 py-5">
+                      <div className="grid grid-cols-2 divide-x divide-border-light rounded-[10px] border border-border-light">
+                        <div className="flex flex-col gap-1 px-4 py-3.5">
+                          <span className="text-xs text-muted-foreground">Total fees</span>
+                          <span className="text-lg font-bold text-foreground">
+                            {formatFee(service.fee, service.display_group)}
+                          </span>
+                          <span className="text-xs text-body">Pay at the CCRO cashier</span>
+                        </div>
+                        <div className="flex flex-col gap-1 px-4 py-3.5">
+                          <span className="text-xs text-muted-foreground">Time at the office</span>
+                          <span className="text-lg font-bold text-foreground">
+                            {service.processing_time || "Varies"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-2.5">
+                        <h4 className="text-sm font-bold text-foreground">
+                          Required documents ({mandatoryReqs.length})
+                        </h4>
+
+                        {mandatoryReqs.length === 0 ? (
+                          <p className="rounded-[10px] border border-dashed border-dashed-border bg-background p-3.5 text-xs italic text-muted-foreground">
+                            No specific required documents are listed for this service.
+                          </p>
+                        ) : (
+                          <div className="divide-y divide-border-lighter rounded-[10px] border border-border-light">
+                            {mandatoryReqs.map((req) => {
+                              const { primary, secondary } = parseRequirementName(req.requirement_name);
+                              return (
+                                <div key={req.id} className="px-4 py-3.5">
+                                  <p className="text-sm font-medium leading-snug text-body-strong">
+                                    {primary}
+                                  </p>
+                                  {secondary && (
+                                    <p className="mt-1 text-xs leading-snug text-muted-foreground">
+                                      {secondary}
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {conditionalReqs.length > 0 && (
+                        <div className="flex flex-col gap-2.5">
+                          <button
+                            type="button"
+                            onClick={() => toggleConditional(service.service_code)}
+                            className="flex w-full items-center justify-between text-left"
+                          >
+                            <h4 className="text-sm font-bold text-foreground">
+                              Only if it applies to you ({conditionalReqs.length})
+                            </h4>
+                            <ChevronDown
+                              className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
+                                isConditionalOpen ? "rotate-180" : ""
+                              }`}
+                            />
+                          </button>
+
+                          <div
+                            className={`overflow-hidden transition-all duration-200 ${
+                              isConditionalOpen ? "max-h-300 opacity-100" : "max-h-0 opacity-0"
+                            }`}
+                          >
+                            <div className="divide-y divide-warning-border/40 rounded-[10px] border border-warning-border bg-warning-soft">
+                              {conditionalReqs.map((req) => {
+                                const { primary, secondary } = parseRequirementName(req.requirement_name);
+                                return (
+                                  <div key={req.id} className="px-4 py-3.5">
+                                    <p className="text-sm font-medium leading-snug text-body-strong">
+                                      {primary}
+                                    </p>
+                                    <p className="mt-1 text-xs leading-snug text-warning-strong">
+                                      {secondary || "Only needed if this applies to your case."}
+                                    </p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {cleanedSteps.length > 0 && (
+                        <div className="flex flex-col gap-3">
+                          <h4 className="text-sm font-bold text-foreground">
+                            What happens at the office
+                          </h4>
+                          <div className="flex flex-col gap-3">
+                            {cleanedSteps.map((step, idx) => (
+                              <div key={idx} className="flex gap-3">
+                                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-bold text-primary">
+                                  {idx + 1}
+                                </span>
+                                <p className="pt-0.5 text-sm leading-relaxed text-body-strong">
+                                  {step}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap items-center justify-between gap-4 rounded-[10px] border border-border-light bg-background px-5 py-4.5">
+                        <div>
+                          <p className="text-sm font-bold text-foreground">
+                            Ready to file this online?
+                          </p>
+                          <p className="text-xs text-body">
+                            Apply now, or save this checklist to your account first.
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-3">
+                          <Link
+                            to="/login"
+                            search={{ redirect: "/requirements" }}
+                            className="inline-flex min-h-9 items-center rounded-lg border border-control-border bg-white px-4 text-xs font-semibold text-foreground transition-colors hover:bg-white/80"
+                          >
+                            Save checklist
+                          </Link>
+                          <Link
+                            to="/apply/$serviceCode/details"
+                            params={{ serviceCode: service.display_group ?? service.service_code }}
+                            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-xs font-semibold text-white transition-colors hover:bg-primary-hover"
+                          >
+                            Start application
+                            <ArrowRight className="size-3.5" />
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </main>
 
       <SiteFooter />

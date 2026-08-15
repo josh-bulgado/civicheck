@@ -1,9 +1,9 @@
-import AboutBanner from "./components/AboutBanner";
 import HeroSection from "./components/HeroSection";
 import HowItWorksSection from "./components/HowItWorksSection";
+import QueueTeaserSection from "./components/QueueTeaserSection";
+import ServicesSection from "./components/ServicesSection";
 import SiteFooter from "./components/SiteFooter";
 import SiteHeader from "./components/SiteHeader";
-import WhyCiviCheckSection from "./components/WhyCiviCheckSection";
 
 const LandingPage = () => {
   return (
@@ -11,9 +11,9 @@ const LandingPage = () => {
       <SiteHeader />
       <main>
         <HeroSection />
+        <ServicesSection />
         <HowItWorksSection />
-        <WhyCiviCheckSection />
-        <AboutBanner />
+        <QueueTeaserSection />
       </main>
       <SiteFooter />
     </div>

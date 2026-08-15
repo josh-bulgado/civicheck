@@ -25,7 +25,7 @@ interface RequirementChecklistProps {
   allowUploads?: boolean;
 }
 
-function isVisible(req: Requirement, selectedCode?: string | null): boolean {
+export function isVisible(req: Requirement, selectedCode?: string | null): boolean {
   if (!req.case_tag) return true;
   if (!selectedCode) return false;
   const code = selectedCode.toUpperCase();

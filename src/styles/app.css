@@ -2,7 +2,6 @@
 @source "../";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/public-sans";
 
 @layer base {
   *,
@@ -45,9 +44,9 @@
 }
 
 @theme inline {
-  --font-display: "Public Sans Variable", "Public Sans", Arial, sans-serif;
-  --font-heading: "Public Sans Variable", "Public Sans", Arial, sans-serif;
-  --font-sans: "Public Sans Variable", "Public Sans", Arial, sans-serif;
+  --font-display: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-heading: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -70,6 +69,9 @@
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
   --color-muted: var(--muted);
+  --color-muted-2: var(--muted-2);
+  --color-body: var(--body);
+  --color-body-strong: var(--body-strong);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
@@ -88,10 +90,29 @@
   --color-brand-gold: var(--brand-gold);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
+  --color-success-soft-2: var(--success-soft-2);
+  --color-success-dot: var(--success-dot);
   --color-warning: var(--warning);
+  --color-warning-strong: var(--warning-strong);
   --color-warning-soft: var(--warning-soft);
+  --color-warning-border: var(--warning-border);
   --color-surface-subtle: var(--surface-subtle);
   --color-sidebar-muted: var(--sidebar-muted);
+
+  --color-primary-tint: var(--primary-tint);
+  --color-control-border: var(--control-border);
+  --color-dashed-border: var(--dashed-border);
+  --color-border-light: var(--border-light);
+  --color-border-lighter: var(--border-lighter);
+  --color-disabled: var(--disabled);
+
+  --color-panel-dark: var(--panel-dark);
+  --color-panel-dark-row: var(--panel-dark-row);
+  --color-panel-dark-divider: var(--panel-dark-divider);
+  --color-panel-dark-highlight: var(--panel-dark-highlight);
+  --color-panel-dark-highlight-border: var(--panel-dark-highlight-border);
+  --color-panel-dark-text: var(--panel-dark-text);
+  --color-panel-dark-muted: var(--panel-dark-muted);
 
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
@@ -103,55 +124,76 @@
 }
 
 :root {
-  --background: #f7f9fc;
-  --workspace: #eef1f5;
-  --foreground: #17212b;
+  --background: #f5f7fb;
+  --workspace: #eef1f6;
+  --foreground: #0f1b2d;
   --card: #ffffff;
-  --card-foreground: #17212b;
+  --card-foreground: #0f1b2d;
   --popover: #ffffff;
-  --popover-foreground: #17212b;
+  --popover-foreground: #0f1b2d;
 
-  --primary: #0049a8;
-  --primary-hover: #003b86;
+  --primary: #0b4da2;
+  --primary-hover: #093a7a;
   --primary-foreground: #ffffff;
-  --primary-soft: #eaf2ff;
-  --secondary: #eef2f7;
-  --secondary-foreground: #17212b;
-  --muted: #f1f4f8;
-  --muted-foreground: #5d6876;
-  --accent: #eaf2ff;
-  --accent-foreground: #003b86;
-  --surface-subtle: #f7f8fa;
+  --primary-soft: #e7eefa;
+  --primary-tint: #f0f5fc;
+  --secondary: #eef1f6;
+  --secondary-foreground: #0f1b2d;
+  --muted: #eef1f6;
+  --muted-foreground: #6b7787;
+  --muted-2: #5d6a7c;
+  --body: #475363;
+  --body-strong: #2c3a4d;
+  --accent: #e7eefa;
+  --accent-foreground: #093a7a;
+  --surface-subtle: #f5f7fb;
 
   --brand-red: #e6151a;
   --brand-gold: #fdd300;
-  --destructive: #c1121f;
-  --success: #167447;
-  --success-soft: #e8f7ef;
-  --warning: #7a5700;
-  --warning-soft: #fff5c2;
+  --destructive: #b3261e;
+  --success: #1f8a5b;
+  --success-soft: #e7f6ee;
+  --success-soft-2: #f4fbf7;
+  --success-dot: #4ec98a;
+  --warning: #9a6c10;
+  --warning-strong: #7d5709;
+  --warning-soft: #fdf7ea;
+  --warning-border: #e6c982;
+  --disabled: #8794a5;
 
-  --border: #d8dee7;
-  --border-strong: #c1c9d4;
-  --input: #c9d1dc;
-  --ring: #0049a8;
+  --border: #d7dee9;
+  --border-light: #e4e9f1;
+  --border-lighter: #eef1f6;
+  --border-strong: #cfd8e5;
+  --control-border: #cfd8e5;
+  --dashed-border: #b9c8dd;
+  --input: #cfd8e5;
+  --ring: #0b4da2;
   --radius: 0.5rem;
 
-  --chart-1: #0049a8;
+  --chart-1: #0b4da2;
   --chart-2: #276dcc;
-  --chart-3: #167447;
-  --chart-4: #7a5700;
-  --chart-5: #c1121f;
+  --chart-3: #1f8a5b;
+  --chart-4: #9a6c10;
+  --chart-5: #b3261e;
 
   --sidebar: #ffffff;
-  --sidebar-foreground: #17212b;
-  --sidebar-primary: #0049a8;
+  --sidebar-foreground: #0f1b2d;
+  --sidebar-primary: #0b4da2;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #eaf2ff;
-  --sidebar-accent-foreground: #003b86;
-  --sidebar-muted: #5d6876;
-  --sidebar-border: #d8dee7;
-  --sidebar-ring: #0049a8;
+  --sidebar-accent: #e7eefa;
+  --sidebar-accent-foreground: #093a7a;
+  --sidebar-muted: #6b7787;
+  --sidebar-border: #d7dee9;
+  --sidebar-ring: #0b4da2;
+
+  --panel-dark: #0f1b2d;
+  --panel-dark-row: #1a2942;
+  --panel-dark-divider: #27364b;
+  --panel-dark-highlight: #123a6e;
+  --panel-dark-highlight-border: #2d6cbf;
+  --panel-dark-text: #cdd7e4;
+  --panel-dark-muted: #9fb0c6;
 }
 
 /* Shared civic layout primitives. */
