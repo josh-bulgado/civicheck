@@ -1,13 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSupabaseServerClient } from "~/utils/supabase";
+import { requireActiveSession } from "~/server/auth";
 
 export const getBookableRequestsFn = createServerFn({ method: "GET" }).handler(async () => {
-  const supabase = getSupabaseServerClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-  if (authError || !user) throw new Error("Unauthorized");
+  const { supabase, user } = await requireActiveSession("requests:view_own");
 
   const { data: requests, error } = await supabase
     .from("requests")
@@ -40,12 +36,7 @@ export const getBookableRequestsFn = createServerFn({ method: "GET" }).handler(a
 });
 
 export const getMyAppointmentsFn = createServerFn({ method: "GET" }).handler(async () => {
-  const supabase = getSupabaseServerClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-  if (authError || !user) throw new Error("Unauthorized");
+  const { supabase, user } = await requireActiveSession("requests:view_own");
 
   const { data, error } = await supabase
     .from("appointments")

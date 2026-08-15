@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { getSupabaseServerClient } from "~/utils/supabase";
+import { requireActiveSession } from "~/server/auth";
+import { hasPermission, type Role } from "~/lib/permissions";
 import { useState } from "react";
 import {
   FileText,
@@ -15,12 +16,7 @@ import { getStatusDetails, getPaymentDetails } from "~/features/services/request
 
 // Fetch applicant's requests
 const getMyRequests = createServerFn({ method: "GET" }).handler(async () => {
-  const supabase = getSupabaseServerClient();
-  
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    throw new Error("Unauthorized");
-  }
+  const { supabase, user } = await requireActiveSession("requests:view_own");
   
   const { data, error } = await supabase
     .from("requests")
@@ -47,6 +43,9 @@ const getMyRequests = createServerFn({ method: "GET" }).handler(async () => {
 });
 
 export const Route = createFileRoute("/_authed/my-requests")({
+  beforeLoad: ({ context }) => {
+    if (!context.user || !hasPermission(context.user.role as Role, "requests:view_own")) throw new Error("Forbidden");
+  },
   loader: () => getMyRequests(),
   component: MyRequestsPage,
 });

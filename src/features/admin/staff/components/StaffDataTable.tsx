@@ -27,7 +27,10 @@ import {
   useCancelStaffInvitation,
   useResendStaffInvitation,
 } from "../hooks/useStaffInvitationActions";
-import { useRemoveStaffMember } from "../hooks/useStaffManagementActions";
+import {
+  useDeactivateStaffMember,
+  useReactivateStaffMember,
+} from "../hooks/useStaffManagementActions";
 import { CancelStaffInvitationDialog } from "./CancelStaffInvitationDialog";
 import { createStaffColumns } from "./StaffColumn";
 import { ManageStaffAccessDialog } from "./ManageStaffAccessDialog";
@@ -53,11 +56,12 @@ export function StaffDataTable({
   const [removeTarget, setRemoveTarget] = useState<StaffMember | null>(null);
   const resendInvitation = useResendStaffInvitation();
   const cancelInvitation = useCancelStaffInvitation();
-  const removeStaff = useRemoveStaffMember();
+  const removeStaff = useDeactivateStaffMember();
+  const reactivateStaff = useReactivateStaffMember();
 
   const resendingStaffId =
     resendInvitation.status === "pending"
-      ? resendInvitation.variables?.data.staffId ?? null
+      ? (resendInvitation.variables?.data.staffId ?? null)
       : null;
 
   const handleResend = useCallback(
@@ -107,6 +111,8 @@ export function StaffDataTable({
         onResend: handleResend,
         onCancel: handleCancelRequest,
         onRemove: handleRemoveRequest,
+        onReactivate: (staffMember) =>
+          void reactivateStaff.mutate({ data: { staffId: staffMember.id } }),
       }),
     [
       checkingStaffId,
@@ -116,6 +122,7 @@ export function StaffDataTable({
       handleRemoveRequest,
       handleResend,
       resendingStaffId,
+      reactivateStaff.mutate,
     ],
   );
 
@@ -163,7 +170,7 @@ export function StaffDataTable({
         <StaffTableToolbar value={globalFilter} onChange={setGlobalFilter} />
         <Button onClick={() => setInviteOpen(true)} className="sm:shrink-0">
           <UserPlus className="size-4" />
-          Invite staff
+          Invite Staff
         </Button>
       </div>
 
@@ -188,7 +195,10 @@ export function StaffDataTable({
           <TableBody>
             {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} className="h-[76px] hover:bg-surface-subtle">
+                <TableRow
+                  key={row.id}
+                  className="h-[76px] hover:bg-surface-subtle"
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="px-5 py-3">
                       {flexRender(
@@ -230,9 +240,7 @@ export function StaffDataTable({
         </div>
       </div>
 
-      {table.getPageCount() > 1 ? (
-        <DataTablePagination table={table} />
-      ) : null}
+      {table.getPageCount() > 1 ? <DataTablePagination table={table} /> : null}
 
       <StaffInviteDialog
         open={inviteOpen}

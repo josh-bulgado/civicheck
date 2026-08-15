@@ -1,17 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getSupabaseServerClient } from "~/utils/supabase";
+import { requireActiveSession } from "~/server/auth";
 
 export const bookAppointmentFn = createServerFn({ method: "POST" })
   .validator((d: { requestId: string; date: string; timeSlotId: string }) => d)
   .handler(async ({ data }) => {
-    const supabase = getSupabaseServerClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return { error: true, message: "Unauthorized: please log in again." };
-    }
+    const { supabase, user } = await requireActiveSession("requests:view_own");
 
     const { data: slot, error: slotError } = await supabase
       .from("appointment_time_slots")
@@ -57,14 +50,7 @@ export const bookAppointmentFn = createServerFn({ method: "POST" })
 export const cancelAppointmentFn = createServerFn({ method: "POST" })
   .validator((d: { appointmentId: string }) => d)
   .handler(async ({ data }) => {
-    const supabase = getSupabaseServerClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return { error: true, message: "Unauthorized: please log in again." };
-    }
+    const { supabase, user } = await requireActiveSession("requests:view_own");
 
     const { error } = await supabase
       .from("appointments")

@@ -1,12 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSupabaseServerClient, getSupabaseAdminClient } from "~/utils/supabase";
 import { sendEmail } from "~/utils/resend";
+import { requireActiveSession } from "~/server/auth";
 
 export const loginWithEmailFn = createServerFn({ method: "POST" })
   .validator((d: { email: string; password: string }) => d)
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient();
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: loginData, error } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
     });
@@ -21,6 +22,13 @@ export const loginWithEmailFn = createServerFn({ method: "POST" })
         message: cleanMessage,
       };
     }
+
+    const { data: profile } = await supabase.from("profiles").select("access_status").eq("id", loginData.user.id).single();
+    if ((profile?.access_status ?? "active") !== "active") {
+      await supabase.auth.signOut();
+      return { error: true, message: "This account is not active." };
+    }
+    return { error: false };
   });
 
 export const loginWithOAuthFn = createServerFn({ method: "POST" })
@@ -170,7 +178,7 @@ export const signupFn = createServerFn({ method: "POST" })
 export const resetPasswordFn = createServerFn({ method: "POST" })
   .validator((d: { password: string }) => d)
   .handler(async ({ data }) => {
-    const supabase = getSupabaseServerClient();
+    const { supabase } = await requireActiveSession();
     const { error } = await supabase.auth.updateUser({
       password: data.password,
     });

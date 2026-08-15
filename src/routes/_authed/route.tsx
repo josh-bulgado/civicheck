@@ -31,9 +31,14 @@ export const loginFn = createServerFn({ method: "POST" })
     // Fetch the user's role from profiles
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, access_status")
       .eq("id", authData.user.id)
       .single();
+
+    if ((profile?.access_status ?? "active") !== "active") {
+      await supabase.auth.signOut();
+      return { error: true, message: "This account is not active.", role: null };
+    }
 
     return {
       error: false,
@@ -45,7 +50,7 @@ export const loginFn = createServerFn({ method: "POST" })
 export const Route = createFileRoute("/_authed")({
   component: AuthedLayout,
   beforeLoad: ({ context, location }) => {
-    if (!context.user)
+    if (!context.user || context.user.accountStatus !== "active")
       throw redirect({ to: "/login", search: { redirect: location.href } });
   },
 });

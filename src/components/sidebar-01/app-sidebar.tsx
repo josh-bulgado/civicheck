@@ -5,6 +5,8 @@ import {
   IconListDetails,
   IconProgressCheck,
   IconUserPlus,
+  IconShield,
+  IconHistory,
 } from "@tabler/icons-react";
 import { LayoutDashboard } from "lucide-react";
 import { NavFooter } from "~/components/sidebar-01/nav-footer";
@@ -53,12 +55,30 @@ export function AppSidebar({
     });
   }
 
-  if (can("users:manage")) {
+  if (can("users:invite_staff")) {
     navMain.push({
       id: "admin-staff",
       title: "Staff",
       url: "/admin/staff",
       icon: IconUserPlus,
+    });
+  }
+
+  if (can("accounts:view_all")) {
+    navMain.push({
+      id: "system-accounts",
+      title: "Accounts",
+      url: "/system-admin/accounts",
+      icon: IconShield,
+    });
+  }
+
+  if (can("audit:view")) {
+    navMain.push({
+      id: "system-audit",
+      title: "Audit Center",
+      url: "/system-admin/audit",
+      icon: IconHistory,
     });
   }
 

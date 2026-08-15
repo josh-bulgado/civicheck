@@ -37,6 +37,7 @@ export function createStaffColumns({
   onResend,
   onCancel,
   onRemove,
+  onReactivate,
 }: {
   checkingStaffId: string | null;
   resendingStaffId: string | null;
@@ -45,6 +46,7 @@ export function createStaffColumns({
   onResend: (staffMember: StaffMember) => void;
   onCancel: (staffMember: StaffMember) => void;
   onRemove: (staffMember: StaffMember) => void;
+  onReactivate: (staffMember: StaffMember) => void;
 }): ColumnDef<StaffMember>[] {
   return [
     {
@@ -125,7 +127,9 @@ export function createStaffColumns({
       cell: ({ row }) => {
         const staffMember = row.original;
         const isChecking = checkingStaffId === staffMember.id;
-        const label = staffMember.confirmed
+        const label = staffMember.status !== "active"
+          ? "Deactivated"
+          : staffMember.confirmed
           ? "Active"
           : staffMember.emailConfirmed
             ? "Setup pending"
@@ -142,7 +146,7 @@ export function createStaffColumns({
           >
             <span
               className={`size-2 rounded-full ${
-                staffMember.confirmed ? "bg-success" : "bg-warning"
+                staffMember.status !== "active" ? "bg-destructive" : staffMember.confirmed ? "bg-success" : "bg-warning"
               }`}
             />
             {label}
@@ -164,6 +168,7 @@ export function createStaffColumns({
             onResend={onResend}
             onCancel={onCancel}
             onRemove={onRemove}
+            onReactivate={onReactivate}
           />
         </div>
       ),

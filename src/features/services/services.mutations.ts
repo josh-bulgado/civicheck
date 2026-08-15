@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getSupabaseServerClient } from "~/utils/supabase";
+import { requireActiveSession } from "~/server/auth";
 
 export const submitRequestFn = createServerFn({ method: "POST" })
   .validator(
@@ -14,15 +14,7 @@ export const submitRequestFn = createServerFn({ method: "POST" })
     }) => d,
   )
   .handler(async ({ data }) => {
-    const supabase = getSupabaseServerClient();
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return { error: true, message: "Unauthorized: Please log in again." };
-    }
+    const { supabase, user } = await requireActiveSession("requests:create");
 
     const year = new Date().getFullYear();
     let trackingNumber = "";

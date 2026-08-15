@@ -4,7 +4,10 @@ export type Role =
   | "staff"
   | "supervisor"
   | "cashier"
-  | "admin";
+  | "admin"
+  | "system_admin";
+
+export type AccountStatus = "active" | "suspended" | "deactivated";
 
 export type Permission =
   // services
@@ -20,13 +23,22 @@ export type Permission =
   | "requests:legal"
   | "requests:collect_payment"
 
-  // users
-  | "users:manage"
+  // CCRO personnel administration
+  | "users:invite_staff"
+  | "users:update_operational_roles"
+  | "users:deactivate_staff"
+
+  // platform account administration
+  | "accounts:view_all"
+  | "accounts:suspend"
+  | "accounts:replace_admin"
+  | "audit:view"
 
   // dashboard
   | "dashboard:applicant"
   | "dashboard:staff"
-  | "dashboard:admin";
+  | "dashboard:admin"
+  | "dashboard:system_admin";
 
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   applicant: [
@@ -68,8 +80,17 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "requests:archive",
     "requests:legal",
     "requests:collect_payment",
-    "users:manage",
+    "users:invite_staff",
+    "users:update_operational_roles",
+    "users:deactivate_staff",
     "dashboard:admin",
+  ],
+  system_admin: [
+    "accounts:view_all",
+    "accounts:suspend",
+    "accounts:replace_admin",
+    "audit:view",
+    "dashboard:system_admin",
   ],
 };
 

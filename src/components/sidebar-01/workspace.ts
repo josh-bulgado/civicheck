@@ -22,6 +22,11 @@ export function getWorkspaceDetails(role: Role): WorkspaceDetails {
         label: "CCRO Administration",
         description: "Services, personnel, and citywide requests",
       };
+    case "system_admin":
+      return {
+        label: "System Administration",
+        description: "Account oversight and audit controls",
+      };
     default:
       return {
         label: "CCRO Workspace",

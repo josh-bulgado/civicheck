@@ -17,5 +17,6 @@ export function usePermissions() {
     can: (permission: Permission) => hasPermission(role, permission),
     isInternal: isInternalRole(role),
     isAdmin: role === "admin",
+    isSystemAdmin: role === "system_admin",
   };
 }

@@ -27,15 +27,17 @@ const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
   // Fetch role from profiles table
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, first_name, last_name")
+    .select("role, first_name, last_name, access_status")
     .eq("id", data.user.id)
     .single();
 
   return {
+    id: data.user.id,
     email: data.user.email,
     role: profile?.role ?? "applicant",
     firstName: profile?.first_name ?? "",
     lastName: profile?.last_name ?? "",
+    accountStatus: profile?.access_status ?? "active",
   };
 });
 

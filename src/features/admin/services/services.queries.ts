@@ -1,11 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSupabaseServerClient } from "~/utils/supabase";
 import type { Service, ServiceRequirement } from "./services.types";
+import { requireActiveSession } from "~/server/auth";
 
 export type { ServiceRequirement } from "./services.types";
 
 export const getAdminServices = createServerFn({ method: "GET" }).handler(
   async () => {
+    await requireActiveSession("services:manage");
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
       .from("services_registry")

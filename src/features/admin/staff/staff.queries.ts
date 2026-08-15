@@ -1,24 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
-import {
-  getSupabaseAdminClient,
-  getSupabaseServerClient,
-} from "~/utils/supabase";
-import { hasPermission, type Role } from "~/lib/permissions";
+import { getSupabaseAdminClient } from "~/utils/supabase";
+import type { Role } from "~/lib/permissions";
+import { requireActiveSession } from "~/server/auth";
 import type { Department, EmploymentType, StaffMember } from "./staff.types";
 
 const CCRO_ROLES: Role[] = ["frontdesk", "staff", "supervisor", "cashier", "admin"];
 
 export const getStaff = createServerFn({ method: "GET" }).handler(async () => {
-  const supabase = getSupabaseServerClient();
-  const { data: authData } = await supabase.auth.getUser();
-  if (!authData.user) throw new Error("Unauthorized");
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", authData.user.id)
-    .single();
-  if (!hasPermission((profile?.role ?? "applicant") as Role, "users:manage"))
-    throw new Error("Forbidden");
+  await requireActiveSession("users:invite_staff");
 
   const adminSupabase = getSupabaseAdminClient();
   const [
@@ -29,7 +18,7 @@ export const getStaff = createServerFn({ method: "GET" }).handler(async () => {
     adminSupabase.auth.admin.listUsers({ perPage: 1000 }),
     adminSupabase
       .from("profiles")
-      .select("id, first_name, last_name, role, department_id, employment_type")
+      .select("id, first_name, last_name, role, department_id, employment_type, access_status")
       .in("role", CCRO_ROLES),
     adminSupabase
       .from("departments")
@@ -78,6 +67,7 @@ export const getStaff = createServerFn({ method: "GET" }).handler(async () => {
         departmentId: item?.department_id ?? null,
         departmentName: department?.name ?? "Unassigned",
         employmentType: (item?.employment_type ?? "regular") as EmploymentType,
+        status: item.access_status ?? "active",
       };
     })
     .filter((user): user is StaffMember => user !== null);

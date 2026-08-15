@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getSupabaseServerClient } from "~/utils/supabase";
+import { requireActiveSession } from "~/server/auth";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
 const MAX_SIZE = 10 * 1024 * 1024;
@@ -18,14 +18,7 @@ export const uploadRequestDocumentFn = createServerFn({ method: "POST" })
     return { file, serviceCode, requirementId };
   })
   .handler(async ({ data }) => {
-    const supabase = getSupabaseServerClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return { error: true, message: "Unauthorized: please log in again." };
-    }
+    const { supabase, user } = await requireActiveSession("requests:create");
 
     const { file, serviceCode, requirementId } = data;
 
@@ -61,14 +54,7 @@ export const uploadRequestDocumentFn = createServerFn({ method: "POST" })
 export const deleteRequestDocumentFn = createServerFn({ method: "POST" })
   .validator((d: { storagePath: string }) => d)
   .handler(async ({ data }) => {
-    const supabase = getSupabaseServerClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return { error: true, message: "Unauthorized: please log in again." };
-    }
+    const { supabase, user } = await requireActiveSession("requests:create");
 
     if (!data.storagePath.startsWith(`${user.id}/`)) {
       return { error: true, message: "You can't remove this file." };

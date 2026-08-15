@@ -28,11 +28,11 @@ export function RemoveStaffMemberDialog({
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Remove this staff member?</DialogTitle>
+          <DialogTitle>Deactivate this staff member?</DialogTitle>
           <DialogDescription>
             {staffMember
-              ? `${staffMember.email} will lose access and their account will be permanently removed. This action cannot be undone.`
-              : "This staff account will be permanently removed."}
+              ? `${staffMember.email} will lose access, but their profile and history will be preserved and can be reactivated.`
+              : "This staff account will be deactivated and preserved."}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -53,10 +53,10 @@ export function RemoveStaffMemberDialog({
             {isPending ? (
               <>
                 <Spinner />
-                Removing
+                Deactivating
               </>
             ) : (
-              "Remove staff member"
+              "Deactivate staff member"
             )}
           </Button>
         </DialogFooter>

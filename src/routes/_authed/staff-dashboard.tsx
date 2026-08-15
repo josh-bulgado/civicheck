@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { hasPermission, type Role } from "~/lib/permissions";
 import {
   ArrowRight,
   ClipboardCheck,
@@ -9,6 +10,9 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authed/staff-dashboard")({
+  beforeLoad: ({ context }) => {
+    if (!context.user || !hasPermission(context.user.role as Role, "dashboard:staff")) throw redirect({ to: "/dashboard" });
+  },
   component: StaffDashboard,
 });
 

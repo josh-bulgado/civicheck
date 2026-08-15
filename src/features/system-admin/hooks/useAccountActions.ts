@@ -1,0 +1,91 @@
+import { useCallback, useState } from "react";
+import { useRouter } from "@tanstack/react-router";
+import { toast } from "sonner";
+import {
+  reactivateAccount,
+  replaceCcroAdmin,
+  suspendAccount,
+} from "../system-admin.functions";
+
+type OutgoingRole = "frontdesk" | "staff" | "supervisor" | "cashier";
+
+export type AccountPendingAction =
+  | { type: "suspend"; accountId: string }
+  | { type: "reactivate"; accountId: string }
+  | { type: "replace-admin" }
+  | null;
+
+export function useAccountActions() {
+  const router = useRouter();
+  const [pendingAction, setPendingAction] =
+    useState<AccountPendingAction>(null);
+
+  const run = useCallback(
+    async (
+      action: () => Promise<unknown>,
+      pending: Exclude<AccountPendingAction, null>,
+      successMessage: string,
+    ) => {
+      setPendingAction(pending);
+      try {
+        await action();
+        toast.success(successMessage);
+        await router.invalidate();
+        return true;
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "The action could not be completed.",
+        );
+        return false;
+      } finally {
+        setPendingAction(null);
+      }
+    },
+    [router],
+  );
+
+  const suspend = useCallback(
+    (accountId: string, reason: string) =>
+      run(
+        () => suspendAccount({ data: { targetId: accountId, reason } }),
+        { type: "suspend", accountId },
+        "Account suspended.",
+      ),
+    [run],
+  );
+
+  const reactivate = useCallback(
+    (accountId: string) =>
+      run(
+        () => reactivateAccount({ data: { targetId: accountId } }),
+        { type: "reactivate", accountId },
+        "Account reactivated.",
+      ),
+    [run],
+  );
+
+  const replaceAdministrator = useCallback(
+    ({
+      candidateId,
+      outgoingRole,
+      outgoingDepartmentId,
+    }: {
+      candidateId: string;
+      outgoingRole: OutgoingRole;
+      outgoingDepartmentId: string | null;
+    }) =>
+      run(
+        () =>
+          replaceCcroAdmin({
+            data: { candidateId, outgoingRole, outgoingDepartmentId },
+          }),
+        { type: "replace-admin" },
+        "CCRO Administrator replaced.",
+      ),
+    [run],
+  );
+
+  return { pendingAction, suspend, reactivate, replaceAdministrator };
+}

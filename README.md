@@ -1,5 +1,21 @@
 # TanStack Start - Supabase Example
 
+## Bootstrap a System Administrator
+
+Create the user through the normal sign-up flow, then promote only its profile
+through the Supabase SQL editor after applying the migrations:
+
+```sql
+update public.profiles
+set role = 'system_admin'
+where id = '<auth-user-uuid>';
+```
+
+System Administrators remain ordinary Supabase `authenticated` users. Never
+assign or expose the Supabase `service_role` key. Additional recovery System
+Administrators must be promoted through the same manual process; the role is
+intentionally absent from invitations and application role selectors.
+
 A TanStack Start example demonstrating integration with Supabase for authentication and database.
 
 - [TanStack Router Docs](https://tanstack.com/router)

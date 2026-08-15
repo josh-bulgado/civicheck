@@ -22,6 +22,7 @@ export function StaffRowActions({
   onResend,
   onCancel,
   onRemove,
+  onReactivate,
 }: {
   staffMember: StaffMember;
   isResending: boolean;
@@ -29,6 +30,7 @@ export function StaffRowActions({
   onResend: (staffMember: StaffMember) => void;
   onCancel: (staffMember: StaffMember) => void;
   onRemove: (staffMember: StaffMember) => void;
+  onReactivate: (staffMember: StaffMember) => void;
 }) {
   if (staffMember.role === "admin") return null;
 
@@ -38,10 +40,11 @@ export function StaffRowActions({
         variant="outline"
         size="sm"
         onClick={() => onManage(staffMember)}
+        disabled={staffMember.status !== "active"}
         className="whitespace-nowrap"
       >
         <ShieldCheck />
-        Manage access
+        Manage Access
       </Button>
       <DropdownMenu>
         <DropdownMenuTrigger
@@ -59,16 +62,19 @@ export function StaffRowActions({
           </span>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
-          {!staffMember.emailConfirmed ? (
+          {staffMember.status !== "active" ? (
+            <DropdownMenuItem onClick={() => onReactivate(staffMember)}>
+              <RotateCcw />
+              Reactivate staff member
+            </DropdownMenuItem>
+          ) : !staffMember.emailConfirmed ? (
             <>
               <DropdownMenuItem
                 disabled={isResending}
                 onClick={() => onResend(staffMember)}
               >
                 <RotateCcw />
-                {isResending
-                  ? "Resending invitation..."
-                  : "Resend invitation"}
+                {isResending ? "Resending invitation..." : "Resend invitation"}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -85,7 +91,7 @@ export function StaffRowActions({
               onClick={() => onRemove(staffMember)}
             >
               <UserMinus />
-              Remove staff member
+              Deactivate staff member
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>

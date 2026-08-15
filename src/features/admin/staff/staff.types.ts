@@ -1,4 +1,4 @@
-import type { Role } from "~/lib/permissions";
+import type { AccountStatus, Role } from "~/lib/permissions";
 
 export type Department = {
   id: string;
@@ -19,6 +19,7 @@ export type StaffMember = {
   departmentId: string | null;
   departmentName: string;
   employmentType: EmploymentType;
+  status: AccountStatus;
 };
 
 export type InviteStaffInput = {

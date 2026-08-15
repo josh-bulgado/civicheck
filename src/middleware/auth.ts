@@ -1,7 +1,7 @@
 import { createMiddleware } from "@tanstack/react-start";
 import { getSupabaseServerClient } from "~/utils/supabase";
 import { hasPermission } from "~/lib/permissions";
-import type { Permission, Role } from "~/lib/permissions";
+import type { AccountStatus, Permission, Role } from "~/lib/permissions";
 
 /**
  * Initializes the Supabase client and fetches the authenticated user once.
@@ -21,15 +21,21 @@ export const rbacMiddleware = createMiddleware({ type: "function" }).server(
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, access_status")
       .eq("id", user.id)
       .single();
+
+    const status = (profile?.access_status ?? "active") as AccountStatus;
+    if (status !== "active") {
+      throw new Error("Forbidden: account is not active");
+    }
 
     return next({
       context: {
         supabase,
         user,
         role: (profile?.role ?? "applicant") as Role,
+        accountStatus: status,
       },
     });
   },

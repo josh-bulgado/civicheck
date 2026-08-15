@@ -67,7 +67,7 @@ const ServiceCard = (service: ServiceProps) => {
         </div>
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1.5 flex-1 ">
         <h2 className="line-clamp-2 text-[19px] font-bold leading-[1.3] tracking-[-0.01em] text-foreground">
           {title}
         </h2>

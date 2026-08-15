@@ -8,7 +8,7 @@ export const Route = createFileRoute("/_authed/admin/staff")({
   beforeLoad: ({ context }) => {
     if (
       !context.user ||
-      !hasPermission(context.user.role as Role, "users:manage")
+      !hasPermission(context.user.role as Role, "users:invite_staff")
     )
       throw redirect({ to: "/dashboard" });
   },
