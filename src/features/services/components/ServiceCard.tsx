@@ -21,51 +21,64 @@ const ServiceCard = (service: ServiceProps) => {
   const label = service.classification.replace("_", " ");
 
   return (
-    <div className="rounded-lg border border-border p-4 flex flex-col gap-2 h-full bg-card text-card-foreground shadow-xs group">
+    <article className="group flex h-full flex-col rounded-xl border border-border-strong bg-white p-5 text-card-foreground shadow-[0_1px_2px_rgba(23,33,43,0.04)] transition-[border-color,box-shadow] hover:border-primary/30 hover:shadow-[0_6px_18px_rgba(23,33,43,0.07)] sm:p-6">
       <div className="flex items-start justify-between gap-3">
-        <div className="bg-primary/10 rounded-md p-2 w-fit text-primary">
-          <FileText className="size-4" />
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/8 text-primary">
+          <FileText className="size-5" aria-hidden="true" />
         </div>
 
         <Badge variant={variant} className="capitalize">
           {label}
         </Badge>
       </div>
-      
-      <h3 className="font-bold text-sm text-foreground mt-1 line-clamp-2 min-h-[2.5rem]">
+
+      <h2 className="mt-4 min-h-[3rem] line-clamp-2 text-base font-bold leading-6 tracking-[-0.01em] text-foreground">
         {service.display_name ?? service.name}
-      </h3>
-      
-      <div className="flex flex-col gap-1 text-xs text-muted-foreground flex-1">
-        <div className="flex items-center gap-1.5">
-          <Clock className="size-3.5 shrink-0 text-primary" />
-          <span>
-            Processing: <span className="font-semibold text-foreground">{service.processing_time}</span>
-          </span>
+      </h2>
+
+      <dl className="mt-5 flex-1 divide-y divide-border border-y border-border">
+        <div className="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-x-3 py-3">
+          <Clock
+            className="row-span-2 mt-0.5 size-4 text-primary"
+            aria-hidden="true"
+          />
+          <dt className="text-xs font-medium text-muted-foreground">
+            Processing time
+          </dt>
+          <dd className="mt-0.5 text-sm font-semibold leading-5 text-foreground">
+            {service.processing_time}
+          </dd>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <PhilippinePeso className="size-3.5 shrink-0 text-primary" />
-          <span>
-            Service Fee:{" "}
-            <span className="font-semibold text-foreground">
-              {formatFee(service.fee, service.display_group)}
-            </span>
-          </span>
+        <div className="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-x-3 py-3">
+          <PhilippinePeso
+            className="row-span-2 mt-0.5 size-4 text-primary"
+            aria-hidden="true"
+          />
+          <dt className="text-xs font-medium text-muted-foreground">
+            Service fee
+          </dt>
+          <dd className="mt-0.5 text-sm font-semibold leading-5 text-foreground">
+            {formatFee(service.fee, service.display_group)}
+          </dd>
         </div>
-      </div>
-      
-      <div className="pt-2 mt-auto">
-        <Link
-          to="/service/$serviceCode"
-          params={{ serviceCode: service.display_group ?? service.service_code }}
-          className="inline-flex w-full items-center justify-center gap-1 rounded-md border border-border bg-background hover:bg-accent hover:text-accent-foreground px-3 py-1.5 text-xs font-medium transition-colors text-foreground"
-        >
-          View Requirements
-          <ArrowRight className="size-3.5 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-        </Link>
-      </div>
-    </div>
+      </dl>
+
+      <Link
+        to="/service/$serviceCode"
+        params={{
+          serviceCode: service.display_group ?? service.service_code,
+        }}
+        preload="intent"
+        className="-mx-2 mt-3 inline-flex min-h-11 items-center justify-between gap-2 rounded-lg px-2 text-sm font-bold text-primary outline-none transition-colors hover:bg-primary/5 hover:text-primary-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        View requirements
+        <ArrowRight
+          className="size-4 transition-transform group-hover:translate-x-0.5"
+          aria-hidden="true"
+        />
+      </Link>
+    </article>
   );
 };
 

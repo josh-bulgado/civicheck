@@ -1,5 +1,6 @@
 import type { Service } from "../services.types";
 import { ServicesPageHeader } from "../components/ServicesPageHeader";
+import { ServicesStatsCards } from "../components/ServicesStatsCards";
 import { ServicesTableSection } from "../components/ServicesTableSection";
 
 interface ServicesPageProps {
@@ -8,8 +9,9 @@ interface ServicesPageProps {
 
 const ServicesPage = ({ services }: ServicesPageProps) => {
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in duration-300">
+    <div className="dashboard-page animate-in fade-in duration-300">
       <ServicesPageHeader />
+      <ServicesStatsCards data={services} />
       <ServicesTableSection services={services} />
     </div>
   );

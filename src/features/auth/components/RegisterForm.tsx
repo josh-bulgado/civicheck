@@ -5,7 +5,6 @@ import {
   Eye,
   EyeClosed,
   Mail,
-  ShieldCheck,
   User,
   Lock,
 } from "lucide-react";
@@ -28,7 +27,8 @@ import {
 import { useSignUp } from "../hooks/useSignUp";
 import { Spinner } from "~/components/ui/spinner";
 import { Button } from "~/components/ui/button";
-import TopoPattern from "./TopoPattern";
+import { CiviCheckIdentity } from "~/components/brand/civic-identity";
+import { AuthBrandPanel } from "./AuthBrandPanel";
 
 const formSchema = z
   .object({
@@ -74,60 +74,25 @@ const RegisterForm = () => {
   }
 
   return (
-    <div className="auth-page flex min-h-dvh bg-ash">
+    <div className="auth-page flex min-h-dvh bg-background">
       {/* Left — Brand panel (hidden on small screens) */}
-      <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-basalt via-[#1A3A35] to-lagoon items-center justify-center relative overflow-hidden">
-        {/* Topographic contour pattern */}
-        <TopoPattern />
-        <div className="relative z-10 max-w-md px-12 text-white text-center">
-          <div className="flex justify-center mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur flex items-center justify-center">
-              <ShieldCheck className="w-8 h-8 text-white/90" />
-            </div>
-          </div>
-          <h2 className="font-display text-3xl mb-4">Create Your Account</h2>
-          <p className="text-white/60 text-sm leading-relaxed">
-            Join CiviCheck to check your requirements before your visit, submit
-            requests online, and track their status from submission to release —
-            no more repeat trips to the CCRO.
-          </p>
-          <div className="mt-8 space-y-3">
-            {[
-              "See exact document requirements",
-              "Submit requests online or walk-in",
-              "Track your request in real time",
-            ].map((item) => (
-              <div
-                key={item}
-                className="flex items-center gap-3 text-sm text-white/70"
-              >
-                <CheckCircle className="w-4 h-4 text-lagoon shrink-0" />
-                <span>{item}</span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-8 flex items-center justify-center gap-4 text-xs text-white/35">
-            <span>City Civil Registrar Office</span>
-            <span>·</span>
-            <span>City Government of Legazpi</span>
-          </div>
-        </div>
-      </div>
+      <AuthBrandPanel
+        title="Create your CiviCheck account."
+        description="Prepare for your CCRO transaction and follow each request through a clear, secure civic service."
+        benefits={[
+          "See exact document requirements",
+          "Submit requests online or walk in",
+          "Track your request in real time",
+        ]}
+      />
 
       {/* Right — Form */}
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
         <div className="w-full max-w-[420px] space-y-8">
           {/* Logo / Brand */}
           <div className="space-y-2">
-            <Link to="/" className="inline-flex items-center gap-2.5 group">
-              <div className="flex items-center justify-center w-9 h-9 rounded-lg border-2 border-lagoon text-lagoon">
-                <CheckCircle className="w-4.5 h-4.5" />
-              </div>
-              <span className="text-xl font-bold text-basalt tracking-tight">
-                CiviCheck
-              </span>
-            </Link>
-            <h1 className="text-2xl font-semibold text-basalt pt-4">
+            <Link to="/"><CiviCheckIdentity /></Link>
+            <h1 className="civic-title pt-4 text-2xl">
               Create your account
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -139,9 +104,9 @@ const RegisterForm = () => {
           {signupMutation.status === "success" &&
             signupMutation.data &&
             !signupMutation.data.error && (
-              <div className="rounded-lg border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-800">
+              <div className="status-success rounded-lg border p-4 text-sm">
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 shrink-0 mt-0.5 text-emerald-600" />
+                  <CheckCircle className="mt-0.5 size-5 shrink-0 text-success" />
                   <div>
                     <p className="font-medium">Account created!</p>
                     <p className="mt-1">

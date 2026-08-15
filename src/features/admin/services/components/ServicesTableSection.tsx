@@ -9,10 +9,10 @@ interface ServicesTableSectionProps {
 
 export function ServicesTableSection({ services }: ServicesTableSectionProps) {
   return (
-    <div className="space-y-3">
-      <div className="flex items-start justify-between gap-4">
+    <section className="dashboard-panel overflow-hidden">
+      <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-5 sm:px-6">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 font-heading">
+          <h2 className="text-xl font-bold text-foreground">
             Active Services Database
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
@@ -26,7 +26,9 @@ export function ServicesTableSection({ services }: ServicesTableSectionProps) {
         </Button>
       </div>
 
-      <ServicesDataTable data={services} />
-    </div>
+      <div className="p-5 sm:p-6">
+        <ServicesDataTable data={services} />
+      </div>
+    </section>
   );
 }

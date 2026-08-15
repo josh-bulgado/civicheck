@@ -82,10 +82,10 @@ export function ServicesDataTable({ data, onView }: ServicesDataTableProps) {
       />
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden">
+      <div className="overflow-hidden rounded-xl border border-border-strong bg-white">
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="bg-slate-50/75 border-b border-slate-100">
+            <TableHeader className="border-b border-border bg-surface-subtle">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
@@ -104,7 +104,7 @@ export function ServicesDataTable({ data, onView }: ServicesDataTableProps) {
                   <TableRow
                     key={row.id}
                     onClick={() => onView?.(row.original)}
-                    className="cursor-pointer hover:bg-slate-50/80 active:bg-slate-100/50 transition-colors"
+                    className="cursor-pointer transition-colors hover:bg-surface-subtle active:bg-secondary"
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
@@ -115,9 +115,9 @@ export function ServicesDataTable({ data, onView }: ServicesDataTableProps) {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-32 text-center text-slate-500">
+                  <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">
                     <div className="flex flex-col items-center justify-center space-y-2">
-                      <SlidersHorizontal className="w-8 h-8 text-slate-300" />
+                      <SlidersHorizontal className="size-8 text-muted-foreground/50" />
                       <p className="text-sm font-medium">No services found matching your filters.</p>
                       <Button variant="link" size="sm" onClick={handleClearFilters} className="text-xs h-auto p-0">
                         Clear filters
@@ -131,7 +131,7 @@ export function ServicesDataTable({ data, onView }: ServicesDataTableProps) {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-slate-100 p-4">
+        <div className="border-t border-border p-4">
           <DataTablePagination table={table} />
         </div>
       </div>

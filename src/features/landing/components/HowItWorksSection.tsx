@@ -23,14 +23,14 @@ const HowItWorksSection = () => {
   ];
 
   return (
-    <section className="bg-white border-t border-basalt/5" id="how-it-works">
-      <div className="max-w-[1120px] mx-auto px-5 py-20">
+    <section className="border-t border-border bg-white" id="how-it-works">
+      <div className="civic-container civic-section">
         {/* Section header */}
         <div className="mb-14">
-          <p className="text-[12px] font-semibold tracking-widest uppercase text-lagoon mb-3">
+          <p className="civic-eyebrow">
             The process
           </p>
-          <h2 className="font-display text-[clamp(1.75rem,3vw,2.5rem)] text-basalt leading-tight">
+          <h2 className="civic-title text-[clamp(1.75rem,3vw,2.5rem)] leading-tight">
             Four steps, one visit
           </h2>
         </div>
@@ -41,18 +41,18 @@ const HowItWorksSection = () => {
             <div key={step.number} className="relative">
               {/* Connector line — desktop only */}
               {i < steps.length - 1 && (
-                <div className="hidden lg:block absolute top-5 left-[calc(100%-8px)] w-[calc(100%-32px)] h-px border-t-2 border-dashed border-lagoon/20" />
+                <div className="absolute left-[calc(100%-8px)] top-5 hidden h-px w-[calc(100%-32px)] border-t-2 border-dashed border-primary/20 lg:block" />
               )}
 
               {/* Step number */}
-              <div className="w-10 h-10 rounded-full border-2 border-lagoon text-lagoon text-[15px] font-bold flex items-center justify-center mb-5">
+              <div className="mb-5 flex size-10 items-center justify-center rounded-full bg-primary-soft text-[15px] font-bold text-primary">
                 {step.number}
               </div>
 
-              <h3 className="font-semibold text-[16px] text-basalt mb-2 leading-snug">
+              <h3 className="mb-2 text-[16px] font-semibold leading-snug text-foreground">
                 {step.title}
               </h3>
-              <p className="text-[14px] text-slate leading-relaxed">
+              <p className="text-[14px] leading-relaxed text-muted-foreground">
                 {step.desc}
               </p>
             </div>

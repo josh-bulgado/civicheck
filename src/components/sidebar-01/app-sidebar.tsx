@@ -2,148 +2,47 @@
 
 import { Sidebar, SidebarContent } from "~/components/ui/sidebar";
 import {
-  IconAd2,
-  IconBellRinging,
-  IconCalendar,
-  IconCalendarStats,
   IconListDetails,
-  IconNews,
-  IconNotebook,
   IconProgressCheck,
-  IconSettingsCode,
   IconUserPlus,
 } from "@tabler/icons-react";
-import { LayoutDashboard, Package } from "lucide-react";
-import { NavCollapsible } from "~/components/sidebar-01/nav-collapsible";
+import { LayoutDashboard } from "lucide-react";
 import { NavFooter } from "~/components/sidebar-01/nav-footer";
 import { NavHeader } from "~/components/sidebar-01/nav-header";
 import { NavMain } from "~/components/sidebar-01/nav-main";
 import { usePermissions } from "~/hooks/usePermissions";
-import type { SidebarData } from "./types";
+import type { NavItem } from "./types";
+import { getWorkspaceDetails } from "./workspace";
 
-const data: SidebarData = {
-  user: {
-    name: "ephraim",
-    email: "ephraim@blocks.so",
-    avatar: "/avatar-01.png",
-  },
-  navMain: [
-    {
-      id: "overview",
-      title: "Overview",
-      url: "#",
-      icon: LayoutDashboard,
-      isActive: true,
-    },
-    {
-      id: "tasks",
-      title: "Tasks",
-      url: "#",
-      icon: IconListDetails,
-    },
-    {
-      id: "meetings",
-      title: "Meetings",
-      url: "#",
-      icon: IconCalendarStats,
-    },
-    {
-      id: "notes",
-      title: "Notes",
-      url: "#",
-      icon: IconNotebook,
-    },
-    {
-      id: "calendar",
-      title: "Calendar",
-      url: "#",
-      icon: IconCalendar,
-    },
-    {
-      id: "completed",
-      title: "Completed",
-      url: "#",
-      icon: IconProgressCheck,
-    },
-    {
-      id: "notifications",
-      title: "Notifications",
-      url: "#",
-      icon: IconBellRinging,
-    },
-  ],
-  navCollapsible: {
-    favorites: [
-      {
-        id: "design",
-        title: "Design",
-        href: "#",
-        color: "bg-green-400 dark:bg-green-300",
-      },
-      {
-        id: "development",
-        title: "Development",
-        href: "#",
-        color: "bg-blue-400 dark:bg-blue-300",
-      },
-      {
-        id: "workshop",
-        title: "Workshop",
-        href: "#",
-        color: "bg-orange-400 dark:bg-orange-300",
-      },
-      {
-        id: "personal",
-        title: "Personal",
-        href: "#",
-        color: "bg-red-400 dark:bg-red-300",
-      },
-    ],
-    teams: [
-      {
-        id: "engineering",
-        title: "Engineering",
-        icon: IconSettingsCode,
-      },
-      {
-        id: "marketing",
-        title: "Marketing",
-        icon: IconAd2,
-      },
-    ],
-    topics: [
-      {
-        id: "product-updates",
-        title: "Product Updates",
-        icon: Package,
-      },
-      {
-        id: "company-news",
-        title: "Company News",
-        icon: IconNews,
-      },
-    ],
-  },
+type SidebarUser = {
+  email: string;
+  firstName: string;
+  lastName: string;
+};
+
+const fallbackUser = {
+  name: "CiviCheck User",
+  email: "",
 };
 
 export function AppSidebar({
   user,
   ...props
-}: React.ComponentProps<typeof Sidebar> & { user?: any }) {
+}: React.ComponentProps<typeof Sidebar> & { user?: SidebarUser | null }) {
   const sidebarUser = user
     ? {
         name:
           `${user.firstName} ${user.lastName}`.trim() ||
           user.email.split("@")[0],
         email: user.email,
-        avatar: "/avatar-01.png",
       }
-    : data.user;
+    : fallbackUser;
 
-  const { can } = usePermissions();
+  const { can, role } = usePermissions();
+  const workspace = getWorkspaceDetails(role);
 
   // Build navMain dynamically based on permissions
-  const navMain = [];
+  const navMain: NavItem[] = [];
 
   if (can("services:manage")) {
     navMain.push({
@@ -200,8 +99,8 @@ export function AppSidebar({
   }
 
   return (
-    <Sidebar collapsible="icon" {...props}>
-      <NavHeader data={data} />
+    <Sidebar collapsible="icon" variant="sidebar" {...props}>
+      <NavHeader items={navMain} workspace={workspace} />
       <SidebarContent>
         <NavMain items={navMain} />
       </SidebarContent>

@@ -7,7 +7,7 @@ import WhyCiviCheckSection from "./components/WhyCiviCheckSection";
 
 const LandingPage = () => {
   return (
-    <div className="min-h-screen bg-ash">
+    <div className="min-h-screen bg-background">
       <SiteHeader />
       <main>
         <HeroSection />

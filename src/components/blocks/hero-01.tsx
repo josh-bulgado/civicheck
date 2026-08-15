@@ -29,7 +29,7 @@ export default function Hero01() {
           <img
             src="https://blockus.lndevui.com/brand/logo.svg"
             alt="blockus"
-            className="size-6 dark:invert"
+            className="size-6"
           />
           blockus
         </a>

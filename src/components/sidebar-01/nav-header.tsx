@@ -3,6 +3,8 @@
 import { Search } from "lucide-react";
 import * as React from "react";
 import { useEffect } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { CiviCheckIdentity } from "~/components/brand/civic-identity";
 
 import {
   CommandDialog,
@@ -11,19 +13,21 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
 } from "~/components/ui/command";
 import { SidebarHeader, useSidebar } from "~/components/ui/sidebar";
 import { cn } from "~/lib/utils";
-import { SidebarData } from "~/components/sidebar-01/types";
+import type { NavItem } from "~/components/sidebar-01/types";
+import type { WorkspaceDetails } from "~/components/sidebar-01/workspace";
 
 interface NavHeaderProps {
-  data: SidebarData;
+  items: NavItem[];
+  workspace: WorkspaceDetails;
 }
 
-export function NavHeader({ data }: NavHeaderProps) {
+export function NavHeader({ items, workspace }: NavHeaderProps) {
   const [open, setOpen] = React.useState(false);
   const { state } = useSidebar();
+  const navigate = useNavigate();
   const isCollapsed = state === "collapsed";
 
   useEffect(() => {
@@ -39,30 +43,52 @@ export function NavHeader({ data }: NavHeaderProps) {
 
   return (
     <>
-      <SidebarHeader>
-        <div
+      <SidebarHeader className="border-b border-sidebar-border p-2.5 group-data-[collapsible=icon]:px-2">
+        <Link
+          to="/dashboard"
           className={cn(
-            "flex items-center px-2 pb-0 pt-3 cursor-pointer overflow-hidden",
-            isCollapsed ? "justify-center" : "justify-between"
+            "mb-1 flex min-h-14 w-full items-center gap-3 rounded-xl px-2 text-sidebar-foreground transition-colors hover:bg-sidebar-accent",
+            isCollapsed && "mx-auto justify-center px-0",
+          )}
+        >
+          <CiviCheckIdentity
+            compact
+            className={cn(
+              isCollapsed &&
+                "mx-auto justify-center gap-0 [&>span:first-child]:size-8 [&>span:last-child]:hidden",
+            )}
+          />
+        </Link>
+        {!isCollapsed && (
+          <p className="px-2 pb-1 text-xs font-semibold text-primary">
+            {workspace.label}
+          </p>
+        )}
+        <button
+          type="button"
+          aria-label="Search CiviCheck navigation"
+          className={cn(
+            "flex min-h-10 items-center overflow-hidden rounded-lg px-2 text-sidebar-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+            isCollapsed ? "justify-center" : "justify-between",
           )}
           onClick={() => setOpen(true)}
         >
           <div className="flex items-center gap-3 min-w-0">
-            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Search className="h-4 w-4 shrink-0" />
             {!isCollapsed && (
-              <span className="text-sm text-muted-foreground font-normal truncate">
+              <span className="truncate text-sm font-medium">
                 Search
               </span>
             )}
           </div>
           {!isCollapsed && (
-            <div className="flex items-center justify-center px-2 py-1 border border-border rounded-md shrink-0">
-              <kbd className="text-muted-foreground inline-flex font-[inherit] text-xs font-medium">
+            <div className="flex shrink-0 items-center justify-center rounded-md border border-sidebar-border bg-white/5 px-2 py-1">
+              <kbd className="inline-flex font-[inherit] text-xs font-medium text-sidebar-muted">
                 <span className="opacity-70">⌘K</span>
               </kbd>
             </div>
           )}
-        </div>
+        </button>
       </SidebarHeader>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
@@ -70,50 +96,14 @@ export function NavHeader({ data }: NavHeaderProps) {
         <CommandList>
           <CommandEmpty>No results found.</CommandEmpty>
           <CommandGroup heading="Navigation">
-            {data.navMain.map((item) => (
+            {items.map((item) => (
               <CommandItem
                 className="py-2!"
                 key={item.id}
-                onSelect={() => setOpen(false)}
-              >
-                <item.icon className="mr-2 h-4 w-4" />
-                <span>{item.title}</span>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-          <CommandSeparator className="my-2" />
-          <CommandGroup heading="Favorites">
-            {data.navCollapsible.favorites.map((item) => (
-              <CommandItem
-                className="py-2!"
-                key={item.id}
-                onSelect={() => setOpen(false)}
-              >
-                <div className={cn("mr-2 h-3 w-3 rounded-full", item.color)} />
-                <span>{item.title}</span>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-          <CommandSeparator className="my-2" />
-          <CommandGroup heading="Teams">
-            {data.navCollapsible.teams.map((item) => (
-              <CommandItem
-                className="py-2!"
-                key={item.id}
-                onSelect={() => setOpen(false)}
-              >
-                <item.icon className="mr-2 h-4 w-4" />
-                <span>{item.title}</span>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-          <CommandSeparator className="my-2" />
-          <CommandGroup heading="Topics">
-            {data.navCollapsible.topics.map((item) => (
-              <CommandItem
-                className="py-2!"
-                key={item.id}
-                onSelect={() => setOpen(false)}
+                onSelect={() => {
+                  setOpen(false);
+                  navigate({ to: item.url });
+                }}
               >
                 <item.icon className="mr-2 h-4 w-4" />
                 <span>{item.title}</span>

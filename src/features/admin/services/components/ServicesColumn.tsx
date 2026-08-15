@@ -11,7 +11,7 @@ export const columns: ColumnDef<Service>[] = [
       <Button
         variant="ghost"
         size="sm"
-        className="font-semibold text-slate-700 text-xs uppercase tracking-wider px-0 hover:bg-transparent"
+        className="px-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:bg-transparent"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Service Code
@@ -19,7 +19,7 @@ export const columns: ColumnDef<Service>[] = [
       </Button>
     ),
     cell: ({ row }) => (
-      <span className="font-mono font-bold text-xs text-slate-700">
+      <span className="font-mono text-xs font-bold text-foreground">
         {row.getValue("service_code")}
       </span>
     ),
@@ -30,7 +30,7 @@ export const columns: ColumnDef<Service>[] = [
       <Button
         variant="ghost"
         size="sm"
-        className="font-semibold text-slate-700 text-xs uppercase tracking-wider px-0 hover:bg-transparent"
+        className="px-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:bg-transparent"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Service Title
@@ -42,14 +42,14 @@ export const columns: ColumnDef<Service>[] = [
       return (
         <div>
           <div
-            className="font-medium text-slate-900 line-clamp-1 text-sm"
+            className="line-clamp-1 text-sm font-medium text-foreground"
             title={service.name}
           >
             {service.name}
           </div>
           {service.display_group && (
             <div className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-slate-300" />
+              <span className="inline-block size-1.5 rounded-full bg-border" />
               Part of group:{" "}
               <span className="font-semibold">{service.display_group}</span>
             </div>
@@ -64,7 +64,7 @@ export const columns: ColumnDef<Service>[] = [
       <Button
         variant="ghost"
         size="sm"
-        className="font-semibold text-slate-700 text-xs uppercase tracking-wider px-0 hover:bg-transparent"
+        className="px-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:bg-transparent"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Complexity
@@ -95,7 +95,7 @@ export const columns: ColumnDef<Service>[] = [
       <Button
         variant="ghost"
         size="sm"
-        className="font-semibold text-slate-700 text-xs uppercase tracking-wider px-0 hover:bg-transparent"
+        className="px-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:bg-transparent"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Standard Fee
@@ -105,7 +105,7 @@ export const columns: ColumnDef<Service>[] = [
     cell: ({ row }) => {
       const fee = row.getValue<number>("fee");
       return (
-        <span className="font-semibold text-slate-900 text-sm">
+        <span className="text-sm font-semibold text-foreground">
           {fee === 0 || fee === null
             ? "Free / Varies"
             : `₱${Number(fee).toLocaleString(undefined, {
@@ -119,13 +119,13 @@ export const columns: ColumnDef<Service>[] = [
   {
     accessorKey: "processing_time",
     header: () => (
-      <span className="font-semibold text-slate-700 text-xs uppercase tracking-wider">
+      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Processing Time
       </span>
     ),
     cell: ({ row }) => (
       <span
-        className="text-slate-600 text-xs truncate max-w-[150px] block"
+        className="block max-w-[150px] truncate text-xs text-muted-foreground"
         title={row.getValue("processing_time")}
       >
         {row.getValue("processing_time") || "N/A"}
@@ -135,7 +135,7 @@ export const columns: ColumnDef<Service>[] = [
   {
     id: "actions",
     header: () => (
-      <span className="font-semibold text-slate-700 text-xs uppercase tracking-wider">
+      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Actions
       </span>
     ),

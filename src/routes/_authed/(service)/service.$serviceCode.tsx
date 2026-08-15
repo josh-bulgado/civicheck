@@ -124,10 +124,10 @@ function ServicePage() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto py-4">
+    <div className="dashboard-page max-w-6xl">
       <Link
         to="/services"
-        className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
+        className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border-strong bg-white px-3.5 text-sm font-semibold text-foreground shadow-xs transition-colors hover:border-primary/50 hover:text-primary"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to Services
@@ -147,7 +147,7 @@ function ServicePage() {
         <>
           <ServiceHero service={selectedService} displayName={displayName} />
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
             <div className="lg:col-span-7">
               <RequirementChecklist
                 requirements={filteredRequirements}

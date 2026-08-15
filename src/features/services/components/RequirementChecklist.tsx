@@ -57,7 +57,7 @@ function RequirementItem({
   return (
     <div
       onClick={onToggle}
-      className="flex items-start gap-3 py-3 text-sm cursor-pointer select-none transition-colors hover:bg-accent/5 px-1 rounded-md"
+      className="flex cursor-pointer select-none items-start gap-3 rounded-lg px-3 py-3 text-sm transition-colors hover:bg-surface-subtle"
     >
       <Checkbox
         id={req.id}
@@ -115,7 +115,7 @@ export function RequirementChecklist({
 
   return (
     <Card size="sm">
-      <CardHeader className="pb-3">
+      <CardHeader className="border-b border-border pb-3">
         <CardTitle className="font-bold text-base">
           Requirement Checklist{" "}
           {mandatoryReqs.length > 0 && `(${mandatoryReqs.length})`}
@@ -131,7 +131,7 @@ export function RequirementChecklist({
             No requirements configured for this service.
           </div>
         ) : (
-          <div className="divide-y divide-border">
+          <div className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-white">
             {/* Mandatory Requirements */}
             {mandatoryReqs.map((req) => (
               <RequirementItem

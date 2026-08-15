@@ -167,9 +167,9 @@ export function StaffDataTable({
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-xl border bg-card shadow-xs">
+      <div className="overflow-hidden rounded-xl border border-border-strong bg-white">
         <Table>
-          <TableHeader className="bg-muted/35">
+          <TableHeader className="bg-surface-subtle">
             {table.getHeaderGroups().map((group) => (
               <TableRow key={group.id} className="hover:bg-transparent">
                 {group.headers.map((header) => (
@@ -188,7 +188,7 @@ export function StaffDataTable({
           <TableBody>
             {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} className="h-[76px] hover:bg-muted/25">
+                <TableRow key={row.id} className="h-[76px] hover:bg-surface-subtle">
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="px-5 py-3">
                       {flexRender(

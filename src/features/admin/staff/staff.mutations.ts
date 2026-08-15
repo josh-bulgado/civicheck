@@ -111,7 +111,7 @@ async function sendStaffInvitationEmail({
   await sendEmail({
     to: email,
     subject: "You are invited to CiviCheck",
-    html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;border:1px solid #e5e7eb;border-radius:8px"><h2 style="color:#0D5E53">Welcome to CiviCheck</h2><p>Hello ${escapeHtml(firstName)},</p><p>You have been invited to join the CiviCheck staff team as a ${escapeHtml(role)}.</p><p style="margin:30px 0"><a href="${invitationUrl.toString()}" style="background:#0D5E53;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600">Accept invitation</a></p><p style="color:#6b7280;font-size:14px">This invitation link will let you set your password and finish your account setup.</p></div>`,
+    html: `<div style="font-family:'Public Sans',Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;border:1px solid #DCE2EA;border-radius:8px;color:#17212B"><h2 style="color:#0049A8">Welcome to CiviCheck</h2><p>Hello ${escapeHtml(firstName)},</p><p>You have been invited to join the CiviCheck staff team as a ${escapeHtml(role)}.</p><p style="margin:30px 0"><a href="${invitationUrl.toString()}" style="background:#0049A8;color:#fff;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:600">Accept invitation</a></p><p style="color:#5D6876;font-size:14px">This invitation link will let you set your password and finish your account setup.</p></div>`,
   });
 }
 
