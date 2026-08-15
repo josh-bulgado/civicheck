@@ -14,41 +14,14 @@ export const submitRequestFn = createServerFn({ method: "POST" })
       return { error: true, message: "Unauthorized: Please log in again." };
     }
 
-    const year = new Date().getFullYear();
-    let trackingNumber = "";
-    let inserted = false;
-    let attempts = 0;
-    const maxAttempts = 5;
-    let lastErrorMsg = "";
-
-    while (!inserted && attempts < maxAttempts) {
-      attempts++;
-      const randStr = String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
-      trackingNumber = `CCRO-${year}-${randStr}`;
-
-      const { error: insertError } = await supabase.from("requests").insert({
-        applicant_id: user.id,
-        request_type: data.serviceCode,
-        form_data: data.formData,
-        tracking_number: trackingNumber,
-        fees_due: data.fee,
-      });
-
-      if (!insertError) {
-        inserted = true;
-      } else {
-        lastErrorMsg = insertError.message;
-        if (insertError.code === "23505") continue;
-        return { error: true, message: insertError.message };
-      }
-    }
-
-    if (!inserted) {
-      return {
-        error: true,
-        message: `Could not generate a unique tracking number after ${maxAttempts} attempts: ${lastErrorMsg}`,
-      };
-    }
-
-    return { error: false, trackingNumber };
+    const { data: request, error } = await supabase.rpc("create_operational_request", {
+      p_service_code: data.serviceCode,
+      p_form_data: data.formData,
+      p_source: "online",
+      p_guest_name: null,
+      p_guest_email: null,
+      p_applicant_id: user.id,
+    });
+    if (error) return { error: true, message: error.message };
+    return { error: false, trackingNumber: request.tracking_number };
   });

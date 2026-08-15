@@ -14,6 +14,7 @@ export interface Service {
   display_group: string | null;
   display_name: string | null;
   requirement_group: string | null;
+  department_id: string | null;
 }
 
 export interface CreateServiceInput {
@@ -26,6 +27,7 @@ export interface CreateServiceInput {
   display_group?: string | null;
   display_name?: string | null;
   requirement_group?: string | null;
+  department_id: string;
 }
 
 export interface UpdateServiceInput {
@@ -37,6 +39,7 @@ export interface UpdateServiceInput {
   display_group?: string | null;
   display_name?: string | null;
   requirement_group?: string | null;
+  department_id?: string;
 }
 
 // ─── service_requirements_metadata ───────────────────────────────────────────

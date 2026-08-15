@@ -6,7 +6,7 @@ import {
   IconProgressCheck,
   IconUserPlus,
 } from "@tabler/icons-react";
-import { LayoutDashboard } from "lucide-react";
+import { Bell, ClipboardPlus, LayoutDashboard } from "lucide-react";
 import { NavFooter } from "~/components/sidebar-01/nav-footer";
 import { NavHeader } from "~/components/sidebar-01/nav-header";
 import { NavMain } from "~/components/sidebar-01/nav-main";
@@ -18,6 +18,7 @@ type SidebarUser = {
   email: string;
   firstName: string;
   lastName: string;
+  unreadNotifications?: number;
 };
 
 const fallbackUser = {
@@ -43,6 +44,15 @@ export function AppSidebar({
 
   // Build navMain dynamically based on permissions
   const navMain: NavItem[] = [];
+
+  if (can("dashboard:admin")) {
+    navMain.push({
+      id: "admin-dashboard",
+      title: "Dashboard",
+      url: "/dashboard",
+      icon: LayoutDashboard,
+    });
+  }
 
   if (can("services:manage")) {
     navMain.push({
@@ -87,6 +97,13 @@ export function AppSidebar({
       url: "/my-requests",
       icon: IconProgressCheck,
     });
+    navMain.push({
+      id: "notifications",
+      title: "Notifications",
+      url: "/notifications",
+      icon: Bell,
+      badge: user?.unreadNotifications ?? 0,
+    });
   }
 
   if (can("requests:view_all")) {
@@ -95,6 +112,15 @@ export function AppSidebar({
       title: "Request Queue",
       url: "/requests",
       icon: IconListDetails,
+    });
+  }
+
+  if (can("requests:intake")) {
+    navMain.push({
+      id: "walk-in-request",
+      title: "New Walk-In Request",
+      url: "/requests/new",
+      icon: ClipboardPlus,
     });
   }
 

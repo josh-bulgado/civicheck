@@ -1,8 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowRight,
   ClipboardCheck,
-  Construction,
   FileClock,
   LayoutDashboard,
   ShieldCheck,
@@ -27,13 +26,7 @@ function StaffDashboard() {
               A focused workspace for request intake, document validation, and civil registry processing.
             </p>
           </div>
-          <div className="flex items-center gap-3 rounded-xl border border-white/15 bg-white/10 p-4 text-white backdrop-blur-sm">
-            <Construction className="size-5 text-brand-gold" aria-hidden="true" />
-            <div>
-              <p className="text-sm font-bold">Workspace in development</p>
-              <p className="text-xs text-white/65">Operational tools are coming next</p>
-            </div>
-          </div>
+          <Link to="/requests" className="dashboard-hero-action">Open request queue<ArrowRight className="size-4"/></Link>
         </div>
       </header>
 
@@ -43,9 +36,9 @@ function StaffDashboard() {
           <h2 id="staff-tools-heading" className="mt-1 text-xl font-bold tracking-tight text-foreground">Your operational workspace</h2>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
-          <ToolPreview icon={FileClock} title="Request queue" description="Review newly submitted requests and route them to the correct processing stage." />
-          <ToolPreview icon={ClipboardCheck} title="Pre-validation" description="Verify document checklists and identify missing requirements before processing." />
-          <ToolPreview icon={LayoutDashboard} title="Processing overview" description="Monitor requests across validation, approval, payment, and release." />
+          <ToolPreview icon={FileClock} title="Request queue" description="Review newly submitted requests and route them to the correct processing stage." href="/requests" />
+          <ToolPreview icon={ClipboardCheck} title="Walk-in intake" description="Create an assisted request while preserving requester and document-subject identities." href="/requests/new" />
+          <ToolPreview icon={LayoutDashboard} title="Archived records" description="Review terminal records retained in the soft-archived queue." href="/requests?archived=true" />
         </div>
       </section>
     </div>
@@ -56,10 +49,12 @@ function ToolPreview({
   icon: Icon,
   title,
   description,
+  href,
 }: {
   icon: typeof FileClock;
   title: string;
   description: string;
+  href: string;
 }) {
   return (
     <article className="dashboard-panel flex min-h-56 flex-col p-5 sm:p-6">
@@ -68,10 +63,10 @@ function ToolPreview({
       </div>
       <h3 className="mt-5 text-lg font-bold text-foreground">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
-      <div className="mt-auto flex items-center gap-1.5 pt-5 text-xs font-bold uppercase tracking-[0.1em] text-primary">
-        Coming soon
+      <Link to={href} className="mt-auto flex items-center gap-1.5 pt-5 text-xs font-bold uppercase tracking-[0.1em] text-primary">
+        Open workspace
         <ArrowRight className="size-3.5" aria-hidden="true" />
-      </div>
+      </Link>
     </article>
   );
 }

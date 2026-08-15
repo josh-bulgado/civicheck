@@ -31,11 +31,18 @@ const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
     .eq("id", data.user.id)
     .single();
 
+  const { count: unreadNotifications } = await supabase
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("recipient_id", data.user.id)
+    .is("read_at", null);
+
   return {
     email: data.user.email,
     role: profile?.role ?? "applicant",
     firstName: profile?.first_name ?? "",
     lastName: profile?.last_name ?? "",
+    unreadNotifications: unreadNotifications ?? 0,
   };
 });
 

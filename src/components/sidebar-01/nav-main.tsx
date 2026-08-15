@@ -31,6 +31,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
                 >
                   {Icon && <Icon className="h-4 w-4 shrink-0" />}
                   <span>{item.title}</span>
+                  {item.badge ? <span className="ml-auto min-w-5 rounded-full bg-primary px-1.5 py-0.5 text-center text-[10px] font-bold text-white">{item.badge}</span> : null}
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>

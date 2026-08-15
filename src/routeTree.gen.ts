@@ -20,8 +20,12 @@ import { Route as AuthedRouteRouteImport } from './routes/_authed/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as AuthedStaffDashboardRouteImport } from './routes/_authed/staff-dashboard'
+import { Route as AuthedRequestsRouteImport } from './routes/_authed/requests'
+import { Route as AuthedNotificationsRouteImport } from './routes/_authed/notifications'
 import { Route as AuthedMyRequestsRouteImport } from './routes/_authed/my-requests'
 import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
+import { Route as AuthedRequestsNewRouteImport } from './routes/_authed/requests.new'
+import { Route as AuthedRequestsRequestIdRouteImport } from './routes/_authed/requests.$requestId'
 import { Route as AuthedAdminStaffRouteImport } from './routes/_authed/admin/staff'
 import { Route as AuthedAdminServicesRouteImport } from './routes/_authed/admin/services'
 import { Route as AuthedserviceServicesRouteImport } from './routes/_authed/(service)/services'
@@ -81,6 +85,16 @@ const AuthedStaffDashboardRoute = AuthedStaffDashboardRouteImport.update({
   path: '/staff-dashboard',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
+const AuthedRequestsRoute = AuthedRequestsRouteImport.update({
+  id: '/requests',
+  path: '/requests',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
+const AuthedNotificationsRoute = AuthedNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
 const AuthedMyRequestsRoute = AuthedMyRequestsRouteImport.update({
   id: '/my-requests',
   path: '/my-requests',
@@ -90,6 +104,16 @@ const AuthedDashboardRoute = AuthedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AuthedRouteRoute,
+} as any)
+const AuthedRequestsNewRoute = AuthedRequestsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AuthedRequestsRoute,
+} as any)
+const AuthedRequestsRequestIdRoute = AuthedRequestsRequestIdRouteImport.update({
+  id: '/$requestId',
+  path: '/$requestId',
+  getParentRoute: () => AuthedRequestsRoute,
 } as any)
 const AuthedAdminStaffRoute = AuthedAdminStaffRouteImport.update({
   id: '/admin/staff',
@@ -124,11 +148,15 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/dashboard': typeof AuthedDashboardRoute
   '/my-requests': typeof AuthedMyRequestsRoute
+  '/notifications': typeof AuthedNotificationsRoute
+  '/requests': typeof AuthedRequestsRouteWithChildren
   '/staff-dashboard': typeof AuthedStaffDashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/services': typeof AuthedserviceServicesRoute
   '/admin/services': typeof AuthedAdminServicesRoute
   '/admin/staff': typeof AuthedAdminStaffRoute
+  '/requests/$requestId': typeof AuthedRequestsRequestIdRoute
+  '/requests/new': typeof AuthedRequestsNewRoute
   '/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
 }
 export interface FileRoutesByTo {
@@ -142,11 +170,15 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/dashboard': typeof AuthedDashboardRoute
   '/my-requests': typeof AuthedMyRequestsRoute
+  '/notifications': typeof AuthedNotificationsRoute
+  '/requests': typeof AuthedRequestsRouteWithChildren
   '/staff-dashboard': typeof AuthedStaffDashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/services': typeof AuthedserviceServicesRoute
   '/admin/services': typeof AuthedAdminServicesRoute
   '/admin/staff': typeof AuthedAdminStaffRoute
+  '/requests/$requestId': typeof AuthedRequestsRequestIdRoute
+  '/requests/new': typeof AuthedRequestsNewRoute
   '/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
 }
 export interface FileRoutesById {
@@ -162,11 +194,15 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_authed/dashboard': typeof AuthedDashboardRoute
   '/_authed/my-requests': typeof AuthedMyRequestsRoute
+  '/_authed/notifications': typeof AuthedNotificationsRoute
+  '/_authed/requests': typeof AuthedRequestsRouteWithChildren
   '/_authed/staff-dashboard': typeof AuthedStaffDashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/_authed/(service)/services': typeof AuthedserviceServicesRoute
   '/_authed/admin/services': typeof AuthedAdminServicesRoute
   '/_authed/admin/staff': typeof AuthedAdminStaffRoute
+  '/_authed/requests/$requestId': typeof AuthedRequestsRequestIdRoute
+  '/_authed/requests/new': typeof AuthedRequestsNewRoute
   '/_authed/(service)/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
 }
 export interface FileRouteTypes {
@@ -182,11 +218,15 @@ export interface FileRouteTypes {
     | '/signup'
     | '/dashboard'
     | '/my-requests'
+    | '/notifications'
+    | '/requests'
     | '/staff-dashboard'
     | '/auth/callback'
     | '/services'
     | '/admin/services'
     | '/admin/staff'
+    | '/requests/$requestId'
+    | '/requests/new'
     | '/service/$serviceCode'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -200,11 +240,15 @@ export interface FileRouteTypes {
     | '/signup'
     | '/dashboard'
     | '/my-requests'
+    | '/notifications'
+    | '/requests'
     | '/staff-dashboard'
     | '/auth/callback'
     | '/services'
     | '/admin/services'
     | '/admin/staff'
+    | '/requests/$requestId'
+    | '/requests/new'
     | '/service/$serviceCode'
   id:
     | '__root__'
@@ -219,11 +263,15 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_authed/dashboard'
     | '/_authed/my-requests'
+    | '/_authed/notifications'
+    | '/_authed/requests'
     | '/_authed/staff-dashboard'
     | '/auth/callback'
     | '/_authed/(service)/services'
     | '/_authed/admin/services'
     | '/_authed/admin/staff'
+    | '/_authed/requests/$requestId'
+    | '/_authed/requests/new'
     | '/_authed/(service)/service/$serviceCode'
   fileRoutesById: FileRoutesById
 }
@@ -319,6 +367,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedStaffDashboardRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
+    '/_authed/requests': {
+      id: '/_authed/requests'
+      path: '/requests'
+      fullPath: '/requests'
+      preLoaderRoute: typeof AuthedRequestsRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/notifications': {
+      id: '/_authed/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof AuthedNotificationsRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
     '/_authed/my-requests': {
       id: '/_authed/my-requests'
       path: '/my-requests'
@@ -332,6 +394,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthedDashboardRouteImport
       parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/requests/new': {
+      id: '/_authed/requests/new'
+      path: '/new'
+      fullPath: '/requests/new'
+      preLoaderRoute: typeof AuthedRequestsNewRouteImport
+      parentRoute: typeof AuthedRequestsRoute
+    }
+    '/_authed/requests/$requestId': {
+      id: '/_authed/requests/$requestId'
+      path: '/$requestId'
+      fullPath: '/requests/$requestId'
+      preLoaderRoute: typeof AuthedRequestsRequestIdRouteImport
+      parentRoute: typeof AuthedRequestsRoute
     }
     '/_authed/admin/staff': {
       id: '/_authed/admin/staff'
@@ -364,9 +440,25 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthedRequestsRouteChildren {
+  AuthedRequestsRequestIdRoute: typeof AuthedRequestsRequestIdRoute
+  AuthedRequestsNewRoute: typeof AuthedRequestsNewRoute
+}
+
+const AuthedRequestsRouteChildren: AuthedRequestsRouteChildren = {
+  AuthedRequestsRequestIdRoute: AuthedRequestsRequestIdRoute,
+  AuthedRequestsNewRoute: AuthedRequestsNewRoute,
+}
+
+const AuthedRequestsRouteWithChildren = AuthedRequestsRoute._addFileChildren(
+  AuthedRequestsRouteChildren,
+)
+
 interface AuthedRouteRouteChildren {
   AuthedDashboardRoute: typeof AuthedDashboardRoute
   AuthedMyRequestsRoute: typeof AuthedMyRequestsRoute
+  AuthedNotificationsRoute: typeof AuthedNotificationsRoute
+  AuthedRequestsRoute: typeof AuthedRequestsRouteWithChildren
   AuthedStaffDashboardRoute: typeof AuthedStaffDashboardRoute
   AuthedserviceServicesRoute: typeof AuthedserviceServicesRoute
   AuthedAdminServicesRoute: typeof AuthedAdminServicesRoute
@@ -377,6 +469,8 @@ interface AuthedRouteRouteChildren {
 const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
   AuthedDashboardRoute: AuthedDashboardRoute,
   AuthedMyRequestsRoute: AuthedMyRequestsRoute,
+  AuthedNotificationsRoute: AuthedNotificationsRoute,
+  AuthedRequestsRoute: AuthedRequestsRouteWithChildren,
   AuthedStaffDashboardRoute: AuthedStaffDashboardRoute,
   AuthedserviceServicesRoute: AuthedserviceServicesRoute,
   AuthedAdminServicesRoute: AuthedAdminServicesRoute,

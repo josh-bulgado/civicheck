@@ -59,6 +59,19 @@ export const columns: ColumnDef<Service>[] = [
     },
   },
   {
+    accessorKey: "department_id",
+    header: () => (
+      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        Department
+      </span>
+    ),
+    cell: ({ row }) => (
+      <span className="text-xs font-semibold capitalize text-foreground">
+        {row.original.department_id ?? "Unassigned"}
+      </span>
+    ),
+  },
+  {
     accessorKey: "classification",
     header: ({ column }) => (
       <Button
