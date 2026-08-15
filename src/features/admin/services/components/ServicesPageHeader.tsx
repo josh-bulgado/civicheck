@@ -1,35 +1,29 @@
-import { ShieldCheck, Building2 } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
+import { CityGovernmentIdentity } from "~/components/brand/civic-identity";
 
 export function ServicesPageHeader() {
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-950 p-8 text-white shadow-xl border border-slate-800">
-      <div className="absolute right-0 top-0 -mt-4 -mr-4 w-40 h-40 bg-white/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute left-0 bottom-0 -mb-4 -ml-4 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+    <header className="dashboard-hero">
+      <div className="relative z-10 flex flex-col justify-between gap-6 md:flex-row md:items-center">
         <div className="space-y-2">
-          <div className="flex items-center gap-2 text-indigo-400 font-semibold text-xs uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-brand-gold">
             <ShieldCheck className="w-4 h-4" />
-            <span>Admin Security Zone</span>
+            <span>Authorized administration</span>
           </div>
-          <h1 className="text-3xl font-bold font-heading text-white tracking-tight">
+          <h1 className="text-3xl font-extrabold tracking-[-0.03em] text-white sm:text-4xl">
             Services Registry
           </h1>
-          <p className="text-slate-400 text-sm max-w-2xl">
+          <p className="max-w-2xl text-sm leading-6 text-white/75">
             Configure and inspect active civil registrar services, associated
             processing guidelines, filing fees, and requirement checklists for
             the Legazpi City Government.
           </p>
         </div>
 
-        <div className="flex items-center gap-3 bg-white/5 backdrop-blur-xs border border-white/10 rounded-xl p-4 self-start md:self-center">
-          <Building2 className="w-8 h-8 text-indigo-400" />
-          <div className="text-xs">
-            <p className="font-semibold text-white">Legazpi City CCRO</p>
-            <p className="text-slate-400 mt-0.5">Office of the Civil Registrar</p>
-          </div>
+        <div className="self-start rounded-xl border border-white/15 bg-white/10 p-3.5 backdrop-blur-sm md:self-center">
+          <CityGovernmentIdentity inverse />
         </div>
       </div>
-    </div>
+    </header>
   );
 }

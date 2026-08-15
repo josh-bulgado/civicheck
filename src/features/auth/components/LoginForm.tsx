@@ -6,8 +6,6 @@ import {
   Eye,
   Lock,
   Mail,
-  CheckCircle,
-  FileText,
   EyeClosed,
   AlertCircleIcon,
 } from "lucide-react";
@@ -33,7 +31,8 @@ import {
 import { Separator } from "~/components/ui/separator";
 import { Spinner } from "~/components/ui/spinner";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import TopoPattern from "./TopoPattern";
+import { CiviCheckIdentity } from "~/components/brand/civic-identity";
+import { AuthBrandPanel } from "./AuthBrandPanel";
 
 const formSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -75,21 +74,14 @@ export function LoginForm({
   }
 
   return (
-    <div className="auth-page flex min-h-dvh bg-ash">
+    <div className="auth-page flex min-h-dvh bg-background">
       {/* Left — Form */}
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
         <div className="w-full max-w-[420px] space-y-8">
           {/* Logo / Brand */}
           <div className="space-y-2">
-            <Link to="/" className="inline-flex items-center gap-2.5 group">
-              <div className="flex items-center justify-center w-9 h-9 rounded-lg border-2 border-lagoon text-lagoon">
-                <CheckCircle className="w-4.5 h-4.5" />
-              </div>
-              <span className="text-xl font-bold text-basalt tracking-tight">
-                CiviCheck
-              </span>
-            </Link>
-            <h1 className="text-2xl font-semibold text-basalt pt-4">
+            <Link to="/"><CiviCheckIdentity /></Link>
+            <h1 className="civic-title pt-4 text-2xl">
               Welcome back
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -211,7 +203,7 @@ export function LoginForm({
                   <div className="flex items-center justify-between text-sm">
                     <Link
                       to="/forgot-password"
-                      className="text-lagoon hover:text-[#0D5E53] font-medium"
+                      className="font-medium text-primary hover:text-primary-hover"
                     >
                       Forgot password?
                     </Link>
@@ -251,33 +243,10 @@ export function LoginForm({
         </div>
       </div>
 
-      {/* Right — Brand panel (hidden on small screens) */}
-      <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-basalt via-[#1A3A35] to-lagoon items-center justify-center relative overflow-hidden">
-        {/* Topographic contour pattern */}
-        <TopoPattern />
-        <div className="relative z-10 max-w-md px-12 text-white text-center">
-          <div className="flex justify-center mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur flex items-center justify-center">
-              <FileText className="w-8 h-8 text-white/90" />
-            </div>
-          </div>
-          <h2 className="font-display text-3xl mb-4">
-            Know What You Need.
-            <br />
-            Before You Need It.
-          </h2>
-          <p className="text-white/60 text-sm leading-relaxed">
-            CiviCheck shows you the exact requirements for your civil registry
-            document request — then tracks it from submission to release, so
-            you're not making repeat trips to the CCRO.
-          </p>
-          <div className="mt-8 flex items-center justify-center gap-4 text-xs text-white/35">
-            <span>City Civil Registrar Office</span>
-            <span>·</span>
-            <span>City Government of Legazpi</span>
-          </div>
-        </div>
-      </div>
+      <AuthBrandPanel
+        title="Know what you need before you visit."
+        description="Review civil registry requirements and track every request from submission to release through one official CCRO service."
+      />
     </div>
   );
 }

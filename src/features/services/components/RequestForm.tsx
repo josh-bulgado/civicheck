@@ -43,7 +43,7 @@ const PURPOSES = [
 
 export function RequestForm({ values, onChange, onSubmit, submitting }: RequestFormProps) {
   return (
-    <Card size="sm">
+    <Card size="sm" className="lg:sticky lg:top-24">
       <CardHeader className="pb-3 border-b border-border">
         <CardTitle className="font-bold text-base">
           Request Details
@@ -54,7 +54,7 @@ export function RequestForm({ values, onChange, onSubmit, submitting }: RequestF
         <form onSubmit={onSubmit} className="space-y-4">
           {/* Subject Name */}
           <div className="space-y-3">
-            <h3 className="text-sm font-medium text-muted-foreground">
+            <h3 className="text-xs font-bold uppercase tracking-[0.1em] text-foreground">
               Subject of the document
             </h3>
 
@@ -109,7 +109,7 @@ export function RequestForm({ values, onChange, onSubmit, submitting }: RequestF
 
           {/* Event Details */}
           <div className="space-y-3">
-            <h3 className="text-sm font-medium text-muted-foreground">
+            <h3 className="text-xs font-bold uppercase tracking-[0.1em] text-foreground">
               Event information
             </h3>
 
@@ -142,7 +142,7 @@ export function RequestForm({ values, onChange, onSubmit, submitting }: RequestF
 
           {/* Purpose */}
           <div className="space-y-3">
-            <h3 className="text-sm font-medium text-muted-foreground">
+            <h3 className="text-xs font-bold uppercase tracking-[0.1em] text-foreground">
               Purpose & notes
             </h3>
 

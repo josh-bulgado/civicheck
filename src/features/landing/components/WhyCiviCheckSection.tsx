@@ -42,14 +42,14 @@ const WhyCiviCheckSection = () => {
   ];
 
   return (
-    <section className="bg-ash border-t border-basalt/5">
-      <div className="max-w-[1120px] mx-auto px-5 py-20">
+    <section className="border-t border-border bg-background">
+      <div className="civic-container civic-section">
         {/* Section header */}
         <div className="mb-14">
-          <p className="text-[12px] font-semibold tracking-widest uppercase text-lagoon mb-3">
+          <p className="civic-eyebrow">
             Why CiviCheck
           </p>
-          <h2 className="font-display text-[clamp(1.75rem,3vw,2.5rem)] text-basalt leading-tight max-w-[400px]">
+          <h2 className="civic-title max-w-[440px] text-[clamp(1.75rem,3vw,2.5rem)] leading-tight">
             Built to save you a trip
           </h2>
         </div>
@@ -60,14 +60,14 @@ const WhyCiviCheckSection = () => {
               key={feature.title}
               className="flex items-start gap-4"
             >
-              <div className="w-10 h-10 rounded-lg bg-lagoon-light flex items-center justify-center text-lagoon shrink-0 mt-0.5">
+              <div className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
                 {feature.icon}
               </div>
               <div>
-                <h3 className="font-semibold text-[15px] text-basalt mb-1">
+                <h3 className="mb-1 text-[15px] font-semibold text-foreground">
                   {feature.title}
                 </h3>
-                <p className="text-[14px] text-slate leading-relaxed">
+                <p className="text-[14px] leading-relaxed text-muted-foreground">
                   {feature.desc}
                 </p>
               </div>

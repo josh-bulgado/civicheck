@@ -1,154 +1,94 @@
 import { Link } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { CityGovernmentIdentity, CiviCheckIdentity } from "~/components/brand/civic-identity";
+
+const publicLinks = [
+  { label: "Services", to: "/requirements" as const },
+  { label: "How it works", href: "/#how-it-works" },
+  { label: "About", href: "/#about" },
+];
 
 const SiteHeader = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const navRef = useRef<HTMLDivElement>(null);
 
-  // Close on Escape
   useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMobileMenuOpen(false);
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileMenuOpen(false);
     };
     window.addEventListener("keydown", handleEsc);
     return () => window.removeEventListener("keydown", handleEsc);
   }, []);
 
   return (
-    <header ref={navRef} className="sticky top-0 z-50">
-      {/* Main Navigation Bar */}
-      <div className="bg-basalt">
-        <div className="max-w-[1120px] mx-auto px-5 h-16 flex items-center justify-between">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 group">
-            <svg
-              className="w-8 h-8 text-lagoon"
-              viewBox="0 0 40 40"
-              fill="none"
-            >
-              <rect
-                x="2"
-                y="2"
-                width="36"
-                height="36"
-                rx="8"
-                stroke="currentColor"
-                strokeWidth="2.5"
-              />
-              <path
-                d="M12 20 L18 26 L28 14"
-                stroke="currentColor"
-                strokeWidth="3"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <span className="text-white text-[22px] font-bold tracking-tight">
-              CiviCheck
-            </span>
-          </Link>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-1">
-            <Link
-              to="/requirements"
-              className="text-[15px] text-white/70 hover:text-white px-3 py-2 rounded-md transition-colors"
-            >
-              Services
-            </Link>
-            <a
-              href="#how-it-works"
-              className="text-[15px] text-white/70 hover:text-white px-3 py-2 rounded-md transition-colors"
-            >
-              How it works
-            </a>
-            <a
-              href="#about"
-              className="text-[15px] text-white/70 hover:text-white px-3 py-2 rounded-md transition-colors"
-            >
-              About
-            </a>
-
-            {/* Divider */}
-            <div className="w-px h-5 bg-white/15 mx-2" />
-
-            <Link
-              to="/login"
-              className="text-[15px] text-white/70 hover:text-white px-3 py-2 rounded-md transition-colors"
-            >
-              Sign in
-            </Link>
-            <Link
-              to="/signup"
-              className="text-[14px] font-semibold text-basalt bg-lagoon hover:bg-[#0D5E53] px-4 py-2 rounded-md transition-colors ml-1"
-            >
-              Get started
-            </Link>
-          </nav>
-
-          {/* Mobile menu button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden text-white/70 hover:text-white p-2 -mr-2"
-            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
-          >
-            {mobileMenuOpen ? (
-              <X className="w-5 h-5" />
-            ) : (
-              <Menu className="w-5 h-5" />
-            )}
-          </button>
+    <header className="sticky top-0 z-50 border-b border-border bg-white/95 backdrop-blur-md">
+      <div className="hidden border-b border-border bg-background sm:block">
+        <div className="civic-container flex h-9 items-center justify-between">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Official civil registry service
+          </p>
+          <CityGovernmentIdentity compact className="[&>span:first-child]:size-6" />
         </div>
-
-        {/* Mobile Navigation */}
-        {mobileMenuOpen && (
-          <div className="md:hidden border-t border-white/10 pb-4">
-            <div className="max-w-[1120px] mx-auto px-5 pt-3 space-y-1">
-              <Link
-                to="/requirements"
-                className="block text-[15px] text-white/70 hover:text-white hover:bg-white/5 px-3 py-2.5 rounded-md"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Services
-              </Link>
-              <a
-                href="#how-it-works"
-                className="block text-[15px] text-white/70 hover:text-white hover:bg-white/5 px-3 py-2.5 rounded-md"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                How it works
-              </a>
-              <a
-                href="#about"
-                className="block text-[15px] text-white/70 hover:text-white hover:bg-white/5 px-3 py-2.5 rounded-md"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                About
-              </a>
-
-
-              <div className="h-px bg-white/10 my-2" />
-
-              <Link
-                to="/login"
-                className="block text-[15px] text-white/70 hover:text-white hover:bg-white/5 px-3 py-2.5 rounded-md"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Sign in
-              </Link>
-              <Link
-                to="/signup"
-                className="block text-center text-[14px] font-semibold text-basalt bg-lagoon hover:bg-[#0D5E53] px-4 py-2.5 rounded-md transition-colors mt-2"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Get started
-              </Link>
-            </div>
-          </div>
-        )}
       </div>
+
+      <div className="civic-container flex h-16 items-center justify-between">
+        <Link to="/" aria-label="CiviCheck home">
+          <CiviCheckIdentity />
+        </Link>
+
+        <nav className="hidden items-center gap-1 md:flex" aria-label="Primary navigation">
+          {publicLinks.map((item) =>
+            item.to ? (
+              <Link key={item.label} to={item.to} className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-primary-soft hover:text-primary">
+                {item.label}
+              </Link>
+            ) : (
+              <a key={item.label} href={item.href} className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-primary-soft hover:text-primary">
+                {item.label}
+              </a>
+            ),
+          )}
+          <span className="mx-2 h-5 w-px bg-border" aria-hidden="true" />
+          <Link to="/login" className="rounded-lg px-3 py-2 text-sm font-semibold text-primary hover:bg-primary-soft">
+            Sign in
+          </Link>
+          <Link to="/signup" className="ml-1 inline-flex min-h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-white transition-colors hover:bg-primary-hover">
+            Get started
+          </Link>
+        </nav>
+
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen((open) => !open)}
+          className="flex size-11 items-center justify-center rounded-lg text-foreground hover:bg-muted md:hidden"
+          aria-expanded={mobileMenuOpen}
+          aria-controls="mobile-navigation"
+          aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+        >
+          {mobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+        </button>
+      </div>
+
+      {mobileMenuOpen ? (
+        <nav id="mobile-navigation" className="border-t border-border bg-white px-5 py-4 md:hidden" aria-label="Mobile navigation">
+          <div className="mx-auto flex max-w-6xl flex-col gap-1">
+            {publicLinks.map((item) =>
+              item.to ? (
+                <Link key={item.label} to={item.to} className="rounded-lg px-3 py-3 text-sm font-medium hover:bg-primary-soft hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
+                  {item.label}
+                </Link>
+              ) : (
+                <a key={item.label} href={item.href} className="rounded-lg px-3 py-3 text-sm font-medium hover:bg-primary-soft hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
+                  {item.label}
+                </a>
+              ),
+            )}
+            <div className="my-2 h-px bg-border" />
+            <Link to="/login" className="rounded-lg px-3 py-3 text-center text-sm font-semibold text-primary" onClick={() => setMobileMenuOpen(false)}>Sign in</Link>
+            <Link to="/signup" className="rounded-lg bg-primary px-3 py-3 text-center text-sm font-semibold text-white" onClick={() => setMobileMenuOpen(false)}>Get started</Link>
+          </div>
+        </nav>
+      ) : null}
     </header>
   );
 };

@@ -139,16 +139,16 @@ export const signupFn = createServerFn({ method: "POST" })
         to: data.email,
         subject: "Confirm your CiviCheck Account",
         html: `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-            <h2 style="color: #0D5E53;">Confirm your CiviCheck account</h2>
+          <div style="font-family: 'Public Sans', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #DCE2EA; border-radius: 8px; color: #17212B;">
+            <h2 style="color: #0049A8;">Confirm your CiviCheck account</h2>
             <p>Thank you for signing up for CiviCheck. Please click the button below to confirm your email address and activate your account:</p>
             <div style="margin: 30px 0;">
-              <a href="${actionLink}" style="background-color: #0D5E53; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Confirm Email Address</a>
+              <a href="${actionLink}" style="background-color: #0049A8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Confirm Email Address</a>
             </div>
-            <p style="color: #6b7280; font-size: 14px;">If the button doesn't work, you can <a href="${actionLink}" style="color: #0D5E53; text-decoration: underline;">click here</a> or copy and paste the following link into your browser:</p>
-            <p style="color: #6b7280; font-size: 14px; word-break: break-all;">${actionLink}</p>
-            <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
-            <p style="color: #9ca3af; font-size: 12px;">City Civil Registrar Office · City Government of Legazpi</p>
+            <p style="color: #5D6876; font-size: 14px;">If the button doesn't work, you can <a href="${actionLink}" style="color: #0049A8; text-decoration: underline;">click here</a> or copy and paste the following link into your browser:</p>
+            <p style="color: #5D6876; font-size: 14px; word-break: break-all;">${actionLink}</p>
+            <hr style="border: 0; border-top: 1px solid #DCE2EA; margin: 20px 0;" />
+            <p style="color: #5D6876; font-size: 12px;">City Civil Registrar Office · City Government of Legazpi</p>
           </div>
         `,
       });
@@ -227,16 +227,16 @@ export const forgotPasswordFn = createServerFn({ method: "POST" })
         to: data.email,
         subject: "Reset your CiviCheck Password",
         html: `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-            <h2 style="color: #0D5E53;">Reset your CiviCheck password</h2>
+          <div style="font-family: 'Public Sans', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #DCE2EA; border-radius: 8px; color: #17212B;">
+            <h2 style="color: #0049A8;">Reset your CiviCheck password</h2>
             <p>We received a request to reset your password. Please click the button below to set a new password:</p>
             <div style="margin: 30px 0;">
-              <a href="${actionLink}" style="background-color: #0D5E53; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Reset Password</a>
+              <a href="${actionLink}" style="background-color: #0049A8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Reset Password</a>
             </div>
-            <p style="color: #6b7280; font-size: 14px;">If the button doesn't work, you can <a href="${actionLink}" style="color: #0D5E53; text-decoration: underline;">click here</a> or copy and paste the following link into your browser:</p>
-            <p style="color: #6b7280; font-size: 14px; word-break: break-all;">${actionLink}</p>
-            <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
-            <p style="color: #9ca3af; font-size: 12px;">City Civil Registrar Office · City Government of Legazpi</p>
+            <p style="color: #5D6876; font-size: 14px;">If the button doesn't work, you can <a href="${actionLink}" style="color: #0049A8; text-decoration: underline;">click here</a> or copy and paste the following link into your browser:</p>
+            <p style="color: #5D6876; font-size: 14px; word-break: break-all;">${actionLink}</p>
+            <hr style="border: 0; border-top: 1px solid #DCE2EA; margin: 20px 0;" />
+            <p style="color: #5D6876; font-size: 12px;">City Civil Registrar Office · City Government of Legazpi</p>
           </div>
         `,
       });

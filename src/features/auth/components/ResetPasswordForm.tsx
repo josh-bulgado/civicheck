@@ -3,7 +3,6 @@ import {
   CheckCircle,
   ArrowRight,
   Eye,
-  ShieldCheck,
   EyeClosed,
   AlertCircleIcon,
   Lock,
@@ -28,7 +27,8 @@ import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Alert, AlertTitle, AlertDescription } from "~/components/ui/alert";
 import { useState } from "react";
-import TopoPattern from "./TopoPattern";
+import { CiviCheckIdentity } from "~/components/brand/civic-identity";
+import { AuthBrandPanel } from "./AuthBrandPanel";
 
 const formSchema = z
   .object({
@@ -66,21 +66,14 @@ const ResetPasswordForm = () => {
   }
 
   return (
-    <div className="auth-page flex min-h-dvh bg-ash">
+    <div className="auth-page flex min-h-dvh bg-background">
       {/* Left — Form */}
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
         <div className="w-full max-w-[420px] space-y-8">
           {/* Logo / Brand */}
           <div className="space-y-2">
-            <Link to="/" className="inline-flex items-center gap-2.5 group">
-              <div className="flex items-center justify-center w-9 h-9 rounded-lg border-2 border-lagoon text-lagoon">
-                <CheckCircle className="w-4.5 h-4.5" />
-              </div>
-              <span className="text-xl font-bold text-basalt tracking-tight">
-                CiviCheck
-              </span>
-            </Link>
-            <h1 className="text-2xl font-semibold text-basalt pt-4">
+            <Link to="/"><CiviCheckIdentity /></Link>
+            <h1 className="civic-title pt-4 text-2xl">
               {isSuccess ? "Password updated!" : "Set a new password"}
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -92,9 +85,9 @@ const ResetPasswordForm = () => {
 
           {isSuccess ? (
             <div className="space-y-5">
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+              <div className="status-success rounded-lg border p-4 text-sm">
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 shrink-0 mt-0.5 text-emerald-600" />
+                  <CheckCircle className="mt-0.5 size-5 shrink-0 text-success" />
                   <div>
                     <p className="font-medium">Password changed successfully</p>
                     <p className="mt-1">
@@ -239,28 +232,10 @@ const ResetPasswordForm = () => {
         </div>
       </div>
 
-      {/* Right — Brand panel (hidden on small screens) */}
-      <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-basalt via-[#1A3A35] to-lagoon items-center justify-center relative overflow-hidden">
-        <TopoPattern />
-        <div className="relative z-10 max-w-md px-12 text-white text-center">
-          <div className="flex justify-center mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur flex items-center justify-center">
-              <ShieldCheck className="w-8 h-8 text-white/90" />
-            </div>
-          </div>
-          <h2 className="font-display text-3xl mb-4">Secure Your Account</h2>
-          <p className="text-white/60 text-sm leading-relaxed">
-            Choose a strong password to keep your CiviCheck account secure. Your
-            personal information and document requests are protected by
-            role-based access controls.
-          </p>
-          <div className="mt-8 flex items-center justify-center gap-4 text-xs text-white/35">
-            <span>City Civil Registrar Office</span>
-            <span>·</span>
-            <span>City Government of Legazpi</span>
-          </div>
-        </div>
-      </div>
+      <AuthBrandPanel
+        title="Protect your civic service account."
+        description="Choose a strong password to keep your personal information and document requests secure."
+      />
     </div>
   );
 };

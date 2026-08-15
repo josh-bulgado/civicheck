@@ -1,168 +1,46 @@
 import { Link } from "@tanstack/react-router";
+import { CityGovernmentIdentity, CiviCheckIdentity } from "~/components/brand/civic-identity";
 
-const SiteFooter = () => {
-  return (
-    <footer className="bg-basalt">
-      {/* Main Footer Links */}
-      <div className="border-b border-white/8">
-        <div className="max-w-[1120px] mx-auto px-5 py-12 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-          {/* Services */}
-          <div>
-            <h4 className="font-semibold text-[12px] text-white/40 uppercase tracking-wider mb-5">
-              Services
-            </h4>
-            <ul className="space-y-2.5">
-              {[
-                "Birth Certificate",
-                "Marriage Certificate",
-                "Death Certificate",
-                "Certified True Copy (CTC)",
-              ].map((link) => (
-                <li key={link}>
-                  <a
-                    href="#"
-                    className="text-[14px] text-white/60 hover:text-white transition-colors"
-                  >
-                    {link}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* For Applicants */}
-          <div>
-            <h4 className="font-semibold text-[12px] text-white/40 uppercase tracking-wider mb-5">
-              For Applicants
-            </h4>
-            <ul className="space-y-2.5">
-              <li>
-                <Link
-                  to="/signup"
-                  className="text-[14px] text-white/60 hover:text-white transition-colors"
-                >
-                  Check Requirements
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/signup"
-                  className="text-[14px] text-white/60 hover:text-white transition-colors"
-                >
-                  Submit a Request
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/login"
-                  search={{ redirect: "/dashboard" }}
-                  className="text-[14px] text-white/60 hover:text-white transition-colors"
-                >
-                  Track Your Request
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/signup"
-                  className="text-[14px] text-white/60 hover:text-white transition-colors"
-                >
-                  Create an Account
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* About */}
-          <div>
-            <h4 className="font-semibold text-[12px] text-white/40 uppercase tracking-wider mb-5">
-              About
-            </h4>
-            <ul className="space-y-2.5">
-              {[
-                "About CCRO",
-                "About CiviCheck",
-                "Privacy Policy",
-                "Accessibility",
-              ].map((link) => (
-                <li key={link}>
-                  <a
-                    href="#"
-                    className="text-[14px] text-white/60 hover:text-white transition-colors"
-                  >
-                    {link}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Contact */}
-          <div>
-            <h4 className="font-semibold text-[12px] text-white/40 uppercase tracking-wider mb-5">
-              Contact
-            </h4>
-            <p className="text-[14px] text-white/60 leading-relaxed mb-2">
-              City Civil Registrar Office
-              <br />
-              City Government of Legazpi
-            </p>
-            <p className="text-[13px] text-white/35 italic">
-              Office address, hours, and contact number to be confirmed with
-              CCRO.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Bar */}
-      <div className="max-w-[1120px] mx-auto px-5 py-5 flex flex-col md:flex-row justify-between items-center gap-4">
-        {/* Logo */}
-        <div className="flex items-center gap-2">
-          <svg
-            className="w-6 h-6 text-lagoon"
-            viewBox="0 0 40 40"
-            fill="none"
-          >
-            <rect
-              x="2"
-              y="2"
-              width="36"
-              height="36"
-              rx="8"
-              stroke="currentColor"
-              strokeWidth="2.5"
-            />
-            <path
-              d="M12 20 L18 26 L28 14"
-              stroke="currentColor"
-              strokeWidth="3"
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          <span className="text-white/70 text-[15px] font-bold tracking-tight">
-            CiviCheck
-          </span>
-        </div>
-
-        {/* Office info */}
-        <p className="text-[13px] text-white/35 text-center">
-          City Civil Registrar Office · City Government of Legazpi
+const SiteFooter = () => (
+  <footer className="border-t border-border bg-white">
+    <div className="civic-container grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr]">
+      <div className="max-w-sm">
+        <CiviCheckIdentity />
+        <p className="mt-4 text-sm leading-6 text-muted-foreground">
+          A City Civil Registrar Office service for checking requirements,
+          submitting requests, and tracking civil registry documents.
         </p>
-
-        {/* Legal Links */}
-        <div className="flex items-center gap-4 text-[13px] text-white/40">
-          <a href="#" className="hover:text-white/70 transition-colors">
-            Privacy
-          </a>
-          <a href="#" className="hover:text-white/70 transition-colors">
-            Accessibility
-          </a>
-        </div>
       </div>
-    </footer>
-  );
-};
+
+      <div>
+        <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-foreground">Public services</h2>
+        <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
+          <li><Link to="/requirements" className="hover:text-primary">Check requirements</Link></li>
+          <li><Link to="/signup" className="hover:text-primary">Submit a request</Link></li>
+          <li><Link to="/login" search={{ redirect: "/dashboard" }} className="hover:text-primary">Track a request</Link></li>
+        </ul>
+      </div>
+
+      <div>
+        <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-foreground">Office</h2>
+        <p className="mt-4 text-sm leading-6 text-muted-foreground">
+          City Civil Registrar Office<br />City Government of Legazpi
+        </p>
+        <p className="mt-3 text-xs leading-5 text-muted-foreground">
+          Office address, hours, and contact details to be confirmed with CCRO.
+        </p>
+      </div>
+    </div>
+
+    <div className="border-t border-border bg-background">
+      <div className="civic-container flex flex-col items-center justify-between gap-4 py-5 sm:flex-row">
+        <CityGovernmentIdentity />
+        <p className="text-center text-xs text-muted-foreground">
+          CiviCheck · City Civil Registrar Office · Legazpi City
+        </p>
+      </div>
+    </div>
+  </footer>
+);
 
 export default SiteFooter;

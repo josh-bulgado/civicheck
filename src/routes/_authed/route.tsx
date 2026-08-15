@@ -7,6 +7,9 @@ import {
   SidebarTrigger,
 } from "~/components/ui/sidebar";
 import { AppSidebar } from "~/components/sidebar-01/app-sidebar";
+import { CityGovernmentIdentity } from "~/components/brand/civic-identity";
+import { getWorkspaceDetails } from "~/components/sidebar-01/workspace";
+import type { Role } from "~/lib/permissions";
 
 export const loginFn = createServerFn({ method: "POST" })
   .validator((d: { email: string; password: string }) => d)
@@ -49,16 +52,27 @@ export const Route = createFileRoute("/_authed")({
 
 function AuthedLayout() {
   const { user } = Route.useRouteContext();
+  const workspace = getWorkspaceDetails((user?.role ?? "applicant") as Role);
+
   return (
     <SidebarProvider>
       <AppSidebar user={user} />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 ">
-          <div className="flex items-center gap-2 px-4">
-            <SidebarTrigger className="sm:hidden" />
+        <header className="flex h-[4.5rem] shrink-0 items-center justify-between border-b border-border-strong bg-white px-4 transition-[width,height] ease-linear sm:px-6">
+          <div className="flex items-center gap-3">
+            <SidebarTrigger className="size-10 rounded-lg border border-border-strong bg-white shadow-xs hover:bg-surface-subtle" />
+            <div className="hidden sm:block">
+              <p className="text-sm font-bold text-foreground">
+                {workspace.label}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {workspace.description}
+              </p>
+            </div>
           </div>
+          <CityGovernmentIdentity compact className="[&>span:first-child]:size-8" />
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+        <div className="civic-workspace flex flex-1 flex-col bg-workspace p-4 text-foreground sm:p-6 lg:p-8">
           <Outlet />
         </div>
       </SidebarInset>

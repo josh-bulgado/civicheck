@@ -99,9 +99,9 @@ export function CaseSelector({ services, selectedCode, onSelect }: CaseSelectorP
   const selectedService = services.find((s) => s.service_code === selectedCode);
 
   return (
-    <Card size="sm">
-      <CardHeader className="pb-3 border-b border-border">
-        <CardTitle className="font-bold text-base text-foreground">Select Your Case</CardTitle>
+    <Card size="sm" className="border-l-4 border-l-brand-gold">
+      <CardHeader className="border-b border-border pb-3">
+        <CardTitle className="text-base font-bold text-foreground">Select Your Case</CardTitle>
         <p className="text-xs text-muted-foreground">
           Answer the questions below to find the right service for your situation.
         </p>
@@ -111,7 +111,7 @@ export function CaseSelector({ services, selectedCode, onSelect }: CaseSelectorP
         {/* Step 1: Age */}
         {steps.hasAge && (
           <div className="space-y-3">
-            <p className="text-sm font-semibold text-gray-700">
+            <p className="text-sm font-semibold text-foreground">
               1. Age of the person to be registered
             </p>
             <RadioGroup
@@ -124,8 +124,8 @@ export function CaseSelector({ services, selectedCode, onSelect }: CaseSelectorP
                   key={a}
                   className={`flex items-center gap-3 rounded-lg border p-3.5 cursor-pointer transition-colors ${
                     age === a
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-border hover:bg-accent hover:text-accent-foreground text-foreground"
+                      ? "border-primary bg-primary text-white shadow-sm [&_.case-helper]:text-white/70"
+                      : "border-border-strong bg-white text-foreground hover:border-primary/40 hover:bg-surface-subtle"
                   }`}
                 >
                   <RadioGroupItem value={a} id={`age-${a}`} />
@@ -141,7 +141,7 @@ export function CaseSelector({ services, selectedCode, onSelect }: CaseSelectorP
         {/* Step 2: Program (only after age picked) */}
         {steps.hasProgram && age && (
           <div className="space-y-3">
-            <p className="text-sm font-semibold text-gray-700">
+            <p className="text-sm font-semibold text-foreground">
               2. Registration program
             </p>
             <RadioGroup
@@ -154,8 +154,8 @@ export function CaseSelector({ services, selectedCode, onSelect }: CaseSelectorP
                   key={p}
                   className={`flex items-center gap-3 rounded-lg border p-3.5 cursor-pointer transition-colors ${
                     program === p
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-border hover:bg-accent hover:text-accent-foreground text-foreground"
+                      ? "border-primary bg-primary text-white shadow-sm [&_.case-helper]:text-white/70"
+                      : "border-border-strong bg-white text-foreground hover:border-primary/40 hover:bg-surface-subtle"
                   }`}
                 >
                   <RadioGroupItem value={p} id={`prog-${p}`} />
@@ -163,7 +163,7 @@ export function CaseSelector({ services, selectedCode, onSelect }: CaseSelectorP
                     <span className="font-medium">
                       {p === "brap" ? "Under BRAP" : "Normal"}
                     </span>
-                    <span className="block text-xs text-gray-500 mt-0.5">
+                    <span className="case-helper mt-0.5 block text-xs text-muted-foreground">
                       {p === "brap" ? "Free — PSA assisted program" : "Standard registration"}
                     </span>
                   </Label>
@@ -176,7 +176,7 @@ export function CaseSelector({ services, selectedCode, onSelect }: CaseSelectorP
         {/* Step 3: Marital status — shown after program=normal, OR directly if no age/program steps */}
         {steps.hasMarital && (program === "normal" || (!steps.hasAge && !steps.hasProgram)) && (
           <div className="space-y-3">
-            <p className="text-sm font-semibold text-gray-700">
+            <p className="text-sm font-semibold text-foreground">
               {steps.hasAge || steps.hasProgram ? "3." : "1."} Status of the child
             </p>
             <RadioGroup
@@ -191,15 +191,15 @@ export function CaseSelector({ services, selectedCode, onSelect }: CaseSelectorP
                     key={m}
                     className={`flex items-center gap-3 rounded-lg border p-3.5 cursor-pointer transition-colors ${
                       marital === m
-                        ? "border-primary bg-primary/5 text-primary"
-                        : "border-border hover:bg-accent hover:text-accent-foreground text-foreground"
+                        ? "border-primary bg-primary text-white shadow-sm [&_.case-helper]:text-white/70"
+                        : "border-border-strong bg-white text-foreground hover:border-primary/40 hover:bg-surface-subtle"
                     }`}
                   >
                     <RadioGroupItem value={m} id={`marital-${m}`} />
                     <Label htmlFor={`marital-${m}`} className="cursor-pointer text-sm">
                       <span className="font-medium capitalize">{m} Child</span>
                       {match && (
-                        <span className="block text-xs text-gray-500 mt-0.5">
+                        <span className="case-helper mt-0.5 block text-xs text-muted-foreground">
                           {Number(match.fee) === 0 ? "Free" : `₱${Number(match.fee).toFixed(2)}`}
                         </span>
                       )}
@@ -213,7 +213,7 @@ export function CaseSelector({ services, selectedCode, onSelect }: CaseSelectorP
 
         {/* Selected result summary */}
         {selectedService && (
-          <div className="rounded-lg px-4 py-3 text-sm bg-primary/10 border border-primary/20 text-primary">
+          <div className="rounded-lg border border-primary/25 bg-primary-soft px-4 py-3 text-sm text-primary-hover">
             <span className="font-semibold">Selected: </span>
             {selectedService.name} —{" "}
             <span className="font-semibold">

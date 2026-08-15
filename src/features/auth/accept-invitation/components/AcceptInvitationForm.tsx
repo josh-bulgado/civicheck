@@ -150,7 +150,7 @@ export function AcceptInvitationForm() {
       <Button
         type="submit"
         size="lg"
-        className="w-full bg-lagoon text-white hover:bg-[#0D5E53]"
+        className="w-full bg-primary text-white hover:bg-primary-hover"
         disabled={isPending}
       >
         {isPending ? (

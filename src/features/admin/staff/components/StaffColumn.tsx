@@ -68,8 +68,8 @@ export function createStaffColumns({
 
         return (
           <div className="flex min-w-72 items-center gap-3.5">
-            <Avatar size="lg" className="bg-muted/60">
-              <AvatarFallback className="bg-primary/8 font-semibold text-primary">
+            <Avatar size="lg" className="bg-primary">
+              <AvatarFallback className="bg-primary font-semibold text-white">
                 {getInitials(staffMember)}
               </AvatarFallback>
             </Avatar>
@@ -79,7 +79,7 @@ export function createStaffColumns({
                   {fullName}
                 </span>
                 {!staffMember.confirmed ? (
-                  <Badge className="h-5 border-amber-300 bg-amber-50 px-2 text-[10px] font-semibold uppercase tracking-wider text-amber-700">
+                  <Badge className="status-warning h-5 px-2 text-[10px] font-semibold uppercase tracking-wider">
                     Invited
                   </Badge>
                 ) : null}
@@ -142,7 +142,7 @@ export function createStaffColumns({
           >
             <span
               className={`size-2 rounded-full ${
-                staffMember.confirmed ? "bg-emerald-500" : "bg-amber-500"
+                staffMember.confirmed ? "bg-success" : "bg-warning"
               }`}
             />
             {label}

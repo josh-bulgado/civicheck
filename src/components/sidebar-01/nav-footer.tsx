@@ -1,6 +1,6 @@
 "use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
+import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,14 +26,19 @@ export function NavFooter({
   user: {
     name: string;
     email: string;
-    avatar: string;
   };
 }) {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const nameParts = user.name.trim().split(/\s+/).filter(Boolean);
+  const initials = (
+    nameParts.length > 1
+      ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`
+      : user.name.slice(0, 2)
+  ).toUpperCase();
 
   return (
-    <SidebarFooter className="p-2">
+    <SidebarFooter className="border-t border-sidebar-border p-2.5 group-data-[collapsible=icon]:p-2">
       <SidebarMenu>
         <SidebarMenuItem>
           <DropdownMenu>
@@ -41,15 +46,17 @@ export function NavFooter({
               render={
                 <SidebarMenuButton
                   size="lg"
-                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  className="h-12 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:justify-center"
                   tooltip={isCollapsed ? user.name : undefined}
                 />
               }
             >
               <Avatar className="h-8 w-8 rounded-full shrink-0">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-full">
-                  {user.name.slice(0, 2).toUpperCase()}
+                <AvatarFallback
+                  className="rounded-full bg-primary-soft font-bold text-primary"
+                  aria-label={`${user.name} initials`}
+                >
+                  {initials}
                 </AvatarFallback>
               </Avatar>
               {!isCollapsed && (
@@ -57,7 +64,7 @@ export function NavFooter({
                   <span className="truncate text-sm font-medium leading-tight">
                     {user.name}
                   </span>
-                  <span className="truncate text-xs text-muted-foreground">
+                  <span className="truncate text-xs text-sidebar-muted">
                     {user.email}
                   </span>
                 </div>

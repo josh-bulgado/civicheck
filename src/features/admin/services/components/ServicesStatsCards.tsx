@@ -1,12 +1,5 @@
 import { useMemo } from "react";
-import { FileText, Settings } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "~/components/ui/card";
+import { FileCheck2, FileClock, Files, Settings } from "lucide-react";
 import { Service } from "../services.types";
 
 interface ServicesStatsCardsProps {
@@ -27,76 +20,41 @@ export function ServicesStatsCards({ data }: ServicesStatsCardsProps) {
   );
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <Card className="relative overflow-hidden bg-gradient-to-br from-indigo-50 to-indigo-100/50 border-indigo-100 ring-indigo-100">
-        <div className="absolute -right-6 -bottom-6 opacity-10 text-indigo-900 pointer-events-none">
-          <FileText className="w-24 h-24" />
-        </div>
-        <CardHeader>
-          <CardTitle className="text-xs font-semibold text-indigo-700 uppercase tracking-wider">
-            Total Registered Services
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-3xl font-bold text-indigo-950 font-heading">
-            {stats.total}
-          </p>
-          <CardDescription className="mt-1 text-indigo-600">
-            Active services in the Legazpi CCRO system
-          </CardDescription>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-100 ring-emerald-100">
-        <CardHeader>
-          <CardTitle className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">
-            Simple Services
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-3xl font-bold text-emerald-950 font-heading">
-            {stats.simple}
-          </p>
-          <CardDescription className="mt-1 text-emerald-600">
-            Fast turnaround (typically 1–2 hours)
-          </CardDescription>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-gradient-to-br from-amber-50 to-amber-100/50 border-amber-100 ring-amber-100">
-        <CardHeader>
-          <CardTitle className="text-xs font-semibold text-amber-700 uppercase tracking-wider">
-            Complex Services
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-3xl font-bold text-amber-950 font-heading">
-            {stats.complex}
-          </p>
-          <CardDescription className="mt-1 text-amber-600">
-            Requires posting/verification periods
-          </CardDescription>
-        </CardContent>
-      </Card>
-
-      <Card className="relative overflow-hidden bg-gradient-to-br from-rose-50 to-rose-100/50 border-rose-100 ring-rose-100">
-        <div className="absolute -right-6 -bottom-6 opacity-10 text-rose-900 pointer-events-none">
-          <Settings className="w-24 h-24" />
-        </div>
-        <CardHeader>
-          <CardTitle className="text-xs font-semibold text-rose-700 uppercase tracking-wider">
-            Highly Technical / Other
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-3xl font-bold text-rose-950 font-heading">
-            {stats.highlyTechnical}
-          </p>
-          <CardDescription className="mt-1 text-rose-600">
-            Requires court decree or custom reviews
-          </CardDescription>
-        </CardContent>
-      </Card>
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <StatCard icon={Files} label="Registered services" value={stats.total} detail="Official CCRO service entries" accent="bg-primary" />
+      <StatCard icon={FileCheck2} label="Simple" value={stats.simple} detail="Standard processing workflow" accent="bg-success" />
+      <StatCard icon={FileClock} label="Complex" value={stats.complex} detail="Extended verification required" accent="bg-brand-gold" />
+      <StatCard icon={Settings} label="Highly technical" value={stats.highlyTechnical} detail="Specialized review workflow" accent="bg-destructive" />
     </div>
+  );
+}
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  accent,
+}: {
+  icon: typeof Files;
+  label: string;
+  value: number;
+  detail: string;
+  accent: string;
+}) {
+  return (
+    <article className="dashboard-stat">
+      <div className={`absolute inset-x-0 top-0 h-1 ${accent}`} aria-hidden="true" />
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">{label}</p>
+          <p className="mt-3 text-3xl font-extrabold tracking-tight text-foreground">{value}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-surface-subtle p-2.5 text-primary">
+          <Icon className="size-5" aria-hidden="true" />
+        </div>
+      </div>
+    </article>
   );
 }
