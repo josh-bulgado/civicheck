@@ -41,6 +41,7 @@ pids
 *.pid.lock
 
 # Tools & Temp
+.mcp.json
 .kiro/
 .agent/
 .agents/
