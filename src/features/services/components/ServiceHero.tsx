@@ -26,6 +26,11 @@ export function ServiceHero({ service, displayName }: ServiceHeroProps) {
   // Clean step text: remove editorial caveats, filter out empty results
   const cleanedSteps = (service.steps_description ?? [])
     .map(cleanStepText)
+    .map((step) =>
+      step.toLowerCase().startsWith("submit the request with complete attachments")
+        ? "Submit the request online, with or without optional file attachments; CCRO checks the request, then registers and signs."
+        : step,
+    )
     .filter((s) => s.length > 0);
 
   return (

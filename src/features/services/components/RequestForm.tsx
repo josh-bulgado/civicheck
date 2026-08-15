@@ -29,6 +29,8 @@ interface RequestFormProps {
   onChange: (field: keyof RequestFormValues, value: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   submitting: boolean;
+  eventDateLabel?: string;
+  eventPlaceLabel?: string;
 }
 
 const PURPOSES = [
@@ -41,9 +43,16 @@ const PURPOSES = [
   "Other",
 ];
 
-export function RequestForm({ values, onChange, onSubmit, submitting }: RequestFormProps) {
+export function RequestForm({
+  values,
+  onChange,
+  onSubmit,
+  submitting,
+  eventDateLabel = "Date of Event",
+  eventPlaceLabel = "Place of Event",
+}: RequestFormProps) {
   return (
-    <Card size="sm" className="lg:sticky lg:top-24">
+    <Card size="sm">
       <CardHeader className="pb-3 border-b border-border">
         <CardTitle className="font-bold text-base">
           Request Details
@@ -115,7 +124,7 @@ export function RequestForm({ values, onChange, onSubmit, submitting }: RequestF
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="eventDate" className="text-xs font-medium text-muted-foreground">Date of Event <span className="text-primary">*</span></Label>
+                <Label htmlFor="eventDate" className="text-xs font-medium text-muted-foreground">{eventDateLabel} <span className="text-primary">*</span></Label>
                 <Input
                   id="eventDate"
                   type="date"
@@ -127,7 +136,7 @@ export function RequestForm({ values, onChange, onSubmit, submitting }: RequestF
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="eventPlace" className="text-xs font-medium text-muted-foreground">Place of Event <span className="text-primary">*</span></Label>
+                <Label htmlFor="eventPlace" className="text-xs font-medium text-muted-foreground">{eventPlaceLabel} <span className="text-primary">*</span></Label>
                 <Input
                   id="eventPlace"
                   value={values.eventPlace}

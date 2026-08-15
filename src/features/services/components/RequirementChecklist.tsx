@@ -6,7 +6,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "~/components/ui/collapsible";
-import { AlertTriangle, ChevronDown } from "lucide-react";
+import { AlertTriangle, Check, ChevronDown, FileText, Info, Upload } from "lucide-react";
 import { parseRequirementName } from "~/features/services/service-utils";
 
 interface Requirement {
@@ -22,6 +22,7 @@ interface RequirementChecklistProps {
   checkedItems: Record<string, boolean>;
   onToggle: (id: string) => void;
   selectedServiceCode?: string | null;
+  allowUploads?: boolean;
 }
 
 function isVisible(req: Requirement, selectedCode?: string | null): boolean {
@@ -47,25 +48,29 @@ function RequirementItem({
   req,
   checked,
   onToggle,
+  allowUpload,
 }: {
   req: Requirement;
   checked: boolean;
   onToggle: () => void;
+  allowUpload: boolean;
 }) {
   const { primary, secondary } = parseRequirementName(req.requirement_name);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   return (
     <div
       onClick={onToggle}
-      className="flex cursor-pointer select-none items-start gap-3 rounded-lg px-3 py-3 text-sm transition-colors hover:bg-surface-subtle"
+      className="cursor-pointer select-none rounded-lg px-3 py-3 text-sm transition-colors hover:bg-surface-subtle"
     >
-      <Checkbox
-        id={req.id}
-        checked={!!checked}
-        onCheckedChange={onToggle}
-        className="mt-0.5 shrink-0"
-      />
-      <div className="flex-1 min-w-0 space-y-0.5">
+      <div className="flex items-start gap-3">
+        <Checkbox
+          id={req.id}
+          checked={!!checked}
+          onCheckedChange={onToggle}
+          className="mt-0.5 shrink-0"
+        />
+        <div className="flex-1 min-w-0 space-y-0.5">
         {/* Primary line: document name */}
         <p
           className={`text-xs font-semibold leading-snug ${
@@ -96,7 +101,44 @@ function RequirementItem({
             <span className="opacity-60">📍</span> {req.where_to_secure}
           </p>
         )}
+        </div>
+        {allowUpload && (
+          <div
+            className="shrink-0"
+            onClick={(event) => event.stopPropagation()}
+          >
+          <input
+            id={`requirement-upload-${req.id}`}
+            type="file"
+            accept="image/*,.pdf,.doc,.docx"
+            className="sr-only"
+            onChange={(event) =>
+              setSelectedFile(event.target.files?.[0] ?? null)
+            }
+          />
+          <label
+            htmlFor={`requirement-upload-${req.id}`}
+            title={selectedFile?.name ?? "Attach a document or photo (optional)"}
+            className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-md border border-border-strong bg-white px-2.5 text-[11px] font-semibold text-foreground shadow-xs transition-colors hover:border-primary/50 hover:text-primary focus-within:ring-2 focus-within:ring-ring"
+          >
+            {selectedFile ? (
+              <Check className="h-3.5 w-3.5 text-emerald-600" />
+            ) : (
+              <Upload className="h-3.5 w-3.5" />
+            )}
+            <span>Optional upload</span>
+          </label>
+          </div>
+        )}
       </div>
+      {selectedFile && (
+        <div className="mt-2 flex min-w-0 items-center gap-1.5 pl-9 text-[11px] font-medium text-muted-foreground">
+          <FileText className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+          <span className="truncate" title={selectedFile.name}>
+            {selectedFile.name}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -106,11 +148,11 @@ export function RequirementChecklist({
   checkedItems,
   onToggle,
   selectedServiceCode,
+  allowUploads = false,
 }: RequirementChecklistProps) {
   const visible = requirements.filter((r) => isVisible(r, selectedServiceCode));
   const mandatoryReqs = visible.filter((r) => r.is_mandatory);
   const conditionalReqs = visible.filter((r) => !r.is_mandatory);
-
   const [conditionalOpen, setConditionalOpen] = useState(false);
 
   return (
@@ -123,6 +165,15 @@ export function RequirementChecklist({
         <p className="text-xs text-muted-foreground">
           Check off each item you have prepared before submitting.
         </p>
+        {allowUploads && (
+          <div className="mt-2 flex items-start gap-2 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-medium text-sky-900">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-sky-600" />
+            <p>
+              Document uploads are optional. You can still submit your request
+              without attaching any files.
+            </p>
+          </div>
+        )}
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -139,6 +190,7 @@ export function RequirementChecklist({
                 req={req}
                 checked={!!checkedItems[req.id]}
                 onToggle={() => onToggle(req.id)}
+                allowUpload={allowUploads}
               />
             ))}
 
@@ -166,6 +218,7 @@ export function RequirementChecklist({
                       req={req}
                       checked={!!checkedItems[req.id]}
                       onToggle={() => onToggle(req.id)}
+                      allowUpload={allowUploads}
                     />
                   ))}
                 </CollapsibleContent>

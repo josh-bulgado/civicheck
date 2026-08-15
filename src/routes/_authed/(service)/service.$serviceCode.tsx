@@ -29,6 +29,7 @@ const DEFAULT_FORM: RequestFormValues = {
 
 function ServicePage() {
   const { isGroup, displayName, services, requirements } = Route.useLoaderData();
+  const { serviceCode } = Route.useParams();
   const router = useRouter();
 
   const [selectedCode, setSelectedCode] = useState<string | null>(
@@ -147,8 +148,8 @@ function ServicePage() {
         <>
           <ServiceHero service={selectedService} displayName={displayName} />
 
-          <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
-            <div className="lg:col-span-7">
+          <div className="space-y-6">
+            <div className="pt-6">
               <RequirementChecklist
                 requirements={filteredRequirements}
                 checkedItems={checkedItems}
@@ -156,14 +157,25 @@ function ServicePage() {
                   setCheckedItems((prev) => ({ ...prev, [id]: !prev[id] }))
                 }
                 selectedServiceCode={selectedCode}
+                allowUploads={serviceCode.toLowerCase() === "birth_ontime"}
               />
             </div>
-            <div className="lg:col-span-5">
+            <div>
               <RequestForm
                 values={form}
                 onChange={handleFormChange}
                 onSubmit={handleSubmit}
                 submitting={submitting}
+                eventDateLabel={
+                  serviceCode.toLowerCase().startsWith("birth")
+                    ? "Date of Birth"
+                    : undefined
+                }
+                eventPlaceLabel={
+                  serviceCode.toLowerCase().startsWith("birth")
+                    ? "Place of Birth"
+                    : undefined
+                }
               />
             </div>
           </div>
