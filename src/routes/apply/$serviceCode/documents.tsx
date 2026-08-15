@@ -10,6 +10,7 @@ import {
 } from "~/features/apply/apply.mutations";
 import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
+import { RequestSummaryCard } from "~/features/apply/components/RequestSummaryCard";
 import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
 import { Route as ApplyLayoutRoute } from "./route";
 
@@ -28,8 +29,17 @@ function formatSize(bytes: number) {
 function DocumentsStepRoute() {
   const { serviceCode } = Route.useParams();
   const navigate = useNavigate();
-  const { requirements } = ApplyLayoutRoute.useLoaderData();
+  const { requirements, displayName, services } = ApplyLayoutRoute.useLoaderData();
   const { draft, update, hydrated } = useApplyDraft(serviceCode);
+  const selectedService =
+    services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
+  const subjectName = [draft.details.subjectFirstName, draft.details.subjectLastName]
+    .filter(Boolean)
+    .join(" ");
+  const purpose =
+    draft.caseAnswers.purpose === "Other"
+      ? draft.caseAnswers.otherPurpose
+      : draft.caseAnswers.purpose;
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [rowError, setRowError] = useState<Record<string, string>>({});
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -101,13 +111,34 @@ function DocumentsStepRoute() {
 
   return (
     <WizardShell
+      step={3}
       title="Upload your documents"
       description="Upload each required document so CCRO staff can pre-check it before your visit. Accepted formats: JPG, PNG, or PDF, up to 10 MB each."
+      sidebar={
+        selectedService && (
+          <RequestSummaryCard
+            serviceName={displayName}
+            fee={selectedService.fee}
+            subjectName={subjectName || undefined}
+            purpose={purpose || undefined}
+          />
+        )
+      }
     >
       <div className="flex flex-col gap-5">
-        <h2 className="text-base font-bold text-foreground">
-          {uploadedCount} of {mandatoryReqs.length} uploaded
-        </h2>
+        {mandatoryReqs.length > 0 && (
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-base font-bold text-foreground">
+              {uploadedCount} of {mandatoryReqs.length} uploaded
+            </h2>
+            <div className="h-2 w-35 shrink-0 overflow-hidden rounded-full bg-border-lighter">
+              <div
+                className="h-full rounded-full bg-primary transition-[width]"
+                style={{ width: `${(uploadedCount / mandatoryReqs.length) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         {!hydrated ? (
           <div className="h-24 animate-pulse rounded-xl bg-muted" />
@@ -169,6 +200,9 @@ function DocumentsStepRoute() {
 
                   {doc ? (
                     <div className="flex shrink-0 items-center gap-3">
+                      <span className="rounded-full bg-success-soft px-3 py-1 text-xs font-bold text-success">
+                        Uploaded
+                      </span>
                       <button
                         type="button"
                         onClick={() => fileInputs.current[req.id]?.click()}

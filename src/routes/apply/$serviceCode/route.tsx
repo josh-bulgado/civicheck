@@ -17,6 +17,7 @@ const STEP_PATHS = ["details", "case", "documents", "review"] as const;
 
 function ApplyLayout() {
   const { serviceCode } = Route.useParams();
+  const { displayName } = Route.useLoaderData();
   const { draft, hydrated } = useApplyDraft(serviceCode);
   const matches = useMatches();
   const activePath = matches[matches.length - 1]?.routeId.split("/").pop();
@@ -27,6 +28,7 @@ function ApplyLayout() {
     <div className="min-h-screen bg-background">
       <ApplyStepRail
         currentStep={currentStep}
+        serviceName={displayName}
         draftUpdatedAt={hydrated ? draft.updatedAt : null}
       />
       <Outlet />

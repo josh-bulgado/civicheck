@@ -21,6 +21,7 @@ import {
 import { CaseSelector } from "~/features/services/components/CaseSelector";
 import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
+import { RequestSummaryCard } from "~/features/apply/components/RequestSummaryCard";
 import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
 import { Route as ApplyLayoutRoute } from "./route";
 
@@ -56,8 +57,13 @@ type CaseValues = z.infer<typeof caseSchema>;
 function CaseStepRoute() {
   const { serviceCode } = Route.useParams();
   const navigate = useNavigate();
-  const { isGroup, services } = ApplyLayoutRoute.useLoaderData();
+  const { isGroup, displayName, services } = ApplyLayoutRoute.useLoaderData();
   const { draft, update, hydrated } = useApplyDraft(serviceCode);
+  const selectedService =
+    services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
+  const subjectName = [draft.details.subjectFirstName, draft.details.subjectLastName]
+    .filter(Boolean)
+    .join(" ");
 
   useEffect(() => {
     if (hydrated && !isGroup && !draft.selectedServiceCode) {
@@ -99,8 +105,18 @@ function CaseStepRoute() {
 
   return (
     <WizardShell
+      step={2}
       title="Tell us about your case"
       description="A few details about the event and why you need this document — this determines which requirements apply to you."
+      sidebar={
+        selectedService && (
+          <RequestSummaryCard
+            serviceName={displayName}
+            fee={selectedService.fee}
+            subjectName={subjectName || undefined}
+          />
+        )
+      }
     >
       <div className="flex flex-col gap-6">
         {isGroup && (

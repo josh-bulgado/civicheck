@@ -11,7 +11,9 @@ import {
 import { Input } from "~/components/ui/input";
 import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
+import { RequestSummaryCard } from "~/features/apply/components/RequestSummaryCard";
 import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
+import { Route as ApplyLayoutRoute } from "./route";
 
 export const Route = createFileRoute("/apply/$serviceCode/details")({
   component: DetailsStepRoute,
@@ -29,7 +31,10 @@ type DetailsValues = z.infer<typeof detailsSchema>;
 function DetailsStepRoute() {
   const { serviceCode } = Route.useParams();
   const navigate = useNavigate();
+  const { displayName, services } = ApplyLayoutRoute.useLoaderData();
   const { draft, update, hydrated } = useApplyDraft(serviceCode);
+  const selectedService =
+    services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
 
   const form = useForm<DetailsValues>({
     resolver: zodResolver(detailsSchema),
@@ -51,8 +56,14 @@ function DetailsStepRoute() {
 
   return (
     <WizardShell
+      step={1}
       title="Who is this document for?"
       description="Enter the full name of the person named on the civil registry record, exactly as it should appear."
+      sidebar={
+        selectedService && (
+          <RequestSummaryCard serviceName={displayName} fee={selectedService.fee} />
+        )
+      }
     >
       <div className="flex flex-col gap-6">
         <FieldGroup>

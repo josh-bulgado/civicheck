@@ -3,8 +3,15 @@ import { getSupabaseServerClient } from "~/utils/supabase";
 
 export type ServiceSummary = Pick<
   import("~/features/admin/services/services.types").Service,
-  "service_code" | "name" | "classification" | "fee" | "processing_time" | "display_group" | "display_name"
->;
+  | "service_code"
+  | "name"
+  | "classification"
+  | "fee"
+  | "processing_time"
+  | "display_group"
+  | "display_name"
+  | "steps_description"
+> & { requirement_count: number };
 
 export const getServices = createServerFn({ method: "GET" }).handler(
   async () => {
@@ -12,21 +19,41 @@ export const getServices = createServerFn({ method: "GET" }).handler(
     const { data, error } = await supabase
       .from("services_registry")
       .select(
-        "service_code, name, classification, fee, processing_time, display_group, display_name",
+        "service_code, name, classification, fee, processing_time, display_group, display_name, steps_description",
       )
       .order("name", { ascending: true });
 
     if (error) throw new Error(error.message);
 
+    const { data: reqRows, error: reqError } = await supabase
+      .from("service_requirements_metadata")
+      .select("service_code");
+
+    if (reqError) throw new Error(reqError.message);
+
+    const requirementCounts = new Map<string, number>();
+    for (const row of reqRows ?? []) {
+      if (!row.service_code) continue;
+      requirementCounts.set(
+        row.service_code,
+        (requirementCounts.get(row.service_code) ?? 0) + 1,
+      );
+    }
+
     const rows = data || [];
     const seen = new Set<string>();
 
-    return rows.filter((row) => {
-      if (!row.display_group) return true;
-      if (seen.has(row.display_group)) return false;
-      seen.add(row.display_group);
-      return true;
-    });
+    return rows
+      .filter((row) => {
+        if (!row.display_group) return true;
+        if (seen.has(row.display_group)) return false;
+        seen.add(row.display_group);
+        return true;
+      })
+      .map((row) => ({
+        ...row,
+        requirement_count: requirementCounts.get(row.service_code) ?? 0,
+      }));
   },
 );
 

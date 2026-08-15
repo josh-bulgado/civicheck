@@ -1,12 +1,14 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { getServiceDetail } from "~/features/services/services.queries";
 import { submitRequestFn } from "~/features/services/services.mutations";
 import { ServiceHero } from "~/features/services/components/ServiceHero";
 import { CaseSelector } from "~/features/services/components/CaseSelector";
 import { RequirementChecklist } from "~/features/services/components/RequirementChecklist";
+import { HowItWorksCard } from "~/features/services/components/HowItWorksCard";
+import { NeedHelpCard } from "~/features/services/components/NeedHelpCard";
 import { RequestForm } from "~/features/services/components/RequestForm";
 import type { RequestFormValues } from "~/features/services/components/RequestForm";
 
@@ -125,14 +127,20 @@ function ServicePage() {
   };
 
   return (
-    <div className="dashboard-page max-w-6xl">
-      <Link
-        to="/services"
-        className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border-strong bg-white px-3.5 text-sm font-semibold text-foreground shadow-xs transition-colors hover:border-primary/50 hover:text-primary"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Services
-      </Link>
+    <div className="dashboard-page max-w-350">
+      <div className="flex flex-wrap items-center gap-3.5">
+        <Link
+          to="/services"
+          className="inline-flex items-center gap-1 text-sm font-bold text-primary hover:text-primary-hover"
+        >
+          <ChevronLeft className="size-4" />
+          Back to Services
+        </Link>
+        <div className="h-4.5 w-px bg-border-light" />
+        <p className="text-sm text-muted-foreground">
+          Services / <span className="text-foreground">{displayName}</span>
+        </p>
+      </div>
 
       {/* Case selector (only for grouped services) */}
       {isGroup && (
@@ -148,8 +156,25 @@ function ServicePage() {
         <>
           <ServiceHero service={selectedService} displayName={displayName} />
 
-          <div className="space-y-6">
-            <div className="pt-6">
+          <div className="grid items-start gap-5 lg:grid-cols-[1fr_380px]">
+            <RequestForm
+              values={form}
+              onChange={handleFormChange}
+              onSubmit={handleSubmit}
+              submitting={submitting}
+              eventDateLabel={
+                serviceCode.toLowerCase().startsWith("birth")
+                  ? "Date of Birth"
+                  : undefined
+              }
+              eventPlaceLabel={
+                serviceCode.toLowerCase().startsWith("birth")
+                  ? "Place of Birth"
+                  : undefined
+              }
+            />
+
+            <div className="flex flex-col gap-5">
               <RequirementChecklist
                 requirements={filteredRequirements}
                 checkedItems={checkedItems}
@@ -159,24 +184,8 @@ function ServicePage() {
                 selectedServiceCode={selectedCode}
                 allowUploads={serviceCode.toLowerCase() === "birth_ontime"}
               />
-            </div>
-            <div>
-              <RequestForm
-                values={form}
-                onChange={handleFormChange}
-                onSubmit={handleSubmit}
-                submitting={submitting}
-                eventDateLabel={
-                  serviceCode.toLowerCase().startsWith("birth")
-                    ? "Date of Birth"
-                    : undefined
-                }
-                eventPlaceLabel={
-                  serviceCode.toLowerCase().startsWith("birth")
-                    ? "Place of Birth"
-                    : undefined
-                }
-              />
+              <HowItWorksCard steps={selectedService.steps_description} />
+              <NeedHelpCard />
             </div>
           </div>
         </>

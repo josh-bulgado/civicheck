@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { CheckCircle2 } from "lucide-react";
-import { Button } from "~/components/ui/button";
+import { Check, CheckCircle2 } from "lucide-react";
+import { Checkbox } from "~/components/ui/checkbox";
 import { formatFee } from "~/features/services/service-utils";
 import { submitRequestFn } from "~/features/services/services.mutations";
 import { WizardShell } from "~/features/apply/components/WizardShell";
@@ -20,6 +20,7 @@ function ReviewStepRoute() {
   const { draft, clear } = useApplyDraft(serviceCode);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
   const [result, setResult] = useState<{ trackingNumber: string; documentWarning?: string } | null>(
     null,
   );
@@ -86,6 +87,7 @@ function ReviewStepRoute() {
   if (result) {
     return (
       <WizardShell
+        step={4}
         title="Request submitted"
         description="CCRO staff will pre-check your documents. You'll be notified in-system and by email as your request moves forward."
       >
@@ -121,53 +123,80 @@ function ReviewStepRoute() {
 
   return (
     <WizardShell
-      title="Review and submit"
-      description="Double check the details below. Payment is never collected online — you'll pay at the CCRO cashier."
+      step={4}
+      title="Check everything before you send"
+      description="Staff pre-check your file, then you pick a queue slot. You can still edit any section."
+      sidebar={<WhatHappensNextCard />}
     >
       <div className="flex flex-col gap-5">
-        <div className="rounded-xl border border-border bg-white p-6">
-          <h2 className="mb-4 text-lg font-bold text-foreground">Your request</h2>
-          <div className="flex flex-col gap-3 divide-y divide-border-lighter text-sm">
-            <div className="flex justify-between pb-3">
-              <span className="text-muted-foreground">Service</span>
-              <span className="font-semibold text-foreground">
-                {selectedService?.name ?? displayName}
-              </span>
-            </div>
-            <div className="flex justify-between py-3">
-              <span className="text-muted-foreground">Subject</span>
-              <span className="font-semibold text-foreground">{fullName || "—"}</span>
-            </div>
-            <div className="flex justify-between py-3">
-              <span className="text-muted-foreground">Event</span>
-              <span className="font-semibold text-foreground">
-                {draft.details.eventDate} · {draft.details.eventPlace}
-              </span>
-            </div>
-            <div className="flex justify-between py-3">
-              <span className="text-muted-foreground">Purpose</span>
-              <span className="font-semibold text-foreground">{finalPurpose || "—"}</span>
-            </div>
-            <div className="flex justify-between pt-3">
-              <span className="text-muted-foreground">Documents uploaded</span>
-              <span className="font-semibold text-foreground">{draft.documents.length}</span>
-            </div>
-          </div>
-        </div>
+        <EditSection
+          title="Your details"
+          onEdit={() =>
+            navigate({ to: "/apply/$serviceCode/details", params: { serviceCode } })
+          }
+        >
+          <ReviewRow label="Subject" value={fullName || "—"} />
+        </EditSection>
 
-        <div className="flex items-center justify-between rounded-[10px] border border-border-light bg-white px-5 py-4.5">
+        <EditSection
+          title="About your case"
+          onEdit={() =>
+            navigate({ to: "/apply/$serviceCode/case", params: { serviceCode } })
+          }
+        >
+          <ReviewRow label="Date of event" value={draft.details.eventDate || "—"} />
+          <ReviewRow label="Place" value={draft.details.eventPlace || "—"} />
+          <ReviewRow label="Purpose" value={finalPurpose || "—"} />
+          <ReviewRow label="Notes" value={draft.caseAnswers.additionalNotes || "None"} />
+        </EditSection>
+
+        <EditSection
+          title={`Documents · ${draft.documents.length} uploaded`}
+          onEdit={() =>
+            navigate({ to: "/apply/$serviceCode/documents", params: { serviceCode } })
+          }
+        >
+          {draft.documents.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No documents uploaded yet.</p>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {draft.documents.map((doc) => (
+                <div key={doc.requirementId} className="flex items-center gap-2.5 text-sm">
+                  <span className="flex size-4.5 shrink-0 items-center justify-center rounded-[5px] bg-success text-[10px] font-bold text-white">
+                    <Check className="size-2.5" />
+                  </span>
+                  <span className="text-foreground">
+                    {doc.requirementName} — {doc.fileName}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </EditSection>
+
+        <div className="flex items-center justify-between gap-5 rounded-[10px] border border-control-border bg-primary-tint px-4.5 py-4">
           <div>
-            <p className="text-sm text-muted-foreground">Total fees</p>
-            <p className="text-xs text-body">Pay at the CCRO cashier</p>
+            <p className="text-base font-bold text-foreground">Nothing is paid online</p>
+            <p className="text-sm leading-relaxed text-body">
+              Bring {selectedService ? formatFee(selectedService.fee) : "the fee"} in cash to the
+              CCRO cashier on your appointment date.
+            </p>
           </div>
-          <p className="text-2xl font-bold text-foreground">
+          <p className="whitespace-nowrap text-2xl font-bold text-foreground">
             {selectedService ? formatFee(selectedService.fee) : "—"}
           </p>
         </div>
 
-        <div className="rounded-lg bg-primary-tint px-4 py-3.5 text-sm leading-relaxed text-body-strong">
-          CiviCheck never collects payment online. Bring cash on your appointment date.
-        </div>
+        <label className="flex cursor-pointer items-start gap-2.5">
+          <Checkbox
+            checked={confirmed}
+            onCheckedChange={(checked) => setConfirmed(checked === true)}
+            className="mt-0.5"
+          />
+          <span className="text-sm leading-relaxed text-body-strong">
+            I confirm the details above are correct and I will bring the original documents.
+          </span>
+        </label>
 
         {submitError && (
           <p className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
@@ -181,9 +210,70 @@ function ReviewStepRoute() {
           navigate({ to: "/apply/$serviceCode/documents", params: { serviceCode } })
         }
         onContinue={handleSubmit}
-        continueLabel="Submit request"
+        continueLabel="Submit and pick a queue slot"
+        continueDisabled={!confirmed}
         continuePending={submitting}
       />
     </WizardShell>
+  );
+}
+
+function EditSection({
+  title,
+  onEdit,
+  children,
+}: {
+  title: string;
+  onEdit: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="overflow-hidden rounded-[10px] border border-border-light">
+      <div className="flex items-center justify-between gap-3 border-b border-border-light bg-background px-4.5 py-3">
+        <span className="text-sm font-bold text-foreground">{title}</span>
+        <button
+          type="button"
+          onClick={onEdit}
+          className="text-sm font-bold text-primary hover:text-primary-hover"
+        >
+          Edit
+        </button>
+      </div>
+      <div className="grid grid-cols-1 gap-2.5 px-4.5 py-3.5 sm:grid-cols-2">{children}</div>
+    </div>
+  );
+}
+
+function ReviewRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between gap-3 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="text-right font-bold text-foreground">{value}</span>
+    </div>
+  );
+}
+
+function WhatHappensNextCard() {
+  const steps = [
+    "Staff pre-check your uploads within 1 working day.",
+    "You pick a date and time slot.",
+    "Your queue number is issued when you check in for your appointment.",
+  ];
+  return (
+    <div className="overflow-hidden rounded-xl border border-border-strong bg-white">
+      <div className="border-b border-border-light px-4.5 py-3.5 text-base font-bold text-foreground">
+        What happens next
+      </div>
+      <div className="flex flex-col gap-3.5 px-4.5 py-4">
+        {steps.map((step, index) => (
+          <div key={step} className="flex items-start gap-3">
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-bold text-primary">
+              {index + 1}
+            </span>
+            <p className="text-sm leading-relaxed text-body-strong">{step}</p>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

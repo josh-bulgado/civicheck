@@ -1,7 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Clock, FileText, PhilippinePeso } from "lucide-react";
-import { Badge } from "~/components/ui/badge";
-import { formatFee } from "~/features/services/service-utils";
+import { FileText } from "lucide-react";
+import {
+  formatFee,
+  getVisitBadge,
+  isFullyOnline,
+  summarizeWait,
+} from "~/features/services/service-utils";
 
 export interface ServiceProps {
   service_code: string;
@@ -11,73 +15,102 @@ export interface ServiceProps {
   processing_time: string;
   display_group: string | null;
   display_name: string | null;
+  steps_description: string[] | null;
+  requirement_count: number;
 }
 
+const badgeToneClasses = {
+  success: "bg-success-soft text-success",
+  warning: "bg-warning-soft text-warning",
+  info: "bg-primary-soft text-primary",
+} as const;
+
 const ServiceCard = (service: ServiceProps) => {
-  const variant = service.classification as
-    | "simple"
-    | "complex"
-    | "highly_technical";
-  const label = service.classification.replace("_", " ");
+  const routeCode = service.display_group ?? service.service_code;
+  const fullyOnline = isFullyOnline(service.steps_description);
+  const visitBadge = getVisitBadge(service.processing_time);
+  const isFree = Number(service.fee) === 0;
+  const title = service.display_name ?? service.name;
+  const requirementLabel =
+    service.requirement_count === 1
+      ? "1 requirement"
+      : `${service.requirement_count} requirements`;
 
   return (
-    <article className="group flex h-full flex-col rounded-xl border border-border-strong bg-white p-5 text-card-foreground shadow-[0_1px_2px_rgba(23,33,43,0.04)] transition-[border-color,box-shadow] hover:border-primary/30 hover:shadow-[0_6px_18px_rgba(23,33,43,0.07)] sm:p-6">
+    <article className="group flex h-full flex-col gap-4 rounded-xl border border-border-strong bg-white p-6 text-card-foreground shadow-[0_1px_2px_rgba(23,33,43,0.04)] transition-[border-color,box-shadow] hover:border-primary/30 hover:shadow-[0_6px_18px_rgba(23,33,43,0.07)]">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/8 text-primary">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-primary-soft text-primary">
           <FileText className="size-5" aria-hidden="true" />
         </div>
 
-        <Badge variant={variant} className="capitalize">
-          {label}
-        </Badge>
+        <div className="flex flex-wrap justify-end gap-2">
+          {fullyOnline ? (
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-bold ${badgeToneClasses.info}`}
+            >
+              Fully online
+            </span>
+          ) : (
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-bold ${badgeToneClasses[visitBadge.tone]}`}
+            >
+              {visitBadge.label}
+            </span>
+          )}
+          {isFree && (
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-bold ${badgeToneClasses.success}`}
+            >
+              No fee
+            </span>
+          )}
+        </div>
       </div>
 
-      <h2 className="mt-4 min-h-[3rem] line-clamp-2 text-base font-bold leading-6 tracking-[-0.01em] text-foreground">
-        {service.display_name ?? service.name}
-      </h2>
+      <div className="flex flex-col gap-1.5">
+        <h2 className="line-clamp-2 text-[19px] font-bold leading-[1.3] tracking-[-0.01em] text-foreground">
+          {title}
+        </h2>
+        <p className="text-[15px] text-muted-foreground">{requirementLabel}</p>
+      </div>
 
-      <dl className="mt-5 flex-1 divide-y divide-border border-y border-border">
-        <div className="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-x-3 py-3">
-          <Clock
-            className="row-span-2 mt-0.5 size-4 text-primary"
-            aria-hidden="true"
-          />
-          <dt className="text-xs font-medium text-muted-foreground">
-            Processing time
+      <dl className="flex flex-col gap-3 border-y border-border-lighter py-3.5">
+        <div className="flex items-baseline justify-between gap-3">
+          <dt className="text-[15px] text-muted-foreground">
+            {fullyOnline ? "Answered in" : "Released"}
           </dt>
-          <dd className="mt-0.5 text-sm font-semibold leading-5 text-foreground">
-            {service.processing_time}
+          <dd className="text-right text-[15px] font-bold text-foreground">
+            {summarizeWait(service.processing_time)}
           </dd>
         </div>
-
-        <div className="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-x-3 py-3">
-          <PhilippinePeso
-            className="row-span-2 mt-0.5 size-4 text-primary"
-            aria-hidden="true"
-          />
-          <dt className="text-xs font-medium text-muted-foreground">
-            Service fee
-          </dt>
-          <dd className="mt-0.5 text-sm font-semibold leading-5 text-foreground">
+        <div className="flex items-baseline justify-between gap-3">
+          <dt className="text-[15px] text-muted-foreground">Fee at cashier</dt>
+          <dd
+            className={`text-right text-[17px] font-bold ${isFree ? "text-success" : "text-foreground"}`}
+          >
             {formatFee(service.fee, service.display_group)}
           </dd>
         </div>
       </dl>
 
-      <Link
-        to="/service/$serviceCode"
-        params={{
-          serviceCode: service.display_group ?? service.service_code,
-        }}
-        preload="intent"
-        className="-mx-2 mt-3 inline-flex min-h-11 items-center justify-between gap-2 rounded-lg px-2 text-sm font-bold text-primary outline-none transition-colors hover:bg-primary/5 hover:text-primary-hover focus-visible:ring-3 focus-visible:ring-ring/50"
-      >
-        View requirements
-        <ArrowRight
-          className="size-4 transition-transform group-hover:translate-x-0.5"
-          aria-hidden="true"
-        />
-      </Link>
+      <div className="mt-auto flex gap-2.5">
+        <Link
+          to="/service/$serviceCode"
+          params={{ serviceCode: routeCode }}
+          preload="intent"
+          className="inline-flex flex-1 min-h-11 items-center justify-center rounded-lg bg-primary px-4 text-[15px] font-bold text-primary-foreground outline-none transition-colors hover:bg-primary-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          View requirements
+        </Link>
+        <Link
+          to="/apply/$serviceCode/details"
+          params={{ serviceCode: routeCode }}
+          preload="intent"
+          className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border-strong bg-white px-4 text-[15px] font-bold text-foreground outline-none transition-colors hover:bg-surface-subtle focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          Start
+        </Link>
+      </div>
     </article>
   );
 };

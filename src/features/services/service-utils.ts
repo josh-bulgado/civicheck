@@ -102,3 +102,91 @@ export function formatFee(
     maximumFractionDigits: 2,
   })}`;
 }
+
+// ─── Browse Services card helpers ────────────────────────────────────────────
+// `processing_time` and `steps_description` are free-text charter language, not
+// structured fields, so the signals below (visit count, fully-online, category)
+// are best-effort heuristics for card display — the full text is always
+// available on the service detail page.
+
+export interface VisitBadge {
+  label: "One visit" | "Several visits";
+  tone: "success" | "warning";
+}
+
+/**
+ * A service needs a second CCRO visit only when it carries a mandatory
+ * posting/publication window the applicant has to wait out before claiming —
+ * plain processing hours (however long) still resolve in one counter visit.
+ */
+export function getVisitBadge(processingTime: string): VisitBadge {
+  const requiresReturnTrip = /posting|publication/i.test(processingTime);
+  return requiresReturnTrip
+    ? { label: "Several visits", tone: "warning" }
+    : { label: "One visit", tone: "success" };
+}
+
+/**
+ * A service is fully online when its own process never ends in an
+ * in-person "claim" step (currently true only for the email inquiry service).
+ */
+export function isFullyOnline(steps: string[] | null): boolean {
+  if (!steps || steps.length === 0) return false;
+  return !steps.some((step) => /\bclaim\b/i.test(step));
+}
+
+/**
+ * Compress the charter's `processing_time` sentence into a short card value:
+ * prefer the posting/publication wait window (what applicants actually plan
+ * around) over the initial counter-hours clause.
+ */
+export function summarizeWait(processingTime: string): string {
+  const hasWaitWindow = /posting|publication/i.test(processingTime);
+  if (hasWaitWindow) {
+    const days = processingTime.match(/(\d+)[\s-]*(?:calendar[\s-]*)?days?/i);
+    if (days) return `After ${days[1]} days`;
+    const weeks = processingTime.match(/(\d+)[\s-]*weeks?/i);
+    if (weeks) return `After ${weeks[1]} weeks`;
+    const months = processingTime.match(/(\d+)(?:[\s-]*(?:to|-)[\s-]*\d+)?[\s-]*months?/i);
+    if (months) return `After ${months[0]}`;
+  }
+  return processingTime.split(";")[0].split("(")[0].trim();
+}
+
+export type ServiceCategory =
+  | "birth"
+  | "marriage"
+  | "death"
+  | "copies"
+  | "corrections";
+
+export const SERVICE_CATEGORY_LABELS: Record<ServiceCategory, string> = {
+  birth: "Birth",
+  marriage: "Marriage",
+  death: "Death",
+  copies: "Copies & endorsements",
+  corrections: "Corrections",
+};
+
+const SERVICE_CATEGORY_BY_CODE: Record<string, ServiceCategory> = {
+  BIRTH_ONTIME: "birth",
+  BIRTH_DELAYED: "birth",
+  MARRIAGE_LICENSE: "marriage",
+  MARRIAGE_ONTIME: "marriage",
+  MARRIAGE_DELAYED: "marriage",
+  DEATH_ONTIME: "death",
+  DEATH_DELAYED: "death",
+  CTC_ISSUANCE: "copies",
+  ELEC_ENDORSEMENT: "copies",
+  OTHER_CERT: "copies",
+  EMAIL_INQUIRY: "copies",
+  LEGITIMATION: "corrections",
+  RA9048_10172: "corrections",
+  RA9255_SURNAME: "corrections",
+  COURT_DECREE: "corrections",
+  SUPPLEMENTAL_REPORT: "corrections",
+};
+
+export function getServiceCategory(serviceCode: string): ServiceCategory | null {
+  return SERVICE_CATEGORY_BY_CODE[serviceCode] ?? null;
+}

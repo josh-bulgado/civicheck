@@ -154,19 +154,30 @@ export function RequirementChecklist({
   const mandatoryReqs = visible.filter((r) => r.is_mandatory);
   const conditionalReqs = visible.filter((r) => !r.is_mandatory);
   const [conditionalOpen, setConditionalOpen] = useState(false);
+  const readyCount = mandatoryReqs.filter((r) => checkedItems[r.id]).length;
 
   return (
     <Card size="sm">
-      <CardHeader className="border-b border-border pb-3">
-        <CardTitle className="font-bold text-base">
-          Requirement Checklist{" "}
-          {mandatoryReqs.length > 0 && `(${mandatoryReqs.length})`}
-        </CardTitle>
-        <p className="text-xs text-muted-foreground">
-          Check off each item you have prepared before submitting.
-        </p>
+      <CardHeader className="flex flex-col gap-2 border-b border-border pb-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <CardTitle className="font-bold text-base">
+              {mandatoryReqs.length > 0 ? `Bring these ${mandatoryReqs.length}` : "Requirement Checklist"}
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Check off each item you have prepared before submitting.
+            </p>
+          </div>
+          {mandatoryReqs.length > 0 && (
+            <span
+              className={`whitespace-nowrap text-xs font-bold ${readyCount > 0 ? "text-success" : "text-muted-foreground"}`}
+            >
+              {readyCount} of {mandatoryReqs.length} ready
+            </span>
+          )}
+        </div>
         {allowUploads && (
-          <div className="mt-2 flex items-start gap-2 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-medium text-sky-900">
+          <div className="flex items-start gap-2 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-medium text-sky-900">
             <Info className="mt-0.5 h-4 w-4 shrink-0 text-sky-600" />
             <p>
               Document uploads are optional. You can still submit your request
