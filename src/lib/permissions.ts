@@ -22,6 +22,11 @@ export type Permission =
   | "requests:archive"
   | "requests:legal"
   | "requests:collect_payment"
+  | "requests:encode_walkin"
+
+  // counter queue
+  | "queue:view_own"
+  | "queue:manage"
 
   // CCRO personnel administration
   | "users:invite_staff"
@@ -45,31 +50,38 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "services:view",
     "requests:view_own",
     "requests:create",
+    "queue:view_own",
     "dashboard:applicant",
   ],
   frontdesk: [
-    // scope TBD — treated as applicant-level for now
+    // Front desk owns intake: it encodes walk-ins and runs the counter queue,
+    // but does not process or approve requests.
     "services:view",
-    "requests:view_own",
+    "requests:view_all",
     "requests:create",
-    "dashboard:applicant",
+    "requests:encode_walkin",
+    "queue:manage",
+    "dashboard:staff",
   ],
   staff: [
     "services:view",
     "requests:view_all",
     "requests:process",
+    "queue:manage",
     "dashboard:staff",
   ],
   supervisor: [
     "services:view",
     "requests:view_all",
     "requests:process",
+    "queue:manage",
     "dashboard:staff",
   ],
   cashier: [
     "services:view",
     "requests:view_all",
     "requests:collect_payment",
+    "queue:manage",
     "dashboard:staff",
   ],
   admin: [
@@ -80,6 +92,8 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "requests:archive",
     "requests:legal",
     "requests:collect_payment",
+    "requests:encode_walkin",
+    "queue:manage",
     "users:invite_staff",
     "users:update_operational_roles",
     "users:deactivate_staff",
@@ -104,5 +118,5 @@ export function getPermissions(role: Role): Permission[] {
 
 /** Checks if the role is any internal (non-applicant) role */
 export function isInternalRole(role: Role): boolean {
-  return role !== "applicant" && role !== "frontdesk";
+  return role !== "applicant";
 }

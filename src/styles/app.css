@@ -106,6 +106,8 @@
   --color-border-lighter: var(--border-lighter);
   --color-disabled: var(--disabled);
 
+  --color-auth-panel: var(--auth-panel);
+
   --color-panel-dark: var(--panel-dark);
   --color-panel-dark-row: var(--panel-dark-row);
   --color-panel-dark-divider: var(--panel-dark-divider);
@@ -160,6 +162,7 @@
   --warning-soft: #fdf7ea;
   --warning-border: #e6c982;
   --disabled: #8794a5;
+  --auth-panel: #0b3f86;
 
   --border: #d7dee9;
   --border-light: #e4e9f1;
@@ -231,7 +234,7 @@
   }
 
   .civic-auth-panel {
-    @apply border-r border-border bg-primary-soft;
+    @apply bg-auth-panel text-white;
   }
 
   .dashboard-page {

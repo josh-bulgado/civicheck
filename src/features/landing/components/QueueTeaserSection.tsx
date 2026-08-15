@@ -19,7 +19,7 @@ const QueueTeaserSection = () => {
             upcoming appointments — all before you leave the house.
           </p>
           <Link
-            to="/queue"
+            to="/appointments"
             className="inline-flex min-h-12 w-fit items-center rounded-lg bg-primary px-6 text-[15px] font-semibold text-white transition-colors hover:bg-primary-hover"
           >
             Book a visit slot

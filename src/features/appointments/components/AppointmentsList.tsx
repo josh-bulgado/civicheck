@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CalendarDays } from "lucide-react";
-import { cancelAppointmentFn } from "~/features/queue/queue.mutations";
+import { cancelAppointmentFn } from "~/features/appointments/appointments.mutations";
+import { getAppointmentStatusDetails } from "~/features/appointments/appointment-status";
 
 export interface Appointment {
   id: string;
@@ -10,13 +11,6 @@ export interface Appointment {
   trackingNumber: string;
   serviceName: string;
 }
-
-const STATUS_STYLES: Record<string, string> = {
-  scheduled: "status-success",
-  attended: "status-neutral",
-  missed: "status-error",
-  cancelled: "status-neutral",
-};
 
 function formatDate(dateKey: string) {
   const [year, month, day] = dateKey.split("-").map(Number);
@@ -62,38 +56,41 @@ export function AppointmentsList({ appointments, onCancelled }: AppointmentsList
 
   return (
     <div className="flex flex-col gap-3">
-      {upcoming.map((appt) => (
-        <div
-          key={appt.id}
-          className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-white p-5"
-        >
-          <div>
-            <p className="text-base font-bold text-foreground">{formatDate(appt.appointmentDate)}</p>
-            <p className="text-sm text-muted-foreground">
-              {appt.slotLabel} · {appt.trackingNumber} · {appt.serviceName}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <span
-              className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium capitalize ${
-                STATUS_STYLES[appt.status ?? ""] ?? "status-neutral"
-              }`}
-            >
-              {appt.status ?? "scheduled"}
-            </span>
-            {appt.status === "scheduled" && (
-              <button
-                type="button"
-                onClick={() => handleCancel(appt.id)}
-                disabled={cancellingId === appt.id}
-                className="text-sm font-bold text-destructive hover:underline"
+      {upcoming.map((appt) => {
+        const status = getAppointmentStatusDetails(appt.status);
+        return (
+          <div
+            key={appt.id}
+            className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-white p-5"
+          >
+            <div>
+              <p className="text-base font-bold text-foreground">
+                {formatDate(appt.appointmentDate)}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {appt.slotLabel} · {appt.trackingNumber} · {appt.serviceName}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span
+                className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${status.styles}`}
               >
-                {cancellingId === appt.id ? "Cancelling..." : "Cancel"}
-              </button>
-            )}
+                {status.label}
+              </span>
+              {appt.status === "scheduled" && (
+                <button
+                  type="button"
+                  onClick={() => handleCancel(appt.id)}
+                  disabled={cancellingId === appt.id}
+                  className="text-sm font-bold text-destructive hover:underline"
+                >
+                  {cancellingId === appt.id ? "Cancelling..." : "Cancel"}
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

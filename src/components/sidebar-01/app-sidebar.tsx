@@ -7,6 +7,8 @@ import {
   IconUserPlus,
   IconShield,
   IconHistory,
+  IconCalendarEvent,
+  IconTicket,
 } from "@tabler/icons-react";
 import { LayoutDashboard } from "lucide-react";
 import { NavFooter } from "~/components/sidebar-01/nav-footer";
@@ -109,12 +111,30 @@ export function AppSidebar({
     });
   }
 
+  if (can("queue:view_own")) {
+    navMain.push({
+      id: "appointments",
+      title: "My Appointments",
+      url: "/appointments",
+      icon: IconCalendarEvent,
+    });
+  }
+
   if (can("requests:view_all")) {
     navMain.push({
       id: "request-queue",
       title: "Request Queue",
       url: "/requests",
       icon: IconListDetails,
+    });
+  }
+
+  if (can("queue:manage")) {
+    navMain.push({
+      id: "queue-desk",
+      title: "Queue Desk",
+      url: "/queue",
+      icon: IconTicket,
     });
   }
 

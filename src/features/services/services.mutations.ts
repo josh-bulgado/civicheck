@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireActiveSession } from "~/server/auth";
+import { insertRequestWithTrackingNumber } from "~/features/requests/tracking-number";
 
 export const submitRequestFn = createServerFn({ method: "POST" })
   .validator(
@@ -16,45 +17,16 @@ export const submitRequestFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabase, user } = await requireActiveSession("requests:create");
 
-    const year = new Date().getFullYear();
-    let trackingNumber = "";
-    let requestId: string | null = null;
-    let attempts = 0;
-    const maxAttempts = 5;
-    let lastErrorMsg = "";
-
-    while (!requestId && attempts < maxAttempts) {
-      attempts++;
-      const randStr = String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
-      trackingNumber = `CCRO-${year}-${randStr}`;
-
-      const { data: inserted, error: insertError } = await supabase
-        .from("requests")
-        .insert({
-          applicant_id: user.id,
-          request_type: data.serviceCode,
-          form_data: data.formData,
-          tracking_number: trackingNumber,
-          fees_due: data.fee,
-        })
-        .select("id")
-        .single();
-
-      if (!insertError && inserted) {
-        requestId = inserted.id;
-      } else if (insertError) {
-        lastErrorMsg = insertError.message;
-        if (insertError.code === "23505") continue;
-        return { error: true, message: insertError.message };
-      }
+    const created = await insertRequestWithTrackingNumber(supabase, {
+      applicant_id: user.id,
+      request_type: data.serviceCode,
+      form_data: data.formData,
+      fees_due: data.fee,
+    });
+    if (created.error) {
+      return { error: true, message: created.message };
     }
-
-    if (!requestId) {
-      return {
-        error: true,
-        message: `Could not generate a unique tracking number after ${maxAttempts} attempts: ${lastErrorMsg}`,
-      };
-    }
+    const { requestId, trackingNumber } = created;
 
     let documentWarning: string | undefined;
     if (data.documents && data.documents.length > 0) {

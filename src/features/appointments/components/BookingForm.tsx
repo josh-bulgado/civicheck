@@ -7,8 +7,8 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { Button } from "~/components/ui/button";
-import { getSlotAvailabilityFn } from "~/features/queue/queue.queries";
-import { bookAppointmentFn } from "~/features/queue/queue.mutations";
+import { getSlotAvailabilityFn } from "~/features/appointments/appointments.queries";
+import { bookAppointmentFn } from "~/features/appointments/appointments.mutations";
 
 export interface BookableRequest {
   id: string;

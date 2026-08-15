@@ -6,7 +6,7 @@ import { CityGovernmentIdentity, CiviCheckIdentity } from "~/components/brand/ci
 const publicLinks = [
   { label: "Requirements", to: "/requirements" as const },
   { label: "Apply online", to: "/apply" as const },
-  { label: "Queue", to: "/queue" as const },
+  { label: "Book a visit", to: "/appointments" as const },
   { label: "Track request", to: "/track" as const },
 ];
 

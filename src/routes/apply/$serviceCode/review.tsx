@@ -104,10 +104,10 @@ function ReviewStepRoute() {
           )}
           <div className="flex flex-wrap gap-3">
             <Link
-              to="/queue"
+              to="/appointments"
               className="inline-flex min-h-11 items-center rounded-lg bg-primary px-5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
             >
-              Book a queue slot
+              Book a visit slot
             </Link>
             <Link
               to="/my-requests"

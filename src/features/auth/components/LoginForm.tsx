@@ -8,6 +8,7 @@ import {
   Mail,
   EyeClosed,
   AlertCircleIcon,
+  Info,
 } from "lucide-react";
 import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,6 +29,7 @@ import {
   InputGroupInput,
   InputGroupButton,
 } from "~/components/ui/input-group";
+import { Checkbox } from "~/components/ui/checkbox";
 import { Separator } from "~/components/ui/separator";
 import { Spinner } from "~/components/ui/spinner";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -57,6 +59,7 @@ export function LoginForm({
   error?: string;
 }) {
   const [showPassword, setShowPassword] = useState(false);
+  const [keepSignedIn, setKeepSignedIn] = useState(true);
   const loginMutation = useLogin(redirectTo);
   const oauthLoginMutation = useOAuthLogin();
 
@@ -74,59 +77,45 @@ export function LoginForm({
   }
 
   return (
-    <div className="auth-page flex min-h-dvh bg-background">
-      {/* Left — Form */}
-      <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
-        <div className="w-full max-w-[420px] space-y-8">
-          {/* Logo / Brand */}
+    <div className="flex min-h-dvh">
+      <AuthBrandPanel
+        title="Know what you need before you visit."
+        description="Check requirements, submit a request online, and follow it from filing to release — all in one place."
+        benefits={[
+          "See the exact documents for your request",
+          "Track your request in real time",
+          "Pay at the CCRO cashier — never online",
+        ]}
+      />
+
+      <div className="flex flex-1 flex-col items-center justify-center bg-background px-6 py-12">
+        <div className="w-full max-w-113 space-y-5">
+          <Link to="/" className="mb-2 inline-flex lg:hidden">
+            <CiviCheckIdentity />
+          </Link>
+
           <div className="space-y-2">
-            <Link to="/"><CiviCheckIdentity /></Link>
-            <h1 className="civic-title pt-4 text-2xl">
-              Welcome back
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Sign in to your account to access your requests, track their
-              status, and manage your documents.
+            <h1 className="civic-title text-[32px]">Sign in</h1>
+            <p className="text-[17px] leading-normal text-muted-2">
+              Access your requests and track their status.
             </p>
           </div>
 
-          <div className="space-y-5">
-            <Button
-              variant="outline"
-              className="w-full justify-center gap-2"
-              onClick={() => oauthLoginMutation.mutate({ provider: "google" })}
-              disabled={oauthLoginMutation.status === "pending"}
-            >
-              <GoogleIcon className="h-4 w-4" />
-              Continue with Google
-            </Button>
-
-            <div className="flex items-center gap-2">
-              <Separator className="flex-1 " />
-              <span className="text-sm text-muted-foreground">
-                or continue with email
-              </span>
-              <Separator className="flex-1" />
-            </div>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={form.handleSubmit(onSubmit)}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             <FieldSet>
-              {/* Server error */}
               {loginMutation.data?.error && (
                 <Alert variant="destructive">
                   <AlertCircleIcon />
                   <AlertTitle>Sign in failed</AlertTitle>
                   <AlertDescription>
-                    Invalid email or password. Please check your credentials and
-                    try again.
+                    Invalid email or password. Please check your credentials
+                    and try again.
                   </AlertDescription>
                 </Alert>
               )}
 
               {error && (
-                <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800 mb-4">
+                <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">
                   {error}
                 </div>
               )}
@@ -137,7 +126,7 @@ export function LoginForm({
                   name="email"
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="email">Email</FieldLabel>
+                      <FieldLabel htmlFor="email">Email address</FieldLabel>
                       <InputGroup>
                         <InputGroupAddon>
                           <Mail size={16} aria-hidden="true" />
@@ -145,9 +134,9 @@ export function LoginForm({
                         <InputGroupInput
                           {...field}
                           id="email"
-                          placeholder="you.example.com"
+                          placeholder="juan.delacruz@email.com"
                           aria-invalid={fieldState.invalid}
-                          autoComplete="on"
+                          autoComplete="email"
                         />
                       </InputGroup>
                       {fieldState.invalid && (
@@ -162,7 +151,15 @@ export function LoginForm({
                   name="password"
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="password">Password</FieldLabel>
+                      <div className="flex items-baseline justify-between">
+                        <FieldLabel htmlFor="password">Password</FieldLabel>
+                        <Link
+                          to="/forgot-password"
+                          className="text-[15px] font-bold text-primary hover:text-primary-hover"
+                        >
+                          Forgot password?
+                        </Link>
+                      </div>
                       <InputGroup>
                         <InputGroupAddon>
                           <Lock size={16} aria-hidden="true" />
@@ -174,7 +171,7 @@ export function LoginForm({
                           type={showPassword ? "text" : "password"}
                           placeholder="Enter your password"
                           aria-invalid={fieldState.invalid}
-                          autoComplete="off"
+                          autoComplete="current-password"
                         />
 
                         <InputGroupAddon align="inline-end">
@@ -199,54 +196,68 @@ export function LoginForm({
                   )}
                 />
 
-                <FieldGroup>
-                  <div className="flex items-center justify-between text-sm">
-                    <Link
-                      to="/forgot-password"
-                      className="font-medium text-primary hover:text-primary-hover"
-                    >
-                      Forgot password?
-                    </Link>
-                  </div>
+                <label className="flex items-center gap-2.5 text-[15px] text-body">
+                  <Checkbox
+                    checked={keepSignedIn}
+                    onCheckedChange={(checked) => setKeepSignedIn(checked === true)}
+                  />
+                  Keep me signed in on this device
+                </label>
 
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={loginMutation.status === "pending"}
-                  >
-                    {loginMutation.status === "pending" ? (
-                      <>
-                        <Spinner />
-                        Signing in
-                      </>
-                    ) : (
-                      "Sign in"
-                    )}
-                  </Button>
-                </FieldGroup>
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="w-full text-base"
+                  disabled={loginMutation.status === "pending"}
+                >
+                  {loginMutation.status === "pending" ? (
+                    <>
+                      <Spinner />
+                      Signing in
+                    </>
+                  ) : (
+                    "Sign in"
+                  )}
+                </Button>
               </FieldGroup>
             </FieldSet>
-
-            {/* Email */}
           </form>
 
-          {/* Footer link */}
-          <p className="text-center text-sm text-muted-foreground">
-            Don't have an account?{" "}
-            <Link
-              to="/signup"
-              className="text-primary font-medium hover:underline"
-            >
+          <div className="flex items-center gap-3.5">
+            <Separator className="flex-1" />
+            <span className="text-[15px] text-muted-foreground">or</span>
+            <Separator className="flex-1" />
+          </div>
+
+          <Button
+            variant="outline"
+            size="lg"
+            className="w-full justify-center gap-2.5 text-base"
+            onClick={() => oauthLoginMutation.mutate({ provider: "google" })}
+            disabled={oauthLoginMutation.status === "pending"}
+          >
+            <GoogleIcon className="h-4.5 w-4.5" />
+            Continue with Google
+          </Button>
+
+          <Separator />
+
+          <p className="text-[17px] text-body">
+            New to CiviCheck?{" "}
+            <Link to="/signup" className="font-bold text-primary hover:text-primary-hover">
               Create an account
             </Link>
           </p>
+
+          <div className="flex gap-2.5 rounded-lg border border-primary/20 bg-primary-tint px-4 py-3.5">
+            <Info className="mt-0.5 size-4.75 shrink-0 text-primary" aria-hidden="true" />
+            <p className="text-[15px] leading-snug text-body-strong">
+              You don&rsquo;t need an account to be served. Walk-in requests are
+              still accepted at the CCRO during office hours.
+            </p>
+          </div>
         </div>
       </div>
-
-      <AuthBrandPanel
-        title="Know what you need before you visit."
-        description="Review civil registry requirements and track every request from submission to release through one official CCRO service."
-      />
     </div>
   );
 }

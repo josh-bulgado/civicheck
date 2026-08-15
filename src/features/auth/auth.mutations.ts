@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSupabaseServerClient, getSupabaseAdminClient } from "~/utils/supabase";
 import { sendEmail } from "~/utils/resend";
+import { renderActionEmail } from "~/utils/email-template";
 import { requireActiveSession } from "~/server/auth";
 
 export const loginWithEmailFn = createServerFn({ method: "POST" })
@@ -65,6 +66,7 @@ export const signupFn = createServerFn({ method: "POST" })
       password: string;
       firstName: string;
       lastName: string;
+      mobileNumber?: string;
       redirectUrl?: string;
     }) => d,
   )
@@ -77,6 +79,7 @@ export const signupFn = createServerFn({ method: "POST" })
       user_metadata: {
         first_name: data.firstName,
         last_name: data.lastName,
+        mobile_number: data.mobileNumber,
       },
     });
 
@@ -103,6 +106,7 @@ export const signupFn = createServerFn({ method: "POST" })
             user_metadata: {
               first_name: data.firstName,
               last_name: data.lastName,
+              mobile_number: data.mobileNumber,
             },
           });
         }
@@ -126,39 +130,57 @@ export const signupFn = createServerFn({ method: "POST" })
       email: data.email,
       password: data.password,
       options: {
-        redirectTo: `${process.env.APP_URL || "http://localhost:3000"}/auth/callback`,
+        data: {
+          first_name: data.firstName,
+          last_name: data.lastName,
+          mobile_number: data.mobileNumber,
+        },
       },
     });
 
-    if (linkError) {
+    const hashedToken = linkData?.properties?.hashed_token;
+
+    if (linkError || !hashedToken) {
       return {
         error: true,
-        message: linkError.message || "Failed to generate email confirmation link.",
+        message: linkError?.message || "Failed to generate email confirmation link.",
       };
     }
 
+    // Point at our own callback so the session is verified server-side and stored
+    // in cookies. Supabase's own action_link returns tokens in the URL fragment,
+    // which this app (server-side sessions only) can never read.
+    const confirmationUrl = new URL(
+      "/auth/callback",
+      process.env.APP_URL || "http://localhost:3000",
+    );
+    confirmationUrl.searchParams.set("token_hash", hashedToken);
+    confirmationUrl.searchParams.set("type", "signup");
+    confirmationUrl.searchParams.set("next", "/dashboard");
+
     try {
-      const actionLink = linkData.properties?.action_link;
-      if (!actionLink) {
-        throw new Error("No action link was returned from Supabase Auth.");
-      }
+      const actionLink = confirmationUrl.toString();
 
       await sendEmail({
         to: data.email,
-        subject: "Confirm your CiviCheck Account",
-        html: `
-          <div style="font-family: 'Public Sans', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #DCE2EA; border-radius: 8px; color: #17212B;">
-            <h2 style="color: #0049A8;">Confirm your CiviCheck account</h2>
-            <p>Thank you for signing up for CiviCheck. Please click the button below to confirm your email address and activate your account:</p>
-            <div style="margin: 30px 0;">
-              <a href="${actionLink}" style="background-color: #0049A8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Confirm Email Address</a>
-            </div>
-            <p style="color: #5D6876; font-size: 14px;">If the button doesn't work, you can <a href="${actionLink}" style="color: #0049A8; text-decoration: underline;">click here</a> or copy and paste the following link into your browser:</p>
-            <p style="color: #5D6876; font-size: 14px; word-break: break-all;">${actionLink}</p>
-            <hr style="border: 0; border-top: 1px solid #DCE2EA; margin: 20px 0;" />
-            <p style="color: #5D6876; font-size: 12px;">City Civil Registrar Office · City Government of Legazpi</p>
-          </div>
-        `,
+        subject: "Confirm your CiviCheck account",
+        html: renderActionEmail({
+          preheader:
+            "Confirm your email address to activate your CiviCheck account.",
+          greeting: `Hello ${data.firstName.trim()},`,
+          heading: "Confirm your email address",
+          paragraphs: [
+            "Thanks for creating a CiviCheck account. Confirm your email address to activate it — you can then file civil registry requests online and follow them from submission to release.",
+          ],
+          actionLabel: "Confirm email address",
+          actionUrl: actionLink,
+          noteLines: [
+            "This link signs you in and can only be used once.",
+            "You will not be able to sign in until your email is confirmed.",
+          ],
+          footerNote:
+            "If you did not create a CiviCheck account, you can safely ignore this email.",
+        }),
       });
     } catch (sendError: any) {
       console.error("Resend sending error:", sendError);
@@ -209,9 +231,6 @@ export const forgotPasswordFn = createServerFn({ method: "POST" })
     const { data: linkData, error } = await adminSupabase.auth.admin.generateLink({
       type: "recovery",
       email: data.email,
-      options: {
-        redirectTo: `${process.env.APP_URL || "http://localhost:3000"}/reset-password`,
-      },
     });
 
     if (error) {
@@ -225,28 +244,41 @@ export const forgotPasswordFn = createServerFn({ method: "POST" })
       };
     }
 
+    const hashedToken = linkData?.properties?.hashed_token;
+
+    if (!hashedToken) {
+      return {
+        error: true,
+        message: "Failed to generate the password reset link.",
+      };
+    }
+
+    const recoveryUrl = new URL(
+      "/auth/callback",
+      process.env.APP_URL || "http://localhost:3000",
+    );
+    recoveryUrl.searchParams.set("token_hash", hashedToken);
+    recoveryUrl.searchParams.set("type", "recovery");
+    recoveryUrl.searchParams.set("next", "/reset-password");
+
     try {
-      const actionLink = linkData.properties?.action_link;
-      if (!actionLink) {
-        throw new Error("No action link was returned from Supabase Auth.");
-      }
+      const actionLink = recoveryUrl.toString();
 
       await sendEmail({
         to: data.email,
-        subject: "Reset your CiviCheck Password",
-        html: `
-          <div style="font-family: 'Public Sans', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #DCE2EA; border-radius: 8px; color: #17212B;">
-            <h2 style="color: #0049A8;">Reset your CiviCheck password</h2>
-            <p>We received a request to reset your password. Please click the button below to set a new password:</p>
-            <div style="margin: 30px 0;">
-              <a href="${actionLink}" style="background-color: #0049A8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Reset Password</a>
-            </div>
-            <p style="color: #5D6876; font-size: 14px;">If the button doesn't work, you can <a href="${actionLink}" style="color: #0049A8; text-decoration: underline;">click here</a> or copy and paste the following link into your browser:</p>
-            <p style="color: #5D6876; font-size: 14px; word-break: break-all;">${actionLink}</p>
-            <hr style="border: 0; border-top: 1px solid #DCE2EA; margin: 20px 0;" />
-            <p style="color: #5D6876; font-size: 12px;">City Civil Registrar Office · City Government of Legazpi</p>
-          </div>
-        `,
+        subject: "Reset your CiviCheck password",
+        html: renderActionEmail({
+          preheader: "Use this link to set a new CiviCheck password.",
+          heading: "Reset your password",
+          paragraphs: [
+            "We received a request to reset the password for your CiviCheck account. Use the button below to set a new one.",
+          ],
+          actionLabel: "Reset password",
+          actionUrl: actionLink,
+          noteLines: ["This link can only be used once."],
+          footerNote:
+            "If you did not request a password reset, you can safely ignore this email — your password stays the same.",
+        }),
       });
     } catch (sendError: any) {
       console.error("Resend sending error:", sendError);

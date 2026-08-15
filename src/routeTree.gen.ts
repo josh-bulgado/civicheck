@@ -13,26 +13,30 @@ import { Route as TrackRouteImport } from './routes/track'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RequirementsRouteImport } from './routes/requirements'
-import { Route as QueueRouteImport } from './routes/queue'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as DisplayRouteImport } from './routes/display'
 import { Route as AcceptInvitationRouteImport } from './routes/accept-invitation'
 import { Route as AuthedRouteRouteImport } from './routes/_authed/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApplyIndexRouteImport } from './routes/apply/index'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as AuthedStaffDashboardRouteImport } from './routes/_authed/staff-dashboard'
+import { Route as AuthedQueueRouteImport } from './routes/_authed/queue'
 import { Route as AuthedMyRequestsRouteImport } from './routes/_authed/my-requests'
 import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
+import { Route as AuthedAppointmentsRouteImport } from './routes/_authed/appointments'
 import { Route as ApplyServiceCodeRouteRouteImport } from './routes/apply/$serviceCode/route'
 import { Route as ApplyServiceCodeIndexRouteImport } from './routes/apply/$serviceCode/index'
+import { Route as AuthedRequestsIndexRouteImport } from './routes/_authed/requests/index'
 import { Route as ApplyServiceCodeReviewRouteImport } from './routes/apply/$serviceCode/review'
 import { Route as ApplyServiceCodeDocumentsRouteImport } from './routes/apply/$serviceCode/documents'
 import { Route as ApplyServiceCodeDetailsRouteImport } from './routes/apply/$serviceCode/details'
 import { Route as ApplyServiceCodeCaseRouteImport } from './routes/apply/$serviceCode/case'
 import { Route as AuthedSystemAdminAuditRouteImport } from './routes/_authed/system-admin/audit'
 import { Route as AuthedSystemAdminAccountsRouteImport } from './routes/_authed/system-admin/accounts'
+import { Route as AuthedRequestsRequestIdRouteImport } from './routes/_authed/requests/$requestId'
 import { Route as AuthedAdminStaffRouteImport } from './routes/_authed/admin/staff'
 import { Route as AuthedAdminServicesRouteImport } from './routes/_authed/admin/services'
 import { Route as AuthedserviceServicesRouteImport } from './routes/_authed/(service)/services'
@@ -58,11 +62,6 @@ const RequirementsRoute = RequirementsRouteImport.update({
   path: '/requirements',
   getParentRoute: () => rootRouteImport,
 } as any)
-const QueueRoute = QueueRouteImport.update({
-  id: '/queue',
-  path: '/queue',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LogoutRoute = LogoutRouteImport.update({
   id: '/logout',
   path: '/logout',
@@ -76,6 +75,11 @@ const LoginRoute = LoginRouteImport.update({
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DisplayRoute = DisplayRouteImport.update({
+  id: '/display',
+  path: '/display',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AcceptInvitationRoute = AcceptInvitationRouteImport.update({
@@ -107,6 +111,11 @@ const AuthedStaffDashboardRoute = AuthedStaffDashboardRouteImport.update({
   path: '/staff-dashboard',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
+const AuthedQueueRoute = AuthedQueueRouteImport.update({
+  id: '/queue',
+  path: '/queue',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
 const AuthedMyRequestsRoute = AuthedMyRequestsRouteImport.update({
   id: '/my-requests',
   path: '/my-requests',
@@ -115,6 +124,11 @@ const AuthedMyRequestsRoute = AuthedMyRequestsRouteImport.update({
 const AuthedDashboardRoute = AuthedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
+const AuthedAppointmentsRoute = AuthedAppointmentsRouteImport.update({
+  id: '/appointments',
+  path: '/appointments',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
 const ApplyServiceCodeRouteRoute = ApplyServiceCodeRouteRouteImport.update({
@@ -126,6 +140,11 @@ const ApplyServiceCodeIndexRoute = ApplyServiceCodeIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => ApplyServiceCodeRouteRoute,
+} as any)
+const AuthedRequestsIndexRoute = AuthedRequestsIndexRouteImport.update({
+  id: '/requests/',
+  path: '/requests/',
+  getParentRoute: () => AuthedRouteRoute,
 } as any)
 const ApplyServiceCodeReviewRoute = ApplyServiceCodeReviewRouteImport.update({
   id: '/review',
@@ -159,6 +178,11 @@ const AuthedSystemAdminAccountsRoute =
     path: '/system-admin/accounts',
     getParentRoute: () => AuthedRouteRoute,
   } as any)
+const AuthedRequestsRequestIdRoute = AuthedRequestsRequestIdRouteImport.update({
+  id: '/requests/$requestId',
+  path: '/requests/$requestId',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
 const AuthedAdminStaffRoute = AuthedAdminStaffRouteImport.update({
   id: '/admin/staff',
   path: '/admin/staff',
@@ -184,57 +208,65 @@ const AuthedserviceServiceServiceCodeRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/accept-invitation': typeof AcceptInvitationRoute
+  '/display': typeof DisplayRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
-  '/queue': typeof QueueRoute
   '/requirements': typeof RequirementsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/track': typeof TrackRoute
   '/apply/$serviceCode': typeof ApplyServiceCodeRouteRouteWithChildren
+  '/appointments': typeof AuthedAppointmentsRoute
   '/dashboard': typeof AuthedDashboardRoute
   '/my-requests': typeof AuthedMyRequestsRoute
+  '/queue': typeof AuthedQueueRoute
   '/staff-dashboard': typeof AuthedStaffDashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/apply/': typeof ApplyIndexRoute
   '/services': typeof AuthedserviceServicesRoute
   '/admin/services': typeof AuthedAdminServicesRoute
   '/admin/staff': typeof AuthedAdminStaffRoute
+  '/requests/$requestId': typeof AuthedRequestsRequestIdRoute
   '/system-admin/accounts': typeof AuthedSystemAdminAccountsRoute
   '/system-admin/audit': typeof AuthedSystemAdminAuditRoute
   '/apply/$serviceCode/case': typeof ApplyServiceCodeCaseRoute
   '/apply/$serviceCode/details': typeof ApplyServiceCodeDetailsRoute
   '/apply/$serviceCode/documents': typeof ApplyServiceCodeDocumentsRoute
   '/apply/$serviceCode/review': typeof ApplyServiceCodeReviewRoute
+  '/requests/': typeof AuthedRequestsIndexRoute
   '/apply/$serviceCode/': typeof ApplyServiceCodeIndexRoute
   '/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/accept-invitation': typeof AcceptInvitationRoute
+  '/display': typeof DisplayRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
-  '/queue': typeof QueueRoute
   '/requirements': typeof RequirementsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/track': typeof TrackRoute
+  '/appointments': typeof AuthedAppointmentsRoute
   '/dashboard': typeof AuthedDashboardRoute
   '/my-requests': typeof AuthedMyRequestsRoute
+  '/queue': typeof AuthedQueueRoute
   '/staff-dashboard': typeof AuthedStaffDashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/apply': typeof ApplyIndexRoute
   '/services': typeof AuthedserviceServicesRoute
   '/admin/services': typeof AuthedAdminServicesRoute
   '/admin/staff': typeof AuthedAdminStaffRoute
+  '/requests/$requestId': typeof AuthedRequestsRequestIdRoute
   '/system-admin/accounts': typeof AuthedSystemAdminAccountsRoute
   '/system-admin/audit': typeof AuthedSystemAdminAuditRoute
   '/apply/$serviceCode/case': typeof ApplyServiceCodeCaseRoute
   '/apply/$serviceCode/details': typeof ApplyServiceCodeDetailsRoute
   '/apply/$serviceCode/documents': typeof ApplyServiceCodeDocumentsRoute
   '/apply/$serviceCode/review': typeof ApplyServiceCodeReviewRoute
+  '/requests': typeof AuthedRequestsIndexRoute
   '/apply/$serviceCode': typeof ApplyServiceCodeIndexRoute
   '/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
 }
@@ -243,29 +275,33 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteRouteWithChildren
   '/accept-invitation': typeof AcceptInvitationRoute
+  '/display': typeof DisplayRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
-  '/queue': typeof QueueRoute
   '/requirements': typeof RequirementsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/track': typeof TrackRoute
   '/apply/$serviceCode': typeof ApplyServiceCodeRouteRouteWithChildren
+  '/_authed/appointments': typeof AuthedAppointmentsRoute
   '/_authed/dashboard': typeof AuthedDashboardRoute
   '/_authed/my-requests': typeof AuthedMyRequestsRoute
+  '/_authed/queue': typeof AuthedQueueRoute
   '/_authed/staff-dashboard': typeof AuthedStaffDashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/apply/': typeof ApplyIndexRoute
   '/_authed/(service)/services': typeof AuthedserviceServicesRoute
   '/_authed/admin/services': typeof AuthedAdminServicesRoute
   '/_authed/admin/staff': typeof AuthedAdminStaffRoute
+  '/_authed/requests/$requestId': typeof AuthedRequestsRequestIdRoute
   '/_authed/system-admin/accounts': typeof AuthedSystemAdminAccountsRoute
   '/_authed/system-admin/audit': typeof AuthedSystemAdminAuditRoute
   '/apply/$serviceCode/case': typeof ApplyServiceCodeCaseRoute
   '/apply/$serviceCode/details': typeof ApplyServiceCodeDetailsRoute
   '/apply/$serviceCode/documents': typeof ApplyServiceCodeDocumentsRoute
   '/apply/$serviceCode/review': typeof ApplyServiceCodeReviewRoute
+  '/_authed/requests/': typeof AuthedRequestsIndexRoute
   '/apply/$serviceCode/': typeof ApplyServiceCodeIndexRoute
   '/_authed/(service)/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
 }
@@ -274,57 +310,65 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/accept-invitation'
+    | '/display'
     | '/forgot-password'
     | '/login'
     | '/logout'
-    | '/queue'
     | '/requirements'
     | '/reset-password'
     | '/signup'
     | '/track'
     | '/apply/$serviceCode'
+    | '/appointments'
     | '/dashboard'
     | '/my-requests'
+    | '/queue'
     | '/staff-dashboard'
     | '/auth/callback'
     | '/apply/'
     | '/services'
     | '/admin/services'
     | '/admin/staff'
+    | '/requests/$requestId'
     | '/system-admin/accounts'
     | '/system-admin/audit'
     | '/apply/$serviceCode/case'
     | '/apply/$serviceCode/details'
     | '/apply/$serviceCode/documents'
     | '/apply/$serviceCode/review'
+    | '/requests/'
     | '/apply/$serviceCode/'
     | '/service/$serviceCode'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/accept-invitation'
+    | '/display'
     | '/forgot-password'
     | '/login'
     | '/logout'
-    | '/queue'
     | '/requirements'
     | '/reset-password'
     | '/signup'
     | '/track'
+    | '/appointments'
     | '/dashboard'
     | '/my-requests'
+    | '/queue'
     | '/staff-dashboard'
     | '/auth/callback'
     | '/apply'
     | '/services'
     | '/admin/services'
     | '/admin/staff'
+    | '/requests/$requestId'
     | '/system-admin/accounts'
     | '/system-admin/audit'
     | '/apply/$serviceCode/case'
     | '/apply/$serviceCode/details'
     | '/apply/$serviceCode/documents'
     | '/apply/$serviceCode/review'
+    | '/requests'
     | '/apply/$serviceCode'
     | '/service/$serviceCode'
   id:
@@ -332,29 +376,33 @@ export interface FileRouteTypes {
     | '/'
     | '/_authed'
     | '/accept-invitation'
+    | '/display'
     | '/forgot-password'
     | '/login'
     | '/logout'
-    | '/queue'
     | '/requirements'
     | '/reset-password'
     | '/signup'
     | '/track'
     | '/apply/$serviceCode'
+    | '/_authed/appointments'
     | '/_authed/dashboard'
     | '/_authed/my-requests'
+    | '/_authed/queue'
     | '/_authed/staff-dashboard'
     | '/auth/callback'
     | '/apply/'
     | '/_authed/(service)/services'
     | '/_authed/admin/services'
     | '/_authed/admin/staff'
+    | '/_authed/requests/$requestId'
     | '/_authed/system-admin/accounts'
     | '/_authed/system-admin/audit'
     | '/apply/$serviceCode/case'
     | '/apply/$serviceCode/details'
     | '/apply/$serviceCode/documents'
     | '/apply/$serviceCode/review'
+    | '/_authed/requests/'
     | '/apply/$serviceCode/'
     | '/_authed/(service)/service/$serviceCode'
   fileRoutesById: FileRoutesById
@@ -363,10 +411,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthedRouteRoute: typeof AuthedRouteRouteWithChildren
   AcceptInvitationRoute: typeof AcceptInvitationRoute
+  DisplayRoute: typeof DisplayRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
-  QueueRoute: typeof QueueRoute
   RequirementsRoute: typeof RequirementsRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
@@ -406,13 +454,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RequirementsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/queue': {
-      id: '/queue'
-      path: '/queue'
-      fullPath: '/queue'
-      preLoaderRoute: typeof QueueRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/logout': {
       id: '/logout'
       path: '/logout'
@@ -432,6 +473,13 @@ declare module '@tanstack/react-router' {
       path: '/forgot-password'
       fullPath: '/forgot-password'
       preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/display': {
+      id: '/display'
+      path: '/display'
+      fullPath: '/display'
+      preLoaderRoute: typeof DisplayRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/accept-invitation': {
@@ -476,6 +524,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedStaffDashboardRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
+    '/_authed/queue': {
+      id: '/_authed/queue'
+      path: '/queue'
+      fullPath: '/queue'
+      preLoaderRoute: typeof AuthedQueueRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
     '/_authed/my-requests': {
       id: '/_authed/my-requests'
       path: '/my-requests'
@@ -488,6 +543,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthedDashboardRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/appointments': {
+      id: '/_authed/appointments'
+      path: '/appointments'
+      fullPath: '/appointments'
+      preLoaderRoute: typeof AuthedAppointmentsRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
     '/apply/$serviceCode': {
@@ -503,6 +565,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/apply/$serviceCode/'
       preLoaderRoute: typeof ApplyServiceCodeIndexRouteImport
       parentRoute: typeof ApplyServiceCodeRouteRoute
+    }
+    '/_authed/requests/': {
+      id: '/_authed/requests/'
+      path: '/requests'
+      fullPath: '/requests/'
+      preLoaderRoute: typeof AuthedRequestsIndexRouteImport
+      parentRoute: typeof AuthedRouteRoute
     }
     '/apply/$serviceCode/review': {
       id: '/apply/$serviceCode/review'
@@ -546,6 +615,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSystemAdminAccountsRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
+    '/_authed/requests/$requestId': {
+      id: '/_authed/requests/$requestId'
+      path: '/requests/$requestId'
+      fullPath: '/requests/$requestId'
+      preLoaderRoute: typeof AuthedRequestsRequestIdRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
     '/_authed/admin/staff': {
       id: '/_authed/admin/staff'
       path: '/admin/staff'
@@ -578,26 +654,34 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthedRouteRouteChildren {
+  AuthedAppointmentsRoute: typeof AuthedAppointmentsRoute
   AuthedDashboardRoute: typeof AuthedDashboardRoute
   AuthedMyRequestsRoute: typeof AuthedMyRequestsRoute
+  AuthedQueueRoute: typeof AuthedQueueRoute
   AuthedStaffDashboardRoute: typeof AuthedStaffDashboardRoute
   AuthedserviceServicesRoute: typeof AuthedserviceServicesRoute
   AuthedAdminServicesRoute: typeof AuthedAdminServicesRoute
   AuthedAdminStaffRoute: typeof AuthedAdminStaffRoute
+  AuthedRequestsRequestIdRoute: typeof AuthedRequestsRequestIdRoute
   AuthedSystemAdminAccountsRoute: typeof AuthedSystemAdminAccountsRoute
   AuthedSystemAdminAuditRoute: typeof AuthedSystemAdminAuditRoute
+  AuthedRequestsIndexRoute: typeof AuthedRequestsIndexRoute
   AuthedserviceServiceServiceCodeRoute: typeof AuthedserviceServiceServiceCodeRoute
 }
 
 const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
+  AuthedAppointmentsRoute: AuthedAppointmentsRoute,
   AuthedDashboardRoute: AuthedDashboardRoute,
   AuthedMyRequestsRoute: AuthedMyRequestsRoute,
+  AuthedQueueRoute: AuthedQueueRoute,
   AuthedStaffDashboardRoute: AuthedStaffDashboardRoute,
   AuthedserviceServicesRoute: AuthedserviceServicesRoute,
   AuthedAdminServicesRoute: AuthedAdminServicesRoute,
   AuthedAdminStaffRoute: AuthedAdminStaffRoute,
+  AuthedRequestsRequestIdRoute: AuthedRequestsRequestIdRoute,
   AuthedSystemAdminAccountsRoute: AuthedSystemAdminAccountsRoute,
   AuthedSystemAdminAuditRoute: AuthedSystemAdminAuditRoute,
+  AuthedRequestsIndexRoute: AuthedRequestsIndexRoute,
   AuthedserviceServiceServiceCodeRoute: AuthedserviceServiceServiceCodeRoute,
 }
 
@@ -630,10 +714,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRouteRoute: AuthedRouteRouteWithChildren,
   AcceptInvitationRoute: AcceptInvitationRoute,
+  DisplayRoute: DisplayRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
-  QueueRoute: QueueRoute,
   RequirementsRoute: RequirementsRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,

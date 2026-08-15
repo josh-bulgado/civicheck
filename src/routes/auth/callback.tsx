@@ -3,28 +3,42 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { getSupabaseServerClient } from "~/utils/supabase";
 
+const OTP_TYPES = ["invite", "signup", "recovery", "email", "email_change"] as const;
+
+const FALLBACK_MESSAGES: Record<(typeof OTP_TYPES)[number], string> = {
+  invite: "This invitation is invalid or has expired.",
+  signup: "This verification link is invalid or has expired.",
+  recovery: "This password reset link is invalid or has expired.",
+  email: "This authentication link is invalid or has expired.",
+  email_change: "This email change link is invalid or has expired.",
+};
+
+function parseOtpType(value: string | null) {
+  return OTP_TYPES.find((type) => type === value);
+}
+
 const handleCallback = createServerFn({ method: "GET" }).handler(async () => {
   const request = getRequest();
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const tokenHash = url.searchParams.get("token_hash");
-  const type = url.searchParams.get("type");
+  const otpType = parseOtpType(url.searchParams.get("type"));
   const next = url.searchParams.get("next");
   const supabase = getSupabaseServerClient();
 
-  if (tokenHash && type === "invite") {
+  if (tokenHash && otpType) {
     const { error } = await supabase.auth.verifyOtp({
       token_hash: tokenHash,
-      type: "invite",
+      type: otpType,
     });
     if (error) {
-      console.error("Invitation verification error:", error);
+      console.error(`Auth ${otpType} verification error:`, error);
       return {
         error: true,
         message:
           error.message && error.message !== "{}"
             ? error.message
-            : "This invitation is invalid or has expired.",
+            : FALLBACK_MESSAGES[otpType],
       };
     }
   } else if (code) {
@@ -48,7 +62,7 @@ const handleCallback = createServerFn({ method: "GET" }).handler(async () => {
 
   return {
     error: false,
-    next: next === "/accept-invitation" ? next : "/dashboard",
+    next,
   };
 });
 
@@ -63,11 +77,12 @@ export const Route = createFileRoute("/auth/callback")({
         },
       });
     }
-    throw redirect({
-      to:
-        res.next === "/accept-invitation"
-          ? "/accept-invitation"
-          : "/dashboard",
-    });
+    if (res.next === "/accept-invitation") {
+      throw redirect({ to: "/accept-invitation" });
+    }
+    if (res.next === "/reset-password") {
+      throw redirect({ to: "/reset-password" });
+    }
+    throw redirect({ to: "/dashboard" });
   },
 });
