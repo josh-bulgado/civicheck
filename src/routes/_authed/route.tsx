@@ -41,16 +41,10 @@ export const loginFn = createServerFn({ method: "POST" })
 
 export const Route = createFileRoute("/_authed")({
   component: AuthedLayout,
-  // beforeLoad: ({ context, location }) => {
-  //   if (!context.user) {
-  //     throw redirect({
-  //       to: "/login",
-  //       search: {
-  //         redirect: location.href,
-  //       },
-  //     });
-  //   }
-  // },
+  beforeLoad: ({ context, location }) => {
+    if (!context.user)
+      throw redirect({ to: "/login", search: { redirect: location.href } });
+  },
 });
 
 function AuthedLayout() {

@@ -11,6 +11,7 @@ import {
   IconNotebook,
   IconProgressCheck,
   IconSettingsCode,
+  IconUserPlus,
 } from "@tabler/icons-react";
 import { LayoutDashboard, Package } from "lucide-react";
 import { NavCollapsible } from "~/components/sidebar-01/nav-collapsible";
@@ -125,12 +126,19 @@ const data: SidebarData = {
   },
 };
 
-export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sidebar> & { user?: any }) {
-  const sidebarUser = user ? {
-    name: `${user.firstName} ${user.lastName}`.trim() || user.email.split("@")[0],
-    email: user.email,
-    avatar: "/avatar-01.png",
-  } : data.user;
+export function AppSidebar({
+  user,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & { user?: any }) {
+  const sidebarUser = user
+    ? {
+        name:
+          `${user.firstName} ${user.lastName}`.trim() ||
+          user.email.split("@")[0],
+        email: user.email,
+        avatar: "/avatar-01.png",
+      }
+    : data.user;
 
   const { can } = usePermissions();
 
@@ -143,6 +151,15 @@ export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sideb
       title: "Services Registry",
       url: "/admin/services",
       icon: LayoutDashboard,
+    });
+  }
+
+  if (can("users:manage")) {
+    navMain.push({
+      id: "admin-staff",
+      title: "Staff",
+      url: "/admin/staff",
+      icon: IconUserPlus,
     });
   }
 

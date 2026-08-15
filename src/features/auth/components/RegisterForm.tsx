@@ -136,19 +136,22 @@ const RegisterForm = () => {
           </div>
 
           {/* Success message */}
-          {signupMutation.status === "success" && signupMutation.data && !signupMutation.data.error && (
-            <div className="rounded-lg border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-800">
-              <div className="flex items-start gap-3">
-                <CheckCircle className="w-5 h-5 shrink-0 mt-0.5 text-emerald-600" />
-                <div>
-                  <p className="font-medium">Account created!</p>
-                  <p className="mt-1">
-                    {signupMutation.data.message || "Please check your email to confirm your account."}
-                  </p>
+          {signupMutation.status === "success" &&
+            signupMutation.data &&
+            !signupMutation.data.error && (
+              <div className="rounded-lg border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-800">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 shrink-0 mt-0.5 text-emerald-600" />
+                  <div>
+                    <p className="font-medium">Account created!</p>
+                    <p className="mt-1">
+                      {signupMutation.data.message ||
+                        "Please check your email to confirm your account."}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Form */}
           <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -288,7 +291,7 @@ const RegisterForm = () => {
                       <InputGroupInput
                         {...field}
                         id="confirmPassword"
-                        type={showPassword ? "text" : "password"}
+                        type={showConfirmPassword ? "text" : "password"}
                         placeholder="Re-enter your password"
                         aria-invalid={fieldState.invalid}
                         autoComplete="off"

@@ -29,11 +29,16 @@ function isVisible(req: Requirement, selectedCode?: string | null): boolean {
   if (!selectedCode) return false;
   const code = selectedCode.toUpperCase();
   switch (req.case_tag) {
-    case "marital_only":     return code.includes("MARITAL") && !code.includes("NONMARITAL");
-    case "non_marital_only": return code.includes("NONMARITAL");
-    case "brap_only":        return code.includes("BRAP");
-    case "foreigner_only":   return true;
-    default:                 return true;
+    case "marital_only":
+      return code.includes("MARITAL") && !code.includes("NONMARITAL");
+    case "non_marital_only":
+      return code.includes("NONMARITAL");
+    case "brap_only":
+      return code.includes("BRAP");
+    case "foreigner_only":
+      return true;
+    default:
+      return true;
   }
 }
 
@@ -112,13 +117,14 @@ export function RequirementChecklist({
     <Card size="sm">
       <CardHeader className="pb-3">
         <CardTitle className="font-bold text-base">
-          Requirement Checklist {mandatoryReqs.length > 0 && `(${mandatoryReqs.length})`}
+          Requirement Checklist{" "}
+          {mandatoryReqs.length > 0 && `(${mandatoryReqs.length})`}
         </CardTitle>
         <p className="text-xs text-muted-foreground">
           Check off each item you have prepared before submitting.
         </p>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         {visible.length === 0 ? (
           <div className="text-center py-6 text-xs text-muted-foreground border border-dashed rounded-lg">
@@ -135,18 +141,24 @@ export function RequirementChecklist({
                 onToggle={() => onToggle(req.id)}
               />
             ))}
-            
+
             {/* Conditional Requirements */}
             {conditionalReqs.length > 0 && (
-              <Collapsible open={conditionalOpen} onOpenChange={setConditionalOpen} className="pt-2">
+              <Collapsible
+                open={conditionalOpen}
+                onOpenChange={setConditionalOpen}
+                className="pt-2"
+              >
                 <CollapsibleTrigger className="flex items-center justify-between w-full py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground border-t border-border mt-2 cursor-pointer select-none group/trigger">
                   <span className="flex items-center gap-1.5">
                     <AlertTriangle className="h-3.5 w-3.5 text-muted-foreground" />
                     If Applicable ({conditionalReqs.length})
                   </span>
-                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${conditionalOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown
+                    className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${conditionalOpen ? "rotate-180" : ""}`}
+                  />
                 </CollapsibleTrigger>
-                
+
                 <CollapsibleContent className="divide-y divide-border pt-1">
                   {conditionalReqs.map((req) => (
                     <RequirementItem

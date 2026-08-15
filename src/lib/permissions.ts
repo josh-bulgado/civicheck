@@ -2,8 +2,7 @@ export type Role =
   | "applicant"
   | "frontdesk"
   | "staff"
-  | "archive"
-  | "legal"
+  | "supervisor"
   | "cashier"
   | "admin";
 
@@ -49,16 +48,10 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "requests:process",
     "dashboard:staff",
   ],
-  archive: [
+  supervisor: [
     "services:view",
     "requests:view_all",
-    "requests:archive",
-    "dashboard:staff",
-  ],
-  legal: [
-    "services:view",
-    "requests:view_all",
-    "requests:legal",
+    "requests:process",
     "dashboard:staff",
   ],
   cashier: [

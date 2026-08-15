@@ -7,21 +7,49 @@ const handleCallback = createServerFn({ method: "GET" }).handler(async () => {
   const request = getRequest();
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
+  const tokenHash = url.searchParams.get("token_hash");
+  const type = url.searchParams.get("type");
+  const next = url.searchParams.get("next");
+  const supabase = getSupabaseServerClient();
 
-  if (code) {
-    const supabase = getSupabaseServerClient();
+  if (tokenHash && type === "invite") {
+    const { error } = await supabase.auth.verifyOtp({
+      token_hash: tokenHash,
+      type: "invite",
+    });
+    if (error) {
+      console.error("Invitation verification error:", error);
+      return {
+        error: true,
+        message:
+          error.message && error.message !== "{}"
+            ? error.message
+            : "This invitation is invalid or has expired.",
+      };
+    }
+  } else if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
-      console.error("OAuth exchangeCodeForSession error:", error);
-      const isJsonEmpty = error.message === "{}" || !error.message;
-      const cleanMessage = isJsonEmpty 
-        ? "An unexpected authentication server error occurred. Please check your SMTP / Auth settings in the Supabase Dashboard."
-        : error.message;
-      return { error: true, message: cleanMessage };
+      console.error("Auth code exchange error:", error);
+      return {
+        error: true,
+        message:
+          error.message && error.message !== "{}"
+            ? error.message
+            : "The authentication session could not be created.",
+      };
     }
+  } else {
+    return {
+      error: true,
+      message: "This authentication link is invalid or has expired.",
+    };
   }
 
-  return { error: false };
+  return {
+    error: false,
+    next: next === "/accept-invitation" ? next : "/dashboard",
+  };
 });
 
 export const Route = createFileRoute("/auth/callback")({
@@ -35,6 +63,11 @@ export const Route = createFileRoute("/auth/callback")({
         },
       });
     }
-    throw redirect({ to: "/dashboard" });
+    throw redirect({
+      to:
+        res.next === "/accept-invitation"
+          ? "/accept-invitation"
+          : "/dashboard",
+    });
   },
 });
