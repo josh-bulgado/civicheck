@@ -6,7 +6,7 @@ const services = [
   {
     icon: <Baby className="size-5" />,
     title: "Birth Certificate",
-    code: "BIRTH_ONTIME",
+    code: "OTCOLB-MARITAL",
     requirements: [
       "Certificate of Live Birth (PSA or local)",
       "Valid ID of requesting party",
@@ -36,7 +36,7 @@ const services = [
   {
     icon: <ScrollText className="size-5" />,
     title: "Certified True Copy",
-    code: "CTC_ISSUANCE",
+    code: "CTC-LOCAL",
     requirements: [
       "Original registered document on file",
       "Valid ID of requesting party",
@@ -51,18 +51,25 @@ const ServicesSection = () => {
   return (
     <section className="border-b border-border-light bg-white">
       <div className="civic-container civic-section">
-        <div className="mb-10 flex flex-wrap items-baseline justify-between gap-4">
+        <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="civic-eyebrow mb-2">Services</p>
+            <p className="civic-eyebrow-rule">Services</p>
             <h2 className="civic-title text-[clamp(1.75rem,3vw,2.125rem)] leading-tight">
               Pick the document you need
             </h2>
+            <p className="mt-3 max-w-md text-[15px] leading-relaxed text-body">
+              Hover a card to preview its requirements, or open the full
+              checklist.
+            </p>
           </div>
           <Link
             to="/requirements"
-            className="text-base font-bold text-primary hover:text-primary-hover"
+            className="group inline-flex items-center gap-1.5 text-base font-bold text-primary hover:text-primary-hover"
           >
-            See all services →
+            See all services
+            <span className="transition-transform group-hover:translate-x-0.5">
+              →
+            </span>
           </Link>
         </div>
 
@@ -79,7 +86,7 @@ const ServicesSection = () => {
               <Link
                 to="/requirements"
                 search={{ code: service.code }}
-                className="civic-card block p-5 transition-all hover:border-primary/30 hover:shadow-md"
+                className="civic-card block p-5 transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_12px_28px_rgba(15,27,45,0.09)]"
               >
                 <div className="mb-3 flex items-center gap-3">
                   <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">

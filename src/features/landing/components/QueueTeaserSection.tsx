@@ -7,10 +7,10 @@ const previewSlots = [
 
 const QueueTeaserSection = () => {
   return (
-    <section className="border-b border-border-light bg-white">
+    <section className="border-b border-border-light bg-background">
       <div className="civic-container civic-section grid grid-cols-1 items-center gap-10 lg:grid-cols-2">
         <div className="flex flex-col gap-4">
-          <p className="civic-eyebrow mb-0">Visit scheduling</p>
+          <p className="civic-eyebrow-rule mb-0">Visit scheduling</p>
           <h2 className="civic-title text-[clamp(1.75rem,3vw,2.125rem)] leading-tight">
             Book a slot before you visit
           </h2>

@@ -136,14 +136,7 @@ export function renderActionEmail({
 
                 ${noteHtml}
 
-                <p style="margin:26px 0 8px;font-family:${FONT_STACK};font-size:13px;line-height:1.5;color:${COLORS.muted};">Button not working? Copy and paste this link into your browser:</p>
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;border-collapse:separate;background-color:${COLORS.page};border:1px solid ${COLORS.border};border-radius:8px;">
-                  <tr>
-                    <td style="padding:12px 14px;font-family:${FONT_STACK};font-size:12px;line-height:1.6;word-break:break-all;">
-                      <a href="${href}" style="color:${COLORS.primary};text-decoration:none;">${href}</a>
-                    </td>
-                  </tr>
-                </table>
+                <p style="margin:24px 0 0;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${COLORS.muted};">Button not working? <a href="${href}" style="color:${COLORS.primary};font-weight:700;text-decoration:underline;">Press here instead</a>.</p>
               </td>
             </tr>
           </table>
