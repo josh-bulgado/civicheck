@@ -4,22 +4,76 @@ import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { roleLabels } from "../system-admin.constants";
-import type { AccountSummary } from "../system-admin.types";
+import type { AccountCategory, AccountSummary } from "../system-admin.types";
 import { AccountRowActions } from "./AccountRowActions";
 
 const headerClassName =
   "text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground";
+
+const ONLINE_THRESHOLD_MS = 15 * 60 * 1000;
 
 function getInitials(account: AccountSummary) {
   const initials = `${account.firstName.charAt(0)}${account.lastName.charAt(0)}`;
   return initials.toUpperCase() || account.email.charAt(0).toUpperCase();
 }
 
+function formatLastSeen(lastSignInAt: string) {
+  const diffMinutes = Math.round(
+    (Date.now() - new Date(lastSignInAt).getTime()) / 60_000,
+  );
+  if (diffMinutes < 1) return "just now";
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${Math.round(diffHours / 24)}d ago`;
+}
+
+function PresenceBadge({ lastSignInAt }: { lastSignInAt: string | null }) {
+  if (!lastSignInAt) {
+    return (
+      <Badge variant="neutral" className="gap-1.5">
+        <span
+          className="size-1.5 rounded-full bg-muted-foreground/50"
+          aria-hidden="true"
+        />
+        Never signed in
+      </Badge>
+    );
+  }
+
+  const isOnline =
+    Date.now() - new Date(lastSignInAt).getTime() < ONLINE_THRESHOLD_MS;
+
+  if (isOnline) {
+    return (
+      <Badge variant="success" className="gap-1.5">
+        <span
+          className="size-1.5 rounded-full bg-success-dot ring-2 ring-success/20"
+          aria-hidden="true"
+        />
+        Active now
+      </Badge>
+    );
+  }
+
+  return (
+    <Badge variant="neutral" className="gap-1.5">
+      <span
+        className="size-1.5 rounded-full bg-muted-foreground/50"
+        aria-hidden="true"
+      />
+      Last seen {formatLastSeen(lastSignInAt)}
+    </Badge>
+  );
+}
+
 export function createAccountColumns({
+  category,
   pendingAccountId,
   onSuspend,
   onReactivate,
 }: {
+  category: AccountCategory;
   pendingAccountId: string | null;
   onSuspend: (account: AccountSummary) => void;
   onReactivate: (account: AccountSummary) => void;
@@ -93,6 +147,17 @@ export function createAccountColumns({
         </div>
       ),
     },
+    ...(category === "personnel"
+      ? [
+          {
+            id: "presence",
+            header: () => <span className={headerClassName}>Presence</span>,
+            cell: ({ row }) => (
+              <PresenceBadge lastSignInAt={row.original.lastSignInAt} />
+            ),
+          } satisfies ColumnDef<AccountSummary>,
+        ]
+      : []),
     {
       accessorKey: "createdAt",
       header: ({ column }) => (

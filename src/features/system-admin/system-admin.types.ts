@@ -37,6 +37,8 @@ export type NormalizedAuditEvent = {
   targetId: string | null;
   requestId: string | null;
   timestamp: string;
+  deviceLabel: string | null;
+  maskedIpAddress: string | null;
 };
 
 export type AuditFilters = {
@@ -155,7 +157,11 @@ export type PrivilegedAccountSecurity = {
 
 export type SecurityActivity = {
   id: string;
-  type: "sign_in_failed" | "admin_session_started" | "privileged_action";
+  type:
+    | "sign_in_failed"
+    | "admin_session_started"
+    | "staff_session_started"
+    | "privileged_action";
   risk: SecurityFindingSeverity;
   actor: string;
   summary: string;

@@ -359,7 +359,9 @@ export const getSecurityCenter = createServerFn({ method: "GET" }).handler(
         type:
           event.event_type === "admin_session_started"
             ? "admin_session_started"
-            : "sign_in_failed",
+            : event.event_type === "staff_session_started"
+              ? "staff_session_started"
+              : "sign_in_failed",
         risk: normalizeSeverity(event.risk_level),
         actor: event.actor_profile_id
           ? (profileNames.get(event.actor_profile_id) ?? "Restricted account")

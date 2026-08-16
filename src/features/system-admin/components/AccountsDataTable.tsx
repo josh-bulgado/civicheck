@@ -85,11 +85,12 @@ export function AccountsDataTable({
   const columns = useMemo(
     () =>
       createAccountColumns({
+        category,
         pendingAccountId,
         onSuspend: handleSuspendRequest,
         onReactivate: handleReactivate,
       }),
-    [handleReactivate, handleSuspendRequest, pendingAccountId],
+    [category, handleReactivate, handleSuspendRequest, pendingAccountId],
   );
 
   const table = useReactTable({

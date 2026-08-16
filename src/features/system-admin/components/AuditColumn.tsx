@@ -78,4 +78,23 @@ export const auditColumns: ColumnDef<NormalizedAuditEvent>[] = [
       </span>
     ),
   },
+  {
+    id: "device",
+    header: () => <span className={headerClassName}>Device</span>,
+    cell: ({ row }) =>
+      row.original.deviceLabel || row.original.maskedIpAddress ? (
+        <div className="min-w-36">
+          <p className="text-sm text-foreground/80">
+            {row.original.deviceLabel ?? "Unrecognized device"}
+          </p>
+          {row.original.maskedIpAddress ? (
+            <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+              {row.original.maskedIpAddress}
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <span className="text-sm text-muted-foreground">—</span>
+      ),
+  },
 ];

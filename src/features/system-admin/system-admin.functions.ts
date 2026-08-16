@@ -2,6 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { getSupabaseAdminClient } from "~/utils/supabase";
 import { requireActiveSession } from "~/server/auth";
+import {
+  describeUserAgent,
+  getRequestNetworkSignal,
+} from "./network-signal.server";
 import type {
   AccountCategory,
   AccountSummary,
@@ -48,6 +52,7 @@ async function writeAudit(
   targetId: string,
   metadata: Record<string, string> = {},
 ) {
+  const { maskedIpAddress, userAgent } = getRequestNetworkSignal();
   const { error } = await getSupabaseAdminClient()
     .from("system_audit_events")
     .insert({
@@ -55,6 +60,8 @@ async function writeAudit(
       event_type: eventType,
       target_profile_id: targetId,
       metadata,
+      masked_ip_address: maskedIpAddress,
+      user_agent: userAgent,
     });
   if (error) throw new Error(`Audit event could not be recorded: ${error.message}`);
 }
@@ -232,7 +239,7 @@ export const getAuditEvents = createServerFn({ method: "GET" })
     await requireActiveSession("audit:view");
     const admin = getSupabaseAdminClient();
     const [{ data: system, error: systemError }, { data: requests, error: requestError }, { data: profiles }] = await Promise.all([
-      admin.from("system_audit_events").select("id, event_type, actor_profile_id, target_profile_id, created_at"),
+      admin.from("system_audit_events").select("id, event_type, actor_profile_id, target_profile_id, created_at, masked_ip_address, user_agent"),
       admin.from("application_logs").select("id, request_id, performed_by_profile_id, action_status, created_at"),
       admin.from("profiles").select("id, first_name, last_name"),
     ]);
@@ -240,8 +247,8 @@ export const getAuditEvents = createServerFn({ method: "GET" })
     if (requestError) throw new Error(requestError.message);
     const actorNames = new Map((profiles ?? []).map((p) => [p.id, `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || p.id]));
     let events: NormalizedAuditEvent[] = [
-      ...(system ?? []).map((e) => ({ id: e.id, source: "system" as const, eventType: e.event_type, actorId: e.actor_profile_id, actor: actorNames.get(e.actor_profile_id) ?? e.actor_profile_id, targetId: e.target_profile_id, requestId: null, timestamp: e.created_at })),
-      ...(requests ?? []).map((e) => ({ id: e.id, source: "request" as const, eventType: e.action_status, actorId: e.performed_by_profile_id, actor: actorNames.get(e.performed_by_profile_id) ?? e.performed_by_profile_id ?? "System", targetId: null, requestId: e.request_id, timestamp: e.created_at })),
+      ...(system ?? []).map((e) => ({ id: e.id, source: "system" as const, eventType: e.event_type, actorId: e.actor_profile_id, actor: actorNames.get(e.actor_profile_id) ?? e.actor_profile_id, targetId: e.target_profile_id, requestId: null, timestamp: e.created_at, deviceLabel: describeUserAgent(e.user_agent), maskedIpAddress: e.masked_ip_address })),
+      ...(requests ?? []).map((e) => ({ id: e.id, source: "request" as const, eventType: e.action_status, actorId: e.performed_by_profile_id, actor: actorNames.get(e.performed_by_profile_id) ?? e.performed_by_profile_id ?? "System", targetId: null, requestId: e.request_id, timestamp: e.created_at, deviceLabel: null, maskedIpAddress: null })),
     ];
     const actor = data.actor?.toLowerCase();
     const event = data.event?.toLowerCase();

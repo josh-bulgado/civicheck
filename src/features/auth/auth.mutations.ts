@@ -2,8 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { getSupabaseServerClient, getSupabaseAdminClient } from "~/utils/supabase";
 import { sendEmail } from "~/utils/resend";
 import { renderActionEmail } from "~/utils/email-template";
-import { requireActiveSession } from "~/server/auth";
+import { requireActiveSession, isOperationalRole } from "~/server/auth";
 import { recordAuthenticationSecurityEvent } from "~/features/system-admin/security-center.server";
+import type { Role } from "~/lib/permissions";
 
 export const loginWithEmailFn = createServerFn({ method: "POST" })
   .validator((d: { email: string; password: string }) => d)
@@ -41,6 +42,11 @@ export const loginWithEmailFn = createServerFn({ method: "POST" })
     if (profile?.role === "admin" || profile?.role === "system_admin") {
       await recordAuthenticationSecurityEvent({
         type: "admin_session_started",
+        actorProfileId: loginData.user.id,
+      });
+    } else if (profile?.role && isOperationalRole(profile.role as Role)) {
+      await recordAuthenticationSecurityEvent({
+        type: "staff_session_started",
         actorProfileId: loginData.user.id,
       });
     }

@@ -25,6 +25,7 @@ import type { SecurityActivity } from "../system-admin.types";
 const activityContent = {
   sign_in_failed: { label: "Rejected sign-in", icon: Fingerprint },
   admin_session_started: { label: "Admin session", icon: LogIn },
+  staff_session_started: { label: "Staff session", icon: LogIn },
   privileged_action: { label: "Privileged action", icon: Shield },
 };
 

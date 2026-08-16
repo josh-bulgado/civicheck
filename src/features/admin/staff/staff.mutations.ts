@@ -9,6 +9,7 @@ import type {
   UpdateStaffAccessInput,
 } from "./staff.types";
 import { sendEmail } from "~/utils/resend";
+import { getRequestNetworkSignal } from "~/features/system-admin/network-signal.server";
 
 const INVITABLE_ROLES: Role[] = ["frontdesk", "staff", "supervisor", "cashier"];
 const staffInvitationActionSchema = z.object({
@@ -67,11 +68,14 @@ async function appendStaffAudit(
   targetId: string,
   metadata: Record<string, string> = {},
 ) {
+  const { maskedIpAddress, userAgent } = getRequestNetworkSignal();
   const { error } = await adminSupabase.from("system_audit_events").insert({
     event_type: eventType,
     actor_profile_id: actorId,
     target_profile_id: targetId,
     metadata,
+    masked_ip_address: maskedIpAddress,
+    user_agent: userAgent,
   });
   if (error) throw new Error(`Audit event could not be recorded: ${error.message}`);
 }
