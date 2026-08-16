@@ -8,6 +8,13 @@ export interface NavItem {
   isActive?: boolean;
 }
 
+export interface NavGroup {
+  id: string;
+  label?: string;
+  separatorBefore?: boolean;
+  items: NavItem[];
+}
+
 export interface User {
   name: string;
   email: string;

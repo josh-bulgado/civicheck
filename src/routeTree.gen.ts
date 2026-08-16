@@ -42,6 +42,7 @@ import { Route as AuthedSystemAdminAccountsRouteImport } from './routes/_authed/
 import { Route as AuthedRequestsRequestIdRouteImport } from './routes/_authed/requests/$requestId'
 import { Route as AuthedAdminStaffRouteImport } from './routes/_authed/admin/staff'
 import { Route as AuthedAdminServicesRouteImport } from './routes/_authed/admin/services'
+import { Route as AuthedAdminReportsRouteImport } from './routes/_authed/admin/reports'
 import { Route as AuthedserviceServicesRouteImport } from './routes/_authed/(service)/services'
 import { Route as AuthedserviceServiceServiceCodeRouteImport } from './routes/_authed/(service)/service.$serviceCode'
 
@@ -212,6 +213,11 @@ const AuthedAdminServicesRoute = AuthedAdminServicesRouteImport.update({
   path: '/admin/services',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
+const AuthedAdminReportsRoute = AuthedAdminReportsRouteImport.update({
+  id: '/admin/reports',
+  path: '/admin/reports',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
 const AuthedserviceServicesRoute = AuthedserviceServicesRouteImport.update({
   id: '/(service)/services',
   path: '/services',
@@ -244,6 +250,7 @@ export interface FileRoutesByFullPath {
   '/auth/callback': typeof AuthCallbackRoute
   '/apply/': typeof ApplyIndexRoute
   '/services': typeof AuthedserviceServicesRoute
+  '/admin/reports': typeof AuthedAdminReportsRoute
   '/admin/services': typeof AuthedAdminServicesRoute
   '/admin/staff': typeof AuthedAdminStaffRoute
   '/requests/$requestId': typeof AuthedRequestsRequestIdRoute
@@ -279,6 +286,7 @@ export interface FileRoutesByTo {
   '/auth/callback': typeof AuthCallbackRoute
   '/apply': typeof ApplyIndexRoute
   '/services': typeof AuthedserviceServicesRoute
+  '/admin/reports': typeof AuthedAdminReportsRoute
   '/admin/services': typeof AuthedAdminServicesRoute
   '/admin/staff': typeof AuthedAdminStaffRoute
   '/requests/$requestId': typeof AuthedRequestsRequestIdRoute
@@ -317,6 +325,7 @@ export interface FileRoutesById {
   '/auth/callback': typeof AuthCallbackRoute
   '/apply/': typeof ApplyIndexRoute
   '/_authed/(service)/services': typeof AuthedserviceServicesRoute
+  '/_authed/admin/reports': typeof AuthedAdminReportsRoute
   '/_authed/admin/services': typeof AuthedAdminServicesRoute
   '/_authed/admin/staff': typeof AuthedAdminStaffRoute
   '/_authed/requests/$requestId': typeof AuthedRequestsRequestIdRoute
@@ -355,6 +364,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/apply/'
     | '/services'
+    | '/admin/reports'
     | '/admin/services'
     | '/admin/staff'
     | '/requests/$requestId'
@@ -390,6 +400,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/apply'
     | '/services'
+    | '/admin/reports'
     | '/admin/services'
     | '/admin/staff'
     | '/requests/$requestId'
@@ -427,6 +438,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/apply/'
     | '/_authed/(service)/services'
+    | '/_authed/admin/reports'
     | '/_authed/admin/services'
     | '/_authed/admin/staff'
     | '/_authed/requests/$requestId'
@@ -694,6 +706,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedAdminServicesRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
+    '/_authed/admin/reports': {
+      id: '/_authed/admin/reports'
+      path: '/admin/reports'
+      fullPath: '/admin/reports'
+      preLoaderRoute: typeof AuthedAdminReportsRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
     '/_authed/(service)/services': {
       id: '/_authed/(service)/services'
       path: '/services'
@@ -718,6 +737,7 @@ interface AuthedRouteRouteChildren {
   AuthedQueueRoute: typeof AuthedQueueRoute
   AuthedStaffDashboardRoute: typeof AuthedStaffDashboardRoute
   AuthedserviceServicesRoute: typeof AuthedserviceServicesRoute
+  AuthedAdminReportsRoute: typeof AuthedAdminReportsRoute
   AuthedAdminServicesRoute: typeof AuthedAdminServicesRoute
   AuthedAdminStaffRoute: typeof AuthedAdminStaffRoute
   AuthedRequestsRequestIdRoute: typeof AuthedRequestsRequestIdRoute
@@ -737,6 +757,7 @@ const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
   AuthedQueueRoute: AuthedQueueRoute,
   AuthedStaffDashboardRoute: AuthedStaffDashboardRoute,
   AuthedserviceServicesRoute: AuthedserviceServicesRoute,
+  AuthedAdminReportsRoute: AuthedAdminReportsRoute,
   AuthedAdminServicesRoute: AuthedAdminServicesRoute,
   AuthedAdminStaffRoute: AuthedAdminStaffRoute,
   AuthedRequestsRequestIdRoute: AuthedRequestsRequestIdRoute,

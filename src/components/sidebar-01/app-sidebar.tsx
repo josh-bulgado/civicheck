@@ -2,20 +2,24 @@
 
 import { Sidebar, SidebarContent } from "~/components/ui/sidebar";
 import {
-  IconListDetails,
-  IconProgressCheck,
-  IconUserPlus,
-  IconShield,
-  IconHistory,
-  IconCalendarEvent,
-  IconTicket,
-} from "@tabler/icons-react";
-import { Activity, Gauge, LayoutDashboard, ShieldAlert } from "lucide-react";
+  Activity,
+  BarChart3,
+  CalendarDays,
+  ClipboardCheck,
+  Gauge,
+  History,
+  LayoutDashboard,
+  ListChecks,
+  Shield,
+  ShieldAlert,
+  Ticket,
+  UserPlus,
+} from "lucide-react";
 import { NavFooter } from "~/components/sidebar-01/nav-footer";
 import { NavHeader } from "~/components/sidebar-01/nav-header";
 import { NavMain } from "~/components/sidebar-01/nav-main";
 import { usePermissions } from "~/hooks/usePermissions";
-import type { NavItem } from "./types";
+import type { NavGroup, NavItem } from "./types";
 import { getWorkspaceDetails } from "./workspace";
 
 type SidebarUser = {
@@ -28,6 +32,40 @@ const fallbackUser = {
   name: "CiviCheck User",
   email: "",
 };
+
+function createCcroAdminGroups(items: NavItem[]): NavGroup[] {
+  const itemsById = new Map(items.map((item) => [item.id, item]));
+  const selectItems = (ids: string[]) =>
+    ids.flatMap((id) => {
+      const item = itemsById.get(id);
+      return item ? [item] : [];
+    });
+
+  return [
+    { id: "overview", items: selectItems(["admin-overview"]) },
+    {
+      id: "operations",
+      label: "Operations",
+      items: selectItems(["request-queue", "queue-desk"]),
+    },
+    {
+      id: "management",
+      label: "Management",
+      items: selectItems(["admin-services", "admin-staff"]),
+    },
+    {
+      id: "insights",
+      label: "Insights",
+      items: selectItems(["admin-reports"]),
+    },
+    {
+      id: "citizen-preview",
+      label: "Citizen Preview",
+      separatorBefore: true,
+      items: selectItems(["services"]),
+    },
+  ].filter((group) => group.items.length > 0);
+}
 
 export function AppSidebar({
   user,
@@ -73,6 +111,12 @@ export function AppSidebar({
       url: "/admin",
       icon: Gauge,
     });
+    navMain.push({
+      id: "admin-reports",
+      title: "Reports",
+      url: "/admin/reports",
+      icon: BarChart3,
+    });
   }
 
   if (can("services:manage")) {
@@ -89,7 +133,7 @@ export function AppSidebar({
       id: "admin-staff",
       title: "Staff",
       url: "/admin/staff",
-      icon: IconUserPlus,
+      icon: UserPlus,
     });
   }
 
@@ -98,7 +142,7 @@ export function AppSidebar({
       id: "system-accounts",
       title: "Accounts",
       url: "/system-admin/accounts",
-      icon: IconShield,
+      icon: Shield,
     });
   }
 
@@ -107,7 +151,7 @@ export function AppSidebar({
       id: "system-audit",
       title: "Audit Center",
       url: "/system-admin/audit",
-      icon: IconHistory,
+      icon: History,
     });
   }
 
@@ -123,9 +167,9 @@ export function AppSidebar({
   if (can("services:view")) {
     navMain.push({
       id: "services",
-      title: "Browse Services",
+      title: role === "admin" ? "Preview Citizen Services" : "Browse Services",
       url: "/services",
-      icon: IconListDetails,
+      icon: ListChecks,
     });
   }
 
@@ -134,7 +178,7 @@ export function AppSidebar({
       id: "my-requests",
       title: "My Requests",
       url: "/my-requests",
-      icon: IconProgressCheck,
+      icon: ClipboardCheck,
     });
   }
 
@@ -143,7 +187,7 @@ export function AppSidebar({
       id: "appointments",
       title: "My Appointments",
       url: "/appointments",
-      icon: IconCalendarEvent,
+      icon: CalendarDays,
     });
   }
 
@@ -152,7 +196,7 @@ export function AppSidebar({
       id: "request-queue",
       title: "Request Queue",
       url: "/requests",
-      icon: IconListDetails,
+      icon: ListChecks,
     });
   }
 
@@ -161,15 +205,21 @@ export function AppSidebar({
       id: "queue-desk",
       title: "Queue Desk",
       url: "/queue",
-      icon: IconTicket,
+      icon: Ticket,
     });
   }
 
+  const navGroups =
+    role === "admin"
+      ? createCcroAdminGroups(navMain)
+      : [{ id: "navigation", label: "Navigation", items: navMain }];
+  const searchableItems = navGroups.flatMap((group) => group.items);
+
   return (
     <Sidebar collapsible="icon" variant="sidebar" {...props}>
-      <NavHeader items={navMain} workspace={workspace} />
+      <NavHeader items={searchableItems} workspace={workspace} />
       <SidebarContent>
-        <NavMain items={navMain} />
+        <NavMain groups={navGroups} />
       </SidebarContent>
       <NavFooter user={sidebarUser} />
     </Sidebar>

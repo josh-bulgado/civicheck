@@ -20,6 +20,12 @@ const badgeVariants = cva(
           "hover:bg-muted hover:text-muted-foreground",
         link: "text-primary underline-offset-4 hover:underline",
 
+        // Status
+        info: "bg-primary-soft text-primary ring-1 ring-inset ring-primary/15",
+        success: "bg-success-soft text-success ring-1 ring-inset ring-success/15",
+        warning: "bg-warning-soft text-warning ring-1 ring-inset ring-warning/20",
+        neutral: "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
+
         // Case Complexity
         simple: "bg-success-soft text-success ring-1 ring-inset ring-success/15",
         complex: "bg-warning-soft text-warning ring-1 ring-inset ring-warning/20",

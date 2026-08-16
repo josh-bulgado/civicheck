@@ -8,6 +8,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "~/components/ui/alert";
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
@@ -76,6 +77,36 @@ function formatDate(value: string) {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function getStatusBadgeVariant(status: string | null) {
+  switch (status) {
+    case "pending_frontdesk":
+    case "incomplete":
+    case "pending_approval":
+      return "warning" as const;
+    case "under_validation":
+    case "processing":
+      return "info" as const;
+    case "rejected":
+      return "destructive" as const;
+    case "ready_for_release":
+    case "released":
+      return "success" as const;
+    default:
+      return "neutral" as const;
+  }
+}
+
+function getPaymentBadgeVariant(paymentStatus: string | null) {
+  switch (paymentStatus) {
+    case "unpaid":
+      return "destructive" as const;
+    case "verified":
+      return "success" as const;
+    default:
+      return "neutral" as const;
+  }
 }
 
 function RequestQueuePage() {
@@ -147,17 +178,17 @@ function RequestQueuePage() {
             <TabsList>
               <TabsTrigger value="all">
                 All
-                <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-bold">
+                <Badge variant="secondary" className="ml-2">
                   {counts.all}
-                </span>
+                </Badge>
               </TabsTrigger>
               {STAGES.map((stage) => (
                 <TabsTrigger key={stage} value={String(stage)}>
                   {STAGE_LABELS[stage]}
                   {counts[String(stage)] > 0 && (
-                    <span className="ml-2 rounded-full bg-primary-soft px-2 py-0.5 text-xs font-bold text-primary">
+                    <Badge variant="info" className="ml-2">
                       {counts[String(stage)]}
-                    </span>
+                    </Badge>
                   )}
                 </TabsTrigger>
               ))}
@@ -261,25 +292,21 @@ function RequestRow({ request }: { request: StaffRequestRow }) {
       <td className="px-5 py-4">
         {request.applicantName}
         {request.isWalkIn && (
-          <span className="ml-2 rounded-md border border-border px-1.5 py-0.5 text-xs text-muted-foreground">
+          <Badge variant="outline" className="ml-2">
             Walk-in
-          </span>
+          </Badge>
         )}
       </td>
       <td className="px-5 py-4 text-muted-foreground">{request.serviceName}</td>
       <td className="px-5 py-4">
-        <span
-          className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${status.styles}`}
-        >
+        <Badge variant={getStatusBadgeVariant(request.status)}>
           {status.label}
-        </span>
+        </Badge>
       </td>
       <td className="px-5 py-4">
-        <span
-          className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${payment.styles}`}
-        >
+        <Badge variant={getPaymentBadgeVariant(request.paymentStatus)}>
           {payment.label}
-        </span>
+        </Badge>
       </td>
       <td className="px-5 py-4 text-muted-foreground">{formatDate(request.createdAt)}</td>
     </tr>
@@ -302,17 +329,18 @@ function RequestCard({ request }: { request: StaffRequestRow }) {
           <p className="text-sm text-foreground">{request.applicantName}</p>
           <p className="text-xs text-muted-foreground">{request.serviceName}</p>
         </div>
-        <span
-          className={`shrink-0 rounded-md border px-2 py-0.5 text-xs font-medium ${status.styles}`}
+        <Badge
+          variant={getStatusBadgeVariant(request.status)}
+          className="shrink-0"
         >
           {status.label}
-        </span>
+        </Badge>
       </div>
       <div className="flex items-center justify-between border-t border-border-light pt-3 text-xs text-muted-foreground">
         <span>{formatDate(request.createdAt)}</span>
-        <span className={`rounded-md border px-2 py-0.5 font-medium ${payment.styles}`}>
+        <Badge variant={getPaymentBadgeVariant(request.paymentStatus)}>
           {payment.label}
-        </span>
+        </Badge>
       </div>
     </Link>
   );
