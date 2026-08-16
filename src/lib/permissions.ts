@@ -38,6 +38,7 @@ export type Permission =
   | "accounts:suspend"
   | "accounts:replace_admin"
   | "audit:view"
+  | "health:view"
 
   // dashboard
   | "dashboard:applicant"
@@ -104,6 +105,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "accounts:suspend",
     "accounts:replace_admin",
     "audit:view",
+    "health:view",
     "dashboard:system_admin",
   ],
 };

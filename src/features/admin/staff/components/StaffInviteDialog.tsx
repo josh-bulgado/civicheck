@@ -194,8 +194,12 @@ export function StaffInviteDialog({
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel htmlFor="staff-role">Staff Role</FieldLabel>
                   <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger>
-                      <SelectValue className="capitalize" placeholder="Role" />
+                    <SelectTrigger id="staff-role">
+                      <SelectValue placeholder="Role">
+                        {(value) =>
+                          roles.find((role) => role.value === value)?.label
+                        }
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
@@ -227,10 +231,13 @@ export function StaffInviteDialog({
                         id="staff-department"
                         aria-invalid={fieldState.invalid}
                       >
-                        <SelectValue
-                          placeholder="Department"
-                          className="capitalize"
-                        />
+                        <SelectValue placeholder="Department">
+                          {(value) =>
+                            departments.find(
+                              (department) => department.id === value,
+                            )?.name
+                          }
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
@@ -265,10 +272,12 @@ export function StaffInviteDialog({
                       id="staff-employment-type"
                       aria-invalid={fieldState.invalid}
                     >
-                      <SelectValue
-                        placeholder="Employment type"
-                        className="capitalize"
-                      />
+                      <SelectValue placeholder="Employment type">
+                        {(value) =>
+                          employmentTypes.find((type) => type.value === value)
+                            ?.label
+                        }
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectGroup>

@@ -37,7 +37,7 @@ const ServiceCard = (service: ServiceProps) => {
       : `${service.requirement_count} requirements`;
 
   return (
-    <article className="group flex h-full flex-col gap-4 rounded-xl border border-border-strong bg-white p-6 text-card-foreground shadow-[0_1px_2px_rgba(23,33,43,0.04)] transition-[border-color,box-shadow] hover:border-primary/30 hover:shadow-[0_6px_18px_rgba(23,33,43,0.07)]">
+    <article className="group flex flex-col gap-4 rounded-xl border border-border-strong bg-white p-6 text-card-foreground shadow-[0_1px_2px_rgba(23,33,43,0.04)] transition-[border-color,box-shadow] hover:border-primary/30 hover:shadow-[0_6px_18px_rgba(23,33,43,0.07)] ">
       <div className="flex items-start justify-between gap-3">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-primary-soft text-primary">
           <FileText className="size-5" aria-hidden="true" />

@@ -1,7 +1,16 @@
 import type { FormEvent } from "react";
 import { Filter, RotateCcw } from "lucide-react";
 import { Button } from "~/components/ui/button";
+import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 
 export type AuditFilterValues = {
   actor: string;
@@ -10,6 +19,15 @@ export type AuditFilterValues = {
   from: string;
   to: string;
 };
+
+const sourceOptions: {
+  value: AuditFilterValues["source"];
+  label: string;
+}[] = [
+  { value: "all", label: "All Sources" },
+  { value: "system", label: "System" },
+  { value: "request", label: "Request" },
+];
 
 export function AuditTableToolbar({
   values,
@@ -41,64 +59,100 @@ export function AuditTableToolbar({
   return (
     <form
       onSubmit={handleSubmit}
-      className="grid gap-3 rounded-xl border border-border bg-surface-subtle p-4 sm:grid-cols-2 lg:grid-cols-6"
+      aria-label="Audit event filters"
     >
-      <Input
-        aria-label="Filter by actor"
-        placeholder="Actor"
-        value={values.actor}
-        onChange={(event) => update("actor", event.target.value)}
-      />
-      <Input
-        aria-label="Filter by event"
-        placeholder="Event"
-        value={values.event}
-        onChange={(event) => update("event", event.target.value)}
-      />
-      <select
-        aria-label="Filter by source"
-        className="h-9 rounded-md border border-input bg-white px-3 text-sm"
-        value={values.source}
-        onChange={(event) =>
-          update(
-            "source",
-            event.target.value as AuditFilterValues["source"],
-          )
-        }
-      >
-        <option value="all">All sources</option>
-        <option value="system">System</option>
-        <option value="request">Request</option>
-      </select>
-      <Input
-        type="date"
-        aria-label="From date"
-        value={values.from}
-        onChange={(event) => update("from", event.target.value)}
-      />
-      <Input
-        type="date"
-        aria-label="To date"
-        value={values.to}
-        onChange={(event) => update("to", event.target.value)}
-      />
-      <div className="flex gap-2">
-        <Button type="submit" className="flex-1">
-          <Filter />
-          Apply
-        </Button>
-        {hasFilters ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={onClear}
-            aria-label="Clear audit filters"
+      <FieldGroup className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+        <Field>
+          <FieldLabel htmlFor="audit-filter-actor">Actor</FieldLabel>
+          <Input
+            id="audit-filter-actor"
+            name="actor"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="e.g., admin@example.com…"
+            value={values.actor}
+            onChange={(event) => update("actor", event.target.value)}
+          />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="audit-filter-event">Event</FieldLabel>
+          <Input
+            id="audit-filter-event"
+            name="event"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="e.g., account.updated…"
+            value={values.event}
+            onChange={(event) => update("event", event.target.value)}
+          />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="audit-filter-source">Source</FieldLabel>
+          <Select
+            name="source"
+            value={values.source}
+            onValueChange={(value) =>
+              update("source", value as AuditFilterValues["source"])
+            }
           >
-            <RotateCcw />
+            <SelectTrigger id="audit-filter-source" className="w-full">
+              <SelectValue>
+                {(value) =>
+                  sourceOptions.find((option) => option.value === value)?.label
+                }
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {sourceOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="audit-filter-from">From Date</FieldLabel>
+          <Input
+            id="audit-filter-from"
+            name="from"
+            type="date"
+            autoComplete="off"
+            value={values.from}
+            onChange={(event) => update("from", event.target.value)}
+          />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="audit-filter-to">To Date</FieldLabel>
+          <Input
+            id="audit-filter-to"
+            name="to"
+            type="date"
+            autoComplete="off"
+            value={values.to}
+            onChange={(event) => update("to", event.target.value)}
+          />
+        </Field>
+        <Field orientation="horizontal" className="self-end">
+          <Button type="submit" className="flex-1">
+            <Filter data-icon="inline-start" aria-hidden="true" />
+            Apply Filters
           </Button>
-        ) : null}
-      </div>
+          {hasFilters ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={onClear}
+              aria-label="Clear audit filters"
+            >
+              <RotateCcw aria-hidden="true" />
+            </Button>
+          ) : null}
+        </Field>
+      </FieldGroup>
     </form>
   );
 }

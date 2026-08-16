@@ -51,4 +51,4 @@ tmp/
 temp/
 *.tsbuildinfo
 .eslintcache
-/docs/
+# /docs/

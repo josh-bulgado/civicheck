@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { ShieldCheck } from "lucide-react";
 import { CityGovernmentIdentity } from "~/components/brand/civic-identity";
@@ -6,10 +7,12 @@ export function SystemAdminPageHeader({
   icon: Icon,
   title,
   description,
+  actions,
 }: {
   icon: LucideIcon;
   title: string;
   description: string;
+  actions?: ReactNode;
 }) {
   return (
     <header className="dashboard-hero">
@@ -32,6 +35,7 @@ export function SystemAdminPageHeader({
             {description}
           </p>
         </div>
+        {actions ? <div className="shrink-0">{actions}</div> : null}
       </div>
     </header>
   );

@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { AccountsPage } from "~/features/system-admin/AccountsPage";
+import { AccountsPage } from "~/features/system-admin/pages/AccountsPage";
 import { getAccounts } from "~/features/system-admin/system-admin.functions";
 import { hasPermission, type Role } from "~/lib/permissions";
 import type { AccountCategory } from "~/features/system-admin/system-admin.types";
@@ -16,7 +16,11 @@ export const Route = createFileRoute("/_authed/system-admin/accounts")({
     page: Math.max(1, Number(search.page) || 1),
   }),
   beforeLoad: ({ context }) => {
-    if (!context.user || !hasPermission(context.user.role as Role, "accounts:view_all")) throw redirect({ to: "/dashboard" });
+    if (
+      !context.user ||
+      !hasPermission(context.user.role as Role, "accounts:view_all")
+    )
+      throw redirect({ to: "/dashboard" });
   },
   loaderDeps: ({ search }) => ({
     category: search.category,
@@ -26,5 +30,8 @@ export const Route = createFileRoute("/_authed/system-admin/accounts")({
     getAccounts({
       data: { category: deps.category, page: deps.page, pageSize: 20 },
     }),
-  component: () => { const data = Route.useLoaderData(); return <AccountsPage {...data} />; },
+  component: () => {
+    const data = Route.useLoaderData();
+    return <AccountsPage {...data} />;
+  },
 });

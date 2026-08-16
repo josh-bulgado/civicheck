@@ -25,7 +25,7 @@ export function getWorkspaceDetails(role: Role): WorkspaceDetails {
     case "system_admin":
       return {
         label: "System Administration",
-        description: "Account oversight and audit controls",
+        description: "Platform health, account oversight, and audit controls",
       };
     default:
       return {

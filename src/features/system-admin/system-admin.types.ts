@@ -48,3 +48,57 @@ export type AuditFilters = {
   from?: string;
   to?: string;
 };
+
+export type HealthStatus =
+  | "operational"
+  | "degraded"
+  | "outage"
+  | "unknown";
+
+export type HealthTrendPoint = {
+  timestamp: string;
+  responseTimeMs: number | null;
+  status: HealthStatus;
+};
+
+export type ServiceHealth = {
+  key: "database" | "authentication" | "storage";
+  name: string;
+  description: string;
+  status: HealthStatus;
+  responseTimeMs: number | null;
+  availabilityPercent: number;
+  errorRatePercent: number;
+  lastCheckedAt: string;
+  trend: HealthTrendPoint[];
+};
+
+export type OperationalSignal = {
+  key: "queue" | "jobs" | "storage" | "workflow";
+  label: string;
+  value: string;
+  detail: string;
+  status: HealthStatus;
+};
+
+export type HealthEvent = {
+  id: string;
+  component: string;
+  title: string;
+  summary: string;
+  type: "degradation" | "recovery" | "maintenance";
+  severity: "info" | "warning" | "critical";
+  timestamp: string;
+  resolvedAt: string | null;
+  relatedAuditEventId: string | null;
+};
+
+export type SystemHealthDashboard = {
+  overallStatus: HealthStatus;
+  availabilityPercent: number;
+  activeDegradations: number;
+  checkedAt: string;
+  services: ServiceHealth[];
+  signals: OperationalSignal[];
+  events: HealthEvent[];
+};

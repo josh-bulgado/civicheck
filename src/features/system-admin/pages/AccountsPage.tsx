@@ -1,13 +1,13 @@
 import { UsersRound } from "lucide-react";
-import { AccountsCategoryNav } from "./components/AccountsCategoryNav";
-import { AccountsDataTable } from "./components/AccountsDataTable";
-import { SystemAdminPageHeader } from "./components/SystemAdminPageHeader";
+import { AccountsCategoryNav } from "../components/AccountsCategoryNav";
+import { AccountsDataTable } from "../components/AccountsDataTable";
+import { SystemAdminPageHeader } from "../components/SystemAdminPageHeader";
 import type {
   AccountCategory,
   AccountSummary,
   AdminCandidate,
   SystemAdminDepartment,
-} from "./system-admin.types";
+} from "../system-admin.types";
 
 const pageContent = {
   personnel: {

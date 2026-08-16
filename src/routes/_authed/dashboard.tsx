@@ -8,8 +8,7 @@ export const Route = createFileRoute("/_authed/dashboard")({
 
     if (hasPermission(role, "dashboard:system_admin")) {
       throw redirect({
-        to: "/system-admin/accounts",
-        search: { category: "personnel", page: 1 },
+        to: "/system-admin/health",
       });
     } else if (hasPermission(role, "dashboard:admin")) {
       throw redirect({ to: "/admin/services" });
