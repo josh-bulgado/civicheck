@@ -67,3 +67,15 @@ export interface UpdateServiceRequirementInput {
   where_to_secure?: string | null;
   case_tag?: string | null;
 }
+
+// ─── Combined create (service + its checklist in one call) ───────────────────
+
+export interface CreateServiceWithRequirementsInput extends CreateServiceInput {
+  requirements: Omit<CreateServiceRequirementInput, "service_code">[];
+}
+
+export interface UpdateServiceWithRequirementsInput {
+  service_code: string;
+  updates: UpdateServiceInput;
+  requirements: Omit<CreateServiceRequirementInput, "service_code">[];
+}

@@ -19,6 +19,34 @@ export const getAdminServices = createServerFn({ method: "GET" }).handler(
   }
 );
 
+/**
+ * Resolve the checklist that belongs to one service.
+ *
+ * A requirement row is linked either by `requirement_group` (variants of one
+ * service share a group — e.g. all six DCOLB services share `birth_delayed`)
+ * or by its own `service_code`. Matching a single string against both columns
+ * misses whichever convention a service doesn't use, so both keys are passed
+ * explicitly. `updateServiceWithRequirements` deletes with this same predicate,
+ * so what the form loads is exactly what a save replaces.
+ */
+export const getServiceChecklist = createServerFn({ method: "GET" })
+  .validator((d: { service_code: string; requirement_group: string | null }) => d)
+  .handler(async ({ data }) => {
+    const supabase = getSupabaseServerClient();
+    const groupKey = data.requirement_group ?? data.service_code;
+
+    const { data: rows, error } = await supabase
+      .from("service_requirements_metadata")
+      .select("*")
+      .or(
+        `requirement_group.eq.${groupKey},service_code.eq.${data.service_code}`
+      )
+      .order("is_mandatory", { ascending: false });
+
+    if (error) throw new Error(error.message);
+    return (rows || []) as ServiceRequirement[];
+  });
+
 export const getServiceRequirements = createServerFn({ method: "GET" })
   .validator((d: string) => d)
   .handler(async ({ data: requirementGroupOrServiceCode }) => {

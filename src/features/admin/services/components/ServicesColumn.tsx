@@ -1,5 +1,5 @@
 import { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, Eye } from "lucide-react";
+import { ArrowUpDown, Eye, Pencil } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Service } from "../services.types";
@@ -72,7 +72,15 @@ export const columns: ColumnDef<Service>[] = [
       </Button>
     ),
     cell: ({ row }) => {
-      const classification = row.getValue<string>("classification");
+      // Nullable in the DB — ServicesStatsCards counts these as "unclassified".
+      const classification = row.getValue<string | null>("classification");
+      if (!classification) {
+        return (
+          <Badge variant="neutral" className="font-semibold text-[10px]">
+            Unclassified
+          </Badge>
+        );
+      }
       return (
         <Badge
           variant={
@@ -141,20 +149,36 @@ export const columns: ColumnDef<Service>[] = [
     ),
     cell: ({ row, table }) => {
       const meta = table.options.meta as
-        | { onView?: (service: Service) => void }
+        | {
+            onView?: (service: Service) => void;
+            onEdit?: (service: Service) => void;
+          }
         | undefined;
       return (
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={(e) => {
-            e.stopPropagation();
-            meta?.onView?.(row.original);
-          }}
-          title="View Service Details"
-        >
-          <Eye className="w-4 h-4" />
-        </Button>
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              meta?.onView?.(row.original);
+            }}
+            title="View Service Details"
+          >
+            <Eye className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              meta?.onEdit?.(row.original);
+            }}
+            title="Edit Service"
+          >
+            <Pencil className="w-4 h-4" />
+          </Button>
+        </div>
       );
     },
   },

@@ -27,9 +27,14 @@ import { DataTablePagination } from "~/components/ui/data-table-pagination";
 interface ServicesDataTableProps {
   data: Service[];
   onView?: (service: Service) => void;
+  onEdit?: (service: Service) => void;
 }
 
-export function ServicesDataTable({ data, onView }: ServicesDataTableProps) {
+export function ServicesDataTable({
+  data,
+  onView,
+  onEdit,
+}: ServicesDataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -54,7 +59,7 @@ export function ServicesDataTable({ data, onView }: ServicesDataTableProps) {
         row.original.service_code.toLowerCase().includes(search)
       );
     },
-    meta: { onView },
+    meta: { onView, onEdit },
   });
 
   const handleClassificationFilter = (value: ClassificationFilter) => {

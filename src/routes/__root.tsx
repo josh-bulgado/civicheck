@@ -111,7 +111,7 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   const [mounted, setMounted] = React.useState(false);
-  
+
   React.useEffect(() => {
     setMounted(true);
   }, []);
@@ -120,7 +120,9 @@ function RootComponent() {
     <RootDocument>
       <Outlet />
       <Toaster />
-      {mounted && import.meta.env.DEV && <TanStackRouterDevtools position="bottom-right" />}
+      {mounted && import.meta.env.DEV && (
+        <TanStackRouterDevtools position="bottom-left" />
+      )}
     </RootDocument>
   );
 }
@@ -152,7 +154,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{document.documentElement.classList.remove('dark');document.documentElement.style.colorScheme='light'}catch(e){}})()`
+            __html: `(function(){try{document.documentElement.classList.remove('dark');document.documentElement.style.colorScheme='light'}catch(e){}})()`,
           }}
         />
         <HeadContent />

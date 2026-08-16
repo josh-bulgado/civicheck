@@ -14,7 +14,7 @@ import {
   CollapsibleTrigger,
 } from "~/components/ui/collapsible";
 import {
-  getServiceRequirements,
+  getServiceChecklist,
   type ServiceRequirement,
 } from "~/features/admin/services/services.queries";
 import type { Service } from "~/features/admin/services/services.types";
@@ -39,12 +39,14 @@ interface ServiceDetailSheetProps {
   service: Service | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onEdit?: (service: Service) => void;
 }
 
 export function ServiceDetailSheet({
   service,
   open,
   onOpenChange,
+  onEdit,
 }: ServiceDetailSheetProps) {
   const [requirements, setRequirements] = useState<ServiceRequirement[]>([]);
   const [loading, setLoading] = useState(false);
@@ -60,8 +62,12 @@ export function ServiceDetailSheet({
       setLoading(true);
       setError(null);
       try {
-        const groupOrCode = currentService.requirement_group ?? currentService.service_code;
-        const data = await getServiceRequirements({ data: groupOrCode });
+        const data = await getServiceChecklist({
+          data: {
+            service_code: currentService.service_code,
+            requirement_group: currentService.requirement_group,
+          },
+        });
         setRequirements(data);
       } catch (err: any) {
         setError(err.message || "Failed to load requirements.");
@@ -210,6 +216,7 @@ export function ServiceDetailSheet({
                     <ul className="space-y-0 divide-y divide-border">
                       {mandatoryReqs.map((req) => {
                         const { primary, secondary } = parseRequirementName(req.requirement_name);
+                        const source = req.where_to_secure ?? secondary;
                         return (
                           <li
                             key={req.id}
@@ -218,9 +225,9 @@ export function ServiceDetailSheet({
                             <p className="text-xs font-semibold leading-snug text-foreground">
                               {primary}
                             </p>
-                            {secondary && (
+                            {source && (
                               <p className="text-[11px] leading-snug mt-0.5 text-muted-foreground">
-                                {secondary}
+                                {source}
                               </p>
                             )}
                           </li>
@@ -245,6 +252,7 @@ export function ServiceDetailSheet({
                     <CollapsibleContent className="divide-y divide-border pt-1">
                       {conditionalReqs.map((req) => {
                         const { primary, secondary } = parseRequirementName(req.requirement_name);
+                        const source = req.where_to_secure ?? secondary;
                         return (
                           <li
                             key={req.id}
@@ -253,9 +261,9 @@ export function ServiceDetailSheet({
                             <p className="text-xs font-medium leading-snug text-foreground">
                               {primary}
                             </p>
-                            {secondary && (
+                            {source && (
                               <p className="text-[11px] leading-snug mt-0.5 text-muted-foreground">
-                                {secondary}
+                                {source}
                               </p>
                             )}
                           </li>
@@ -270,7 +278,15 @@ export function ServiceDetailSheet({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-border bg-muted/30 flex justify-end">
+        <div className="p-4 border-t border-border bg-muted/30 flex justify-end gap-2">
+          {onEdit && (
+            <button
+              onClick={() => onEdit(service)}
+              className="px-4 py-2 border border-border-strong bg-white text-foreground hover:bg-surface-subtle rounded-lg text-xs font-medium transition-colors shadow-sm cursor-pointer"
+            >
+              Edit Service
+            </button>
+          )}
           <button
             onClick={() => onOpenChange(false)}
             className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg text-xs font-medium transition-colors shadow-sm cursor-pointer"
