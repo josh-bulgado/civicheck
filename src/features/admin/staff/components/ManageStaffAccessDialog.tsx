@@ -50,7 +50,7 @@ const formSchema = z
 type FormValues = z.infer<typeof formSchema>;
 
 const roles: { value: FormValues["role"]; label: string }[] = [
-  { value: "frontdesk", label: "Front desk" },
+  { value: "frontdesk", label: "Front Desk" },
   { value: "staff", label: "Staff" },
   { value: "supervisor", label: "Supervisor" },
   { value: "cashier", label: "Cashier" },
@@ -61,7 +61,7 @@ const employmentTypes: {
   label: string;
 }[] = [
   { value: "regular", label: "Regular" },
-  { value: "job_order", label: "Job order" },
+  { value: "job_order", label: "Job Order" },
   { value: "contractual", label: "Contractual" },
 ];
 
@@ -126,7 +126,11 @@ function ManageStaffAccessForm({
                   className="w-full"
                   aria-invalid={fieldState.invalid}
                 >
-                  <SelectValue placeholder="Role" className="capitalize" />
+                  <SelectValue placeholder="Role">
+                    {(value) =>
+                      roles.find((role) => role.value === value)?.label
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
@@ -160,10 +164,13 @@ function ManageStaffAccessForm({
                     className="w-full"
                     aria-invalid={fieldState.invalid}
                   >
-                    <SelectValue
-                      placeholder="Select a department"
-                      className="capitalize"
-                    />
+                    <SelectValue placeholder="Select a department">
+                      {(value) =>
+                        departments.find(
+                          (department) => department.id === value,
+                        )?.name
+                      }
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
@@ -197,10 +204,13 @@ function ManageStaffAccessForm({
                   className="w-full"
                   aria-invalid={fieldState.invalid}
                 >
-                  <SelectValue
-                    placeholder="Employment type"
-                    className="capitalize"
-                  />
+                  <SelectValue placeholder="Employment type">
+                    {(value) =>
+                      employmentTypes.find(
+                        (employmentType) => employmentType.value === value,
+                      )?.label
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
