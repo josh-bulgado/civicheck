@@ -102,3 +102,84 @@ export type SystemHealthDashboard = {
   signals: OperationalSignal[];
   events: HealthEvent[];
 };
+
+export type SecurityFindingSeverity = "critical" | "high" | "medium" | "low";
+
+export type SecurityFindingStatus = "open" | "acknowledged" | "resolved";
+
+export type SecurityFindingCategory =
+  | "authentication"
+  | "privileged_access"
+  | "policy";
+
+export type SecurityFinding = {
+  id: string;
+  category: SecurityFindingCategory;
+  severity: SecurityFindingSeverity;
+  title: string;
+  summary: string;
+  status: SecurityFindingStatus;
+  subjectLabel: string | null;
+  assignedToId: string | null;
+  assignedToLabel: string | null;
+  lastSeenAt: string;
+  resolutionNote: string | null;
+};
+
+export type SecurityControlStatus =
+  | "enforced"
+  | "monitoring"
+  | "review_due"
+  | "action_required";
+
+export type SecurityPolicyControl = {
+  key: string;
+  category: "identity" | "access" | "credentials" | "audit";
+  name: string;
+  description: string;
+  status: SecurityControlStatus;
+  evidenceSummary: string;
+  lastReviewedAt: string | null;
+  nextReviewDueAt: string | null;
+  reviewIntervalDays: number;
+};
+
+export type PrivilegedAccountSecurity = {
+  id: string;
+  name: string;
+  role: Role;
+  status: AccountStatus;
+  lastSignInAt: string | null;
+  isStale: boolean;
+};
+
+export type SecurityActivity = {
+  id: string;
+  type: "sign_in_failed" | "admin_session_started" | "privileged_action";
+  risk: SecurityFindingSeverity;
+  actor: string;
+  summary: string;
+  timestamp: string;
+};
+
+export type SecurityAssignee = {
+  id: string;
+  name: string;
+};
+
+export type SecurityPosture = "protected" | "watch" | "attention";
+
+export type SecurityCenterDashboard = {
+  posture: SecurityPosture;
+  checkedAt: string;
+  openFindingCount: number;
+  urgentFindingCount: number;
+  failedSignIns24h: number;
+  privilegedAccountCount: number;
+  overdueControlCount: number;
+  findings: SecurityFinding[];
+  privilegedAccounts: PrivilegedAccountSecurity[];
+  controls: SecurityPolicyControl[];
+  activities: SecurityActivity[];
+  assignees: SecurityAssignee[];
+};

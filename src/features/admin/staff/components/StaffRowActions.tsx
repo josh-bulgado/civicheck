@@ -48,6 +48,7 @@ export function StaffRowActions({
       </Button>
       <DropdownMenu>
         <DropdownMenuTrigger
+          nativeButton
           render={
             <Button
               variant="ghost"

@@ -34,6 +34,7 @@ import { Route as ApplyServiceCodeReviewRouteImport } from './routes/apply/$serv
 import { Route as ApplyServiceCodeDocumentsRouteImport } from './routes/apply/$serviceCode/documents'
 import { Route as ApplyServiceCodeDetailsRouteImport } from './routes/apply/$serviceCode/details'
 import { Route as ApplyServiceCodeCaseRouteImport } from './routes/apply/$serviceCode/case'
+import { Route as AuthedSystemAdminSecurityRouteImport } from './routes/_authed/system-admin/security'
 import { Route as AuthedSystemAdminHealthRouteImport } from './routes/_authed/system-admin/health'
 import { Route as AuthedSystemAdminAuditRouteImport } from './routes/_authed/system-admin/audit'
 import { Route as AuthedSystemAdminAccountsRouteImport } from './routes/_authed/system-admin/accounts'
@@ -168,6 +169,12 @@ const ApplyServiceCodeCaseRoute = ApplyServiceCodeCaseRouteImport.update({
   path: '/case',
   getParentRoute: () => ApplyServiceCodeRouteRoute,
 } as any)
+const AuthedSystemAdminSecurityRoute =
+  AuthedSystemAdminSecurityRouteImport.update({
+    id: '/system-admin/security',
+    path: '/system-admin/security',
+    getParentRoute: () => AuthedRouteRoute,
+  } as any)
 const AuthedSystemAdminHealthRoute = AuthedSystemAdminHealthRouteImport.update({
   id: '/system-admin/health',
   path: '/system-admin/health',
@@ -237,6 +244,7 @@ export interface FileRoutesByFullPath {
   '/system-admin/accounts': typeof AuthedSystemAdminAccountsRoute
   '/system-admin/audit': typeof AuthedSystemAdminAuditRoute
   '/system-admin/health': typeof AuthedSystemAdminHealthRoute
+  '/system-admin/security': typeof AuthedSystemAdminSecurityRoute
   '/apply/$serviceCode/case': typeof ApplyServiceCodeCaseRoute
   '/apply/$serviceCode/details': typeof ApplyServiceCodeDetailsRoute
   '/apply/$serviceCode/documents': typeof ApplyServiceCodeDocumentsRoute
@@ -270,6 +278,7 @@ export interface FileRoutesByTo {
   '/system-admin/accounts': typeof AuthedSystemAdminAccountsRoute
   '/system-admin/audit': typeof AuthedSystemAdminAuditRoute
   '/system-admin/health': typeof AuthedSystemAdminHealthRoute
+  '/system-admin/security': typeof AuthedSystemAdminSecurityRoute
   '/apply/$serviceCode/case': typeof ApplyServiceCodeCaseRoute
   '/apply/$serviceCode/details': typeof ApplyServiceCodeDetailsRoute
   '/apply/$serviceCode/documents': typeof ApplyServiceCodeDocumentsRoute
@@ -306,6 +315,7 @@ export interface FileRoutesById {
   '/_authed/system-admin/accounts': typeof AuthedSystemAdminAccountsRoute
   '/_authed/system-admin/audit': typeof AuthedSystemAdminAuditRoute
   '/_authed/system-admin/health': typeof AuthedSystemAdminHealthRoute
+  '/_authed/system-admin/security': typeof AuthedSystemAdminSecurityRoute
   '/apply/$serviceCode/case': typeof ApplyServiceCodeCaseRoute
   '/apply/$serviceCode/details': typeof ApplyServiceCodeDetailsRoute
   '/apply/$serviceCode/documents': typeof ApplyServiceCodeDocumentsRoute
@@ -342,6 +352,7 @@ export interface FileRouteTypes {
     | '/system-admin/accounts'
     | '/system-admin/audit'
     | '/system-admin/health'
+    | '/system-admin/security'
     | '/apply/$serviceCode/case'
     | '/apply/$serviceCode/details'
     | '/apply/$serviceCode/documents'
@@ -375,6 +386,7 @@ export interface FileRouteTypes {
     | '/system-admin/accounts'
     | '/system-admin/audit'
     | '/system-admin/health'
+    | '/system-admin/security'
     | '/apply/$serviceCode/case'
     | '/apply/$serviceCode/details'
     | '/apply/$serviceCode/documents'
@@ -410,6 +422,7 @@ export interface FileRouteTypes {
     | '/_authed/system-admin/accounts'
     | '/_authed/system-admin/audit'
     | '/_authed/system-admin/health'
+    | '/_authed/system-admin/security'
     | '/apply/$serviceCode/case'
     | '/apply/$serviceCode/details'
     | '/apply/$serviceCode/documents'
@@ -613,6 +626,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApplyServiceCodeCaseRouteImport
       parentRoute: typeof ApplyServiceCodeRouteRoute
     }
+    '/_authed/system-admin/security': {
+      id: '/_authed/system-admin/security'
+      path: '/system-admin/security'
+      fullPath: '/system-admin/security'
+      preLoaderRoute: typeof AuthedSystemAdminSecurityRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
     '/_authed/system-admin/health': {
       id: '/_authed/system-admin/health'
       path: '/system-admin/health'
@@ -685,6 +705,7 @@ interface AuthedRouteRouteChildren {
   AuthedSystemAdminAccountsRoute: typeof AuthedSystemAdminAccountsRoute
   AuthedSystemAdminAuditRoute: typeof AuthedSystemAdminAuditRoute
   AuthedSystemAdminHealthRoute: typeof AuthedSystemAdminHealthRoute
+  AuthedSystemAdminSecurityRoute: typeof AuthedSystemAdminSecurityRoute
   AuthedRequestsIndexRoute: typeof AuthedRequestsIndexRoute
   AuthedserviceServiceServiceCodeRoute: typeof AuthedserviceServiceServiceCodeRoute
 }
@@ -702,6 +723,7 @@ const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
   AuthedSystemAdminAccountsRoute: AuthedSystemAdminAccountsRoute,
   AuthedSystemAdminAuditRoute: AuthedSystemAdminAuditRoute,
   AuthedSystemAdminHealthRoute: AuthedSystemAdminHealthRoute,
+  AuthedSystemAdminSecurityRoute: AuthedSystemAdminSecurityRoute,
   AuthedRequestsIndexRoute: AuthedRequestsIndexRoute,
   AuthedserviceServiceServiceCodeRoute: AuthedserviceServiceServiceCodeRoute,
 }

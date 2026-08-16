@@ -43,6 +43,7 @@ export function NavFooter({
         <SidebarMenuItem>
           <DropdownMenu>
             <DropdownMenuTrigger
+              nativeButton
               render={
                 <SidebarMenuButton
                   size="lg"

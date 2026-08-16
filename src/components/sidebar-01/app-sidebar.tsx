@@ -10,7 +10,7 @@ import {
   IconCalendarEvent,
   IconTicket,
 } from "@tabler/icons-react";
-import { Activity, LayoutDashboard } from "lucide-react";
+import { Activity, LayoutDashboard, ShieldAlert } from "lucide-react";
 import { NavFooter } from "~/components/sidebar-01/nav-footer";
 import { NavHeader } from "~/components/sidebar-01/nav-header";
 import { NavMain } from "~/components/sidebar-01/nav-main";
@@ -54,6 +54,15 @@ export function AppSidebar({
       title: "System Health",
       url: "/system-admin/health",
       icon: Activity,
+    });
+  }
+
+  if (can("security:view")) {
+    navMain.push({
+      id: "system-security",
+      title: "Security Center",
+      url: "/system-admin/security",
+      icon: ShieldAlert,
     });
   }
 

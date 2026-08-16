@@ -3,6 +3,7 @@ import { getSupabaseServerClient, getSupabaseAdminClient } from "~/utils/supabas
 import { sendEmail } from "~/utils/resend";
 import { renderActionEmail } from "~/utils/email-template";
 import { requireActiveSession } from "~/server/auth";
+import { recordAuthenticationSecurityEvent } from "~/features/system-admin/security-center.server";
 
 export const loginWithEmailFn = createServerFn({ method: "POST" })
   .validator((d: { email: string; password: string }) => d)
@@ -14,6 +15,10 @@ export const loginWithEmailFn = createServerFn({ method: "POST" })
     });
 
     if (error) {
+      await recordAuthenticationSecurityEvent({
+        type: "sign_in_failed",
+        email: data.email,
+      });
       const isJsonEmpty = error.message === "{}" || !error.message;
       const cleanMessage = isJsonEmpty
         ? "An unexpected login server error occurred. Please check your Supabase connection."
@@ -24,10 +29,20 @@ export const loginWithEmailFn = createServerFn({ method: "POST" })
       };
     }
 
-    const { data: profile } = await supabase.from("profiles").select("access_status").eq("id", loginData.user.id).single();
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, access_status")
+      .eq("id", loginData.user.id)
+      .single();
     if ((profile?.access_status ?? "active") !== "active") {
       await supabase.auth.signOut();
       return { error: true, message: "This account is not active." };
+    }
+    if (profile?.role === "admin" || profile?.role === "system_admin") {
+      await recordAuthenticationSecurityEvent({
+        type: "admin_session_started",
+        actorProfileId: loginData.user.id,
+      });
     }
     return { error: false };
   });

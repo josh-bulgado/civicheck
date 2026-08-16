@@ -39,6 +39,7 @@ export function TeamSwitcher({
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger
+            nativeButton
             render={
               <SidebarMenuButton
                 size="lg"

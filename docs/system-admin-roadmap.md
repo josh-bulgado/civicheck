@@ -35,6 +35,8 @@ Service checks are retained as aggregate snapshots for 24-hour availability, err
 
 ### 2. Security Center
 
+**MVP implementation status: Implemented.** The Security Center is available to active System Administrators at `/system-admin/security`. Permission-protected server functions and metadata-only security tables are introduced by `20260816130000_add_security_center.sql`.
+
 Centralize security posture, access-risk signals, and administrator safeguards.
 
 - Summarize authentication anomalies, elevated-risk access attempts, and administrator session activity.
@@ -42,6 +44,19 @@ Centralize security posture, access-risk signals, and administrator safeguards.
 - Track security policy status, credential rotation reminders, and other configurable controls.
 - Provide workflows for acknowledging, assigning, and resolving security findings.
 - Record sensitive administrative actions in the Audit Center while keeping protected citizen data out of security views.
+
+#### Implemented MVP safeguards and signals
+
+| Capability | Data source | Workflow | Acceptable exposure |
+|---|---|---|---|
+| Authentication anomalies | Redacted sign-in failure events; optional server-side HMAC fingerprint for repeat detection | Repeated failures create reviewable findings | Event type, risk, time, and pseudonymous grouping only |
+| Administrator sessions | Successful CCRO and System Administrator sign-ins | Recent activity review | Administrator profile label and session start time |
+| Privileged access review | Active System Administrator, CCRO Administrator, and Supervisor profiles plus Auth sign-in timestamps | Accounts inactive for the review window create findings | Role, account status, creation time, and last sign-in only |
+| Security findings | Metadata-only finding register | Acknowledge, assign, and resolve with a required resolution note | Security summaries and administrative profile references only |
+| Policy controls | Configurable control register and review cadence | Record a completed review and calculate the next due date | Status, evidence summary, interval, and dates; never secret values |
+| Audit linkage | Append-only system audit events | Finding and control actions are recorded automatically | Actor, event type, target administrator when applicable, and finding/control identifier |
+
+The login path deliberately excludes raw email addresses and network addresses from Security Center telemetry. If `SECURITY_EVENT_HASH_SECRET` is configured, rejected attempts can be grouped with a one-way HMAC fingerprint; the fingerprint itself is not displayed. Findings, event summaries, and resolution notes must never contain citizen submissions, case data, document metadata, tokens, or credentials.
 
 ### 3. Integrations & Notifications
 

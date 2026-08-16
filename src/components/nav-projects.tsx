@@ -40,6 +40,7 @@ export function NavProjects({
             </SidebarMenuButton>
             <DropdownMenu>
               <DropdownMenuTrigger
+                nativeButton
                 render={
                   <SidebarMenuAction
                     showOnHover
