@@ -1,5 +1,6 @@
 import { Loader2 } from "lucide-react";
 import { Button } from "~/components/ui/button";
+import { DatePicker } from "~/components/ui/date-picker";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
@@ -11,6 +12,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { Textarea } from "~/components/ui/textarea";
+import { toDateKey } from "~/lib/date";
 
 export interface RequestFormValues {
   subjectFirstName: string;
@@ -125,13 +127,14 @@ export function RequestForm({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="eventDate" className="text-xs font-medium text-muted-foreground">{eventDateLabel} <span className="text-primary">*</span></Label>
-                <Input
+                <DatePicker
                   id="eventDate"
-                  type="date"
                   value={values.eventDate}
-                  onChange={(e) => onChange("eventDate", e.target.value)}
-                  required
-                  className="h-9 text-xs"
+                  onValueChange={(value) => onChange("eventDate", value)}
+                  max={toDateKey()}
+                  clearable={false}
+                  placeholder={eventDateLabel}
+                  className="text-xs"
                 />
               </div>
 
@@ -201,7 +204,8 @@ export function RequestForm({
 
           <Button
             type="submit"
-            disabled={submitting}
+            // eventDate is picked, not typed, so it carries no native `required`.
+            disabled={submitting || !values.eventDate}
             className="w-full mt-4"
           >
             {submitting ? (

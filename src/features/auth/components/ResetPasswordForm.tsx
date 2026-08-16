@@ -46,7 +46,15 @@ const ResetPasswordForm = () => {
   const resetPasswordMutation = useResetPassword();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const isSuccess = resetPasswordMutation.status === "success";
+  const result = resetPasswordMutation.data;
+  // A rejected update still resolves the mutation, so "success" alone would
+  // announce a password change that never happened.
+  const isSuccess = resetPasswordMutation.status === "success" && !result?.error;
+  const updateError = result?.error
+    ? result.message || "An unexpected error occurred. Please try again."
+    : resetPasswordMutation.status === "error"
+      ? "We could not reach the account service. Please try again in a moment."
+      : null;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -68,8 +76,8 @@ const ResetPasswordForm = () => {
   return (
     <div className="auth-page flex min-h-dvh bg-background">
       {/* Left — Form */}
-      <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
-        <div className="w-full max-w-[420px] space-y-8">
+      <div className="flex flex-1 flex-col items-center px-6 py-12">
+        <div className="my-auto w-full max-w-105 shrink-0 space-y-8">
           {/* Logo / Brand */}
           <div className="space-y-2">
             <Link to="/"><CiviCheckIdentity /></Link>
@@ -108,15 +116,11 @@ const ResetPasswordForm = () => {
             </div>
           ) : (
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-              {/* Server error */}
-              {resetPasswordMutation.data?.error && (
+              {updateError && (
                 <Alert variant="destructive">
                   <AlertCircleIcon />
                   <AlertTitle>Update failed</AlertTitle>
-                  <AlertDescription>
-                    {resetPasswordMutation.data.message ||
-                      "An unexpected error occurred. Please try again."}
-                  </AlertDescription>
+                  <AlertDescription>{updateError}</AlertDescription>
                 </Alert>
               )}
 

@@ -35,6 +35,24 @@ export function getSupabaseServerClient() {
   );
 }
 
+/**
+ * Stateless anon client for one-off auth checks — e.g. confirming the current
+ * password before changing it. It never touches the session cookies, so the
+ * caller's live session is left exactly as it was.
+ */
+export function getSupabaseStatelessClient() {
+  return createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_PUBLISHABLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    },
+  );
+}
+
 export function getSupabaseAdminClient() {
   const secretKey = process.env.SUPABASE_SECRET_KEY;
   if (!secretKey) {

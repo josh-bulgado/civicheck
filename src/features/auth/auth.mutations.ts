@@ -182,6 +182,7 @@ export const signupFn = createServerFn({ method: "POST" })
         html: renderActionEmail({
           preheader:
             "Confirm your email address to activate your CiviCheck account.",
+          label: "Email verification",
           greeting: `Hello ${data.firstName.trim()},`,
           heading: "Confirm your email address",
           paragraphs: [
@@ -221,6 +222,15 @@ export const resetPasswordFn = createServerFn({ method: "POST" })
     });
 
     if (error) {
+      // Supabase rejects reusing the current password with this code.
+      if (error.code === "same_password") {
+        return {
+          error: true,
+          message:
+            "Your new password must be different from your current password.",
+        };
+      }
+
       const isJsonEmpty = error.message === "{}" || !error.message;
       const cleanMessage = isJsonEmpty
         ? "An unexpected password reset server error occurred."
@@ -249,6 +259,15 @@ export const forgotPasswordFn = createServerFn({ method: "POST" })
     });
 
     if (error) {
+      // Unregistered address: answer exactly as we do for a real one so this
+      // form can't be used to discover which emails have accounts.
+      if (error.status === 404 || error.code === "user_not_found") {
+        return {
+          error: false,
+          message: "Password reset link sent.",
+        };
+      }
+
       const isJsonEmpty = error.message === "{}" || !error.message;
       const cleanMessage = isJsonEmpty
         ? "An unexpected forgot password request server error occurred."
@@ -284,6 +303,7 @@ export const forgotPasswordFn = createServerFn({ method: "POST" })
         subject: "Reset your CiviCheck password",
         html: renderActionEmail({
           preheader: "Use this link to set a new CiviCheck password.",
+          label: "Password reset",
           heading: "Reset your password",
           paragraphs: [
             "We received a request to reset the password for your CiviCheck account. Use the button below to set a new one.",

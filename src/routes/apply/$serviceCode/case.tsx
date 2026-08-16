@@ -10,7 +10,9 @@ import {
   FieldLabel,
 } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
+import { DatePicker } from "~/components/ui/date-picker";
 import { Textarea } from "~/components/ui/textarea";
+import { toDateKey } from "~/lib/date";
 import {
   Select,
   SelectContent,
@@ -135,7 +137,15 @@ function CaseStepRoute() {
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel htmlFor="eventDate">Date of event</FieldLabel>
-                  <Input id="eventDate" type="date" {...field} />
+                  <DatePicker
+                    id="eventDate"
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    onBlur={field.onBlur}
+                    max={toDateKey()}
+                    placeholder="Select the date of event"
+                    invalid={fieldState.invalid}
+                  />
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </Field>
               )}

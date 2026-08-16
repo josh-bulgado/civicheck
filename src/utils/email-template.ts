@@ -34,6 +34,11 @@ export function escapeHtml(value: string) {
 type ActionEmailOptions = {
   /** Preview line shown next to the subject in the inbox. */
   preheader: string;
+  /**
+   * Short kicker above the heading, e.g. "Password reset". Every automated
+   * email shares this layout, so this is what tells them apart at a glance.
+   */
+  label?: string;
   heading: string;
   /** Rendered above the heading, e.g. "Hello Juan," */
   greeting?: string;
@@ -54,6 +59,7 @@ type ActionEmailOptions = {
  */
 export function renderActionEmail({
   preheader,
+  label,
   heading,
   greeting,
   paragraphs,
@@ -63,6 +69,10 @@ export function renderActionEmail({
   footerNote,
 }: ActionEmailOptions) {
   const href = escapeHtml(actionUrl);
+
+  const labelHtml = label
+    ? `<p style="margin:0 0 12px;font-family:${FONT_STACK};font-size:12px;font-weight:700;line-height:1.4;letter-spacing:0.12em;text-transform:uppercase;color:${COLORS.primary};">${escapeHtml(label)}</p>`
+    : "";
 
   const greetingHtml = greeting
     ? `<p style="margin:0 0 10px;font-family:${FONT_STACK};font-size:16px;line-height:1.6;color:${COLORS.body};">${escapeHtml(greeting)}</p>`
@@ -122,6 +132,7 @@ export function renderActionEmail({
             </tr>
             <tr>
               <td class="civic-pad" style="padding:32px;">
+                ${labelHtml}
                 ${greetingHtml}
                 <h1 style="margin:0 0 14px;font-family:${FONT_STACK};font-size:22px;font-weight:700;line-height:1.3;letter-spacing:-0.01em;color:${COLORS.heading};">${escapeHtml(heading)}</h1>
                 ${paragraphsHtml}

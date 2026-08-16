@@ -15,6 +15,8 @@ import { seo } from "../utils/seo";
 import { getSupabaseServerClient } from "../utils/supabase";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
+import type { AccountProfile } from "~/features/account/account.types";
+import type { AccountStatus, Role } from "~/lib/permissions";
 
 const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = getSupabaseServerClient();
@@ -24,21 +26,30 @@ const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
     return null;
   }
 
-  // Fetch role from profiles table
+  // Fetch role and personal details from profiles table
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, first_name, last_name, access_status")
+    .select(
+      "role, first_name, middle_name, last_name, suffix, date_of_birth, sex, phone_number, access_status, created_at, last_login_at",
+    )
     .eq("id", data.user.id)
     .single();
 
   return {
     id: data.user.id,
     email: data.user.email,
-    role: profile?.role ?? "applicant",
+    role: (profile?.role ?? "applicant") as Role,
     firstName: profile?.first_name ?? "",
+    middleName: profile?.middle_name ?? "",
     lastName: profile?.last_name ?? "",
-    accountStatus: profile?.access_status ?? "active",
-  };
+    suffix: profile?.suffix ?? "",
+    dateOfBirth: profile?.date_of_birth ?? "",
+    sex: (profile?.sex ?? "") as AccountProfile["sex"],
+    phoneNumber: profile?.phone_number ?? "",
+    accountStatus: (profile?.access_status ?? "active") as AccountStatus,
+    createdAt: profile?.created_at ?? "",
+    lastLoginAt: profile?.last_login_at ?? null,
+  } satisfies AccountProfile;
 });
 
 export const Route = createRootRoute({

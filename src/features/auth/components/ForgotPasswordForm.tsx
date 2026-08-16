@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "@tanstack/react-router";
 import {
+  AlertCircleIcon,
   ArrowLeft,
   CheckCircleIcon,
   Mail,
@@ -33,7 +34,15 @@ type FormValues = z.infer<typeof formSchema>;
 
 const ForgotPasswordForm = () => {
   const forgotPasswordMutation = useForgotPassword();
-  const isSuccess = forgotPasswordMutation.status === "success";
+  const result = forgotPasswordMutation.data;
+  // A server-reported failure still resolves the mutation, so "success" alone
+  // would show the sent confirmation for a request that never sent anything.
+  const isSuccess = forgotPasswordMutation.status === "success" && !result?.error;
+  const requestError = result?.error
+    ? result.message
+    : forgotPasswordMutation.status === "error"
+      ? "We could not reach the email service. Please try again in a moment."
+      : null;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -56,8 +65,8 @@ const ForgotPasswordForm = () => {
   return (
     <div className="auth-page flex min-h-dvh bg-background">
       {/* Left — Form */}
-      <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
-        <div className="w-full max-w-[420px] space-y-8">
+      <div className="flex flex-1 flex-col items-center px-6 py-12">
+        <div className="my-auto w-full max-w-105 shrink-0 space-y-8">
           {/* Logo / Brand */}
           <div className="space-y-2">
             <Link to="/"><CiviCheckIdentity /></Link>
@@ -94,12 +103,12 @@ const ForgotPasswordForm = () => {
             </div>
           ) : (
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-              {/* Server error */}
-
-              {forgotPasswordMutation.error && (
-                <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">
-                  {forgotPasswordMutation.data?.error}
-                </div>
+              {requestError && (
+                <Alert variant="destructive">
+                  <AlertCircleIcon />
+                  <AlertTitle>Reset link not sent</AlertTitle>
+                  <AlertDescription>{requestError}</AlertDescription>
+                </Alert>
               )}
 
               <FieldGroup>

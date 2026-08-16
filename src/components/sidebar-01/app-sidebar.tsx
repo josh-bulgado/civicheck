@@ -19,19 +19,9 @@ import { NavFooter } from "~/components/sidebar-01/nav-footer";
 import { NavHeader } from "~/components/sidebar-01/nav-header";
 import { NavMain } from "~/components/sidebar-01/nav-main";
 import { usePermissions } from "~/hooks/usePermissions";
+import type { AccountProfile } from "~/features/account/account.types";
 import type { NavGroup, NavItem } from "./types";
 import { getWorkspaceDetails } from "./workspace";
-
-type SidebarUser = {
-  email: string;
-  firstName: string;
-  lastName: string;
-};
-
-const fallbackUser = {
-  name: "CiviCheck User",
-  email: "",
-};
 
 function createCcroAdminGroups(items: NavItem[]): NavGroup[] {
   const itemsById = new Map(items.map((item) => [item.id, item]));
@@ -70,16 +60,7 @@ function createCcroAdminGroups(items: NavItem[]): NavGroup[] {
 export function AppSidebar({
   user,
   ...props
-}: React.ComponentProps<typeof Sidebar> & { user?: SidebarUser | null }) {
-  const sidebarUser = user
-    ? {
-        name:
-          `${user.firstName} ${user.lastName}`.trim() ||
-          user.email.split("@")[0],
-        email: user.email,
-      }
-    : fallbackUser;
-
+}: React.ComponentProps<typeof Sidebar> & { user?: AccountProfile | null }) {
   const { can, role } = usePermissions();
   const workspace = getWorkspaceDetails(role);
 
@@ -221,7 +202,7 @@ export function AppSidebar({
       <SidebarContent>
         <NavMain groups={navGroups} />
       </SidebarContent>
-      <NavFooter user={sidebarUser} />
+      <NavFooter account={user ?? null} />
     </Sidebar>
   );
 }

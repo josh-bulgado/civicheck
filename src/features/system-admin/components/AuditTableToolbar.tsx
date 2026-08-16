@@ -1,6 +1,7 @@
 import type { FormEvent } from "react";
 import { Filter, RotateCcw } from "lucide-react";
 import { Button } from "~/components/ui/button";
+import { DatePicker } from "~/components/ui/date-picker";
 import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import {
@@ -115,24 +116,22 @@ export function AuditTableToolbar({
         </Field>
         <Field>
           <FieldLabel htmlFor="audit-filter-from">From Date</FieldLabel>
-          <Input
+          <DatePicker
             id="audit-filter-from"
-            name="from"
-            type="date"
-            autoComplete="off"
             value={values.from}
-            onChange={(event) => update("from", event.target.value)}
+            onValueChange={(value) => update("from", value)}
+            max={values.to || undefined}
+            placeholder="Any start date"
           />
         </Field>
         <Field>
           <FieldLabel htmlFor="audit-filter-to">To Date</FieldLabel>
-          <Input
+          <DatePicker
             id="audit-filter-to"
-            name="to"
-            type="date"
-            autoComplete="off"
             value={values.to}
-            onChange={(event) => update("to", event.target.value)}
+            onValueChange={(value) => update("to", value)}
+            min={values.from || undefined}
+            placeholder="Any end date"
           />
         </Field>
         <Field orientation="horizontal" className="self-end">

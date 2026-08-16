@@ -43,6 +43,31 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+const INVALID_CREDENTIALS =
+  "Invalid email or password. Please check your credentials and try again.";
+
+/** Keeps the applicant on this page with a readable reason for every failure. */
+function describeSignInError(
+  result: { error?: boolean; message?: string } | undefined,
+  requestFailed: boolean,
+) {
+  if (requestFailed) {
+    return "We could not reach the sign-in service. Please check your connection and try again.";
+  }
+  if (!result?.error) {
+    return null;
+  }
+
+  const message = result.message ?? "";
+  if (!message || /invalid login credentials/i.test(message)) {
+    return INVALID_CREDENTIALS;
+  }
+  if (/email not confirmed/i.test(message)) {
+    return "Please confirm your email address first — check your inbox for the confirmation link.";
+  }
+  return message;
+}
+
 const GoogleIcon = (
   props: JSX.IntrinsicAttributes & SVGProps<SVGSVGElement>,
 ) => (
@@ -76,6 +101,11 @@ export function LoginForm({
     loginMutation.mutate({ data });
   }
 
+  const signInError = describeSignInError(
+    loginMutation.data,
+    loginMutation.status === "error",
+  );
+
   return (
     <div className="flex min-h-dvh">
       <AuthBrandPanel
@@ -88,8 +118,8 @@ export function LoginForm({
         ]}
       />
 
-      <div className="flex flex-1 flex-col items-center justify-center bg-background px-6 py-12">
-        <div className="w-full max-w-113 space-y-5">
+      <div className="flex flex-1 flex-col items-center bg-background px-6 py-12">
+        <div className="my-auto w-full max-w-113 shrink-0 space-y-5">
           <Link to="/" className="mb-2 inline-flex lg:hidden">
             <CiviCheckIdentity />
           </Link>
@@ -102,24 +132,23 @@ export function LoginForm({
           </div>
 
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            {/* Kept outside <FieldSet>: a grid child inside a flex <fieldset>
+                makes Chrome drop the layout of every following field. */}
+            {signInError && (
+              <Alert variant="destructive">
+                <AlertCircleIcon />
+                <AlertTitle>Sign in failed</AlertTitle>
+                <AlertDescription>{signInError}</AlertDescription>
+              </Alert>
+            )}
+
+            {error && (
+              <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">
+                {error}
+              </div>
+            )}
+
             <FieldSet>
-              {loginMutation.data?.error && (
-                <Alert variant="destructive">
-                  <AlertCircleIcon />
-                  <AlertTitle>Sign in failed</AlertTitle>
-                  <AlertDescription>
-                    Invalid email or password. Please check your credentials
-                    and try again.
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {error && (
-                <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">
-                  {error}
-                </div>
-              )}
-
               <FieldGroup>
                 <Controller
                   control={form.control}

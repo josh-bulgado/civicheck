@@ -7,14 +7,13 @@ const logoutFn = createServerFn({ method: "POST" }).handler(async () => {
   const { error } = await supabase.auth.signOut();
 
   if (error) {
-    return {
-      error: true,
-      message: error.message,
-    };
+    // Best effort: clearing the session cookie is what matters, so send the
+    // user to sign-in either way instead of stranding them on a blank route.
+    console.error("Sign out error:", error);
   }
 
   throw redirect({
-    href: "/",
+    to: "/login",
   });
 });
 

@@ -126,8 +126,8 @@ const RegisterForm = () => {
         ]}
       />
 
-      <div className="flex flex-1 flex-col items-center justify-center bg-background px-6 py-12">
-        <div className="w-full max-w-113 space-y-5">
+      <div className="flex flex-1 flex-col items-center bg-background px-6 py-12">
+        <div className="my-auto w-full max-w-113 shrink-0 space-y-5">
           <Link to="/" className="mb-2 inline-flex lg:hidden">
             <CiviCheckIdentity />
           </Link>
