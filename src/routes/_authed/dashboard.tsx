@@ -11,7 +11,7 @@ export const Route = createFileRoute("/_authed/dashboard")({
         to: "/system-admin/health",
       });
     } else if (hasPermission(role, "dashboard:admin")) {
-      throw redirect({ to: "/admin/services" });
+      throw redirect({ to: "/admin" });
     } else if (hasPermission(role, "dashboard:staff")) {
       throw redirect({ to: "/staff-dashboard" });
     } else {

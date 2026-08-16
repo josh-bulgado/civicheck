@@ -61,6 +61,12 @@ function AuthedLayout() {
 
   return (
     <SidebarProvider>
+      <a
+        href="#main-content"
+        className="sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:not-sr-only focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-foreground focus:shadow-lg"
+      >
+        Skip to Main Content
+      </a>
       <AppSidebar user={user} />
       <SidebarInset>
         <header className="flex h-[4.5rem] shrink-0 items-center justify-between border-b border-border-strong bg-white px-4 transition-[width,height] ease-linear sm:px-6">
@@ -77,9 +83,13 @@ function AuthedLayout() {
           </div>
           <CityGovernmentIdentity compact className="[&>span:first-child]:size-8" />
         </header>
-        <div className="civic-workspace flex flex-1 flex-col bg-workspace p-4 text-foreground sm:p-6 lg:p-8">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="civic-workspace flex flex-1 flex-col bg-workspace p-4 text-foreground sm:p-6 lg:p-8"
+        >
           <Outlet />
-        </div>
+        </main>
       </SidebarInset>
     </SidebarProvider>
   );

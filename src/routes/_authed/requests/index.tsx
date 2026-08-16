@@ -1,7 +1,14 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { FilterX, Search } from "lucide-react";
 import { hasPermission, type Role } from "~/lib/permissions";
+import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle,
+} from "~/components/ui/alert";
+import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { getAllRequestsFn, type StaffRequestRow } from "~/features/requests/requests.queries";
@@ -11,6 +18,8 @@ import {
   STAGE_OF,
   getStatusDetails,
   getPaymentDetails,
+  isRequestStatus,
+  type RequestStatus,
   type WorkflowStage,
 } from "~/features/requests/request-workflow";
 
@@ -24,7 +33,35 @@ const STAGE_STATUSES = STAGES.reduce<Record<WorkflowStage, string[]>>(
   {} as Record<WorkflowStage, string[]>,
 );
 
+function parseWorkflowStage(value: unknown): WorkflowStage | undefined {
+  switch (value) {
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+      return value;
+    default:
+      return undefined;
+  }
+}
+
+function parseRequestStatus(value: unknown): RequestStatus | undefined {
+  return typeof value === "string" && isRequestStatus(value) ? value : undefined;
+}
+
+interface RequestQueueSearch {
+  stage?: WorkflowStage;
+  status?: RequestStatus;
+  payment?: "unpaid";
+}
+
 export const Route = createFileRoute("/_authed/requests/")({
+  validateSearch: (search: Record<string, unknown>): RequestQueueSearch => ({
+    stage: parseWorkflowStage(search.stage),
+    status: parseRequestStatus(search.status),
+    payment: search.payment === "unpaid" ? search.payment : undefined,
+  }),
   beforeLoad: ({ context }) => {
     if (!context.user || !hasPermission(context.user.role as Role, "requests:view_all"))
       throw new Error("Forbidden");
@@ -43,7 +80,8 @@ function formatDate(value: string) {
 
 function RequestQueuePage() {
   const requests = Route.useLoaderData();
-  const [tab, setTab] = useState<string>("all");
+  const { stage, status, payment } = Route.useSearch();
+  const navigate = useNavigate({ from: "/requests/" });
   const [search, setSearch] = useState("");
 
   const counts = useMemo(() => {
@@ -59,7 +97,11 @@ function RequestQueuePage() {
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     return requests.filter((r) => {
-      if (tab !== "all" && !STAGE_STATUSES[Number(tab) as WorkflowStage].includes(r.status))
+      if (stage && !STAGE_STATUSES[stage].includes(r.status))
+        return false;
+      if (status && r.status !== status)
+        return false;
+      if (payment === "unpaid" && r.paymentStatus === "verified")
         return false;
       if (!term) return true;
       return (
@@ -68,7 +110,9 @@ function RequestQueuePage() {
         r.serviceName.toLowerCase().includes(term)
       );
     });
-  }, [requests, tab, search]);
+  }, [requests, stage, status, payment, search]);
+
+  const hasFocusedFilter = Boolean(status || payment);
 
   return (
     <div className="dashboard-page max-w-7xl">
@@ -88,7 +132,18 @@ function RequestQueuePage() {
 
       <div className="mt-8 flex flex-col gap-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <Tabs value={tab} onValueChange={setTab}>
+          <Tabs
+            value={stage ? String(stage) : "all"}
+            onValueChange={(value) =>
+              navigate({
+                search: {
+                  stage: value === "all" ? undefined : parseWorkflowStage(Number(value)),
+                  status: undefined,
+                  payment: undefined,
+                },
+              })
+            }
+          >
             <TabsList>
               <TabsTrigger value="all">
                 All
@@ -119,6 +174,36 @@ function RequestQueuePage() {
             />
           </div>
         </div>
+
+        {hasFocusedFilter ? (
+          <Alert>
+            <Search aria-hidden="true" />
+            <AlertTitle>Focused overview filter</AlertTitle>
+            <AlertDescription>
+              Showing {status === "incomplete" ? "incomplete requests" : "requests ready for release"}
+              {payment === "unpaid" ? " that still need payment verification" : ""}.
+            </AlertDescription>
+            <AlertAction>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Clear overview filter"
+                onClick={() =>
+                  navigate({
+                    search: {
+                      stage: undefined,
+                      status: undefined,
+                      payment: undefined,
+                    },
+                  })
+                }
+              >
+                <FilterX data-icon="inline-start" aria-hidden="true" />
+                Clear
+              </Button>
+            </AlertAction>
+          </Alert>
+        ) : null}
 
         {visible.length === 0 ? (
           <p className="rounded-xl border border-dashed border-dashed-border bg-white p-10 text-center text-sm italic text-muted-foreground">

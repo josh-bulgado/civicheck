@@ -30,6 +30,7 @@ import { Route as AuthedAppointmentsRouteImport } from './routes/_authed/appoint
 import { Route as ApplyServiceCodeRouteRouteImport } from './routes/apply/$serviceCode/route'
 import { Route as ApplyServiceCodeIndexRouteImport } from './routes/apply/$serviceCode/index'
 import { Route as AuthedRequestsIndexRouteImport } from './routes/_authed/requests/index'
+import { Route as AuthedAdminIndexRouteImport } from './routes/_authed/admin/index'
 import { Route as ApplyServiceCodeReviewRouteImport } from './routes/apply/$serviceCode/review'
 import { Route as ApplyServiceCodeDocumentsRouteImport } from './routes/apply/$serviceCode/documents'
 import { Route as ApplyServiceCodeDetailsRouteImport } from './routes/apply/$serviceCode/details'
@@ -148,6 +149,11 @@ const AuthedRequestsIndexRoute = AuthedRequestsIndexRouteImport.update({
   path: '/requests/',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
+const AuthedAdminIndexRoute = AuthedAdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
 const ApplyServiceCodeReviewRoute = ApplyServiceCodeReviewRouteImport.update({
   id: '/review',
   path: '/review',
@@ -249,6 +255,7 @@ export interface FileRoutesByFullPath {
   '/apply/$serviceCode/details': typeof ApplyServiceCodeDetailsRoute
   '/apply/$serviceCode/documents': typeof ApplyServiceCodeDocumentsRoute
   '/apply/$serviceCode/review': typeof ApplyServiceCodeReviewRoute
+  '/admin/': typeof AuthedAdminIndexRoute
   '/requests/': typeof AuthedRequestsIndexRoute
   '/apply/$serviceCode/': typeof ApplyServiceCodeIndexRoute
   '/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
@@ -283,6 +290,7 @@ export interface FileRoutesByTo {
   '/apply/$serviceCode/details': typeof ApplyServiceCodeDetailsRoute
   '/apply/$serviceCode/documents': typeof ApplyServiceCodeDocumentsRoute
   '/apply/$serviceCode/review': typeof ApplyServiceCodeReviewRoute
+  '/admin': typeof AuthedAdminIndexRoute
   '/requests': typeof AuthedRequestsIndexRoute
   '/apply/$serviceCode': typeof ApplyServiceCodeIndexRoute
   '/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
@@ -320,6 +328,7 @@ export interface FileRoutesById {
   '/apply/$serviceCode/details': typeof ApplyServiceCodeDetailsRoute
   '/apply/$serviceCode/documents': typeof ApplyServiceCodeDocumentsRoute
   '/apply/$serviceCode/review': typeof ApplyServiceCodeReviewRoute
+  '/_authed/admin/': typeof AuthedAdminIndexRoute
   '/_authed/requests/': typeof AuthedRequestsIndexRoute
   '/apply/$serviceCode/': typeof ApplyServiceCodeIndexRoute
   '/_authed/(service)/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
@@ -357,6 +366,7 @@ export interface FileRouteTypes {
     | '/apply/$serviceCode/details'
     | '/apply/$serviceCode/documents'
     | '/apply/$serviceCode/review'
+    | '/admin/'
     | '/requests/'
     | '/apply/$serviceCode/'
     | '/service/$serviceCode'
@@ -391,6 +401,7 @@ export interface FileRouteTypes {
     | '/apply/$serviceCode/details'
     | '/apply/$serviceCode/documents'
     | '/apply/$serviceCode/review'
+    | '/admin'
     | '/requests'
     | '/apply/$serviceCode'
     | '/service/$serviceCode'
@@ -427,6 +438,7 @@ export interface FileRouteTypes {
     | '/apply/$serviceCode/details'
     | '/apply/$serviceCode/documents'
     | '/apply/$serviceCode/review'
+    | '/_authed/admin/'
     | '/_authed/requests/'
     | '/apply/$serviceCode/'
     | '/_authed/(service)/service/$serviceCode'
@@ -598,6 +610,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedRequestsIndexRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
+    '/_authed/admin/': {
+      id: '/_authed/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AuthedAdminIndexRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
     '/apply/$serviceCode/review': {
       id: '/apply/$serviceCode/review'
       path: '/review'
@@ -706,6 +725,7 @@ interface AuthedRouteRouteChildren {
   AuthedSystemAdminAuditRoute: typeof AuthedSystemAdminAuditRoute
   AuthedSystemAdminHealthRoute: typeof AuthedSystemAdminHealthRoute
   AuthedSystemAdminSecurityRoute: typeof AuthedSystemAdminSecurityRoute
+  AuthedAdminIndexRoute: typeof AuthedAdminIndexRoute
   AuthedRequestsIndexRoute: typeof AuthedRequestsIndexRoute
   AuthedserviceServiceServiceCodeRoute: typeof AuthedserviceServiceServiceCodeRoute
 }
@@ -724,6 +744,7 @@ const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
   AuthedSystemAdminAuditRoute: AuthedSystemAdminAuditRoute,
   AuthedSystemAdminHealthRoute: AuthedSystemAdminHealthRoute,
   AuthedSystemAdminSecurityRoute: AuthedSystemAdminSecurityRoute,
+  AuthedAdminIndexRoute: AuthedAdminIndexRoute,
   AuthedRequestsIndexRoute: AuthedRequestsIndexRoute,
   AuthedserviceServiceServiceCodeRoute: AuthedserviceServiceServiceCodeRoute,
 }

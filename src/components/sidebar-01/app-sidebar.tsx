@@ -10,7 +10,7 @@ import {
   IconCalendarEvent,
   IconTicket,
 } from "@tabler/icons-react";
-import { Activity, LayoutDashboard, ShieldAlert } from "lucide-react";
+import { Activity, Gauge, LayoutDashboard, ShieldAlert } from "lucide-react";
 import { NavFooter } from "~/components/sidebar-01/nav-footer";
 import { NavHeader } from "~/components/sidebar-01/nav-header";
 import { NavMain } from "~/components/sidebar-01/nav-main";
@@ -63,6 +63,15 @@ export function AppSidebar({
       title: "Security Center",
       url: "/system-admin/security",
       icon: ShieldAlert,
+    });
+  }
+
+  if (can("dashboard:admin")) {
+    navMain.push({
+      id: "admin-overview",
+      title: "Overview",
+      url: "/admin",
+      icon: Gauge,
     });
   }
 
