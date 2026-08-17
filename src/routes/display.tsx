@@ -3,10 +3,11 @@ import { useEffect, useState } from "react";
 import { getNowServingFn } from "~/features/queue/queue.queries";
 import { LANE_LABELS, QUEUE_LANES, type NowServingRow } from "~/features/queue/queue.types";
 
-const REFRESH_MS = 5000;
+const REFRESH_MS = 15_000;
 
 export const Route = createFileRoute("/display")({
   loader: () => getNowServingFn(),
+  staleTime: REFRESH_MS,
   component: DisplayBoard,
 });
 
@@ -20,19 +21,45 @@ function DisplayBoard() {
   // usable here — the underlying table is deliberately not anon-readable.
   useEffect(() => {
     let cancelled = false;
-    const timer = setInterval(async () => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const schedule = () => {
+      if (cancelled || document.hidden) return;
+      timer = setTimeout(poll, REFRESH_MS);
+    };
+
+    const poll = async () => {
       try {
         const next = await getNowServingFn();
         if (!cancelled) setFeed(next);
       } catch {
         // A dropped poll is harmless; the next tick recovers.
+      } finally {
+        if (!cancelled) {
+          setNow(new Date());
+          schedule();
+        }
       }
-      if (!cancelled) setNow(new Date());
-    }, REFRESH_MS);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        if (timer) clearTimeout(timer);
+        timer = undefined;
+        return;
+      }
+
+      setNow(new Date());
+      void poll();
+    };
+
+    schedule();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       cancelled = true;
-      clearInterval(timer);
+      if (timer) clearTimeout(timer);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 

@@ -54,6 +54,13 @@ export const columns: ColumnDef<Service>[] = [
               <span className="font-semibold">{service.display_group}</span>
             </div>
           )}
+          <div className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
+            <span className="inline-block size-1.5 rounded-full bg-border" />
+            Department:{" "}
+            <span className="font-semibold capitalize">
+              {service.department_id ?? "Unassigned"}
+            </span>
+          </div>
         </div>
       );
     },

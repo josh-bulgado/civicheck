@@ -1,5 +1,6 @@
 import { createMiddleware } from "@tanstack/react-start";
 import { getSupabaseServerClient } from "~/utils/supabase";
+import { getVerifiedSessionUser } from "~/server/auth";
 import { hasPermission } from "~/lib/permissions";
 import type { AccountStatus, Permission, Role } from "~/lib/permissions";
 
@@ -11,9 +12,7 @@ export const rbacMiddleware = createMiddleware({ type: "function" }).server(
   async ({ next }) => {
     const supabase = getSupabaseServerClient();
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getVerifiedSessionUser(supabase);
 
     if (!user) {
       throw new Error("Unauthorized: not authenticated");

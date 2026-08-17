@@ -1,3 +1,6 @@
+import { Link } from "@tanstack/react-router";
+import { FileText } from "lucide-react";
+import { Button } from "~/components/ui/button";
 import {
   badgeToneClasses,
   ServiceEntryDialogs,
@@ -52,6 +55,18 @@ const ServiceCard = (service: ServiceEntryProps) => {
         </dd>
       </dl>
 
+      <div className="mt-auto flex gap-2.5">
+        <Link
+          to="/service/$serviceCode"
+          params={{ serviceCode: routeCode }}
+          className="inline-flex flex-1 min-h-11 items-center justify-center rounded-lg bg-primary px-4 text-[15px] font-bold text-primary-foreground outline-none transition-colors hover:bg-primary-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          View requirements
+        </Link>
+        <Link
+          to="/apply/$serviceCode/details"
+          params={{ serviceCode: routeCode }}
+          className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border-strong bg-white px-4 text-[15px] font-bold text-foreground outline-none transition-colors hover:bg-surface-subtle focus-visible:ring-3 focus-visible:ring-ring/50"
       <div className="flex gap-2">
         <button
           type="button"

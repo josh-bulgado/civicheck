@@ -43,6 +43,7 @@ import {
 } from "~/components/ui/select";
 import { Spinner } from "~/components/ui/spinner";
 import { parseRequirementName } from "~/features/services/service-utils";
+import type { Department } from "~/features/admin/departments.queries";
 import { getServiceChecklist } from "../services.queries";
 import { useCreateServiceWithRequirements } from "../hooks/useCreateServiceWithRequirements";
 import { useUpdateServiceWithRequirements } from "../hooks/useUpdateServiceWithRequirements";
@@ -90,6 +91,9 @@ function buildFormSchema(takenCodes: Set<string>) {
         "Enter a valid amount (0 or more)",
       ),
     processing_time: z.string().trim().min(1, "Processing time is required"),
+    // Optional: a service with no department shows as "Unassigned" in the
+    // request queue rather than blocking the save.
+    department_id: z.string().optional(),
     steps: z.array(z.object({ value: z.string() })),
     requirements: z.array(requirementSchema),
     display_group: z.string().optional(),
@@ -101,6 +105,12 @@ function buildFormSchema(takenCodes: Set<string>) {
 type FormValues = z.infer<ReturnType<typeof buildFormSchema>>;
 
 // ─── Charter vocabulary ──────────────────────────────────────────────────────
+
+/**
+ * shadcn's Select has no empty-string item value, so "no department" needs its
+ * own sentinel; it maps back to null on submit.
+ */
+const UNASSIGNED_DEPARTMENT_VALUE = "unassigned";
 
 const CLASSIFICATIONS: {
   value: ServiceClassification;
@@ -138,6 +148,7 @@ function emptyDefaults(): FormValues {
     classification: "simple",
     fee: "",
     processing_time: "",
+    department_id: UNASSIGNED_DEPARTMENT_VALUE,
     steps: STEP_PLACEHOLDERS.map(() => ({ value: "" })),
     requirements: [{ ...EMPTY_REQUIREMENT }],
     display_group: "",
@@ -153,6 +164,7 @@ function serviceDefaults(service: Service): FormValues {
     classification: service.classification ?? "simple",
     fee: String(service.fee ?? 0),
     processing_time: service.processing_time ?? "",
+    department_id: service.department_id ?? UNASSIGNED_DEPARTMENT_VALUE,
     steps: (service.steps_description ?? []).map((value) => ({ value })),
     // Filled in once the checklist loads.
     requirements: [],
@@ -185,6 +197,7 @@ interface ServiceFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   services: Service[];
+  departments: Department[];
   /** Present ⇒ edit that service. Absent ⇒ create a new one. */
   service?: Service | null;
 }
@@ -193,6 +206,7 @@ export function ServiceFormDialog({
   open,
   onOpenChange,
   services,
+  departments,
   service = null,
 }: ServiceFormDialogProps) {
   const isEdit = service !== null;
@@ -310,6 +324,10 @@ export function ServiceFormDialog({
     form.setValue("fee", String(source.fee ?? 0));
     form.setValue("processing_time", source.processing_time ?? "");
     form.setValue(
+      "department_id",
+      source.department_id ?? UNASSIGNED_DEPARTMENT_VALUE,
+    );
+    form.setValue(
       "steps",
       (source.steps_description ?? []).map((value) => ({ value })),
     );
@@ -351,6 +369,11 @@ export function ServiceFormDialog({
       classification: values.classification,
       fee: Number(values.fee),
       processing_time: values.processing_time.trim(),
+      department_id:
+        !values.department_id ||
+        values.department_id === UNASSIGNED_DEPARTMENT_VALUE
+          ? null
+          : values.department_id,
       steps_description: steps,
       display_group: values.display_group?.trim() || null,
       display_name: values.display_name?.trim() || null,
@@ -603,6 +626,53 @@ export function ServiceFormDialog({
                           Include any posting or publication wait.
                         </FieldDescription>
                       )}
+                    </Field>
+                  )}
+                />
+
+                <Controller
+                  control={form.control}
+                  name="department_id"
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor="service-department">
+                        Handling Department
+                      </FieldLabel>
+                      <Select
+                        value={field.value ?? UNASSIGNED_DEPARTMENT_VALUE}
+                        onValueChange={field.onChange}
+                      >
+                        <SelectTrigger
+                          id="service-department"
+                          aria-invalid={fieldState.invalid}
+                        >
+                          <SelectValue placeholder="Unassigned">
+                            {(value) =>
+                              departments.find((d) => d.id === value)?.name ??
+                              "Unassigned"
+                            }
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            {departments.map((department) => (
+                              <SelectItem
+                                key={department.id}
+                                value={department.id}
+                              >
+                                {department.name}
+                              </SelectItem>
+                            ))}
+                            <SelectItem value={UNASSIGNED_DEPARTMENT_VALUE}>
+                              Unassigned
+                            </SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      <FieldDescription>
+                        Which CCRO department requests for this service are
+                        routed to.
+                      </FieldDescription>
                     </Field>
                   )}
                 />

@@ -148,6 +148,7 @@ export const getSecurityCenter = createServerFn({ method: "GET" }).handler(
       controlsResult,
       securityEventsResult,
       auditEventsResult,
+      usersResult,
     ] = await Promise.all([
       admin
         .from("profiles")
@@ -179,6 +180,7 @@ export const getSecurityCenter = createServerFn({ method: "GET" }).handler(
         .select("id, event_type, actor_profile_id, created_at")
         .order("created_at", { ascending: false })
         .limit(20),
+      admin.auth.admin.listUsers({ page: 1, perPage: 1_000 }),
     ]);
 
     if (profilesResult.error) throw new Error(profilesResult.error.message);
@@ -188,6 +190,7 @@ export const getSecurityCenter = createServerFn({ method: "GET" }).handler(
       throw new Error(securityEventsResult.error.message);
     }
     if (auditEventsResult.error) throw new Error(auditEventsResult.error.message);
+    if (usersResult.error) throw new Error(usersResult.error.message);
 
     const profiles = profilesResult.data ?? [];
     const profileNames = new Map(
@@ -196,12 +199,13 @@ export const getSecurityCenter = createServerFn({ method: "GET" }).handler(
     const privilegedProfiles = profiles.filter((profile) =>
       privilegedRoles.has(normalizeRole(profile.role)),
     );
-    const privilegedUsers = await Promise.all(
-      privilegedProfiles.map(async (profile) => {
-        const { data, error } = await admin.auth.admin.getUserById(profile.id);
-        return error || !data.user ? null : { profile, user: data.user };
-      }),
+    const usersById = new Map(
+      usersResult.data.users.map((user) => [user.id, user]),
     );
+    const privilegedUsers = privilegedProfiles.map((profile) => {
+      const user = usersById.get(profile.id);
+      return user ? { profile, user } : null;
+    });
 
     const privilegedAccounts: PrivilegedAccountSecurity[] = privilegedUsers
       .filter((entry) => entry !== null)

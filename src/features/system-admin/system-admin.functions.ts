@@ -92,6 +92,7 @@ export const getAccounts = createServerFn({ method: "GET" })
     const [
       { data: profiles, error: profilesError, count },
       personnelData,
+      usersResult,
     ] = await Promise.all([
       admin
         .from("profiles")
@@ -104,18 +105,18 @@ export const getAccounts = createServerFn({ method: "GET" })
         .order("first_name", { ascending: true, nullsFirst: false })
         .range(start, start + data.pageSize - 1),
       personnelDataPromise,
+      admin.auth.admin.listUsers({ page: 1, perPage: 1_000 }),
     ]);
     if (profilesError) throw new Error(profilesError.message);
+    if (usersResult.error) throw new Error(usersResult.error.message);
 
-    const profileUsers = await Promise.all(
-      (profiles ?? []).map(async (profile) => {
-        const { data: userData, error } =
-          await admin.auth.admin.getUserById(profile.id);
-        if (error) throw new Error(error.message);
-        return { profile, user: userData.user };
-      }),
+    const usersById = new Map(
+      usersResult.data.users.map((user) => [user.id, user]),
     );
-    const accounts: AccountSummary[] = profileUsers.map(({ profile, user }) => {
+    const accounts: AccountSummary[] = (profiles ?? []).map((profile) => {
+      const user = usersById.get(profile.id);
+      if (!user) throw new Error(`Auth user ${profile.id} is missing.`);
+
       return {
         id: user.id,
         email: user.email ?? "",
