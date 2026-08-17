@@ -1,20 +1,17 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "@tanstack/react-router";
-import { Check, Eye, EyeClosed, Mail, User, Lock } from "lucide-react";
+import { AlertCircleIcon } from "lucide-react";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import z from "zod";
 import {
   Field,
-  FieldDescription,
   FieldError,
-  FieldGroup,
   FieldLabel,
 } from "~/components/ui/field";
 import {
   InputGroup,
   InputGroupAddon,
-  InputGroupButton,
   InputGroupInput,
   InputGroupText,
 } from "~/components/ui/input-group";
@@ -24,8 +21,14 @@ import { Checkbox } from "~/components/ui/checkbox";
 import { useSignUp } from "../hooks/useSignUp";
 import { Spinner } from "~/components/ui/spinner";
 import { Button } from "~/components/ui/button";
-import { CiviCheckIdentity } from "~/components/brand/civic-identity";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { AuthBrandPanel } from "./AuthBrandPanel";
+import {
+  AuthCardFooter,
+  AuthCardHeading,
+  AuthCardLayout,
+} from "./AuthCardLayout";
+import { PasswordToggle } from "./PasswordToggle";
 import { VerifyEmailNotice } from "./VerifyEmailNotice";
 import { cn } from "~/lib/utils";
 
@@ -47,15 +50,33 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+/**
+ * Four independent things a password can do right — length, a digit, mixed
+ * character classes, and real length. Index 0 is the untouched state; anything
+ * typed scores at least 1 so the meter always responds to the first keystroke.
+ */
 function passwordStrength(password: string) {
-  const rules = [
-    password.length >= 8,
-    /\d/.test(password),
-    /[a-z]/.test(password),
-    /[A-Z]/.test(password) || /[^A-Za-z0-9]/.test(password),
-  ];
-  return rules.filter(Boolean).length;
+  if (!password) {
+    return 0;
+  }
+
+  let score = 0;
+  if (password.length >= 8) score += 1;
+  if (/\d/.test(password)) score += 1;
+  if (/[^A-Za-z0-9]/.test(password) || (/[a-z]/.test(password) && /[A-Z]/.test(password)))
+    score += 1;
+  if (password.length >= 12) score += 1;
+
+  return Math.max(1, score);
 }
+
+const STRENGTH_STEPS = [
+  { width: "0%", bar: "bg-transparent", label: "8+ characters, 1 number" },
+  { width: "25%", bar: "bg-destructive", label: "Too weak" },
+  { width: "50%", bar: "bg-warning", label: "Weak" },
+  { width: "75%", bar: "bg-primary", label: "Good" },
+  { width: "100%", bar: "bg-success", label: "Strong" },
+] as const;
 
 const RegisterForm = () => {
   const signupMutation = useSignUp();
@@ -76,8 +97,7 @@ const RegisterForm = () => {
   });
 
   const password = form.watch("password");
-  const strength = passwordStrength(password);
-  const meetsMinRule = password.length >= 8 && /\d/.test(password);
+  const strength = STRENGTH_STEPS[passwordStrength(password)];
 
   async function onSubmit(data: FormValues) {
     const result = await signupMutation.mutate({
@@ -106,117 +126,110 @@ const RegisterForm = () => {
   }
 
   return (
-    <div className="flex min-h-dvh">
-      <AuthBrandPanel
-        title="One account for every CCRO request."
-        description="Your details are saved once, so the next request only takes a minute to file."
-        steps={[
-          {
-            title: "Create your account",
-            description: "Takes about a minute — no documents needed yet.",
-          },
-          {
-            title: "File your request online",
-            description: "Upload your documents and pick a queue slot.",
-          },
-          {
-            title: "Visit once to pay and claim",
-            description: "Settle the fee at the cashier and receive your document.",
-          },
-        ]}
-      />
+    <AuthCardLayout
+      className="max-w-120"
+      panel={
+        <AuthBrandPanel
+          title="One account for every CCRO request."
+          description="Your details are saved once, so the next request only takes a minute to file."
+          steps={[
+            {
+              title: "Create your account",
+              description: "About a minute — no documents needed yet.",
+            },
+            {
+              title: "File your request online",
+              description: "Upload your documents and pick a queue slot.",
+            },
+            {
+              title: "Visit once to pay and claim",
+              description:
+                "Settle the fee at the cashier and receive your document.",
+            },
+          ]}
+        />
+      }
+    >
+      <div className="space-y-5">
+        <AuthCardHeading
+          title="Create your account"
+          description="Use the name that appears on your valid ID."
+        />
 
-      <div className="flex flex-1 flex-col items-center bg-background px-6 py-12">
-        <div className="my-auto w-full max-w-113 shrink-0 space-y-5">
-          <Link to="/" className="mb-2 inline-flex lg:hidden">
-            <CiviCheckIdentity />
-          </Link>
+        {signupMutation.data?.error && (
+          <Alert variant="destructive">
+            <AlertCircleIcon />
+            <AlertTitle>Account not created</AlertTitle>
+            <AlertDescription>{signupMutation.data.message}</AlertDescription>
+          </Alert>
+        )}
 
-          <div className="space-y-2">
-            <h1 className="civic-title text-[32px]">Create your account</h1>
-            <p className="text-[17px] leading-normal text-muted-2">
-              Use the name that appears on your valid ID.
-            </p>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <Controller
+              control={form.control}
+              name="firstName"
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid} className="flex-1">
+                  <FieldLabel htmlFor="firstName">First name</FieldLabel>
+                  <Input
+                    {...field}
+                    id="firstName"
+                    className="h-10"
+                    placeholder="Juan"
+                    aria-invalid={fieldState.invalid}
+                    autoComplete="given-name"
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+
+            <Controller
+              control={form.control}
+              name="lastName"
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid} className="flex-1">
+                  <FieldLabel htmlFor="lastName">Last name</FieldLabel>
+                  <Input
+                    {...field}
+                    id="lastName"
+                    className="h-10"
+                    placeholder="Dela Cruz"
+                    aria-invalid={fieldState.invalid}
+                    autoComplete="family-name"
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
           </div>
 
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-            {signupMutation.data?.error && (
-              <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">
-                {signupMutation.data.message}
-              </div>
-            )}
-            <FieldGroup>
-              <div className="grid grid-cols-2 gap-3.5">
-                <Controller
-                  control={form.control}
-                  name="firstName"
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="firstName">First name</FieldLabel>
-                      <InputGroup>
-                        <InputGroupAddon>
-                          <User size={16} aria-hidden="true" />
-                        </InputGroupAddon>
-                        <InputGroupInput
-                          {...field}
-                          id="firstName"
-                          placeholder="Juan"
-                          aria-invalid={fieldState.invalid}
-                          autoComplete="given-name"
-                        />
-                      </InputGroup>
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
-                    </Field>
-                  )}
-                />
-
-                <Controller
-                  control={form.control}
-                  name="lastName"
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="lastName">Last name</FieldLabel>
-                      <Input
-                        {...field}
-                        id="lastName"
-                        placeholder="Dela Cruz"
-                        aria-invalid={fieldState.invalid}
-                        autoComplete="family-name"
-                      />
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
-                    </Field>
-                  )}
-                />
-              </div>
-
+          {/* Email and mobile share a row and a single note underneath — they
+              are one decision ("where do we reach you?"), not two. */}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-4 sm:flex-row">
               <Controller
                 control={form.control}
                 name="email"
                 render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
+                  <Field data-invalid={fieldState.invalid} className="flex-1">
                     <FieldLabel htmlFor="email">Email address</FieldLabel>
-                    <InputGroup>
-                      <InputGroupAddon>
-                        <Mail size={16} aria-hidden="true" />
-                      </InputGroupAddon>
-                      <InputGroupInput
-                        {...field}
-                        id="email"
-                        placeholder="juan.delacruz@email.com"
-                        aria-invalid={fieldState.invalid}
-                        autoComplete="email"
-                      />
-                    </InputGroup>
-                    {fieldState.invalid ? (
+                    <Input
+                      {...field}
+                      id="email"
+                      type="email"
+                      className="h-10"
+                      placeholder="juan.delacruz@email.com"
+                      aria-invalid={fieldState.invalid}
+                      autoComplete="email"
+                    />
+                    {fieldState.invalid && (
                       <FieldError errors={[fieldState.error]} />
-                    ) : (
-                      <FieldDescription>
-                        We send request updates here — no spam.
-                      </FieldDescription>
                     )}
                   </Field>
                 )}
@@ -226,11 +239,16 @@ const RegisterForm = () => {
                 control={form.control}
                 name="mobileNumber"
                 render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
+                  <Field
+                    data-invalid={fieldState.invalid}
+                    className="sm:w-45 sm:flex-none"
+                  >
                     <FieldLabel htmlFor="mobileNumber">Mobile number</FieldLabel>
-                    <InputGroup>
+                    <InputGroup className="h-10">
                       <InputGroupAddon>
-                        <InputGroupText className="font-bold text-body-strong">+63</InputGroupText>
+                        <InputGroupText className="font-bold text-body-strong">
+                          +63
+                        </InputGroupText>
                       </InputGroupAddon>
                       <Separator orientation="vertical" className="h-6" />
                       <InputGroupInput
@@ -243,152 +261,140 @@ const RegisterForm = () => {
                         autoComplete="tel-national"
                         maxLength={10}
                         onChange={(e) =>
-                          field.onChange(e.target.value.replace(/\D/g, "").slice(0, 10))
+                          field.onChange(
+                            e.target.value.replace(/\D/g, "").slice(0, 10),
+                          )
                         }
                       />
                     </InputGroup>
-                    {fieldState.invalid ? (
-                      <FieldError errors={[fieldState.error]} />
-                    ) : (
-                      <FieldDescription>
-                        Used for queue reminders on the day of your visit.
-                      </FieldDescription>
-                    )}
-                  </Field>
-                )}
-              />
-
-              <Controller
-                control={form.control}
-                name="password"
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="password">Password</FieldLabel>
-                    <InputGroup>
-                      <InputGroupAddon>
-                        <Lock size={16} aria-hidden="true" />
-                      </InputGroupAddon>
-
-                      <InputGroupInput
-                        {...field}
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="At least 8 characters"
-                        aria-invalid={fieldState.invalid}
-                        autoComplete="new-password"
-                      />
-
-                      <InputGroupAddon align="inline-end">
-                        <InputGroupButton
-                          size="icon-xs"
-                          onClick={() => setShowPassword(!showPassword)}
-                          type="button"
-                        >
-                          {showPassword ? (
-                            <EyeClosed size={16} />
-                          ) : (
-                            <Eye size={16} />
-                          )}
-                        </InputGroupButton>
-                      </InputGroupAddon>
-                    </InputGroup>
-
-                    <div className="flex gap-1.5 pt-0.5">
-                      {[0, 1, 2, 3].map((segment) => (
-                        <div
-                          key={segment}
-                          className={cn(
-                            "h-1.5 flex-1 rounded-full",
-                            segment < strength ? "bg-success" : "bg-border-strong",
-                          )}
-                        />
-                      ))}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Check
-                        size={16}
-                        strokeWidth={3}
-                        className={meetsMinRule ? "text-success" : "text-muted-foreground"}
-                      />
-                      <span
-                        className={cn(
-                          "text-[15px]",
-                          meetsMinRule ? "text-body" : "text-muted-foreground",
-                        )}
-                      >
-                        At least 8 characters, with one number
-                      </span>
-                    </div>
-
                     {fieldState.invalid && (
                       <FieldError errors={[fieldState.error]} />
                     )}
                   </Field>
                 )}
               />
+            </div>
 
-              <Controller
-                control={form.control}
-                name="agreeToTerms"
-                render={({ field, fieldState }) => (
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex items-start gap-2.5">
-                      <Checkbox
-                        id="agreeToTerms"
-                        checked={field.value === true}
-                        onCheckedChange={(checked) => field.onChange(checked === true)}
-                        aria-invalid={fieldState.invalid}
-                        className="mt-0.5"
-                      />
-                      <label htmlFor="agreeToTerms" className="text-[16px] leading-snug text-body">
-                        I agree to the{" "}
-                        <Link to="/" className="font-bold text-primary hover:text-primary-hover">
-                          Terms of Use
-                        </Link>{" "}
-                        and{" "}
-                        <Link to="/" className="font-bold text-primary hover:text-primary-hover">
-                          Privacy Notice
-                        </Link>
-                        .
-                      </label>
-                    </div>
-                    {fieldState.invalid && (
-                      <FieldError errors={[fieldState.error]} />
-                    )}
+            <p className="text-[13px] text-muted-foreground">
+              Updates and queue reminders go to these — no spam.
+            </p>
+          </div>
+
+          <Controller
+            control={form.control}
+            name="password"
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="password">Password</FieldLabel>
+                <InputGroup className="h-10">
+                  <InputGroupInput
+                    {...field}
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="At least 8 characters, with one number"
+                    aria-invalid={fieldState.invalid}
+                    autoComplete="new-password"
+                  />
+                  <PasswordToggle
+                    shown={showPassword}
+                    onToggle={() => setShowPassword(!showPassword)}
+                  />
+                </InputGroup>
+
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className="h-1 flex-1 overflow-hidden rounded-full bg-border-strong"
+                    aria-hidden="true"
+                  >
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-[width,background-color] duration-200",
+                        strength.bar,
+                      )}
+                      style={{ width: strength.width }}
+                    />
                   </div>
-                )}
-              />
-
-              <Button
-                type="submit"
-                size="lg"
-                className="w-full text-base"
-                disabled={signupMutation.status === "pending"}
-              >
-                {signupMutation.status === "pending" ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Spinner className="h-4 w-4 shrink-0" />
-                    Creating account...
+                  <span className="shrink-0 text-[13px] font-bold text-muted-foreground">
+                    {strength.label}
                   </span>
-                ) : (
-                  "Create account"
+                </div>
+
+                {fieldState.invalid && (
+                  <FieldError errors={[fieldState.error]} />
                 )}
-              </Button>
-            </FieldGroup>
-          </form>
+              </Field>
+            )}
+          />
 
-          <Separator />
+          <Controller
+            control={form.control}
+            name="agreeToTerms"
+            render={({ field, fieldState }) => (
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-start gap-2.5">
+                  <Checkbox
+                    id="agreeToTerms"
+                    checked={field.value === true}
+                    onCheckedChange={(checked) => field.onChange(checked === true)}
+                    aria-invalid={fieldState.invalid}
+                    className="mt-0.5"
+                  />
+                  <label
+                    htmlFor="agreeToTerms"
+                    className="text-[15px] leading-snug text-body"
+                  >
+                    I agree to the{" "}
+                    <Link
+                      to="/"
+                      className="font-bold text-primary hover:text-primary-hover"
+                    >
+                      Terms of Use
+                    </Link>{" "}
+                    and{" "}
+                    <Link
+                      to="/"
+                      className="font-bold text-primary hover:text-primary-hover"
+                    >
+                      Privacy Notice
+                    </Link>
+                    .
+                  </label>
+                </div>
+                {fieldState.invalid && (
+                  <FieldError errors={[fieldState.error]} />
+                )}
+              </div>
+            )}
+          />
 
-          <p className="text-[17px] text-body">
-            Already have an account?{" "}
-            <Link to="/login" className="font-bold text-primary hover:text-primary-hover">
-              Sign in
-            </Link>
-          </p>
-        </div>
+          <Button
+            type="submit"
+            size="lg"
+            className="mt-1 w-full text-[15px]"
+            disabled={signupMutation.status === "pending"}
+          >
+            {signupMutation.status === "pending" ? (
+              <>
+                <Spinner />
+                Creating account
+              </>
+            ) : (
+              "Create account"
+            )}
+          </Button>
+        </form>
+
+        <AuthCardFooter>
+          Already have an account?
+          <Link
+            to="/login"
+            className="font-bold text-primary hover:text-primary-hover"
+          >
+            Sign in
+          </Link>
+        </AuthCardFooter>
       </div>
-    </div>
+    </AuthCardLayout>
   );
 };
 

@@ -14,6 +14,9 @@ import type { RequestFormValues } from "~/features/services/components/RequestFo
 
 export const Route = createFileRoute("/_authed/(service)/service/$serviceCode")({
   loader: ({ params }) => getServiceDetail({ data: params.serviceCode }),
+  // Admin edits call `router.invalidate()`, so this only ever serves a
+  // checklist the applicant already loaded in this session.
+  staleTime: 5 * 60_000,
   component: ServicePage,
 });
 

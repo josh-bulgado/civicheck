@@ -17,6 +17,7 @@ import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import type { AccountProfile } from "~/features/account/account.types";
 import type { AccountStatus, Role } from "~/lib/permissions";
+import { loadCurrentUser } from "~/features/auth/current-user";
 
 const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = getSupabaseServerClient();
@@ -54,7 +55,9 @@ const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
 
 export const Route = createRootRoute({
   beforeLoad: async () => {
-    const user = await fetchUser();
+    // Reads through the identity cache so navigating between pages doesn't
+    // re-verify the session and re-read the profile every time.
+    const user = await loadCurrentUser(fetchUser);
 
     return {
       user,

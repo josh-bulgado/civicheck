@@ -12,6 +12,8 @@ import {
   CreditCard
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "~/components/ui/dialog";
+import { CountUp } from "~/components/motion/count-up";
+import { staggerStyle } from "~/components/motion/stagger";
 import { getStatusDetails, getPaymentDetails } from "~/features/services/request-status";
 
 // Fetch applicant's requests
@@ -83,7 +85,7 @@ function MyRequestsPage() {
         </div>
         <Link
           to="/services"
-          className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-white px-4 py-2 text-sm font-bold text-primary shadow-sm transition-colors hover:bg-primary-soft"
+          className="civic-press inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-white px-4 py-2 text-sm font-bold text-primary shadow-sm hover:bg-primary-soft"
         >
           Submit New Request
         </Link>
@@ -91,16 +93,16 @@ function MyRequestsPage() {
       </header>
 
       {requests.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <RequestStat icon={FileText} label="All requests" value={requests.length} accent="bg-primary" />
-          <RequestStat icon={Clock3} label="In progress" value={activeCount} accent="bg-primary" />
-          <RequestStat icon={CheckCircle} label="Ready for release" value={readyCount} accent="bg-success" />
-          <RequestStat icon={CreditCard} label="Payment due" value={unpaidCount} accent="bg-brand-gold" />
+        <div className="civic-stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <RequestStat index={0} icon={FileText} label="All requests" value={requests.length} accent="bg-primary" />
+          <RequestStat index={1} icon={Clock3} label="In progress" value={activeCount} accent="bg-primary" />
+          <RequestStat index={2} icon={CheckCircle} label="Ready for release" value={readyCount} accent="bg-success" />
+          <RequestStat index={3} icon={CreditCard} label="Payment due" value={unpaidCount} accent="bg-brand-gold" />
         </div>
       ) : null}
 
       {requests.length === 0 ? (
-        <div className="dashboard-panel mx-auto mt-8 max-w-lg space-y-4 px-6 py-16 text-center">
+        <div className="dashboard-panel civic-enter-scale mx-auto mt-8 max-w-lg space-y-4 px-6 py-16 text-center">
           <div className="mx-auto flex size-14 items-center justify-center rounded-xl bg-primary text-white shadow-md">
             <FileText className="w-6 h-6" />
           </div>
@@ -136,12 +138,16 @@ function MyRequestsPage() {
                   <th className="p-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
-                {requests.map((req: any) => {
+              <tbody className="civic-stagger divide-y divide-border">
+                {requests.map((req: any, index: number) => {
                   const status = getStatusDetails(req.status);
                   const payment = getPaymentDetails(req.payment_status);
                   return (
-                    <tr key={req.id} className="transition-colors hover:bg-surface-subtle">
+                    <tr
+                      key={req.id}
+                      style={staggerStyle(index)}
+                      className="transition-colors duration-200 hover:bg-surface-subtle"
+                    >
                       <td className="p-4 font-mono font-semibold text-foreground">
                         {req.tracking_number}
                       </td>
@@ -168,7 +174,7 @@ function MyRequestsPage() {
                       <td className="p-4 text-right">
                         <button
                           onClick={() => setSelectedRequest(req)}
-                          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                          className="civic-press inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           Details
@@ -182,12 +188,16 @@ function MyRequestsPage() {
           </div>
 
           {/* Mobile Card List View */}
-          <div className="divide-y divide-border md:hidden">
-            {requests.map((req: any) => {
+          <div className="civic-stagger divide-y divide-border md:hidden">
+            {requests.map((req: any, index: number) => {
               const status = getStatusDetails(req.status);
               const payment = getPaymentDetails(req.payment_status);
               return (
-                <div key={req.id} className="space-y-3 p-4 transition-colors hover:bg-surface-subtle">
+                <div
+                  key={req.id}
+                  style={staggerStyle(index)}
+                  className="space-y-3 p-4 transition-colors duration-200 hover:bg-surface-subtle"
+                >
                   <div className="flex items-center justify-between gap-4">
                     <span className="font-mono font-bold text-foreground">
                       {req.tracking_number}
@@ -216,7 +226,7 @@ function MyRequestsPage() {
                     
                     <button
                       onClick={() => setSelectedRequest(req)}
-                      className="inline-flex items-center gap-1 font-medium text-primary"
+                      className="civic-nudge inline-flex items-center gap-1 font-medium text-primary"
                     >
                       View Details
                       <ChevronRight className="w-3.5 h-3.5" />
@@ -311,19 +321,24 @@ function RequestStat({
   label,
   value,
   accent,
+  index,
 }: {
   icon: typeof FileText;
   label: string;
   value: number;
   accent: string;
+  index: number;
 }) {
   return (
-    <article className="dashboard-stat">
+    <article
+      className="dashboard-stat civic-interactive civic-lift"
+      style={staggerStyle(index)}
+    >
       <div className={`absolute inset-x-0 top-0 h-1 ${accent}`} aria-hidden="true" />
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">{label}</p>
-          <p className="mt-2 text-3xl font-extrabold text-foreground">{value}</p>
+          <CountUp value={value} className="mt-2 block text-3xl font-extrabold text-foreground" />
         </div>
         <div className="rounded-lg border border-border bg-surface-subtle p-2.5 text-primary">
           <Icon className="size-5" aria-hidden="true" />

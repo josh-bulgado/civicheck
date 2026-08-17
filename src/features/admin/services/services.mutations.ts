@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { rbacMiddleware, requirePermission } from "~/middleware/auth";
+import { invalidateServiceCatalogue } from "~/features/services/services.catalogue";
 import type {
   CreateServiceInput,
   UpdateServiceInput,
@@ -65,6 +66,8 @@ export const createService = createServerFn({ method: "POST" })
       .single();
 
     if (error) throw new Error(error.message);
+
+    invalidateServiceCatalogue();
     return created as Service;
   });
 
@@ -118,6 +121,7 @@ export const createServiceWithRequirements = createServerFn({ method: "POST" })
       }
     }
 
+    invalidateServiceCatalogue();
     return created as Service;
   });
 
@@ -133,6 +137,8 @@ export const updateService = createServerFn({ method: "POST" })
       .single();
 
     if (error) throw new Error(error.message);
+
+    invalidateServiceCatalogue();
     return updated as Service;
   });
 
@@ -184,6 +190,7 @@ export const updateServiceWithRequirements = createServerFn({ method: "POST" })
       if (insertError) throw new Error(insertError.message);
     }
 
+    invalidateServiceCatalogue();
     return updated as Service;
   });
 
@@ -197,6 +204,8 @@ export const deleteService = createServerFn({ method: "POST" })
       .eq("service_code", service_code);
 
     if (error) throw new Error(error.message);
+
+    invalidateServiceCatalogue();
     return { success: true, service_code };
   });
 
@@ -216,6 +225,8 @@ export const createServiceRequirement = createServerFn({ method: "POST" })
       .single();
 
     if (error) throw new Error(error.message);
+
+    invalidateServiceCatalogue();
     return created as ServiceRequirement;
   });
 
@@ -231,6 +242,8 @@ export const updateServiceRequirement = createServerFn({ method: "POST" })
       .single();
 
     if (error) throw new Error(error.message);
+
+    invalidateServiceCatalogue();
     return updated as ServiceRequirement;
   });
 
@@ -244,6 +257,8 @@ export const deleteServiceRequirement = createServerFn({ method: "POST" })
       .eq("id", id);
 
     if (error) throw new Error(error.message);
+
+    invalidateServiceCatalogue();
     return { success: true, id };
   });
 
@@ -257,5 +272,7 @@ export const deleteServiceRequirementsByServiceCode = createServerFn({ method: "
       .eq("service_code", service_code);
 
     if (error) throw new Error(error.message);
+
+    invalidateServiceCatalogue();
     return { success: true, service_code };
   });

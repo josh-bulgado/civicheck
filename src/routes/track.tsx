@@ -4,6 +4,7 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Search, FileText } from "lucide-react";
+import { enterDelay, staggerStyle } from "~/components/motion/stagger";
 import { Field, FieldError, FieldGroup, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
@@ -74,7 +75,7 @@ function TrackPage() {
       <SiteHeader />
 
       <main className="mx-auto w-full max-w-160 flex-1 px-5 py-14 sm:px-8">
-        <div className="mb-8 text-center">
+        <div className="civic-enter mb-8 text-center">
           <h1 className="civic-title text-[clamp(1.75rem,4vw,2.625rem)] leading-tight">
             Track an existing request
           </h1>
@@ -84,7 +85,10 @@ function TrackPage() {
           </p>
         </div>
 
-        <div className="rounded-xl border border-border bg-white p-6 sm:p-8">
+        <div
+          className="civic-enter rounded-xl border border-border bg-white p-6 sm:p-8"
+          style={enterDelay(90)}
+        >
           <FieldGroup>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Controller
@@ -121,21 +125,29 @@ function TrackPage() {
             type="button"
             onClick={form.handleSubmit(onSubmit)}
             disabled={submitting}
-            className="mt-5 w-full sm:w-auto"
+            className="civic-press mt-5 w-full sm:w-auto"
           >
-            <Search className="size-4" />
+            <Search
+              className={`size-4 ${submitting ? "animate-spin" : ""}`}
+              aria-hidden="true"
+            />
             {submitting ? "Searching..." : "Track request"}
           </Button>
 
           {notFound && (
-            <p className="mt-4 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
+            <p className="civic-enter-scale mt-4 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
               {notFound}
             </p>
           )}
         </div>
 
         {result && status && payment && (
-          <div className="mt-6 rounded-xl border border-border bg-white p-6 sm:p-8">
+          // Keyed on the tracking number so looking up a second request replays
+          // the entrance instead of silently swapping the numbers in place.
+          <div
+            key={result.trackingNumber}
+            className="civic-enter mt-6 rounded-xl border border-border bg-white p-6 sm:p-8"
+          >
             <div className="mb-5 flex items-start gap-3">
               <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
                 <FileText className="size-5" />
@@ -148,7 +160,7 @@ function TrackPage() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 divide-y divide-border-lighter text-sm">
+            <div className="civic-stagger-auto flex flex-col gap-3 divide-y divide-border-lighter text-sm">
               <div className="flex items-center justify-between pb-3">
                 <span className="text-muted-foreground">Status</span>
                 <span

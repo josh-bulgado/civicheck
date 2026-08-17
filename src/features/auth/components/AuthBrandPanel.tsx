@@ -1,11 +1,21 @@
-import { Check } from "lucide-react";
-import { CityGovernmentIdentity, CiviCheckIdentity } from "~/components/brand/civic-identity";
+import {
+  CityGovernmentIdentity,
+  CiviCheckIdentity,
+} from "~/components/brand/civic-identity";
 
 type BrandStep = {
   title: string;
   description: string;
 };
 
+/**
+ * The dark column of the auth screens. Three fixed bands — office identity,
+ * the pitch, the city seal — so the panel keeps the same shape whether it is
+ * carrying a benefit list or a numbered sequence.
+ *
+ * Both lists are ruled rather than boxed: hairlines separate the items without
+ * adding a second surface competing with the form card opposite.
+ */
 export function AuthBrandPanel({
   eyebrow = "Official online service",
   title,
@@ -20,44 +30,61 @@ export function AuthBrandPanel({
   steps?: BrandStep[];
 }) {
   return (
-    <aside className="civic-auth-panel hidden min-h-dvh w-110 shrink-0 flex-col justify-between p-10 lg:flex xl:w-130 xl:p-12">
+    <aside className="civic-auth-panel hidden min-h-dvh w-110 shrink-0 flex-col p-9 lg:flex xl:w-130 xl:px-11">
       <CiviCheckIdentity inverse />
 
-      <div className="max-w-md">
-        <p className="mb-6 text-[13px] font-bold tracking-[0.12em] text-white/60 uppercase">
-          {eyebrow}
-        </p>
-        <h2 className="text-[34px] leading-[1.15] font-bold tracking-[-0.015em] text-white xl:text-[38px]">
-          {title}
-        </h2>
-        <p className="mt-4 text-base leading-relaxed text-white/80">{description}</p>
+      <div className="flex flex-1 flex-col justify-center py-10">
+        <div className="max-w-md">
+          <p className="text-xs font-bold tracking-[0.12em] text-white/55 uppercase">
+            {eyebrow}
+          </p>
+          <h2 className="mt-4 text-[32px] leading-[1.15] font-bold tracking-[-0.02em] text-balance text-white xl:text-[34px]">
+            {title}
+          </h2>
+          <p className="mt-4 max-w-[34ch] text-[15px] leading-relaxed text-white/75">
+            {description}
+          </p>
 
-        {benefits?.length ? (
-          <ul className="mt-7 flex flex-col gap-3.5">
-            {benefits.map((benefit) => (
-              <li key={benefit} className="flex items-start gap-3 text-[15px] leading-snug text-white/90">
-                <span className="mt-0.5 flex size-5.5 shrink-0 items-center justify-center rounded-full bg-white/15">
-                  <Check className="size-3" strokeWidth={3.4} aria-hidden="true" />
-                </span>
-                {benefit}
-              </li>
-            ))}
-          </ul>
-        ) : null}
+          {benefits?.length ? (
+            <ul className="mt-7 border-t border-white/15">
+              {benefits.map((benefit) => (
+                <li
+                  key={benefit}
+                  className="flex items-center gap-3 border-b border-white/15 py-3 text-[15px] leading-snug text-white/90 last:border-b-0"
+                >
+                  <span
+                    className="size-1.5 shrink-0 rounded-full bg-white/55"
+                    aria-hidden="true"
+                  />
+                  {benefit}
+                </li>
+              ))}
+            </ul>
+          ) : null}
 
-        {steps?.length ? (
-          <ol className="mt-7 flex flex-col gap-3">
-            {steps.map((step, index) => (
-              <li key={step.title} className="flex gap-3.5 rounded-[10px] bg-white/10 px-4.5 py-4">
-                <span className="shrink-0 text-base font-bold text-white/60">{index + 1}</span>
-                <div className="flex flex-col gap-0.5">
-                  <p className="text-[15px] font-bold text-white">{step.title}</p>
-                  <p className="text-sm leading-snug text-white/70">{step.description}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        ) : null}
+          {steps?.length ? (
+            <ol className="mt-7 border-t border-white/15">
+              {steps.map((step, index) => (
+                <li
+                  key={step.title}
+                  className="flex gap-3.5 border-b border-white/15 py-3.5 last:border-b-0"
+                >
+                  <span className="w-5 shrink-0 pt-px text-[13px] font-bold text-white/55 tabular-nums">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <div className="flex flex-col gap-0.5">
+                    <p className="text-[15px] font-bold text-white">
+                      {step.title}
+                    </p>
+                    <p className="text-[13.5px] leading-snug text-white/65">
+                      {step.description}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          ) : null}
+        </div>
       </div>
 
       <div className="border-t border-white/15 pt-6">

@@ -2,14 +2,7 @@ import { JSX, SVGProps, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "~/components/ui/button";
 
-import {
-  Eye,
-  Lock,
-  Mail,
-  EyeClosed,
-  AlertCircleIcon,
-  Info,
-} from "lucide-react";
+import { AlertCircleIcon } from "lucide-react";
 import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
@@ -21,20 +14,19 @@ import {
   FieldError,
   FieldGroup,
   FieldLabel,
-  FieldSet,
 } from "~/components/ui/field";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-  InputGroupButton,
-} from "~/components/ui/input-group";
+import { Input } from "~/components/ui/input";
+import { InputGroup, InputGroupInput } from "~/components/ui/input-group";
 import { Checkbox } from "~/components/ui/checkbox";
-import { Separator } from "~/components/ui/separator";
 import { Spinner } from "~/components/ui/spinner";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { CiviCheckIdentity } from "~/components/brand/civic-identity";
 import { AuthBrandPanel } from "./AuthBrandPanel";
+import {
+  AuthCardFooter,
+  AuthCardHeading,
+  AuthCardLayout,
+} from "./AuthCardLayout";
+import { PasswordToggle } from "./PasswordToggle";
 
 const formSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -107,186 +99,149 @@ export function LoginForm({
   );
 
   return (
-    <div className="flex min-h-dvh">
-      <AuthBrandPanel
-        title="Know what you need before you visit."
-        description="Check requirements, submit a request online, and follow it from filing to release — all in one place."
-        benefits={[
-          "See the exact documents for your request",
-          "Track your request in real time",
-          "Pay at the CCRO cashier — never online",
-        ]}
-      />
+    <AuthCardLayout
+      panel={
+        <AuthBrandPanel
+          title="Know what you need before you visit."
+          description="Check requirements, file online, and follow your request from filing to release."
+          benefits={[
+            "See the exact documents for your request",
+            "Track your request in real time",
+            "Pay at the CCRO cashier — never online",
+          ]}
+        />
+      }
+      footnote="No account needed to be served — walk-in requests are still accepted at the CCRO during office hours."
+    >
+      <div className="space-y-5">
+        <AuthCardHeading
+          title="Sign in"
+          description="Access your requests and track their status."
+        />
 
-      <div className="flex flex-1 flex-col items-center bg-background px-6 py-12">
-        <div className="my-auto w-full max-w-113 shrink-0 space-y-5">
-          <Link to="/" className="mb-2 inline-flex lg:hidden">
-            <CiviCheckIdentity />
-          </Link>
+        {signInError && (
+          <Alert variant="destructive">
+            <AlertCircleIcon />
+            <AlertTitle>Sign in failed</AlertTitle>
+            <AlertDescription>{signInError}</AlertDescription>
+          </Alert>
+        )}
 
-          <div className="space-y-2">
-            <h1 className="civic-title text-[32px]">Sign in</h1>
-            <p className="text-[17px] leading-normal text-muted-2">
-              Access your requests and track their status.
-            </p>
-          </div>
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircleIcon />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-            {/* Kept outside <FieldSet>: a grid child inside a flex <fieldset>
-                makes Chrome drop the layout of every following field. */}
-            {signInError && (
-              <Alert variant="destructive">
-                <AlertCircleIcon />
-                <AlertTitle>Sign in failed</AlertTitle>
-                <AlertDescription>{signInError}</AlertDescription>
-              </Alert>
-            )}
-
-            {error && (
-              <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">
-                {error}
-              </div>
-            )}
-
-            <FieldSet>
-              <FieldGroup>
-                <Controller
-                  control={form.control}
-                  name="email"
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="email">Email address</FieldLabel>
-                      <InputGroup>
-                        <InputGroupAddon>
-                          <Mail size={16} aria-hidden="true" />
-                        </InputGroupAddon>
-                        <InputGroupInput
-                          {...field}
-                          id="email"
-                          placeholder="juan.delacruz@email.com"
-                          aria-invalid={fieldState.invalid}
-                          autoComplete="email"
-                        />
-                      </InputGroup>
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
-                    </Field>
-                  )}
-                />
-
-                <Controller
-                  control={form.control}
-                  name="password"
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid}>
-                      <div className="flex items-baseline justify-between">
-                        <FieldLabel htmlFor="password">Password</FieldLabel>
-                        <Link
-                          to="/forgot-password"
-                          className="text-[15px] font-bold text-primary hover:text-primary-hover"
-                        >
-                          Forgot password?
-                        </Link>
-                      </div>
-                      <InputGroup>
-                        <InputGroupAddon>
-                          <Lock size={16} aria-hidden="true" />
-                        </InputGroupAddon>
-
-                        <InputGroupInput
-                          {...field}
-                          id="password"
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Enter your password"
-                          aria-invalid={fieldState.invalid}
-                          autoComplete="current-password"
-                        />
-
-                        <InputGroupAddon align="inline-end">
-                          <InputGroupButton
-                            size="icon-xs"
-                            onClick={() => setShowPassword(!showPassword)}
-                            type="button"
-                          >
-                            {showPassword ? (
-                              <EyeClosed className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </InputGroupButton>
-                        </InputGroupAddon>
-                      </InputGroup>
-
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
-                    </Field>
-                  )}
-                />
-
-                <label className="flex items-center gap-2.5 text-[15px] text-body">
-                  <Checkbox
-                    checked={keepSignedIn}
-                    onCheckedChange={(checked) => setKeepSignedIn(checked === true)}
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <FieldGroup className="gap-4">
+            <Controller
+              control={form.control}
+              name="email"
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="email">Email address</FieldLabel>
+                  <Input
+                    {...field}
+                    id="email"
+                    type="email"
+                    className="h-10"
+                    placeholder="juan.delacruz@email.com"
+                    aria-invalid={fieldState.invalid}
+                    autoComplete="email"
                   />
-                  Keep me signed in on this device
-                </label>
-
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="w-full text-base"
-                  disabled={loginMutation.status === "pending"}
-                >
-                  {loginMutation.status === "pending" ? (
-                    <>
-                      <Spinner />
-                      Signing in
-                    </>
-                  ) : (
-                    "Sign in"
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
                   )}
-                </Button>
-              </FieldGroup>
-            </FieldSet>
-          </form>
+                </Field>
+              )}
+            />
 
-          <div className="flex items-center gap-3.5">
-            <Separator className="flex-1" />
-            <span className="text-[15px] text-muted-foreground">or</span>
-            <Separator className="flex-1" />
-          </div>
+            <Controller
+              control={form.control}
+              name="password"
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <FieldLabel htmlFor="password">Password</FieldLabel>
+                    <Link
+                      to="/forgot-password"
+                      className="text-[13px] font-bold text-primary hover:text-primary-hover"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+                  <InputGroup className="h-10">
+                    <InputGroupInput
+                      {...field}
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      aria-invalid={fieldState.invalid}
+                      autoComplete="current-password"
+                    />
+                    <PasswordToggle
+                      shown={showPassword}
+                      onToggle={() => setShowPassword(!showPassword)}
+                    />
+                  </InputGroup>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
 
-          <Button
-            variant="outline"
-            size="lg"
-            className="w-full justify-center gap-2.5 text-base"
-            onClick={() => oauthLoginMutation.mutate({ provider: "google" })}
-            disabled={oauthLoginMutation.status === "pending"}
+            <label className="flex items-center gap-2.5 text-[15px] text-body">
+              <Checkbox
+                checked={keepSignedIn}
+                onCheckedChange={(checked) => setKeepSignedIn(checked === true)}
+              />
+              Keep me signed in on this device
+            </label>
+
+            <div className="flex flex-col gap-2.5">
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full text-[15px]"
+                disabled={loginMutation.status === "pending"}
+              >
+                {loginMutation.status === "pending" ? (
+                  <>
+                    <Spinner />
+                    Signing in
+                  </>
+                ) : (
+                  "Sign in"
+                )}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full justify-center gap-2.5 text-[15px]"
+                onClick={() => oauthLoginMutation.mutate({ provider: "google" })}
+                disabled={oauthLoginMutation.status === "pending"}
+              >
+                <GoogleIcon className="size-4.5" />
+                Continue with Google
+              </Button>
+            </div>
+          </FieldGroup>
+        </form>
+
+        <AuthCardFooter>
+          New to CiviCheck?
+          <Link
+            to="/signup"
+            className="font-bold text-primary hover:text-primary-hover"
           >
-            <GoogleIcon className="h-4.5 w-4.5" />
-            Continue with Google
-          </Button>
-
-          <Separator />
-
-          <p className="text-[17px] text-body">
-            New to CiviCheck?{" "}
-            <Link to="/signup" className="font-bold text-primary hover:text-primary-hover">
-              Create an account
-            </Link>
-          </p>
-
-          <div className="flex gap-2.5 rounded-lg border border-primary/20 bg-primary-tint px-4 py-3.5">
-            <Info className="mt-0.5 size-4.75 shrink-0 text-primary" aria-hidden="true" />
-            <p className="text-[15px] leading-snug text-body-strong">
-              You don&rsquo;t need an account to be served. Walk-in requests are
-              still accepted at the CCRO during office hours.
-            </p>
-          </div>
-        </div>
+            Create an account
+          </Link>
+        </AuthCardFooter>
       </div>
-    </div>
+    </AuthCardLayout>
   );
 }

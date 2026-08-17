@@ -67,6 +67,10 @@ const handleCallback = createServerFn({ method: "GET" }).handler(async () => {
 });
 
 export const Route = createFileRoute("/auth/callback")({
+  // This loader consumes a single-use OTP / auth code. Nothing links to it
+  // today, but preloading it on hover would silently spend the token, so it is
+  // opted out explicitly rather than by convention.
+  preload: false,
   loader: async () => {
     const res = await handleCallback();
     if (res.error) {

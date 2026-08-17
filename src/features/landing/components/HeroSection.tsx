@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Building2, Clock, Landmark, ShieldCheck } from "lucide-react";
 import type { FeaturedChecklist } from "../landing.queries";
+import { enterDelay, staggerStyle } from "~/components/motion/stagger";
 import { cn } from "~/lib/utils";
 
 const trustPoints = [
@@ -13,7 +14,7 @@ const ChecklistCard = ({ checklist }: { checklist: FeaturedChecklist }) => (
   <Link
     to="/requirements"
     search={{ code: checklist.linkCode }}
-    className="civic-card group block overflow-hidden shadow-[0_20px_48px_rgba(15,27,45,0.1)] transition-all hover:border-primary/30 hover:shadow-[0_24px_56px_rgba(15,27,45,0.14)]"
+    className="civic-card group civic-interactive civic-lift block overflow-hidden shadow-[0_20px_48px_rgba(15,27,45,0.1)] hover:border-primary/30 hover:shadow-[0_24px_56px_rgba(15,27,45,0.14)]"
   >
     <div className="flex items-start justify-between gap-3 border-b border-border-light bg-surface-subtle px-5 py-4">
       <div className="min-w-0">
@@ -58,7 +59,7 @@ const ChecklistCard = ({ checklist }: { checklist: FeaturedChecklist }) => (
       </p>
       <span className="flex items-center gap-1.5 text-xs font-bold text-primary">
         View all
-        <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+        <ArrowRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-1" />
       </span>
     </div>
   </Link>
@@ -73,7 +74,8 @@ const HeroSection = ({ checklist }: { checklist: FeaturedChecklist | null }) => 
           checklist && "lg:grid-cols-[1.12fr_0.88fr]",
         )}
       >
-        <div className="flex flex-col gap-6">
+        {/* Above the fold, so this cascades in on load rather than on scroll. */}
+        <div className="civic-stagger-auto flex flex-col gap-6">
           <p className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-primary-soft px-3.5 py-1.5 text-xs font-bold uppercase tracking-widest text-primary">
             <span className="size-1.5 rounded-full bg-primary" />
             City Civil Registrar Office · Legazpi City
@@ -94,23 +96,24 @@ const HeroSection = ({ checklist }: { checklist: FeaturedChecklist | null }) => 
           <div className="flex flex-wrap gap-3.5 pt-1">
             <Link
               to="/requirements"
-              className="group inline-flex min-h-12 items-center gap-2 rounded-lg bg-primary px-6 text-[15px] font-semibold text-white shadow-[0_8px_20px_rgba(11,77,162,0.22)] transition-all hover:bg-primary-hover hover:shadow-[0_10px_26px_rgba(11,77,162,0.3)]"
+              className="group civic-press inline-flex min-h-12 items-center gap-2 rounded-lg bg-primary px-6 text-[15px] font-semibold text-white shadow-[0_8px_20px_rgba(11,77,162,0.22)] hover:bg-primary-hover hover:shadow-[0_10px_26px_rgba(11,77,162,0.3)]"
             >
               Check my requirements
-              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+              <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" />
             </Link>
             <Link
               to="/track"
-              className="inline-flex min-h-12 items-center rounded-lg border border-control-border bg-white px-6 text-[15px] font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary"
+              className="civic-press inline-flex min-h-12 items-center rounded-lg border border-control-border bg-white px-6 text-[15px] font-semibold text-foreground hover:border-primary/40 hover:text-primary"
             >
               Track an existing request
             </Link>
           </div>
 
-          <ul className="flex flex-wrap items-center gap-x-6 gap-y-2.5 pt-3">
-            {trustPoints.map(({ icon: Icon, label }) => (
+          <ul className="civic-stagger flex flex-wrap items-center gap-x-6 gap-y-2.5 pt-3">
+            {trustPoints.map(({ icon: Icon, label }, index) => (
               <li
                 key={label}
+                style={staggerStyle(index, 420)}
                 className="flex items-center gap-2 text-[13px] font-medium text-muted-2"
               >
                 <Icon className="size-4 text-primary/70" />
@@ -120,7 +123,11 @@ const HeroSection = ({ checklist }: { checklist: FeaturedChecklist | null }) => 
           </ul>
         </div>
 
-        {checklist ? <ChecklistCard checklist={checklist} /> : null}
+        {checklist ? (
+          <div className="civic-enter" style={enterDelay(260)}>
+            <ChecklistCard checklist={checklist} />
+          </div>
+        ) : null}
       </div>
     </section>
   );

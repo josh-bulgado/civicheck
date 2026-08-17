@@ -47,6 +47,21 @@ export function parseRequirementName(name: string): {
   return { primary, secondary };
 }
 
+/**
+ * Some requirement names are prefixed with the case they belong to, e.g.
+ * "[Change of First Name] NBI and Police Clearance...". Pull that bracketed
+ * prefix out so it can be rendered as a chip instead of sitting inline in the
+ * document name.
+ */
+export function splitCaseLabel(name: string): {
+  caseLabel: string | null;
+  name: string;
+} {
+  const match = name.match(/^\s*\[([^\]]+)\]\s*(.+)$/);
+  if (!match) return { caseLabel: null, name: name.trim() };
+  return { caseLabel: match[1].trim(), name: match[2].trim() };
+}
+
 // ─── Editorial caveat patterns ───────────────────────────────────────────────
 // These phrases indicate internal notes that leaked into user-facing step copy.
 // The regex matches parenthesized text containing any of these phrases.

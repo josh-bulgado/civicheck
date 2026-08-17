@@ -34,6 +34,10 @@ import {
   formatFee,
   parseRequirementName,
 } from "~/features/services/service-utils";
+import {
+  cachedServiceRead,
+  serviceCacheKeys,
+} from "~/features/services/services.cache";
 
 interface ServiceDetailSheetProps {
   service: Service | null;
@@ -62,12 +66,19 @@ export function ServiceDetailSheet({
       setLoading(true);
       setError(null);
       try {
-        const data = await getServiceChecklist({
-          data: {
-            service_code: currentService.service_code,
-            requirement_group: currentService.requirement_group,
-          },
-        });
+        const data = await cachedServiceRead(
+          serviceCacheKeys.checklist(
+            currentService.service_code,
+            currentService.requirement_group,
+          ),
+          () =>
+            getServiceChecklist({
+              data: {
+                service_code: currentService.service_code,
+                requirement_group: currentService.requirement_group,
+              },
+            }),
+        );
         setRequirements(data);
       } catch (err: any) {
         setError(err.message || "Failed to load requirements.");
