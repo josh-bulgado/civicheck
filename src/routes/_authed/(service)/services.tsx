@@ -12,6 +12,7 @@ import { getServiceCategory, getVisitBadge } from "~/features/services/service-u
 
 export const Route = createFileRoute("/_authed/(service)/services")({
   loader: () => getServices(),
+  staleTime: 5 * 60_000,
   component: ServicesPage,
 });
 

@@ -14,6 +14,7 @@ import type { RequestFormValues } from "~/features/services/components/RequestFo
 
 export const Route = createFileRoute("/_authed/(service)/service/$serviceCode")({
   loader: ({ params }) => getServiceDetail({ data: params.serviceCode }),
+  staleTime: 5 * 60_000,
   component: ServicePage,
 });
 

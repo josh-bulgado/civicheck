@@ -10,6 +10,7 @@ export const Route = createFileRoute("/apply/$serviceCode")({
     }
   },
   loader: ({ params }) => getServiceDetail({ data: params.serviceCode }),
+  staleTime: 5 * 60_000,
   component: ApplyLayout,
 });
 

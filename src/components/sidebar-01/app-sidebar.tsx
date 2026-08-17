@@ -112,7 +112,7 @@ export function AppSidebar({
   if (can("users:invite_staff")) {
     navMain.push({
       id: "admin-staff",
-      title: "Staff",
+      title: "Staff Management",
       url: "/admin/staff",
       icon: UserPlus,
     });
@@ -121,7 +121,7 @@ export function AppSidebar({
   if (can("accounts:view_all")) {
     navMain.push({
       id: "system-accounts",
-      title: "Accounts",
+      title: "Accounts Center",
       url: "/system-admin/accounts",
       icon: Shield,
     });

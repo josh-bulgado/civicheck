@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import {
-  Search,
-  ChevronDown,
-  ArrowRight,
-} from "lucide-react";
+import { Search, ChevronDown, ArrowRight } from "lucide-react";
 import SiteHeader from "~/features/landing/components/SiteHeader";
 import SiteFooter from "~/features/landing/components/SiteFooter";
 import { getAllServicesWithRequirements } from "~/features/services/services.queries";
-import type { Service, ServiceRequirement } from "~/features/admin/services/services.types";
+import type {
+  Service,
+  ServiceRequirement,
+} from "~/features/admin/services/services.types";
 import {
   parseRequirementName,
   cleanStepText,
@@ -38,7 +37,8 @@ const HEADER_CLEARANCE = 96;
 function scrollWithinPage(id: string) {
   const element = document.getElementById(id);
   if (!element) return;
-  const top = element.getBoundingClientRect().top + window.scrollY - HEADER_CLEARANCE;
+  const top =
+    element.getBoundingClientRect().top + window.scrollY - HEADER_CLEARANCE;
   window.scrollTo({ top, behavior: "smooth" });
 }
 
@@ -51,8 +51,12 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activePill, setActivePill] = useState<PillKey>("all");
-  const [expandedCodes, setExpandedCodes] = useState<Record<string, boolean>>({});
-  const [conditionalOpen, setConditionalOpen] = useState<Record<string, boolean>>({});
+  const [expandedCodes, setExpandedCodes] = useState<Record<string, boolean>>(
+    {},
+  );
+  const [conditionalOpen, setConditionalOpen] = useState<
+    Record<string, boolean>
+  >({});
 
   useEffect(() => {
     let cancelled = false;
@@ -100,7 +104,9 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
       map.set(
         service.service_code,
         requirements.filter(
-          (r) => r.service_code === groupOrCode || r.requirement_group === groupOrCode,
+          (r) =>
+            r.service_code === groupOrCode ||
+            r.requirement_group === groupOrCode,
         ),
       );
     }
@@ -122,7 +128,9 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
       if (nameMatch) return true;
 
       const serviceReqs = requirementsByService.get(service.service_code) ?? [];
-      return serviceReqs.some((r) => r.requirement_name.toLowerCase().includes(query));
+      return serviceReqs.some((r) =>
+        r.requirement_name.toLowerCase().includes(query),
+      );
     });
   }, [services, requirementsByService, searchQuery, activePill]);
 
@@ -136,9 +144,8 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
             List of requirements
           </h1>
           <p className="mt-3.5 text-lg leading-relaxed text-body">
-            Search or browse every civil registry service the CCRO offers,
-            and see the exact documents, fees, and steps involved before
-            you visit.
+            Search or browse every civil registry service the CCRO offers, and
+            see the exact documents, fees, and steps involved before you visit.
           </p>
         </div>
 
@@ -211,9 +218,12 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
             {filteredServices.map((service) => {
               const isExpanded = !!expandedCodes[service.service_code];
               const isConditionalOpen = !!conditionalOpen[service.service_code];
-              const serviceReqs = requirementsByService.get(service.service_code) ?? [];
+              const serviceReqs =
+                requirementsByService.get(service.service_code) ?? [];
               const mandatoryReqs = serviceReqs.filter((r) => r.is_mandatory);
-              const conditionalReqs = serviceReqs.filter((r) => !r.is_mandatory);
+              const conditionalReqs = serviceReqs.filter(
+                (r) => !r.is_mandatory,
+              );
               const cleanedSteps = (service.steps_description ?? [])
                 .map(cleanStepText)
                 .filter((s) => s.length > 0);
@@ -228,7 +238,9 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                     type="button"
                     onClick={() => toggleExpand(service.service_code)}
                     className={`flex w-full items-center justify-between gap-4 px-5 py-4.5 text-left transition-colors ${
-                      isExpanded ? "border-b border-border-light" : "hover:bg-background"
+                      isExpanded
+                        ? "border-b border-border-light"
+                        : "hover:bg-background"
                     }`}
                   >
                     <div>
@@ -250,20 +262,28 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
 
                   <div
                     className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                      isExpanded ? "max-h-[3000px] opacity-100" : "max-h-0 opacity-0"
+                      isExpanded
+                        ? "max-h-[3000px] opacity-100"
+                        : "max-h-0 opacity-0"
                     }`}
                   >
                     <div className="flex flex-col gap-5 px-5 py-5">
                       <div className="grid grid-cols-2 divide-x divide-border-light rounded-[10px] border border-border-light">
                         <div className="flex flex-col gap-1 px-4 py-3.5">
-                          <span className="text-xs text-muted-foreground">Total fees</span>
+                          <span className="text-xs text-muted-foreground">
+                            Total fees
+                          </span>
                           <span className="text-lg font-bold text-foreground">
                             {formatFee(service.fee, service.display_group)}
                           </span>
-                          <span className="text-xs text-body">Pay at the CCRO cashier</span>
+                          <span className="text-xs text-body">
+                            Pay at the CCRO cashier
+                          </span>
                         </div>
                         <div className="flex flex-col gap-1 px-4 py-3.5">
-                          <span className="text-xs text-muted-foreground">Time at the office</span>
+                          <span className="text-xs text-muted-foreground">
+                            Time at the office
+                          </span>
                           <span className="text-lg font-bold text-foreground">
                             {service.processing_time || "Varies"}
                           </span>
@@ -277,12 +297,14 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
 
                         {mandatoryReqs.length === 0 ? (
                           <p className="rounded-[10px] border border-dashed border-dashed-border bg-background p-3.5 text-xs italic text-muted-foreground">
-                            No specific required documents are listed for this service.
+                            No specific required documents are listed for this
+                            service.
                           </p>
                         ) : (
                           <div className="divide-y divide-border-lighter rounded-[10px] border border-border-light">
                             {mandatoryReqs.map((req) => {
-                              const { primary, secondary } = parseRequirementName(req.requirement_name);
+                              const { primary, secondary } =
+                                parseRequirementName(req.requirement_name);
                               return (
                                 <div key={req.id} className="px-4 py-3.5">
                                   <p className="text-sm font-medium leading-snug text-body-strong">
@@ -304,11 +326,14 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                         <div className="flex flex-col gap-2.5">
                           <button
                             type="button"
-                            onClick={() => toggleConditional(service.service_code)}
+                            onClick={() =>
+                              toggleConditional(service.service_code)
+                            }
                             className="flex w-full items-center justify-between text-left"
                           >
                             <h4 className="text-sm font-bold text-foreground">
-                              Only if it applies to you ({conditionalReqs.length})
+                              Only if it applies to you (
+                              {conditionalReqs.length})
                             </h4>
                             <ChevronDown
                               className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
@@ -319,19 +344,23 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
 
                           <div
                             className={`overflow-hidden transition-all duration-200 ${
-                              isConditionalOpen ? "max-h-300 opacity-100" : "max-h-0 opacity-0"
+                              isConditionalOpen
+                                ? "max-h-300 opacity-100"
+                                : "max-h-0 opacity-0"
                             }`}
                           >
                             <div className="divide-y divide-warning-border/40 rounded-[10px] border border-warning-border bg-warning-soft">
                               {conditionalReqs.map((req) => {
-                                const { primary, secondary } = parseRequirementName(req.requirement_name);
+                                const { primary, secondary } =
+                                  parseRequirementName(req.requirement_name);
                                 return (
                                   <div key={req.id} className="px-4 py-3.5">
                                     <p className="text-sm font-medium leading-snug text-body-strong">
                                       {primary}
                                     </p>
                                     <p className="mt-1 text-xs leading-snug text-warning-strong">
-                                      {secondary || "Only needed if this applies to your case."}
+                                      {secondary ||
+                                        "Only needed if this applies to your case."}
                                     </p>
                                   </div>
                                 );
@@ -367,7 +396,8 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                             Ready to file this online?
                           </p>
                           <p className="text-xs text-body">
-                            Apply now, or save this checklist to your account first.
+                            Apply now, or save this checklist to your account
+                            first.
                           </p>
                         </div>
                         <div className="flex flex-wrap gap-3">
@@ -380,7 +410,10 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                           </Link>
                           <Link
                             to="/apply/$serviceCode/details"
-                            params={{ serviceCode: service.display_group ?? service.service_code }}
+                            params={{
+                              serviceCode:
+                                service.display_group ?? service.service_code,
+                            }}
                             className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-xs font-semibold text-white transition-colors hover:bg-primary-hover"
                           >
                             Start application

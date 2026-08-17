@@ -17,12 +17,28 @@ import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import type { AccountProfile } from "~/features/account/account.types";
 import type { AccountStatus, Role } from "~/lib/permissions";
+import { getVerifiedSessionUser } from "~/server/auth";
+
+const PUBLIC_ROUTES = new Set([
+  "/",
+  "/apply",
+  "/apply/",
+  "/auth/callback",
+  "/display",
+  "/forgot-password",
+  "/login",
+  "/logout",
+  "/requirements",
+  "/reset-password",
+  "/signup",
+  "/track",
+]);
 
 const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = getSupabaseServerClient();
-  const { data, error: _error } = await supabase.auth.getUser();
+  const user = await getVerifiedSessionUser(supabase);
 
-  if (!data.user?.email) {
+  if (!user?.email) {
     return null;
   }
 
@@ -32,12 +48,12 @@ const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
     .select(
       "role, first_name, middle_name, last_name, suffix, date_of_birth, sex, phone_number, access_status, created_at, last_login_at",
     )
-    .eq("id", data.user.id)
+    .eq("id", user.id)
     .single();
 
   return {
-    id: data.user.id,
-    email: data.user.email,
+    id: user.id,
+    email: user.email,
     role: (profile?.role ?? "applicant") as Role,
     firstName: profile?.first_name ?? "",
     middleName: profile?.middle_name ?? "",
@@ -53,7 +69,11 @@ const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
 });
 
 export const Route = createRootRoute({
-  beforeLoad: async () => {
+  beforeLoad: async ({ location }) => {
+    if (PUBLIC_ROUTES.has(location.pathname)) {
+      return { user: null };
+    }
+
     const user = await fetchUser();
 
     return {

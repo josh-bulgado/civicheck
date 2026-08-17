@@ -4,13 +4,18 @@ import { Button } from "~/components/ui/button";
 import { ServiceDetailSheet } from "~/features/services/components/ServiceDetailSheet";
 import { ServicesDataTable } from "./ServicesDataTable";
 import { ServiceFormDialog } from "./ServiceFormDialog";
+import type { Department } from "../../departments.queries";
 import type { Service } from "../services.types";
 
 interface ServicesTableSectionProps {
   services: Service[];
+  departments: Department[];
 }
 
-export function ServicesTableSection({ services }: ServicesTableSectionProps) {
+export function ServicesTableSection({
+  services,
+  departments,
+}: ServicesTableSectionProps) {
   const [formOpen, setFormOpen] = useState(false);
   // null while the form is open ⇒ create mode; a service ⇒ edit that service.
   const [editing, setEditing] = useState<Service | null>(null);
@@ -56,6 +61,7 @@ export function ServicesTableSection({ services }: ServicesTableSectionProps) {
         open={formOpen}
         onOpenChange={setFormOpen}
         services={services}
+        departments={departments}
         service={editing}
       />
 
