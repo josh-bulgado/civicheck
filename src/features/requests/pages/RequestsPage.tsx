@@ -10,6 +10,8 @@ interface RequestsPageProps {
   departments: Department[];
   filters: RequestQueueFilters;
   onFiltersChange: (filters: RequestQueueFilters) => void;
+  /** Set when the viewer is department-scoped (staff/supervisor). */
+  scopedDepartmentName?: string | null;
 }
 
 const RequestsPage = ({
@@ -17,16 +19,18 @@ const RequestsPage = ({
   departments,
   filters,
   onFiltersChange,
+  scopedDepartmentName,
 }: RequestsPageProps) => {
   return (
     <div className="dashboard-page animate-in fade-in duration-300">
-      <RequestsPageHeader />
+      <RequestsPageHeader departmentName={scopedDepartmentName} />
       <RequestsStatsCards data={requests} />
       <RequestsTableSection
         requests={requests}
         departments={departments}
         filters={filters}
         onFiltersChange={onFiltersChange}
+        scopedDepartmentName={scopedDepartmentName}
       />
     </div>
   );

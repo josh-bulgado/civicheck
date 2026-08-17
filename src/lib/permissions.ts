@@ -59,7 +59,6 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   frontdesk: [
     // Front desk owns intake: it encodes walk-ins and runs the counter queue,
     // but does not process or approve requests.
-    "services:view",
     "requests:view_all",
     "requests:create",
     "requests:encode_walkin",
@@ -67,21 +66,18 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "dashboard:staff",
   ],
   staff: [
-    "services:view",
     "requests:view_all",
     "requests:process",
     "queue:manage",
     "dashboard:staff",
   ],
   supervisor: [
-    "services:view",
     "requests:view_all",
     "requests:process",
     "queue:manage",
     "dashboard:staff",
   ],
   cashier: [
-    "services:view",
     "requests:view_all",
     "requests:collect_payment",
     "queue:manage",
@@ -125,4 +121,17 @@ export function getPermissions(role: Role): Permission[] {
 /** Checks if the role is any internal (non-applicant) role */
 export function isInternalRole(role: Role): boolean {
   return role !== "applicant";
+}
+
+/**
+ * Roles restricted to their own assigned department's requests. Everyone else
+ * (frontdesk, cashier, admin, system_admin) needs cross-department visibility
+ * to do their job — frontdesk triages before a request is routed to a
+ * department, cashier collects payment across all services, admin/system_admin
+ * oversee the whole office.
+ */
+export const DEPARTMENT_SCOPED_ROLES: readonly Role[] = ["staff", "supervisor"];
+
+export function isDepartmentScopedRole(role: Role): boolean {
+  return DEPARTMENT_SCOPED_ROLES.includes(role);
 }

@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireActiveSession } from "~/server/auth";
+import { isDepartmentScopedRole } from "~/lib/permissions";
 import {
   ALLOWED_TRANSITIONS,
   REASON_REQUIRED,
@@ -10,7 +11,9 @@ import {
 export const advanceRequestStatusFn = createServerFn({ method: "POST" })
   .validator((d: { requestId: string; toStatus: string; remarks?: string }) => d)
   .handler(async ({ data }) => {
-    const { supabase, user } = await requireActiveSession("requests:process");
+    const { supabase, user, role, departmentId } = await requireActiveSession(
+      "requests:process",
+    );
 
     if (!isRequestStatus(data.toStatus)) {
       return { error: true, message: `Unknown status "${data.toStatus}".` };
@@ -19,11 +22,22 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
 
     const { data: request, error: fetchError } = await supabase
       .from("requests")
-      .select("id, status, payment_status, tracking_number")
+      .select(
+        "id, status, payment_status, tracking_number, services_registry(department_id)",
+      )
       .eq("id", data.requestId)
       .single();
 
     if (fetchError || !request) {
+      return { error: true, message: "That request no longer exists." };
+    }
+
+    const service = Array.isArray(request.services_registry)
+      ? request.services_registry[0]
+      : request.services_registry;
+    if (isDepartmentScopedRole(role) && service?.department_id !== departmentId) {
+      // Same phrasing as a missing row — don't reveal a wrong-department
+      // request exists.
       return { error: true, message: "That request no longer exists." };
     }
 
@@ -85,6 +99,8 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
     return { error: false, status: toStatus, trackingNumber: request.tracking_number };
   });
 
+// No department check needed here: "requests:collect_payment" is only ever
+// granted to cashier/admin, neither of which is department-scoped.
 export const verifyPaymentFn = createServerFn({ method: "POST" })
   .validator((d: { requestId: string; orNumber: string }) => d)
   .handler(async ({ data }) => {
@@ -126,10 +142,32 @@ export const setAttachmentVerificationFn = createServerFn({ method: "POST" })
     (d: { attachmentId: string; status: "approved" | "rejected"; reason?: string }) => d,
   )
   .handler(async ({ data }) => {
-    const { supabase } = await requireActiveSession("requests:process");
+    const { supabase, role, departmentId } = await requireActiveSession("requests:process");
 
     if (data.status === "rejected" && !data.reason?.trim()) {
       return { error: true, message: "Say why the document was rejected." };
+    }
+
+    if (isDepartmentScopedRole(role)) {
+      const { data: attachment, error: fetchError } = await supabase
+        .from("requirements_attachments")
+        .select("id, requests(services_registry(department_id))")
+        .eq("id", data.attachmentId)
+        .single();
+
+      if (fetchError || !attachment) {
+        return { error: true, message: "That document no longer exists." };
+      }
+
+      const request = Array.isArray(attachment.requests)
+        ? attachment.requests[0]
+        : attachment.requests;
+      const service = Array.isArray(request?.services_registry)
+        ? request.services_registry[0]
+        : request?.services_registry;
+      if (service?.department_id !== departmentId) {
+        return { error: true, message: "That document no longer exists." };
+      }
     }
 
     const { error } = await supabase

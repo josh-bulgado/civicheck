@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AccountStatus, Permission, Role } from "~/lib/permissions";
-import { hasPermission } from "~/lib/permissions";
+import { hasPermission, isDepartmentScopedRole } from "~/lib/permissions";
 import { getSupabaseServerClient } from "~/utils/supabase";
 
 export type ActiveSession = {
@@ -8,6 +8,9 @@ export type ActiveSession = {
   user: VerifiedSessionUser;
   role: Role;
   accountStatus: AccountStatus;
+  /** Null for roles that aren't department-scoped (see isDepartmentScopedRole). */
+  departmentId: string | null;
+  departmentName: string | null;
 };
 
 export type VerifiedSessionUser = {
@@ -58,7 +61,7 @@ export async function requireActiveSession(
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("role, access_status")
+    .select("role, access_status, department_id, departments(name)")
     .eq("id", user.id)
     .single();
 
@@ -71,7 +74,18 @@ export async function requireActiveSession(
     throw new Error(`Forbidden: requires "${permission}" permission`);
   }
 
-  return { supabase, user, role, accountStatus };
+  // Defensive: a department-scoped role with no department assigned is
+  // scoped to nothing, never treated as unscoped. Callers that filter by
+  // `departmentId` should always exclude rows when this is null.
+  const department = Array.isArray(profile.departments)
+    ? profile.departments[0]
+    : profile.departments;
+  const departmentId = isDepartmentScopedRole(role)
+    ? ((profile.department_id as string | null) ?? null)
+    : null;
+  const departmentName = departmentId ? ((department?.name as string) ?? null) : null;
+
+  return { supabase, user, role, accountStatus, departmentId, departmentName };
 }
 
 export function isOperationalRole(role: Role): boolean {

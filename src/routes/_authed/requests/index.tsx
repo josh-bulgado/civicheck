@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { hasPermission, type Role } from "~/lib/permissions";
 import { getActiveDepartments } from "~/features/admin/departments.queries";
-import { getAllRequestsFn } from "~/features/requests/requests.queries";
+import { getAllRequestsFn, getMyDepartmentScopeFn } from "~/features/requests/requests.queries";
 import {
   parseDepartmentFilter,
   parsePaymentFilter,
@@ -23,17 +23,18 @@ export const Route = createFileRoute("/_authed/requests/")({
       throw new Error("Forbidden");
   },
   loader: async () => {
-    const [requests, departments] = await Promise.all([
+    const [requests, departments, scope] = await Promise.all([
       getAllRequestsFn(),
       getActiveDepartments(),
+      getMyDepartmentScopeFn(),
     ]);
-    return { requests, departments };
+    return { requests, departments, scope };
   },
   component: RequestQueueRoute,
 });
 
 function RequestQueueRoute() {
-  const { requests, departments } = Route.useLoaderData();
+  const { requests, departments, scope } = Route.useLoaderData();
   const filters = Route.useSearch();
   const navigate = useNavigate({ from: "/requests/" });
 
@@ -43,6 +44,7 @@ function RequestQueueRoute() {
       departments={departments}
       filters={filters}
       onFiltersChange={(next) => navigate({ search: next })}
+      scopedDepartmentName={scope.isScoped ? scope.departmentName : null}
     />
   );
 }

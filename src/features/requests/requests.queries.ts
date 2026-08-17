@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireActiveSession } from "~/server/auth";
+import { isDepartmentScopedRole } from "~/lib/permissions";
 
 function one<T>(value: T | T[] | null | undefined): T | undefined {
   return Array.isArray(value) ? value[0] : (value ?? undefined);
@@ -55,9 +56,14 @@ function applicantNameOf(row: any): string {
   return fromForm || "—";
 }
 
-/** Every request in the office pipeline. */
+/**
+ * Every request in the office pipeline — or, for a department-scoped role
+ * (staff/supervisor), every request belonging to their own department only.
+ * This filter is applied here, server-side, before the data ever reaches the
+ * browser — it is not a UI-only restriction.
+ */
 export const getAllRequestsFn = createServerFn({ method: "GET" }).handler(async () => {
-  const { supabase } = await requireActiveSession("requests:view_all");
+  const { supabase, role, departmentId } = await requireActiveSession("requests:view_all");
 
   const { data, error } = await supabase
     .from("requests")
@@ -71,7 +77,7 @@ export const getAllRequestsFn = createServerFn({ method: "GET" }).handler(async 
 
   if (error) throw new Error(error.message);
 
-  return (data ?? []).map((row: any): StaffRequestRow => {
+  const rows = (data ?? []).map((row: any): StaffRequestRow => {
     const service = one<ServiceEmbed>(row.services_registry);
     return {
       id: row.id,
@@ -87,12 +93,27 @@ export const getAllRequestsFn = createServerFn({ method: "GET" }).handler(async 
       updatedAt: row.updated_at,
     };
   });
+
+  if (isDepartmentScopedRole(role)) {
+    return departmentId ? rows.filter((r) => r.departmentId === departmentId) : [];
+  }
+  return rows;
+});
+
+/** What department (if any) the caller is scoped to, for UI display. */
+export const getMyDepartmentScopeFn = createServerFn({ method: "GET" }).handler(async () => {
+  const { role, departmentId, departmentName } = await requireActiveSession();
+  return {
+    isScoped: isDepartmentScopedRole(role),
+    departmentId,
+    departmentName,
+  };
 });
 
 export const getRequestDetailFn = createServerFn({ method: "GET" })
   .validator((d: { requestId: string }) => d)
   .handler(async ({ data }) => {
-    const { supabase } = await requireActiveSession("requests:view_all");
+    const { supabase, role, departmentId } = await requireActiveSession("requests:view_all");
 
     const { data: row, error } = await supabase
       .from("requests")
@@ -106,6 +127,13 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       .single();
 
     if (error || !row) throw new Error(error?.message ?? "Request not found");
+
+    const service = one<ServiceEmbed>((row as any).services_registry);
+    // Same "not found" phrasing as a missing row — a department-scoped staff
+    // member shouldn't be able to tell a wrong-department request even exists.
+    if (isDepartmentScopedRole(role) && departmentOf(service).departmentId !== departmentId) {
+      throw new Error("Request not found");
+    }
 
     const [attachments, logs] = await Promise.all([
       supabase
@@ -124,8 +152,6 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
 
     if (attachments.error) throw new Error(attachments.error.message);
     if (logs.error) throw new Error(logs.error.message);
-
-    const service = one<ServiceEmbed>((row as any).services_registry);
 
     return {
       id: row.id,

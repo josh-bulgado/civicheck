@@ -29,6 +29,8 @@ interface RequestsTableToolbarProps {
   departments: Department[];
   departmentFilter: string;
   onDepartmentFilterChange: (value: string) => void;
+  /** Staff/supervisor only ever see one department — show it, not a picker. */
+  scopedDepartmentName?: string | null;
 }
 
 export function RequestsTableToolbar({
@@ -40,6 +42,7 @@ export function RequestsTableToolbar({
   departments,
   departmentFilter,
   onDepartmentFilterChange,
+  scopedDepartmentName,
 }: RequestsTableToolbarProps) {
   return (
     <div className="flex flex-col gap-4">
@@ -59,33 +62,39 @@ export function RequestsTableToolbar({
             <Building2 className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Department:</span>
           </div>
-          <Select
-            value={departmentFilter}
-            onValueChange={(value) =>
-              onDepartmentFilterChange(value ?? ALL_DEPARTMENTS)
-            }
-          >
-            <SelectTrigger
-              id="requests-department-filter"
-              className="h-10 w-48"
-              aria-label="Filter by department"
+          {scopedDepartmentName ? (
+            <Badge variant="neutral" className="h-10 px-3 text-sm font-semibold">
+              {scopedDepartmentName}
+            </Badge>
+          ) : (
+            <Select
+              value={departmentFilter}
+              onValueChange={(value) =>
+                onDepartmentFilterChange(value ?? ALL_DEPARTMENTS)
+              }
             >
-              <SelectValue placeholder="All departments" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value={ALL_DEPARTMENTS}>All departments</SelectItem>
-                {departments.map((department) => (
-                  <SelectItem key={department.id} value={department.id}>
-                    {department.name}
+              <SelectTrigger
+                id="requests-department-filter"
+                className="h-10 w-48"
+                aria-label="Filter by department"
+              >
+                <SelectValue placeholder="All departments" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value={ALL_DEPARTMENTS}>All departments</SelectItem>
+                  {departments.map((department) => (
+                    <SelectItem key={department.id} value={department.id}>
+                      {department.name}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value={UNASSIGNED_DEPARTMENT_FILTER}>
+                    Unassigned
                   </SelectItem>
-                ))}
-                <SelectItem value={UNASSIGNED_DEPARTMENT_FILTER}>
-                  Unassigned
-                </SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-export const QUEUE_LANES = ["application", "payment", "releasing", "assistance"] as const;
+export const QUEUE_LANES = ["application", "releasing", "assistance"] as const;
 export type QueueLane = (typeof QUEUE_LANES)[number];
 
 export const TICKET_STATUSES = [
@@ -15,7 +15,6 @@ export type IssueSource = "self_checkin" | "frontdesk" | "walk_in";
 
 export const LANE_LABELS: Record<QueueLane, string> = {
   application: "New Application",
-  payment: "Payment",
   releasing: "Releasing",
   assistance: "Assistance",
 };
@@ -23,8 +22,7 @@ export const LANE_LABELS: Record<QueueLane, string> = {
 export const LANE_PREFIXES: Record<QueueLane, string> = {
   application: "A",
   releasing: "B",
-  payment: "C",
-  assistance: "D",
+  assistance: "C",
 };
 
 export function isQueueLane(value: string | null): value is QueueLane {

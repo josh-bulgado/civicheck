@@ -37,6 +37,7 @@ interface RequestsDataTableProps {
   departmentFilter: string;
   onDepartmentFilterChange: (value: string) => void;
   onClearFilters: () => void;
+  scopedDepartmentName?: string | null;
 }
 
 export function RequestsDataTable({
@@ -48,6 +49,7 @@ export function RequestsDataTable({
   departmentFilter,
   onDepartmentFilterChange,
   onClearFilters,
+  scopedDepartmentName,
 }: RequestsDataTableProps) {
   const navigate = useNavigate();
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -101,6 +103,7 @@ export function RequestsDataTable({
         departments={departments}
         departmentFilter={departmentFilter}
         onDepartmentFilterChange={onDepartmentFilterChange}
+        scopedDepartmentName={scopedDepartmentName}
       />
 
       <div className="overflow-hidden rounded-xl border border-border-strong bg-white">

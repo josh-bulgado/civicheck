@@ -17,6 +17,7 @@ interface RequestsTableSectionProps {
   departments: Department[];
   filters: RequestQueueFilters;
   onFiltersChange: (filters: RequestQueueFilters) => void;
+  scopedDepartmentName?: string | null;
 }
 
 export function RequestsTableSection({
@@ -24,6 +25,7 @@ export function RequestsTableSection({
   departments,
   filters,
   onFiltersChange,
+  scopedDepartmentName,
 }: RequestsTableSectionProps) {
   const { stage, status, payment, department } = filters;
 
@@ -93,6 +95,7 @@ export function RequestsTableSection({
             })
           }
           onClearFilters={() => onFiltersChange(EMPTY_FILTERS)}
+          scopedDepartmentName={scopedDepartmentName}
         />
       </div>
     </section>
