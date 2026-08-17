@@ -1,16 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { getFeaturedChecklist } from "~/features/landing/landing.queries";
+import { getFeaturedChecklists } from "~/features/landing/landing.queries";
 import LandingPage from "~/features/landing/LandingPage";
 
 export const Route = createFileRoute("/")({
-  loader: () => getFeaturedChecklist(),
+  loader: () => getFeaturedChecklists(),
   staleTime: 5 * 60_000,
   component: Home,
 });
 
 function Home() {
-  const featuredChecklist = Route.useLoaderData();
+  const featuredChecklists = Route.useLoaderData();
 
-  return <LandingPage featuredChecklist={featuredChecklist} />;
+  return <LandingPage featuredChecklists={featuredChecklists} />;
 }

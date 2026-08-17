@@ -1,5 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
 import { Baby, Gem, Heart, ScrollText } from "lucide-react";
 
 const services = [
@@ -46,8 +45,6 @@ const services = [
 ];
 
 const ServicesSection = () => {
-  const [hoveredService, setHoveredService] = useState<number | null>(null);
-
   return (
     <section className="border-b border-border-light bg-white">
       <div className="civic-container civic-section">
@@ -58,8 +55,8 @@ const ServicesSection = () => {
               Pick the document you need
             </h2>
             <p className="mt-3 max-w-md text-[15px] leading-relaxed text-body">
-              Hover a card to preview its requirements, or open the full
-              checklist.
+              Each card lists what you'll be asked to bring. Open one for the
+              full checklist and fees.
             </p>
           </div>
           <Link
@@ -74,63 +71,50 @@ const ServicesSection = () => {
         </div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {services.map((service, i) => (
-            <div
+          {/*
+            The requirements are on the card rather than behind a hover: the
+            whole point of the page is that you should not have to interact
+            with anything to find out what you need to bring.
+          */}
+          {services.map((service) => (
+            <Link
               key={service.code}
-              className="group relative"
-              onMouseEnter={() => setHoveredService(i)}
-              onMouseLeave={() => setHoveredService(null)}
-              onFocus={() => setHoveredService(i)}
-              onBlur={() => setHoveredService(null)}
+              to="/requirements"
+              search={{ code: service.code }}
+              className="civic-card flex flex-col gap-3.5 p-5 transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_12px_28px_rgba(15,27,45,0.09)]"
             >
-              <Link
-                to="/requirements"
-                search={{ code: service.code }}
-                className="civic-card block p-5 transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_12px_28px_rgba(15,27,45,0.09)]"
-              >
-                <div className="mb-3 flex items-center gap-3">
-                  <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
-                    {service.icon}
-                  </div>
-                  <span className="text-[15px] font-semibold text-foreground">
-                    {service.title}
-                  </span>
+              <div className="flex items-center gap-3">
+                <div className="flex size-10.5 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                  {service.icon}
                 </div>
+                <span className="text-[15px] font-semibold leading-tight text-foreground">
+                  {service.title}
+                </span>
+              </div>
 
-                <div
-                  className={`overflow-hidden transition-all duration-300 ease-out ${
-                    hoveredService === i
-                      ? "max-h-30 opacity-100"
-                      : "max-h-0 opacity-0"
-                  }`}
-                >
-                  <div className="mt-1 border-t border-border pt-3">
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      You'll need
-                    </p>
-                    <ul className="space-y-1.5">
-                      {service.requirements.map((req) => (
-                        <li
-                          key={req}
-                          className="flex items-start gap-2 text-[13px] leading-snug text-muted-foreground"
-                        >
-                          <span className="mt-1.5 size-1 shrink-0 rounded-full bg-primary" />
-                          {req}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                <p
-                  className={`text-[13px] font-semibold text-primary transition-opacity duration-200 ${
-                    hoveredService === i ? "h-0 opacity-0" : "opacity-100"
-                  }`}
-                >
-                  View requirements →
+              <div className="border-t border-border-lighter pt-3.25">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  You'll need · {service.requirements.length} requirements
                 </p>
-              </Link>
-            </div>
+                <ul className="space-y-2">
+                  {service.requirements.map((req) => (
+                    <li
+                      key={req}
+                      className="flex items-start gap-2.25 text-[13px] leading-snug text-muted-foreground"
+                    >
+                      <span className="mt-1.5 size-1 shrink-0 rounded-full bg-primary" />
+                      {req}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Pinned to the bottom so the call to action lines up across
+                  cards whose requirement lists wrap to different heights. */}
+              <p className="mt-auto text-[13px] font-semibold text-primary">
+                View requirements →
+              </p>
+            </Link>
           ))}
         </div>
       </div>

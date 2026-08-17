@@ -3,12 +3,20 @@ import { CityGovernmentIdentity, CiviCheckIdentity } from "~/components/brand/ci
 
 const SiteFooter = () => (
   <footer className="border-t border-border bg-white">
-    <div className="civic-container grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr]">
-      <div className="max-w-sm">
+    <div className="civic-container grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr]">
+      <div className="max-w-md">
         <CiviCheckIdentity />
+        {/*
+          The page no longer carries a standalone About section, so the office's
+          own description lands here — it is context for the footer's contact
+          block rather than a section a reader has to scroll past.
+        */}
         <p className="mt-4 text-sm leading-6 text-muted-foreground">
-          A City Civil Registrar Office service for checking requirements,
-          submitting requests, and tracking civil registry documents.
+          The City Civil Registrar Office (CCRO) of Legazpi City registers and
+          issues official birth, marriage, death, and other civil registry
+          records. CiviCheck was built to make that process clearer and faster
+          for residents and staff alike, without changing how the office legally
+          operates.
         </p>
       </div>
 
@@ -17,7 +25,8 @@ const SiteFooter = () => (
         <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
           <li><Link to="/requirements" className="hover:text-primary">Check requirements</Link></li>
           <li><Link to="/signup" className="hover:text-primary">Submit a request</Link></li>
-          <li><Link to="/login" search={{ redirect: "/dashboard" }} className="hover:text-primary">Track a request</Link></li>
+          <li><Link to="/track" className="hover:text-primary">Track a request</Link></li>
+          <li><Link to="/appointments" className="hover:text-primary">Book a visit</Link></li>
         </ul>
       </div>
 
