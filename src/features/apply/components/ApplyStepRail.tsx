@@ -47,12 +47,6 @@ export function ApplyStepRail({
         </div>
         <div className="flex shrink-0 items-center gap-4.5">
           {savedLabel && <span className="text-sm text-muted-foreground">{savedLabel}</span>}
-          <Link
-            to="/my-requests"
-            className="text-sm font-bold text-primary hover:text-primary-hover"
-          >
-            Save and exit
-          </Link>
         </div>
       </div>
 
@@ -64,18 +58,18 @@ export function ApplyStepRail({
             <div key={step} className="flex flex-1 items-center gap-3 last:flex-initial">
               <div className="flex shrink-0 items-center gap-2">
                 <span
-                  className={`flex size-5.5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                  className={`flex size-5.5 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-[background-color,color,border-color,transform] duration-300 ease-out ${
                     isDone
                       ? "bg-success text-white"
                       : isCurrent
-                        ? "bg-primary text-white"
+                        ? "bg-primary text-white scale-110"
                         : "border border-control-border text-disabled"
                   }`}
                 >
-                  {isDone ? <Check className="size-3" /> : step}
+                  {isDone ? <Check className="civic-enter-scale size-3" /> : step}
                 </span>
                 <span
-                  className={`whitespace-nowrap text-sm ${
+                  className={`whitespace-nowrap text-sm transition-colors duration-300 ${
                     isCurrent
                       ? "font-bold text-foreground"
                       : isDone
@@ -87,9 +81,16 @@ export function ApplyStepRail({
                 </span>
               </div>
               {index < STEPS.length - 1 && (
-                <div
-                  className={`h-0.75 flex-1 rounded-full ${isDone ? "bg-success" : "bg-border-light"}`}
-                />
+                // The connector fills left-to-right as the step completes,
+                // instead of flipping colour in one frame. The track stays put
+                // and an overlay scales across it, so nothing reflows.
+                <div className="relative h-0.75 flex-1 overflow-hidden rounded-full bg-border-light">
+                  <div
+                    className={`absolute inset-0 origin-left rounded-full bg-success transition-transform duration-500 ease-out ${
+                      isDone ? "scale-x-100" : "scale-x-0"
+                    }`}
+                  />
+                </div>
               )}
             </div>
           );

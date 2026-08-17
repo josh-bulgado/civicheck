@@ -2,96 +2,57 @@ import { Link } from "@tanstack/react-router";
 import { FileText } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import {
-  formatFee,
-  getVisitBadge,
-  isFullyOnline,
-  summarizeWait,
-} from "~/features/services/service-utils";
+  badgeToneClasses,
+  ServiceEntryDialogs,
+  useServiceEntry,
+  type ServiceEntryProps,
+} from "~/features/services/components/useServiceEntry";
 
-export interface ServiceProps {
-  service_code: string;
-  name: string;
-  classification: string;
-  fee: number | string;
-  processing_time: string;
-  display_group: string | null;
-  display_name: string | null;
-  steps_description: string[] | null;
-  requirement_count: number;
-}
-
-const badgeToneClasses = {
-  success: "bg-success-soft text-success",
-  warning: "bg-warning-soft text-warning",
-  info: "bg-primary-soft text-primary",
-} as const;
-
-const ServiceCard = (service: ServiceProps) => {
-  const routeCode = service.display_group ?? service.service_code;
-  const fullyOnline = isFullyOnline(service.steps_description);
-  const visitBadge = getVisitBadge(service.processing_time);
-  const isFree = Number(service.fee) === 0;
-  const title = service.display_name ?? service.name;
-  const requirementLabel =
-    service.requirement_count === 1
-      ? "1 requirement"
-      : `${service.requirement_count} requirements`;
+/**
+ * Compact density: roughly half the height of the old tile. The title leads,
+ * the meta reads as one inline line instead of a definition list, and the
+ * decorative document icon is gone — at this size it cost a whole row of
+ * height and said nothing the title didn't.
+ */
+const ServiceCard = (service: ServiceEntryProps) => {
+  const entry = useServiceEntry(service);
 
   return (
-    <article className="group flex flex-col gap-4 rounded-xl border border-border-strong bg-white p-6 text-card-foreground shadow-[0_1px_2px_rgba(23,33,43,0.04)] transition-[border-color,box-shadow] hover:border-primary/30 hover:shadow-[0_6px_18px_rgba(23,33,43,0.07)] ">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-primary-soft text-primary">
-          <FileText className="size-5" aria-hidden="true" />
-        </div>
-
-        <div className="flex flex-wrap justify-end gap-2">
-          {fullyOnline ? (
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-bold ${badgeToneClasses.info}`}
-            >
-              Fully online
-            </span>
-          ) : (
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-bold ${badgeToneClasses[visitBadge.tone]}`}
-            >
-              {visitBadge.label}
-            </span>
-          )}
-          {isFree && (
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-bold ${badgeToneClasses.success}`}
-            >
-              No fee
-            </span>
-          )}
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-1.5 flex-1 ">
-        <h2 className="line-clamp-2 text-[19px] font-bold leading-[1.3] tracking-[-0.01em] text-foreground">
-          {title}
+    <article
+      style={service.style}
+      className="civic-interactive civic-lift flex flex-col gap-2.5 rounded-xl border border-border bg-white p-4 text-card-foreground shadow-[0_1px_2px_rgba(23,33,43,0.04)] hover:border-primary/30 hover:shadow-[0_8px_20px_-8px_rgba(11,77,162,0.28)]"
+    >
+      <div className="flex items-start gap-2">
+        <h2 className="flex-1 text-[15px] font-bold leading-[1.3] tracking-[-0.01em] text-foreground text-pretty">
+          {entry.title}
         </h2>
-        <p className="text-[15px] text-muted-foreground">{requirementLabel}</p>
+        <span
+          className={`mt-px shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${badgeToneClasses[entry.badge.tone]}`}
+        >
+          {entry.badge.label}
+        </span>
       </div>
 
-      <dl className="flex flex-col gap-3 border-y border-border-lighter py-3.5">
-        <div className="flex items-baseline justify-between gap-3">
-          <dt className="text-[15px] text-muted-foreground">
-            {fullyOnline ? "Answered in" : "Released"}
-          </dt>
-          <dd className="text-right text-[15px] font-bold text-foreground">
-            {summarizeWait(service.processing_time)}
-          </dd>
-        </div>
-        <div className="flex items-baseline justify-between gap-3">
-          <dt className="text-[15px] text-muted-foreground">Fee at cashier</dt>
-          <dd
-            className={`text-right text-[17px] font-bold ${isFree ? "text-success" : "text-foreground"}`}
-          >
-            {formatFee(service.fee, service.display_group)}
-          </dd>
-        </div>
+      <p className="flex flex-wrap items-center gap-x-2 text-[13px] text-muted-foreground">
+        <span>{entry.requirementLabel}</span>
+        <span aria-hidden="true" className="text-border-strong">
+          ·
+        </span>
+        {/* The column header carries the "Released" framing in the directory
+            view; here the layout is the only cue, so name it for screen
+            readers rather than spending a line of the tile on it. */}
+        <span aria-label={`${entry.waitTerm} ${entry.waitLabel}`}>
+          {entry.waitLabel}
+        </span>
+      </p>
+
+      <dl className="mt-auto flex items-baseline justify-between gap-3 border-t border-border-lighter pt-2.5">
+        <dt className="text-[13px] text-muted-foreground">Fee at cashier</dt>
+        <dd
+          className={`text-[15px] font-bold tabular-nums ${entry.isFree ? "text-success" : "text-foreground"}`}
+        >
+          {entry.feeLabel}
+        </dd>
       </dl>
 
       <div className="mt-auto flex gap-2.5">
@@ -106,10 +67,24 @@ const ServiceCard = (service: ServiceProps) => {
           to="/apply/$serviceCode/details"
           params={{ serviceCode: routeCode }}
           className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border-strong bg-white px-4 text-[15px] font-bold text-foreground outline-none transition-colors hover:bg-surface-subtle focus-visible:ring-3 focus-visible:ring-ring/50"
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={entry.startApply}
+          className="civic-press inline-flex min-h-9 flex-1 cursor-pointer items-center justify-center rounded-lg bg-primary px-4 text-[14px] font-bold text-primary-foreground outline-none hover:bg-primary-hover focus-visible:ring-3 focus-visible:ring-ring/50"
         >
-          Start
-        </Link>
+          Apply
+        </button>
+        <button
+          type="button"
+          onClick={entry.openRequirements}
+          className="civic-press inline-flex min-h-9 cursor-pointer items-center justify-center rounded-lg border border-control-border bg-white px-3 text-[14px] font-bold text-body-strong outline-none hover:bg-surface-subtle focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          Requirements
+        </button>
       </div>
+
+      <ServiceEntryDialogs entry={entry} />
     </article>
   );
 };

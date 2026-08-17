@@ -33,6 +33,7 @@ const PUBLIC_ROUTES = new Set([
   "/signup",
   "/track",
 ]);
+import { loadCurrentUser } from "~/features/auth/current-user";
 
 const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = getSupabaseServerClient();
@@ -75,6 +76,10 @@ export const Route = createRootRoute({
     }
 
     const user = await fetchUser();
+  beforeLoad: async () => {
+    // Reads through the identity cache so navigating between pages doesn't
+    // re-verify the session and re-read the profile every time.
+    const user = await loadCurrentUser(fetchUser);
 
     return {
       user,

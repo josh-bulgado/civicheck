@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { Search } from "lucide-react";
+import type { ComponentType, ReactNode } from "react";
+import { LayoutGrid, Rows3, Search } from "lucide-react";
 import { Input } from "~/components/ui/input";
 import {
   Select,
@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { SERVICE_CATEGORY_LABELS, type ServiceCategory } from "~/features/services/service-utils";
+import type { ServiceView } from "~/features/services/hooks/useServiceView";
 
 export type CategoryFilter = "all" | ServiceCategory | "one-visit";
 export type SortOption = "az" | "fee";
@@ -22,6 +23,26 @@ const CATEGORY_FILTERS: { value: CategoryFilter; label: string }[] = [
   { value: "one-visit", label: "Finished in one visit" },
 ];
 
+const VIEW_OPTIONS: {
+  value: ServiceView;
+  label: string;
+  hint: string;
+  icon: ComponentType<{ className?: string }>;
+}[] = [
+  {
+    value: "cards",
+    label: "Cards",
+    hint: "Show services as compact cards",
+    icon: LayoutGrid,
+  },
+  {
+    value: "rows",
+    label: "List",
+    hint: "Show services as a one-line-each list",
+    icon: Rows3,
+  },
+];
+
 interface ServicesToolbarProps {
   searchTerm: string;
   onSearchTermChange: (value: string) => void;
@@ -29,6 +50,8 @@ interface ServicesToolbarProps {
   onCategoryChange: (value: CategoryFilter) => void;
   sort: SortOption;
   onSortChange: (value: SortOption) => void;
+  view: ServiceView;
+  onViewChange: (value: ServiceView) => void;
   totalCount: number;
 }
 
@@ -39,6 +62,8 @@ export function ServicesToolbar({
   onCategoryChange,
   sort,
   onSortChange,
+  view,
+  onViewChange,
   totalCount,
 }: ServicesToolbarProps) {
   return (
@@ -72,20 +97,68 @@ export function ServicesToolbar({
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-[15px] text-muted-foreground">Sort</span>
-          <Select value={sort} onValueChange={(value) => onSortChange(value as SortOption)}>
-            <SelectTrigger className="h-9 rounded-lg border-control-border text-[15px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="az">A–Z</SelectItem>
-              <SelectItem value="fee">Lowest fee first</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+          <div
+            role="group"
+            aria-label="Service layout"
+            className="flex items-center gap-1 rounded-lg border border-control-border bg-white p-1"
+          >
+            {VIEW_OPTIONS.map((option) => (
+              <ViewButton
+                key={option.value}
+                active={view === option.value}
+                hint={option.hint}
+                onClick={() => onViewChange(option.value)}
+              >
+                <option.icon className="size-4" aria-hidden="true" />
+                {option.label}
+              </ViewButton>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-[15px] text-muted-foreground">Sort</span>
+            <Select value={sort} onValueChange={(value) => onSortChange(value as SortOption)}>
+              <SelectTrigger className="h-9 rounded-lg border-control-border text-[15px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="az">A–Z</SelectItem>
+                <SelectItem value="fee">Lowest fee first</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function ViewButton({
+  active,
+  hint,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  hint: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      title={hint}
+      className={
+        active
+          ? "civic-press inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-md bg-primary px-3 text-[14px] font-bold text-primary-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          : "civic-press inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-md px-3 text-[14px] font-bold text-muted-foreground outline-none transition-colors hover:bg-surface-subtle hover:text-body-strong focus-visible:ring-3 focus-visible:ring-ring/50"
+      }
+    >
+      {children}
+    </button>
   );
 }
 

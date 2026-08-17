@@ -1,5 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getSupabaseServerClient } from "~/utils/supabase";
+import {
+  collectRequirements,
+  loadServiceCatalogue,
+  resolveServices,
+} from "~/features/services/services.catalogue";
+
+// Every read below is derived from the in-process catalogue cache rather than
+// querying Supabase directly — see `services.catalogue.ts` for why that is safe
+// for this data. On a warm cache these server functions do no database work at
+// all; on a cold one they share a single pair of parallel queries.
 
 export type ServiceSummary = Pick<
   import("~/features/admin/services/services.types").Service,
@@ -14,123 +23,103 @@ export type ServiceSummary = Pick<
 > & { requirement_count: number };
 
 export const getServices = createServerFn({ method: "GET" }).handler(
-  async () => {
-    const supabase = getSupabaseServerClient();
-    const { data, error } = await supabase
-      .from("services_registry")
-      .select(
-        "service_code, name, classification, fee, processing_time, display_group, display_name, steps_description",
-      )
-      .order("name", { ascending: true });
+  async (): Promise<ServiceSummary[]> => {
+    const catalogue = await loadServiceCatalogue();
 
-    if (error) throw new Error(error.message);
-
-    const { data: reqRows, error: reqError } = await supabase
-      .from("service_requirements_metadata")
-      .select("service_code");
-
-    if (reqError) throw new Error(reqError.message);
-
-    const requirementCounts = new Map<string, number>();
-    for (const row of reqRows ?? []) {
-      if (!row.service_code) continue;
-      requirementCounts.set(
-        row.service_code,
-        (requirementCounts.get(row.service_code) ?? 0) + 1,
-      );
-    }
-
-    const rows = data || [];
+    // One card per display group; ungrouped services stand alone.
     const seen = new Set<string>();
 
-    return rows
-      .filter((row) => {
-        if (!row.display_group) return true;
-        if (seen.has(row.display_group)) return false;
-        seen.add(row.display_group);
+    return catalogue.services
+      .filter((service) => {
+        if (!service.display_group) return true;
+        if (seen.has(service.display_group)) return false;
+        seen.add(service.display_group);
         return true;
       })
-      .map((row) => ({
-        ...row,
-        requirement_count: requirementCounts.get(row.service_code) ?? 0,
-      }));
+      .map((service) => {
+        // Count against the same code the card routes on and the same resolution
+        // the requirements popup uses, so "N requirements" always matches the
+        // checklist the applicant sees when they open it.
+        //
+        // This corrects a real undercount. Requirement rows use two linkage
+        // conventions: group-owned rows carry the group and leave `service_code`
+        // null (`birth_delayed`), while service-owned rows carry their own code
+        // (`RA9048-CCE`). The previous count only ever matched on `service_code`,
+        // so every group-owned service reported "0 requirements" on its card
+        // while its popup listed a full checklist.
+        const routeCode = service.display_group ?? service.service_code;
+        const { services: cases } = resolveServices(catalogue, routeCode);
+
+        return {
+          service_code: service.service_code,
+          name: service.name,
+          classification: service.classification,
+          fee: service.fee,
+          processing_time: service.processing_time,
+          display_group: service.display_group,
+          display_name: service.display_name,
+          steps_description: service.steps_description,
+          requirement_count: collectRequirements(catalogue, routeCode, cases)
+            .length,
+        };
+      });
   },
 );
 
 export const getServiceDetail = createServerFn({ method: "GET" })
   .validator((d: string) => d)
   .handler(async ({ data: serviceCodeOrGroup }) => {
-    const supabase = getSupabaseServerClient();
+    const catalogue = await loadServiceCatalogue();
+    const { services, isGroup } = resolveServices(catalogue, serviceCodeOrGroup);
 
-    // Try as display_group first
-    const { data: grouped } = await supabase
-      .from("services_registry")
-      .select("*")
-      .eq("display_group", serviceCodeOrGroup)
-      .order("service_code", { ascending: true });
-
-    if (grouped && grouped.length > 0) {
-      const requirementGroup = grouped[0].display_group!;
-      const { data: requirements, error: reqError } = await supabase
-        .from("service_requirements_metadata")
-        .select("*")
-        .eq("requirement_group", requirementGroup);
-
-      if (reqError) throw new Error(reqError.message);
-
-      return {
-        isGroup: true,
-        displayName: grouped[0].display_name,
-        services: grouped,
-        requirements: requirements || [],
-      };
+    if (services.length === 0) {
+      throw new Error(`No service found for "${serviceCodeOrGroup}".`);
     }
 
-    // Fallback: treat as standalone service_code
-    const { data: service, error: serviceError } = await supabase
-      .from("services_registry")
-      .select("*")
-      .eq("service_code", serviceCodeOrGroup)
-      .single();
-
-    if (serviceError) throw new Error(serviceError.message);
-
-    const { data: requirements, error: reqError } = await supabase
-      .from("service_requirements_metadata")
-      .select("*")
-      .eq("requirement_group", service.requirement_group ?? serviceCodeOrGroup);
-
-    if (reqError) throw new Error(reqError.message);
+    // Grouped services resolve their checklist off the group key; a standalone
+    // service falls back to its own code when it carries no requirement group.
+    const requirementKey = isGroup
+      ? services[0].display_group!
+      : (services[0].requirement_group ?? serviceCodeOrGroup);
 
     return {
-      isGroup: false,
-      displayName: service.display_name ?? service.name,
-      services: [service],
-      requirements: requirements || [],
+      isGroup,
+      displayName: services[0].display_name ?? services[0].name,
+      services,
+      requirements: catalogue.requirementsByGroup.get(requirementKey) ?? [],
     };
   });
 
-export const getAllServicesWithRequirements = createServerFn({ method: "GET" }).handler(
-  async () => {
-    const supabase = getSupabaseServerClient();
-    const { data: services, error: sErr } = await supabase
-      .from("services_registry")
-      .select("*")
-      .order("name", { ascending: true });
+/**
+ * Everything the "View requirements" popup needs for one service card: the
+ * case(s) sitting behind the card plus their full checklist.
+ *
+ * Unlike `getServiceDetail`, this resolves requirements against every key the
+ * card touches — the group key, each case's `service_code`, and each case's
+ * `requirement_group` — because some grouped services keep one shared checklist
+ * on the group key while others keep a separate checklist per case.
+ */
+export const getServiceOverview = createServerFn({ method: "GET" })
+  .validator((d: string) => d)
+  .handler(async ({ data: codeOrGroup }) => {
+    const catalogue = await loadServiceCatalogue();
+    const { services, isGroup } = resolveServices(catalogue, codeOrGroup);
 
-    if (sErr) throw new Error(sErr.message);
-
-    const { data: reqs, error: rErr } = await supabase
-      .from("service_requirements_metadata")
-      .select("*");
-
-    if (rErr) throw new Error(rErr.message);
+    if (services.length === 0) {
+      throw new Error(`No service found for "${codeOrGroup}".`);
+    }
 
     return {
-      services: services || [],
-      requirements: reqs || [],
+      isGroup,
+      displayName: services[0].display_name ?? services[0].name,
+      services,
+      requirements: collectRequirements(catalogue, codeOrGroup, services),
     };
-  }
-);
+  });
 
-
+export const getAllServicesWithRequirements = createServerFn({
+  method: "GET",
+}).handler(async () => {
+  const { services, requirements } = await loadServiceCatalogue();
+  return { services, requirements };
+});

@@ -9,6 +9,13 @@ import {
   FieldLabel,
 } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
 import { RequestSummaryCard } from "~/features/apply/components/RequestSummaryCard";
@@ -27,6 +34,22 @@ const detailsSchema = z.object({
 });
 
 type DetailsValues = z.infer<typeof detailsSchema>;
+
+// The draft stores "no suffix" as an empty string, but Base UI reads an empty
+// value as "nothing selected" and renders no label for it, so the option needs
+// a real value that is mapped back to "" on the way in and out.
+const NO_SUFFIX = "none";
+
+// Generational suffixes as they appear on PSA civil registry records.
+const SUFFIXES = [
+  { value: NO_SUFFIX, label: "None" },
+  { value: "Jr.", label: "Jr." },
+  { value: "Sr.", label: "Sr." },
+  { value: "II", label: "II" },
+  { value: "III", label: "III" },
+  { value: "IV", label: "IV" },
+  { value: "V", label: "V" },
+];
 
 function DetailsStepRoute() {
   const { serviceCode } = Route.useParams();
@@ -74,7 +97,7 @@ function DetailsStepRoute() {
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel htmlFor="subjectFirstName">First name</FieldLabel>
-                  <Input id="subjectFirstName" placeholder="e.g. Juan" {...field} />
+                  <Input id="subjectFirstName" placeholder="Juan" {...field} />
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </Field>
               )}
@@ -85,7 +108,7 @@ function DetailsStepRoute() {
               render={({ field }) => (
                 <Field>
                   <FieldLabel htmlFor="subjectMiddleName">Middle name</FieldLabel>
-                  <Input id="subjectMiddleName" placeholder="e.g. Santos" {...field} />
+                  <Input id="subjectMiddleName" placeholder="Santos" {...field} />
                 </Field>
               )}
             />
@@ -95,7 +118,7 @@ function DetailsStepRoute() {
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel htmlFor="subjectLastName">Last name</FieldLabel>
-                  <Input id="subjectLastName" placeholder="e.g. Dela Cruz" {...field} />
+                  <Input id="subjectLastName" placeholder="Dela Cruz" {...field} />
                   {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                 </Field>
               )}
@@ -106,7 +129,28 @@ function DetailsStepRoute() {
               render={({ field }) => (
                 <Field>
                   <FieldLabel htmlFor="subjectSuffix">Suffix</FieldLabel>
-                  <Input id="subjectSuffix" placeholder="e.g. Jr." {...field} />
+                  <Select
+                    // Without `items`, the trigger prints the raw value ("none")
+                    // instead of the option's label ("None").
+                    items={SUFFIXES}
+                    // `values` only lands once the draft hydrates, so an empty
+                    // or missing suffix both read as the "None" option.
+                    value={field.value || NO_SUFFIX}
+                    onValueChange={(value) =>
+                      field.onChange(value === NO_SUFFIX ? "" : value)
+                    }
+                  >
+                    <SelectTrigger id="subjectSuffix" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SUFFIXES.map((suffix) => (
+                        <SelectItem key={suffix.label} value={suffix.value}>
+                          {suffix.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </Field>
               )}
             />

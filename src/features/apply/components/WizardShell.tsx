@@ -1,3 +1,5 @@
+import { enterDelay } from "~/components/motion/stagger";
+
 interface WizardShellProps {
   step: 1 | 2 | 3 | 4;
   title: string;
@@ -14,9 +16,12 @@ export function WizardShell({
   children,
 }: WizardShellProps) {
   return (
-    <div className="mx-auto w-full max-w-350 px-5 py-7 sm:px-10">
+    // Every wizard step renders through here, so keying on the step number is
+    // what makes moving between them feel like a step rather than a redraw: the
+    // card is torn down and rebuilt, which replays the entrance.
+    <div key={step} className="mx-auto w-full max-w-350 px-5 py-7 sm:px-10">
       <div className={sidebar ? "grid items-start gap-5 lg:grid-cols-[1fr_340px]" : ""}>
-        <div className="rounded-xl border border-border-strong bg-white p-6 sm:p-7">
+        <div className="civic-enter rounded-xl border border-border-strong bg-white p-6 sm:p-7">
           <div className="flex flex-col gap-1.5 pb-5">
             <p className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
               Step {step} of 4
@@ -30,7 +35,14 @@ export function WizardShell({
           </div>
           {children}
         </div>
-        {sidebar && <div className="mt-5 flex flex-col gap-4 lg:mt-0">{sidebar}</div>}
+        {sidebar && (
+          <div
+            className="civic-enter mt-5 flex flex-col gap-4 lg:mt-0"
+            style={enterDelay(90)}
+          >
+            {sidebar}
+          </div>
+        )}
       </div>
     </div>
   );

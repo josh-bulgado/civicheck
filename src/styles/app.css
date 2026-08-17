@@ -229,6 +229,107 @@
   --panel-dark-highlight-border: #2d6cbf;
   --panel-dark-text: #cdd7e4;
   --panel-dark-muted: #9fb0c6;
+
+  /* ─── Motion tokens ────────────────────────────────────────────────────────
+     One scale for the whole app so timings stay in step. `--ease-civic` is a
+     decelerating curve: quick to start, settling at the end, which reads as
+     responsive rather than floaty. Government service UI should feel brisk and
+     unfussy — nothing here runs longer than 420ms. */
+  --ease-civic: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-civic-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 140ms;
+  --duration-base: 220ms;
+  --duration-slow: 380ms;
+  /* Gap between consecutive items in a staggered list. */
+  --stagger-step: 55ms;
+}
+
+/* ─── Keyframes ──────────────────────────────────────────────────────────────
+   Every animation below moves only `opacity` and `transform`. Both are composited
+   on the GPU, so none of this triggers layout or paint — it stays smooth on the
+   low-end hardware a public-facing civic service has to work on. */
+
+@keyframes civic-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes civic-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes civic-rise-sm {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 7px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes civic-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes civic-slide-in-left {
+  from {
+    opacity: 0;
+    transform: translate3d(-16px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes civic-shimmer {
+  from {
+    background-position: -180% 0;
+  }
+  to {
+    background-position: 180% 0;
+  }
+}
+
+@keyframes civic-pulse-ring {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.85);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+}
+
+@keyframes civic-progress-sweep {
+  from {
+    transform: translate3d(-100%, 0, 0);
+  }
+  to {
+    transform: translate3d(400%, 0, 0);
+  }
 }
 
 /* Shared civic layout primitives. */
@@ -313,8 +414,14 @@
     @apply bg-auth-panel text-white;
   }
 
+  /* Every authed page wraps itself in this, and route components remount on
+     navigation, so a single rule here gives the whole workspace a consistent
+     arrival without each page opting in. Deliberately a plain fade: individual
+     sections inside supply the vertical movement, and doing both at two levels
+     reads as the page sliding twice. */
   .dashboard-page {
     @apply mx-auto w-full max-w-[1440px] space-y-6;
+    animation: civic-fade-in var(--duration-base) var(--ease-civic) both;
   }
 
   .system-health-page {
@@ -378,5 +485,224 @@
 
   .status-neutral {
     @apply border-health-neutral-border bg-health-neutral-bg text-health-neutral-fg;
+  }
+
+  /* ─── Entrance animations ──────────────────────────────────────────────────
+     `--enter-delay` lets a caller offset one element; `--civic-index` lets a
+     list offset each child by its position without a per-item class. */
+
+  .civic-enter {
+    animation: civic-rise var(--duration-slow) var(--ease-civic) both;
+    animation-delay: var(--enter-delay, 0ms);
+  }
+
+  .civic-enter-sm {
+    animation: civic-rise-sm var(--duration-base) var(--ease-civic) both;
+    animation-delay: var(--enter-delay, 0ms);
+  }
+
+  .civic-enter-fade {
+    animation: civic-fade-in var(--duration-slow) var(--ease-civic) both;
+    animation-delay: var(--enter-delay, 0ms);
+  }
+
+  .civic-enter-scale {
+    animation: civic-scale-in var(--duration-base) var(--ease-civic-emphasized) both;
+    animation-delay: var(--enter-delay, 0ms);
+  }
+
+  .civic-enter-left {
+    animation: civic-slide-in-left var(--duration-base) var(--ease-civic) both;
+    animation-delay: var(--enter-delay, 0ms);
+  }
+
+  /* Cascade direct children. Capped at the 12th item so a long list doesn't end
+     up with the last rows visibly waiting on a delay the user has scrolled to. */
+  .civic-stagger > * {
+    animation: civic-rise var(--duration-slow) var(--ease-civic) both;
+    animation-delay: calc(
+      var(--stagger-base, 0ms) + min(var(--civic-index, 0), 12) * var(--stagger-step)
+    );
+  }
+
+  /* Same cascade, but ordered off the DOM rather than an explicit index. For
+     containers whose children are conditionally rendered, where a caller can't
+     hand out a meaningful running index. */
+  .civic-stagger-auto > * {
+    animation: civic-rise var(--duration-slow) var(--ease-civic) both;
+  }
+
+  .civic-stagger-auto > *:nth-child(1) {
+    animation-delay: calc(var(--stagger-base, 0ms) + 0 * var(--stagger-step));
+  }
+  .civic-stagger-auto > *:nth-child(2) {
+    animation-delay: calc(var(--stagger-base, 0ms) + 1 * var(--stagger-step));
+  }
+  .civic-stagger-auto > *:nth-child(3) {
+    animation-delay: calc(var(--stagger-base, 0ms) + 2 * var(--stagger-step));
+  }
+  .civic-stagger-auto > *:nth-child(4) {
+    animation-delay: calc(var(--stagger-base, 0ms) + 3 * var(--stagger-step));
+  }
+  .civic-stagger-auto > *:nth-child(5) {
+    animation-delay: calc(var(--stagger-base, 0ms) + 4 * var(--stagger-step));
+  }
+  .civic-stagger-auto > *:nth-child(6) {
+    animation-delay: calc(var(--stagger-base, 0ms) + 5 * var(--stagger-step));
+  }
+  .civic-stagger-auto > *:nth-child(7) {
+    animation-delay: calc(var(--stagger-base, 0ms) + 6 * var(--stagger-step));
+  }
+  .civic-stagger-auto > *:nth-child(n + 8) {
+    animation-delay: calc(var(--stagger-base, 0ms) + 7 * var(--stagger-step));
+  }
+
+  /* ─── Scroll reveal ────────────────────────────────────────────────────────
+     Paired with the `Reveal` component: the element sits in the "before" state
+     until it is observed entering the viewport, which adds `data-revealed`. */
+
+  .civic-reveal {
+    opacity: 0;
+    transform: translate3d(0, 20px, 0);
+    transition:
+      opacity var(--duration-slow) var(--ease-civic),
+      transform var(--duration-slow) var(--ease-civic);
+    transition-delay: var(--enter-delay, 0ms);
+    will-change: opacity, transform;
+  }
+
+  .civic-reveal[data-revealed="true"] {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    will-change: auto;
+  }
+
+  /* ─── Interaction feedback ─────────────────────────────────────────────────
+     Transitions are scoped to named properties rather than `all`, so unrelated
+     property changes never animate by accident. */
+
+  .civic-interactive {
+    transition:
+      transform var(--duration-fast) var(--ease-civic),
+      box-shadow var(--duration-base) var(--ease-civic),
+      border-color var(--duration-base) var(--ease-civic),
+      background-color var(--duration-fast) var(--ease-civic);
+  }
+
+  /* Card that lifts toward the pointer. */
+  .civic-lift:hover {
+    transform: translate3d(0, -3px, 0);
+  }
+
+  .civic-lift:active {
+    transform: translate3d(0, -1px, 0);
+  }
+
+  /* Buttons and other press targets acknowledge the press itself. */
+  .civic-press {
+    transition:
+      transform var(--duration-fast) var(--ease-civic),
+      background-color var(--duration-fast) var(--ease-civic),
+      box-shadow var(--duration-fast) var(--ease-civic);
+  }
+
+  .civic-press:active:not(:disabled) {
+    transform: scale(0.975);
+  }
+
+  /* Nudges an arrow/chevron toward its direction of travel on hover. */
+  .civic-nudge :is(svg, [data-nudge]) {
+    transition: transform var(--duration-base) var(--ease-civic);
+  }
+
+  .civic-nudge:hover :is(svg, [data-nudge]) {
+    transform: translate3d(3px, 0, 0);
+  }
+
+  /* ─── Loading states ───────────────────────────────────────────────────────
+     A sweeping highlight reads as "working" far better than a block fading in
+     and out, and it makes a slow load feel shorter than it is. */
+
+  .civic-skeleton {
+    background-color: var(--muted);
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in srgb, white 62%, transparent) 50%,
+      transparent 100%
+    );
+    background-size: 220% 100%;
+    background-repeat: no-repeat;
+    animation: civic-shimmer 1.5s var(--ease-civic) infinite;
+  }
+
+  /* Thin indeterminate bar, for the top of a panel that is refreshing. */
+  .civic-progress-track {
+    @apply relative h-0.5 w-full overflow-hidden rounded-full bg-border-light;
+  }
+
+  .civic-progress-track::after {
+    content: "";
+    @apply absolute inset-y-0 left-0 w-1/4 rounded-full bg-primary;
+    animation: civic-progress-sweep 1.15s var(--ease-civic) infinite;
+  }
+
+  /* Halo that radiates out of a live status dot. */
+  .civic-live-dot {
+    @apply relative inline-flex size-2 rounded-full bg-success-dot;
+  }
+
+  .civic-live-dot::before {
+    content: "";
+    @apply absolute inset-0 rounded-full bg-success-dot;
+    animation: civic-pulse-ring 2s var(--ease-civic) infinite;
+  }
+}
+
+/* ─── Reduced motion ─────────────────────────────────────────────────────────
+   A hard stop, not a softening. Anyone who has asked their OS for reduced motion
+   may be doing so because movement makes them ill, so every decorative animation
+   is cut and every element is dropped straight into its final state. Opacity
+   fades are kept at a hair's duration so nothing that animates in ever gets
+   stuck invisible. */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .civic-enter,
+  .civic-enter-sm,
+  .civic-enter-fade,
+  .civic-enter-scale,
+  .civic-enter-left,
+  .dashboard-page,
+  .civic-stagger > *,
+  .civic-stagger-auto > * {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+  }
+
+  .civic-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .civic-lift:hover,
+  .civic-lift:active,
+  .civic-press:active:not(:disabled),
+  .civic-nudge:hover :is(svg, [data-nudge]) {
+    transform: none;
+  }
+
+  .civic-skeleton,
+  .civic-progress-track::after,
+  .civic-live-dot::before {
+    animation: none;
+  }
+
+  .civic-live-dot::before {
+    display: none;
   }
 }

@@ -1,3 +1,4 @@
+import { Reveal } from "~/components/motion/reveal";
 import type { FeaturedChecklist } from "./landing.queries";
 import AboutSection from "./components/AboutSection";
 import CtaBandSection from "./components/CtaBandSection";
@@ -18,13 +19,31 @@ const LandingPage = ({ featuredChecklist }: LandingPageProps) => {
     <div className="min-h-screen bg-background">
       <SiteHeader />
       <main>
+        {/*
+          The hero is on screen at load, so it animates itself with the pure-CSS
+          entrance classes. Everything below has to be scrolled to, which is what
+          `Reveal` is for — each section arrives as the reader reaches it rather
+          than all of them having already played off screen.
+        */}
         <HeroSection checklist={featuredChecklist} />
-        <ServicesSection />
-        <HowItWorksSection />
-        <WhyCiviCheckSection />
-        <QueueTeaserSection />
-        <AboutSection />
-        <CtaBandSection />
+        <Reveal>
+          <ServicesSection />
+        </Reveal>
+        <Reveal>
+          <HowItWorksSection />
+        </Reveal>
+        <Reveal>
+          <WhyCiviCheckSection />
+        </Reveal>
+        <Reveal>
+          <QueueTeaserSection />
+        </Reveal>
+        <Reveal>
+          <AboutSection />
+        </Reveal>
+        <Reveal>
+          <CtaBandSection />
+        </Reveal>
       </main>
       <SiteFooter />
     </div>

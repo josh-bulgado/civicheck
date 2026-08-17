@@ -1,6 +1,7 @@
 import { redirect, createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getSupabaseServerClient } from "../utils/supabase";
+import { clearCurrentUser } from "~/features/auth/current-user";
 
 const logoutFn = createServerFn({ method: "POST" }).handler(async () => {
   const supabase = getSupabaseServerClient();
@@ -19,5 +20,10 @@ const logoutFn = createServerFn({ method: "POST" }).handler(async () => {
 
 export const Route = createFileRoute("/logout")({
   preload: false,
-  loader: () => logoutFn(),
+  loader: () => {
+    // Drop the cached identity before the session goes, so nothing downstream
+    // can read a signed-out user back out of the cache.
+    clearCurrentUser();
+    return logoutFn();
+  },
 });

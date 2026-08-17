@@ -2,6 +2,7 @@ import { useRouter } from "@tanstack/react-router";
 
 import { useMutation } from "~/hooks/useMutation";
 import { loginWithEmailFn, signupFn } from "../auth.mutations";
+import { clearCurrentUser } from "../current-user";
 import { toast } from "sonner";
 
 export function useSignUp() {
@@ -12,6 +13,7 @@ export function useSignUp() {
     onSuccess: async (ctx) => {
       // Check for your custom return object
       if (ctx.data && !ctx.data.error) {
+        clearCurrentUser();
         await router.invalidate();
         if (ctx.data.redirectUrl) {
           // Use the returned URL

@@ -1,13 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Search, ChevronDown, ArrowRight } from "lucide-react";
+import {
+  Search,
+  ChevronDown,
+  ArrowRight,
+} from "lucide-react";
+import { enterDelay, staggerStyle } from "~/components/motion/stagger";
 import SiteHeader from "~/features/landing/components/SiteHeader";
 import SiteFooter from "~/features/landing/components/SiteFooter";
 import { getAllServicesWithRequirements } from "~/features/services/services.queries";
-import type {
-  Service,
-  ServiceRequirement,
-} from "~/features/admin/services/services.types";
+import {
+  cachedServiceRead,
+  invalidateServiceCache,
+  serviceCacheKeys,
+} from "~/features/services/services.cache";
+import type { Service, ServiceRequirement } from "~/features/admin/services/services.types";
 import {
   parseRequirementName,
   cleanStepText,
@@ -65,7 +72,10 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
       try {
         setLoading(true);
         setError(null);
-        const data = await getAllServicesWithRequirements();
+        const data = await cachedServiceRead(
+          serviceCacheKeys.allWithRequirements(),
+          getAllServicesWithRequirements,
+        );
         if (cancelled) return;
         setServices(data.services as Service[]);
         setRequirements(data.requirements as ServiceRequirement[]);
@@ -139,7 +149,7 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
       <SiteHeader />
 
       <main className="mx-auto w-full max-w-225 flex-1 px-5 pb-14 pt-12 sm:px-8 sm:pt-14">
-        <div className="mx-auto mb-8 max-w-190 text-center">
+        <div className="civic-enter mx-auto mb-8 max-w-190 text-center">
           <h1 className="civic-title text-[clamp(1.75rem,4vw,2.625rem)] leading-tight">
             List of requirements
           </h1>
@@ -149,29 +159,33 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
           </p>
         </div>
 
-        <div className="relative mb-5">
-          <Search className="pointer-events-none absolute left-5 top-1/2 size-4.5 -translate-y-1/2 text-muted-foreground" />
+        <div className="civic-enter relative mb-5" style={enterDelay(80)}>
+          <Search className="pointer-events-none absolute left-5 top-1/2 size-4.5 -translate-y-1/2 text-muted-foreground transition-colors" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search for a service or requirement..."
-            className="h-13.5 w-full rounded-[10px] border border-control-border bg-white pl-12 pr-4 text-[17px] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-[3px] focus:ring-primary/15"
+            className="h-13.5 w-full rounded-[10px] border border-control-border bg-white pl-12 pr-4 text-[17px] text-foreground outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-muted-foreground focus:border-primary focus:ring-[3px] focus:ring-primary/15"
           />
         </div>
 
-        <div className="mb-8 flex flex-wrap gap-2.5">
-          {pills.map((pill) => {
+        <div
+          className="civic-stagger mb-8 flex flex-wrap gap-2.5"
+          style={{ "--stagger-step": "40ms" } as React.CSSProperties}
+        >
+          {pills.map((pill, index) => {
             const active = activePill === pill.key;
             return (
               <button
                 key={pill.key}
                 type="button"
                 onClick={() => setActivePill(pill.key)}
+                style={staggerStyle(index, 120)}
                 className={
                   active
-                    ? "rounded-full bg-foreground px-4.5 py-2.5 text-[15px] font-bold text-white"
-                    : "rounded-full border border-control-border bg-white px-4.5 py-2.5 text-[15px] text-body-strong transition-colors hover:border-dashed-border"
+                    ? "civic-press rounded-full bg-foreground px-4.5 py-2.5 text-[15px] font-bold text-white"
+                    : "civic-press rounded-full border border-control-border bg-white px-4.5 py-2.5 text-[15px] text-body-strong hover:border-dashed-border hover:bg-surface-subtle"
                 }
               >
                 {pill.label}
@@ -181,20 +195,27 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
         </div>
 
         {loading && (
-          <div className="space-y-3">
+          <div className="civic-stagger space-y-3">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-18 animate-pulse rounded-xl bg-muted" />
+              <div
+                key={i}
+                className="civic-skeleton h-18 rounded-xl"
+                style={staggerStyle(i)}
+              />
             ))}
           </div>
         )}
 
         {!loading && error && (
-          <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-8 text-center">
+          <div className="civic-enter-scale rounded-xl border border-destructive/20 bg-destructive/5 p-8 text-center">
             <p className="mb-3 text-sm font-medium text-destructive">{error}</p>
             <button
               type="button"
-              onClick={() => setReloadToken((n) => n + 1)}
-              className="inline-flex items-center rounded-lg border border-control-border bg-white px-4 py-2 text-sm font-semibold text-foreground hover:bg-background"
+              onClick={() => {
+                invalidateServiceCache(serviceCacheKeys.allWithRequirements());
+                setReloadToken((n) => n + 1);
+              }}
+              className="civic-press inline-flex items-center rounded-lg border border-control-border bg-white px-4 py-2 text-sm font-semibold text-foreground hover:bg-background"
             >
               Try again
             </button>
@@ -202,7 +223,7 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
         )}
 
         {!loading && !error && filteredServices.length === 0 && (
-          <div className="rounded-xl border border-border bg-white p-10 text-center">
+          <div className="civic-enter-scale rounded-xl border border-border bg-white p-10 text-center">
             <p className="mb-1 text-sm font-semibold text-foreground">
               No services found
             </p>
@@ -214,8 +235,8 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
         )}
 
         {!loading && !error && filteredServices.length > 0 && (
-          <div className="space-y-4">
-            {filteredServices.map((service) => {
+          <div className="civic-stagger space-y-4">
+            {filteredServices.map((service, serviceIndex) => {
               const isExpanded = !!expandedCodes[service.service_code];
               const isConditionalOpen = !!conditionalOpen[service.service_code];
               const serviceReqs =
@@ -232,7 +253,8 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                 <div
                   key={service.service_code}
                   id={`service-${service.service_code}`}
-                  className="overflow-hidden rounded-xl border border-border bg-white"
+                  style={staggerStyle(serviceIndex)}
+                  className="civic-interactive overflow-hidden rounded-xl border border-border bg-white hover:border-border-strong hover:shadow-[0_4px_14px_rgba(23,33,43,0.06)]"
                 >
                   <button
                     type="button"
@@ -241,6 +263,8 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                       isExpanded
                         ? "border-b border-border-light"
                         : "hover:bg-background"
+                    className={`flex w-full items-center justify-between gap-4 px-5 py-4.5 text-left transition-colors duration-200 ${
+                      isExpanded ? "border-b border-border-light" : "hover:bg-background"
                     }`}
                   >
                     <div>
@@ -260,13 +284,26 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                     />
                   </button>
 
+                  {/*
+                    Animating `grid-template-rows` between 0fr and 1fr expands to
+                    the content's own height. The previous `max-height: 3000px`
+                    made every panel travel the same 3000px regardless of how
+                    tall it actually was, so short checklists snapped open and
+                    long ones appeared to stall — the timing never matched the
+                    content.
+                  */}
                   <div
                     className={`overflow-hidden transition-all duration-300 ease-in-out ${
                       isExpanded
                         ? "max-h-[3000px] opacity-100"
                         : "max-h-0 opacity-0"
+                    className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
+                      isExpanded
+                        ? "grid-rows-[1fr] opacity-100"
+                        : "grid-rows-[0fr] opacity-0"
                     }`}
                   >
+                    <div className="overflow-hidden">
                     <div className="flex flex-col gap-5 px-5 py-5">
                       <div className="grid grid-cols-2 divide-x divide-border-light rounded-[10px] border border-border-light">
                         <div className="flex flex-col gap-1 px-4 py-3.5">
@@ -347,8 +384,13 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                               isConditionalOpen
                                 ? "max-h-300 opacity-100"
                                 : "max-h-0 opacity-0"
+                            className={`grid transition-[grid-template-rows,opacity] duration-250 ease-out ${
+                              isConditionalOpen
+                                ? "grid-rows-[1fr] opacity-100"
+                                : "grid-rows-[0fr] opacity-0"
                             }`}
                           >
+                            <div className="overflow-hidden">
                             <div className="divide-y divide-warning-border/40 rounded-[10px] border border-warning-border bg-warning-soft">
                               {conditionalReqs.map((req) => {
                                 const { primary, secondary } =
@@ -365,6 +407,7 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                                   </div>
                                 );
                               })}
+                            </div>
                             </div>
                           </div>
                         </div>
@@ -415,12 +458,15 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                                 service.display_group ?? service.service_code,
                             }}
                             className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-xs font-semibold text-white transition-colors hover:bg-primary-hover"
+                            params={{ serviceCode: service.display_group ?? service.service_code }}
+                            className="civic-press civic-nudge inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-xs font-semibold text-white hover:bg-primary-hover"
                           >
                             Start application
                             <ArrowRight className="size-3.5" />
                           </Link>
                         </div>
                       </div>
+                    </div>
                     </div>
                   </div>
                 </div>

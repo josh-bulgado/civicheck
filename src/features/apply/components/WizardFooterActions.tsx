@@ -1,4 +1,5 @@
 import { Button } from "~/components/ui/button";
+import { Spinner } from "~/components/ui/spinner";
 
 interface WizardFooterActionsProps {
   onBack?: () => void;
@@ -35,6 +36,9 @@ export function WizardFooterActions({
           onClick={onContinue}
           disabled={continueDisabled || continuePending}
         >
+          {/* A spinner alongside the label makes the wait legible as work in
+              progress rather than a button that simply stopped responding. */}
+          {continuePending && <Spinner aria-hidden="true" />}
           {continuePending ? "Saving..." : continueLabel}
         </Button>
       </div>
