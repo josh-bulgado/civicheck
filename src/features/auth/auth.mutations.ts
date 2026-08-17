@@ -87,12 +87,13 @@ export const signupFn = createServerFn({ method: "POST" })
       password: string;
       firstName: string;
       lastName: string;
-      mobileNumber?: string;
+      middleName?: string;
       redirectUrl?: string;
     }) => d,
   )
   .handler(async ({ data }) => {
     const adminSupabase = getSupabaseAdminClient();
+    const middleName = data.middleName?.trim() || undefined;
     let signUpResult = await adminSupabase.auth.admin.createUser({
       email: data.email,
       password: data.password,
@@ -100,7 +101,7 @@ export const signupFn = createServerFn({ method: "POST" })
       user_metadata: {
         first_name: data.firstName,
         last_name: data.lastName,
-        mobile_number: data.mobileNumber,
+        middle_name: middleName,
       },
     });
 
@@ -127,7 +128,7 @@ export const signupFn = createServerFn({ method: "POST" })
             user_metadata: {
               first_name: data.firstName,
               last_name: data.lastName,
-              mobile_number: data.mobileNumber,
+              middle_name: middleName,
             },
           });
         }
@@ -145,6 +146,16 @@ export const signupFn = createServerFn({ method: "POST" })
       };
     }
 
+    // The profile row is created by a trigger that only reads the first and last
+    // name out of the metadata, so the middle name has to be written onto it.
+    const newProfileId = signUpResult.data?.user?.id;
+    if (newProfileId && middleName) {
+      await adminSupabase
+        .from("profiles")
+        .update({ middle_name: middleName })
+        .eq("id", newProfileId);
+    }
+
     // Generate signup verification link
     const { data: linkData, error: linkError } = await adminSupabase.auth.admin.generateLink({
       type: "signup",
@@ -154,7 +165,7 @@ export const signupFn = createServerFn({ method: "POST" })
         data: {
           first_name: data.firstName,
           last_name: data.lastName,
-          mobile_number: data.mobileNumber,
+          middle_name: middleName,
         },
       },
     });

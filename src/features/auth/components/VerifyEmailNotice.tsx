@@ -1,11 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import { MailCheck } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import { AuthBrandPanel } from "./AuthBrandPanel";
+import { AuthEmblemPanel } from "./AuthSidePanel";
 import {
-  AuthCardFooter,
-  AuthCardLayout,
-} from "./AuthCardLayout";
+  authButtonClass,
+  authLinkClass,
+  AuthFormFooter,
+  AuthSplitLayout,
+} from "./AuthSplitLayout";
 
 export function VerifyEmailNotice({
   email,
@@ -15,38 +17,18 @@ export function VerifyEmailNotice({
   onUseDifferentEmail: () => void;
 }) {
   return (
-    <AuthCardLayout
-      panel={
-        <AuthBrandPanel
-          title="One last step before you can sign in."
-          description="Confirming your email keeps your request updates going to the right person."
-          steps={[
-            {
-              title: "Open the email we just sent",
-              description: "It arrives within a minute from CiviCheck.",
-            },
-            {
-              title: "Click the confirmation link",
-              description: "This activates your CiviCheck account.",
-            },
-            {
-              title: "File your request",
-              description:
-                "The link signs you in, so you can start straight away.",
-            },
-          ]}
-        />
-      }
-    >
-      <div className="space-y-5">
-        <div className="space-y-4">
+    <AuthSplitLayout panel={<AuthEmblemPanel />}>
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
           <span className="flex size-12 items-center justify-center rounded-full bg-success-soft">
             <MailCheck className="size-6 text-success" aria-hidden="true" />
           </span>
 
-          <div className="space-y-1">
-            <h1 className="civic-title text-2xl">Check your email</h1>
-            <p className="text-[15px] leading-snug text-muted-2">
+          <div className="flex flex-col gap-1.5">
+            <h1 className="civic-title text-[28px] leading-[1.15]">
+              Check your email
+            </h1>
+            <p className="text-sm leading-snug text-muted-2">
               We sent a verification link to{" "}
               <span className="font-bold text-body-strong">{email}</span>. Open
               it to verify your account — the link signs you in and takes you
@@ -55,7 +37,7 @@ export function VerifyEmailNotice({
           </div>
         </div>
 
-        <div className="space-y-2 rounded-lg border border-border-light bg-surface-subtle p-4 text-[14px] leading-snug text-muted-2">
+        <div className="flex flex-col gap-2 rounded-lg border border-border-light bg-surface-subtle p-4 text-[13px] leading-snug text-muted-2">
           <p>
             Didn&apos;t get it? Check your spam or promotions folder — it can
             take a minute to arrive.
@@ -63,25 +45,21 @@ export function VerifyEmailNotice({
           <p>You won&apos;t be able to sign in until your email is verified.</p>
         </div>
 
-        <Button
-          size="lg"
-          className="w-full text-[15px]"
-          render={<Link to="/login" />}
-        >
+        <Button className={authButtonClass} render={<Link to="/login" />}>
           Go to sign in
         </Button>
 
-        <AuthCardFooter>
+        <AuthFormFooter>
           Used the wrong email?
           <button
             type="button"
             onClick={onUseDifferentEmail}
-            className="font-bold text-primary hover:text-primary-hover"
+            className={authLinkClass}
           >
             Sign up again
           </button>
-        </AuthCardFooter>
+        </AuthFormFooter>
       </div>
-    </AuthCardLayout>
+    </AuthSplitLayout>
   );
 }

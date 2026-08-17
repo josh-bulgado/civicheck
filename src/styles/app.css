@@ -123,6 +123,7 @@
   --color-disabled: var(--disabled);
 
   --color-auth-panel: var(--auth-panel);
+  --color-auth-panel-tint: var(--auth-panel-tint);
 
   --color-panel-dark: var(--panel-dark);
   --color-panel-dark-row: var(--panel-dark-row);
@@ -195,6 +196,8 @@
   --health-neutral-dot: #68778b;
   --disabled: #8794a5;
   --auth-panel: #0b3f86;
+  /* Quiet counterpart to the solid panel, for the screens that don't sell. */
+  --auth-panel-tint: #dbe6f4;
 
   --border: #d7dee9;
   --border-light: #e4e9f1;

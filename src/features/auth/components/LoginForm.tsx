@@ -20,12 +20,16 @@ import { InputGroup, InputGroupInput } from "~/components/ui/input-group";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Spinner } from "~/components/ui/spinner";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { AuthBrandPanel } from "./AuthBrandPanel";
+import { AuthEmblemPanel } from "./AuthSidePanel";
 import {
-  AuthCardFooter,
-  AuthCardHeading,
-  AuthCardLayout,
-} from "./AuthCardLayout";
+  authButtonClass,
+  authFieldClass,
+  authLabelClass,
+  authLinkClass,
+  AuthFormFooter,
+  AuthFormHeading,
+  AuthSplitLayout,
+} from "./AuthSplitLayout";
 import { PasswordToggle } from "./PasswordToggle";
 
 const formSchema = z.object({
@@ -99,24 +103,12 @@ export function LoginForm({
   );
 
   return (
-    <AuthCardLayout
-      panel={
-        <AuthBrandPanel
-          title="Know what you need before you visit."
-          description="Check requirements, file online, and follow your request from filing to release."
-          benefits={[
-            "See the exact documents for your request",
-            "Track your request in real time",
-            "Pay at the CCRO cashier — never online",
-          ]}
-        />
-      }
-      footnote="No account needed to be served — walk-in requests are still accepted at the CCRO during office hours."
-    >
-      <div className="space-y-5">
-        <AuthCardHeading
-          title="Sign in"
-          description="Access your requests and track their status."
+    <AuthSplitLayout panel={<AuthEmblemPanel />}>
+      <div className="flex flex-col gap-7">
+        <AuthFormHeading
+          title="Welcome back"
+          description="Please enter your details"
+          className="text-[34px] font-extrabold"
         />
 
         {signInError && (
@@ -140,13 +132,15 @@ export function LoginForm({
               control={form.control}
               name="email"
               render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="email">Email address</FieldLabel>
+                <Field data-invalid={fieldState.invalid} className="gap-1.75">
+                  <FieldLabel htmlFor="email" className={authLabelClass}>
+                    Email address
+                  </FieldLabel>
                   <Input
                     {...field}
                     id="email"
                     type="email"
-                    className="h-10"
+                    className={authFieldClass}
                     placeholder="juan.delacruz@email.com"
                     aria-invalid={fieldState.invalid}
                     autoComplete="email"
@@ -162,21 +156,16 @@ export function LoginForm({
               control={form.control}
               name="password"
               render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <div className="flex items-baseline justify-between gap-3">
-                    <FieldLabel htmlFor="password">Password</FieldLabel>
-                    <Link
-                      to="/forgot-password"
-                      className="text-[13px] font-bold text-primary hover:text-primary-hover"
-                    >
-                      Forgot password?
-                    </Link>
-                  </div>
-                  <InputGroup className="h-10">
+                <Field data-invalid={fieldState.invalid} className="gap-1.75">
+                  <FieldLabel htmlFor="password" className={authLabelClass}>
+                    Password
+                  </FieldLabel>
+                  <InputGroup className={authFieldClass}>
                     <InputGroupInput
                       {...field}
                       id="password"
                       type={showPassword ? "text" : "password"}
+                      className="px-3.5"
                       placeholder="Enter your password"
                       aria-invalid={fieldState.invalid}
                       autoComplete="current-password"
@@ -193,19 +182,26 @@ export function LoginForm({
               )}
             />
 
-            <label className="flex items-center gap-2.5 text-[15px] text-body">
-              <Checkbox
-                checked={keepSignedIn}
-                onCheckedChange={(checked) => setKeepSignedIn(checked === true)}
-              />
-              Keep me signed in on this device
-            </label>
+            {/* Session length and the recovery route are the two decisions left
+                before submitting, so they share one line under the fields. */}
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 pt-0.5">
+              <label className="flex items-center gap-2.5 text-[13.5px] text-body">
+                <Checkbox
+                  checked={keepSignedIn}
+                  onCheckedChange={(checked) => setKeepSignedIn(checked === true)}
+                />
+                Keep me signed in
+              </label>
 
-            <div className="flex flex-col gap-2.5">
+              <Link to="/forgot-password" className={authLinkClass}>
+                Forgot password
+              </Link>
+            </div>
+
+            <div className="flex flex-col gap-3">
               <Button
                 type="submit"
-                size="lg"
-                className="w-full text-[15px]"
+                className={authButtonClass}
                 disabled={loginMutation.status === "pending"}
               >
                 {loginMutation.status === "pending" ? (
@@ -220,28 +216,24 @@ export function LoginForm({
 
               <Button
                 variant="outline"
-                size="lg"
-                className="w-full justify-center gap-2.5 text-[15px]"
+                className={`${authButtonClass} justify-center gap-2.5 text-sm font-medium`}
                 onClick={() => oauthLoginMutation.mutate({ provider: "google" })}
                 disabled={oauthLoginMutation.status === "pending"}
               >
                 <GoogleIcon className="size-4.5" />
-                Continue with Google
+                Sign in with Google
               </Button>
             </div>
           </FieldGroup>
         </form>
 
-        <AuthCardFooter>
-          New to CiviCheck?
-          <Link
-            to="/signup"
-            className="font-bold text-primary hover:text-primary-hover"
-          >
-            Create an account
+        <AuthFormFooter>
+          Don&apos;t have an account?
+          <Link to="/signup" className={authLinkClass}>
+            Sign up
           </Link>
-        </AuthCardFooter>
+        </AuthFormFooter>
       </div>
-    </AuthCardLayout>
+    </AuthSplitLayout>
   );
 }

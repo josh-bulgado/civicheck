@@ -2,10 +2,12 @@ import {
   CityGovernmentIdentity,
   CiviCheckIdentity,
 } from "~/components/brand/civic-identity";
+import { cn } from "~/lib/utils";
 
 type BrandStep = {
   title: string;
-  description: string;
+  /** Omit to run the sequence as bare titles — the step names alone carry it. */
+  description?: string;
 };
 
 /**
@@ -25,7 +27,8 @@ export function AuthBrandPanel({
 }: {
   eyebrow?: string;
   title: string;
-  description: string;
+  /** Optional — a headline that already states the promise needs no gloss. */
+  description?: string;
   benefits?: string[];
   steps?: BrandStep[];
 }) {
@@ -41,9 +44,11 @@ export function AuthBrandPanel({
           <h2 className="mt-4 text-[32px] leading-[1.15] font-bold tracking-[-0.02em] text-balance text-white xl:text-[34px]">
             {title}
           </h2>
-          <p className="mt-4 max-w-[34ch] text-[15px] leading-relaxed text-white/75">
-            {description}
-          </p>
+          {description ? (
+            <p className="mt-4 max-w-[34ch] text-[15px] leading-relaxed text-white/75">
+              {description}
+            </p>
+          ) : null}
 
           {benefits?.length ? (
             <ul className="mt-7 border-t border-white/15">
@@ -67,19 +72,35 @@ export function AuthBrandPanel({
               {steps.map((step, index) => (
                 <li
                   key={step.title}
-                  className="flex gap-3.5 border-b border-white/15 py-3.5 last:border-b-0"
+                  className={cn(
+                    "flex gap-3.5 border-b border-white/15 py-3.5 last:border-b-0",
+                    // With no second line to align against, the number reads as
+                    // dropped unless it centres on the title it belongs to.
+                    step.description ? "items-start" : "items-center",
+                  )}
                 >
-                  <span className="w-5 shrink-0 pt-px text-[13px] font-bold text-white/55 tabular-nums">
+                  <span
+                    className={cn(
+                      "w-5 shrink-0 text-[13px] font-bold text-white/55 tabular-nums",
+                      step.description && "pt-px",
+                    )}
+                  >
                     {String(index + 1).padStart(2, "0")}
                   </span>
-                  <div className="flex flex-col gap-0.5">
+                  {step.description ? (
+                    <div className="flex flex-col gap-0.5">
+                      <p className="text-[15px] font-bold text-white">
+                        {step.title}
+                      </p>
+                      <p className="text-[13.5px] leading-snug text-white/65">
+                        {step.description}
+                      </p>
+                    </div>
+                  ) : (
                     <p className="text-[15px] font-bold text-white">
                       {step.title}
                     </p>
-                    <p className="text-[13.5px] leading-snug text-white/65">
-                      {step.description}
-                    </p>
-                  </div>
+                  )}
                 </li>
               ))}
             </ol>

@@ -1,12 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import {
-  CheckCircle,
-  ArrowRight,
-  Eye,
-  EyeClosed,
-  AlertCircleIcon,
-  Lock,
-} from "lucide-react";
+import { CheckCircle, ArrowRight, AlertCircleIcon } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { Button } from "~/components/ui/button";
 import {
@@ -15,20 +8,22 @@ import {
   FieldGroup,
   FieldLabel,
 } from "~/components/ui/field";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-  InputGroupButton,
-} from "~/components/ui/input-group";
+import { InputGroup, InputGroupInput } from "~/components/ui/input-group";
 import { Spinner } from "~/components/ui/spinner";
 import { useResetPassword } from "../hooks/useResetPassword";
 import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Alert, AlertTitle, AlertDescription } from "~/components/ui/alert";
 import { useState } from "react";
-import { CiviCheckIdentity } from "~/components/brand/civic-identity";
-import { AuthBrandPanel } from "./AuthBrandPanel";
+import { AuthEmblemPanel } from "./AuthSidePanel";
+import {
+  authButtonClass,
+  authFieldClass,
+  authLabelClass,
+  AuthFormHeading,
+  AuthSplitLayout,
+} from "./AuthSplitLayout";
+import { PasswordToggle } from "./PasswordToggle";
 
 const formSchema = z
   .object({
@@ -74,173 +69,136 @@ const ResetPasswordForm = () => {
   }
 
   return (
-    <div className="auth-page flex min-h-dvh bg-background">
-      {/* Left — Form */}
-      <div className="flex flex-1 flex-col items-center px-6 py-12">
-        <div className="my-auto w-full max-w-105 shrink-0 space-y-8">
-          {/* Logo / Brand */}
-          <div className="space-y-2">
-            <Link to="/"><CiviCheckIdentity /></Link>
-            <h1 className="civic-title pt-4 text-2xl">
-              {isSuccess ? "Password updated!" : "Set a new password"}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {isSuccess
-                ? "Your password has been reset successfully. You can now sign in with your new password."
-                : "Enter your new password below. Make sure it's at least 8 characters."}
-            </p>
-          </div>
+    <AuthSplitLayout panel={<AuthEmblemPanel />}>
+      <div className="flex flex-col gap-7">
+        <AuthFormHeading
+          title={isSuccess ? "Password updated!" : "Set a new password"}
+          description={
+            isSuccess
+              ? "Your password has been reset successfully. You can now sign in with your new password."
+              : "Enter your new password below. Make sure it's at least 8 characters."
+          }
+        />
 
-          {isSuccess ? (
-            <div className="space-y-5">
-              <div className="status-success rounded-lg border p-4 text-sm">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="mt-0.5 size-5 shrink-0 text-success" />
-                  <div>
-                    <p className="font-medium">Password changed successfully</p>
-                    <p className="mt-1">
-                      You can now use your new password to sign in.
-                    </p>
-                  </div>
+        {isSuccess ? (
+          <div className="flex flex-col gap-5">
+            <div className="status-success rounded-lg border p-4 text-sm">
+              <div className="flex items-start gap-3">
+                <CheckCircle className="mt-0.5 size-5 shrink-0 text-success" />
+                <div>
+                  <p className="font-medium">Password changed successfully</p>
+                  <p className="mt-1">
+                    You can now use your new password to sign in.
+                  </p>
                 </div>
               </div>
-
-              <Link to="/login">
-                <Button className="w-full">
-                  <span className="flex items-center gap-2">
-                    Go to sign in
-                    <ArrowRight className="h-4 w-4" />
-                  </span>
-                </Button>
-              </Link>
             </div>
-          ) : (
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-              {updateError && (
-                <Alert variant="destructive">
-                  <AlertCircleIcon />
-                  <AlertTitle>Update failed</AlertTitle>
-                  <AlertDescription>{updateError}</AlertDescription>
-                </Alert>
-              )}
 
-              {/* New Password */}
-              <FieldGroup>
-                <Controller
-                  control={form.control}
-                  name="password"
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="password">Password</FieldLabel>
-                      <InputGroup>
-                        <InputGroupAddon>
-                          <Lock size={16} aria-hidden="true" />
-                        </InputGroupAddon>
+            <Button className={authButtonClass} render={<Link to="/login" />}>
+              Go to sign in
+              <ArrowRight className="size-4" />
+            </Button>
+          </div>
+        ) : (
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="flex flex-col gap-5"
+          >
+            {updateError && (
+              <Alert variant="destructive">
+                <AlertCircleIcon />
+                <AlertTitle>Update failed</AlertTitle>
+                <AlertDescription>{updateError}</AlertDescription>
+              </Alert>
+            )}
 
-                        <InputGroupInput
-                          {...field}
-                          id="password"
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Enter your password"
-                          aria-invalid={fieldState.invalid}
-                          autoComplete="off"
-                        />
+            <FieldGroup className="gap-5">
+              <Controller
+                control={form.control}
+                name="password"
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid} className="gap-1.75">
+                    <FieldLabel htmlFor="password" className={authLabelClass}>
+                      New password
+                    </FieldLabel>
+                    <InputGroup className={authFieldClass}>
+                      <InputGroupInput
+                        {...field}
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        className="px-3.5"
+                        placeholder="At least 8 characters"
+                        aria-invalid={fieldState.invalid}
+                        autoComplete="new-password"
+                      />
+                      <PasswordToggle
+                        shown={showPassword}
+                        onToggle={() => setShowPassword(!showPassword)}
+                      />
+                    </InputGroup>
 
-                        <InputGroupAddon align="inline-end">
-                          <InputGroupButton
-                            size="icon-xs"
-                            onClick={() => setShowPassword(!showPassword)}
-                            type="button"
-                          >
-                            {showPassword ? (
-                              <EyeClosed className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </InputGroupButton>
-                        </InputGroupAddon>
-                      </InputGroup>
-
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
-                    </Field>
-                  )}
-                />
-
-                <Controller
-                  control={form.control}
-                  name="confirmPassword"
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="confirmPassword">
-                        Confirm Password
-                      </FieldLabel>
-                      <InputGroup>
-                        <InputGroupAddon>
-                          <Lock size={16} aria-hidden="true" />
-                        </InputGroupAddon>
-
-                        <InputGroupInput
-                          {...field}
-                          id="confirmPassword"
-                          type={showConfirmPassword ? "text" : "password"}
-                          placeholder="Re-enter your password"
-                          aria-invalid={fieldState.invalid}
-                          autoComplete="off"
-                        />
-
-                        <InputGroupAddon align="inline-end">
-                          <InputGroupButton
-                            size="icon-xs"
-                            onClick={() =>
-                              setShowConfirmPassword(!showConfirmPassword)
-                            }
-                            type="button"
-                          >
-                            {showConfirmPassword ? (
-                              <EyeClosed className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </InputGroupButton>
-                        </InputGroupAddon>
-                      </InputGroup>
-
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
-                    </Field>
-                  )}
-                />
-
-                <FieldGroup>
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={resetPasswordMutation.status === "pending"}
-                  >
-                    {resetPasswordMutation.status === "pending" ? (
-                      <>
-                        <Spinner />
-                        Updating password
-                      </>
-                    ) : (
-                      "Reset Password"
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
                     )}
-                  </Button>
-                </FieldGroup>
-              </FieldGroup>
-            </form>
-          )}
-        </div>
-      </div>
+                  </Field>
+                )}
+              />
 
-      <AuthBrandPanel
-        title="Protect your civic service account."
-        description="Choose a strong password to keep your personal information and document requests secure."
-      />
-    </div>
+              <Controller
+                control={form.control}
+                name="confirmPassword"
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid} className="gap-1.75">
+                    <FieldLabel
+                      htmlFor="confirmPassword"
+                      className={authLabelClass}
+                    >
+                      Confirm new password
+                    </FieldLabel>
+                    <InputGroup className={authFieldClass}>
+                      <InputGroupInput
+                        {...field}
+                        id="confirmPassword"
+                        type={showConfirmPassword ? "text" : "password"}
+                        className="px-3.5"
+                        placeholder="Re-enter your password"
+                        aria-invalid={fieldState.invalid}
+                        autoComplete="new-password"
+                      />
+                      <PasswordToggle
+                        shown={showConfirmPassword}
+                        onToggle={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                      />
+                    </InputGroup>
+
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+
+              <Button
+                type="submit"
+                className={authButtonClass}
+                disabled={resetPasswordMutation.status === "pending"}
+              >
+                {resetPasswordMutation.status === "pending" ? (
+                  <>
+                    <Spinner />
+                    Updating password
+                  </>
+                ) : (
+                  "Reset password"
+                )}
+              </Button>
+            </FieldGroup>
+          </form>
+        )}
+      </div>
+    </AuthSplitLayout>
   );
 };
 
