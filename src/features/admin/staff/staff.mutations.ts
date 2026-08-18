@@ -18,7 +18,7 @@ const staffInvitationActionSchema = z.object({
 const updateStaffAccessSchema = z.object({
   staffId: z.string().uuid(),
   role: z.enum(["staff", "supervisor", "cashier"]),
-  departmentId: z.string().uuid().nullable().optional(),
+  departmentId: z.string().nullable().optional(),
   employmentType: z.enum(["regular", "job_order", "contractual"]),
 }) satisfies z.ZodType<UpdateStaffAccessInput>;
 
