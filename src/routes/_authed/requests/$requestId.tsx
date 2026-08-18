@@ -5,15 +5,14 @@ import { ArrowLeft, CheckCircle2, XCircle } from "lucide-react";
 import { hasPermission, type Role } from "~/lib/permissions";
 import { usePermissions } from "~/hooks/usePermissions";
 import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import { getRequestDetailFn } from "~/features/requests/requests.queries";
 import {
   advanceRequestStatusFn,
   setAttachmentVerificationFn,
-  verifyPaymentFn,
 } from "~/features/requests/requests.mutations";
+import { PaymentVerificationPanel } from "~/features/requests/components/PaymentVerificationPanel";
 import {
   REASON_REQUIRED,
   STAGE_LABELS,
@@ -57,7 +56,6 @@ function RequestDetailPage() {
   const { can } = usePermissions();
 
   const [remarks, setRemarks] = useState("");
-  const [orNumber, setOrNumber] = useState("");
   const [busy, setBusy] = useState(false);
 
   const status = getStatusDetails(request.status);
@@ -66,7 +64,6 @@ function RequestDetailPage() {
   const available = nextStatuses(request.status);
 
   const canProcess = can("requests:process");
-  const canCollect = can("requests:collect_payment");
 
   async function handleTransition(to: RequestStatus) {
     if (REASON_REQUIRED.includes(to) && !remarks.trim()) {
@@ -87,24 +84,6 @@ function RequestDetailPage() {
       }
       toast.success(`Moved to ${getStatusDetails(to).label}`);
       setRemarks("");
-      router.invalidate();
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleVerifyPayment() {
-    setBusy(true);
-    try {
-      const res = await verifyPaymentFn({
-        data: { requestId: request.id, orNumber },
-      });
-      if (res.error) {
-        toast.error("Could not verify payment", { description: res.message });
-        return;
-      }
-      toast.success("Payment verified");
-      setOrNumber("");
       router.invalidate();
     } finally {
       setBusy(false);
@@ -317,38 +296,13 @@ function RequestDetailPage() {
             )}
           </section>
 
-          <section className="rounded-xl border border-border bg-white p-6">
-            <h2 className="mb-1 text-lg font-bold text-foreground">Payment</h2>
-            <p className="mb-4 text-sm text-muted-foreground">
-              Fee due: ₱{request.feesDue.toFixed(2)}
-            </p>
-
-            {request.paymentStatus === "verified" ? (
-              <p className="text-sm text-foreground">
-                Verified against OR{" "}
-                <span className="font-bold">{request.orNumber ?? "—"}</span>.
-              </p>
-            ) : canCollect ? (
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="or-number">Official receipt number</Label>
-                  <Input
-                    id="or-number"
-                    value={orNumber}
-                    onChange={(e) => setOrNumber(e.target.value)}
-                    placeholder="OR-000123"
-                  />
-                </div>
-                <Button disabled={busy || !orNumber.trim()} onClick={handleVerifyPayment}>
-                  Verify payment
-                </Button>
-              </div>
-            ) : (
-              <p className="text-sm italic text-muted-foreground">
-                The cashier records payment against the official receipt.
-              </p>
-            )}
-          </section>
+          <PaymentVerificationPanel
+            requestId={request.id}
+            feesDue={request.feesDue}
+            paymentStatus={request.paymentStatus}
+            orNumber={request.orNumber}
+            onVerified={() => router.invalidate()}
+          />
         </div>
       </div>
     </div>

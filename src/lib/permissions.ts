@@ -77,12 +77,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "queue:manage",
     "dashboard:staff",
   ],
-  cashier: [
-    "requests:view_all",
-    "requests:collect_payment",
-    "queue:manage",
-    "dashboard:staff",
-  ],
+  cashier: ["requests:collect_payment", "dashboard:staff"],
   admin: [
     "services:view",
     "services:manage",

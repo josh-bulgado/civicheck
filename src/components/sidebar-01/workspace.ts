@@ -17,6 +17,11 @@ export function getWorkspaceDetails(role: Role): WorkspaceDetails {
         label: "Outlet Workspace",
         description: "Assisted services and outlet requests",
       };
+    case "cashier":
+      return {
+        label: "Cashier Counter",
+        description: "Payment collection and verification",
+      };
     case "admin":
       return {
         label: "CCRO Administration",

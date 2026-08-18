@@ -100,6 +100,171 @@ export const getAllRequestsFn = createServerFn({ method: "GET" }).handler(async 
   return rows;
 });
 
+export interface CashierLookupResult {
+  id: string;
+  trackingNumber: string;
+  status: string;
+  paymentStatus: string;
+  orNumber: string | null;
+  feesDue: number;
+  applicantName: string;
+  serviceName: string;
+}
+
+/**
+ * Counter lookup by tracking number, for the cashier's payment desk. Returns
+ * only what a cashier needs to collect payment — no `form_data`, no
+ * attachments, no logs — deliberately narrower than `getRequestDetailFn`.
+ */
+export const lookupRequestByTrackingFn = createServerFn({ method: "GET" })
+  .validator((d: { trackingNumber: string }) => d)
+  .handler(async ({ data }): Promise<CashierLookupResult | null> => {
+    const { supabase } = await requireActiveSession("requests:collect_payment");
+
+    const trackingNumber = data.trackingNumber.trim();
+    if (!trackingNumber) return null;
+
+    const { data: row, error } = await supabase
+      .from("requests")
+      .select(
+        `id, tracking_number, status, payment_status, or_number, fees_due,
+         subject_first_name:form_data->>subject_first_name,
+         subject_last_name:form_data->>subject_last_name,
+         services_registry(name, display_name),
+         profiles(first_name, last_name)`,
+      )
+      .eq("tracking_number", trackingNumber)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    if (!row) return null;
+
+    const service = one<ServiceEmbed>((row as any).services_registry);
+    const profile = one<{ first_name?: string; last_name?: string }>(
+      (row as any).profiles,
+    );
+    const applicantName =
+      (profile ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() : "") ||
+      `${(row as any).subject_first_name ?? ""} ${(row as any).subject_last_name ?? ""}`.trim() ||
+      "—";
+
+    return {
+      id: row.id,
+      trackingNumber: row.tracking_number,
+      status: row.status,
+      paymentStatus: row.payment_status,
+      orNumber: row.or_number,
+      feesDue: Number(row.fees_due ?? 0),
+      applicantName,
+      serviceName: service?.display_name || service?.name || "—",
+    };
+  });
+
+/** How many requests are ready for release but still unpaid, for the cashier dashboard. */
+export const getAwaitingPaymentCountFn = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabase } = await requireActiveSession("requests:collect_payment");
+
+  const { count, error } = await supabase
+    .from("requests")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "ready_for_release")
+    .neq("payment_status", "verified");
+
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+});
+
+export interface PaymentHistoryRow {
+  id: string;
+  trackingNumber: string;
+  applicantName: string;
+  serviceName: string;
+  orNumber: string | null;
+  feesDue: number;
+  verifiedAt: string;
+  verifiedBy: string;
+}
+
+/** Today's verified payments, for the cashier's end-of-day reconciliation. */
+export const getPaymentHistoryFn = createServerFn({ method: "GET" }).handler(
+  async (): Promise<PaymentHistoryRow[]> => {
+    const { supabase } = await requireActiveSession("requests:collect_payment");
+
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const { data, error } = await supabase
+      .from("application_logs")
+      .select(
+        `id, created_at,
+         profiles(first_name, last_name),
+         requests(tracking_number, fees_due, or_number,
+           services_registry(name, display_name),
+           profiles(first_name, last_name),
+           subject_first_name:form_data->>subject_first_name,
+           subject_last_name:form_data->>subject_last_name)`,
+      )
+      .eq("action_status", "payment_verified")
+      .gte("created_at", startOfToday.toISOString())
+      .order("created_at", { ascending: false });
+
+    if (error) throw new Error(error.message);
+
+    return (data ?? []).flatMap((log: any): PaymentHistoryRow[] => {
+      const request = one<any>(log.requests);
+      if (!request) return [];
+
+      const service = one<ServiceEmbed>(request.services_registry);
+      const applicantProfile = one<{ first_name?: string; last_name?: string }>(
+        request.profiles,
+      );
+      const applicantName =
+        (applicantProfile
+          ? `${applicantProfile.first_name ?? ""} ${applicantProfile.last_name ?? ""}`.trim()
+          : "") ||
+        `${request.subject_first_name ?? ""} ${request.subject_last_name ?? ""}`.trim() ||
+        "—";
+
+      const verifier = one<{ first_name?: string; last_name?: string }>(log.profiles);
+      const verifiedBy = verifier
+        ? `${verifier.first_name ?? ""} ${verifier.last_name ?? ""}`.trim() || "System"
+        : "System";
+
+      return [
+        {
+          id: log.id,
+          trackingNumber: request.tracking_number,
+          applicantName,
+          serviceName: service?.display_name || service?.name || "—",
+          orNumber: request.or_number,
+          feesDue: Number(request.fees_due ?? 0),
+          verifiedAt: log.created_at,
+          verifiedBy,
+        },
+      ];
+    });
+  },
+);
+
+/** How many payments the cashier has verified today, for the dashboard. */
+export const getPaymentsVerifiedTodayCountFn = createServerFn({ method: "GET" }).handler(
+  async () => {
+    const { supabase } = await requireActiveSession("requests:collect_payment");
+
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const { count, error } = await supabase
+      .from("application_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("action_status", "payment_verified")
+      .gte("created_at", startOfToday.toISOString());
+
+    if (error) throw new Error(error.message);
+    return count ?? 0;
+  },
+);
+
 /** What department (if any) the caller is scoped to, for UI display. */
 export const getMyDepartmentScopeFn = createServerFn({ method: "GET" }).handler(async () => {
   const { role, departmentId, departmentName } = await requireActiveSession();

@@ -10,7 +10,12 @@ import {
   ShieldCheck,
   Ticket,
 } from "lucide-react";
-import { getAllRequestsFn, getMyDepartmentScopeFn } from "~/features/requests/requests.queries";
+import {
+  getAllRequestsFn,
+  getAwaitingPaymentCountFn,
+  getMyDepartmentScopeFn,
+  getPaymentsVerifiedTodayCountFn,
+} from "~/features/requests/requests.queries";
 import { getTodayQueueFn } from "~/features/queue/queue.queries";
 import { STAGE_OF, isRequestStatus } from "~/features/requests/request-workflow";
 
@@ -19,7 +24,33 @@ export const Route = createFileRoute("/_authed/staff-dashboard")({
     if (!context.user || !hasPermission(context.user.role as Role, "dashboard:staff"))
       throw redirect({ to: "/dashboard" });
   },
-  loader: async () => {
+  loader: async ({ context }) => {
+    const isCashier = context.user?.role === "cashier";
+
+    // Cashier holds neither "requests:view_all" nor "queue:manage" — it must
+    // never call getAllRequestsFn or getTodayQueueFn, only the narrow counts
+    // its own Cashier Counter / Payment History actually need.
+    if (isCashier) {
+      const [scope, unpaid, paymentsVerifiedToday] = await Promise.all([
+        getMyDepartmentScopeFn(),
+        getAwaitingPaymentCountFn(),
+        getPaymentsVerifiedTodayCountFn(),
+      ]);
+
+      return {
+        isCashier: true as const,
+        awaitingIntake: 0,
+        inValidation: 0,
+        inProgress: 0,
+        readyForRelease: 0,
+        unpaid,
+        waitingInQueue: 0,
+        servedToday: 0,
+        paymentsVerifiedToday,
+        scope,
+      };
+    }
+
     const [requests, tickets, scope] = await Promise.all([
       getAllRequestsFn(),
       getTodayQueueFn(),
@@ -31,6 +62,7 @@ export const Route = createFileRoute("/_authed/staff-dashboard")({
         .length;
 
     return {
+      isCashier: false as const,
       awaitingIntake: inStage(1),
       inValidation: inStage(2),
       inProgress: inStage(3) + inStage(4),
@@ -40,6 +72,7 @@ export const Route = createFileRoute("/_authed/staff-dashboard")({
       ).length,
       waitingInQueue: tickets.filter((t) => t.status === "waiting").length,
       servedToday: tickets.filter((t) => t.status === "served").length,
+      paymentsVerifiedToday: 0,
       scope,
     };
   },
@@ -67,19 +100,27 @@ function StaffDashboard() {
               )}
             </div>
             <h1 className="text-3xl font-extrabold tracking-[-0.03em] text-white sm:text-4xl">
-              Staff Dashboard
+              {stats.isCashier ? "Cashier Dashboard" : "Staff Dashboard"}
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/75">
-              A focused workspace for request intake, document validation, and civil
-              registry processing.
+              {stats.isCashier
+                ? "A focused workspace for looking up requests and collecting payment."
+                : "A focused workspace for request intake, document validation, and civil registry processing."}
             </p>
           </div>
           <div className="flex items-center gap-3 rounded-xl border border-white/15 bg-white/10 p-4 text-white backdrop-blur-sm">
             <Ticket className="size-5 text-brand-gold" aria-hidden="true" />
-            <div>
-              <p className="text-sm font-bold">{stats.waitingInQueue} waiting at the counter</p>
-              <p className="text-xs text-white/65">{stats.servedToday} served today</p>
-            </div>
+            {stats.isCashier ? (
+              <div>
+                <p className="text-sm font-bold">{stats.unpaid} awaiting payment</p>
+                <p className="text-xs text-white/65">{stats.paymentsVerifiedToday} verified today</p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm font-bold">{stats.waitingInQueue} waiting at the counter</p>
+                <p className="text-xs text-white/65">{stats.servedToday} served today</p>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -96,23 +137,44 @@ function StaffDashboard() {
             Your operational workspace
           </h2>
         </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <RequestQueueSummaryCard
-            awaitingIntake={stats.awaitingIntake}
-            inValidation={stats.inValidation}
-            inProgress={stats.inProgress}
-            readyForRelease={stats.readyForRelease}
-            unpaid={stats.unpaid}
-          />
-          <ToolCard
-            icon={Ticket}
-            title="Queue desk"
-            description="Issue numbers, encode walk-ins, and call the next applicant."
-            count={stats.waitingInQueue}
-            countLabel="waiting now"
-            to="/queue"
-          />
-        </div>
+        {stats.isCashier ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            <ToolCard
+              icon={ClipboardCheck}
+              title="Cashier Counter"
+              description="Look up a request by tracking number and record payment."
+              count={stats.unpaid}
+              countLabel="awaiting payment"
+              to="/cashier"
+            />
+            <ToolCard
+              icon={ListChecks}
+              title="Payments verified today"
+              description="Payments you've collected and verified so far today."
+              count={stats.paymentsVerifiedToday}
+              countLabel="verified today"
+              to="/payment-history"
+            />
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            <RequestQueueSummaryCard
+              awaitingIntake={stats.awaitingIntake}
+              inValidation={stats.inValidation}
+              inProgress={stats.inProgress}
+              readyForRelease={stats.readyForRelease}
+              unpaid={stats.unpaid}
+            />
+            <ToolCard
+              icon={Ticket}
+              title="Queue desk"
+              description="Issue numbers, encode walk-ins, and call the next applicant."
+              count={stats.waitingInQueue}
+              countLabel="waiting now"
+              to="/queue"
+            />
+          </div>
+        )}
       </section>
     </div>
   );
