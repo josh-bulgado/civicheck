@@ -15,7 +15,7 @@ System administrators should receive only the operational metadata needed to kee
 Provide a single operational view of platform availability and service health.
 
 - Display service status, uptime trends, error rates, and response-time indicators.
-- Surface queue backlogs, failed background jobs, storage capacity signals, and other operational bottlenecks.
+- Surface failed background jobs, storage capacity signals, and other operational bottlenecks.
 - Highlight active degradations and recent recoveries with timestamps and affected components.
 - Offer drill-down views based on aggregate or redacted telemetry, without exposing citizen submissions or documents.
 - Link health signals to relevant incidents, maintenance events, and administrative actions.
@@ -27,7 +27,6 @@ Provide a single operational view of platform availability and service health.
 | Core database | Metadata-only profile availability probe | On dashboard refresh; 30-second route freshness window | Platform operations | Status and response time |
 | Authentication | Supabase Auth administrative availability probe | On dashboard refresh; 30-second route freshness window | Identity operations | Status and response time |
 | Document storage | Bucket availability probe and aggregate storage RPC | On dashboard refresh; 30-second route freshness window | Platform operations | Object count and total bytes only |
-| Counter queue | Current-day queue status timestamps | On dashboard refresh | CCRO operations | Waiting count and oldest wait only |
 | Background jobs | Metadata-only job run records written by job runners | On job completion | Platform engineering | Job key, status, retry count, and failure code |
 | Request workflow | Status and update timestamps for staff-owned workflow stages | On dashboard refresh | CCRO operations | Aggregate count of records unchanged for 48 hours |
 

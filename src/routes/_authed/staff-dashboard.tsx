@@ -8,7 +8,6 @@ import {
   LayoutDashboard,
   ListChecks,
   ShieldCheck,
-  Ticket,
 } from "lucide-react";
 import {
   getAllRequestsFn,
@@ -16,7 +15,6 @@ import {
   getMyDepartmentScopeFn,
   getPaymentsVerifiedTodayCountFn,
 } from "~/features/requests/requests.queries";
-import { getTodayQueueFn } from "~/features/queue/queue.queries";
 import { STAGE_OF, isRequestStatus } from "~/features/requests/request-workflow";
 
 export const Route = createFileRoute("/_authed/staff-dashboard")({
@@ -27,8 +25,8 @@ export const Route = createFileRoute("/_authed/staff-dashboard")({
   loader: async ({ context }) => {
     const isCashier = context.user?.role === "cashier";
 
-    // Cashier holds neither "requests:view_all" nor "queue:manage" — it must
-    // never call getAllRequestsFn or getTodayQueueFn, only the narrow counts
+    // Cashier holds no request-docket permissions — it must
+    // never call those functions, only the narrow counts
     // its own Cashier Counter / Payment History actually need.
     if (isCashier) {
       const [scope, unpaid, paymentsVerifiedToday] = await Promise.all([
@@ -39,21 +37,21 @@ export const Route = createFileRoute("/_authed/staff-dashboard")({
 
       return {
         isCashier: true as const,
+        canViewRequests: false,
         awaitingIntake: 0,
         inValidation: 0,
         inProgress: 0,
         readyForRelease: 0,
         unpaid,
-        waitingInQueue: 0,
-        servedToday: 0,
         paymentsVerifiedToday,
         scope,
       };
     }
 
-    const [requests, tickets, scope] = await Promise.all([
-      getAllRequestsFn(),
-      getTodayQueueFn(),
+    const role = context.user!.role as Role;
+    const canViewRequests = hasPermission(role, "requests:view_all");
+    const [requests, scope] = await Promise.all([
+      canViewRequests ? getAllRequestsFn() : Promise.resolve([]),
       getMyDepartmentScopeFn(),
     ]);
 
@@ -63,6 +61,7 @@ export const Route = createFileRoute("/_authed/staff-dashboard")({
 
     return {
       isCashier: false as const,
+      canViewRequests,
       awaitingIntake: inStage(1),
       inValidation: inStage(2),
       inProgress: inStage(3) + inStage(4),
@@ -70,8 +69,6 @@ export const Route = createFileRoute("/_authed/staff-dashboard")({
       unpaid: requests.filter(
         (r) => r.status === "ready_for_release" && r.paymentStatus !== "verified",
       ).length,
-      waitingInQueue: tickets.filter((t) => t.status === "waiting").length,
-      servedToday: tickets.filter((t) => t.status === "served").length,
       paymentsVerifiedToday: 0,
       scope,
     };
@@ -109,7 +106,7 @@ function StaffDashboard() {
             </p>
           </div>
           <div className="flex items-center gap-3 rounded-xl border border-white/15 bg-white/10 p-4 text-white backdrop-blur-sm">
-            <Ticket className="size-5 text-brand-gold" aria-hidden="true" />
+            <ClipboardCheck className="size-5 text-brand-gold" aria-hidden="true" />
             {stats.isCashier ? (
               <div>
                 <p className="text-sm font-bold">{stats.unpaid} awaiting payment</p>
@@ -117,8 +114,8 @@ function StaffDashboard() {
               </div>
             ) : (
               <div>
-                <p className="text-sm font-bold">{stats.waitingInQueue} waiting at the counter</p>
-                <p className="text-xs text-white/65">{stats.servedToday} served today</p>
+                <p className="text-sm font-bold">{stats.awaitingIntake} awaiting intake</p>
+                <p className="text-xs text-white/65">{stats.readyForRelease} ready for release</p>
               </div>
             )}
           </div>
@@ -158,21 +155,15 @@ function StaffDashboard() {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            <RequestQueueSummaryCard
-              awaitingIntake={stats.awaitingIntake}
-              inValidation={stats.inValidation}
-              inProgress={stats.inProgress}
-              readyForRelease={stats.readyForRelease}
-              unpaid={stats.unpaid}
-            />
-            <ToolCard
-              icon={Ticket}
-              title="Queue desk"
-              description="Issue numbers, encode walk-ins, and call the next applicant."
-              count={stats.waitingInQueue}
-              countLabel="waiting now"
-              to="/queue"
-            />
+            {stats.canViewRequests ? (
+              <RequestQueueSummaryCard
+                awaitingIntake={stats.awaitingIntake}
+                inValidation={stats.inValidation}
+                inProgress={stats.inProgress}
+                readyForRelease={stats.readyForRelease}
+                unpaid={stats.unpaid}
+              />
+            ) : null}
           </div>
         )}
       </section>

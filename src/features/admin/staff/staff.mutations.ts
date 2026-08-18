@@ -11,13 +11,13 @@ import type {
 import { sendEmail } from "~/utils/resend";
 import { getRequestNetworkSignal } from "~/features/system-admin/network-signal.server";
 
-const INVITABLE_ROLES: Role[] = ["frontdesk", "staff", "supervisor", "cashier"];
+const INVITABLE_ROLES: Role[] = ["staff", "supervisor", "cashier"];
 const staffInvitationActionSchema = z.object({
   staffId: z.string().uuid(),
 });
 const updateStaffAccessSchema = z.object({
   staffId: z.string().uuid(),
-  role: z.enum(["frontdesk", "staff", "supervisor", "cashier"]),
+  role: z.enum(["staff", "supervisor", "cashier"]),
   departmentId: z.string().uuid().nullable().optional(),
   employmentType: z.enum(["regular", "job_order", "contractual"]),
 }) satisfies z.ZodType<UpdateStaffAccessInput>;

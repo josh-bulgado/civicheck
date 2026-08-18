@@ -5,15 +5,15 @@ import {
 } from "~/features/admin/overview/overview-formatters";
 
 interface OverviewDocketHeaderProps {
-  queueDate: string;
+  officeDate: string;
   openRequests: number;
-  citizensInQueue: number;
+  incompleteRequests: number;
 }
 
 export function OverviewDocketHeader({
-  queueDate,
+  officeDate,
   openRequests,
-  citizensInQueue,
+  incompleteRequests,
 }: OverviewDocketHeaderProps) {
   return (
     <header className="dashboard-hero">
@@ -28,12 +28,12 @@ export function OverviewDocketHeader({
               Today&apos;s Operations Docket
             </h1>
             <p className="max-w-2xl text-pretty text-sm leading-6 text-white/80">
-              Prioritize citizen follow-up, monitor the five-stage request
-              workflow, and keep the counter queue moving.
+              Prioritize citizen follow-up and monitor the five-stage request
+              workflow.
             </p>
           </div>
           <p className="text-xs font-medium text-white/80">
-            Office Day · {formatOfficeDate(queueDate)}
+            Office Day · {formatOfficeDate(officeDate)}
           </p>
         </div>
 
@@ -45,9 +45,9 @@ export function OverviewDocketHeader({
             </dd>
           </div>
           <div className="flex min-w-0 flex-col gap-1 border-l border-white/15 pl-4">
-            <dt className="text-xs text-white/80">Citizens in Queue</dt>
+            <dt className="text-xs text-white/80">Incomplete Requests</dt>
             <dd className="text-2xl font-extrabold tabular-nums">
-              {formatCount(citizensInQueue)}
+              {formatCount(incompleteRequests)}
             </dd>
           </div>
         </dl>

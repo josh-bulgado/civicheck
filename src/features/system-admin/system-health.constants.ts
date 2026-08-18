@@ -49,13 +49,6 @@ export const healthDataSources = [
     exposure: "Object count and total bytes only",
   },
   {
-    signal: "Counter queue",
-    source: "Today’s queue status timestamps",
-    refresh: "On dashboard refresh",
-    owner: "CCRO operations",
-    exposure: "Aggregate count and oldest wait only",
-  },
-  {
     signal: "Background jobs",
     source: "Metadata-only job run records",
     refresh: "Written by each job runner",

@@ -1,7 +1,8 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { hasPermission, type Role } from "~/lib/permissions";
 import { getActiveDepartments } from "~/features/admin/departments.queries";
 import { getAllRequestsFn, getMyDepartmentScopeFn } from "~/features/requests/requests.queries";
+import { getEncodableServicesFn } from "~/features/requests/walk-in-intake.queries";
 import {
   parseDepartmentFilter,
   parsePaymentFilter,
@@ -22,21 +23,25 @@ export const Route = createFileRoute("/_authed/requests/")({
     if (!context.user || !hasPermission(context.user.role as Role, "requests:view_all"))
       throw new Error("Forbidden");
   },
-  loader: async () => {
-    const [requests, departments, scope] = await Promise.all([
+  loader: async ({ context }) => {
+    const role = context.user!.role as Role;
+    const canEncode = hasPermission(role, "requests:encode_walkin");
+    const [requests, departments, scope, services] = await Promise.all([
       getAllRequestsFn(),
       getActiveDepartments(),
       getMyDepartmentScopeFn(),
+      canEncode ? getEncodableServicesFn() : Promise.resolve([]),
     ]);
-    return { requests, departments, scope };
+    return { requests, departments, scope, services, canEncode };
   },
   component: RequestQueueRoute,
 });
 
 function RequestQueueRoute() {
-  const { requests, departments, scope } = Route.useLoaderData();
+  const { requests, departments, scope, services, canEncode } = Route.useLoaderData();
   const filters = Route.useSearch();
   const navigate = useNavigate({ from: "/requests/" });
+  const router = useRouter();
 
   return (
     <RequestsPage
@@ -45,6 +50,8 @@ function RequestQueueRoute() {
       filters={filters}
       onFiltersChange={(next) => navigate({ search: next })}
       scopedDepartmentName={scope.isScoped ? scope.departmentName : null}
+      encodableServices={canEncode ? services : null}
+      onWalkInEncoded={() => router.invalidate()}
     />
   );
 }

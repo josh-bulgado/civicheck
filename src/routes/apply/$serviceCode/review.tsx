@@ -104,14 +104,8 @@ function ReviewStepRoute() {
           )}
           <div className="flex flex-wrap gap-3">
             <Link
-              to="/appointments"
-              className="inline-flex min-h-11 items-center rounded-lg bg-primary px-5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
-            >
-              Book a visit slot
-            </Link>
-            <Link
               to="/my-requests"
-              className="inline-flex min-h-11 items-center rounded-lg border border-control-border bg-white px-5 text-sm font-semibold text-foreground hover:bg-background"
+              className="inline-flex min-h-11 items-center rounded-lg bg-primary px-5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
             >
               View my requests
             </Link>
@@ -125,7 +119,7 @@ function ReviewStepRoute() {
     <WizardShell
       step={4}
       title="Check everything before you send"
-      description="Staff pre-check your file, then you pick a queue slot. You can still edit any section."
+      description="Staff pre-check your file before you visit the CCRO counter. You can still edit any section."
       sidebar={<WhatHappensNextCard />}
     >
       <div className="flex flex-col gap-5">
@@ -179,7 +173,7 @@ function ReviewStepRoute() {
             <p className="text-base font-bold text-foreground">Nothing is paid online</p>
             <p className="text-sm leading-relaxed text-body">
               Bring {selectedService ? formatFee(selectedService.fee) : "the fee"} in cash to the
-              CCRO cashier on your appointment date.
+              CCRO cashier when you visit.
             </p>
           </div>
           <p className="whitespace-nowrap text-2xl font-bold text-foreground">
@@ -210,7 +204,7 @@ function ReviewStepRoute() {
           navigate({ to: "/apply/$serviceCode/documents", params: { serviceCode } })
         }
         onContinue={handleSubmit}
-        continueLabel="Submit and pick a queue slot"
+        continueLabel="Submit request"
         continueDisabled={!confirmed}
         continuePending={submitting}
       />
@@ -256,8 +250,8 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
 function WhatHappensNextCard() {
   const steps = [
     "Staff pre-check your uploads within 1 working day.",
-    "You pick a date and time slot.",
-    "Your queue number is issued when you check in for your appointment.",
+    "Visit the CCRO counter with your original documents — no appointment needed.",
+    "Present your tracking number at the counter when you arrive.",
   ];
   return (
     <div className="overflow-hidden rounded-xl border border-border-strong bg-white">

@@ -7,7 +7,7 @@
  */
 
 export const REQUEST_STATUSES = [
-  "pending_frontdesk",
+  "submitted",
   "under_validation",
   "incomplete",
   "rejected",
@@ -30,7 +30,7 @@ export const STAGE_LABELS: Record<WorkflowStage, string> = {
 };
 
 export const STAGE_OF: Record<RequestStatus, WorkflowStage> = {
-  pending_frontdesk: 1,
+  submitted: 1,
   under_validation: 2,
   incomplete: 2,
   rejected: 2,
@@ -41,7 +41,7 @@ export const STAGE_OF: Record<RequestStatus, WorkflowStage> = {
 };
 
 export const ALLOWED_TRANSITIONS: Record<RequestStatus, RequestStatus[]> = {
-  pending_frontdesk: ["under_validation", "rejected"],
+  submitted: ["under_validation", "rejected"],
   under_validation: ["incomplete", "processing", "rejected"],
   incomplete: ["under_validation", "rejected"],
   processing: ["pending_approval"],
@@ -78,7 +78,7 @@ export function stageOf(status: string | null): WorkflowStage | null {
  * the action reads the same regardless of where it was triggered from.
  */
 export const TRANSITION_LABELS: Record<RequestStatus, string> = {
-  pending_frontdesk: "Return to front desk",
+  submitted: "Return to submitted",
   under_validation: "Start validation",
   incomplete: "Mark incomplete",
   rejected: "Reject request",

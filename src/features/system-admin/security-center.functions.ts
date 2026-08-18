@@ -47,7 +47,6 @@ const controlReviewSchema = z.object({
 
 function normalizeRole(value: unknown): Role {
   return value === "applicant" ||
-    value === "frontdesk" ||
     value === "staff" ||
     value === "supervisor" ||
     value === "cashier" ||

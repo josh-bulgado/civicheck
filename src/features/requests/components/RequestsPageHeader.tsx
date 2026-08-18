@@ -1,12 +1,21 @@
 import { Building2, ClipboardList } from "lucide-react";
 import { CityGovernmentIdentity } from "~/components/brand/civic-identity";
+import { WalkInIntakeDialog } from "./WalkInIntakeDialog";
+import type { EncodableService } from "../walk-in-intake.queries";
 
 interface RequestsPageHeaderProps {
   /** Set when the viewer is department-scoped (staff/supervisor). */
   departmentName?: string | null;
+  /** Set when the viewer can encode walk-ins; null/undefined hides the action. */
+  encodableServices?: EncodableService[] | null;
+  onWalkInEncoded?: () => void;
 }
 
-export function RequestsPageHeader({ departmentName }: RequestsPageHeaderProps) {
+export function RequestsPageHeader({
+  departmentName,
+  encodableServices,
+  onWalkInEncoded,
+}: RequestsPageHeaderProps) {
   return (
     <header className="dashboard-hero">
       <div className="relative z-10 flex flex-col justify-between gap-6 md:flex-row md:items-center">
@@ -31,8 +40,16 @@ export function RequestsPageHeader({ departmentName }: RequestsPageHeaderProps) 
           )}
         </div>
 
-        <div className="self-start rounded-xl border border-white/15 bg-white/10 p-3.5 backdrop-blur-sm md:self-center">
-          <CityGovernmentIdentity inverse />
+        <div className="flex items-center gap-3 self-start md:self-center">
+          {encodableServices ? (
+            <WalkInIntakeDialog
+              services={encodableServices}
+              onChanged={() => onWalkInEncoded?.()}
+            />
+          ) : null}
+          <div className="rounded-xl border border-white/15 bg-white/10 p-3.5 backdrop-blur-sm">
+            <CityGovernmentIdentity inverse />
+          </div>
         </div>
       </div>
     </header>

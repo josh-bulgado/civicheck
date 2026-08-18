@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { setResponseHeader } from "@tanstack/react-start/server";
-import { toDateKey } from "~/features/queue/queue-date";
 import { requireActiveSession } from "~/server/auth";
 import { getSupabaseAdminClient } from "~/utils/supabase";
 import type {
@@ -48,7 +47,7 @@ const serviceDetails: Record<
 };
 
 const activeRequestStatuses = [
-  "pending_frontdesk",
+  "submitted",
   "under_validation",
   "processing",
   "pending_approval",
@@ -245,11 +244,6 @@ export const getSystemHealth = createServerFn({ method: "GET" }).handler(
       .gte("recorded_at", historyCutoff)
       .order("recorded_at", { ascending: true })
       .limit(500);
-    const queuePromise = admin
-      .from("queue_tickets")
-      .select("status, created_at")
-      .eq("queue_date", toDateKey())
-      .in("status", ["waiting", "called", "serving"]);
     const jobsPromise = admin
       .from("system_background_job_runs")
       .select("status, retry_count, started_at, completed_at")
@@ -271,7 +265,6 @@ export const getSystemHealth = createServerFn({ method: "GET" }).handler(
       authenticationProbe,
       storageProbe,
       historyResult,
-      queueResult,
       jobsResult,
       workflowResult,
       eventsResult,
@@ -280,7 +273,6 @@ export const getSystemHealth = createServerFn({ method: "GET" }).handler(
       authenticationProbePromise,
       storageProbePromise,
       historyPromise,
-      queuePromise,
       jobsPromise,
       workflowPromise,
       eventsPromise,
@@ -305,24 +297,6 @@ export const getSystemHealth = createServerFn({ method: "GET" }).handler(
     const services = probes.map((probe) =>
       buildServiceHealth(probe, historicalRows),
     );
-
-    const activeQueueRows = queueResult.error ? [] : (queueResult.data ?? []);
-    const waitingRows = activeQueueRows.filter((row) => row.status === "waiting");
-    const oldestWaitMinutes = waitingRows.length
-      ? Math.max(
-          0,
-          Math.round(
-            (Date.now() -
-              Math.min(...waitingRows.map((row) => new Date(row.created_at).getTime()))) /
-              60_000,
-          ),
-        )
-      : 0;
-    const queueStatus: HealthStatus = queueResult.error
-      ? "unknown"
-      : waitingRows.length >= 40 || oldestWaitMinutes >= 60
-        ? "degraded"
-        : "operational";
 
     const jobRows = jobsResult.error ? [] : (jobsResult.data ?? []);
     const failedJobs = jobRows.filter((row) => row.status === "failed").length;
@@ -356,17 +330,6 @@ export const getSystemHealth = createServerFn({ method: "GET" }).handler(
           : "operational";
 
     const signals: OperationalSignal[] = [
-      {
-        key: "queue",
-        label: "Counter queue",
-        value: queueResult.error ? "Unavailable" : `${waitingRows.length} waiting`,
-        detail: queueResult.error
-          ? "Queue telemetry is unavailable."
-          : oldestWaitMinutes > 0
-            ? `Oldest wait is ${oldestWaitMinutes} minutes.`
-            : "No active wait backlog.",
-        status: queueStatus,
-      },
       {
         key: "jobs",
         label: "Background jobs",

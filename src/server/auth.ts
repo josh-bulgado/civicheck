@@ -89,5 +89,5 @@ export async function requireActiveSession(
 }
 
 export function isOperationalRole(role: Role): boolean {
-  return ["frontdesk", "staff", "supervisor", "cashier"].includes(role);
+  return ["staff", "supervisor", "cashier"].includes(role);
 }

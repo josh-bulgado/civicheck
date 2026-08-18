@@ -17,7 +17,7 @@ but skip structured requirement checklists, which is why applicants keep submitt
 incomplete requests and have to make repeat trips. That gap is the whole reason this
 system exists — don't let any feature work undermine it.
 
-## 2. Users & roles (RBAC — 3 roles)
+## 2. Users & roles
 
 - **Applicant / Citizen** — selects a service, views its requirement checklist, optionally
   uploads documents for pre-validation, submits a request intent, gets a tracking number,
@@ -25,7 +25,8 @@ system exists — don't let any feature work undermine it.
   document.
 - **CCRO Staff** — logs in to a dashboard of submitted requests, reviews pre-validation
   uploads before the applicant's visit, validates walk-in documents (accepted / incomplete /
-  rejected), processes and approves, marks ready for release.
+  rejected), processes and approves, marks ready for release, and encodes walk-in requests
+  for visitors with no account.
 - **Admin** — manages staff/admin accounts and roles, configures document types and their
   requirement checklists (including inter-office dependency notes, e.g. barangay/court/PSA
   prerequisites), monitors all request activity, views reports/analytics (volume,
@@ -59,7 +60,7 @@ The `requests.status` field stores the exact state of the request using this voc
 
 | Status Code | Label / UI Text | Stage | Description |
 | :--- | :--- | :--- | :--- |
-| `pending_frontdesk` | Pending Review | **1. Submission** | Initial state after applicant submits online. Awaiting front-desk check. |
+| `submitted` | Submitted | **1. Submission** | Initial state after an applicant or department staff member submits the request. |
 | `under_validation` | Under Validation | **2. Validation** | Staff are verifying uploaded documents or walk-in physical papers. |
 | `incomplete` | Incomplete | **2. Validation** | Requirements check failed; applicant needs to upload or bring missing files. |
 | `rejected` | Rejected | **2. Validation** | Request denied (e.g. incorrect details, invalid eligibility). |

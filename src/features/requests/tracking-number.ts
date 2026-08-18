@@ -32,7 +32,7 @@ export async function insertRequestWithTrackingNumber(
 
     const { data: inserted, error } = await supabase
       .from("requests")
-      .insert({ ...values, tracking_number: trackingNumber })
+      .insert({ status: "submitted", ...values, tracking_number: trackingNumber })
       .select("id")
       .single();
 

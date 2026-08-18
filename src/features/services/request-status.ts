@@ -1,7 +1,7 @@
 export function getStatusDetails(status: string | null) {
   switch (status) {
-    case "pending_frontdesk":
-      return { label: "Pending Review", styles: "status-warning" };
+    case "submitted":
+      return { label: "Submitted", styles: "status-warning" };
     case "under_validation":
       return { label: "Under Validation", styles: "border-primary/20 bg-primary-soft text-primary" };
     case "incomplete":

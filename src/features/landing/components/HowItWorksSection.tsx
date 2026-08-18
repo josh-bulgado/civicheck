@@ -11,8 +11,8 @@ const steps = [
   },
   {
     number: "3",
-    title: "Get your queue number",
-    desc: "Book a slot or walk in, and get a queue number so you know exactly when you'll be seen.",
+    title: "Visit the CCRO",
+    desc: "Bring your tracking number and original documents to the counter — no appointment needed.",
   },
   {
     number: "4",

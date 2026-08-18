@@ -38,7 +38,7 @@ const formSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Please enter a valid email address"),
-  role: z.enum(["frontdesk", "staff", "supervisor", "cashier"]),
+  role: z.enum(["staff", "supervisor", "cashier"]),
   departmentId: z.string(),
   employmentType: z.enum(["regular", "job_order", "contractual"]),
 });
@@ -46,7 +46,6 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const roles: { value: FormValues["role"]; label: string }[] = [
-  { value: "frontdesk", label: "Front desk" },
   { value: "staff", label: "Staff" },
   { value: "supervisor", label: "Supervisor" },
   { value: "cashier", label: "Cashier" },

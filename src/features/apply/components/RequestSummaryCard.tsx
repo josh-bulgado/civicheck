@@ -25,7 +25,7 @@ export function RequestSummaryCard({
         <SummaryRow label="Fee at cashier" value={formatFee(fee)} />
         <div className="h-px bg-border-lighter" />
         <p className="text-sm leading-relaxed text-body">
-          Nothing is paid online. Bring cash on your appointment date.
+          Nothing is paid online. Bring cash when you visit the CCRO counter.
         </p>
       </div>
     </div>

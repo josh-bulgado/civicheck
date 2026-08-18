@@ -5,4 +5,3 @@ export type AdminOverviewData = Awaited<
 >;
 
 export type RequestOverview = AdminOverviewData["requests"];
-export type QueueOverview = AdminOverviewData["queue"];

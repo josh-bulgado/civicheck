@@ -34,7 +34,7 @@ import type {
 const formSchema = z
   .object({
     candidateId: z.string().min(1, "Select an active staff member"),
-    outgoingRole: z.enum(["frontdesk", "staff", "supervisor", "cashier"]),
+    outgoingRole: z.enum(["staff", "supervisor", "cashier"]),
     outgoingDepartmentId: z.string(),
   })
   .superRefine((values, context) => {
@@ -54,7 +54,6 @@ type FormValues = z.infer<typeof formSchema>;
 type OutgoingRole = FormValues["outgoingRole"];
 
 const outgoingRoles: { value: OutgoingRole; label: string }[] = [
-  { value: "frontdesk", label: "Front desk" },
   { value: "staff", label: "Staff" },
   { value: "supervisor", label: "Supervisor" },
   { value: "cashier", label: "Cashier" },

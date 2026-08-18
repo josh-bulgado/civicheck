@@ -76,7 +76,7 @@ export type ServiceHealth = {
 };
 
 export type OperationalSignal = {
-  key: "queue" | "jobs" | "storage" | "workflow";
+  key: "jobs" | "storage" | "workflow";
   label: string;
   value: string;
   detail: string;
