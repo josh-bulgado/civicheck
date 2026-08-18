@@ -4,7 +4,6 @@ import { Sidebar, SidebarContent } from "~/components/ui/sidebar";
 import {
   Activity,
   BarChart3,
-  CalendarDays,
   ClipboardCheck,
   Gauge,
   History,
@@ -12,7 +11,6 @@ import {
   ListChecks,
   Shield,
   ShieldAlert,
-  Ticket,
   UserPlus,
 } from "lucide-react";
 import { NavFooter } from "~/components/sidebar-01/nav-footer";
@@ -36,7 +34,7 @@ function createCcroAdminGroups(items: NavItem[]): NavGroup[] {
     {
       id: "operations",
       label: "Operations",
-      items: selectItems(["request-queue", "queue-desk"]),
+      items: selectItems(["request-queue"]),
     },
     {
       id: "management",
@@ -163,30 +161,12 @@ export function AppSidebar({
     });
   }
 
-  if (can("queue:view_own")) {
-    navMain.push({
-      id: "appointments",
-      title: "My Appointments",
-      url: "/appointments",
-      icon: CalendarDays,
-    });
-  }
-
   if (can("requests:view_all")) {
     navMain.push({
       id: "request-queue",
       title: "Request Queue",
       url: "/requests",
       icon: ListChecks,
-    });
-  }
-
-  if (can("queue:manage")) {
-    navMain.push({
-      id: "queue-desk",
-      title: "Queue Desk",
-      url: "/queue",
-      icon: Ticket,
     });
   }
 

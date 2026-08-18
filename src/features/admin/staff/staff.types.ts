@@ -33,7 +33,7 @@ export type InviteStaffInput = {
 
 export type UpdateStaffAccessInput = {
   staffId: string;
-  role: Extract<Role, "frontdesk" | "staff" | "supervisor" | "cashier">;
+  role: Extract<Role, "staff" | "supervisor" | "cashier">;
   departmentId?: string | null;
   employmentType: EmploymentType;
 };

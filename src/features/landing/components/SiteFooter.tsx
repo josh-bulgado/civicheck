@@ -26,7 +26,6 @@ const SiteFooter = () => (
           <li><Link to="/requirements" className="hover:text-primary">Check requirements</Link></li>
           <li><Link to="/signup" className="hover:text-primary">Submit a request</Link></li>
           <li><Link to="/track" className="hover:text-primary">Track a request</Link></li>
-          <li><Link to="/appointments" className="hover:text-primary">Book a visit</Link></li>
         </ul>
       </div>
 

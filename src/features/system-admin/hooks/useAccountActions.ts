@@ -7,7 +7,7 @@ import {
   suspendAccount,
 } from "../system-admin.functions";
 
-type OutgoingRole = "frontdesk" | "staff" | "supervisor" | "cashier";
+type OutgoingRole = "staff" | "supervisor" | "cashier";
 
 export type AccountPendingAction =
   | { type: "suspend"; accountId: string }

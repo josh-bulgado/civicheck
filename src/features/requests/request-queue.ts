@@ -1,9 +1,9 @@
 /**
- * Presentation helpers for the staff-facing request queue.
+ * Presentation helpers for the staff-facing request docket.
  *
  * `request-workflow.ts` owns the workflow *rules* (which statuses exist, which
  * transitions are legal). This module owns how that workflow is displayed and
- * filtered in the queue — stage groupings, search-param parsing, badge variants.
+ * filtered in the docket — stage groupings, search-param parsing, badge variants.
  */
 
 import {
@@ -41,7 +41,7 @@ export interface RequestQueueFilters {
   department?: string;
 }
 
-/** Every filter cleared — navigate with this to reset the queue. */
+/** Every filter cleared — navigate with this to reset the docket. */
 export const EMPTY_FILTERS: RequestQueueFilters = {
   stage: undefined,
   status: undefined,
@@ -86,7 +86,7 @@ export function formatRequestDate(value: string) {
 
 export function getStatusBadgeVariant(status: string | null) {
   switch (status) {
-    case "pending_frontdesk":
+    case "submitted":
     case "incomplete":
     case "pending_approval":
       return "warning" as const;

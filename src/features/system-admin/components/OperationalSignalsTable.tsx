@@ -1,4 +1,4 @@
-import { Archive, Clock3, FileClock, ServerCog } from "lucide-react";
+import { Archive, FileClock, ServerCog } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import {
   Card,
@@ -23,7 +23,6 @@ import { formatHealthCount } from "../system-health.utils";
 import { HealthStatusBadge } from "./HealthStatusBadge";
 
 const signalIcons = {
-  queue: Clock3,
   jobs: ServerCog,
   storage: Archive,
   workflow: FileClock,

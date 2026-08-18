@@ -31,7 +31,7 @@ const suspendSchema = accountActionSchema.extend({
 });
 const replacementSchema = z.object({
   candidateId: z.string().uuid(),
-  outgoingRole: z.enum(["frontdesk", "staff", "supervisor", "cashier"]),
+  outgoingRole: z.enum(["staff", "supervisor", "cashier"]),
   outgoingDepartmentId: z.string().min(1).nullable().optional(),
 });
 const auditSchema = pageSchema.extend({
@@ -84,7 +84,7 @@ export const getAccounts = createServerFn({ method: "GET" })
             admin
               .from("profiles")
               .select("id, first_name, last_name, role")
-              .in("role", ["frontdesk", "staff", "supervisor", "cashier"])
+              .in("role", ["staff", "supervisor", "cashier"])
               .eq("access_status", "active")
               .order("last_name"),
           ])

@@ -1,6 +1,5 @@
 export type Role =
   | "applicant"
-  | "frontdesk"
   | "staff"
   | "supervisor"
   | "cashier"
@@ -23,10 +22,6 @@ export type Permission =
   | "requests:legal"
   | "requests:collect_payment"
   | "requests:encode_walkin"
-
-  // counter queue
-  | "queue:view_own"
-  | "queue:manage"
 
   // CCRO personnel administration
   | "users:invite_staff"
@@ -53,28 +48,22 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "services:view",
     "requests:view_own",
     "requests:create",
-    "queue:view_own",
     "dashboard:applicant",
   ],
-  frontdesk: [
-    // Front desk owns intake: it encodes walk-ins and runs the counter queue,
-    // but does not process or approve requests.
+  staff: [
+    "services:view",
     "requests:view_all",
     "requests:create",
-    "requests:encode_walkin",
-    "queue:manage",
-    "dashboard:staff",
-  ],
-  staff: [
-    "requests:view_all",
     "requests:process",
-    "queue:manage",
+    "requests:encode_walkin",
     "dashboard:staff",
   ],
   supervisor: [
+    "services:view",
     "requests:view_all",
+    "requests:create",
     "requests:process",
-    "queue:manage",
+    "requests:encode_walkin",
     "dashboard:staff",
   ],
   cashier: ["requests:collect_payment", "dashboard:staff"],
@@ -87,7 +76,6 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "requests:legal",
     "requests:collect_payment",
     "requests:encode_walkin",
-    "queue:manage",
     "users:invite_staff",
     "users:update_operational_roles",
     "users:deactivate_staff",
@@ -119,11 +107,8 @@ export function isInternalRole(role: Role): boolean {
 }
 
 /**
- * Roles restricted to their own assigned department's requests. Everyone else
- * (frontdesk, cashier, admin, system_admin) needs cross-department visibility
- * to do their job — frontdesk triages before a request is routed to a
- * department, cashier collects payment across all services, admin/system_admin
- * oversee the whole office.
+ * Roles restricted to their own assigned department's requests. Cashier and
+ * admin remain office-wide for their dedicated duties.
  */
 export const DEPARTMENT_SCOPED_ROLES: readonly Role[] = ["staff", "supervisor"];
 

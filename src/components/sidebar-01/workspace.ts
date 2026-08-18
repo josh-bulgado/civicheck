@@ -12,11 +12,6 @@ export function getWorkspaceDetails(role: Role): WorkspaceDetails {
         label: "Citizen Portal",
         description: "Find services and manage your requests",
       };
-    case "frontdesk":
-      return {
-        label: "Outlet Workspace",
-        description: "Assisted services and outlet requests",
-      };
     case "cashier":
       return {
         label: "Cashier Counter",

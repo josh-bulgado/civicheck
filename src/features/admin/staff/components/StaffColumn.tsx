@@ -9,7 +9,6 @@ import { StaffRowActions } from "./StaffRowActions";
 
 const roleLabels: Partial<Record<Role, string>> = {
   admin: "Administrator",
-  frontdesk: "Front desk",
   staff: "Staff",
   supervisor: "Supervisor",
   cashier: "Cashier",

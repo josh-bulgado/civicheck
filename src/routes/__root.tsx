@@ -25,7 +25,6 @@ const PUBLIC_ROUTES = new Set([
   "/apply",
   "/apply/",
   "/auth/callback",
-  "/display",
   "/forgot-password",
   "/login",
   "/logout",

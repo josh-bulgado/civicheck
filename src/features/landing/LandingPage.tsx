@@ -2,7 +2,6 @@ import { Reveal } from "~/components/motion/reveal";
 import type { FeaturedChecklist } from "./landing.queries";
 import HeroSection from "./components/HeroSection";
 import HowItWorksSection from "./components/HowItWorksSection";
-import QueueTeaserSection from "./components/QueueTeaserSection";
 import ServicesSection from "./components/ServicesSection";
 import SiteFooter from "./components/SiteFooter";
 import SiteHeader from "./components/SiteHeader";
@@ -17,12 +16,12 @@ const LandingPage = ({ featuredChecklists }: LandingPageProps) => {
       <SiteHeader />
       <main>
         {/*
-          Four sections, in the order a resident actually needs them: what a
-          checklist looks like, which document they want, what happens after
-          they submit, and when they can come in. The old Why / About / CTA
-          sections restated all three of those, so they were dropped rather
-          than trimmed — the page argues its case by showing a real checklist
-          in the hero, not by listing benefits.
+          Three sections, in the order a resident actually needs them: what a
+          checklist looks like, which document they want, and what happens
+          after they submit. The old Why / About / CTA sections restated all
+          three of those, so they were dropped rather than trimmed — the page
+          argues its case by showing a real checklist in the hero, not by
+          listing benefits.
 
           The hero is on screen at load, so it animates itself with the pure-CSS
           entrance classes. Everything below has to be scrolled to, which is what
@@ -35,9 +34,6 @@ const LandingPage = ({ featuredChecklists }: LandingPageProps) => {
         </Reveal>
         <Reveal>
           <HowItWorksSection />
-        </Reveal>
-        <Reveal>
-          <QueueTeaserSection />
         </Reveal>
       </main>
       <SiteFooter />

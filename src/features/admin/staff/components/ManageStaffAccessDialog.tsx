@@ -30,7 +30,7 @@ import type { Department, StaffMember } from "../staff.types";
 
 const formSchema = z
   .object({
-    role: z.enum(["frontdesk", "staff", "supervisor", "cashier"]),
+    role: z.enum(["staff", "supervisor", "cashier"]),
     departmentId: z.string(),
     employmentType: z.enum(["regular", "job_order", "contractual"]),
   })
@@ -50,7 +50,6 @@ const formSchema = z
 type FormValues = z.infer<typeof formSchema>;
 
 const roles: { value: FormValues["role"]; label: string }[] = [
-  { value: "frontdesk", label: "Front Desk" },
   { value: "staff", label: "Staff" },
   { value: "supervisor", label: "Supervisor" },
   { value: "cashier", label: "Cashier" },

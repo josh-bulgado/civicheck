@@ -4,7 +4,7 @@ import type { Role } from "~/lib/permissions";
 import { requireActiveSession } from "~/server/auth";
 import type { Department, EmploymentType, StaffMember } from "./staff.types";
 
-const CCRO_ROLES: Role[] = ["frontdesk", "staff", "supervisor", "cashier", "admin"];
+const CCRO_ROLES: Role[] = ["staff", "supervisor", "cashier", "admin"];
 
 export const getStaff = createServerFn({ method: "GET" }).handler(async () => {
   await requireActiveSession("users:invite_staff");
