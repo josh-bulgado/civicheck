@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { CountUp } from "~/components/motion/count-up";
 import { staggerStyle } from "~/components/motion/stagger";
 import { getStatusDetails, getPaymentDetails } from "~/features/services/request-status";
+import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 
 // Fetch applicant's requests
 const getMyRequests = createServerFn({ method: "GET" }).handler(async () => {
@@ -55,6 +56,9 @@ export const Route = createFileRoute("/_authed/my-requests")({
 function MyRequestsPage() {
   const requests = Route.useLoaderData();
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  // The applicant's own status tracker — this is the "no polling-by-phone-call"
+  // promise, so it has to move the moment staff advance the request.
+  useRealtimeRefresh({ tables: ["requests"] });
   const activeCount = requests.filter(
     (request: any) => !["released", "rejected"].includes(request.status ?? ""),
   ).length;

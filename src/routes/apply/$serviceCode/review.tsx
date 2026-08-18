@@ -39,6 +39,13 @@ function ReviewStepRoute() {
     .filter(Boolean)
     .join(" ");
 
+  const sexLabel =
+    draft.details.subjectSex === "male"
+      ? "Male"
+      : draft.details.subjectSex === "female"
+        ? "Female"
+        : "—";
+
   const finalPurpose =
     draft.caseAnswers.purpose === "Other"
       ? draft.caseAnswers.otherPurpose
@@ -58,6 +65,8 @@ function ReviewStepRoute() {
             subject_middle_name: draft.details.subjectMiddleName,
             subject_last_name: draft.details.subjectLastName,
             subject_suffix: draft.details.subjectSuffix,
+            subject_sex: draft.details.subjectSex,
+            contact_number: draft.details.contactNumber,
             event_date: draft.details.eventDate,
             event_place: draft.details.eventPlace,
             purpose: finalPurpose,
@@ -130,6 +139,11 @@ function ReviewStepRoute() {
           }
         >
           <ReviewRow label="Subject" value={fullName || "—"} />
+          <ReviewRow label="Sex" value={sexLabel} />
+          <ReviewRow
+            label="Contact number"
+            value={draft.details.contactNumber ? `+63 ${draft.details.contactNumber}` : "—"}
+          />
         </EditSection>
 
         <EditSection

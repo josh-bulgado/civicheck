@@ -21,6 +21,7 @@ import { STAGE_OF, isRequestStatus } from "~/features/requests/request-workflow"
 import { getStatusDetails } from "~/features/services/request-status";
 import { WalkInIntakeDialog } from "~/features/requests/components/WalkInIntakeDialog";
 import { getEncodableServicesFn } from "~/features/requests/walk-in-intake.queries";
+import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 
 export const Route = createFileRoute("/_authed/staff-dashboard")({
   beforeLoad: ({ context }) => {
@@ -98,6 +99,7 @@ export const Route = createFileRoute("/_authed/staff-dashboard")({
 function StaffDashboard() {
   const stats = Route.useLoaderData();
   const router = useRouter();
+  useRealtimeRefresh({ tables: ["requests", "application_logs"] });
 
   return (
     <div className="dashboard-page">

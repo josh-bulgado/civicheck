@@ -11,6 +11,7 @@ import {
   type RequestQueueFilters,
 } from "~/features/requests/request-queue";
 import RequestsPage from "~/features/requests/pages/RequestsPage";
+import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 
 export const Route = createFileRoute("/_authed/requests/")({
   validateSearch: (search: Record<string, unknown>): RequestQueueFilters => ({
@@ -42,6 +43,7 @@ function RequestQueueRoute() {
   const filters = Route.useSearch();
   const navigate = useNavigate({ from: "/requests/" });
   const router = useRouter();
+  useRealtimeRefresh({ tables: ["requests", "application_logs"] });
 
   return (
     <RequestsPage

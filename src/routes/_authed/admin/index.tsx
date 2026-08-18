@@ -11,6 +11,7 @@ import { AdminOverviewSkeleton } from "~/features/admin/overview/components/Admi
 import { getCcroAdminOverview } from "~/features/admin/overview/overview.queries";
 import { AdminOverviewPage } from "~/features/admin/overview/pages/AdminOverviewPage";
 import { hasPermission, type Role } from "~/lib/permissions";
+import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 
 export const Route = createFileRoute("/_authed/admin/")({
   beforeLoad: ({ context }) => {
@@ -32,6 +33,9 @@ export const Route = createFileRoute("/_authed/admin/")({
 
 function AdminOverviewRoute() {
   const data = Route.useLoaderData();
+  useRealtimeRefresh({
+    tables: ["requests", "application_logs"],
+  });
   return <AdminOverviewPage data={data} />;
 }
 

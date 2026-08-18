@@ -102,17 +102,13 @@ const RegisterForm = () => {
     }
   }
 
-  if (verificationEmail) {
-    return (
-      <VerifyEmailNotice
-        email={verificationEmail}
-        onUseDifferentEmail={() => setVerificationEmail(null)}
-      />
-    );
-  }
-
   return (
     <AuthSplitLayout panel={<AuthProgressPanel />} className="max-w-85">
+      <VerifyEmailNotice
+        open={verificationEmail !== null}
+        onUseDifferentEmail={() => setVerificationEmail(null)}
+      />
+
       <div className="flex flex-col gap-6.5">
         <AuthFormHeading title="Create an account" />
 

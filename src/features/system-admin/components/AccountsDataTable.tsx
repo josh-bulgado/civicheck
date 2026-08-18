@@ -20,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
+import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { useAccountActions } from "../hooks/useAccountActions";
 import type {
   AccountCategory,
@@ -29,6 +30,7 @@ import type {
 } from "../system-admin.types";
 import { createAccountColumns } from "./AccountsColumn";
 import { AccountsTableToolbar } from "./AccountsTableToolbar";
+import { EditAccountDialog } from "./EditAccountDialog";
 import { ReplaceCcroAdminDialog } from "./ReplaceCcroAdminDialog";
 import { SuspendAccountDialog } from "./SuspendAccountDialog";
 
@@ -57,9 +59,15 @@ export function AccountsDataTable({
   const [suspendTarget, setSuspendTarget] = useState<AccountSummary | null>(
     null,
   );
+  const [editTarget, setEditTarget] = useState<AccountSummary | null>(null);
   const [replacementOpen, setReplacementOpen] = useState(false);
-  const { pendingAction, suspend, reactivate, replaceAdministrator } =
-    useAccountActions();
+  const {
+    pendingAction,
+    suspend,
+    reactivate,
+    updateDetails,
+    replaceAdministrator,
+  } = useAccountActions();
 
   const pendingAccountId =
     pendingAction && "accountId" in pendingAction
@@ -75,6 +83,10 @@ export function AccountsDataTable({
     setSuspendTarget(account);
   }, []);
 
+  const handleEditRequest = useCallback((account: AccountSummary) => {
+    setEditTarget(account);
+  }, []);
+
   const handleReactivate = useCallback(
     (account: AccountSummary) => {
       void reactivate(account.id);
@@ -87,10 +99,17 @@ export function AccountsDataTable({
       createAccountColumns({
         category,
         pendingAccountId,
+        onEdit: handleEditRequest,
         onSuspend: handleSuspendRequest,
         onReactivate: handleReactivate,
       }),
-    [category, handleReactivate, handleSuspendRequest, pendingAccountId],
+    [
+      category,
+      handleEditRequest,
+      handleReactivate,
+      handleSuspendRequest,
+      pendingAccountId,
+    ],
   );
 
   const table = useReactTable({
@@ -127,6 +146,12 @@ export function AccountsDataTable({
   const suspendPending =
     pendingAction?.type === "suspend" &&
     pendingAction.accountId === suspendTarget?.id;
+  const editPending =
+    pendingAction?.type === "edit-details" &&
+    pendingAction.accountId === editTarget?.id;
+  // Every account mutation — edit, suspend, reactivate, admin replacement —
+  // writes a profiles row, so one subscription covers the whole directory.
+  const realtimeStatus = useRealtimeRefresh({ tables: ["profiles"] });
 
   return (
     <div className="space-y-4">
@@ -134,6 +159,7 @@ export function AccountsDataTable({
         value={globalFilter}
         onChange={setGlobalFilter}
         placeholder={`Filter ${accountNoun}s`}
+        realtimeStatus={realtimeStatus}
         onReplaceAdministrator={
           category === "personnel"
             ? () => setReplacementOpen(true)
@@ -230,6 +256,15 @@ export function AccountsDataTable({
             ? suspend(suspendTarget.id, reason)
             : Promise.resolve(false)
         }
+      />
+      <EditAccountDialog
+        account={editTarget}
+        departments={departments}
+        isPending={editPending}
+        onOpenChange={(open) => {
+          if (!open && !editPending) setEditTarget(null);
+        }}
+        onConfirm={updateDetails}
       />
       {category === "personnel" ? (
         <ReplaceCcroAdminDialog

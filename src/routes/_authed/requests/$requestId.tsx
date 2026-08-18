@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { ArrowLeft, CheckCircle2, ExternalLink, XCircle } from "lucide-react";
 import { hasPermission, type Role } from "~/lib/permissions";
 import { usePermissions } from "~/hooks/usePermissions";
+import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
@@ -65,6 +66,9 @@ function RequestDetailPage() {
   const request = Route.useLoaderData();
   const router = useRouter();
   const { can } = usePermissions();
+  useRealtimeRefresh({
+    tables: ["requests", "application_logs", "requirements_attachments"],
+  });
 
   const [remarks, setRemarks] = useState("");
   const [busy, setBusy] = useState(false);

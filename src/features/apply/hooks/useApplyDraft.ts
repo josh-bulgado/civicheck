@@ -16,6 +16,8 @@ export interface ApplyDraft {
     subjectMiddleName: string;
     subjectLastName: string;
     subjectSuffix: string;
+    subjectSex: string;
+    contactNumber: string;
     eventDate: string;
     eventPlace: string;
   };
@@ -35,6 +37,8 @@ export const DEFAULT_APPLY_DRAFT: ApplyDraft = {
     subjectMiddleName: "",
     subjectLastName: "",
     subjectSuffix: "",
+    subjectSex: "",
+    contactNumber: "",
     eventDate: "",
     eventPlace: "",
   },

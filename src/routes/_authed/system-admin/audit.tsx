@@ -2,6 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { AuditPage } from "~/features/system-admin/pages/AuditPage";
 import { getAuditEvents } from "~/features/system-admin/system-admin.functions";
 import { hasPermission, type Role } from "~/lib/permissions";
+import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 
 export const Route = createFileRoute("/_authed/system-admin/audit")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -23,8 +24,15 @@ export const Route = createFileRoute("/_authed/system-admin/audit")({
   },
   loaderDeps: ({ search }) => search,
   loader: ({ deps }) => getAuditEvents({ data: { ...deps, pageSize: 20 } }),
-  component: () => {
-    const data = Route.useLoaderData();
-    return <AuditPage {...data} />;
-  },
+  component: AuditRoute,
 });
+
+function AuditRoute() {
+  const data = Route.useLoaderData();
+  // Only system_audit_events is subscribed: application_logs is gated behind
+  // is_ccro_staff(), which deliberately excludes system_admin, so a channel on
+  // it would connect and never deliver. Request-sourced rows still arrive on
+  // the next load or tab focus.
+  useRealtimeRefresh({ tables: ["system_audit_events"] });
+  return <AuditPage {...data} />;
+}

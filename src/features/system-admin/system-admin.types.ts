@@ -5,17 +5,53 @@ export type AccountCategory =
   | "citizens"
   | "platform-admins";
 
+export type AccountSex = "" | "male" | "female";
+
+export type AccountEmploymentType = "regular" | "job_order" | "contractual";
+
+/** Roles a System Administrator can assign from the account edit dialog. */
+export type AssignableRole = Exclude<Role, "system_admin">;
+
+/**
+ * Optional profile columns are normalised to "" (never null) so the edit
+ * dialog's inputs stay controlled without per-field fallbacks.
+ */
 export type AccountSummary = {
   id: string;
   email: string;
   firstName: string;
+  middleName: string;
   lastName: string;
+  suffix: string;
+  dateOfBirth: string;
+  sex: AccountSex;
+  phoneNumber: string;
   role: Role;
   status: AccountStatus;
   createdAt: string;
   lastSignInAt: string | null;
   suspensionReason: string | null;
   departmentId: string | null;
+  employmentType: AccountEmploymentType;
+};
+
+/** Payload of the system administrator's account edit dialog. */
+export type AccountDetailsInput = {
+  targetId: string;
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  suffix: string;
+  dateOfBirth: string;
+  sex: AccountSex;
+  phoneNumber: string;
+  email: string;
+  /** Blank keeps the current password. */
+  newPassword: string;
+  role: AssignableRole;
+  /** Required for staff/supervisor, ignored for every other role. */
+  departmentId: string | null;
+  employmentType: AccountEmploymentType;
 };
 
 export type AdminCandidate = Pick<

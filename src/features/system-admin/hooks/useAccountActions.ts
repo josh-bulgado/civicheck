@@ -5,13 +5,16 @@ import {
   reactivateAccount,
   replaceCcroAdmin,
   suspendAccount,
+  updateAccountDetails,
 } from "../system-admin.functions";
+import type { AccountDetailsInput } from "../system-admin.types";
 
 type OutgoingRole = "staff" | "supervisor" | "cashier";
 
 export type AccountPendingAction =
   | { type: "suspend"; accountId: string }
   | { type: "reactivate"; accountId: string }
+  | { type: "edit-details"; accountId: string }
   | { type: "replace-admin" }
   | null;
 
@@ -66,6 +69,16 @@ export function useAccountActions() {
     [run],
   );
 
+  const updateDetails = useCallback(
+    (values: AccountDetailsInput) =>
+      run(
+        () => updateAccountDetails({ data: values }),
+        { type: "edit-details", accountId: values.targetId },
+        "Account details updated.",
+      ),
+    [run],
+  );
+
   const replaceAdministrator = useCallback(
     ({
       candidateId,
@@ -87,5 +100,11 @@ export function useAccountActions() {
     [run],
   );
 
-  return { pendingAction, suspend, reactivate, replaceAdministrator };
+  return {
+    pendingAction,
+    suspend,
+    reactivate,
+    updateDetails,
+    replaceAdministrator,
+  };
 }

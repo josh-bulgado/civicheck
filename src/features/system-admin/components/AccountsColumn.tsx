@@ -70,11 +70,13 @@ function PresenceBadge({ lastSignInAt }: { lastSignInAt: string | null }) {
 export function createAccountColumns({
   category,
   pendingAccountId,
+  onEdit,
   onSuspend,
   onReactivate,
 }: {
   category: AccountCategory;
   pendingAccountId: string | null;
+  onEdit: (account: AccountSummary) => void;
   onSuspend: (account: AccountSummary) => void;
   onReactivate: (account: AccountSummary) => void;
 }): ColumnDef<AccountSummary>[] {
@@ -186,6 +188,7 @@ export function createAccountColumns({
           <AccountRowActions
             account={row.original}
             isPending={pendingAccountId === row.original.id}
+            onEdit={onEdit}
             onSuspend={onSuspend}
             onReactivate={onReactivate}
           />

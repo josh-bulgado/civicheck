@@ -31,6 +31,7 @@ export type Permission =
   // platform account administration
   | "accounts:view_all"
   | "accounts:suspend"
+  | "accounts:edit_details"
   | "accounts:replace_admin"
   | "audit:view"
   | "health:view"
@@ -84,6 +85,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   system_admin: [
     "accounts:view_all",
     "accounts:suspend",
+    "accounts:edit_details",
     "accounts:replace_admin",
     "audit:view",
     "health:view",

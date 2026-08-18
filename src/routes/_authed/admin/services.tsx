@@ -4,6 +4,7 @@ import { getActiveDepartments } from "~/features/admin/departments.queries";
 import { hasPermission } from "~/lib/permissions";
 import type { Role } from "~/lib/permissions";
 import ServicesPage from "~/features/admin/services/pages/ServicesPage";
+import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 
 export const Route = createFileRoute("/_authed/admin/services")({
   beforeLoad: ({ context }) => {
@@ -24,5 +25,8 @@ export const Route = createFileRoute("/_authed/admin/services")({
 
 function AdminServicesRoute() {
   const { services, departments } = Route.useLoaderData();
+  useRealtimeRefresh({
+    tables: ["services_registry", "service_requirements_metadata"],
+  });
   return <ServicesPage services={services} departments={departments} />;
 }

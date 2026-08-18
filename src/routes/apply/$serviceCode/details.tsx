@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { Phone } from "lucide-react";
 import {
   Field,
   FieldError,
@@ -9,6 +10,12 @@ import {
   FieldLabel,
 } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from "~/components/ui/input-group";
 import {
   Select,
   SelectContent,
@@ -31,6 +38,15 @@ const detailsSchema = z.object({
   subjectMiddleName: z.string(),
   subjectLastName: z.string().min(1, "Last name is required"),
   subjectSuffix: z.string(),
+  subjectSex: z.enum(["male", "female"], {
+    errorMap: () => ({ message: "Select the sex on record" }),
+  }),
+  contactNumber: z
+    .string()
+    .refine(
+      (value) => value === "" || /^9\d{9}$/.test(value),
+      "Enter a valid 10-digit mobile number, e.g. 9171234567",
+    ),
 });
 
 type DetailsValues = z.infer<typeof detailsSchema>;
@@ -51,6 +67,18 @@ const SUFFIXES = [
   { value: "V", label: "V" },
 ];
 
+// No "unspecified" value is accepted by the schema — this sentinel only
+// gives the Select a real item to resolve while nothing has been chosen yet,
+// the same trick used for suffix above.
+const NO_SEX = "unspecified";
+
+const SEXES = [
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
+];
+
+const SEX_ITEMS = [{ value: NO_SEX, label: "Select sex" }, ...SEXES];
+
 function DetailsStepRoute() {
   const { serviceCode } = Route.useParams();
   const navigate = useNavigate();
@@ -68,6 +96,8 @@ function DetailsStepRoute() {
           subjectMiddleName: draft.details.subjectMiddleName,
           subjectLastName: draft.details.subjectLastName,
           subjectSuffix: draft.details.subjectSuffix,
+          subjectSex: draft.details.subjectSex as "male" | "female",
+          contactNumber: draft.details.contactNumber,
         }
       : undefined,
   });
@@ -154,7 +184,59 @@ function DetailsStepRoute() {
                 </Field>
               )}
             />
+            <Controller
+              control={form.control}
+              name="subjectSex"
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="subjectSex">Sex</FieldLabel>
+                  <Select<"male" | "female" | typeof NO_SEX>
+                    items={SEX_ITEMS}
+                    value={field.value || NO_SEX}
+                    onValueChange={(value) =>
+                      field.onChange(value === NO_SEX ? "" : value)
+                    }
+                  >
+                    <SelectTrigger id="subjectSex" className="w-full">
+                      <SelectValue placeholder="Select sex" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SEX_ITEMS.map((sex) => (
+                        <SelectItem key={sex.value} value={sex.value}>
+                          {sex.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
           </div>
+
+          <Controller
+            control={form.control}
+            name="contactNumber"
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="contactNumber">Contact number (optional)</FieldLabel>
+                <InputGroup>
+                  <InputGroupAddon>
+                    <Phone size={16} aria-hidden="true" />
+                    <InputGroupText>+63</InputGroupText>
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    {...field}
+                    id="contactNumber"
+                    inputMode="numeric"
+                    placeholder="9171234567"
+                    aria-invalid={fieldState.invalid}
+                  />
+                </InputGroup>
+                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+              </Field>
+            )}
+          />
         </FieldGroup>
 
         <WizardFooterActions
