@@ -49,7 +49,7 @@ export const badgeToneClasses = {
  * here rather than being written twice. Pair the returned object with
  * `<ServiceEntryDialogs entry={...} />` to mount the dialogs themselves.
  */
-export function useServiceEntry(service: ServiceEntryProps) {
+export function useServiceEntry(service: ServiceEntryProps, canApply = true) {
   const navigate = useNavigate();
   const [requirementsOpen, setRequirementsOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -110,6 +110,7 @@ export function useServiceEntry(service: ServiceEntryProps) {
     waitTerm: fullyOnline ? "Answered in" : "Released",
     waitLabel: summarizeWait(service.processing_time),
     feeLabel: formatFee(service.fee, service.display_group),
+    canApply,
     openRequirements: () => setRequirementsOpen(true),
     startApply: () => askToApply(false),
 
@@ -137,17 +138,19 @@ export function ServiceEntryDialogs({ entry }: { entry: ServiceEntry }) {
         processingTime={entry.service.processing_time}
         open={entry.requirementsOpen}
         onOpenChange={entry.setRequirementsOpen}
-        onApply={entry.applyFromChecklist}
+        onApply={entry.canApply ? entry.applyFromChecklist : undefined}
       />
 
-      <ConfirmApplyDialog
-        title={entry.title}
-        fee={entry.service.fee}
-        displayGroup={entry.service.display_group}
-        open={entry.confirmOpen}
-        onOpenChange={entry.handleConfirmOpenChange}
-        onConfirm={entry.confirmApply}
-      />
+      {entry.canApply && (
+        <ConfirmApplyDialog
+          title={entry.title}
+          fee={entry.service.fee}
+          displayGroup={entry.service.display_group}
+          open={entry.confirmOpen}
+          onOpenChange={entry.handleConfirmOpenChange}
+          onConfirm={entry.confirmApply}
+        />
+      )}
     </>
   );
 }

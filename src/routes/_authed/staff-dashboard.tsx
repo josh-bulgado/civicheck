@@ -1,6 +1,7 @@
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useRouter } from "@tanstack/react-router";
 import { hasPermission, type Role } from "~/lib/permissions";
 import {
+  AlertTriangle,
   ArrowRight,
   Building2,
   ClipboardCheck,
@@ -14,8 +15,12 @@ import {
   getAwaitingPaymentCountFn,
   getMyDepartmentScopeFn,
   getPaymentsVerifiedTodayCountFn,
+  type StaffRequestRow,
 } from "~/features/requests/requests.queries";
 import { STAGE_OF, isRequestStatus } from "~/features/requests/request-workflow";
+import { getStatusDetails } from "~/features/services/request-status";
+import { WalkInIntakeDialog } from "~/features/requests/components/WalkInIntakeDialog";
+import { getEncodableServicesFn } from "~/features/requests/walk-in-intake.queries";
 
 export const Route = createFileRoute("/_authed/staff-dashboard")({
   beforeLoad: ({ context }) => {
@@ -38,6 +43,7 @@ export const Route = createFileRoute("/_authed/staff-dashboard")({
       return {
         isCashier: true as const,
         canViewRequests: false,
+        canEncodeWalkIn: false,
         awaitingIntake: 0,
         inValidation: 0,
         inProgress: 0,
@@ -45,23 +51,33 @@ export const Route = createFileRoute("/_authed/staff-dashboard")({
         unpaid,
         paymentsVerifiedToday,
         scope,
+        needsAttention: [] as StaffRequestRow[],
+        needsAttentionCount: 0,
+        encodableServices: [],
       };
     }
 
     const role = context.user!.role as Role;
     const canViewRequests = hasPermission(role, "requests:view_all");
-    const [requests, scope] = await Promise.all([
+    const canEncodeWalkIn = hasPermission(role, "requests:encode_walkin");
+    const [requests, scope, encodableServices] = await Promise.all([
       canViewRequests ? getAllRequestsFn() : Promise.resolve([]),
       getMyDepartmentScopeFn(),
+      canEncodeWalkIn ? getEncodableServicesFn() : Promise.resolve([]),
     ]);
 
     const inStage = (stage: number) =>
       requests.filter((r) => isRequestStatus(r.status) && STAGE_OF[r.status] === stage)
         .length;
 
+    const needsAttentionAll = requests
+      .filter((r) => r.status === "incomplete" || r.status === "rejected")
+      .sort((a, b) => a.updatedAt.localeCompare(b.updatedAt));
+
     return {
       isCashier: false as const,
       canViewRequests,
+      canEncodeWalkIn,
       awaitingIntake: inStage(1),
       inValidation: inStage(2),
       inProgress: inStage(3) + inStage(4),
@@ -71,6 +87,9 @@ export const Route = createFileRoute("/_authed/staff-dashboard")({
       ).length,
       paymentsVerifiedToday: 0,
       scope,
+      needsAttention: needsAttentionAll.slice(0, 5),
+      needsAttentionCount: needsAttentionAll.length,
+      encodableServices,
     };
   },
   component: StaffDashboard,
@@ -78,6 +97,7 @@ export const Route = createFileRoute("/_authed/staff-dashboard")({
 
 function StaffDashboard() {
   const stats = Route.useLoaderData();
+  const router = useRouter();
 
   return (
     <div className="dashboard-page">
@@ -104,6 +124,14 @@ function StaffDashboard() {
                 ? "A focused workspace for looking up requests and collecting payment."
                 : "A focused workspace for request intake, document validation, and civil registry processing."}
             </p>
+            {!stats.isCashier && stats.canEncodeWalkIn && (
+              <div className="mt-4">
+                <WalkInIntakeDialog
+                  services={stats.encodableServices}
+                  onChanged={() => router.invalidate()}
+                />
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-3 rounded-xl border border-white/15 bg-white/10 p-4 text-white backdrop-blur-sm">
             <ClipboardCheck className="size-5 text-brand-gold" aria-hidden="true" />
@@ -156,17 +184,80 @@ function StaffDashboard() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {stats.canViewRequests ? (
-              <RequestQueueSummaryCard
-                awaitingIntake={stats.awaitingIntake}
-                inValidation={stats.inValidation}
-                inProgress={stats.inProgress}
-                readyForRelease={stats.readyForRelease}
-                unpaid={stats.unpaid}
-              />
+              <>
+                <RequestQueueSummaryCard
+                  awaitingIntake={stats.awaitingIntake}
+                  inValidation={stats.inValidation}
+                  inProgress={stats.inProgress}
+                  readyForRelease={stats.readyForRelease}
+                  unpaid={stats.unpaid}
+                />
+                <NeedsAttentionCard
+                  requests={stats.needsAttention}
+                  total={stats.needsAttentionCount}
+                />
+              </>
             ) : null}
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+function NeedsAttentionCard({
+  requests,
+  total,
+}: {
+  requests: StaffRequestRow[];
+  total: number;
+}) {
+  return (
+    <div className="dashboard-panel flex min-h-56 flex-col p-5 sm:p-6">
+      <div className="flex items-start gap-4">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-warning text-white shadow-sm">
+          <AlertTriangle className="size-5" aria-hidden="true" />
+        </div>
+        <div className="min-w-0">
+          <h3 className="text-lg font-bold text-foreground">Needs attention</h3>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">
+            Incomplete or rejected requests waiting the longest.
+          </p>
+        </div>
+        <span className="ml-auto shrink-0 text-sm font-bold tabular-nums text-foreground">
+          {total}
+        </span>
+      </div>
+
+      {requests.length === 0 ? (
+        <p className="mt-5 flex flex-1 items-center justify-center text-sm text-muted-foreground">
+          Nothing needs attention right now.
+        </p>
+      ) : (
+        <ul className="mt-5 flex flex-1 flex-col divide-y divide-border border-t border-border">
+          {requests.map((request) => {
+            const status = getStatusDetails(request.status);
+            return (
+              <li key={request.id}>
+                <Link
+                  to="/requests/$requestId"
+                  params={{ requestId: request.id }}
+                  className="flex items-center gap-3 py-3 transition-colors hover:text-primary"
+                >
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                    {request.trackingNumber} · {request.applicantName}
+                  </span>
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${status.styles}`}
+                  >
+                    {status.label}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

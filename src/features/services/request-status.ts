@@ -16,6 +16,12 @@ export function getStatusDetails(status: string | null) {
       return { label: "Ready for Release", styles: "status-success" };
     case "released":
       return { label: "Released", styles: "status-success" };
+    case "document_approved":
+      return { label: "Document Approved", styles: "status-success" };
+    case "document_rejected":
+      return { label: "Document Rejected", styles: "status-error" };
+    case "document_resubmitted":
+      return { label: "Document Resubmitted", styles: "status-warning" };
     default:
       return { label: status || "Unknown", styles: "status-neutral" };
   }

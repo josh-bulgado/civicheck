@@ -303,9 +303,9 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
     const [attachments, logs] = await Promise.all([
       supabase
         .from("requirements_attachments")
-        .select("id, requirement_name, file_url, verification_status, rejection_reason, created_at")
+        .select("id, requirement_name, file_url, verification_status, rejection_reason, uploaded_at")
         .eq("request_id", data.requestId)
-        .order("created_at", { ascending: true }),
+        .order("uploaded_at", { ascending: true }),
       supabase
         .from("application_logs")
         .select(
@@ -344,14 +344,15 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       })),
       logs: (logs.data ?? []).map((l: any) => {
         const actor = one<{ first_name?: string; last_name?: string }>(l.profiles);
+        const fallbackActor = l.action_status === "document_resubmitted" ? "Applicant" : "System";
         return {
           id: l.id,
           actionStatus: l.action_status,
           remarks: l.remarks,
           createdAt: l.created_at,
           actorName: actor
-            ? `${actor.first_name ?? ""} ${actor.last_name ?? ""}`.trim() || "System"
-            : "System",
+            ? `${actor.first_name ?? ""} ${actor.last_name ?? ""}`.trim() || fallbackActor
+            : fallbackActor,
         };
       }),
     };

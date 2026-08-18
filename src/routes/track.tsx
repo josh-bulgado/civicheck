@@ -1,18 +1,33 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Search, FileText } from "lucide-react";
+import { toast } from "sonner";
+import { Search, FileText, Upload } from "lucide-react";
 import { enterDelay, staggerStyle } from "~/components/motion/stagger";
 import { Field, FieldError, FieldGroup, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import SiteHeader from "~/features/landing/components/SiteHeader";
 import SiteFooter from "~/features/landing/components/SiteFooter";
-import { trackRequestFn } from "~/features/track/track.queries";
+import { trackRequestFn, resubmitAttachmentFn } from "~/features/track/track.queries";
 import { getStatusDetails, getPaymentDetails } from "~/features/services/request-status";
 import { formatFee } from "~/features/services/service-utils";
+
+const ACCEPT = "image/jpeg,image/png,application/pdf";
+const MAX_SIZE = 10 * 1024 * 1024;
+
+function getAttachmentStatusStyles(status: string) {
+  switch (status) {
+    case "approved":
+      return "status-success";
+    case "rejected":
+      return "status-error";
+    default:
+      return "status-warning";
+  }
+}
 
 type TrackSearch = { ref?: string };
 
@@ -30,6 +45,13 @@ const trackSchema = z.object({
 
 type TrackValues = z.infer<typeof trackSchema>;
 
+type TrackAttachment = {
+  id: string;
+  requirementName: string;
+  verificationStatus: string;
+  rejectionReason: string | null;
+};
+
 type TrackResult = {
   trackingNumber: string;
   serviceName: string;
@@ -37,6 +59,7 @@ type TrackResult = {
   paymentStatus: string | null;
   feesDue: number | string;
   createdAt: string;
+  attachments: TrackAttachment[];
 };
 
 function TrackPage() {
@@ -65,6 +88,12 @@ function TrackPage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function refreshResult() {
+    const values = form.getValues();
+    const res = await trackRequestFn({ data: values });
+    if (!res.error && res.request) setResult(res.request);
   }
 
   const status = result ? getStatusDetails(result.status) : null;
@@ -196,11 +225,114 @@ function TrackPage() {
                 </span>
               </div>
             </div>
+
+            {result.attachments.length > 0 && (
+              <div className="mt-6 border-t border-border-lighter pt-5">
+                <h2 className="mb-3 text-sm font-bold text-foreground">Your documents</h2>
+                <div className="flex flex-col gap-3">
+                  {result.attachments.map((doc) => (
+                    <AttachmentTrackRow
+                      key={doc.id}
+                      doc={doc}
+                      trackingNumber={result.trackingNumber}
+                      lastName={form.getValues("lastName")}
+                      onResubmitted={refreshResult}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
 
       <SiteFooter />
+    </div>
+  );
+}
+
+function AttachmentTrackRow({
+  doc,
+  trackingNumber,
+  lastName,
+  onResubmitted,
+}: {
+  doc: TrackAttachment;
+  trackingNumber: string;
+  lastName: string;
+  onResubmitted: () => Promise<void>;
+}) {
+  const fileInput = useRef<HTMLInputElement | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleFile(file: File) {
+    if (!file.type || !ACCEPT.split(",").includes(file.type)) {
+      toast.error("Only JPG, PNG, or PDF files are accepted.");
+      return;
+    }
+    if (file.size > MAX_SIZE) {
+      toast.error("Files must be 10 MB or smaller.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.set("file", file);
+      formData.set("attachmentId", doc.id);
+      formData.set("trackingNumber", trackingNumber);
+      formData.set("lastName", lastName);
+
+      const res = await resubmitAttachmentFn({ data: formData });
+      if (res.error) {
+        toast.error(res.message);
+        return;
+      }
+      toast.success("Document resubmitted for review.");
+      await onResubmitted();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-light p-4 text-sm">
+      <div className="min-w-0">
+        <p className="truncate font-semibold text-foreground">{doc.requirementName}</p>
+        <span
+          className={`mt-1 inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium capitalize ${getAttachmentStatusStyles(doc.verificationStatus)}`}
+        >
+          {doc.verificationStatus}
+        </span>
+        {doc.verificationStatus === "rejected" && doc.rejectionReason && (
+          <p className="mt-1 text-xs text-destructive">{doc.rejectionReason}</p>
+        )}
+      </div>
+
+      {doc.verificationStatus === "rejected" && (
+        <>
+          <input
+            ref={fileInput}
+            type="file"
+            accept={ACCEPT}
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleFile(file);
+              e.target.value = "";
+            }}
+          />
+          <Button
+            type="button"
+            size="sm"
+            disabled={submitting}
+            onClick={() => fileInput.current?.click()}
+          >
+            <Upload className="size-3.5" />
+            {submitting ? "Uploading..." : "Resubmit"}
+          </Button>
+        </>
+      )}
     </div>
   );
 }

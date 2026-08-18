@@ -6,6 +6,8 @@ export interface EncodableService {
   serviceCode: string;
   name: string;
   fee: number;
+  displayGroup: string | null;
+  processingTime: string;
 }
 
 export const getEncodableServicesFn = createServerFn({ method: "GET" }).handler(
@@ -16,7 +18,9 @@ export const getEncodableServicesFn = createServerFn({ method: "GET" }).handler(
 
     let query = supabase
       .from("services_registry")
-      .select("service_code, name, display_name, fee, department_id")
+      .select(
+        "service_code, name, display_name, fee, department_id, display_group, processing_time",
+      )
       .order("name", { ascending: true });
 
     if (isDepartmentScopedRole(role)) {
@@ -31,6 +35,8 @@ export const getEncodableServicesFn = createServerFn({ method: "GET" }).handler(
       serviceCode: service.service_code,
       name: service.display_name || service.name,
       fee: Number(service.fee ?? 0),
+      displayGroup: service.display_group,
+      processingTime: service.processing_time,
     }));
   },
 );

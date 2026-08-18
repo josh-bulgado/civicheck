@@ -142,23 +142,25 @@ export const setAttachmentVerificationFn = createServerFn({ method: "POST" })
     (d: { attachmentId: string; status: "approved" | "rejected"; reason?: string }) => d,
   )
   .handler(async ({ data }) => {
-    const { supabase, role, departmentId } = await requireActiveSession("requests:process");
+    const { supabase, user, role, departmentId } = await requireActiveSession(
+      "requests:process",
+    );
 
     if (data.status === "rejected" && !data.reason?.trim()) {
       return { error: true, message: "Say why the document was rejected." };
     }
 
+    const { data: attachment, error: fetchError } = await supabase
+      .from("requirements_attachments")
+      .select("id, request_id, requirement_name, requests(services_registry(department_id))")
+      .eq("id", data.attachmentId)
+      .single();
+
+    if (fetchError || !attachment) {
+      return { error: true, message: "That document no longer exists." };
+    }
+
     if (isDepartmentScopedRole(role)) {
-      const { data: attachment, error: fetchError } = await supabase
-        .from("requirements_attachments")
-        .select("id, requests(services_registry(department_id))")
-        .eq("id", data.attachmentId)
-        .single();
-
-      if (fetchError || !attachment) {
-        return { error: true, message: "That document no longer exists." };
-      }
-
       const request = Array.isArray(attachment.requests)
         ? attachment.requests[0]
         : attachment.requests;
@@ -170,14 +172,68 @@ export const setAttachmentVerificationFn = createServerFn({ method: "POST" })
       }
     }
 
+    const reason = data.status === "rejected" ? data.reason?.trim() : null;
+
     const { error } = await supabase
       .from("requirements_attachments")
       .update({
         verification_status: data.status,
-        rejection_reason: data.status === "rejected" ? data.reason?.trim() : null,
+        rejection_reason: reason,
       })
       .eq("id", data.attachmentId);
 
     if (error) return { error: true, message: error.message };
+
+    const { error: logError } = await supabase.from("application_logs").insert({
+      request_id: attachment.request_id,
+      performed_by_profile_id: user.id,
+      action_status: data.status === "approved" ? "document_approved" : "document_rejected",
+      remarks:
+        data.status === "approved"
+          ? `Approved "${attachment.requirement_name}".`
+          : `Rejected "${attachment.requirement_name}": ${reason}`,
+    });
+    if (logError) {
+      console.error("Failed to write attachment verification audit log", logError);
+    }
+
     return { error: false };
+  });
+
+export const getAttachmentSignedUrlFn = createServerFn({ method: "GET" })
+  .validator((d: { attachmentId: string }) => d)
+  .handler(async ({ data }) => {
+    const { supabase, role, departmentId } = await requireActiveSession("requests:process");
+
+    const { data: attachment, error: fetchError } = await supabase
+      .from("requirements_attachments")
+      .select("id, file_url, requests(services_registry(department_id))")
+      .eq("id", data.attachmentId)
+      .single();
+
+    if (fetchError || !attachment) {
+      return { error: true, message: "That document no longer exists." };
+    }
+
+    if (isDepartmentScopedRole(role)) {
+      const request = Array.isArray(attachment.requests)
+        ? attachment.requests[0]
+        : attachment.requests;
+      const service = Array.isArray(request?.services_registry)
+        ? request.services_registry[0]
+        : request?.services_registry;
+      if (service?.department_id !== departmentId) {
+        return { error: true, message: "That document no longer exists." };
+      }
+    }
+
+    const { data: signed, error: signError } = await supabase.storage
+      .from("request-documents")
+      .createSignedUrl(attachment.file_url, 300);
+
+    if (signError || !signed) {
+      return { error: true, message: "Could not generate a link for this file." };
+    }
+
+    return { error: false, url: signed.signedUrl };
   });

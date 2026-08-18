@@ -11,8 +11,9 @@ import {
  * decorative document icon is gone — at this size it cost a whole row of
  * height and said nothing the title didn't.
  */
-const ServiceCard = (service: ServiceEntryProps) => {
-  const entry = useServiceEntry(service);
+const ServiceCard = (service: ServiceEntryProps & { canApply?: boolean }) => {
+  const { canApply = true, ...serviceProps } = service;
+  const entry = useServiceEntry(serviceProps, canApply);
 
   return (
     <article
@@ -53,17 +54,19 @@ const ServiceCard = (service: ServiceEntryProps) => {
       </dl>
 
       <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={entry.startApply}
-          className="civic-press inline-flex min-h-9 flex-1 cursor-pointer items-center justify-center rounded-lg bg-primary px-4 text-[14px] font-bold text-primary-foreground outline-none hover:bg-primary-hover focus-visible:ring-3 focus-visible:ring-ring/50"
-        >
-          Apply
-        </button>
+        {canApply && (
+          <button
+            type="button"
+            onClick={entry.startApply}
+            className="civic-press inline-flex min-h-9 flex-1 cursor-pointer items-center justify-center rounded-lg bg-primary px-4 text-[14px] font-bold text-primary-foreground outline-none hover:bg-primary-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            Apply
+          </button>
+        )}
         <button
           type="button"
           onClick={entry.openRequirements}
-          className="civic-press inline-flex min-h-9 cursor-pointer items-center justify-center rounded-lg border border-control-border bg-white px-3 text-[14px] font-bold text-body-strong outline-none hover:bg-surface-subtle focus-visible:ring-3 focus-visible:ring-ring/50"
+          className={`civic-press inline-flex min-h-9 cursor-pointer items-center justify-center rounded-lg border border-control-border bg-white px-3 text-[14px] font-bold text-body-strong outline-none hover:bg-surface-subtle focus-visible:ring-3 focus-visible:ring-ring/50 ${canApply ? "" : "flex-1"}`}
         >
           Requirements
         </button>
