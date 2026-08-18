@@ -26,6 +26,7 @@ import { Route as AuthedStaffDashboardRouteImport } from './routes/_authed/staff
 import { Route as AuthedQueueRouteImport } from './routes/_authed/queue'
 import { Route as AuthedMyRequestsRouteImport } from './routes/_authed/my-requests'
 import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
+import { Route as AuthedCashierRouteImport } from './routes/_authed/cashier'
 import { Route as AuthedAppointmentsRouteImport } from './routes/_authed/appointments'
 import { Route as ApplyServiceCodeRouteRouteImport } from './routes/apply/$serviceCode/route'
 import { Route as ApplyServiceCodeIndexRouteImport } from './routes/apply/$serviceCode/index'
@@ -128,6 +129,11 @@ const AuthedMyRequestsRoute = AuthedMyRequestsRouteImport.update({
 const AuthedDashboardRoute = AuthedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
+const AuthedCashierRoute = AuthedCashierRouteImport.update({
+  id: '/cashier',
+  path: '/cashier',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedAppointmentsRoute = AuthedAppointmentsRouteImport.update({
@@ -243,6 +249,7 @@ export interface FileRoutesByFullPath {
   '/track': typeof TrackRoute
   '/apply/$serviceCode': typeof ApplyServiceCodeRouteRouteWithChildren
   '/appointments': typeof AuthedAppointmentsRoute
+  '/cashier': typeof AuthedCashierRoute
   '/dashboard': typeof AuthedDashboardRoute
   '/my-requests': typeof AuthedMyRequestsRoute
   '/queue': typeof AuthedQueueRoute
@@ -279,6 +286,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/track': typeof TrackRoute
   '/appointments': typeof AuthedAppointmentsRoute
+  '/cashier': typeof AuthedCashierRoute
   '/dashboard': typeof AuthedDashboardRoute
   '/my-requests': typeof AuthedMyRequestsRoute
   '/queue': typeof AuthedQueueRoute
@@ -318,6 +326,7 @@ export interface FileRoutesById {
   '/track': typeof TrackRoute
   '/apply/$serviceCode': typeof ApplyServiceCodeRouteRouteWithChildren
   '/_authed/appointments': typeof AuthedAppointmentsRoute
+  '/_authed/cashier': typeof AuthedCashierRoute
   '/_authed/dashboard': typeof AuthedDashboardRoute
   '/_authed/my-requests': typeof AuthedMyRequestsRoute
   '/_authed/queue': typeof AuthedQueueRoute
@@ -357,6 +366,7 @@ export interface FileRouteTypes {
     | '/track'
     | '/apply/$serviceCode'
     | '/appointments'
+    | '/cashier'
     | '/dashboard'
     | '/my-requests'
     | '/queue'
@@ -393,6 +403,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/track'
     | '/appointments'
+    | '/cashier'
     | '/dashboard'
     | '/my-requests'
     | '/queue'
@@ -431,6 +442,7 @@ export interface FileRouteTypes {
     | '/track'
     | '/apply/$serviceCode'
     | '/_authed/appointments'
+    | '/_authed/cashier'
     | '/_authed/dashboard'
     | '/_authed/my-requests'
     | '/_authed/queue'
@@ -594,6 +606,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedDashboardRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
+    '/_authed/cashier': {
+      id: '/_authed/cashier'
+      path: '/cashier'
+      fullPath: '/cashier'
+      preLoaderRoute: typeof AuthedCashierRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
     '/_authed/appointments': {
       id: '/_authed/appointments'
       path: '/appointments'
@@ -732,6 +751,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthedRouteRouteChildren {
   AuthedAppointmentsRoute: typeof AuthedAppointmentsRoute
+  AuthedCashierRoute: typeof AuthedCashierRoute
   AuthedDashboardRoute: typeof AuthedDashboardRoute
   AuthedMyRequestsRoute: typeof AuthedMyRequestsRoute
   AuthedQueueRoute: typeof AuthedQueueRoute
@@ -752,6 +772,7 @@ interface AuthedRouteRouteChildren {
 
 const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
   AuthedAppointmentsRoute: AuthedAppointmentsRoute,
+  AuthedCashierRoute: AuthedCashierRoute,
   AuthedDashboardRoute: AuthedDashboardRoute,
   AuthedMyRequestsRoute: AuthedMyRequestsRoute,
   AuthedQueueRoute: AuthedQueueRoute,

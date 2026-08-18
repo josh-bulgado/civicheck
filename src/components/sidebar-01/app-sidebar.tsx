@@ -190,6 +190,15 @@ export function AppSidebar({
     });
   }
 
+  if (can("requests:collect_payment")) {
+    navMain.push({
+      id: "cashier-counter",
+      title: "Cashier Counter",
+      url: "/cashier",
+      icon: ClipboardCheck,
+    });
+  }
+
   const navGroups =
     role === "admin"
       ? createCcroAdminGroups(navMain)

@@ -10,7 +10,11 @@ import {
   ShieldCheck,
   Ticket,
 } from "lucide-react";
-import { getAllRequestsFn, getMyDepartmentScopeFn } from "~/features/requests/requests.queries";
+import {
+  getAllRequestsFn,
+  getMyDepartmentScopeFn,
+  getPaymentsVerifiedTodayCountFn,
+} from "~/features/requests/requests.queries";
 import { getTodayQueueFn } from "~/features/queue/queue.queries";
 import { STAGE_OF, isRequestStatus } from "~/features/requests/request-workflow";
 
@@ -19,11 +23,14 @@ export const Route = createFileRoute("/_authed/staff-dashboard")({
     if (!context.user || !hasPermission(context.user.role as Role, "dashboard:staff"))
       throw redirect({ to: "/dashboard" });
   },
-  loader: async () => {
-    const [requests, tickets, scope] = await Promise.all([
+  loader: async ({ context }) => {
+    const isCashier = context.user?.role === "cashier";
+
+    const [requests, tickets, scope, paymentsVerifiedToday] = await Promise.all([
       getAllRequestsFn(),
       getTodayQueueFn(),
       getMyDepartmentScopeFn(),
+      isCashier ? getPaymentsVerifiedTodayCountFn() : Promise.resolve(0),
     ]);
 
     const inStage = (stage: number) =>
@@ -31,6 +38,7 @@ export const Route = createFileRoute("/_authed/staff-dashboard")({
         .length;
 
     return {
+      isCashier,
       awaitingIntake: inStage(1),
       inValidation: inStage(2),
       inProgress: inStage(3) + inStage(4),
@@ -40,6 +48,7 @@ export const Route = createFileRoute("/_authed/staff-dashboard")({
       ).length,
       waitingInQueue: tickets.filter((t) => t.status === "waiting").length,
       servedToday: tickets.filter((t) => t.status === "served").length,
+      paymentsVerifiedToday,
       scope,
     };
   },
@@ -96,23 +105,44 @@ function StaffDashboard() {
             Your operational workspace
           </h2>
         </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <RequestQueueSummaryCard
-            awaitingIntake={stats.awaitingIntake}
-            inValidation={stats.inValidation}
-            inProgress={stats.inProgress}
-            readyForRelease={stats.readyForRelease}
-            unpaid={stats.unpaid}
-          />
-          <ToolCard
-            icon={Ticket}
-            title="Queue desk"
-            description="Issue numbers, encode walk-ins, and call the next applicant."
-            count={stats.waitingInQueue}
-            countLabel="waiting now"
-            to="/queue"
-          />
-        </div>
+        {stats.isCashier ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            <ToolCard
+              icon={ClipboardCheck}
+              title="Cashier Counter"
+              description="Look up a request by tracking number and record payment."
+              count={stats.unpaid}
+              countLabel="awaiting payment"
+              to="/cashier"
+            />
+            <ToolCard
+              icon={ListChecks}
+              title="Payments verified today"
+              description="Payments you've collected and verified so far today."
+              count={stats.paymentsVerifiedToday}
+              countLabel="verified today"
+              to="/requests"
+            />
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            <RequestQueueSummaryCard
+              awaitingIntake={stats.awaitingIntake}
+              inValidation={stats.inValidation}
+              inProgress={stats.inProgress}
+              readyForRelease={stats.readyForRelease}
+              unpaid={stats.unpaid}
+            />
+            <ToolCard
+              icon={Ticket}
+              title="Queue desk"
+              description="Issue numbers, encode walk-ins, and call the next applicant."
+              count={stats.waitingInQueue}
+              countLabel="waiting now"
+              to="/queue"
+            />
+          </div>
+        )}
       </section>
     </div>
   );
