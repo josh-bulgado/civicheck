@@ -83,23 +83,21 @@ function DetailsStepRoute() {
   const { serviceCode } = Route.useParams();
   const navigate = useNavigate();
   const { displayName, services } = ApplyLayoutRoute.useLoaderData();
-  const { draft, update, hydrated } = useApplyDraft(serviceCode);
+  const { draft, update } = useApplyDraft(serviceCode);
   const selectedService =
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
 
   const form = useForm<DetailsValues>({
     resolver: zodResolver(detailsSchema),
     mode: "onBlur",
-    values: hydrated
-      ? {
-          subjectFirstName: draft.details.subjectFirstName,
-          subjectMiddleName: draft.details.subjectMiddleName,
-          subjectLastName: draft.details.subjectLastName,
-          subjectSuffix: draft.details.subjectSuffix,
-          subjectSex: draft.details.subjectSex as "male" | "female",
-          contactNumber: draft.details.contactNumber,
-        }
-      : undefined,
+    values: {
+      subjectFirstName: draft.details.subjectFirstName,
+      subjectMiddleName: draft.details.subjectMiddleName,
+      subjectLastName: draft.details.subjectLastName,
+      subjectSuffix: draft.details.subjectSuffix,
+      subjectSex: draft.details.subjectSex as "male" | "female",
+      contactNumber: draft.details.contactNumber,
+    },
   });
 
   function onSubmit(values: DetailsValues) {

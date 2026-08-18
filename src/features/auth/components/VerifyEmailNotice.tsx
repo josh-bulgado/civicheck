@@ -1,20 +1,34 @@
-import { Link } from "@tanstack/react-router";
 import { MailCheck } from "lucide-react";
-import { Button } from "~/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { authButtonClass } from "./AuthSplitLayout";
+import { OtpCodeForm } from "./OtpCodeForm";
 
 export function VerifyEmailNotice({
   open,
+  email,
+  isVerifying,
+  isResending,
+  errorMessage,
+  onVerify,
+  onResend,
   onUseDifferentEmail,
+  dismissLabel = "Used the wrong email? Sign up again",
 }: {
   open: boolean;
+  email: string;
+  isVerifying: boolean;
+  isResending: boolean;
+  errorMessage?: string | null;
+  onVerify: (code: string) => void;
+  onResend: () => void;
   onUseDifferentEmail: () => void;
+  /** Text for the dismiss link — the signup and login entry points into this
+   * dialog want different framing for "never mind, close this". */
+  dismissLabel?: string;
 }) {
   return (
     <Dialog open={open}>
@@ -29,25 +43,27 @@ export function VerifyEmailNotice({
               Check your email
             </DialogTitle>
             <DialogDescription className="text-sm leading-snug text-muted-2">
-              We have sent you a verification link.
+              We've sent a verification code to {email}. Enter it below to
+              confirm your account.
             </DialogDescription>
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 rounded-lg border border-border-light bg-surface-subtle p-4 text-[13px] leading-snug text-muted-2">
-          <p>Didn&apos;t get it? Please check your spam folder.</p>
-        </div>
-
-        <Button className={authButtonClass} render={<Link to="/login" />}>
-          Go to sign in
-        </Button>
+        <OtpCodeForm
+          isVerifying={isVerifying}
+          isResending={isResending}
+          errorMessage={errorMessage}
+          onVerify={onVerify}
+          onResend={onResend}
+          submitLabel="Confirm account"
+        />
 
         <button
           type="button"
           onClick={onUseDifferentEmail}
           className="self-center text-[13px] font-semibold text-muted-2 underline underline-offset-2 hover:text-body"
         >
-          Used the wrong email? Sign up again
+          {dismissLabel}
         </button>
       </DialogContent>
     </Dialog>

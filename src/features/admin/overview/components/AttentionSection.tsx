@@ -19,7 +19,8 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { formatCount } from "~/features/admin/overview/overview-formatters";
+import { CountUp } from "~/components/motion/count-up";
+import { staggerStyle } from "~/components/motion/stagger";
 import { cn } from "~/lib/utils";
 
 interface AttentionSectionProps {
@@ -49,7 +50,7 @@ export function AttentionSection({
       </div>
 
       {hasAttentionItems ? null : (
-        <Alert variant="success">
+        <Alert variant="success" className="civic-enter-sm">
           <CheckCircle2 aria-hidden="true" />
           <AlertTitle>No Urgent Follow-up Items</AlertTitle>
           <AlertDescription>
@@ -59,9 +60,13 @@ export function AttentionSection({
         </Alert>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <IncompleteRequestsCard count={incompleteRequests} />
-        <UnpaidReleaseCard count={unpaidReleaseRequests} />
+      <div className="civic-stagger grid gap-4 md:grid-cols-2">
+        <div style={staggerStyle(0)}>
+          <IncompleteRequestsCard count={incompleteRequests} />
+        </div>
+        <div style={staggerStyle(1)}>
+          <UnpaidReleaseCard count={unpaidReleaseRequests} />
+        </div>
       </div>
     </section>
   );
@@ -141,7 +146,7 @@ function AttentionCard({
   title,
 }: AttentionCardProps) {
   return (
-    <Card>
+    <Card className="civic-interactive civic-lift">
       <CardHeader>
         <CardTitle>
           <h3 className="text-balance">{title}</h3>
@@ -163,7 +168,7 @@ function AttentionCard({
           </div>
           <div className="min-w-0">
             <p className="text-3xl font-extrabold tracking-tight tabular-nums">
-              {formatCount(count)}
+              <CountUp value={count} />
             </p>
             <p className="text-xs text-muted-foreground">{countLabel}</p>
           </div>

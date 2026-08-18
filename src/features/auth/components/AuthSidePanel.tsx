@@ -1,4 +1,5 @@
 import { CheckIcon } from "lucide-react";
+import { enterDelay, staggerStyle } from "~/components/motion/stagger";
 import { cn } from "~/lib/utils";
 
 /** The four points of the workflow an applicant actually watches for. */
@@ -58,7 +59,10 @@ export function AuthProgressPanel() {
       />
 
       <div className="relative mx-auto h-75 w-full max-w-112" aria-hidden="true">
-        <div className="absolute top-0 left-0 flex w-79 flex-col gap-3.5 rounded-xl bg-white px-4.5 pt-4 pb-3.5 shadow-[0_18px_40px_-16px_rgba(3,20,42,0.55)]">
+        <div
+          className="civic-enter-scale absolute top-0 left-0 flex w-79 flex-col gap-3.5 rounded-xl bg-white px-4.5 pt-4 pb-3.5 shadow-[0_18px_40px_-16px_rgba(3,20,42,0.55)]"
+          style={enterDelay(140)}
+        >
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm font-semibold text-foreground">
               Request status
@@ -68,10 +72,11 @@ export function AuthProgressPanel() {
             </span>
           </div>
 
-          <div className="flex flex-col gap-2.75">
-            {trackedSteps.map((step) => (
+          <div className="civic-stagger flex flex-col gap-2.75">
+            {trackedSteps.map((step, index) => (
               <div
                 key={step.label}
+                style={staggerStyle(index, 340)}
                 className={cn(
                   "flex items-center gap-2.5 text-[12.5px]",
                   step.state === "current"
@@ -106,7 +111,10 @@ export function AuthProgressPanel() {
           </div>
         </div>
 
-        <div className="absolute right-0 bottom-0 flex w-44 flex-col items-center gap-3 rounded-xl bg-white p-4.5 shadow-[0_20px_44px_-14px_rgba(3,20,42,0.6)]">
+        <div
+          className="civic-enter-scale absolute right-0 bottom-0 flex w-44 flex-col items-center gap-3 rounded-xl bg-white p-4.5 shadow-[0_20px_44px_-14px_rgba(3,20,42,0.6)]"
+          style={enterDelay(300)}
+        >
           <div
             className="grid size-26 place-items-center rounded-full"
             style={{
@@ -129,7 +137,10 @@ export function AuthProgressPanel() {
         </div>
       </div>
 
-      <div className="flex flex-col items-center gap-2.5 text-center">
+      <div
+        className="civic-enter-sm flex flex-col items-center gap-2.5 text-center"
+        style={enterDelay(420)}
+      >
         <h2 className="text-xl font-bold tracking-[-0.01em] text-white">
           One account, every CCRO request
         </h2>
@@ -149,7 +160,7 @@ export function AuthProgressPanel() {
 export function AuthEmblemPanel() {
   return (
     <aside className="flex h-full items-center justify-center bg-auth-panel-tint px-11">
-      <div className="flex flex-col items-center gap-7">
+      <div className="civic-enter-scale flex flex-col items-center gap-7">
         <img
           src="/brand/ccro-emblem.png"
           alt=""

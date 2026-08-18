@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
+import { CountUp } from "~/components/motion/count-up";
 import { cn } from "~/lib/utils";
 import { postureContent } from "../security-center.utils";
 import type { SecurityCenterDashboard } from "../system-admin.types";
@@ -44,7 +45,7 @@ function LedgerMetric({
       </div>
       <div>
         <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
-          {value}
+          <CountUp value={value} />
         </p>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p>
       </div>
@@ -93,7 +94,7 @@ export function SecurityPostureSummary({
             </Badge>
           </div>
         </CardHeader>
-        <CardContent className="grid p-0 sm:grid-cols-2 xl:grid-cols-[minmax(16rem,1.4fr)_repeat(4,minmax(0,1fr))]">
+        <CardContent className="civic-stagger-auto grid p-0 sm:grid-cols-2 xl:grid-cols-[minmax(16rem,1.4fr)_repeat(4,minmax(0,1fr))]">
           <div className="flex min-h-44 flex-col justify-between gap-8 border-b border-border p-5 sm:col-span-2 sm:p-6 xl:col-span-1 xl:border-r xl:border-b-0">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">

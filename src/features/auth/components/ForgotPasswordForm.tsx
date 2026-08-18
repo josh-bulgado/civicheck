@@ -1,15 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "@tanstack/react-router";
-import {
-  AlertCircleIcon,
-  ArrowLeft,
-  CheckCircleIcon,
-  Mail,
-} from "lucide-react";
+import { AlertCircleIcon, ArrowLeft, Mail } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import z from "zod";
 import { Button } from "~/components/ui/button";
+import { staggerStyle } from "~/components/motion/stagger";
 import { useForgotPassword } from "../hooks/useForgotPassword";
+import { useVerifyRecoveryOtp } from "../hooks/useVerifyRecoveryOtp";
 import {
   Field,
   FieldError,
@@ -24,6 +21,7 @@ import {
 import { Spinner } from "~/components/ui/spinner";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { AuthEmblemPanel } from "./AuthSidePanel";
+import { OtpCodeForm } from "./OtpCodeForm";
 import {
   authButtonClass,
   authFieldClass,
@@ -40,14 +38,20 @@ type FormValues = z.infer<typeof formSchema>;
 
 const ForgotPasswordForm = () => {
   const forgotPasswordMutation = useForgotPassword();
+  const verifyOtpMutation = useVerifyRecoveryOtp();
   const result = forgotPasswordMutation.data;
   // A server-reported failure still resolves the mutation, so "success" alone
-  // would show the sent confirmation for a request that never sent anything.
-  const isSuccess = forgotPasswordMutation.status === "success" && !result?.error;
+  // would show the code-entry step for a request that never sent anything.
+  const codeSent = forgotPasswordMutation.status === "success" && !result?.error;
   const requestError = result?.error
     ? result.message
     : forgotPasswordMutation.status === "error"
       ? "We could not reach the email service. Please try again in a moment."
+      : null;
+  const otpError = verifyOtpMutation.data?.error
+    ? verifyOtpMutation.data.message
+    : verifyOtpMutation.status === "error"
+      ? "We could not reach the account service. Please try again in a moment."
       : null;
 
   const form = useForm<FormValues>({
@@ -72,30 +76,33 @@ const ForgotPasswordForm = () => {
     <AuthSplitLayout panel={<AuthEmblemPanel />}>
       <div className="flex flex-col gap-7">
         <AuthFormHeading
-          title={isSuccess ? "Check your email" : "Forgot your password?"}
+          title={codeSent ? "Check your email" : "Forgot your password?"}
           description={
-            isSuccess
-              ? `We've sent a password reset link to ${email}. Please check your inbox and follow the instructions.`
-              : "Enter your email address and we'll send you a link to reset your password."
+            codeSent
+              ? `We've sent a verification code to ${email}. Enter it below to continue.`
+              : "Enter your email address and we'll send you a code to reset your password."
           }
         />
 
-        {isSuccess ? (
-          <div className="flex flex-col gap-5">
-            <Alert variant="success">
-              <CheckCircleIcon />
-              <AlertTitle>Reset link sent!</AlertTitle>
-              <AlertDescription>
-                If an account exists with that email address, you'll receive a
-                password reset link shortly. Please also check your spam folder.
-              </AlertDescription>
-            </Alert>
+        {codeSent ? (
+          <div className="civic-enter-scale flex flex-col gap-5">
+            <OtpCodeForm
+              isVerifying={verifyOtpMutation.status === "pending"}
+              isResending={forgotPasswordMutation.status === "pending"}
+              errorMessage={otpError}
+              onVerify={(token) =>
+                verifyOtpMutation.mutate({ data: { email, token } })
+              }
+              onResend={() =>
+                forgotPasswordMutation.mutate({ data: { email } })
+              }
+            />
 
             <Link
               to="/login"
-              className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+              className="group inline-flex items-center gap-2 text-sm text-primary hover:underline"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1" />
               Back to sign in
             </Link>
           </div>
@@ -105,19 +112,23 @@ const ForgotPasswordForm = () => {
             className="flex flex-col gap-5"
           >
             {requestError && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="civic-enter-sm">
                 <AlertCircleIcon />
-                <AlertTitle>Reset link not sent</AlertTitle>
+                <AlertTitle>Reset code not sent</AlertTitle>
                 <AlertDescription>{requestError}</AlertDescription>
               </Alert>
             )}
 
-            <FieldGroup className="gap-5">
+            <FieldGroup className="civic-stagger gap-5">
               <Controller
                 control={form.control}
                 name="email"
                 render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid} className="gap-1.75">
+                  <Field
+                    data-invalid={fieldState.invalid}
+                    style={staggerStyle(0)}
+                    className="gap-1.75"
+                  >
                     <FieldLabel htmlFor="email" className={authLabelClass}>
                       Email address
                     </FieldLabel>
@@ -143,6 +154,7 @@ const ForgotPasswordForm = () => {
               <Button
                 type="submit"
                 className={authButtonClass}
+                style={staggerStyle(1)}
                 disabled={forgotPasswordMutation.status === "pending"}
               >
                 {forgotPasswordMutation.status === "pending" ? (
@@ -151,15 +163,16 @@ const ForgotPasswordForm = () => {
                     Sending
                   </>
                 ) : (
-                  "Send reset link"
+                  "Send reset code"
                 )}
               </Button>
 
               <Link
                 to="/login"
-                className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                style={staggerStyle(2)}
+                className="group inline-flex items-center gap-2 text-sm text-primary hover:underline"
               >
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1" />
                 Back to sign in
               </Link>
             </FieldGroup>

@@ -4,6 +4,8 @@ import { Search } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { CountUp } from "~/components/motion/count-up";
+import { staggerStyle } from "~/components/motion/stagger";
 import { getPaymentDetails, getStatusDetails } from "~/features/requests/request-workflow";
 import { PaymentVerificationPanel } from "~/features/requests/components/PaymentVerificationPanel";
 import {
@@ -67,14 +69,17 @@ export function CashierCounter() {
       </section>
 
       {searched && !result && (
-        <p className="text-sm italic text-muted-foreground">
+        <p className="civic-enter-sm text-sm italic text-muted-foreground">
           No request found for that tracking number — double-check it with the applicant.
         </p>
       )}
 
       {result && status && payment && (
-        <>
-          <section className="rounded-xl border border-border bg-white p-6">
+        <div key={result.id} className="civic-stagger flex flex-col gap-6">
+          <section
+            style={staggerStyle(0)}
+            className="civic-interactive civic-lift rounded-xl border border-border bg-white p-6"
+          >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
@@ -99,19 +104,21 @@ export function CashierCounter() {
               </div>
             </div>
             <p className="mt-5 text-3xl font-extrabold tracking-tight text-foreground">
-              ₱{result.feesDue.toFixed(2)}
+              <CountUp value={result.feesDue} prefix="₱" decimals={2} duration={600} />
             </p>
             <p className="text-xs text-muted-foreground">Fee due</p>
           </section>
 
-          <PaymentVerificationPanel
-            requestId={result.id}
-            feesDue={result.feesDue}
-            paymentStatus={result.paymentStatus}
-            orNumber={result.orNumber}
-            onVerified={handleLookup}
-          />
-        </>
+          <div style={staggerStyle(1)}>
+            <PaymentVerificationPanel
+              requestId={result.id}
+              feesDue={result.feesDue}
+              paymentStatus={result.paymentStatus}
+              orNumber={result.orNumber}
+              onVerified={handleLookup}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

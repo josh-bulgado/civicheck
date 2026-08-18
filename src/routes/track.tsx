@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -67,6 +67,10 @@ function TrackPage() {
   const [result, setResult] = useState<TrackResult | null>(null);
   const [notFound, setNotFound] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // The values behind the request currently on screen — kept separate from the
+  // (possibly since-edited) form fields so polling always re-checks the request
+  // that's actually displayed.
+  const lookupValuesRef = useRef<TrackValues | null>(null);
 
   const form = useForm<TrackValues>({
     resolver: zodResolver(trackSchema),
@@ -82,19 +86,38 @@ function TrackPage() {
       if (res.error || !res.request) {
         setNotFound(res.message || "We couldn't find that request.");
         setResult(null);
+        lookupValuesRef.current = null;
         return;
       }
       setResult(res.request);
+      lookupValuesRef.current = values;
     } finally {
       setSubmitting(false);
     }
   }
 
   async function refreshResult() {
-    const values = form.getValues();
+    const values = lookupValuesRef.current ?? form.getValues();
     const res = await trackRequestFn({ data: values });
     if (!res.error && res.request) setResult(res.request);
   }
+
+  // This is a public, unauthenticated page, so it can't subscribe to Supabase
+  // Realtime the way the signed-in dashboards do — `requests` has no RLS
+  // policy for the anon role (the lookup above only works because the server
+  // function deliberately uses the admin client). Polling is the equivalent
+  // for this one page: quiet, and only while a result is actually on screen.
+  useEffect(() => {
+    if (!result) return;
+
+    const interval = setInterval(() => {
+      if (document.hidden) return;
+      void refreshResult();
+    }, 15_000);
+
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result?.trackingNumber]);
 
   const status = result ? getStatusDetails(result.status) : null;
   const payment = result ? getPaymentDetails(result.paymentStatus) : null;

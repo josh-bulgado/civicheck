@@ -66,7 +66,7 @@ export function OperationalSignalsTable({
                   <TableHead scope="col">Operational Detail</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody className="civic-stagger-auto">
                 {signals.length > 0 ? (
                   signals.map((signal) => {
                     const Icon = signalIcons[signal.key];

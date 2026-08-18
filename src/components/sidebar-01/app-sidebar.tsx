@@ -148,6 +148,15 @@ export function AppSidebar({
     });
   }
 
+  if (can("dashboard:applicant")) {
+    navMain.push({
+      id: "applicant-dashboard",
+      title: "Dashboard",
+      url: "/dashboard",
+      icon: LayoutDashboard,
+    });
+  }
+
   if (can("services:view")) {
     navMain.push({
       id: "services",

@@ -10,7 +10,7 @@ export function useForgotPassword() {
         toast.error("Error", { description: ctx.data.message });
         return;
       }
-      toast.success("Check your email for the reset link.");
+      toast.success("Check your email for the reset code.");
     },
   });
 }

@@ -7,8 +7,12 @@ import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 
+import { staggerStyle } from "~/components/motion/stagger";
 import { useLogin } from "~/features/auth/hooks/useLogin";
 import { useOAuthLogin } from "~/features/auth/hooks/useOAuthLogin";
+import { useVerifySignupOtp } from "~/features/auth/hooks/useVerifySignupOtp";
+import { useResendSignupOtp } from "~/features/auth/hooks/useResendSignupOtp";
+import { VerifyEmailNotice } from "./VerifyEmailNotice";
 import {
   Field,
   FieldError,
@@ -59,7 +63,7 @@ function describeSignInError(
     return INVALID_CREDENTIALS;
   }
   if (/email not confirmed/i.test(message)) {
-    return "Please confirm your email address first — check your inbox for the confirmation link.";
+    return "Please confirm your email address first — check your inbox for the verification code.";
   }
   return message;
 }
@@ -83,6 +87,16 @@ export function LoginForm({
   const [keepSignedIn, setKeepSignedIn] = useState(true);
   const loginMutation = useLogin(redirectTo);
   const oauthLoginMutation = useOAuthLogin();
+  const verifyOtpMutation = useVerifySignupOtp();
+  const resendOtpMutation = useResendSignupOtp();
+  // Set when a sign-in attempt fails specifically because the account was
+  // never confirmed — the credentials themselves were correct, so this skips
+  // straight to a fresh code instead of sending the applicant back to their
+  // inbox to dig up (or request again) whatever the signup flow originally sent.
+  const [unconfirmed, setUnconfirmed] = useState<{
+    email: string;
+    password: string;
+  } | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -93,8 +107,12 @@ export function LoginForm({
     },
   });
 
-  function onSubmit(data: FormValues) {
-    loginMutation.mutate({ data });
+  async function onSubmit(data: FormValues) {
+    const result = await loginMutation.mutate({ data });
+    if (result?.error && /email not confirmed/i.test(result.message ?? "")) {
+      setUnconfirmed({ email: data.email, password: data.password });
+      resendOtpMutation.mutate({ data });
+    }
   }
 
   const signInError = describeSignInError(
@@ -102,8 +120,32 @@ export function LoginForm({
     loginMutation.status === "error",
   );
 
+  const otpError = verifyOtpMutation.data?.error
+    ? verifyOtpMutation.data.message
+    : verifyOtpMutation.status === "error"
+      ? "We could not reach the account service. Please try again in a moment."
+      : null;
+
   return (
     <AuthSplitLayout panel={<AuthEmblemPanel />}>
+      <VerifyEmailNotice
+        open={unconfirmed !== null}
+        email={unconfirmed?.email ?? ""}
+        isVerifying={verifyOtpMutation.status === "pending"}
+        isResending={resendOtpMutation.status === "pending"}
+        errorMessage={otpError}
+        onVerify={(token) => {
+          if (!unconfirmed) return;
+          verifyOtpMutation.mutate({ data: { email: unconfirmed.email, token } });
+        }}
+        onResend={() => {
+          if (!unconfirmed) return;
+          resendOtpMutation.mutate({ data: unconfirmed });
+        }}
+        onUseDifferentEmail={() => setUnconfirmed(null)}
+        dismissLabel="Wrong account? Try again"
+      />
+
       <div className="flex flex-col gap-7">
         <AuthFormHeading
           title="Welcome back"
@@ -112,7 +154,7 @@ export function LoginForm({
         />
 
         {signInError && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="civic-enter-sm">
             <AlertCircleIcon />
             <AlertTitle>Sign in failed</AlertTitle>
             <AlertDescription>{signInError}</AlertDescription>
@@ -120,19 +162,23 @@ export function LoginForm({
         )}
 
         {error && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="civic-enter-sm">
             <AlertCircleIcon />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <FieldGroup className="gap-4">
+          <FieldGroup className="civic-stagger gap-4">
             <Controller
               control={form.control}
               name="email"
               render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid} className="gap-1.75">
+                <Field
+                  data-invalid={fieldState.invalid}
+                  style={staggerStyle(0)}
+                  className="gap-1.75"
+                >
                   <FieldLabel htmlFor="email" className={authLabelClass}>
                     Email address
                   </FieldLabel>
@@ -156,7 +202,11 @@ export function LoginForm({
               control={form.control}
               name="password"
               render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid} className="gap-1.75">
+                <Field
+                  data-invalid={fieldState.invalid}
+                  style={staggerStyle(1)}
+                  className="gap-1.75"
+                >
                   <FieldLabel htmlFor="password" className={authLabelClass}>
                     Password
                   </FieldLabel>
@@ -184,7 +234,10 @@ export function LoginForm({
 
             {/* Session length and the recovery route are the two decisions left
                 before submitting, so they share one line under the fields. */}
-            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 pt-0.5">
+            <div
+              style={staggerStyle(2)}
+              className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 pt-0.5"
+            >
               <label className="flex items-center gap-2.5 text-[13.5px] text-body">
                 <Checkbox
                   checked={keepSignedIn}
@@ -198,7 +251,7 @@ export function LoginForm({
               </Link>
             </div>
 
-            <div className="flex flex-col gap-3">
+            <div style={staggerStyle(3)} className="flex flex-col gap-3">
               <Button
                 type="submit"
                 className={authButtonClass}

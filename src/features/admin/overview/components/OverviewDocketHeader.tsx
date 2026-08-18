@@ -1,8 +1,7 @@
 import { Landmark } from "lucide-react";
-import {
-  formatCount,
-  formatOfficeDate,
-} from "~/features/admin/overview/overview-formatters";
+import { CountUp } from "~/components/motion/count-up";
+import { enterDelay } from "~/components/motion/stagger";
+import { formatOfficeDate } from "~/features/admin/overview/overview-formatters";
 
 interface OverviewDocketHeaderProps {
   officeDate: string;
@@ -37,17 +36,20 @@ export function OverviewDocketHeader({
           </p>
         </div>
 
-        <dl className="grid min-w-64 grid-cols-2 gap-3 rounded-xl border border-white/15 bg-white/10 p-4 text-white backdrop-blur-sm">
+        <dl
+          className="civic-enter-scale grid min-w-64 grid-cols-2 gap-3 rounded-xl border border-white/15 bg-white/10 p-4 text-white backdrop-blur-sm"
+          style={enterDelay(160)}
+        >
           <div className="flex min-w-0 flex-col gap-1">
             <dt className="text-xs text-white/80">Open Requests</dt>
             <dd className="text-2xl font-extrabold tabular-nums">
-              {formatCount(openRequests)}
+              <CountUp value={openRequests} />
             </dd>
           </div>
           <div className="flex min-w-0 flex-col gap-1 border-l border-white/15 pl-4">
             <dt className="text-xs text-white/80">Incomplete Requests</dt>
             <dd className="text-2xl font-extrabold tabular-nums">
-              {formatCount(incompleteRequests)}
+              <CountUp value={incompleteRequests} />
             </dd>
           </div>
         </dl>

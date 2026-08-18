@@ -76,15 +76,13 @@ function CaseStepRoute() {
   const form = useForm<CaseValues>({
     resolver: zodResolver(caseSchema),
     mode: "onBlur",
-    values: hydrated
-      ? {
-          eventDate: draft.details.eventDate,
-          eventPlace: draft.details.eventPlace,
-          purpose: draft.caseAnswers.purpose,
-          otherPurpose: draft.caseAnswers.otherPurpose,
-          additionalNotes: draft.caseAnswers.additionalNotes,
-        }
-      : undefined,
+    values: {
+      eventDate: draft.details.eventDate,
+      eventPlace: draft.details.eventPlace,
+      purpose: draft.caseAnswers.purpose,
+      otherPurpose: draft.caseAnswers.otherPurpose,
+      additionalNotes: draft.caseAnswers.additionalNotes,
+    },
   });
 
   const purpose = form.watch("purpose");

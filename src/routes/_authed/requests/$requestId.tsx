@@ -31,6 +31,7 @@ import {
   stageOf,
   type RequestStatus,
 } from "~/features/requests/request-workflow";
+import { staggerStyle } from "~/components/motion/stagger";
 
 export const Route = createFileRoute("/_authed/requests/$requestId")({
   beforeLoad: ({ context }) => {
@@ -127,9 +128,9 @@ function RequestDetailPage() {
     <div className="dashboard-page ">
       <Link
         to="/requests"
-        className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+        className="group mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
       >
-        <ArrowLeft className="size-4" />
+        <ArrowLeft className="size-4 transition-transform duration-200 group-hover:-translate-x-1" />
         Back to the queue
       </Link>
 
@@ -149,13 +150,15 @@ function RequestDetailPage() {
               {request.isWalkIn ? " · Walk-in" : ""}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="civic-stagger flex flex-wrap gap-2">
             <span
+              style={staggerStyle(0)}
               className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium ${status.styles}`}
             >
               {status.label}
             </span>
             <span
+              style={staggerStyle(1)}
               className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium ${payment.styles}`}
             >
               {payment.label}
@@ -164,8 +167,8 @@ function RequestDetailPage() {
         </div>
       </header>
 
-      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="flex flex-col gap-6 lg:col-span-2">
+      <div className="civic-stagger mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div style={staggerStyle(0)} className="flex flex-col gap-6 lg:col-span-2">
           <section className="rounded-xl border border-border bg-white p-6">
             <h2 className="mb-4 text-lg font-bold text-foreground">
               Submitted details
@@ -194,7 +197,7 @@ function RequestDetailPage() {
                 counter.
               </p>
             ) : (
-              <div className="flex flex-col gap-3">
+              <div className="civic-stagger-auto flex flex-col gap-3">
                 {request.attachments.map((doc) => (
                   <AttachmentRow
                     key={doc.id}
@@ -209,7 +212,7 @@ function RequestDetailPage() {
 
           <section className="rounded-xl border border-border bg-white p-6">
             <h2 className="mb-4 text-lg font-bold text-foreground">History</h2>
-            <ol className="flex flex-col gap-4">
+            <ol className="civic-stagger-auto flex flex-col gap-4">
               {request.logs.map((log) => (
                 <li key={log.id} className="flex gap-4">
                   <div className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" />
@@ -232,7 +235,7 @@ function RequestDetailPage() {
           </section>
         </div>
 
-        <div className="flex flex-col gap-6">
+        <div style={staggerStyle(1)} className="flex flex-col gap-6">
           <section className="rounded-xl border border-border bg-white p-6">
             <h2 className="mb-4 text-lg font-bold text-foreground">
               Move this request
@@ -265,20 +268,22 @@ function RequestDetailPage() {
                   />
                 </div>
 
-                {available.map((next) => (
-                  <Button
-                    key={next}
-                    variant={next === "rejected" ? "outline" : "default"}
-                    disabled={busy}
-                    onClick={() => handleTransition(next)}
-                  >
-                    {TRANSITION_LABELS[next]}
-                  </Button>
-                ))}
+                <div className="civic-stagger-auto flex flex-col gap-3">
+                  {available.map((next) => (
+                    <Button
+                      key={next}
+                      variant={next === "rejected" ? "outline" : "default"}
+                      disabled={busy}
+                      onClick={() => handleTransition(next)}
+                    >
+                      {TRANSITION_LABELS[next]}
+                    </Button>
+                  ))}
+                </div>
 
                 {request.status === "ready_for_release" &&
                   request.paymentStatus !== "verified" && (
-                    <p className="rounded-lg border border-warning/20 bg-warning/5 p-3 text-xs text-warning-strong">
+                    <p className="civic-enter-sm rounded-lg border border-warning/20 bg-warning/5 p-3 text-xs text-warning-strong">
                       Payment must be verified before this can be released.
                     </p>
                   )}
@@ -420,7 +425,7 @@ function AttachmentRow({
       </div>
 
       {rejecting && (
-        <div className="flex flex-col gap-2 rounded-lg border border-border-light bg-muted/30 p-3">
+        <div className="civic-enter-sm flex flex-col gap-2 rounded-lg border border-border-light bg-muted/30 p-3">
           <Label htmlFor={`reject-reason-${doc.id}`}>
             Reason for rejecting this document
           </Label>

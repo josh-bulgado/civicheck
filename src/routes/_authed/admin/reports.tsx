@@ -11,6 +11,7 @@ import { AdminReportsSkeleton } from "~/features/admin/reports/components/AdminR
 import { getCcroAdminReports } from "~/features/admin/reports/reports.queries";
 import { AdminReportsPage } from "~/features/admin/reports/pages/AdminReportsPage";
 import { hasPermission, type Role } from "~/lib/permissions";
+import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 
 export const Route = createFileRoute("/_authed/admin/reports")({
   beforeLoad: ({ context }) => {
@@ -32,6 +33,7 @@ export const Route = createFileRoute("/_authed/admin/reports")({
 
 function AdminReportsRoute() {
   const data = Route.useLoaderData();
+  useRealtimeRefresh({ tables: ["requests", "application_logs"] });
   return <AdminReportsPage data={data} />;
 }
 

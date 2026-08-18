@@ -89,7 +89,7 @@ export function IncidentTimeline({ events }: { events: HealthEvent[] }) {
         </Link>
       </div>
       {events.length > 0 ? (
-        <ul aria-label="Recent incident events">
+        <ul aria-label="Recent incident events" className="civic-stagger-auto">
           {events.map((event) => (
             <EventRow key={event.id} event={event} />
           ))}

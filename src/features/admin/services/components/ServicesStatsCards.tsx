@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Card,
   CardAction,
@@ -7,6 +7,8 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
+import { CountUp } from "~/components/motion/count-up";
+import { staggerStyle } from "~/components/motion/stagger";
 import { cn } from "~/lib/utils";
 import { Service } from "../services.types";
 
@@ -90,6 +92,15 @@ export function ServicesStatsCards({ data }: ServicesStatsCardsProps) {
       : classificationDetails;
   const classifiedCount = stats.total - stats.unclassified;
 
+  // The classification-mix bar renders at zero width and grows to its real
+  // proportions once mounted, so the mix reads as filling in rather than
+  // appearing pre-drawn.
+  const [grown, setGrown] = useState(false);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setGrown(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
   return (
     <Card role="region" aria-labelledby="registry-overview-title">
       <CardHeader className="border-b">
@@ -107,7 +118,7 @@ export function ServicesStatsCards({ data }: ServicesStatsCardsProps) {
               Total Services
             </dt>
             <dd className="mt-1 text-3xl font-extrabold tracking-tight text-foreground tabular-nums">
-              {numberFormatter.format(stats.total)}
+              <CountUp value={stats.total} />
             </dd>
           </dl>
         </CardAction>
@@ -126,29 +137,36 @@ export function ServicesStatsCards({ data }: ServicesStatsCardsProps) {
             className="flex h-2.5 overflow-hidden rounded-full bg-secondary"
             aria-hidden="true"
           >
-            {visibleClassifications.map((classification) => {
+            {visibleClassifications.map((classification, index) => {
               const count = stats[classification.key];
               const percentage = stats.total > 0 ? count / stats.total : 0;
 
               return (
                 <div
                   key={classification.key}
-                  className={cn("h-full", classification.barClassName)}
-                  style={{ width: `${percentage * 100}%` }}
+                  className={cn(
+                    "h-full transition-[width] duration-700 ease-out",
+                    classification.barClassName,
+                  )}
+                  style={{
+                    width: grown ? `${percentage * 100}%` : "0%",
+                    transitionDelay: `${index * 60}ms`,
+                  }}
                 />
               );
             })}
           </div>
         </div>
 
-        <dl className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-x-6 gap-y-5">
-          {visibleClassifications.map((classification) => {
+        <dl className="civic-stagger grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-x-6 gap-y-5">
+          {visibleClassifications.map((classification, index) => {
             const count = stats[classification.key];
             const percentage = stats.total > 0 ? count / stats.total : 0;
 
             return (
               <div
                 key={classification.key}
+                style={staggerStyle(index)}
                 className={cn(
                   "min-w-0 border-l-2 pl-3",
                   classification.borderClassName,
@@ -159,7 +177,7 @@ export function ServicesStatsCards({ data }: ServicesStatsCardsProps) {
                 </dt>
                 <dd className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
                   <span className="text-2xl font-extrabold tracking-tight text-foreground tabular-nums">
-                    {numberFormatter.format(count)}
+                    <CountUp value={count} />
                   </span>
                   <span className="text-xs font-semibold text-muted-foreground tabular-nums">
                     {percentageFormatter.format(percentage)}

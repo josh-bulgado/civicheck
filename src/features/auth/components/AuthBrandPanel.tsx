@@ -2,6 +2,7 @@ import {
   CityGovernmentIdentity,
   CiviCheckIdentity,
 } from "~/components/brand/civic-identity";
+import { staggerStyle } from "~/components/motion/stagger";
 import { cn } from "~/lib/utils";
 
 type BrandStep = {
@@ -51,10 +52,11 @@ export function AuthBrandPanel({
           ) : null}
 
           {benefits?.length ? (
-            <ul className="mt-7 border-t border-white/15">
-              {benefits.map((benefit) => (
+            <ul className="civic-stagger mt-7 border-t border-white/15">
+              {benefits.map((benefit, index) => (
                 <li
                   key={benefit}
+                  style={staggerStyle(index, 180)}
                   className="flex items-center gap-3 border-b border-white/15 py-3 text-[15px] leading-snug text-white/90 last:border-b-0"
                 >
                   <span
@@ -68,10 +70,11 @@ export function AuthBrandPanel({
           ) : null}
 
           {steps?.length ? (
-            <ol className="mt-7 border-t border-white/15">
+            <ol className="civic-stagger mt-7 border-t border-white/15">
               {steps.map((step, index) => (
                 <li
                   key={step.title}
+                  style={staggerStyle(index, 180)}
                   className={cn(
                     "flex gap-3.5 border-b border-white/15 py-3.5 last:border-b-0",
                     // With no second line to align against, the number reads as

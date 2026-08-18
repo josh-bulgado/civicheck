@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Card,
   CardAction,
@@ -7,6 +7,8 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
+import { CountUp } from "~/components/motion/count-up";
+import { staggerStyle } from "~/components/motion/stagger";
 import { cn } from "~/lib/utils";
 import { STAGES, STAGE_STATUSES } from "../request-queue";
 import { STAGE_LABELS, type WorkflowStage } from "../request-workflow";
@@ -72,6 +74,12 @@ export function RequestsStatsCards({ data }: RequestsStatsCardsProps) {
     return { total: data.length, byStage, unpaid };
   }, [data]);
 
+  const [grown, setGrown] = useState(false);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setGrown(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
   return (
     <Card role="region" aria-labelledby="request-pipeline-title">
       <CardHeader className="border-b">
@@ -89,7 +97,7 @@ export function RequestsStatsCards({ data }: RequestsStatsCardsProps) {
               Total Requests
             </dt>
             <dd className="mt-1 text-3xl font-extrabold tracking-tight text-foreground tabular-nums">
-              {numberFormatter.format(stats.total)}
+              <CountUp value={stats.total} />
             </dd>
           </dl>
         </CardAction>
@@ -108,29 +116,36 @@ export function RequestsStatsCards({ data }: RequestsStatsCardsProps) {
             className="flex h-2.5 overflow-hidden rounded-full bg-secondary"
             aria-hidden="true"
           >
-            {STAGES.map((stage) => {
+            {STAGES.map((stage, index) => {
               const percentage =
                 stats.total > 0 ? stats.byStage[stage] / stats.total : 0;
 
               return (
                 <div
                   key={stage}
-                  className={cn("h-full", stageDetails[stage].barClassName)}
-                  style={{ width: `${percentage * 100}%` }}
+                  className={cn(
+                    "h-full transition-[width] duration-700 ease-out",
+                    stageDetails[stage].barClassName,
+                  )}
+                  style={{
+                    width: grown ? `${percentage * 100}%` : "0%",
+                    transitionDelay: `${index * 60}ms`,
+                  }}
                 />
               );
             })}
           </div>
         </div>
 
-        <dl className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-x-6 gap-y-5">
-          {STAGES.map((stage) => {
+        <dl className="civic-stagger grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-x-6 gap-y-5">
+          {STAGES.map((stage, index) => {
             const count = stats.byStage[stage];
             const percentage = stats.total > 0 ? count / stats.total : 0;
 
             return (
               <div
                 key={stage}
+                style={staggerStyle(index)}
                 className={cn(
                   "min-w-0 border-l-2 pl-3",
                   stageDetails[stage].borderClassName,
@@ -141,7 +156,7 @@ export function RequestsStatsCards({ data }: RequestsStatsCardsProps) {
                 </dt>
                 <dd className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
                   <span className="text-2xl font-extrabold tracking-tight text-foreground tabular-nums">
-                    {numberFormatter.format(count)}
+                    <CountUp value={count} />
                   </span>
                   <span className="text-xs font-semibold text-muted-foreground tabular-nums">
                     {percentageFormatter.format(percentage)}

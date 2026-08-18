@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { CiviCheckIdentity } from "~/components/brand/civic-identity";
+import { enterDelay } from "~/components/motion/stagger";
 import { cn } from "~/lib/utils";
 
 /**
@@ -25,13 +26,13 @@ export function AuthSplitLayout({
   return (
     <div className="flex min-h-dvh bg-card">
       <div className="flex flex-1 flex-col px-5 py-8 sm:px-10">
-        <Link to="/" className="w-fit">
+        <Link to="/" className="civic-enter-fade w-fit">
           <CiviCheckIdentity compact />
         </Link>
 
         <div
           className={cn(
-            "mx-auto flex w-full max-w-88 flex-1 flex-col justify-center py-10",
+            "civic-enter mx-auto flex w-full max-w-88 flex-1 flex-col justify-center py-10",
             className,
           )}
         >
@@ -42,7 +43,10 @@ export function AuthSplitLayout({
       {/* Proportional rather than fixed: the panel holds a little under half the
           screen at every width, which is the balance the form column is sized
           against. Capped so it stops growing on very wide monitors. */}
-      <div className="hidden shrink-0 lg:block lg:w-[42%] lg:max-w-190 xl:w-[45%]">
+      <div
+        className="civic-enter-fade hidden shrink-0 lg:block lg:w-[42%] lg:max-w-190 xl:w-[45%]"
+        style={enterDelay(120)}
+      >
         {panel}
       </div>
     </div>

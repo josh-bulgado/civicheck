@@ -10,6 +10,7 @@ import {
 } from "~/components/ui/field";
 import { InputGroup, InputGroupInput } from "~/components/ui/input-group";
 import { Spinner } from "~/components/ui/spinner";
+import { staggerStyle } from "~/components/motion/stagger";
 import { useResetPassword } from "../hooks/useResetPassword";
 import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,6 +25,7 @@ import {
   AuthSplitLayout,
 } from "./AuthSplitLayout";
 import { PasswordToggle } from "./PasswordToggle";
+import { cn } from "~/lib/utils";
 
 const formSchema = z
   .object({
@@ -81,7 +83,7 @@ const ResetPasswordForm = () => {
         />
 
         {isSuccess ? (
-          <div className="flex flex-col gap-5">
+          <div className="civic-enter-scale flex flex-col gap-5">
             <div className="status-success rounded-lg border p-4 text-sm">
               <div className="flex items-start gap-3">
                 <CheckCircle className="mt-0.5 size-5 shrink-0 text-success" />
@@ -94,9 +96,12 @@ const ResetPasswordForm = () => {
               </div>
             </div>
 
-            <Button className={authButtonClass} render={<Link to="/login" />}>
+            <Button
+              className={cn(authButtonClass, "group")}
+              render={<Link to="/login" />}
+            >
               Go to sign in
-              <ArrowRight className="size-4" />
+              <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" />
             </Button>
           </div>
         ) : (
@@ -105,19 +110,23 @@ const ResetPasswordForm = () => {
             className="flex flex-col gap-5"
           >
             {updateError && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="civic-enter-sm">
                 <AlertCircleIcon />
                 <AlertTitle>Update failed</AlertTitle>
                 <AlertDescription>{updateError}</AlertDescription>
               </Alert>
             )}
 
-            <FieldGroup className="gap-5">
+            <FieldGroup className="civic-stagger gap-5">
               <Controller
                 control={form.control}
                 name="password"
                 render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid} className="gap-1.75">
+                  <Field
+                    data-invalid={fieldState.invalid}
+                    style={staggerStyle(0)}
+                    className="gap-1.75"
+                  >
                     <FieldLabel htmlFor="password" className={authLabelClass}>
                       New password
                     </FieldLabel>
@@ -148,7 +157,11 @@ const ResetPasswordForm = () => {
                 control={form.control}
                 name="confirmPassword"
                 render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid} className="gap-1.75">
+                  <Field
+                    data-invalid={fieldState.invalid}
+                    style={staggerStyle(1)}
+                    className="gap-1.75"
+                  >
                     <FieldLabel
                       htmlFor="confirmPassword"
                       className={authLabelClass}
@@ -183,6 +196,7 @@ const ResetPasswordForm = () => {
               <Button
                 type="submit"
                 className={authButtonClass}
+                style={staggerStyle(2)}
                 disabled={resetPasswordMutation.status === "pending"}
               >
                 {resetPasswordMutation.status === "pending" ? (

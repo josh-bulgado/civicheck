@@ -90,7 +90,7 @@ export function PrivilegedAccessSection({
                 </TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
+            <TableBody className="civic-stagger-auto">
               {accounts.map((account) => (
                 <TableRow key={account.id}>
                   <TableCell className="max-w-56 whitespace-normal px-6 py-4 break-words font-medium">

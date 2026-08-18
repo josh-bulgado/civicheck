@@ -211,7 +211,7 @@ export function SecurityFindingsSection({
         </TabsList>
         <TabsContent value={filter} className="mt-3">
           {visibleFindings.length > 0 ? (
-            <div className="flex flex-col gap-3">
+            <div className="civic-stagger-auto flex flex-col gap-3">
               {visibleFindings.map((finding) => {
                 const isPending =
                   pendingAction?.type === "finding" &&

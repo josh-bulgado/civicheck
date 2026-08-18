@@ -1,6 +1,8 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { hasPermission } from "~/lib/permissions";
 import type { Role } from "~/lib/permissions";
+import { getMyRequestsFn } from "~/features/requests/applicant-requests.queries";
+import { CitizenDashboard } from "~/features/dashboard/CitizenDashboard";
 
 export const Route = createFileRoute("/_authed/dashboard")({
   beforeLoad: ({ context }) => {
@@ -14,13 +16,17 @@ export const Route = createFileRoute("/_authed/dashboard")({
       throw redirect({ to: "/admin" });
     } else if (hasPermission(role, "dashboard:staff")) {
       throw redirect({ to: "/staff-dashboard" });
-    } else {
-      throw redirect({ to: "/services" });
     }
+    // Applicants have no dedicated route to redirect to — this route renders
+    // their dashboard directly instead.
   },
+  loader: () => getMyRequestsFn(),
   component: RouteComponent,
 });
 
 function RouteComponent() {
-  return <div>Redirecting based on your role...</div>;
+  const requests = Route.useLoaderData();
+  const { user } = Route.useRouteContext();
+
+  return <CitizenDashboard requests={requests} firstName={user?.firstName ?? ""} />;
 }

@@ -23,6 +23,7 @@ import {
   stageOf,
 } from "~/features/requests/request-workflow";
 import { formatFee } from "~/features/services/service-utils";
+import { staggerStyle } from "~/components/motion/stagger";
 
 const ACCEPT = "image/jpeg,image/png,application/pdf";
 const MAX_SIZE = 10 * 1024 * 1024;
@@ -79,9 +80,9 @@ function MyRequestDetailPage() {
     <div className="dashboard-page">
       <Link
         to="/my-requests"
-        className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+        className="group mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
       >
-        <ArrowLeft className="size-4" />
+        <ArrowLeft className="size-4 transition-transform duration-200 group-hover:-translate-x-1" />
         Back to my requests
       </Link>
 
@@ -96,13 +97,15 @@ function MyRequestDetailPage() {
             </h1>
             <p className="mt-2 text-sm text-white/75">{request.serviceName}</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="civic-stagger flex flex-wrap gap-2">
             <span
+              style={staggerStyle(0)}
               className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium ${status.styles}`}
             >
               {status.label}
             </span>
             <span
+              style={staggerStyle(1)}
               className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium ${payment.styles}`}
             >
               {payment.label}
@@ -111,8 +114,8 @@ function MyRequestDetailPage() {
         </div>
       </header>
 
-      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="flex flex-col gap-6 lg:col-span-2">
+      <div className="civic-stagger mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div style={staggerStyle(0)} className="flex flex-col gap-6 lg:col-span-2">
           <section className="rounded-xl border border-border bg-white p-6">
             <h2 className="mb-4 text-lg font-bold text-foreground">Submitted details</h2>
             <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
@@ -155,7 +158,7 @@ function MyRequestDetailPage() {
                 Nothing was pre-uploaded for this request.
               </p>
             ) : (
-              <div className="flex flex-col gap-3">
+              <div className="civic-stagger-auto flex flex-col gap-3">
                 {request.attachments.map((doc) => (
                   <AttachmentRow key={doc.id} doc={doc} onChanged={() => router.invalidate()} />
                 ))}
@@ -165,7 +168,7 @@ function MyRequestDetailPage() {
 
           <section className="rounded-xl border border-border bg-white p-6">
             <h2 className="mb-4 text-lg font-bold text-foreground">Status history</h2>
-            <ol className="flex flex-col gap-4">
+            <ol className="civic-stagger-auto flex flex-col gap-4">
               {request.logs.map((log) => (
                 <li key={log.id} className="flex gap-4">
                   <div className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" />
@@ -184,7 +187,7 @@ function MyRequestDetailPage() {
           </section>
         </div>
 
-        <div className="flex flex-col gap-6">
+        <div style={staggerStyle(1)} className="flex flex-col gap-6">
           <section className="rounded-xl border border-border bg-white p-6">
             <h2 className="mb-3 text-lg font-bold text-foreground">Processing time</h2>
             <p className="text-sm text-muted-foreground">
@@ -193,7 +196,7 @@ function MyRequestDetailPage() {
           </section>
 
           {request.status === "ready_for_release" && (
-            <section className="rounded-xl border border-success/20 bg-success/5 p-6">
+            <section className="civic-enter-scale rounded-xl border border-success/20 bg-success/5 p-6">
               <h2 className="mb-2 text-lg font-bold text-foreground">Ready for release</h2>
               <p className="text-sm text-muted-foreground">
                 {request.paymentStatus === "verified"

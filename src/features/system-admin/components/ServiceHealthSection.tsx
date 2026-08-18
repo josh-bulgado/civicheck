@@ -76,8 +76,9 @@ function HealthTrend({
       <path d="M0 29.5H120" className="stroke-border" strokeWidth="1" />
       <polyline
         points={coordinates}
+        pathLength={1}
         fill="none"
-        className={trendStroke[status]}
+        className={cn("civic-draw-line", trendStroke[status])}
         strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -158,7 +159,7 @@ export function ServiceHealthSection({
         title="Core Service Health"
       />
       {services.length > 0 ? (
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="civic-stagger-auto grid gap-4 lg:grid-cols-3">
           {services.map((service) => (
             <ServiceHealthCard key={service.key} service={service} />
           ))}

@@ -15,6 +15,7 @@ import { getServices } from "~/features/services/services.queries";
 import { getServiceCategory, getVisitBadge } from "~/features/services/service-utils";
 import { getMyDepartmentScopeFn } from "~/features/requests/requests.queries";
 import { usePermissions } from "~/hooks/usePermissions";
+import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 
 export const Route = createFileRoute("/_authed/(service)/services")({
   loader: async () => {
@@ -25,7 +26,9 @@ export const Route = createFileRoute("/_authed/(service)/services")({
     return { services, scope };
   },
   // The registry only changes when an admin edits it, and those edits already
-  // call `router.invalidate()`, so browsing away and back can reuse this.
+  // call `router.invalidate()`, so browsing away and back can reuse this —
+  // realtime below covers the case where the edit happens while this page is
+  // already open.
   staleTime: 5 * 60_000,
   component: ServicesPage,
 });
@@ -43,6 +46,9 @@ function ServicesPage() {
   const { view, chooseView } = useServiceView();
   const { role } = usePermissions();
   const canApply = role === "applicant";
+  useRealtimeRefresh({
+    tables: ["services_registry", "service_requirements_metadata"],
+  });
 
   // Department-scoped staff (staff/supervisor) only handle their own
   // department's services — the same scoping already applied to Request

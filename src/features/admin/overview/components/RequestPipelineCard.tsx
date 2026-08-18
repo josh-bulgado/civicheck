@@ -20,7 +20,8 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { formatCount } from "~/features/admin/overview/overview-formatters";
+import { CountUp } from "~/components/motion/count-up";
+import { staggerStyle } from "~/components/motion/stagger";
 import type { RequestOverview } from "~/features/admin/overview/overview.types";
 
 const STAGE_DETAILS = {
@@ -52,13 +53,13 @@ export function RequestPipelineCard({
         </CardDescription>
         <CardAction>
           <Badge variant="secondary">
-            {formatCount(requests.openTotal)} Total
+            <CountUp value={requests.openTotal} /> Total
           </Badge>
         </CardAction>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-4">
         {requests.openTotal === 0 ? (
-          <Alert>
+          <Alert className="civic-enter-sm">
             <CheckCircle2 aria-hidden="true" />
             <AlertTitle>The Request Pipeline Is Clear</AlertTitle>
             <AlertDescription>
@@ -69,10 +70,10 @@ export function RequestPipelineCard({
 
         <ol
           aria-labelledby="request-pipeline-heading"
-          className="grid flex-1 gap-3 sm:grid-cols-2 xl:grid-cols-5"
+          className="civic-stagger grid flex-1 gap-3 sm:grid-cols-2 xl:grid-cols-5"
         >
-          {requests.stages.map((stage) => (
-            <li key={stage.stage} className="min-w-0">
+          {requests.stages.map((stage, index) => (
+            <li key={stage.stage} style={staggerStyle(index)} className="min-w-0">
               <WorkflowStageCard stage={stage} />
             </li>
           ))}
@@ -101,7 +102,7 @@ function WorkflowStageCard({
   const Icon = detail.icon;
 
   return (
-    <Card className="h-full" size="sm">
+    <Card className="civic-interactive civic-lift h-full" size="sm">
       <CardHeader>
         <CardTitle>
           <h3 className="text-balance">{stage.label}</h3>
@@ -111,7 +112,7 @@ function WorkflowStageCard({
       <CardContent>
         <div className="flex items-center justify-between gap-3">
           <span className="text-3xl font-extrabold tracking-tight tabular-nums">
-            {formatCount(stage.count)}
+            <CountUp value={stage.count} />
           </span>
           <Icon className="size-5 text-primary" aria-hidden="true" />
         </div>

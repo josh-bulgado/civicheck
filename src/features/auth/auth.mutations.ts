@@ -1,10 +1,79 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getSupabaseServerClient, getSupabaseAdminClient } from "~/utils/supabase";
+import {
+  getSupabaseServerClient,
+  getSupabaseAdminClient,
+  getSupabaseStatelessClient,
+} from "~/utils/supabase";
 import { sendEmail } from "~/utils/resend";
-import { renderActionEmail } from "~/utils/email-template";
+import { renderOtpEmail } from "~/utils/email-template";
 import { requireActiveSession, isOperationalRole } from "~/server/auth";
 import { recordAuthenticationSecurityEvent } from "~/features/system-admin/security-center.server";
 import type { Role } from "~/lib/permissions";
+
+/**
+ * Generates a fresh signup OTP for a user that was just created (or
+ * recreated) with `email_confirm: false`, and emails it. Shared by the
+ * initial signup and by the "resend from login" path, which both land the
+ * user on the same unconfirmed-account state.
+ */
+async function sendSignupOtpEmail(
+  adminSupabase: ReturnType<typeof getSupabaseAdminClient>,
+  params: {
+    email: string;
+    password: string;
+    firstName: string;
+    userMetadata: Record<string, unknown>;
+  },
+) {
+  const { data: linkData, error: linkError } =
+    await adminSupabase.auth.admin.generateLink({
+      type: "signup",
+      email: params.email,
+      password: params.password,
+      options: { data: params.userMetadata },
+    });
+
+  const otp = linkData?.properties?.email_otp;
+
+  if (linkError || !otp) {
+    return {
+      error: true,
+      message:
+        linkError?.message || "Failed to generate the email verification code.",
+    };
+  }
+
+  try {
+    await sendEmail({
+      to: params.email,
+      subject: "Confirm your CiviCheck account",
+      html: renderOtpEmail({
+        preheader: "Use this code to confirm your CiviCheck account.",
+        label: "Email verification",
+        greeting: `Hello ${params.firstName.trim()},`,
+        heading: "Confirm your email address",
+        paragraphs: [
+          "Thanks for creating a CiviCheck account. Enter the code below to activate it — you can then file civil registry requests online and follow them from submission to release.",
+        ],
+        code: otp,
+        noteLines: [
+          "This code expires in 1 hour and can only be used once.",
+          "You will not be able to sign in until your email is confirmed.",
+        ],
+        footerNote:
+          "If you did not create a CiviCheck account, you can safely ignore this email.",
+      }),
+    });
+  } catch (sendError: any) {
+    console.error("Resend sending error:", sendError);
+    return {
+      error: true,
+      message: `Failed to send the verification code: ${sendError.message}`,
+    };
+  }
+
+  return { error: false };
+}
 
 export const loginWithEmailFn = createServerFn({ method: "POST" })
   .validator((d: { email: string; password: string }) => d)
@@ -88,7 +157,6 @@ export const signupFn = createServerFn({ method: "POST" })
       firstName: string;
       lastName: string;
       middleName?: string;
-      redirectUrl?: string;
     }) => d,
   )
   .handler(async ({ data }) => {
@@ -156,78 +224,126 @@ export const signupFn = createServerFn({ method: "POST" })
         .eq("id", newProfileId);
     }
 
-    // Generate signup verification link
-    const { data: linkData, error: linkError } = await adminSupabase.auth.admin.generateLink({
-      type: "signup",
+    const otpResult = await sendSignupOtpEmail(adminSupabase, {
       email: data.email,
       password: data.password,
-      options: {
-        data: {
-          first_name: data.firstName,
-          last_name: data.lastName,
-          middle_name: middleName,
-        },
+      firstName: data.firstName,
+      userMetadata: {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        middle_name: middleName,
       },
     });
 
-    const hashedToken = linkData?.properties?.hashed_token;
-
-    if (linkError || !hashedToken) {
-      return {
-        error: true,
-        message: linkError?.message || "Failed to generate email confirmation link.",
-      };
-    }
-
-    // Point at our own callback so the session is verified server-side and stored
-    // in cookies. Supabase's own action_link returns tokens in the URL fragment,
-    // which this app (server-side sessions only) can never read.
-    const confirmationUrl = new URL(
-      "/auth/callback",
-      process.env.APP_URL || "http://localhost:3000",
-    );
-    confirmationUrl.searchParams.set("token_hash", hashedToken);
-    confirmationUrl.searchParams.set("type", "signup");
-    confirmationUrl.searchParams.set("next", "/dashboard");
-
-    try {
-      const actionLink = confirmationUrl.toString();
-
-      await sendEmail({
-        to: data.email,
-        subject: "Confirm your CiviCheck account",
-        html: renderActionEmail({
-          preheader:
-            "Confirm your email address to activate your CiviCheck account.",
-          label: "Email verification",
-          greeting: `Hello ${data.firstName.trim()},`,
-          heading: "Confirm your email address",
-          paragraphs: [
-            "Thanks for creating a CiviCheck account. Confirm your email address to activate it — you can then file civil registry requests online and follow them from submission to release.",
-          ],
-          actionLabel: "Confirm email address",
-          actionUrl: actionLink,
-          noteLines: [
-            "This link signs you in and can only be used once.",
-            "You will not be able to sign in until your email is confirmed.",
-          ],
-          footerNote:
-            "If you did not create a CiviCheck account, you can safely ignore this email.",
-        }),
-      });
-    } catch (sendError: any) {
-      console.error("Resend sending error:", sendError);
-      return {
-        error: true,
-        message: `Account created, but failed to send verification email: ${sendError.message}`,
-      };
+    if (otpResult.error) {
+      return otpResult;
     }
 
     return {
       error: false,
-      message: "Please check your email to confirm your account before signing in.",
-      redirectUrl: undefined,
+      message: "Please check your email for your verification code.",
     };
+  });
+
+/**
+ * Resends a signup OTP for an account the applicant already created but
+ * never confirmed — reached from the login form when a correct password
+ * comes back "email not confirmed". The password is re-verified here
+ * (rather than trusted from the caller) because this recreates the account
+ * with whatever password is supplied: without that check, anyone could hand
+ * this endpoint a stranger's unconfirmed email and a password of their own
+ * choosing and take the account over before its real owner ever confirms it.
+ */
+export const resendSignupOtpFn = createServerFn({ method: "POST" })
+  .validator((d: { email: string; password: string }) => d)
+  .handler(async ({ data }) => {
+    const INVALID_CREDENTIALS = "Invalid email or password.";
+    const statelessSupabase = getSupabaseStatelessClient();
+    const { error: signInError } =
+      await statelessSupabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
+
+    if (!signInError || !/email not confirmed/i.test(signInError.message ?? "")) {
+      return { error: true, message: INVALID_CREDENTIALS };
+    }
+
+    const adminSupabase = getSupabaseAdminClient();
+    const {
+      data: { users },
+    } = await adminSupabase.auth.admin.listUsers({ perPage: 1000 });
+    const existingUser = users?.find(
+      (u) => u.email?.toLowerCase() === data.email.toLowerCase(),
+    );
+
+    if (!existingUser) {
+      return { error: true, message: INVALID_CREDENTIALS };
+    }
+
+    const userMetadata = existingUser.user_metadata ?? {};
+    const firstName = (userMetadata.first_name as string | undefined) || "there";
+    const middleName = userMetadata.middle_name as string | undefined;
+
+    // Recreate rather than update: Supabase Auth has no admin call to mint a
+    // fresh unconfirmed state for an existing user, so this mirrors the same
+    // delete-and-recreate signupFn already does for a repeat signup attempt.
+    await adminSupabase.auth.admin.deleteUser(existingUser.id);
+    const { data: created, error: createError } =
+      await adminSupabase.auth.admin.createUser({
+        email: data.email,
+        password: data.password,
+        email_confirm: false,
+        user_metadata: userMetadata,
+      });
+
+    if (createError || !created?.user) {
+      const isJsonEmpty = !createError?.message || createError.message === "{}";
+      return {
+        error: true,
+        message: isJsonEmpty
+          ? "An unexpected error occurred while resending the code."
+          : createError.message,
+      };
+    }
+
+    if (middleName) {
+      await adminSupabase
+        .from("profiles")
+        .update({ middle_name: middleName })
+        .eq("id", created.user.id);
+    }
+
+    return sendSignupOtpEmail(adminSupabase, {
+      email: data.email,
+      password: data.password,
+      firstName,
+      userMetadata,
+    });
+  });
+
+export const verifySignupOtpFn = createServerFn({ method: "POST" })
+  .validator((d: { email: string; token: string }) => d)
+  .handler(async ({ data }) => {
+    const supabase = getSupabaseServerClient();
+    const { error } = await supabase.auth.verifyOtp({
+      email: data.email,
+      token: data.token,
+      type: "signup",
+    });
+
+    if (error) {
+      const isJsonEmpty = error.message === "{}" || !error.message;
+      const cleanMessage = isJsonEmpty
+        ? "An unexpected verification error occurred."
+        : error.message;
+      return {
+        error: true,
+        message: cleanMessage,
+      };
+    }
+
+    return { error: false };
   });
 
 export const resetPasswordFn = createServerFn({ method: "POST" })
@@ -268,8 +384,8 @@ export const forgotPasswordFn = createServerFn({ method: "POST" })
   .validator((d: { email: string }) => d)
   .handler(async ({ data }) => {
     const adminSupabase = getSupabaseAdminClient();
-    
-    // Generate recovery link
+
+    // Generate a recovery OTP code
     const { data: linkData, error } = await adminSupabase.auth.admin.generateLink({
       type: "recovery",
       email: data.email,
@@ -281,7 +397,7 @@ export const forgotPasswordFn = createServerFn({ method: "POST" })
       if (error.status === 404 || error.code === "user_not_found") {
         return {
           error: false,
-          message: "Password reset link sent.",
+          message: "Password reset code sent.",
         };
       }
 
@@ -295,39 +411,28 @@ export const forgotPasswordFn = createServerFn({ method: "POST" })
       };
     }
 
-    const hashedToken = linkData?.properties?.hashed_token;
+    const otp = linkData?.properties?.email_otp;
 
-    if (!hashedToken) {
+    if (!otp) {
       return {
         error: true,
-        message: "Failed to generate the password reset link.",
+        message: "Failed to generate the password reset code.",
       };
     }
 
-    const recoveryUrl = new URL(
-      "/auth/callback",
-      process.env.APP_URL || "http://localhost:3000",
-    );
-    recoveryUrl.searchParams.set("token_hash", hashedToken);
-    recoveryUrl.searchParams.set("type", "recovery");
-    recoveryUrl.searchParams.set("next", "/reset-password");
-
     try {
-      const actionLink = recoveryUrl.toString();
-
       await sendEmail({
         to: data.email,
         subject: "Reset your CiviCheck password",
-        html: renderActionEmail({
-          preheader: "Use this link to set a new CiviCheck password.",
+        html: renderOtpEmail({
+          preheader: "Use this code to reset your CiviCheck password.",
           label: "Password reset",
           heading: "Reset your password",
           paragraphs: [
-            "We received a request to reset the password for your CiviCheck account. Use the button below to set a new one.",
+            "We received a request to reset the password for your CiviCheck account. Enter the code below to continue.",
           ],
-          actionLabel: "Reset password",
-          actionUrl: actionLink,
-          noteLines: ["This link can only be used once."],
+          code: otp,
+          noteLines: ["This code expires in 1 hour and can only be used once."],
           footerNote:
             "If you did not request a password reset, you can safely ignore this email — your password stays the same.",
         }),
@@ -336,12 +441,36 @@ export const forgotPasswordFn = createServerFn({ method: "POST" })
       console.error("Resend sending error:", sendError);
       return {
         error: true,
-        message: `Failed to send reset password email: ${sendError.message}`,
+        message: `Failed to send the password reset code: ${sendError.message}`,
       };
     }
 
     return {
       error: false,
-      message: "Password reset link sent.",
+      message: "Password reset code sent.",
     };
+  });
+
+export const verifyRecoveryOtpFn = createServerFn({ method: "POST" })
+  .validator((d: { email: string; token: string }) => d)
+  .handler(async ({ data }) => {
+    const supabase = getSupabaseServerClient();
+    const { error } = await supabase.auth.verifyOtp({
+      email: data.email,
+      token: data.token,
+      type: "recovery",
+    });
+
+    if (error) {
+      const isJsonEmpty = error.message === "{}" || !error.message;
+      const cleanMessage = isJsonEmpty
+        ? "An unexpected verification error occurred."
+        : error.message;
+      return {
+        error: true,
+        message: cleanMessage,
+      };
+    }
+
+    return { error: false };
   });

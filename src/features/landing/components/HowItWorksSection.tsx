@@ -1,3 +1,5 @@
+import { Reveal } from "~/components/motion/reveal";
+
 const steps = [
   {
     number: "1",
@@ -47,21 +49,20 @@ const HowItWorksSection = () => {
           />
 
           <div className="relative grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {steps.map((step) => (
-              <div
-                key={step.number}
-                className="civic-card group relative p-6 transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_12px_28px_rgba(15,27,45,0.09)]"
-              >
-                <span className="mb-5 flex size-10 items-center justify-center rounded-full bg-primary text-[17px] font-bold text-white shadow-[0_4px_12px_rgba(11,77,162,0.25)]">
-                  {step.number}
-                </span>
-                <h3 className="mb-2 text-[19px] font-bold leading-snug text-foreground">
-                  {step.title}
-                </h3>
-                <p className="text-[15px] leading-relaxed text-body">
-                  {step.desc}
-                </p>
-              </div>
+            {steps.map((step, index) => (
+              <Reveal key={step.number} delay={index * 70}>
+                <div className="civic-card civic-interactive civic-lift group relative h-full p-6 hover:border-primary/30 hover:shadow-[0_12px_28px_rgba(15,27,45,0.09)]">
+                  <span className="mb-5 flex size-10 items-center justify-center rounded-full bg-primary text-[17px] font-bold text-white shadow-[0_4px_12px_rgba(11,77,162,0.25)] transition-transform duration-200 group-hover:scale-110">
+                    {step.number}
+                  </span>
+                  <h3 className="mb-2 text-[19px] font-bold leading-snug text-foreground">
+                    {step.title}
+                  </h3>
+                  <p className="text-[15px] leading-relaxed text-body">
+                    {step.desc}
+                  </p>
+                </div>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -72,29 +73,31 @@ const HowItWorksSection = () => {
           — rather than in a section of their own — keeps the promise attached
           to the process it qualifies.
         */}
-        <div className="civic-card mt-6 flex flex-wrap items-center gap-x-6 gap-y-3.5 px-5.5 py-4.5">
-          <p className="text-[12.5px] font-bold text-foreground">
-            Every request follows five tracked stages
-          </p>
+        <Reveal delay={100}>
+          <div className="civic-card mt-6 flex flex-wrap items-center gap-x-6 gap-y-3.5 px-5.5 py-4.5">
+            <p className="text-[12.5px] font-bold text-foreground">
+              Every request follows five tracked stages
+            </p>
 
-          <ol className="flex min-w-70 flex-1 flex-wrap items-center gap-x-4 gap-y-2.5">
-            {stages.map((stage) => (
-              <li
-                key={stage.step}
-                className="flex items-center gap-1.75 text-[13px] text-body"
-              >
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-border-strong font-mono text-[10px] font-bold text-primary">
-                  {stage.step}
-                </span>
-                {stage.label}
-              </li>
-            ))}
-          </ol>
+            <ol className="flex min-w-70 flex-1 flex-wrap items-center gap-x-4 gap-y-2.5">
+              {stages.map((stage) => (
+                <li
+                  key={stage.step}
+                  className="flex items-center gap-1.75 text-[13px] text-body"
+                >
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-border-strong font-mono text-[10px] font-bold text-primary">
+                    {stage.step}
+                  </span>
+                  {stage.label}
+                </li>
+              ))}
+            </ol>
 
-          <p className="text-[12.5px] text-muted-2">
-            Visible any time — no phone calls.
-          </p>
-        </div>
+            <p className="text-[12.5px] text-muted-2">
+              Visible any time — no phone calls.
+            </p>
+          </div>
+        </Reveal>
       </div>
     </section>
   );

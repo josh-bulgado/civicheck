@@ -36,7 +36,9 @@ const LandingPage = ({ featuredChecklists }: LandingPageProps) => {
           <HowItWorksSection />
         </Reveal>
       </main>
-      <SiteFooter />
+      <Reveal>
+        <SiteFooter />
+      </Reveal>
     </div>
   );
 };

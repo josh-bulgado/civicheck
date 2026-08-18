@@ -335,6 +335,17 @@
   }
 }
 
+/* Paired with `pathLength={1}` on the SVG element, so the draw-in timing is
+   independent of the path's actual on-screen length. */
+@keyframes civic-draw-line {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
 /* Shared civic layout primitives. */
 @layer components {
   .civic-container {
@@ -650,6 +661,14 @@
     animation: civic-progress-sweep 1.15s var(--ease-civic) infinite;
   }
 
+  /* Sparkline / trend polyline that draws itself in on mount. */
+  .civic-draw-line {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: civic-draw-line 900ms var(--ease-civic-emphasized) both;
+    animation-delay: var(--enter-delay, 120ms);
+  }
+
   /* Halo that radiates out of a live status dot. */
   .civic-live-dot {
     @apply relative inline-flex size-2 rounded-full bg-success-dot;
@@ -703,6 +722,11 @@
   .civic-progress-track::after,
   .civic-live-dot::before {
     animation: none;
+  }
+
+  .civic-draw-line {
+    animation: none;
+    stroke-dashoffset: 0;
   }
 
   .civic-live-dot::before {

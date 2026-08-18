@@ -28,7 +28,7 @@ const RequestsPage = ({
   onWalkInEncoded,
 }: RequestsPageProps) => {
   return (
-    <div className="dashboard-page animate-in fade-in duration-300">
+    <div className="dashboard-page">
       <RequestsPageHeader
         departmentName={scopedDepartmentName}
         encodableServices={encodableServices}

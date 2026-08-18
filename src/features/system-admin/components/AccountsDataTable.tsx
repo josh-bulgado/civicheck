@@ -193,7 +193,7 @@ export function AccountsDataTable({
                 </TableRow>
               ))}
             </TableHeader>
-            <TableBody>
+            <TableBody className="civic-stagger-auto">
               {table.getRowModel().rows.length ? (
                 table.getRowModel().rows.map((row) => (
                   <TableRow

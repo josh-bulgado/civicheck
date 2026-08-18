@@ -2,6 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CityGovernmentIdentity, CiviCheckIdentity } from "~/components/brand/civic-identity";
+import { staggerStyle } from "~/components/motion/stagger";
+import { cn } from "~/lib/utils";
 
 const publicLinks = [
   { label: "Requirements", to: "/requirements" as const },
@@ -21,7 +23,7 @@ const SiteHeader = () => {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-white/95 backdrop-blur-md">
+    <header className="civic-enter-fade sticky top-0 z-50 border-b border-border bg-white/95 backdrop-blur-md">
       <div className="hidden border-b border-border-light bg-background sm:block">
         <div className="civic-container flex h-9 items-center justify-between">
           <p className="text-[13px] font-bold uppercase tracking-[0.09em] text-muted-2">
@@ -54,20 +56,43 @@ const SiteHeader = () => {
         <button
           type="button"
           onClick={() => setMobileMenuOpen((open) => !open)}
-          className="flex size-11 items-center justify-center rounded-lg text-foreground hover:bg-muted md:hidden"
+          className="civic-press flex size-11 items-center justify-center rounded-lg text-foreground hover:bg-muted md:hidden"
           aria-expanded={mobileMenuOpen}
           aria-controls="mobile-navigation"
           aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
         >
-          {mobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+          <span className="relative flex size-5 items-center justify-center">
+            <X
+              className={cn(
+                "absolute size-5 transition-[opacity,transform] duration-200 ease-out",
+                mobileMenuOpen ? "rotate-0 opacity-100" : "-rotate-45 opacity-0",
+              )}
+            />
+            <Menu
+              className={cn(
+                "absolute size-5 transition-[opacity,transform] duration-200 ease-out",
+                mobileMenuOpen ? "rotate-45 opacity-0" : "rotate-0 opacity-100",
+              )}
+            />
+          </span>
         </button>
       </div>
 
       {mobileMenuOpen ? (
-        <nav id="mobile-navigation" className="border-t border-border bg-white px-5 py-4 md:hidden" aria-label="Mobile navigation">
+        <nav
+          id="mobile-navigation"
+          className="civic-enter-sm civic-stagger border-t border-border bg-white px-5 py-4 md:hidden"
+          aria-label="Mobile navigation"
+        >
           <div className="mx-auto flex max-w-6xl flex-col gap-1">
-            {publicLinks.map((item) => (
-              <Link key={item.label} to={item.to} className="rounded-lg px-3 py-3 text-sm font-medium hover:bg-primary-soft hover:text-primary" onClick={() => setMobileMenuOpen(false)}>
+            {publicLinks.map((item, index) => (
+              <Link
+                key={item.label}
+                to={item.to}
+                style={staggerStyle(index)}
+                className="civic-interactive rounded-lg px-3 py-3 text-sm font-medium hover:bg-primary-soft hover:text-primary"
+                onClick={() => setMobileMenuOpen(false)}
+              >
                 {item.label}
               </Link>
             ))}

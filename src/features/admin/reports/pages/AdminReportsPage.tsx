@@ -5,6 +5,7 @@ import {
   Clock3,
   FileWarning,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
 import {
@@ -15,6 +16,8 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
+import { CountUp } from "~/components/motion/count-up";
+import { enterDelay, staggerStyle } from "~/components/motion/stagger";
 import type { AdminReportsData } from "~/features/admin/reports/reports.types";
 
 const generatedAtFormatter = new Intl.DateTimeFormat("en-US", {
@@ -28,6 +31,14 @@ export function AdminReportsPage({ data }: { data: AdminReportsData }) {
     ...data.requestVolume.months.map((month) => month.count),
     1,
   );
+
+  // Bars render at 0 and grow to their real width once mounted, so the chart
+  // reads as filling in rather than appearing pre-drawn.
+  const [barsGrown, setBarsGrown] = useState(false);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setBarsGrown(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   return (
     <div className="dashboard-page">
@@ -48,7 +59,10 @@ export function AdminReportsPage({ data }: { data: AdminReportsData }) {
               </p>
             </div>
           </div>
-          <div className="flex min-w-64 items-center gap-3 rounded-xl border border-white/15 bg-white/10 p-4 text-white backdrop-blur-sm">
+          <div
+            className="civic-enter-scale flex min-w-64 items-center gap-3 rounded-xl border border-white/15 bg-white/10 p-4 text-white backdrop-blur-sm"
+            style={enterDelay(160)}
+          >
             <CalendarRange className="size-5 text-brand-gold" aria-hidden="true" />
             <div>
               <p className="text-xs font-medium text-white/70">Reporting period</p>
@@ -58,12 +72,15 @@ export function AdminReportsPage({ data }: { data: AdminReportsData }) {
         </div>
       </header>
 
-      <section aria-labelledby="report-summary-heading" className="grid gap-4 lg:grid-cols-2">
+      <section
+        aria-labelledby="report-summary-heading"
+        className="civic-stagger grid gap-4 lg:grid-cols-2"
+      >
         <h2 id="report-summary-heading" className="sr-only">
           Report summary
         </h2>
 
-        <Card className="lg:col-span-2">
+        <Card style={staggerStyle(0)} className="lg:col-span-2">
           <CardHeader>
             <CardTitle>
               <h2>Request Volume</h2>
@@ -74,37 +91,44 @@ export function AdminReportsPage({ data }: { data: AdminReportsData }) {
             </CardDescription>
             <CardAction>
               <Badge variant="secondary">
-                {data.requestVolume.total.toLocaleString()} submitted
+                <CountUp value={data.requestVolume.total} /> submitted
               </Badge>
             </CardAction>
           </CardHeader>
           <CardContent>
             {data.requestVolume.total > 0 ? (
-              <ol className="flex flex-col gap-4" aria-label="Monthly request volume">
-                {data.requestVolume.months.map((month) => (
+              <ol
+                className="civic-stagger flex flex-col gap-4"
+                aria-label="Monthly request volume"
+              >
+                {data.requestVolume.months.map((month, index) => (
                   <li
                     className="grid grid-cols-[5.5rem_minmax(0,1fr)_3rem] items-center gap-3"
                     key={month.key}
+                    style={staggerStyle(index)}
                   >
                     <span className="text-xs font-medium text-muted-foreground">
                       {month.label}
                     </span>
                     <div className="h-3 overflow-hidden rounded-full bg-muted">
                       <div
-                        className="h-full rounded-full bg-primary"
+                        className="h-full rounded-full bg-primary transition-[width] duration-700 ease-out"
                         style={{
-                          width: `${(month.count / maxMonthlyVolume) * 100}%`,
+                          width: barsGrown
+                            ? `${(month.count / maxMonthlyVolume) * 100}%`
+                            : "0%",
+                          transitionDelay: `${index * 55}ms`,
                         }}
                       />
                     </div>
                     <span className="text-right text-sm font-bold tabular-nums">
-                      {month.count.toLocaleString()}
+                      <CountUp value={month.count} duration={700} />
                     </span>
                   </li>
                 ))}
               </ol>
             ) : (
-              <Alert>
+              <Alert className="civic-enter-sm">
                 <CheckCircle2 aria-hidden="true" />
                 <AlertTitle>No Requests in This Period</AlertTitle>
                 <AlertDescription>
@@ -115,7 +139,7 @@ export function AdminReportsPage({ data }: { data: AdminReportsData }) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card style={staggerStyle(1)}>
           <CardHeader>
             <CardTitle>
               <h2>Processing Time</h2>
@@ -130,9 +154,14 @@ export function AdminReportsPage({ data }: { data: AdminReportsData }) {
           </CardHeader>
           <CardContent className="flex flex-1 flex-col gap-5">
             {data.processingTime.averageDays !== null ? (
-              <div>
+              <div className="civic-enter-sm">
                 <p className="text-4xl font-extrabold tracking-tight tabular-nums">
-                  {data.processingTime.averageDays.toLocaleString()}
+                  <CountUp
+                    value={data.processingTime.averageDays}
+                    decimals={
+                      Number.isInteger(data.processingTime.averageDays) ? 0 : 1
+                    }
+                  />
                   <span className="ml-2 text-base font-medium text-muted-foreground">
                     days
                   </span>
@@ -143,7 +172,7 @@ export function AdminReportsPage({ data }: { data: AdminReportsData }) {
                 </p>
               </div>
             ) : (
-              <Alert>
+              <Alert className="civic-enter-sm">
                 <Clock3 aria-hidden="true" />
                 <AlertTitle>No Recorded Releases Yet</AlertTitle>
                 <AlertDescription>
@@ -154,7 +183,7 @@ export function AdminReportsPage({ data }: { data: AdminReportsData }) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card style={staggerStyle(2)}>
           <CardHeader>
             <CardTitle>
               <h2>Incomplete Submissions</h2>
@@ -169,9 +198,15 @@ export function AdminReportsPage({ data }: { data: AdminReportsData }) {
           </CardHeader>
           <CardContent className="flex flex-1 flex-col gap-5">
             {data.incompleteSubmissions.percentage !== null ? (
-              <div>
+              <div className="civic-enter-sm">
                 <p className="text-4xl font-extrabold tracking-tight tabular-nums">
-                  {data.incompleteSubmissions.percentage.toLocaleString()}%
+                  <CountUp
+                    value={data.incompleteSubmissions.percentage}
+                    decimals={
+                      Number.isInteger(data.incompleteSubmissions.percentage) ? 0 : 1
+                    }
+                    suffix="%"
+                  />
                 </p>
                 <p className="mt-2 text-sm text-muted-foreground">
                   {data.incompleteSubmissions.count.toLocaleString()} of{" "}
@@ -180,7 +215,7 @@ export function AdminReportsPage({ data }: { data: AdminReportsData }) {
                 </p>
               </div>
             ) : (
-              <Alert>
+              <Alert className="civic-enter-sm">
                 <FileWarning aria-hidden="true" />
                 <AlertTitle>No Submission History Yet</AlertTitle>
                 <AlertDescription>

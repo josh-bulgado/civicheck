@@ -9,6 +9,7 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { getPaymentHistoryFn } from "~/features/requests/requests.queries";
+import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 
 export const Route = createFileRoute("/_authed/payment-history")({
   beforeLoad: ({ context }) => {
@@ -28,6 +29,7 @@ function formatTime(value: string) {
 
 function PaymentHistoryPage() {
   const payments = Route.useLoaderData();
+  useRealtimeRefresh({ tables: ["application_logs", "requests"] });
 
   return (
     <div className="dashboard-page max-w-5xl">
@@ -47,7 +49,7 @@ function PaymentHistoryPage() {
 
       <div className="mt-8 rounded-xl border border-border bg-white">
         {payments.length === 0 ? (
-          <p className="p-8 text-center text-sm italic text-muted-foreground">
+          <p className="civic-enter-sm p-8 text-center text-sm italic text-muted-foreground">
             No payments verified yet today.
           </p>
         ) : (
@@ -64,7 +66,7 @@ function PaymentHistoryPage() {
                   <TableHead>Verified by</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody className="civic-stagger-auto">
                 {payments.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell className="font-medium">{p.trackingNumber}</TableCell>

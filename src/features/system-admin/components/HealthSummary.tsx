@@ -81,7 +81,7 @@ export function HealthSummary({ data }: { data: SystemHealthDashboard }) {
             <h2 id="health-summary-title">Health Summary</h2>
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid p-0 sm:grid-cols-2 xl:grid-cols-4">
+        <CardContent className="civic-stagger-auto grid p-0 sm:grid-cols-2 xl:grid-cols-4">
           <SummaryMetric
             label="Platform State"
             value={overall.label}

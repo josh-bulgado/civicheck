@@ -49,7 +49,7 @@ export function ActiveIncidentsSection({
           {formatHealthCount(activeIncidentCount)} active
         </Badge>
       </div>
-      <div className="flex flex-col gap-3">
+      <div className="civic-stagger-auto flex flex-col gap-3">
         {activeEvents.map((event) => (
           <Alert
             key={event.id}

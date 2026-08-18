@@ -11,11 +11,13 @@ import { HowItWorksCard } from "~/features/services/components/HowItWorksCard";
 import { NeedHelpCard } from "~/features/services/components/NeedHelpCard";
 import { RequestForm } from "~/features/services/components/RequestForm";
 import type { RequestFormValues } from "~/features/services/components/RequestForm";
+import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 
 export const Route = createFileRoute("/_authed/(service)/service/$serviceCode")({
   loader: ({ params }) => getServiceDetail({ data: params.serviceCode }),
   // Admin edits call `router.invalidate()`, so this only ever serves a
-  // checklist the applicant already loaded in this session.
+  // checklist the applicant already loaded in this session — realtime below
+  // covers an edit landing while this exact page is already open.
   staleTime: 5 * 60_000,
   component: ServicePage,
 });
@@ -36,6 +38,9 @@ function ServicePage() {
   const { isGroup, displayName, services, requirements } = Route.useLoaderData();
   const { serviceCode } = Route.useParams();
   const router = useRouter();
+  useRealtimeRefresh({
+    tables: ["services_registry", "service_requirements_metadata"],
+  });
 
   const [selectedCode, setSelectedCode] = useState<string | null>(
     isGroup ? null : services[0].service_code,

@@ -10,6 +10,7 @@ import {
   SidebarSeparator,
 } from "~/components/ui/sidebar";
 import { Link } from "@tanstack/react-router";
+import { staggerStyle } from "~/components/motion/stagger";
 import type { NavGroup } from "./types";
 
 export function NavMain({ groups }: { groups: NavGroup[] }) {
@@ -26,12 +27,12 @@ export function NavMain({ groups }: { groups: NavGroup[] }) {
                 {group.label}
               </SidebarGroupLabel>
             ) : null}
-            <SidebarMenu className="gap-1.5">
-              {group.items.map((item) => {
+            <SidebarMenu className="civic-stagger gap-1.5">
+              {group.items.map((item, index) => {
                 const Icon = item.icon;
 
                 return (
-                  <SidebarMenuItem key={item.id}>
+                  <SidebarMenuItem key={item.id} style={staggerStyle(index)}>
                     <Link
                       to={item.url}
                       activeOptions={{ exact: item.url === "/admin" }}
@@ -39,12 +40,15 @@ export function NavMain({ groups }: { groups: NavGroup[] }) {
                     >
                       <SidebarMenuButton
                         tooltip={item.title}
-                        className="h-10 w-full justify-start gap-3 rounded-lg px-3 text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:[&>span]:hidden"
+                        className="civic-press h-10 w-full justify-start gap-3 rounded-lg px-3 text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:[&>span]:hidden"
                       >
                         <Icon />
                         <span className="flex-1">{item.title}</span>
                         {!!item.badge && (
-                          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-2xs font-bold text-white group-data-[collapsible=icon]:hidden">
+                          <span
+                            key={item.badge}
+                            className="civic-enter-scale flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-2xs font-bold text-white group-data-[collapsible=icon]:hidden"
+                          >
                             {item.badge > 99 ? "99+" : item.badge}
                           </span>
                         )}

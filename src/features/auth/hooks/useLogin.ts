@@ -18,6 +18,12 @@ export function useLogin(redirectTo?: string) {
         return;
       }
 
+      // Handled inline by LoginForm, which sends the applicant straight to a
+      // fresh verification code instead of this generic failure toast.
+      if (/email not confirmed/i.test(ctx.data.message ?? "")) {
+        return;
+      }
+
       toast.error("Unable to sign in", {
         description: "Invalid email or password.",
       });

@@ -69,7 +69,7 @@ export function SecurityActivitySection({
                 <TableHead className="px-6 text-right">Time</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
+            <TableBody className="civic-stagger-auto">
               {activities.map((activity) => {
                 const content = activityContent[activity.type];
                 const Icon = content.icon;

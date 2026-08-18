@@ -5,10 +5,12 @@ import { JSX, SVGProps, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import z from "zod";
 import { Field, FieldError, FieldLabel } from "~/components/ui/field";
+import { staggerStyle } from "~/components/motion/stagger";
 import { InputGroup, InputGroupInput } from "~/components/ui/input-group";
 import { Input } from "~/components/ui/input";
 import { Checkbox } from "~/components/ui/checkbox";
 import { useSignUp } from "../hooks/useSignUp";
+import { useVerifySignupOtp } from "../hooks/useVerifySignupOtp";
 import { useOAuthLogin } from "../hooks/useOAuthLogin";
 import { Spinner } from "~/components/ui/spinner";
 import { Button } from "~/components/ui/button";
@@ -61,11 +63,23 @@ const GoogleIcon = (
   </svg>
 );
 
+type PendingSignup = {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  middleName: string;
+};
+
 const RegisterForm = () => {
   const signupMutation = useSignUp();
+  const verifyOtpMutation = useVerifySignupOtp();
   const oauthLoginMutation = useOAuthLogin();
   const [showPassword, setShowPassword] = useState(false);
-  const [verificationEmail, setVerificationEmail] = useState<string | null>(
+  // Kept in memory (never persisted) so the resend action can re-run the same
+  // signup call — that is what mints a fresh code once the previous one has
+  // been sent.
+  const [pendingSignup, setPendingSignup] = useState<PendingSignup | null>(
     null,
   );
 
@@ -86,34 +100,53 @@ const RegisterForm = () => {
   const noMiddleName = form.watch("noMiddleName");
 
   async function onSubmit(data: FormValues) {
-    const result = await signupMutation.mutate({
-      data: {
-        email: data.email,
-        password: data.password,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        middleName: data.noMiddleName ? "" : data.middleName.trim(),
-      },
-    });
+    const signup: PendingSignup = {
+      email: data.email,
+      password: data.password,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      middleName: data.noMiddleName ? "" : data.middleName.trim(),
+    };
+    const result = await signupMutation.mutate({ data: signup });
 
     if (result && !result.error) {
-      setVerificationEmail(data.email);
+      setPendingSignup(signup);
       form.reset();
     }
   }
 
+  const otpError = verifyOtpMutation.data?.error
+    ? verifyOtpMutation.data.message
+    : verifyOtpMutation.status === "error"
+      ? "We could not reach the account service. Please try again in a moment."
+      : null;
+
   return (
     <AuthSplitLayout panel={<AuthProgressPanel />} className="max-w-85">
       <VerifyEmailNotice
-        open={verificationEmail !== null}
-        onUseDifferentEmail={() => setVerificationEmail(null)}
+        open={pendingSignup !== null}
+        email={pendingSignup?.email ?? ""}
+        isVerifying={verifyOtpMutation.status === "pending"}
+        isResending={signupMutation.status === "pending"}
+        errorMessage={otpError}
+        onVerify={(token) => {
+          if (!pendingSignup) return;
+          verifyOtpMutation.mutate({
+            data: { email: pendingSignup.email, token },
+          });
+        }}
+        onResend={() => {
+          if (!pendingSignup) return;
+          signupMutation.mutate({ data: pendingSignup });
+        }}
+        onUseDifferentEmail={() => setPendingSignup(null)}
       />
 
       <div className="flex flex-col gap-6.5">
         <AuthFormHeading title="Create an account" />
 
         {signupMutation.data?.error && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="civic-enter-sm">
             <AlertCircleIcon />
             <AlertTitle>Account not created</AlertTitle>
             <AlertDescription>{signupMutation.data.message}</AlertDescription>
@@ -122,9 +155,9 @@ const RegisterForm = () => {
 
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className="flex flex-col gap-3.5"
+          className="civic-stagger flex flex-col gap-3.5"
         >
-          <div className="flex gap-2.5">
+          <div style={staggerStyle(0)} className="flex gap-2.5">
             <Controller
               control={form.control}
               name="firstName"
@@ -178,7 +211,7 @@ const RegisterForm = () => {
             />
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div style={staggerStyle(1)} className="flex flex-col gap-2">
             <Controller
               control={form.control}
               name="middleName"
@@ -232,7 +265,11 @@ const RegisterForm = () => {
             control={form.control}
             name="email"
             render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid} className="gap-1.5">
+              <Field
+                data-invalid={fieldState.invalid}
+                style={staggerStyle(2)}
+                className="gap-1.5"
+              >
                 <FieldLabel htmlFor="email" className={authLabelClass}>
                   Email
                 </FieldLabel>
@@ -256,7 +293,11 @@ const RegisterForm = () => {
             control={form.control}
             name="password"
             render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid} className="gap-1.5">
+              <Field
+                data-invalid={fieldState.invalid}
+                style={staggerStyle(3)}
+                className="gap-1.5"
+              >
                 <FieldLabel htmlFor="password" className={authLabelClass}>
                   Password
                 </FieldLabel>
@@ -286,7 +327,7 @@ const RegisterForm = () => {
             control={form.control}
             name="agreeToTerms"
             render={({ field, fieldState }) => (
-              <div className="flex flex-col gap-1.5 pt-1 pb-1.5">
+              <div style={staggerStyle(4)} className="flex flex-col gap-1.5 pt-1 pb-1.5">
                 <div className="flex items-start gap-2.5">
                   <Checkbox
                     id="agreeToTerms"
@@ -319,32 +360,34 @@ const RegisterForm = () => {
             )}
           />
 
-          <Button
-            type="submit"
-            className={authButtonClass}
-            disabled={signupMutation.status === "pending"}
-          >
-            {signupMutation.status === "pending" ? (
-              <>
-                <Spinner />
-                Creating account
-              </>
-            ) : (
-              "Sign up"
-            )}
-          </Button>
+          <div style={staggerStyle(5)} className="flex flex-col gap-3.5">
+            <Button
+              type="submit"
+              className={authButtonClass}
+              disabled={signupMutation.status === "pending"}
+            >
+              {signupMutation.status === "pending" ? (
+                <>
+                  <Spinner />
+                  Creating account
+                </>
+              ) : (
+                "Sign up"
+              )}
+            </Button>
 
-          <AuthFormDivider />
+            <AuthFormDivider />
 
-          <Button
-            variant="outline"
-            className={`${authButtonClass} justify-center gap-2.5 text-sm font-medium`}
-            onClick={() => oauthLoginMutation.mutate({ provider: "google" })}
-            disabled={oauthLoginMutation.status === "pending"}
-          >
-            <GoogleIcon className="size-4.5" />
-            Sign up with Google
-          </Button>
+            <Button
+              variant="outline"
+              className={`${authButtonClass} justify-center gap-2.5 text-sm font-medium`}
+              onClick={() => oauthLoginMutation.mutate({ provider: "google" })}
+              disabled={oauthLoginMutation.status === "pending"}
+            >
+              <GoogleIcon className="size-4.5" />
+              Sign up with Google
+            </Button>
+          </div>
         </form>
 
         <AuthFormFooter>

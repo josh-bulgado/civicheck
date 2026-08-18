@@ -1,6 +1,8 @@
 const FONT_STACK =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 
+const CODE_FONT_STACK = "'Courier New', Courier, monospace";
+
 const COLORS = {
   page: "#eef1f6",
   card: "#ffffff",
@@ -31,7 +33,7 @@ export function escapeHtml(value: string) {
   );
 }
 
-type ActionEmailOptions = {
+type OtpEmailOptions = {
   /** Preview line shown next to the subject in the inbox. */
   preheader: string;
   /**
@@ -43,33 +45,31 @@ type ActionEmailOptions = {
   /** Rendered above the heading, e.g. "Hello Juan," */
   greeting?: string;
   paragraphs: string[];
-  actionLabel: string;
-  actionUrl: string;
-  /** Highlighted box under the button — one line per entry. */
+  /** The one-time numeric code the recipient types into the app. */
+  code: string;
+  /** Highlighted box under the code — one line per entry. */
   noteLines?: string[];
   /** Closing line in the footer, e.g. what to do if this wasn't you. */
   footerNote?: string;
 };
 
 /**
- * Renders a transactional email around a single call to action.
+ * Renders a transactional email built around a one-time code the recipient
+ * types back into the app, rather than a link they click.
  *
  * Table-based layout with inline styles throughout — Outlook's Word rendering
  * engine ignores most modern CSS, so nothing here should depend on it.
  */
-export function renderActionEmail({
+export function renderOtpEmail({
   preheader,
   label,
   heading,
   greeting,
   paragraphs,
-  actionLabel,
-  actionUrl,
+  code,
   noteLines = [],
   footerNote,
-}: ActionEmailOptions) {
-  const href = escapeHtml(actionUrl);
-
+}: OtpEmailOptions) {
   const labelHtml = label
     ? `<p style="margin:0 0 12px;font-family:${FONT_STACK};font-size:12px;font-weight:700;line-height:1.4;letter-spacing:0.12em;text-transform:uppercase;color:${COLORS.primary};">${escapeHtml(label)}</p>`
     : "";
@@ -137,17 +137,15 @@ export function renderActionEmail({
                 <h1 style="margin:0 0 14px;font-family:${FONT_STACK};font-size:22px;font-weight:700;line-height:1.3;letter-spacing:-0.01em;color:${COLORS.heading};">${escapeHtml(heading)}</h1>
                 ${paragraphsHtml}
 
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 24px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:4px 0 24px;">
                   <tr>
-                    <td align="center" bgcolor="${COLORS.primary}" style="border-radius:8px;">
-                      <a href="${href}" style="display:inline-block;padding:14px 30px;font-family:${FONT_STACK};font-size:16px;font-weight:700;line-height:1;color:#ffffff;text-decoration:none;border-radius:8px;">${escapeHtml(actionLabel)}</a>
+                    <td align="center" bgcolor="${COLORS.noteBg}" style="border:1px solid ${COLORS.noteBorder};border-radius:10px;padding:22px;">
+                      <span style="font-family:${CODE_FONT_STACK};font-size:34px;font-weight:700;letter-spacing:10px;color:${COLORS.heading};">${escapeHtml(code)}</span>
                     </td>
                   </tr>
                 </table>
 
                 ${noteHtml}
-
-                <p style="margin:24px 0 0;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${COLORS.muted};">Button not working? <a href="${href}" style="color:${COLORS.primary};font-weight:700;text-decoration:underline;">Press here instead</a>.</p>
               </td>
             </tr>
           </table>

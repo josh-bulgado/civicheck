@@ -11,7 +11,7 @@ interface ServicesPageProps {
 
 const ServicesPage = ({ services, departments }: ServicesPageProps) => {
   return (
-    <div className="dashboard-page animate-in fade-in duration-300">
+    <div className="dashboard-page">
       <ServicesPageHeader />
       <ServicesStatsCards data={services} />
       <ServicesTableSection services={services} departments={departments} />
