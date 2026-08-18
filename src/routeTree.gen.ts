@@ -23,12 +23,13 @@ import { Route as ApplyIndexRouteImport } from './routes/apply/index'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as AuthedStaffDashboardRouteImport } from './routes/_authed/staff-dashboard'
 import { Route as AuthedPaymentHistoryRouteImport } from './routes/_authed/payment-history'
-import { Route as AuthedMyRequestsRouteImport } from './routes/_authed/my-requests'
+import { Route as AuthedNotificationsRouteImport } from './routes/_authed/notifications'
 import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
 import { Route as AuthedCashierRouteImport } from './routes/_authed/cashier'
 import { Route as ApplyServiceCodeRouteRouteImport } from './routes/apply/$serviceCode/route'
 import { Route as ApplyServiceCodeIndexRouteImport } from './routes/apply/$serviceCode/index'
 import { Route as AuthedRequestsIndexRouteImport } from './routes/_authed/requests/index'
+import { Route as AuthedMyRequestsIndexRouteImport } from './routes/_authed/my-requests/index'
 import { Route as AuthedAdminIndexRouteImport } from './routes/_authed/admin/index'
 import { Route as ApplyServiceCodeReviewRouteImport } from './routes/apply/$serviceCode/review'
 import { Route as ApplyServiceCodeDocumentsRouteImport } from './routes/apply/$serviceCode/documents'
@@ -39,6 +40,7 @@ import { Route as AuthedSystemAdminHealthRouteImport } from './routes/_authed/sy
 import { Route as AuthedSystemAdminAuditRouteImport } from './routes/_authed/system-admin/audit'
 import { Route as AuthedSystemAdminAccountsRouteImport } from './routes/_authed/system-admin/accounts'
 import { Route as AuthedRequestsRequestIdRouteImport } from './routes/_authed/requests/$requestId'
+import { Route as AuthedMyRequestsRequestIdRouteImport } from './routes/_authed/my-requests/$requestId'
 import { Route as AuthedAdminStaffRouteImport } from './routes/_authed/admin/staff'
 import { Route as AuthedAdminServicesRouteImport } from './routes/_authed/admin/services'
 import { Route as AuthedAdminReportsRouteImport } from './routes/_authed/admin/reports'
@@ -114,9 +116,9 @@ const AuthedPaymentHistoryRoute = AuthedPaymentHistoryRouteImport.update({
   path: '/payment-history',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
-const AuthedMyRequestsRoute = AuthedMyRequestsRouteImport.update({
-  id: '/my-requests',
-  path: '/my-requests',
+const AuthedNotificationsRoute = AuthedNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedDashboardRoute = AuthedDashboardRouteImport.update({
@@ -142,6 +144,11 @@ const ApplyServiceCodeIndexRoute = ApplyServiceCodeIndexRouteImport.update({
 const AuthedRequestsIndexRoute = AuthedRequestsIndexRouteImport.update({
   id: '/requests/',
   path: '/requests/',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
+const AuthedMyRequestsIndexRoute = AuthedMyRequestsIndexRouteImport.update({
+  id: '/my-requests/',
+  path: '/my-requests/',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedAdminIndexRoute = AuthedAdminIndexRouteImport.update({
@@ -197,6 +204,12 @@ const AuthedRequestsRequestIdRoute = AuthedRequestsRequestIdRouteImport.update({
   path: '/requests/$requestId',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
+const AuthedMyRequestsRequestIdRoute =
+  AuthedMyRequestsRequestIdRouteImport.update({
+    id: '/my-requests/$requestId',
+    path: '/my-requests/$requestId',
+    getParentRoute: () => AuthedRouteRoute,
+  } as any)
 const AuthedAdminStaffRoute = AuthedAdminStaffRouteImport.update({
   id: '/admin/staff',
   path: '/admin/staff',
@@ -237,7 +250,7 @@ export interface FileRoutesByFullPath {
   '/apply/$serviceCode': typeof ApplyServiceCodeRouteRouteWithChildren
   '/cashier': typeof AuthedCashierRoute
   '/dashboard': typeof AuthedDashboardRoute
-  '/my-requests': typeof AuthedMyRequestsRoute
+  '/notifications': typeof AuthedNotificationsRoute
   '/payment-history': typeof AuthedPaymentHistoryRoute
   '/staff-dashboard': typeof AuthedStaffDashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -246,6 +259,7 @@ export interface FileRoutesByFullPath {
   '/admin/reports': typeof AuthedAdminReportsRoute
   '/admin/services': typeof AuthedAdminServicesRoute
   '/admin/staff': typeof AuthedAdminStaffRoute
+  '/my-requests/$requestId': typeof AuthedMyRequestsRequestIdRoute
   '/requests/$requestId': typeof AuthedRequestsRequestIdRoute
   '/system-admin/accounts': typeof AuthedSystemAdminAccountsRoute
   '/system-admin/audit': typeof AuthedSystemAdminAuditRoute
@@ -256,6 +270,7 @@ export interface FileRoutesByFullPath {
   '/apply/$serviceCode/documents': typeof ApplyServiceCodeDocumentsRoute
   '/apply/$serviceCode/review': typeof ApplyServiceCodeReviewRoute
   '/admin/': typeof AuthedAdminIndexRoute
+  '/my-requests/': typeof AuthedMyRequestsIndexRoute
   '/requests/': typeof AuthedRequestsIndexRoute
   '/apply/$serviceCode/': typeof ApplyServiceCodeIndexRoute
   '/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
@@ -272,7 +287,7 @@ export interface FileRoutesByTo {
   '/track': typeof TrackRoute
   '/cashier': typeof AuthedCashierRoute
   '/dashboard': typeof AuthedDashboardRoute
-  '/my-requests': typeof AuthedMyRequestsRoute
+  '/notifications': typeof AuthedNotificationsRoute
   '/payment-history': typeof AuthedPaymentHistoryRoute
   '/staff-dashboard': typeof AuthedStaffDashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -281,6 +296,7 @@ export interface FileRoutesByTo {
   '/admin/reports': typeof AuthedAdminReportsRoute
   '/admin/services': typeof AuthedAdminServicesRoute
   '/admin/staff': typeof AuthedAdminStaffRoute
+  '/my-requests/$requestId': typeof AuthedMyRequestsRequestIdRoute
   '/requests/$requestId': typeof AuthedRequestsRequestIdRoute
   '/system-admin/accounts': typeof AuthedSystemAdminAccountsRoute
   '/system-admin/audit': typeof AuthedSystemAdminAuditRoute
@@ -291,6 +307,7 @@ export interface FileRoutesByTo {
   '/apply/$serviceCode/documents': typeof ApplyServiceCodeDocumentsRoute
   '/apply/$serviceCode/review': typeof ApplyServiceCodeReviewRoute
   '/admin': typeof AuthedAdminIndexRoute
+  '/my-requests': typeof AuthedMyRequestsIndexRoute
   '/requests': typeof AuthedRequestsIndexRoute
   '/apply/$serviceCode': typeof ApplyServiceCodeIndexRoute
   '/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
@@ -310,7 +327,7 @@ export interface FileRoutesById {
   '/apply/$serviceCode': typeof ApplyServiceCodeRouteRouteWithChildren
   '/_authed/cashier': typeof AuthedCashierRoute
   '/_authed/dashboard': typeof AuthedDashboardRoute
-  '/_authed/my-requests': typeof AuthedMyRequestsRoute
+  '/_authed/notifications': typeof AuthedNotificationsRoute
   '/_authed/payment-history': typeof AuthedPaymentHistoryRoute
   '/_authed/staff-dashboard': typeof AuthedStaffDashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -319,6 +336,7 @@ export interface FileRoutesById {
   '/_authed/admin/reports': typeof AuthedAdminReportsRoute
   '/_authed/admin/services': typeof AuthedAdminServicesRoute
   '/_authed/admin/staff': typeof AuthedAdminStaffRoute
+  '/_authed/my-requests/$requestId': typeof AuthedMyRequestsRequestIdRoute
   '/_authed/requests/$requestId': typeof AuthedRequestsRequestIdRoute
   '/_authed/system-admin/accounts': typeof AuthedSystemAdminAccountsRoute
   '/_authed/system-admin/audit': typeof AuthedSystemAdminAuditRoute
@@ -329,6 +347,7 @@ export interface FileRoutesById {
   '/apply/$serviceCode/documents': typeof ApplyServiceCodeDocumentsRoute
   '/apply/$serviceCode/review': typeof ApplyServiceCodeReviewRoute
   '/_authed/admin/': typeof AuthedAdminIndexRoute
+  '/_authed/my-requests/': typeof AuthedMyRequestsIndexRoute
   '/_authed/requests/': typeof AuthedRequestsIndexRoute
   '/apply/$serviceCode/': typeof ApplyServiceCodeIndexRoute
   '/_authed/(service)/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
@@ -348,7 +367,7 @@ export interface FileRouteTypes {
     | '/apply/$serviceCode'
     | '/cashier'
     | '/dashboard'
-    | '/my-requests'
+    | '/notifications'
     | '/payment-history'
     | '/staff-dashboard'
     | '/auth/callback'
@@ -357,6 +376,7 @@ export interface FileRouteTypes {
     | '/admin/reports'
     | '/admin/services'
     | '/admin/staff'
+    | '/my-requests/$requestId'
     | '/requests/$requestId'
     | '/system-admin/accounts'
     | '/system-admin/audit'
@@ -367,6 +387,7 @@ export interface FileRouteTypes {
     | '/apply/$serviceCode/documents'
     | '/apply/$serviceCode/review'
     | '/admin/'
+    | '/my-requests/'
     | '/requests/'
     | '/apply/$serviceCode/'
     | '/service/$serviceCode'
@@ -383,7 +404,7 @@ export interface FileRouteTypes {
     | '/track'
     | '/cashier'
     | '/dashboard'
-    | '/my-requests'
+    | '/notifications'
     | '/payment-history'
     | '/staff-dashboard'
     | '/auth/callback'
@@ -392,6 +413,7 @@ export interface FileRouteTypes {
     | '/admin/reports'
     | '/admin/services'
     | '/admin/staff'
+    | '/my-requests/$requestId'
     | '/requests/$requestId'
     | '/system-admin/accounts'
     | '/system-admin/audit'
@@ -402,6 +424,7 @@ export interface FileRouteTypes {
     | '/apply/$serviceCode/documents'
     | '/apply/$serviceCode/review'
     | '/admin'
+    | '/my-requests'
     | '/requests'
     | '/apply/$serviceCode'
     | '/service/$serviceCode'
@@ -420,7 +443,7 @@ export interface FileRouteTypes {
     | '/apply/$serviceCode'
     | '/_authed/cashier'
     | '/_authed/dashboard'
-    | '/_authed/my-requests'
+    | '/_authed/notifications'
     | '/_authed/payment-history'
     | '/_authed/staff-dashboard'
     | '/auth/callback'
@@ -429,6 +452,7 @@ export interface FileRouteTypes {
     | '/_authed/admin/reports'
     | '/_authed/admin/services'
     | '/_authed/admin/staff'
+    | '/_authed/my-requests/$requestId'
     | '/_authed/requests/$requestId'
     | '/_authed/system-admin/accounts'
     | '/_authed/system-admin/audit'
@@ -439,6 +463,7 @@ export interface FileRouteTypes {
     | '/apply/$serviceCode/documents'
     | '/apply/$serviceCode/review'
     | '/_authed/admin/'
+    | '/_authed/my-requests/'
     | '/_authed/requests/'
     | '/apply/$serviceCode/'
     | '/_authed/(service)/service/$serviceCode'
@@ -560,11 +585,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedPaymentHistoryRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
-    '/_authed/my-requests': {
-      id: '/_authed/my-requests'
-      path: '/my-requests'
-      fullPath: '/my-requests'
-      preLoaderRoute: typeof AuthedMyRequestsRouteImport
+    '/_authed/notifications': {
+      id: '/_authed/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof AuthedNotificationsRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/dashboard': {
@@ -600,6 +625,13 @@ declare module '@tanstack/react-router' {
       path: '/requests'
       fullPath: '/requests/'
       preLoaderRoute: typeof AuthedRequestsIndexRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/my-requests/': {
+      id: '/_authed/my-requests/'
+      path: '/my-requests'
+      fullPath: '/my-requests/'
+      preLoaderRoute: typeof AuthedMyRequestsIndexRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/admin/': {
@@ -672,6 +704,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedRequestsRequestIdRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
+    '/_authed/my-requests/$requestId': {
+      id: '/_authed/my-requests/$requestId'
+      path: '/my-requests/$requestId'
+      fullPath: '/my-requests/$requestId'
+      preLoaderRoute: typeof AuthedMyRequestsRequestIdRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
     '/_authed/admin/staff': {
       id: '/_authed/admin/staff'
       path: '/admin/staff'
@@ -713,19 +752,21 @@ declare module '@tanstack/react-router' {
 interface AuthedRouteRouteChildren {
   AuthedCashierRoute: typeof AuthedCashierRoute
   AuthedDashboardRoute: typeof AuthedDashboardRoute
-  AuthedMyRequestsRoute: typeof AuthedMyRequestsRoute
+  AuthedNotificationsRoute: typeof AuthedNotificationsRoute
   AuthedPaymentHistoryRoute: typeof AuthedPaymentHistoryRoute
   AuthedStaffDashboardRoute: typeof AuthedStaffDashboardRoute
   AuthedserviceServicesRoute: typeof AuthedserviceServicesRoute
   AuthedAdminReportsRoute: typeof AuthedAdminReportsRoute
   AuthedAdminServicesRoute: typeof AuthedAdminServicesRoute
   AuthedAdminStaffRoute: typeof AuthedAdminStaffRoute
+  AuthedMyRequestsRequestIdRoute: typeof AuthedMyRequestsRequestIdRoute
   AuthedRequestsRequestIdRoute: typeof AuthedRequestsRequestIdRoute
   AuthedSystemAdminAccountsRoute: typeof AuthedSystemAdminAccountsRoute
   AuthedSystemAdminAuditRoute: typeof AuthedSystemAdminAuditRoute
   AuthedSystemAdminHealthRoute: typeof AuthedSystemAdminHealthRoute
   AuthedSystemAdminSecurityRoute: typeof AuthedSystemAdminSecurityRoute
   AuthedAdminIndexRoute: typeof AuthedAdminIndexRoute
+  AuthedMyRequestsIndexRoute: typeof AuthedMyRequestsIndexRoute
   AuthedRequestsIndexRoute: typeof AuthedRequestsIndexRoute
   AuthedserviceServiceServiceCodeRoute: typeof AuthedserviceServiceServiceCodeRoute
 }
@@ -733,19 +774,21 @@ interface AuthedRouteRouteChildren {
 const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
   AuthedCashierRoute: AuthedCashierRoute,
   AuthedDashboardRoute: AuthedDashboardRoute,
-  AuthedMyRequestsRoute: AuthedMyRequestsRoute,
+  AuthedNotificationsRoute: AuthedNotificationsRoute,
   AuthedPaymentHistoryRoute: AuthedPaymentHistoryRoute,
   AuthedStaffDashboardRoute: AuthedStaffDashboardRoute,
   AuthedserviceServicesRoute: AuthedserviceServicesRoute,
   AuthedAdminReportsRoute: AuthedAdminReportsRoute,
   AuthedAdminServicesRoute: AuthedAdminServicesRoute,
   AuthedAdminStaffRoute: AuthedAdminStaffRoute,
+  AuthedMyRequestsRequestIdRoute: AuthedMyRequestsRequestIdRoute,
   AuthedRequestsRequestIdRoute: AuthedRequestsRequestIdRoute,
   AuthedSystemAdminAccountsRoute: AuthedSystemAdminAccountsRoute,
   AuthedSystemAdminAuditRoute: AuthedSystemAdminAuditRoute,
   AuthedSystemAdminHealthRoute: AuthedSystemAdminHealthRoute,
   AuthedSystemAdminSecurityRoute: AuthedSystemAdminSecurityRoute,
   AuthedAdminIndexRoute: AuthedAdminIndexRoute,
+  AuthedMyRequestsIndexRoute: AuthedMyRequestsIndexRoute,
   AuthedRequestsIndexRoute: AuthedRequestsIndexRoute,
   AuthedserviceServiceServiceCodeRoute: AuthedserviceServiceServiceCodeRoute,
 }

@@ -4,6 +4,7 @@ import { Sidebar, SidebarContent } from "~/components/ui/sidebar";
 import {
   Activity,
   BarChart3,
+  Bell,
   ClipboardCheck,
   Gauge,
   History,
@@ -57,8 +58,12 @@ function createCcroAdminGroups(items: NavItem[]): NavGroup[] {
 
 export function AppSidebar({
   user,
+  unreadNotifications = 0,
   ...props
-}: React.ComponentProps<typeof Sidebar> & { user?: AccountProfile | null }) {
+}: React.ComponentProps<typeof Sidebar> & {
+  user?: AccountProfile | null;
+  unreadNotifications?: number;
+}) {
   const { can, role } = usePermissions();
   const workspace = getWorkspaceDetails(role);
 
@@ -163,6 +168,13 @@ export function AppSidebar({
       title: "My Requests",
       url: "/my-requests",
       icon: ClipboardCheck,
+    });
+    navMain.push({
+      id: "notifications",
+      title: "Notifications",
+      url: "/notifications",
+      icon: Bell,
+      badge: unreadNotifications,
     });
   }
 

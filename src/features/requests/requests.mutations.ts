@@ -7,6 +7,11 @@ import {
   isRequestStatus,
   type RequestStatus,
 } from "~/features/requests/request-workflow";
+import {
+  buildDocumentRejectedEmail,
+  buildStatusChangeEmail,
+  dispatchApplicantNotification,
+} from "~/features/notifications/notifications.server";
 
 export const advanceRequestStatusFn = createServerFn({ method: "POST" })
   .validator((d: { requestId: string; toStatus: string; remarks?: string }) => d)
@@ -96,6 +101,9 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
       console.error("Failed to write request status audit log", logError);
     }
 
+    const notificationContent = buildStatusChangeEmail(toStatus, request.tracking_number, remarks);
+    await dispatchApplicantNotification(supabase, data.requestId, notificationContent);
+
     return { error: false, status: toStatus, trackingNumber: request.tracking_number };
   });
 
@@ -152,7 +160,9 @@ export const setAttachmentVerificationFn = createServerFn({ method: "POST" })
 
     const { data: attachment, error: fetchError } = await supabase
       .from("requirements_attachments")
-      .select("id, request_id, requirement_name, requests(services_registry(department_id))")
+      .select(
+        "id, request_id, requirement_name, requests(tracking_number, services_registry(department_id))",
+      )
       .eq("id", data.attachmentId)
       .single();
 
@@ -195,6 +205,21 @@ export const setAttachmentVerificationFn = createServerFn({ method: "POST" })
     });
     if (logError) {
       console.error("Failed to write attachment verification audit log", logError);
+    }
+
+    if (data.status === "rejected" && reason) {
+      const requestInfo = Array.isArray(attachment.requests)
+        ? attachment.requests[0]
+        : attachment.requests;
+      const trackingNumber = requestInfo?.tracking_number;
+      if (trackingNumber) {
+        const notificationContent = buildDocumentRejectedEmail(
+          trackingNumber,
+          attachment.requirement_name,
+          reason,
+        );
+        await dispatchApplicantNotification(supabase, attachment.request_id, notificationContent);
+      }
     }
 
     return { error: false };

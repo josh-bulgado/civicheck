@@ -49,15 +49,6 @@ import type {
 
 const formSchema = z
   .object({
-    role: z.enum([
-      "applicant",
-      "staff",
-      "supervisor",
-      "cashier",
-      "admin",
-    ]),
-    departmentId: z.string(),
-    employmentType: z.enum(["regular", "job_order", "contractual"]),
     firstName: z.string().trim().min(1, "First name is required"),
     middleName: z.string(),
     lastName: z.string().trim().min(1, "Last name is required"),
@@ -91,38 +82,15 @@ const formSchema = z
   .refine((values) => values.newPassword === values.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
-  })
-  .superRefine((values, context) => {
-    if (
-      (values.role === "staff" || values.role === "supervisor") &&
-      !values.departmentId
-    ) {
-      context.addIssue({
-        code: "custom",
-        path: ["departmentId"],
-        message: "Select a department for this role",
-      });
-    }
   });
 
 type FormValues = z.infer<typeof formSchema>;
 
-const roles: { value: FormValues["role"]; label: string }[] = [
-  { value: "applicant", label: "Applicant (citizen)" },
-  { value: "staff", label: "Staff" },
-  { value: "supervisor", label: "Supervisor" },
-  { value: "cashier", label: "Cashier" },
-  { value: "admin", label: "CCRO Administrator" },
-];
-
-const employmentTypes: {
-  value: FormValues["employmentType"];
-  label: string;
-}[] = [
-  { value: "regular", label: "Regular" },
-  { value: "job_order", label: "Job Order" },
-  { value: "contractual", label: "Contractual" },
-];
+const employmentTypeLabels: Record<string, string> = {
+  regular: "Regular",
+  job_order: "Job Order",
+  contractual: "Contractual",
+};
 
 const sexOptions: { value: FormValues["sex"]; label: string }[] = [
   { value: "", label: "Unspecified" },
@@ -186,16 +154,12 @@ function EditAccountForm({
       email: account.email,
       newPassword: "",
       confirmPassword: "",
-      role: account.role as FormValues["role"],
-      departmentId: account.departmentId ?? "",
-      employmentType: account.employmentType,
     },
   });
 
-  const selectedRole = form.watch("role");
-  const requiresDepartment =
-    selectedRole === "staff" || selectedRole === "supervisor";
-  const isApplicant = selectedRole === "applicant";
+  const accountDepartment = departments.find(
+    (department) => department.id === account.departmentId,
+  );
 
   const displayName =
     `${account.firstName} ${account.lastName}`.trim() ||
@@ -213,9 +177,6 @@ function EditAccountForm({
       phoneNumber: values.phoneNumber.trim(),
       email: values.email.trim().toLowerCase(),
       newPassword: values.newPassword,
-      role: values.role,
-      departmentId: requiresDepartment ? values.departmentId : null,
-      employmentType: values.employmentType,
     });
 
     if (succeeded) onClose();
@@ -531,134 +492,31 @@ function EditAccountForm({
 
             <SectionHeading
               title="Role and access"
-              description="Controls what this account can reach across CiviCheck. Changes take effect on the account's next page load."
+              description="Read-only here. Role, department, and employment type are managed by the CCRO Administrator from Manage Staff — replacing the CCRO Administrator itself uses Replace CCRO Administrator instead."
             />
 
-            <Controller
-              control={form.control}
-              name="role"
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="edit-account-role">Role</FieldLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger
-                      id="edit-account-role"
-                      className="w-full"
-                      aria-invalid={fieldState.invalid}
-                    >
-                      <SelectValue placeholder="Select a role">
-                        {(value) =>
-                          roles.find((role) => role.value === value)?.label
-                        }
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {roles.map((role) => (
-                          <SelectItem key={role.value} value={role.value}>
-                            {role.label}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                  {fieldState.invalid ? (
-                    <FieldError errors={[fieldState.error]} />
-                  ) : selectedRole === "admin" ? (
-                    <FieldDescription>
-                      Only one active CCRO Administrator is allowed. If the seat
-                      is taken, hand it over with Replace CCRO Administrator
-                      instead.
-                    </FieldDescription>
-                  ) : null}
-                </Field>
-              )}
-            />
-
-            {requiresDepartment ? (
-              <Controller
-                control={form.control}
-                name="departmentId"
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="edit-account-department">
-                      Department
-                    </FieldLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger
-                        id="edit-account-department"
-                        className="w-full"
-                        aria-invalid={fieldState.invalid}
-                      >
-                        <SelectValue placeholder="Select department">
-                          {(value) =>
-                            departments.find(
-                              (department) => department.id === value,
-                            )?.name
-                          }
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          {departments.map((department) => (
-                            <SelectItem
-                              key={department.id}
-                              value={department.id}
-                            >
-                              {department.name}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                    {fieldState.invalid ? (
-                      <FieldError errors={[fieldState.error]} />
-                    ) : (
-                      <FieldDescription>
-                        Staff and supervisors only see requests routed to their
-                        own department.
-                      </FieldDescription>
-                    )}
-                  </Field>
-                )}
-              />
-            ) : null}
-
-            {isApplicant ? null : (
-              <Controller
-                control={form.control}
-                name="employmentType"
-                render={({ field }) => (
-                  <Field>
-                    <FieldLabel htmlFor="edit-account-employment-type">
-                      Employment type
-                    </FieldLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger
-                        id="edit-account-employment-type"
-                        className="w-full"
-                      >
-                        <SelectValue placeholder="Select employment type">
-                          {(value) =>
-                            employmentTypes.find((type) => type.value === value)
-                              ?.label
-                          }
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          {employmentTypes.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </Field>
-                )}
-              />
-            )}
+            <div className="grid gap-4 rounded-lg border border-border bg-surface-subtle p-3 text-sm sm:grid-cols-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Role</p>
+                <p className="font-medium text-foreground">
+                  {roleLabels[account.role]}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Department</p>
+                <p className="font-medium text-foreground">
+                  {accountDepartment?.name ?? "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">
+                  Employment type
+                </p>
+                <p className="font-medium text-foreground">
+                  {employmentTypeLabels[account.employmentType] ?? "—"}
+                </p>
+              </div>
+            </div>
           </FieldGroup>
         </div>
 

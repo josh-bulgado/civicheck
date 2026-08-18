@@ -9,6 +9,8 @@ import {
 import { AppSidebar } from "~/components/sidebar-01/app-sidebar";
 import { CityGovernmentIdentity } from "~/components/brand/civic-identity";
 import { getWorkspaceDetails } from "~/components/sidebar-01/workspace";
+import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
+import { getUnreadNotificationCountFn } from "~/features/notifications/notifications.queries";
 import type { Role } from "~/lib/permissions";
 
 export const loginFn = createServerFn({ method: "POST" })
@@ -53,11 +55,19 @@ export const Route = createFileRoute("/_authed")({
     if (!context.user || context.user.accountStatus !== "active")
       throw redirect({ to: "/login", search: { redirect: location.href } });
   },
+  loader: async ({ context }) => ({
+    unreadNotifications:
+      context.user?.role === "applicant" ? await getUnreadNotificationCountFn() : 0,
+  }),
 });
 
 function AuthedLayout() {
   const { user } = Route.useRouteContext();
+  const { unreadNotifications } = Route.useLoaderData();
   const workspace = getWorkspaceDetails((user?.role ?? "applicant") as Role);
+  // Sidebar badge tracks new notifications live, from wherever the applicant
+  // happens to be — not just while they're on the notifications page itself.
+  useRealtimeRefresh({ tables: ["notifications"], enabled: user?.role === "applicant" });
 
   return (
     <SidebarProvider>
@@ -67,7 +77,7 @@ function AuthedLayout() {
       >
         Skip to Main Content
       </a>
-      <AppSidebar user={user} />
+      <AppSidebar user={user} unreadNotifications={unreadNotifications} />
       <SidebarInset>
         <header className="flex h-[4.5rem] shrink-0 items-center justify-between border-b border-border-strong bg-white px-4 transition-[width,height] ease-linear sm:px-6">
           <div className="flex items-center gap-3">

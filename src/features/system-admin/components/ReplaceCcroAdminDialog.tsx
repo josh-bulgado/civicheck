@@ -53,6 +53,11 @@ const formSchema = z
 type FormValues = z.infer<typeof formSchema>;
 type OutgoingRole = FormValues["outgoingRole"];
 
+const appointFormSchema = z.object({
+  candidateId: z.string().min(1, "Select an active staff member"),
+});
+type AppointFormValues = z.infer<typeof appointFormSchema>;
+
 const outgoingRoles: { value: OutgoingRole; label: string }[] = [
   { value: "staff", label: "Staff" },
   { value: "supervisor", label: "Supervisor" },
@@ -259,10 +264,126 @@ function ReplaceCcroAdminForm({
   );
 }
 
+function AppointCcroAdminForm({
+  adminCandidates,
+  isPending,
+  onClose,
+  onConfirm,
+}: {
+  adminCandidates: AdminCandidate[];
+  isPending: boolean;
+  onClose: () => void;
+  onConfirm: (values: {
+    candidateId: string;
+    outgoingRole: null;
+    outgoingDepartmentId: null;
+  }) => Promise<boolean>;
+}) {
+  const form = useForm<AppointFormValues>({
+    resolver: zodResolver(appointFormSchema),
+    mode: "onBlur",
+    defaultValues: { candidateId: "" },
+  });
+  const candidateItems = adminCandidates.map((candidate) => ({
+    label: `${candidate.firstName} ${candidate.lastName} — ${roleLabels[candidate.role]}`,
+    value: candidate.id,
+  }));
+
+  async function onSubmit(data: AppointFormValues) {
+    const succeeded = await onConfirm({
+      candidateId: data.candidateId,
+      outgoingRole: null,
+      outgoingDepartmentId: null,
+    });
+
+    if (succeeded) {
+      form.reset();
+      onClose();
+    }
+  }
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>Appoint CCRO Administrator</DialogTitle>
+        <DialogDescription>
+          There is no active CCRO Administrator. The selected active staff
+          member is promoted to the role.
+        </DialogDescription>
+      </DialogHeader>
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        <FieldGroup>
+          <Controller
+            control={form.control}
+            name="candidateId"
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="incoming-administrator">
+                  Incoming administrator
+                </FieldLabel>
+                <Select
+                  items={candidateItems}
+                  value={field.value}
+                  onValueChange={field.onChange}
+                >
+                  <SelectTrigger
+                    id="incoming-administrator"
+                    className="w-full"
+                    aria-invalid={fieldState.invalid}
+                  >
+                    <SelectValue
+                      placeholder="Select active staff"
+                      className="capitalize"
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {candidateItems.map((candidate) => (
+                        <SelectItem key={candidate.value} value={candidate.value}>
+                          {candidate.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                {fieldState.invalid ? (
+                  <FieldError errors={[fieldState.error]} />
+                ) : null}
+              </Field>
+            )}
+          />
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isPending}
+              onClick={onClose}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              {isPending ? (
+                <span className="flex items-center gap-2">
+                  <Spinner className="size-4" />
+                  Appointing...
+                </span>
+              ) : (
+                "Confirm appointment"
+              )}
+            </Button>
+          </DialogFooter>
+        </FieldGroup>
+      </form>
+    </>
+  );
+}
+
 export function ReplaceCcroAdminDialog({
   open,
   adminCandidates,
   departments,
+  hasActiveAdmin,
   isPending,
   onOpenChange,
   onConfirm,
@@ -270,21 +391,29 @@ export function ReplaceCcroAdminDialog({
   open: boolean;
   adminCandidates: AdminCandidate[];
   departments: SystemAdminDepartment[];
+  hasActiveAdmin: boolean;
   isPending: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: (values: {
     candidateId: string;
-    outgoingRole: OutgoingRole;
+    outgoingRole: OutgoingRole | null;
     outgoingDepartmentId: string | null;
   }) => Promise<boolean>;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        {open ? (
+        {open && hasActiveAdmin ? (
           <ReplaceCcroAdminForm
             adminCandidates={adminCandidates}
             departments={departments}
+            isPending={isPending}
+            onClose={() => onOpenChange(false)}
+            onConfirm={onConfirm}
+          />
+        ) : open ? (
+          <AppointCcroAdminForm
+            adminCandidates={adminCandidates}
             isPending={isPending}
             onClose={() => onOpenChange(false)}
             onConfirm={onConfirm}

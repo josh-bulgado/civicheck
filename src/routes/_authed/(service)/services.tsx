@@ -78,7 +78,7 @@ function ServicesPage() {
       if (category === "one-visit") {
         return getVisitBadge(service.processing_time).label === "One visit";
       }
-      return getServiceCategory(service.service_code) === category;
+      return getServiceCategory(service.department_id) === category;
     });
 
     const sorted = [...filtered];

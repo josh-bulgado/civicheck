@@ -42,7 +42,12 @@ export function NavMain({ groups }: { groups: NavGroup[] }) {
                         className="h-10 w-full justify-start gap-3 rounded-lg px-3 text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:[&>span]:hidden"
                       >
                         <Icon />
-                        <span>{item.title}</span>
+                        <span className="flex-1">{item.title}</span>
+                        {!!item.badge && (
+                          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-2xs font-bold text-white group-data-[collapsible=icon]:hidden">
+                            {item.badge > 99 ? "99+" : item.badge}
+                          </span>
+                        )}
                       </SidebarMenuButton>
                     </Link>
                   </SidebarMenuItem>

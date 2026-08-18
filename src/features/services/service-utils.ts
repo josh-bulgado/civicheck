@@ -183,25 +183,24 @@ export const SERVICE_CATEGORY_LABELS: Record<ServiceCategory, string> = {
   corrections: "Corrections",
 };
 
-const SERVICE_CATEGORY_BY_CODE: Record<string, ServiceCategory> = {
-  BIRTH_ONTIME: "birth",
-  BIRTH_DELAYED: "birth",
-  MARRIAGE_LICENSE: "marriage",
-  MARRIAGE_ONTIME: "marriage",
-  MARRIAGE_DELAYED: "marriage",
-  DEATH_ONTIME: "death",
-  DEATH_DELAYED: "death",
-  CTC_ISSUANCE: "copies",
-  ELEC_ENDORSEMENT: "copies",
-  OTHER_CERT: "copies",
-  EMAIL_INQUIRY: "copies",
-  LEGITIMATION: "corrections",
-  RA9048_10172: "corrections",
-  RA9255_SURNAME: "corrections",
-  COURT_DECREE: "corrections",
-  SUPPLEMENTAL_REPORT: "corrections",
+// Services route to a category via their owning department (see
+// `services_registry.department_id`, backfilled in
+// `20260817120000_add_service_department.sql`) rather than a hardcoded list of
+// service codes. A per-code map went stale the moment a service was split into
+// several case-specific codes (e.g. `BIRTH_ONTIME` -> `OTCOLB-MARITAL` /
+// `OTCOLB-NONMARITAL`) — every split silently dropped those cases out of their
+// category filter. Department ownership doesn't move when a service is split.
+const CATEGORY_BY_DEPARTMENT: Record<string, ServiceCategory> = {
+  birth: "birth",
+  marriage: "marriage",
+  death: "death",
+  archives: "copies",
+  legal: "corrections",
 };
 
-export function getServiceCategory(serviceCode: string): ServiceCategory | null {
-  return SERVICE_CATEGORY_BY_CODE[serviceCode] ?? null;
+export function getServiceCategory(
+  departmentId: string | null | undefined,
+): ServiceCategory | null {
+  if (!departmentId) return null;
+  return CATEGORY_BY_DEPARTMENT[departmentId] ?? null;
 }

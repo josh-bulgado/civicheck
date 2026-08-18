@@ -6,6 +6,7 @@ export interface NavItem {
   icon: ElementType;
   url: string;
   isActive?: boolean;
+  badge?: number;
 }
 
 export interface NavGroup {

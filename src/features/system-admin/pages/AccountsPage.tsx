@@ -37,6 +37,7 @@ export function AccountsPage({
   accounts,
   adminCandidates,
   departments,
+  hasActiveAdmin,
   category,
   page,
   pageSize,
@@ -46,6 +47,7 @@ export function AccountsPage({
   accounts: AccountSummary[];
   adminCandidates: AdminCandidate[];
   departments: SystemAdminDepartment[];
+  hasActiveAdmin: boolean;
   category: AccountCategory;
   page: number;
   pageSize: number;
@@ -80,6 +82,7 @@ export function AccountsPage({
             data={accounts}
             adminCandidates={adminCandidates}
             departments={departments}
+            hasActiveAdmin={hasActiveAdmin}
             category={category}
             page={page}
             pageSize={pageSize}

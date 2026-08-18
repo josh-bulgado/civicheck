@@ -20,7 +20,8 @@ export const Route = createFileRoute("/_authed/admin/staff")({
 function AdminStaffRoute() {
   const data = Route.useLoaderData();
   // Keeps this directory in step with the System Administrator's account page —
-  // both read profiles, and either can change a role or suspend an account.
+  // both read profiles and can suspend an account, but only this page can
+  // change a staff member's role, department, or employment type.
   useRealtimeRefresh({ tables: ["profiles"] });
   return <StaffPage staff={data.staff} departments={data.departments} />;
 }
