@@ -1,61 +1,29 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
-import { requireActiveSession } from "~/server/auth";
 import { hasPermission, type Role } from "~/lib/permissions";
-import { useState } from "react";
 import {
   FileText,
   ChevronRight,
   Eye,
   CheckCircle,
   Clock3,
-  CreditCard
+  CreditCard,
 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "~/components/ui/dialog";
 import { CountUp } from "~/components/motion/count-up";
 import { staggerStyle } from "~/components/motion/stagger";
 import { getStatusDetails, getPaymentDetails } from "~/features/services/request-status";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
+import { getMyRequestsFn } from "~/features/requests/applicant-requests.queries";
 
-// Fetch applicant's requests
-const getMyRequests = createServerFn({ method: "GET" }).handler(async () => {
-  const { supabase, user } = await requireActiveSession("requests:view_own");
-  
-  const { data, error } = await supabase
-    .from("requests")
-    .select(`
-      id,
-      tracking_number,
-      request_type,
-      status,
-      payment_status,
-      created_at,
-      fees_due,
-      form_data,
-      services_registry (
-        name
-      )
-    `)
-    .eq("applicant_id", user.id)
-    .order("created_at", { ascending: false });
-    
-  if (error) {
-    throw new Error(error.message);
-  }
-  return data || [];
-});
-
-export const Route = createFileRoute("/_authed/my-requests")({
+export const Route = createFileRoute("/_authed/my-requests/")({
   beforeLoad: ({ context }) => {
     if (!context.user || !hasPermission(context.user.role as Role, "requests:view_own")) throw new Error("Forbidden");
   },
-  loader: () => getMyRequests(),
+  loader: () => getMyRequestsFn(),
   component: MyRequestsPage,
 });
 
 function MyRequestsPage() {
   const requests = Route.useLoaderData();
-  const [selectedRequest, setSelectedRequest] = useState<any>(null);
   // The applicant's own status tracker — this is the "no polling-by-phone-call"
   // promise, so it has to move the moment staff advance the request.
   useRealtimeRefresh({ tables: ["requests"] });
@@ -68,13 +36,6 @@ function MyRequestsPage() {
   const unpaidCount = requests.filter(
     (request: any) => request.payment_status === "unpaid",
   ).length;
-
-  const formatFormDataKey = (key: string) => {
-    return key
-      .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
-  };
 
   return (
     <div className="dashboard-page max-w-7xl">
@@ -176,13 +137,14 @@ function MyRequestsPage() {
                         </span>
                       </td>
                       <td className="p-4 text-right">
-                        <button
-                          onClick={() => setSelectedRequest(req)}
+                        <Link
+                          to="/my-requests/$requestId"
+                          params={{ requestId: req.id }}
                           className="civic-press inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           Details
-                        </button>
+                        </Link>
                       </td>
                     </tr>
                   );
@@ -210,7 +172,7 @@ function MyRequestsPage() {
                       {status.label}
                     </span>
                   </div>
-                  
+
                   <div className="space-y-1">
                     <h4 className="text-sm font-semibold text-foreground">
                       {req.services_registry?.name || req.request_type}
@@ -227,94 +189,21 @@ function MyRequestsPage() {
                         {payment.label}
                       </span>
                     </div>
-                    
-                    <button
-                      onClick={() => setSelectedRequest(req)}
+
+                    <Link
+                      to="/my-requests/$requestId"
+                      params={{ requestId: req.id }}
                       className="civic-nudge inline-flex items-center gap-1 font-medium text-primary"
                     >
                       View Details
                       <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
+                    </Link>
                   </div>
                 </div>
               );
             })}
           </div>
         </div>
-      )}
-
-      {/* Details Dialog */}
-      {selectedRequest && (
-        <Dialog open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-lg font-bold text-foreground">
-                Request Details
-              </DialogTitle>
-              <DialogDescription className="font-mono text-xs font-semibold text-muted-foreground">
-                Tracking Number: {selectedRequest.tracking_number}
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 pt-2 text-sm">
-              <div className="space-y-2 rounded-lg border border-border bg-surface-subtle p-3">
-                <div className="flex justify-between">
-                  <span className="text-xs text-muted-foreground">Document Type</span>
-                  <span className="text-right font-medium text-foreground">
-                    {selectedRequest.services_registry?.name || selectedRequest.request_type}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-xs text-muted-foreground">Status</span>
-                  <span className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-2xs font-medium ${getStatusDetails(selectedRequest.status).styles}`}>
-                    {getStatusDetails(selectedRequest.status).label}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-xs text-muted-foreground">Payment</span>
-                  <span className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-2xs font-medium ${getPaymentDetails(selectedRequest.payment_status).styles}`}>
-                    {getPaymentDetails(selectedRequest.payment_status).label}
-                  </span>
-                </div>
-                {Number(selectedRequest.fees_due) > 0 && (
-                  <div className="flex justify-between border-t border-border pt-2">
-                    <span className="text-xs font-medium text-muted-foreground">Fees Due</span>
-                    <span className="font-bold text-primary">
-                      ₱{Number(selectedRequest.fees_due).toFixed(2)}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Form Data Fields */}
-              {selectedRequest.form_data && typeof selectedRequest.form_data === "object" && (
-                <div className="space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Submitted Form Details
-                  </h4>
-                  <div className="grid grid-cols-1 gap-2.5 max-h-[220px] overflow-y-auto pr-1">
-                    {Object.entries(selectedRequest.form_data).map(([key, val]: [string, any]) => {
-                      if (!val || String(val).trim() === "") return null;
-                      return (
-                        <div key={key} className="border-b border-border pb-1.5">
-                          <span className="block text-2xs text-muted-foreground">
-                            {formatFormDataKey(key)}
-                          </span>
-                          <span className="text-xs font-medium leading-relaxed text-foreground">
-                            {key === "event_date" 
-                              ? new Date(val).toLocaleDateString("en-US", { year: 'numeric', month: 'long', day: 'numeric' })
-                              : String(val)
-                            }
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
       )}
     </div>
   );
