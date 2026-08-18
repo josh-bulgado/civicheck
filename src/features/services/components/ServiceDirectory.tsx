@@ -21,6 +21,7 @@ const ROW_GRID =
 
 interface ServiceDirectoryProps {
   services: ServiceEntryProps[];
+  canApply?: boolean;
 }
 
 /**
@@ -28,7 +29,7 @@ interface ServiceDirectoryProps {
  * catalogue at once — the compact cards are the browsing view, this is the
  * looking-something-up view.
  */
-export function ServiceDirectory({ services }: ServiceDirectoryProps) {
+export function ServiceDirectory({ services, canApply = true }: ServiceDirectoryProps) {
   return (
     <div className="@container overflow-hidden rounded-xl border border-border bg-white">
       <div
@@ -45,6 +46,7 @@ export function ServiceDirectory({ services }: ServiceDirectoryProps) {
           <ServiceRow
             key={service.service_code}
             style={staggerStyle(index)}
+            canApply={canApply}
             {...service}
           />
         ))}
@@ -53,8 +55,9 @@ export function ServiceDirectory({ services }: ServiceDirectoryProps) {
   );
 }
 
-const ServiceRow = (service: ServiceEntryProps) => {
-  const entry = useServiceEntry(service);
+const ServiceRow = (service: ServiceEntryProps & { canApply?: boolean }) => {
+  const { canApply = true, ...serviceProps } = service;
+  const entry = useServiceEntry(serviceProps, canApply);
 
   return (
     <div
@@ -106,13 +109,15 @@ const ServiceRow = (service: ServiceEntryProps) => {
         >
           Requirements
         </button>
-        <button
-          type="button"
-          onClick={entry.startApply}
-          className="civic-press inline-flex min-h-9 flex-1 cursor-pointer items-center justify-center rounded-lg bg-primary px-4 text-[14px] font-bold text-primary-foreground outline-none hover:bg-primary-hover focus-visible:ring-3 focus-visible:ring-ring/50 @3xl:flex-none"
-        >
-          Apply
-        </button>
+        {canApply && (
+          <button
+            type="button"
+            onClick={entry.startApply}
+            className="civic-press inline-flex min-h-9 flex-1 cursor-pointer items-center justify-center rounded-lg bg-primary px-4 text-[14px] font-bold text-primary-foreground outline-none hover:bg-primary-hover focus-visible:ring-3 focus-visible:ring-ring/50 @3xl:flex-none"
+          >
+            Apply
+          </button>
+        )}
       </div>
 
       <ServiceEntryDialogs entry={entry} />

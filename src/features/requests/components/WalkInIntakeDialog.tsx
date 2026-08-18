@@ -21,6 +21,7 @@ import {
 } from "~/components/ui/select";
 import { encodeWalkInFn } from "~/features/requests/walk-in-intake.mutations";
 import type { EncodableService } from "~/features/requests/walk-in-intake.queries";
+import { ServiceRequirementsDialog } from "~/features/services/components/ServiceRequirementsDialog";
 
 interface WalkInIntakeDialogProps {
   services: EncodableService[];
@@ -30,6 +31,7 @@ interface WalkInIntakeDialogProps {
 export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogProps) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [requirementsOpen, setRequirementsOpen] = useState(false);
   const [serviceCode, setServiceCode] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -39,6 +41,8 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
     trackingNumber: string;
   } | null>(null);
 
+  const selectedService = services.find((service) => service.serviceCode === serviceCode);
+
   function reset() {
     setServiceCode("");
     setFirstName("");
@@ -46,6 +50,7 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
     setPurpose("");
     setContactNumber("");
     setEncodedRequest(null);
+    setRequirementsOpen(false);
   }
 
   async function handleSubmit(event: React.FormEvent) {
@@ -103,20 +108,30 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
               <FieldGroup>
                 <Field>
                   <FieldLabel htmlFor="walkin-service">Service requested</FieldLabel>
-                  <Select value={serviceCode} onValueChange={(value) => setServiceCode(value ?? "")}>
-                    <SelectTrigger id="walkin-service">
-                      <SelectValue placeholder="Select a department service" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {services.map((service) => (
-                          <SelectItem key={service.serviceCode} value={service.serviceCode}>
-                            {service.name} — ₱{service.fee.toFixed(2)}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-2">
+                    <Select value={serviceCode} onValueChange={(value) => setServiceCode(value ?? "")}>
+                      <SelectTrigger id="walkin-service" className="flex-1">
+                        <SelectValue placeholder="Select a department service" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {services.map((service) => (
+                            <SelectItem key={service.serviceCode} value={service.serviceCode}>
+                              {service.name} — ₱{service.fee.toFixed(2)}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={!selectedService}
+                      onClick={() => setRequirementsOpen(true)}
+                    >
+                      View requirements
+                    </Button>
+                  </div>
                 </Field>
 
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -194,6 +209,18 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
           )}
         </DialogContent>
       </Dialog>
+
+      {selectedService && (
+        <ServiceRequirementsDialog
+          serviceCode={selectedService.displayGroup ?? selectedService.serviceCode}
+          title={selectedService.name}
+          fee={selectedService.fee}
+          displayGroup={selectedService.displayGroup}
+          processingTime={selectedService.processingTime}
+          open={requirementsOpen}
+          onOpenChange={setRequirementsOpen}
+        />
+      )}
     </>
   );
 }

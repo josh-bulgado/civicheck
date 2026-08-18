@@ -46,8 +46,12 @@ interface ServiceRequirementsDialogProps {
   processingTime: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Raised by the footer's Apply — the card confirms before routing. */
-  onApply: () => void;
+  /**
+   * Raised by the footer's Apply — the card confirms before routing. Omit
+   * for a read-only reference view (e.g. staff looking up requirements) —
+   * the Apply button and its helper copy are hidden entirely.
+   */
+  onApply?: () => void;
 }
 
 type Overview = Awaited<ReturnType<typeof getServiceOverview>>;
@@ -357,8 +361,9 @@ export function ServiceRequirementsDialog({
 
         <div className="flex flex-col-reverse gap-2.5 border-t border-border-light bg-surface-subtle px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-body">
-            You can still submit without every document — staff will flag
-            anything missing.
+            {onApply
+              ? "You can still submit without every document — staff will flag anything missing."
+              : "Reference only — cross-check this against what the visitor has on hand."}
           </p>
           <div className="flex shrink-0 gap-2.5">
             <button
@@ -368,14 +373,16 @@ export function ServiceRequirementsDialog({
             >
               Close
             </button>
-            <button
-              type="button"
-              onClick={onApply}
-              className="civic-press civic-nudge inline-flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground outline-none hover:bg-primary-hover focus-visible:ring-3 focus-visible:ring-ring/50"
-            >
-              Apply
-              <ArrowRight className="size-4" aria-hidden="true" />
-            </button>
+            {onApply && (
+              <button
+                type="button"
+                onClick={onApply}
+                className="civic-press civic-nudge inline-flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground outline-none hover:bg-primary-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                Apply
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </button>
+            )}
           </div>
         </div>
       </DialogContent>

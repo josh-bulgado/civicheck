@@ -20,6 +20,7 @@ export type ServiceSummary = Pick<
   | "display_group"
   | "display_name"
   | "steps_description"
+  | "department_id"
 > & { requirement_count: number };
 
 export const getServices = createServerFn({ method: "GET" }).handler(
@@ -59,6 +60,7 @@ export const getServices = createServerFn({ method: "GET" }).handler(
           display_group: service.display_group,
           display_name: service.display_name,
           steps_description: service.steps_description,
+          department_id: service.department_id,
           requirement_count: collectRequirements(catalogue, routeCode, cases)
             .length,
         };

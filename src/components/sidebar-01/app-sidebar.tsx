@@ -146,7 +146,12 @@ export function AppSidebar({
   if (can("services:view")) {
     navMain.push({
       id: "services",
-      title: role === "admin" ? "Preview Citizen Services" : "Browse Services",
+      title:
+        role === "admin"
+          ? "Preview Citizen Services"
+          : role === "staff" || role === "supervisor"
+            ? "Service Reference"
+            : "Browse Services",
       url: "/services",
       icon: ListChecks,
     });

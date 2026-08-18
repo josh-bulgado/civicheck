@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { CalendarClock, Files, ShieldCheck } from "lucide-react";
+import { Building2, CalendarClock, Files, ShieldCheck } from "lucide-react";
 import { CountUp } from "~/components/motion/count-up";
 import { enterDelay, staggerStyle } from "~/components/motion/stagger";
 import ServiceCard from "~/features/services/components/ServiceCard";
@@ -13,9 +13,17 @@ import {
 import { useServiceView } from "~/features/services/hooks/useServiceView";
 import { getServices } from "~/features/services/services.queries";
 import { getServiceCategory, getVisitBadge } from "~/features/services/service-utils";
+import { getMyDepartmentScopeFn } from "~/features/requests/requests.queries";
+import { usePermissions } from "~/hooks/usePermissions";
 
 export const Route = createFileRoute("/_authed/(service)/services")({
-  loader: () => getServices(),
+  loader: async () => {
+    const [services, scope] = await Promise.all([
+      getServices(),
+      getMyDepartmentScopeFn(),
+    ]);
+    return { services, scope };
+  },
   // The registry only changes when an admin edits it, and those edits already
   // call `router.invalidate()`, so browsing away and back can reuse this.
   staleTime: 5 * 60_000,
@@ -31,8 +39,21 @@ export const Route = createFileRoute("/_authed/(service)/services")({
 const INITIAL_VISIBLE_COUNT = { cards: 9, rows: 30 } as const;
 
 function ServicesPage() {
-  const services = Route.useLoaderData();
+  const { services: allServices, scope } = Route.useLoaderData();
   const { view, chooseView } = useServiceView();
+  const { role } = usePermissions();
+  const canApply = role === "applicant";
+
+  // Department-scoped staff (staff/supervisor) only handle their own
+  // department's services — the same scoping already applied to Request
+  // Queue and Walk-In Intake's service picker.
+  const services = useMemo(
+    () =>
+      scope.isScoped
+        ? allServices.filter((s) => s.department_id === scope.departmentId)
+        : allServices,
+    [allServices, scope],
+  );
 
   const [searchTerm, setSearchTerm] = useState("");
   const [category, setCategory] = useState<CategoryFilter>("all");
@@ -97,25 +118,37 @@ function ServicesPage() {
       <header className="dashboard-hero civic-enter">
         <div className="relative z-10 grid gap-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
           <div>
-            <div
-              className="civic-enter-sm mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-white/90"
-              style={enterDelay(80)}
-            >
-              <ShieldCheck className="size-3.5" aria-hidden="true" />
-              Official CCRO services
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <div
+                className="civic-enter-sm inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-white/90"
+                style={enterDelay(80)}
+              >
+                <ShieldCheck className="size-3.5" aria-hidden="true" />
+                Official CCRO services
+              </div>
+              {scope.isScoped && scope.departmentName && (
+                <div
+                  className="civic-enter-sm inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold text-white/90"
+                  style={enterDelay(80)}
+                >
+                  <Building2 className="size-3.5" aria-hidden="true" />
+                  {scope.departmentName} department
+                </div>
+              )}
             </div>
             <h1
               className="civic-enter-sm max-w-3xl text-3xl font-extrabold tracking-[-0.035em] text-white sm:text-4xl"
               style={enterDelay(140)}
             >
-              Browse Document Services
+              {canApply ? "Browse Document Services" : "Service & Requirements Reference"}
             </h1>
             <p
               className="civic-enter-sm mt-3 max-w-2xl text-sm leading-6 text-white/75 sm:text-base"
               style={enterDelay(200)}
             >
-              Review the official checklist, prepare your documents, and send
-              your request intent to the City Civil Registrar Office.
+              {canApply
+                ? "Review the official checklist, prepare your documents, and send your request intent to the City Civil Registrar Office."
+                : "Look up requirements and processing details to guide applicants and validate walk-ins at the counter."}
             </p>
           </div>
 
@@ -180,7 +213,7 @@ function ServicesPage() {
             </p>
           </div>
         ) : view === "rows" ? (
-          <ServiceDirectory services={visibleServices} />
+          <ServiceDirectory services={visibleServices} canApply={canApply} />
         ) : (
           // Cards keep their `service_code` key across filter changes, so React
           // reuses the existing nodes and only genuinely new cards animate in —
@@ -190,6 +223,7 @@ function ServicesPage() {
               <ServiceCard
                 key={service.service_code}
                 style={staggerStyle(index)}
+                canApply={canApply}
                 {...service}
               />
             ))}
