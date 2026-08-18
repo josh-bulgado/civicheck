@@ -10,12 +10,14 @@ export function AccountsTableToolbar({
   placeholder,
   realtimeStatus,
   onReplaceAdministrator,
+  replaceAdministratorLabel = "Replace CCRO Administrator",
 }: {
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
   realtimeStatus: RealtimeStatus;
   onReplaceAdministrator?: () => void;
+  replaceAdministratorLabel?: string;
 }) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -34,7 +36,7 @@ export function AccountsTableToolbar({
       {onReplaceAdministrator ? (
         <Button onClick={onReplaceAdministrator} className="sm:shrink-0">
           <UserRoundCog />
-          Replace CCRO Administrator
+          {replaceAdministratorLabel}
         </Button>
       ) : null}
     </div>

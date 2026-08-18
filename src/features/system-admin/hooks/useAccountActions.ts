@@ -10,6 +10,11 @@ import {
 import type { AccountDetailsInput } from "../system-admin.types";
 
 type OutgoingRole = "staff" | "supervisor" | "cashier";
+type ReplaceAdministratorInput = {
+  candidateId: string;
+  outgoingRole: OutgoingRole | null;
+  outgoingDepartmentId: string | null;
+};
 
 export type AccountPendingAction =
   | { type: "suspend"; accountId: string }
@@ -80,22 +85,16 @@ export function useAccountActions() {
   );
 
   const replaceAdministrator = useCallback(
-    ({
-      candidateId,
-      outgoingRole,
-      outgoingDepartmentId,
-    }: {
-      candidateId: string;
-      outgoingRole: OutgoingRole;
-      outgoingDepartmentId: string | null;
-    }) =>
+    ({ candidateId, outgoingRole, outgoingDepartmentId }: ReplaceAdministratorInput) =>
       run(
         () =>
           replaceCcroAdmin({
             data: { candidateId, outgoingRole, outgoingDepartmentId },
           }),
         { type: "replace-admin" },
-        "CCRO Administrator replaced.",
+        outgoingRole
+          ? "CCRO Administrator replaced."
+          : "CCRO Administrator appointed.",
       ),
     [run],
   );

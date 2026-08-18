@@ -21,15 +21,17 @@ export function AccountRowActions({
 
   return (
     <div className="flex items-center justify-end gap-2">
-      <Button
-        size="sm"
-        variant="outline"
-        disabled={isPending}
-        onClick={() => onEdit(account)}
-      >
-        <SquarePen />
-        Edit details
-      </Button>
+      {account.role === "applicant" ? null : (
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={isPending}
+          onClick={() => onEdit(account)}
+        >
+          <SquarePen />
+          Edit details
+        </Button>
+      )}
       {account.status === "active" ? (
         <Button
           size="sm"

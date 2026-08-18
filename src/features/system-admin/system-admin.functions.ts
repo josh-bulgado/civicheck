@@ -64,19 +64,12 @@ const accountDetailsSchema = accountActionSchema.extend({
       (value) => value === "" || (value.length >= 8 && /\d/.test(value)),
       "The new password must be at least 8 characters and include a number.",
     ),
-  role: z.enum([
-    "applicant",
-    "staff",
-    "supervisor",
-    "cashier",
-    "admin",
-  ]),
-  departmentId: z.string().min(1).nullable(),
-  employmentType: z.enum(["regular", "job_order", "contractual"]),
 });
 const replacementSchema = z.object({
   candidateId: z.string().uuid(),
-  outgoingRole: z.enum(["staff", "supervisor", "cashier"]),
+  // Absent when there is no active CCRO Administrator to demote — the
+  // candidate is appointed outright instead of replacing anyone.
+  outgoingRole: z.enum(["staff", "supervisor", "cashier"]).nullable().optional(),
   outgoingDepartmentId: z.string().min(1).nullable().optional(),
 });
 const auditSchema = pageSchema.extend({
@@ -130,11 +123,22 @@ export const getAccounts = createServerFn({ method: "GET" })
             .eq("access_status", "active")
             .order("last_name")
         : Promise.resolve(null);
+    // Drives whether "Replace CCRO Administrator" replaces an incumbent or
+    // appoints the first/a recovery administrator outright.
+    const activeAdminPromise =
+      category === "personnel"
+        ? admin
+            .from("profiles")
+            .select("id", { count: "exact", head: true })
+            .eq("role", "admin")
+            .eq("access_status", "active")
+        : Promise.resolve(null);
     const [
       { data: profiles, error: profilesError, count },
       departmentsResult,
       candidatesResult,
       usersResult,
+      activeAdminResult,
     ] = await Promise.all([
       admin
         .from("profiles")
@@ -153,6 +157,7 @@ export const getAccounts = createServerFn({ method: "GET" })
         .order("name"),
       candidatesPromise,
       admin.auth.admin.listUsers({ page: 1, perPage: 1_000 }),
+      activeAdminPromise,
     ]);
     if (profilesError) throw new Error(profilesError.message);
     if (usersResult.error) throw new Error(usersResult.error.message);
@@ -195,6 +200,9 @@ export const getAccounts = createServerFn({ method: "GET" })
     if (candidatesResult?.error) {
       throw new Error(candidatesResult.error.message);
     }
+    if (activeAdminResult?.error) {
+      throw new Error(activeAdminResult.error.message);
+    }
     const total = count ?? 0;
     return {
       accounts,
@@ -207,6 +215,7 @@ export const getAccounts = createServerFn({ method: "GET" })
         }),
       ),
       departments: departmentsResult.data ?? [],
+      hasActiveAdmin: (activeAdminResult?.count ?? 0) > 0,
       category,
       page: data.page,
       pageSize: data.pageSize,
@@ -289,23 +298,11 @@ export const updateAccountDetails = createServerFn({ method: "POST" })
     if (target.role === "system_admin") {
       throw new Error("System Administrator accounts cannot be modified here.");
     }
-
-    // Only staff and supervisor are department-scoped; every other role is
-    // cleared so a demoted account never keeps a stale department.
-    const requiresDepartment =
-      data.role === "staff" || data.role === "supervisor";
-    const departmentId = requiresDepartment ? data.departmentId : null;
-    if (requiresDepartment && !departmentId) {
-      throw new Error("Select a department for this role.");
-    }
-    if (departmentId) {
-      const { data: department } = await admin
-        .from("departments")
-        .select("id")
-        .eq("id", departmentId)
-        .eq("is_active", true)
-        .single();
-      if (!department) throw new Error("Select a valid active department.");
+    // Citizens are fully self-service (their own profile edit and password
+    // reset flows), so this dialog is personnel-only. Suspend/reactivate is
+    // the only lever System Admin has over a citizen account.
+    if (target.role === "applicant") {
+      throw new Error("Citizen accounts can only be suspended or reactivated here.");
     }
 
     const { data: authUser, error: authUserError } =
@@ -347,28 +344,14 @@ export const updateAccountDetails = createServerFn({ method: "POST" })
         date_of_birth: data.dateOfBirth || null,
         sex: data.sex || null,
         phone_number: data.phoneNumber || null,
-        role: data.role,
-        department_id: departmentId,
-        // Applicants are residents, not personnel, so they carry no employment
-        // type — the column is nullable precisely for them.
-        employment_type: data.role === "applicant" ? null : data.employmentType,
         updated_at: new Date().toISOString(),
       })
       .eq("id", data.targetId);
-    if (profileError) {
-      // profiles_one_active_ccro_admin_idx allows a single active `admin` row.
-      throw new Error(
-        profileError.code === "23505"
-          ? "There is already an active CCRO Administrator. Use Replace CCRO Administrator to hand the role over."
-          : profileError.message,
-      );
-    }
+    if (profileError) throw new Error(profileError.message);
 
     await writeAudit(session.user.id, "account_details_updated", data.targetId, {
       email_changed: String(emailChanged),
       password_reset: String(passwordChanged),
-      role_from: target.role as string,
-      role_to: data.role,
     });
     return { success: true };
   });
@@ -377,12 +360,16 @@ export const replaceCcroAdmin = createServerFn({ method: "POST" })
   .validator(replacementSchema)
   .handler(async ({ data }) => {
     const { supabase } = await requireActiveSession("accounts:replace_admin");
-    if (["staff", "supervisor"].includes(data.outgoingRole) && !data.outgoingDepartmentId) {
+    if (
+      data.outgoingRole &&
+      ["staff", "supervisor"].includes(data.outgoingRole) &&
+      !data.outgoingDepartmentId
+    ) {
       throw new Error("Select a department for the outgoing administrator.");
     }
     const { error } = await supabase.rpc("replace_ccro_admin", {
       candidate_id: data.candidateId,
-      outgoing_role: data.outgoingRole,
+      outgoing_role: data.outgoingRole ?? null,
       outgoing_department_id: data.outgoingDepartmentId ?? null,
     });
     if (error) throw new Error(error.message);

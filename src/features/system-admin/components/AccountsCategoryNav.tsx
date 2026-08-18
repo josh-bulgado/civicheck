@@ -22,8 +22,8 @@ export function AccountsCategoryNav({
   activeCategory: AccountCategory;
 }) {
   return (
-    <Tabs value={activeCategory} className="w-full items-center ">
-      <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-xl border border-border bg-white p-2 py-7">
+    <Tabs value={activeCategory} className="w-full items-center">
+      <TabsList className="h-auto! w-full justify-start gap-1 overflow-auto rounded-xl border border-border bg-white p-2">
         {categories.map((category) => {
           const Icon = categoryIcons[category];
 

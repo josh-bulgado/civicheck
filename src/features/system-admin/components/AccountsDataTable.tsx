@@ -38,6 +38,7 @@ export function AccountsDataTable({
   data,
   adminCandidates,
   departments,
+  hasActiveAdmin,
   category,
   page,
   pageSize,
@@ -47,6 +48,7 @@ export function AccountsDataTable({
   data: AccountSummary[];
   adminCandidates: AdminCandidate[];
   departments: SystemAdminDepartment[];
+  hasActiveAdmin: boolean;
   category: AccountCategory;
   page: number;
   pageSize: number;
@@ -165,6 +167,11 @@ export function AccountsDataTable({
             ? () => setReplacementOpen(true)
             : undefined
         }
+        replaceAdministratorLabel={
+          hasActiveAdmin
+            ? "Replace CCRO Administrator"
+            : "Appoint CCRO Administrator"
+        }
       />
 
       <div className="overflow-hidden rounded-xl border border-border-strong bg-white">
@@ -271,6 +278,7 @@ export function AccountsDataTable({
           open={replacementOpen}
           adminCandidates={adminCandidates}
           departments={departments}
+          hasActiveAdmin={hasActiveAdmin}
           isPending={pendingAction?.type === "replace-admin"}
           onOpenChange={(open) => {
             if (pendingAction?.type !== "replace-admin") {
