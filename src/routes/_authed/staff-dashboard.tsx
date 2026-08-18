@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import {
   getAllRequestsFn,
+  getAwaitingPaymentCountFn,
   getMyDepartmentScopeFn,
   getPaymentsVerifiedTodayCountFn,
 } from "~/features/requests/requests.queries";
@@ -26,11 +27,34 @@ export const Route = createFileRoute("/_authed/staff-dashboard")({
   loader: async ({ context }) => {
     const isCashier = context.user?.role === "cashier";
 
-    const [requests, tickets, scope, paymentsVerifiedToday] = await Promise.all([
+    // Cashier holds neither "requests:view_all" nor "queue:manage" — it must
+    // never call getAllRequestsFn or getTodayQueueFn, only the narrow counts
+    // its own Cashier Counter / Payment History actually need.
+    if (isCashier) {
+      const [scope, unpaid, paymentsVerifiedToday] = await Promise.all([
+        getMyDepartmentScopeFn(),
+        getAwaitingPaymentCountFn(),
+        getPaymentsVerifiedTodayCountFn(),
+      ]);
+
+      return {
+        isCashier: true as const,
+        awaitingIntake: 0,
+        inValidation: 0,
+        inProgress: 0,
+        readyForRelease: 0,
+        unpaid,
+        waitingInQueue: 0,
+        servedToday: 0,
+        paymentsVerifiedToday,
+        scope,
+      };
+    }
+
+    const [requests, tickets, scope] = await Promise.all([
       getAllRequestsFn(),
       getTodayQueueFn(),
       getMyDepartmentScopeFn(),
-      isCashier ? getPaymentsVerifiedTodayCountFn() : Promise.resolve(0),
     ]);
 
     const inStage = (stage: number) =>
@@ -38,7 +62,7 @@ export const Route = createFileRoute("/_authed/staff-dashboard")({
         .length;
 
     return {
-      isCashier,
+      isCashier: false as const,
       awaitingIntake: inStage(1),
       inValidation: inStage(2),
       inProgress: inStage(3) + inStage(4),
@@ -48,7 +72,7 @@ export const Route = createFileRoute("/_authed/staff-dashboard")({
       ).length,
       waitingInQueue: tickets.filter((t) => t.status === "waiting").length,
       servedToday: tickets.filter((t) => t.status === "served").length,
-      paymentsVerifiedToday,
+      paymentsVerifiedToday: 0,
       scope,
     };
   },
@@ -76,19 +100,27 @@ function StaffDashboard() {
               )}
             </div>
             <h1 className="text-3xl font-extrabold tracking-[-0.03em] text-white sm:text-4xl">
-              Staff Dashboard
+              {stats.isCashier ? "Cashier Dashboard" : "Staff Dashboard"}
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/75">
-              A focused workspace for request intake, document validation, and civil
-              registry processing.
+              {stats.isCashier
+                ? "A focused workspace for looking up requests and collecting payment."
+                : "A focused workspace for request intake, document validation, and civil registry processing."}
             </p>
           </div>
           <div className="flex items-center gap-3 rounded-xl border border-white/15 bg-white/10 p-4 text-white backdrop-blur-sm">
             <Ticket className="size-5 text-brand-gold" aria-hidden="true" />
-            <div>
-              <p className="text-sm font-bold">{stats.waitingInQueue} waiting at the counter</p>
-              <p className="text-xs text-white/65">{stats.servedToday} served today</p>
-            </div>
+            {stats.isCashier ? (
+              <div>
+                <p className="text-sm font-bold">{stats.unpaid} awaiting payment</p>
+                <p className="text-xs text-white/65">{stats.paymentsVerifiedToday} verified today</p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm font-bold">{stats.waitingInQueue} waiting at the counter</p>
+                <p className="text-xs text-white/65">{stats.servedToday} served today</p>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -121,7 +153,7 @@ function StaffDashboard() {
               description="Payments you've collected and verified so far today."
               count={stats.paymentsVerifiedToday}
               countLabel="verified today"
-              to="/requests"
+              to="/payment-history"
             />
           </div>
         ) : (

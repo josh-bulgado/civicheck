@@ -172,11 +172,13 @@ export function QueueDeskConsole({
                 </Button>
               </form>
 
-              <WalkInEncodeDialog
-                services={services}
-                defaultLane={l}
-                onEncoded={onChanged}
-              />
+              {services.length > 0 && (
+                <WalkInEncodeDialog
+                  services={services}
+                  defaultLane={l}
+                  onEncoded={onChanged}
+                />
+              )}
             </div>
 
             <div className="flex flex-col gap-3">

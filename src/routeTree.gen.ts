@@ -24,6 +24,7 @@ import { Route as ApplyIndexRouteImport } from './routes/apply/index'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as AuthedStaffDashboardRouteImport } from './routes/_authed/staff-dashboard'
 import { Route as AuthedQueueRouteImport } from './routes/_authed/queue'
+import { Route as AuthedPaymentHistoryRouteImport } from './routes/_authed/payment-history'
 import { Route as AuthedMyRequestsRouteImport } from './routes/_authed/my-requests'
 import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
 import { Route as AuthedCashierRouteImport } from './routes/_authed/cashier'
@@ -119,6 +120,11 @@ const AuthedStaffDashboardRoute = AuthedStaffDashboardRouteImport.update({
 const AuthedQueueRoute = AuthedQueueRouteImport.update({
   id: '/queue',
   path: '/queue',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
+const AuthedPaymentHistoryRoute = AuthedPaymentHistoryRouteImport.update({
+  id: '/payment-history',
+  path: '/payment-history',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedMyRequestsRoute = AuthedMyRequestsRouteImport.update({
@@ -252,6 +258,7 @@ export interface FileRoutesByFullPath {
   '/cashier': typeof AuthedCashierRoute
   '/dashboard': typeof AuthedDashboardRoute
   '/my-requests': typeof AuthedMyRequestsRoute
+  '/payment-history': typeof AuthedPaymentHistoryRoute
   '/queue': typeof AuthedQueueRoute
   '/staff-dashboard': typeof AuthedStaffDashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -289,6 +296,7 @@ export interface FileRoutesByTo {
   '/cashier': typeof AuthedCashierRoute
   '/dashboard': typeof AuthedDashboardRoute
   '/my-requests': typeof AuthedMyRequestsRoute
+  '/payment-history': typeof AuthedPaymentHistoryRoute
   '/queue': typeof AuthedQueueRoute
   '/staff-dashboard': typeof AuthedStaffDashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -329,6 +337,7 @@ export interface FileRoutesById {
   '/_authed/cashier': typeof AuthedCashierRoute
   '/_authed/dashboard': typeof AuthedDashboardRoute
   '/_authed/my-requests': typeof AuthedMyRequestsRoute
+  '/_authed/payment-history': typeof AuthedPaymentHistoryRoute
   '/_authed/queue': typeof AuthedQueueRoute
   '/_authed/staff-dashboard': typeof AuthedStaffDashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -369,6 +378,7 @@ export interface FileRouteTypes {
     | '/cashier'
     | '/dashboard'
     | '/my-requests'
+    | '/payment-history'
     | '/queue'
     | '/staff-dashboard'
     | '/auth/callback'
@@ -406,6 +416,7 @@ export interface FileRouteTypes {
     | '/cashier'
     | '/dashboard'
     | '/my-requests'
+    | '/payment-history'
     | '/queue'
     | '/staff-dashboard'
     | '/auth/callback'
@@ -445,6 +456,7 @@ export interface FileRouteTypes {
     | '/_authed/cashier'
     | '/_authed/dashboard'
     | '/_authed/my-requests'
+    | '/_authed/payment-history'
     | '/_authed/queue'
     | '/_authed/staff-dashboard'
     | '/auth/callback'
@@ -590,6 +602,13 @@ declare module '@tanstack/react-router' {
       path: '/queue'
       fullPath: '/queue'
       preLoaderRoute: typeof AuthedQueueRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/payment-history': {
+      id: '/_authed/payment-history'
+      path: '/payment-history'
+      fullPath: '/payment-history'
+      preLoaderRoute: typeof AuthedPaymentHistoryRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/my-requests': {
@@ -754,6 +773,7 @@ interface AuthedRouteRouteChildren {
   AuthedCashierRoute: typeof AuthedCashierRoute
   AuthedDashboardRoute: typeof AuthedDashboardRoute
   AuthedMyRequestsRoute: typeof AuthedMyRequestsRoute
+  AuthedPaymentHistoryRoute: typeof AuthedPaymentHistoryRoute
   AuthedQueueRoute: typeof AuthedQueueRoute
   AuthedStaffDashboardRoute: typeof AuthedStaffDashboardRoute
   AuthedserviceServicesRoute: typeof AuthedserviceServicesRoute
@@ -775,6 +795,7 @@ const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
   AuthedCashierRoute: AuthedCashierRoute,
   AuthedDashboardRoute: AuthedDashboardRoute,
   AuthedMyRequestsRoute: AuthedMyRequestsRoute,
+  AuthedPaymentHistoryRoute: AuthedPaymentHistoryRoute,
   AuthedQueueRoute: AuthedQueueRoute,
   AuthedStaffDashboardRoute: AuthedStaffDashboardRoute,
   AuthedserviceServicesRoute: AuthedserviceServicesRoute,

@@ -139,7 +139,7 @@ export function AppSidebar({
   if (can("dashboard:staff")) {
     navMain.push({
       id: "staff-dashboard",
-      title: "Staff Dashboard",
+      title: role === "cashier" ? "Cashier Dashboard" : "Staff Dashboard",
       url: "/staff-dashboard",
       icon: LayoutDashboard,
     });
@@ -196,6 +196,12 @@ export function AppSidebar({
       title: "Cashier Counter",
       url: "/cashier",
       icon: ClipboardCheck,
+    });
+    navMain.push({
+      id: "payment-history",
+      title: "Payment History",
+      url: "/payment-history",
+      icon: History,
     });
   }
 
