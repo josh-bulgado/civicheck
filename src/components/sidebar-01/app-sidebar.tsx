@@ -47,12 +47,6 @@ function createCcroAdminGroups(items: NavItem[]): NavGroup[] {
       label: "Insights",
       items: selectItems(["admin-reports"]),
     },
-    {
-      id: "citizen-preview",
-      label: "Citizen Preview",
-      separatorBefore: true,
-      items: selectItems(["services"]),
-    },
   ].filter((group) => group.items.length > 0);
 }
 

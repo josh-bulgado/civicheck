@@ -20,6 +20,7 @@ export const Route = createFileRoute("/_authed/admin/services")({
     ]);
     return { services, departments };
   },
+  staleTime: 5 * 60_000,
   component: AdminServicesRoute,
 });
 

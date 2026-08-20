@@ -74,7 +74,8 @@ export const authFilledGroupClass = `${authFieldClass} border-border-light bg-su
 export const authLabelClass = "text-[13px] font-medium text-body-strong";
 
 /** Full-width action, matched to the field height above it. */
-export const authButtonClass = "h-11 w-full rounded-lg text-[15px] font-semibold";
+export const authButtonClass =
+  "h-11 w-full rounded-lg text-[15px] font-semibold";
 
 export function AuthFormHeading({
   title,

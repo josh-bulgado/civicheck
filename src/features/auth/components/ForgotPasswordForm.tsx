@@ -132,7 +132,7 @@ const ForgotPasswordForm = () => {
                     <FieldLabel htmlFor="email" className={authLabelClass}>
                       Email address
                     </FieldLabel>
-                    <InputGroup className={authFieldClass}>
+                    <InputGroup className={`${authFieldClass} px-0`}>
                       <InputGroupAddon>
                         <Mail size={16} aria-hidden="true" />
                       </InputGroupAddon>

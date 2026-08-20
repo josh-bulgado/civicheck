@@ -59,6 +59,7 @@ export const Route = createFileRoute("/_authed")({
     unreadNotifications:
       context.user?.role === "applicant" ? await getUnreadNotificationCountFn() : 0,
   }),
+  staleTime: 30_000,
 });
 
 function AuthedLayout() {

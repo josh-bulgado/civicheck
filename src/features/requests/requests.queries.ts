@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireActiveSession } from "~/server/auth";
 import { isDepartmentScopedRole } from "~/lib/permissions";
+
+const trackingLookupSchema = z.object({ trackingNumber: z.string().min(1) });
+const requestIdSchema = z.object({ requestId: z.string().uuid() });
 
 function one<T>(value: T | T[] | null | undefined): T | undefined {
   return Array.isArray(value) ? value[0] : (value ?? undefined);
@@ -117,7 +121,7 @@ export interface CashierLookupResult {
  * attachments, no logs — deliberately narrower than `getRequestDetailFn`.
  */
 export const lookupRequestByTrackingFn = createServerFn({ method: "GET" })
-  .validator((d: { trackingNumber: string }) => d)
+  .validator(trackingLookupSchema)
   .handler(async ({ data }): Promise<CashierLookupResult | null> => {
     const { supabase } = await requireActiveSession("requests:collect_payment");
 
@@ -275,8 +279,10 @@ export const getMyDepartmentScopeFn = createServerFn({ method: "GET" }).handler(
   };
 });
 
+export type RequestDetail = Awaited<ReturnType<typeof getRequestDetailFn>>;
+
 export const getRequestDetailFn = createServerFn({ method: "GET" })
-  .validator((d: { requestId: string }) => d)
+  .validator(requestIdSchema)
   .handler(async ({ data }) => {
     const { supabase, role, departmentId } = await requireActiveSession("requests:view_all");
 

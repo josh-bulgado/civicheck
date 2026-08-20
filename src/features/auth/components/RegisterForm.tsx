@@ -1,12 +1,16 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "@tanstack/react-router";
-import { AlertCircleIcon } from "lucide-react";
+import { AlertCircleIcon, Lock, Mail } from "lucide-react";
 import { JSX, SVGProps, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import z from "zod";
 import { Field, FieldError, FieldLabel } from "~/components/ui/field";
 import { staggerStyle } from "~/components/motion/stagger";
-import { InputGroup, InputGroupInput } from "~/components/ui/input-group";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "~/components/ui/input-group";
 import { Input } from "~/components/ui/input";
 import { Checkbox } from "~/components/ui/checkbox";
 import { useSignUp } from "../hooks/useSignUp";
@@ -273,15 +277,19 @@ const RegisterForm = () => {
                 <FieldLabel htmlFor="email" className={authLabelClass}>
                   Email
                 </FieldLabel>
-                <Input
-                  {...field}
-                  id="email"
-                  type="email"
-                  className={authFilledFieldClass}
-                  placeholder="Enter your email"
-                  aria-invalid={fieldState.invalid}
-                  autoComplete="email"
-                />
+                <InputGroup className={`${authFilledGroupClass} px-0`}>
+                  <InputGroupAddon>
+                    <Mail size={16} aria-hidden="true" />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    {...field}
+                    id="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    aria-invalid={fieldState.invalid}
+                    autoComplete="email"
+                  />
+                </InputGroup>
                 {fieldState.invalid && (
                   <FieldError errors={[fieldState.error]} />
                 )}
@@ -301,12 +309,14 @@ const RegisterForm = () => {
                 <FieldLabel htmlFor="password" className={authLabelClass}>
                   Password
                 </FieldLabel>
-                <InputGroup className={authFilledGroupClass}>
+                <InputGroup className={`${authFilledGroupClass} px-0`}>
+                  <InputGroupAddon>
+                    <Lock size={16} aria-hidden="true" />
+                  </InputGroupAddon>
                   <InputGroupInput
                     {...field}
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    className="px-3.5"
                     placeholder="8+ characters, one number"
                     aria-invalid={fieldState.invalid}
                     autoComplete="new-password"

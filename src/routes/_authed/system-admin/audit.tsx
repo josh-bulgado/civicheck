@@ -24,6 +24,7 @@ export const Route = createFileRoute("/_authed/system-admin/audit")({
   },
   loaderDeps: ({ search }) => search,
   loader: ({ deps }) => getAuditEvents({ data: { ...deps, pageSize: 20 } }),
+  staleTime: 30_000,
   component: AuditRoute,
 });
 

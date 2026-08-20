@@ -27,6 +27,8 @@ export const getMyRequestsFn = createServerFn({ method: "GET" }).handler(async (
  * Mirrors `getRequestDetailFn` (the staff version) but scoped to the caller's
  * own request instead of department, and without the staff-only remarks UI.
  */
+export type MyRequestDetail = Awaited<ReturnType<typeof getMyRequestDetailFn>>;
+
 export const getMyRequestDetailFn = createServerFn({ method: "GET" })
   .validator((d: { requestId: string }) => d)
   .handler(async ({ data }) => {

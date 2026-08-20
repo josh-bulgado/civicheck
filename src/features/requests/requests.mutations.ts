@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireActiveSession } from "~/server/auth";
 import { isDepartmentScopedRole } from "~/lib/permissions";
 import {
@@ -13,8 +14,24 @@ import {
   dispatchApplicantNotification,
 } from "~/features/notifications/notifications.server";
 
+const advanceRequestStatusSchema = z.object({
+  requestId: z.string().uuid(),
+  toStatus: z.string(),
+  remarks: z.string().optional(),
+});
+const verifyPaymentSchema = z.object({
+  requestId: z.string().uuid(),
+  orNumber: z.string(),
+});
+const attachmentVerificationSchema = z.object({
+  attachmentId: z.string().uuid(),
+  status: z.enum(["approved", "rejected"]),
+  reason: z.string().optional(),
+});
+const attachmentIdSchema = z.object({ attachmentId: z.string().uuid() });
+
 export const advanceRequestStatusFn = createServerFn({ method: "POST" })
-  .validator((d: { requestId: string; toStatus: string; remarks?: string }) => d)
+  .validator(advanceRequestStatusSchema)
   .handler(async ({ data }) => {
     const { supabase, user, role, departmentId } = await requireActiveSession(
       "requests:process",
@@ -110,7 +127,7 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
 // No department check needed here: "requests:collect_payment" is only ever
 // granted to cashier/admin, neither of which is department-scoped.
 export const verifyPaymentFn = createServerFn({ method: "POST" })
-  .validator((d: { requestId: string; orNumber: string }) => d)
+  .validator(verifyPaymentSchema)
   .handler(async ({ data }) => {
     const { supabase, user } = await requireActiveSession("requests:collect_payment");
 
@@ -146,9 +163,7 @@ export const verifyPaymentFn = createServerFn({ method: "POST" })
   });
 
 export const setAttachmentVerificationFn = createServerFn({ method: "POST" })
-  .validator(
-    (d: { attachmentId: string; status: "approved" | "rejected"; reason?: string }) => d,
-  )
+  .validator(attachmentVerificationSchema)
   .handler(async ({ data }) => {
     const { supabase, user, role, departmentId } = await requireActiveSession(
       "requests:process",
@@ -226,7 +241,7 @@ export const setAttachmentVerificationFn = createServerFn({ method: "POST" })
   });
 
 export const getAttachmentSignedUrlFn = createServerFn({ method: "GET" })
-  .validator((d: { attachmentId: string }) => d)
+  .validator(attachmentIdSchema)
   .handler(async ({ data }) => {
     const { supabase, role, departmentId } = await requireActiveSession("requests:process");
 

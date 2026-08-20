@@ -100,6 +100,10 @@
   --color-health-success-border: var(--health-success-border);
   --color-health-success-fg: var(--health-success-fg);
   --color-health-success-dot: var(--health-success-dot);
+  --color-health-info-bg: var(--health-info-bg);
+  --color-health-info-border: var(--health-info-border);
+  --color-health-info-fg: var(--health-info-fg);
+  --color-health-info-dot: var(--health-info-dot);
   --color-health-warning-bg: var(--health-warning-bg);
   --color-health-warning-border: var(--health-warning-border);
   --color-health-warning-fg: var(--health-warning-fg);
@@ -182,6 +186,10 @@
   --health-success-border: #a7d8bd;
   --health-success-fg: #17623f;
   --health-success-dot: #16824f;
+  --health-info-bg: #eaf1fb;
+  --health-info-border: #a8c5ea;
+  --health-info-fg: #0b4da2;
+  --health-info-dot: #3b7dd8;
   --health-warning-bg: #fff6df;
   --health-warning-border: #dfc27a;
   --health-warning-fg: #6b4805;
@@ -487,6 +495,10 @@
 
   .status-success {
     @apply border-health-success-border bg-health-success-bg text-health-success-fg;
+  }
+
+  .status-info {
+    @apply border-health-info-border bg-health-info-bg text-health-info-fg;
   }
 
   .status-warning {

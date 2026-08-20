@@ -2,7 +2,7 @@ import { JSX, SVGProps, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "~/components/ui/button";
 
-import { AlertCircleIcon } from "lucide-react";
+import { AlertCircleIcon, Lock, Mail } from "lucide-react";
 import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
@@ -19,8 +19,11 @@ import {
   FieldGroup,
   FieldLabel,
 } from "~/components/ui/field";
-import { Input } from "~/components/ui/input";
-import { InputGroup, InputGroupInput } from "~/components/ui/input-group";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "~/components/ui/input-group";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Spinner } from "~/components/ui/spinner";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -136,7 +139,9 @@ export function LoginForm({
         errorMessage={otpError}
         onVerify={(token) => {
           if (!unconfirmed) return;
-          verifyOtpMutation.mutate({ data: { email: unconfirmed.email, token } });
+          verifyOtpMutation.mutate({
+            data: { email: unconfirmed.email, token },
+          });
         }}
         onResend={() => {
           if (!unconfirmed) return;
@@ -182,15 +187,19 @@ export function LoginForm({
                   <FieldLabel htmlFor="email" className={authLabelClass}>
                     Email address
                   </FieldLabel>
-                  <Input
-                    {...field}
-                    id="email"
-                    type="email"
-                    className={authFieldClass}
-                    placeholder="juan.delacruz@email.com"
-                    aria-invalid={fieldState.invalid}
-                    autoComplete="email"
-                  />
+                  <InputGroup className={`${authFieldClass} px-0`}>
+                    <InputGroupAddon>
+                      <Mail size={16} aria-hidden="true" />
+                    </InputGroupAddon>
+                    <InputGroupInput
+                      {...field}
+                      id="email"
+                      type="email"
+                      placeholder="juan.delacruz@email.com"
+                      aria-invalid={fieldState.invalid}
+                      autoComplete="email"
+                    />
+                  </InputGroup>
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
                   )}
@@ -210,12 +219,14 @@ export function LoginForm({
                   <FieldLabel htmlFor="password" className={authLabelClass}>
                     Password
                   </FieldLabel>
-                  <InputGroup className={authFieldClass}>
+                  <InputGroup className={`${authFieldClass} px-0`}>
+                    <InputGroupAddon>
+                      <Lock size={16} aria-hidden="true" />
+                    </InputGroupAddon>
                     <InputGroupInput
                       {...field}
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      className="px-3.5"
                       placeholder="Enter your password"
                       aria-invalid={fieldState.invalid}
                       autoComplete="current-password"
@@ -241,7 +252,9 @@ export function LoginForm({
               <label className="flex items-center gap-2.5 text-[13.5px] text-body">
                 <Checkbox
                   checked={keepSignedIn}
-                  onCheckedChange={(checked) => setKeepSignedIn(checked === true)}
+                  onCheckedChange={(checked) =>
+                    setKeepSignedIn(checked === true)
+                  }
                 />
                 Keep me signed in
               </label>
@@ -270,7 +283,9 @@ export function LoginForm({
               <Button
                 variant="outline"
                 className={`${authButtonClass} justify-center gap-2.5 text-sm font-medium`}
-                onClick={() => oauthLoginMutation.mutate({ provider: "google" })}
+                onClick={() =>
+                  oauthLoginMutation.mutate({ provider: "google" })
+                }
                 disabled={oauthLoginMutation.status === "pending"}
               >
                 <GoogleIcon className="size-4.5" />

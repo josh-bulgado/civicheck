@@ -14,6 +14,7 @@ export const Route = createFileRoute("/_authed/admin/staff")({
       throw redirect({ to: "/dashboard" });
   },
   loader: () => getStaff(),
+  staleTime: 30_000,
   component: AdminStaffRoute,
 });
 

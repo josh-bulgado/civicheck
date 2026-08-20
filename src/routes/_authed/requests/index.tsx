@@ -35,6 +35,7 @@ export const Route = createFileRoute("/_authed/requests/")({
     ]);
     return { requests, departments, scope, services, canEncode };
   },
+  staleTime: 15_000,
   component: RequestQueueRoute,
 });
 

@@ -68,6 +68,8 @@ export const getServices = createServerFn({ method: "GET" }).handler(
   },
 );
 
+export type ServiceDetail = Awaited<ReturnType<typeof getServiceDetail>>;
+
 export const getServiceDetail = createServerFn({ method: "GET" })
   .validator((d: string) => d)
   .handler(async ({ data: serviceCodeOrGroup }) => {

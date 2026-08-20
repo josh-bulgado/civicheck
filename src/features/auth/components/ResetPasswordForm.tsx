@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { CheckCircle, ArrowRight, AlertCircleIcon } from "lucide-react";
+import { CheckCircle, ArrowRight, AlertCircleIcon, Lock } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { Button } from "~/components/ui/button";
 import {
@@ -8,7 +8,11 @@ import {
   FieldGroup,
   FieldLabel,
 } from "~/components/ui/field";
-import { InputGroup, InputGroupInput } from "~/components/ui/input-group";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "~/components/ui/input-group";
 import { Spinner } from "~/components/ui/spinner";
 import { staggerStyle } from "~/components/motion/stagger";
 import { useResetPassword } from "../hooks/useResetPassword";
@@ -130,12 +134,14 @@ const ResetPasswordForm = () => {
                     <FieldLabel htmlFor="password" className={authLabelClass}>
                       New password
                     </FieldLabel>
-                    <InputGroup className={authFieldClass}>
+                    <InputGroup className={`${authFieldClass} px-0`}>
+                      <InputGroupAddon>
+                        <Lock size={16} aria-hidden="true" />
+                      </InputGroupAddon>
                       <InputGroupInput
                         {...field}
                         id="password"
                         type={showPassword ? "text" : "password"}
-                        className="px-3.5"
                         placeholder="At least 8 characters"
                         aria-invalid={fieldState.invalid}
                         autoComplete="new-password"
@@ -168,12 +174,14 @@ const ResetPasswordForm = () => {
                     >
                       Confirm new password
                     </FieldLabel>
-                    <InputGroup className={authFieldClass}>
+                    <InputGroup className={`${authFieldClass} px-0`}>
+                      <InputGroupAddon>
+                        <Lock size={16} aria-hidden="true" />
+                      </InputGroupAddon>
                       <InputGroupInput
                         {...field}
                         id="confirmPassword"
                         type={showConfirmPassword ? "text" : "password"}
-                        className="px-3.5"
                         placeholder="Re-enter your password"
                         aria-invalid={fieldState.invalid}
                         autoComplete="new-password"

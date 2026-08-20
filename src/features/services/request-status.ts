@@ -1,17 +1,17 @@
 export function getStatusDetails(status: string | null) {
   switch (status) {
     case "submitted":
-      return { label: "Submitted", styles: "status-warning" };
+      return { label: "Submitted", styles: "status-neutral" };
     case "under_validation":
-      return { label: "Under Validation", styles: "border-primary/20 bg-primary-soft text-primary" };
+      return { label: "Under Validation", styles: "status-info" };
     case "incomplete":
       return { label: "Incomplete", styles: "status-warning" };
     case "rejected":
       return { label: "Rejected", styles: "status-error" };
     case "processing":
-      return { label: "Processing", styles: "border-primary/20 bg-primary-soft text-primary" };
+      return { label: "Processing", styles: "status-info" };
     case "pending_approval":
-      return { label: "Pending Approval", styles: "status-warning" };
+      return { label: "Pending Approval", styles: "status-info" };
     case "ready_for_release":
       return { label: "Ready for Release", styles: "status-success" };
     case "released":
@@ -30,7 +30,7 @@ export function getStatusDetails(status: string | null) {
 export function getPaymentDetails(paymentStatus: string | null) {
   switch (paymentStatus) {
     case "unpaid":
-      return { label: "Unpaid", styles: "status-error" };
+      return { label: "Unpaid", styles: "status-warning" };
     case "verified":
       return { label: "Paid", styles: "status-success" };
     default:

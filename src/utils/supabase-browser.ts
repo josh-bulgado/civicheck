@@ -24,8 +24,17 @@ let clientPromise: Promise<SupabaseClient> | null = null;
  * against the signed-in user's own RLS policies.
  */
 export function getSupabaseBrowserClient(): Promise<SupabaseClient> {
-  clientPromise ??= getSupabaseBrowserConfig().then(({ url, publishableKey }) =>
-    createBrowserClient(url, publishableKey),
-  );
+  clientPromise ??= getSupabaseBrowserConfig().then(({ url, publishableKey }) => {
+    const client = createBrowserClient(url, publishableKey);
+    // Realtime sockets don't auto-pick-up a refreshed access token; without
+    // this, a long-lived subscription silently stops receiving RLS-filtered
+    // rows once the token it was opened with expires (~1hr by default).
+    client.auth.onAuthStateChange((event, session) => {
+      if (event === "TOKEN_REFRESHED" && session) {
+        client.realtime.setAuth(session.access_token);
+      }
+    });
+    return client;
+  });
   return clientPromise;
 }
