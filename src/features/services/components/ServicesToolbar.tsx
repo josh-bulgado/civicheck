@@ -1,6 +1,8 @@
 import type { ComponentType, ReactNode } from "react";
 import { LayoutGrid, Rows3, Search } from "lucide-react";
+import { Badge } from "~/components/ui/badge";
 import { Input } from "~/components/ui/input";
+import { cn } from "~/lib/utils";
 import {
   Select,
   SelectContent,
@@ -8,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { SERVICE_CATEGORY_LABELS, type ServiceCategory } from "~/features/services/service-utils";
 import type { ServiceView } from "~/features/services/hooks/useServiceView";
 
@@ -52,7 +55,7 @@ interface ServicesToolbarProps {
   onSortChange: (value: SortOption) => void;
   view: ServiceView;
   onViewChange: (value: ServiceView) => void;
-  totalCount: number;
+  categoryCounts: Record<CategoryFilter, number>;
 }
 
 export function ServicesToolbar({
@@ -64,7 +67,7 @@ export function ServicesToolbar({
   onSortChange,
   view,
   onViewChange,
-  totalCount,
+  categoryCounts,
 }: ServicesToolbarProps) {
   return (
     <div className="flex flex-col gap-4">
@@ -79,23 +82,43 @@ export function ServicesToolbar({
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
-          <PillButton
-            active={category === "all"}
-            onClick={() => onCategoryChange("all")}
-          >
-            All {totalCount}
-          </PillButton>
-          {CATEGORY_FILTERS.map((filter) => (
-            <PillButton
-              key={filter.value}
-              active={category === filter.value}
-              onClick={() => onCategoryChange(filter.value)}
-            >
-              {filter.label}
-            </PillButton>
-          ))}
-        </div>
+        <Tabs
+          value={category}
+          onValueChange={(value) => onCategoryChange(value as CategoryFilter)}
+          className="min-w-0"
+        >
+          <TabsList variant="accent" className="max-w-full overflow-x-auto">
+            <TabsTrigger value="all">
+              All
+              <Badge
+                variant="secondary"
+                className={cn(
+                  "ml-2",
+                  category === "all" && "bg-white/20 text-primary-foreground",
+                )}
+              >
+                {categoryCounts.all}
+              </Badge>
+            </TabsTrigger>
+            {CATEGORY_FILTERS.map((filter) => (
+              <TabsTrigger key={filter.value} value={filter.value}>
+                {filter.label}
+                {categoryCounts[filter.value] > 0 && (
+                  <Badge
+                    variant="info"
+                    className={cn(
+                      "ml-2",
+                      category === filter.value &&
+                        "bg-white/20 text-primary-foreground ring-0",
+                    )}
+                  >
+                    {categoryCounts[filter.value]}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
           <div
@@ -155,31 +178,6 @@ function ViewButton({
         active
           ? "civic-press inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-md bg-primary px-3 text-[14px] font-bold text-primary-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           : "civic-press inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-md px-3 text-[14px] font-bold text-muted-foreground outline-none transition-colors hover:bg-surface-subtle hover:text-body-strong focus-visible:ring-3 focus-visible:ring-ring/50"
-      }
-    >
-      {children}
-    </button>
-  );
-}
-
-function PillButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={
-        active
-          ? "whitespace-nowrap rounded-full bg-foreground px-4 py-2 text-[15px] font-bold text-white"
-          : "whitespace-nowrap rounded-full border border-control-border bg-white px-4 py-2 text-[15px] text-body-strong transition-colors hover:bg-surface-subtle"
       }
     >
       {children}

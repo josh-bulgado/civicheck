@@ -1,6 +1,7 @@
 import { Building2, Search } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Input } from "~/components/ui/input";
+import { cn } from "~/lib/utils";
 import {
   Select,
   SelectContent,
@@ -105,11 +106,18 @@ export function RequestsTableToolbar({
             value === "all" ? undefined : parseWorkflowStage(Number(value)),
           )
         }
+        className="min-w-0"
       >
-        <TabsList>
+        <TabsList variant="accent" className="max-w-full overflow-x-auto">
           <TabsTrigger value="all">
             All
-            <Badge variant="secondary" className="ml-2">
+            <Badge
+              variant="secondary"
+              className={cn(
+                "ml-2",
+                !stage && "bg-white/20 text-primary-foreground",
+              )}
+            >
               {stageCounts.all}
             </Badge>
           </TabsTrigger>
@@ -117,7 +125,14 @@ export function RequestsTableToolbar({
             <TabsTrigger key={workflowStage} value={String(workflowStage)}>
               {STAGE_LABELS[workflowStage]}
               {stageCounts[workflowStage] > 0 && (
-                <Badge variant="info" className="ml-2">
+                <Badge
+                  variant="info"
+                  className={cn(
+                    "ml-2",
+                    stage === workflowStage &&
+                      "bg-white/20 text-primary-foreground ring-0",
+                  )}
+                >
                   {stageCounts[workflowStage]}
                 </Badge>
               )}

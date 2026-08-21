@@ -59,6 +59,27 @@ export default function ServiceCatalogPage({
     [services],
   );
 
+  // Counts always reflect the department-scoped catalogue as a whole, not the
+  // currently-filtered view — same reasoning as the request queue's stage
+  // tabs: switching categories should never make a category look emptier
+  // than it actually is.
+  const categoryCounts = useMemo(() => {
+    const counts: Record<CategoryFilter, number> = {
+      all: services.length,
+      birth: 0,
+      marriage: 0,
+      death: 0,
+      copies: 0,
+      corrections: 0,
+      "one-visit": oneVisitCount,
+    };
+    for (const service of services) {
+      const category = getServiceCategory(service.department_id);
+      if (category) counts[category] += 1;
+    }
+    return counts;
+  }, [services, oneVisitCount]);
+
   const filteredServices = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
 
@@ -173,66 +194,70 @@ export default function ServiceCatalogPage({
 
       <section
         aria-labelledby="services-list-heading"
-        className="civic-enter flex flex-col gap-6"
+        className="civic-enter"
         style={enterDelay(120)}
       >
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.13em] text-primary">
-            Service directory
-          </p>
-          <h2 id="services-list-heading" className="mt-1 text-xl font-bold tracking-tight text-foreground">
-            Select a document service
-          </h2>
-        </div>
-
-        <ServicesToolbar
-          searchTerm={searchTerm}
-          onSearchTermChange={updateSearchTerm}
-          category={category}
-          onCategoryChange={updateCategory}
-          sort={sort}
-          onSortChange={updateSort}
-          view={view}
-          onViewChange={chooseView}
-          totalCount={services.length}
-        />
-
-        {visibleServices.length === 0 ? (
-          <div className="civic-enter-scale rounded-xl border border-dashed border-border-strong bg-white px-6 py-12 text-center">
-            <p className="text-base font-bold text-foreground">No services match your search</p>
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              Try a different keyword, or clear the filters above.
+        <div className="dashboard-panel overflow-hidden">
+          <div className="border-b border-border px-5 py-5 sm:px-6">
+            <p className="text-xs font-bold uppercase tracking-[0.13em] text-primary">
+              Service directory
             </p>
+            <h2 id="services-list-heading" className="mt-1 text-xl font-bold tracking-tight text-foreground">
+              Select a document service
+            </h2>
           </div>
-        ) : view === "rows" ? (
-          <ServiceDirectory services={visibleServices} canApply={canApply} />
-        ) : (
-          // Cards keep their `service_code` key across filter changes, so React
-          // reuses the existing nodes and only genuinely new cards animate in —
-          // the cascade doesn't replay on every keystroke in the search box.
-          <div className="civic-stagger grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {visibleServices.map((service, index) => (
-              <ServiceCard
-                key={service.service_code}
-                style={staggerStyle(index)}
-                canApply={canApply}
-                {...service}
-              />
-            ))}
-          </div>
-        )}
 
-        {remainingCount > 0 && (
-          <div className="flex justify-center pt-2">
-            <button
-              type="button"
-              onClick={() => setShowAll(true)}
-              className="civic-press whitespace-nowrap rounded-lg border border-control-border bg-white px-7 py-3.5 text-base font-bold text-foreground hover:bg-surface-subtle"
-            >
-              Show the remaining {remainingCount} service{remainingCount === 1 ? "" : "s"}
-            </button>
+          <div className="flex flex-col gap-5 p-5 sm:p-6">
+            <ServicesToolbar
+              searchTerm={searchTerm}
+              onSearchTermChange={updateSearchTerm}
+              category={category}
+              onCategoryChange={updateCategory}
+              sort={sort}
+              onSortChange={updateSort}
+              view={view}
+              onViewChange={chooseView}
+              categoryCounts={categoryCounts}
+            />
+
+            {visibleServices.length === 0 ? (
+              <div className="civic-enter-scale rounded-xl border border-dashed border-border-strong bg-background px-6 py-12 text-center">
+                <p className="text-base font-bold text-foreground">No services match your search</p>
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  Try a different keyword, or clear the filters above.
+                </p>
+              </div>
+            ) : view === "rows" ? (
+              <ServiceDirectory services={visibleServices} canApply={canApply} />
+            ) : (
+              // Cards keep their `service_code` key across filter changes, so React
+              // reuses the existing nodes and only genuinely new cards animate in —
+              // the cascade doesn't replay on every keystroke in the search box.
+              <div className="civic-stagger grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {visibleServices.map((service, index) => (
+                  <ServiceCard
+                    key={service.service_code}
+                    style={staggerStyle(index)}
+                    canApply={canApply}
+                    {...service}
+                  />
+                ))}
+              </div>
+            )}
+
+            {remainingCount > 0 && (
+              <div className="flex justify-center pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowAll(true)}
+                  className="civic-press whitespace-nowrap rounded-lg border border-control-border bg-white px-7 py-3.5 text-base font-bold text-foreground hover:bg-surface-subtle"
+                >
+                  Show the remaining {remainingCount} service{remainingCount === 1 ? "" : "s"}
+                </button>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </section>
     </div>
   );
