@@ -24,7 +24,7 @@ const SiteFooter = () => (
         <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-foreground">Public services</h2>
         <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
           <li><Link to="/requirements" className="hover:text-primary">Check requirements</Link></li>
-          <li><Link to="/signup" className="hover:text-primary">Submit a request</Link></li>
+          <li><Link to="/requirements" className="hover:text-primary">Submit a request</Link></li>
           <li><Link to="/track" className="hover:text-primary">Track a request</Link></li>
         </ul>
       </div>

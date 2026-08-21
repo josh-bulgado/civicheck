@@ -4,7 +4,6 @@ import HeroSection from "./components/HeroSection";
 import HowItWorksSection from "./components/HowItWorksSection";
 import ServicesSection from "./components/ServicesSection";
 import SiteFooter from "./components/SiteFooter";
-import SiteHeader from "./components/SiteHeader";
 
 type LandingPageProps = {
   featuredChecklists: FeaturedChecklist[];
@@ -13,7 +12,6 @@ type LandingPageProps = {
 const LandingPage = ({ featuredChecklists }: LandingPageProps) => {
   return (
     <div className="min-h-screen bg-background">
-      <SiteHeader />
       <main>
         {/*
           Three sections, in the order a resident actually needs them: what a

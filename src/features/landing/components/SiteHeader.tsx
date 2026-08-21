@@ -7,7 +7,6 @@ import { cn } from "~/lib/utils";
 
 const publicLinks = [
   { label: "Requirements", to: "/requirements" as const },
-  { label: "Apply online", to: "/apply" as const },
   { label: "Track request", to: "/track" as const },
 ];
 

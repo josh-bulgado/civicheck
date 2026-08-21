@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import SiteHeader from "~/features/landing/components/SiteHeader";
 
 import { getFeaturedChecklists } from "~/features/landing/landing.queries";
 import LandingPage from "~/features/landing/LandingPage";
@@ -12,5 +13,10 @@ export const Route = createFileRoute("/")({
 function Home() {
   const featuredChecklists = Route.useLoaderData();
 
-  return <LandingPage featuredChecklists={featuredChecklists} />;
+  return (
+    <div>
+      <SiteHeader />
+      <LandingPage featuredChecklists={featuredChecklists} />
+    </div>
+  );
 }
