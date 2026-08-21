@@ -1,5 +1,4 @@
 import { Building2, ClipboardList } from "lucide-react";
-import { CityGovernmentIdentity } from "~/components/brand/civic-identity";
 import { WalkInIntakeDialog } from "./WalkInIntakeDialog";
 import type { EncodableService } from "../walk-in-intake.queries";
 
@@ -47,9 +46,6 @@ export function RequestsPageHeader({
               onChanged={() => onWalkInEncoded?.()}
             />
           ) : null}
-          <div className="rounded-xl border border-white/15 bg-white/10 p-3.5 backdrop-blur-sm">
-            <CityGovernmentIdentity inverse />
-          </div>
         </div>
       </div>
     </header>

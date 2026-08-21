@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { ShieldCheck } from "lucide-react";
-import { CityGovernmentIdentity } from "~/components/brand/civic-identity";
 
 export function SystemAdminPageHeader({
   icon: Icon,

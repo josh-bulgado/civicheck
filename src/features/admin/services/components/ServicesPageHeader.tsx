@@ -1,5 +1,4 @@
 import { ShieldCheck } from "lucide-react";
-import { CityGovernmentIdentity } from "~/components/brand/civic-identity";
 
 export function ServicesPageHeader() {
   return (
@@ -18,10 +17,6 @@ export function ServicesPageHeader() {
             processing guidelines, filing fees, and requirement checklists for
             the Legazpi City Government.
           </p>
-        </div>
-
-        <div className="self-start rounded-xl border border-white/15 bg-white/10 p-3.5 backdrop-blur-sm md:self-center">
-          <CityGovernmentIdentity inverse />
         </div>
       </div>
     </header>
