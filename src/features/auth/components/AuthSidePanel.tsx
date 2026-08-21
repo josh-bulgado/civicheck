@@ -154,18 +154,22 @@ export function AuthProgressPanel() {
 
 /**
  * Panel for the screens a resident reaches once they already have an account.
- * Nothing to sell here, so it carries the office seal on a tinted field and
+ * Nothing to sell here, so it carries a placeholder mark on a tinted field and
  * leaves the form to hold attention.
+ *
+ * Placeholder only: no MOA authorizes use of the real CCRO seal artwork yet.
+ * Swap the badge below for the actual emblem once that's in hand.
  */
 export function AuthEmblemPanel() {
   return (
     <aside className="flex h-full items-center justify-center bg-auth-panel-tint px-11">
       <div className="civic-enter-scale flex flex-col items-center gap-7">
-        <img
-          src="/brand/ccro-emblem.png"
-          alt=""
-          className="w-full max-w-80 object-contain xl:max-w-88"
-        />
+        <div
+          aria-hidden="true"
+          className="flex size-40 items-center justify-center rounded-full border border-primary/20 bg-white text-sm font-extrabold tracking-tight text-primary xl:size-44"
+        >
+          CCRO
+        </div>
         <p className="text-center text-[13px] font-medium text-primary-hover">
           City Civil Registrar Office · City Government of Legazpi
         </p>

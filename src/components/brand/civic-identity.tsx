@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { cn } from "~/lib/utils";
 
 type MarkProps = {
@@ -7,42 +6,27 @@ type MarkProps = {
   inverse?: boolean;
 };
 
-const assetPaths = {
-  ccro: "/brand/ccro-emblem.png",
-  city: "/brand/city-of-legazpi-seal.png",
-} as const;
-
+/**
+ * Text-only placeholder: no MOA is in place authorizing use of the CCRO or
+ * City of Legazpi official seals, so render initials instead of the real
+ * artwork. Swap in the actual emblem once that authorization exists.
+ */
 function OfficialMark({
-  src,
-  alt,
-  fallback,
+  label,
   className,
 }: {
-  src: string;
-  alt: string;
-  fallback: string;
+  label: string;
   className?: string;
 }) {
-  const [available, setAvailable] = useState(true);
-
   return (
     <span
       className={cn(
         "relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-primary/20 bg-white text-[10px] font-extrabold tracking-tight text-primary",
         className,
       )}
-      aria-label={available ? undefined : alt}
+      aria-hidden="true"
     >
-      {available ? (
-        <img
-          src={src}
-          alt={alt}
-          className="size-full object-contain"
-          onError={() => setAvailable(false)}
-        />
-      ) : (
-        <span aria-hidden="true">{fallback}</span>
-      )}
+      {label}
     </span>
   );
 }
@@ -54,11 +38,7 @@ export function CiviCheckIdentity({
 }: MarkProps) {
   return (
     <span className={cn("inline-flex min-w-0 items-center gap-3", className)}>
-      <OfficialMark
-        src={assetPaths.ccro}
-        alt="City Civil Registrar Office emblem"
-        fallback="CCRO"
-      />
+      <OfficialMark label="CCRO" />
       <span className="min-w-0 leading-tight">
         <span
           className={cn(
@@ -90,12 +70,7 @@ export function CityGovernmentIdentity({
 }: MarkProps) {
   return (
     <span className={cn("inline-flex min-w-0 items-center gap-3", className)}>
-      <OfficialMark
-        src={assetPaths.city}
-        alt="City of Legazpi official seal"
-        fallback="CITY"
-        className="border-brand-gold/70"
-      />
+      <OfficialMark label="CITY" className="border-brand-gold/70" />
       <span className="min-w-0 leading-tight">
         <span
           className={cn(
