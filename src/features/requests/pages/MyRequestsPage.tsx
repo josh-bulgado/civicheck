@@ -1,12 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import {
-  FileText,
-  ChevronRight,
-  Eye,
-  CheckCircle,
-  Clock3,
-  CreditCard,
-} from "lucide-react";
+import { FileText, ChevronRight, Eye } from "lucide-react";
 import { CountUp } from "~/components/motion/count-up";
 import { staggerStyle } from "~/components/motion/stagger";
 import { getStatusDetails, getPaymentDetails } from "~/features/services/request-status";
@@ -23,8 +16,13 @@ export default function MyRequestsPage({ requests }: MyRequestsPageProps) {
   const readyCount = requests.filter(
     (request: any) => request.status === "ready_for_release",
   ).length;
-  const unpaidCount = requests.filter(
-    (request: any) => request.payment_status === "unpaid",
+  // Payment is only ever due once a request reaches the counter — nothing
+  // earlier in the workflow has a fee to pay yet, so counting every
+  // `unpaid` row (the old logic) overstated this against requests still in
+  // review.
+  const paymentDueCount = requests.filter(
+    (request: any) =>
+      request.status === "ready_for_release" && request.payment_status !== "verified",
   ).length;
 
   return (
@@ -42,19 +40,10 @@ export default function MyRequestsPage({ requests }: MyRequestsPageProps) {
           to="/services"
           className="civic-press inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-white px-4 py-2 text-sm font-bold text-primary shadow-sm hover:bg-primary-soft"
         >
-          Submit New Request
+          Submit a new request
         </Link>
         </div>
       </header>
-
-      {requests.length > 0 ? (
-        <div className="civic-stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <RequestStat index={0} icon={FileText} label="All requests" value={requests.length} accent="bg-primary" />
-          <RequestStat index={1} icon={Clock3} label="In progress" value={activeCount} accent="bg-primary" />
-          <RequestStat index={2} icon={CheckCircle} label="Ready for release" value={readyCount} accent="bg-success" />
-          <RequestStat index={3} icon={CreditCard} label="Payment due" value={unpaidCount} accent="bg-brand-gold" />
-        </div>
-      ) : null}
 
       {requests.length === 0 ? (
         <div className="dashboard-panel civic-enter-scale mx-auto mt-8 max-w-lg space-y-4 px-6 py-16 text-center">
@@ -71,14 +60,24 @@ export default function MyRequestsPage({ requests }: MyRequestsPageProps) {
             to="/services"
             className="inline-flex min-h-10 items-center rounded-lg border border-border bg-white px-3.5 py-1.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
           >
-            Browse Services
+            Browse services
           </Link>
         </div>
       ) : (
         <div className="dashboard-panel overflow-hidden">
-          <div className="border-b border-border px-5 py-5 sm:px-6">
-            <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">Request history</p>
-            <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground">Submitted applications</h2>
+          <div className="flex flex-col gap-4 border-b border-border px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">Request history</p>
+              <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground">
+                Submitted applications ·{" "}
+                <span className="text-muted-foreground">{requests.length}</span>
+              </h2>
+            </div>
+            <dl className="civic-stagger flex flex-wrap gap-x-6 gap-y-3">
+              <SummaryFigure index={0} label="In progress" value={activeCount} dotClassName="bg-primary" />
+              <SummaryFigure index={1} label="Ready for release" value={readyCount} dotClassName="bg-success" />
+              <SummaryFigure index={2} label="Payment due" value={paymentDueCount} dotClassName="bg-brand-gold" />
+            </dl>
           </div>
           {/* Desktop Table View */}
           <div className="hidden md:block overflow-x-auto">
@@ -185,7 +184,7 @@ export default function MyRequestsPage({ requests }: MyRequestsPageProps) {
                       params={{ requestId: req.id }}
                       className="civic-nudge inline-flex items-center gap-1 font-medium text-primary"
                     >
-                      View Details
+                      View details
                       <ChevronRight className="w-3.5 h-3.5" />
                     </Link>
                   </div>
@@ -199,34 +198,26 @@ export default function MyRequestsPage({ requests }: MyRequestsPageProps) {
   );
 }
 
-function RequestStat({
-  icon: Icon,
+function SummaryFigure({
   label,
   value,
-  accent,
+  dotClassName,
   index,
 }: {
-  icon: typeof FileText;
   label: string;
   value: number;
-  accent: string;
+  dotClassName: string;
   index: number;
 }) {
   return (
-    <article
-      className="dashboard-stat civic-interactive civic-lift"
-      style={staggerStyle(index)}
-    >
-      <div className={`absolute inset-x-0 top-0 h-1 ${accent}`} aria-hidden="true" />
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">{label}</p>
-          <CountUp value={value} className="mt-2 block text-3xl font-extrabold text-foreground" />
-        </div>
-        <div className="rounded-lg border border-border bg-surface-subtle p-2.5 text-primary">
-          <Icon className="size-5" aria-hidden="true" />
-        </div>
-      </div>
-    </article>
+    <div className="min-w-20" style={staggerStyle(index)}>
+      <dt className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+        <span className={`size-1.5 shrink-0 rounded-full ${dotClassName}`} aria-hidden="true" />
+        {label}
+      </dt>
+      <dd className="mt-1 text-2xl font-extrabold tracking-tight text-foreground tabular-nums">
+        <CountUp value={value} />
+      </dd>
+    </div>
   );
 }

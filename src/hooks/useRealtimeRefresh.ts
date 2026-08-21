@@ -61,10 +61,6 @@ export function useRealtimeRefresh({
     let channel: RealtimeChannel | undefined;
     let client: Awaited<ReturnType<typeof getSupabaseBrowserClient>> | undefined;
     let debounce: ReturnType<typeof setTimeout> | undefined;
-    // A dropped socket means missed events, so the first successful (re)join
-    // refetches rather than trusting whatever is already on screen.
-    let hasSubscribed = false;
-
     let lastRefreshAt = 0;
 
     const refreshNow = () => {
@@ -115,8 +111,6 @@ export function useRealtimeRefresh({
         if (cancelled) return;
         if (channelStatus === "SUBSCRIBED") {
           setStatus("live");
-          if (hasSubscribed) refreshNow();
-          hasSubscribed = true;
           return;
         }
         // CHANNEL_ERROR / TIMED_OUT / CLOSED all mean "not receiving events".

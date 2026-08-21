@@ -9,7 +9,7 @@ const steps = [
   {
     number: "2",
     title: "Apply online",
-    desc: "File your request online and upload documents for pre-validation, so nothing gets rejected at the counter.",
+    desc: "Sign in (or create a free account), then file your request online and upload documents for pre-validation, so nothing gets rejected at the counter.",
   },
   {
     number: "3",

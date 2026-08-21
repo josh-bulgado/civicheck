@@ -403,7 +403,8 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                             Ready to file this online?
                           </p>
                           <p className="text-xs text-body">
-                            Apply now, or save this checklist to your account first.
+                            Sign in to apply — or create a free account if you
+                            don't have one yet.
                           </p>
                         </div>
                         <div className="flex flex-wrap gap-3">

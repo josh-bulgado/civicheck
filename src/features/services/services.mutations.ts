@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireActiveSession } from "~/server/auth";
 import { insertRequestWithTrackingNumber } from "~/features/requests/tracking-number";
+import { isVisible } from "~/features/services/service-utils";
+import { loadServiceCatalogue, resolveServices } from "~/features/services/services.catalogue";
 
 export const submitRequestFn = createServerFn({ method: "POST" })
   .validator(
@@ -16,6 +18,37 @@ export const submitRequestFn = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { supabase, user } = await requireActiveSession("requests:create");
+
+    // The wizard's upload step won't let an applicant past it without every
+    // mandatory, applicable document attached — but that gate is purely
+    // client-side. Re-check it here so a request can never actually be
+    // created missing one, no matter how this function gets called. Uses the
+    // same catalogue resolution getServiceDetail() uses (requirement rows key
+    // by requirement_group/display_group, not always by service_code), so
+    // this stays in lockstep with whatever checklist the wizard showed.
+    const catalogue = await loadServiceCatalogue();
+    const { services: resolvedServices, isGroup } = resolveServices(catalogue, data.serviceCode);
+    if (resolvedServices.length === 0) {
+      return { error: true, message: "Unknown service." };
+    }
+    const requirementKey = isGroup
+      ? resolvedServices[0].display_group!
+      : (resolvedServices[0].requirement_group ?? data.serviceCode);
+    const requirements = catalogue.requirementsByGroup.get(requirementKey) ?? [];
+
+    const applicableMandatory = requirements.filter(
+      (r) => r.is_mandatory && isVisible(r, data.serviceCode),
+    );
+    const uploadedNames = new Set((data.documents ?? []).map((d) => d.requirementName));
+    const missing = applicableMandatory.filter(
+      (r) => !uploadedNames.has(r.requirement_name),
+    );
+    if (missing.length > 0) {
+      return {
+        error: true,
+        message: `Missing required document(s): ${missing.map((r) => r.requirement_name).join(", ")}.`,
+      };
+    }
 
     const created = await insertRequestWithTrackingNumber(supabase, {
       applicant_id: user.id,

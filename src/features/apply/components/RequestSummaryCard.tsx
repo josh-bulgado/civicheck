@@ -14,7 +14,7 @@ export function RequestSummaryCard({
   purpose,
 }: RequestSummaryCardProps) {
   return (
-    <div className="overflow-hidden rounded-xl border border-border-strong bg-white">
+    <div className="civic-card overflow-hidden">
       <div className="border-b border-border-light px-4.5 py-3.5 text-base font-bold text-foreground">
         Your request
       </div>

@@ -36,6 +36,18 @@ export function buildStatusChangeEmail(
   return { subject, text, html };
 }
 
+export function buildPreValidationCompleteEmail(trackingNumber: string): NotificationContent {
+  const subject = `Request ${trackingNumber}: pre-validation complete`;
+  const lines = [
+    `All the documents you pre-uploaded for request ${trackingNumber} have been reviewed and approved.`,
+    `You may now visit the CCRO in person to finish your request. Please bring the physical original copies of the documents you uploaded, along with payment for the applicable fee.`,
+    `Sign in to CiviCheck and open "My Requests" for the full details.`,
+  ];
+  const text = lines.join("\n\n");
+  const html = lines.map((line) => `<p>${escapeHtml(line)}</p>`).join("");
+  return { subject, text, html };
+}
+
 export function buildDocumentRejectedEmail(
   trackingNumber: string,
   requirementName: string,

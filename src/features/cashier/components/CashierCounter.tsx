@@ -112,6 +112,7 @@ export function CashierCounter() {
           <div style={staggerStyle(1)}>
             <PaymentVerificationPanel
               requestId={result.id}
+              status={result.status}
               feesDue={result.feesDue}
               paymentStatus={result.paymentStatus}
               orNumber={result.orNumber}

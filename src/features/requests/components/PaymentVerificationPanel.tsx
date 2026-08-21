@@ -5,15 +5,18 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { usePermissions } from "~/hooks/usePermissions";
 import { verifyPaymentFn } from "~/features/requests/requests.mutations";
+import { getStatusDetails } from "~/features/requests/request-workflow";
 
 export function PaymentVerificationPanel({
   requestId,
+  status,
   feesDue,
   paymentStatus,
   orNumber,
   onVerified,
 }: {
   requestId: string;
+  status: string;
   feesDue: number;
   paymentStatus: string;
   orNumber: string | null;
@@ -21,6 +24,7 @@ export function PaymentVerificationPanel({
 }) {
   const { can } = usePermissions();
   const canCollect = can("requests:collect_payment");
+  const isReadyForRelease = status === "ready_for_release";
 
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
@@ -49,6 +53,12 @@ export function PaymentVerificationPanel({
       {paymentStatus === "verified" ? (
         <p className="text-sm text-foreground">
           Verified against OR <span className="font-bold">{orNumber ?? "—"}</span>.
+        </p>
+      ) : !isReadyForRelease ? (
+        <p className="text-sm italic text-muted-foreground">
+          Payment can't be collected yet — this request is still{" "}
+          {getStatusDetails(status).label.toLowerCase()}. It needs to be
+          approved for release first.
         </p>
       ) : canCollect ? (
         <div className="flex flex-col gap-3">

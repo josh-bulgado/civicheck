@@ -105,7 +105,7 @@ export default function MyRequestDetailPage({ request, onUpdated }: MyRequestDet
 
       <div className="civic-stagger mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div style={staggerStyle(0)} className="flex flex-col gap-6 lg:col-span-2">
-          <section className="rounded-xl border border-border bg-white p-6">
+          <section className="dashboard-panel p-6">
             <h2 className="mb-4 text-lg font-bold text-foreground">Submitted details</h2>
             <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
               {Object.entries(request.formData).map(([key, value]) => {
@@ -138,7 +138,7 @@ export default function MyRequestDetailPage({ request, onUpdated }: MyRequestDet
             )}
           </section>
 
-          <section className="rounded-xl border border-border bg-white p-6">
+          <section className="dashboard-panel p-6">
             <h2 className="mb-4 text-lg font-bold text-foreground">
               Your documents ({request.attachments.length})
             </h2>
@@ -155,29 +155,52 @@ export default function MyRequestDetailPage({ request, onUpdated }: MyRequestDet
             )}
           </section>
 
-          <section className="rounded-xl border border-border bg-white p-6">
+          <section className="dashboard-panel p-6">
             <h2 className="mb-4 text-lg font-bold text-foreground">Status history</h2>
             <ol className="civic-stagger-auto flex flex-col gap-4">
-              {request.logs.map((log) => (
-                <li key={log.id} className="flex gap-4">
-                  <div className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" />
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">
-                      {getStatusDetails(log.actionStatus).label}
-                    </p>
-                    {log.remarks && (
-                      <p className="text-sm text-muted-foreground">{log.remarks}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">{formatDateTime(log.createdAt)}</p>
-                  </div>
-                </li>
-              ))}
+              {/* Document approvals and reversals are staff-side plumbing —
+                  they don't move the request forward or ask the applicant to
+                  do anything, so they'd just be noise here. A rejection
+                  stays, since that's the applicant's cue to resubmit. */}
+              {request.logs
+                .filter(
+                  (log) =>
+                    log.actionStatus !== "document_approved" &&
+                    log.actionStatus !== "document_reverted",
+                )
+                .map((log, index, visibleLogs) => {
+                  const logStatus = getStatusDetails(log.actionStatus);
+                  // Logs come back oldest-first, so the last entry is the
+                  // request's current status — the one thing worth the eye
+                  // landing on first in an otherwise-quiet gray timeline.
+                  const isCurrent = index === visibleLogs.length - 1;
+                  return (
+                    <li key={log.id} className="flex gap-4">
+                      <div
+                        className={`shrink-0 rounded-full ${logStatus.dot} ${
+                          isCurrent
+                            ? "mt-1 size-3 ring-4 ring-primary/15"
+                            : "mt-1.5 size-2"
+                        }`}
+                      />
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">
+                          {logStatus.label}
+                        </p>
+                        {log.remarks && (
+                          <p className="text-sm text-muted-foreground">{log.remarks}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground">{formatDateTime(log.createdAt)}</p>
+                      </div>
+                    </li>
+                  );
+                })}
             </ol>
           </section>
         </div>
 
         <div style={staggerStyle(1)} className="flex flex-col gap-6">
-          <section className="rounded-xl border border-border bg-white p-6">
+          <section className="dashboard-panel p-6">
             <h2 className="mb-3 text-lg font-bold text-foreground">Processing time</h2>
             <p className="text-sm text-muted-foreground">
               {request.processingTime || "Varies by document type — check with the CCRO."}
@@ -185,7 +208,7 @@ export default function MyRequestDetailPage({ request, onUpdated }: MyRequestDet
           </section>
 
           {request.status === "ready_for_release" && (
-            <section className="civic-enter-scale rounded-xl border border-success/20 bg-success/5 p-6">
+            <section className="civic-enter-scale rounded-xl border border-success/25 bg-success-soft-2 p-6">
               <h2 className="mb-2 text-lg font-bold text-foreground">Ready for release</h2>
               <p className="text-sm text-muted-foreground">
                 {request.paymentStatus === "verified"

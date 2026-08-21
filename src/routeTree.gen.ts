@@ -21,31 +21,31 @@ import { Route as AuthedRouteRouteImport } from './routes/_authed/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApplyIndexRouteImport } from './routes/apply/index'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
-import { Route as AuthedStaffDashboardRouteImport } from './routes/_authed/staff-dashboard'
-import { Route as AuthedPaymentHistoryRouteImport } from './routes/_authed/payment-history'
-import { Route as AuthedNotificationsRouteImport } from './routes/_authed/notifications'
-import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
-import { Route as AuthedCashierRouteImport } from './routes/_authed/cashier'
-import { Route as ApplyServiceCodeRouteRouteImport } from './routes/apply/$serviceCode/route'
-import { Route as ApplyServiceCodeIndexRouteImport } from './routes/apply/$serviceCode/index'
-import { Route as AuthedRequestsIndexRouteImport } from './routes/_authed/requests/index'
-import { Route as AuthedMyRequestsIndexRouteImport } from './routes/_authed/my-requests/index'
-import { Route as AuthedAdminIndexRouteImport } from './routes/_authed/admin/index'
-import { Route as ApplyServiceCodeReviewRouteImport } from './routes/apply/$serviceCode/review'
-import { Route as ApplyServiceCodeDocumentsRouteImport } from './routes/apply/$serviceCode/documents'
-import { Route as ApplyServiceCodeDetailsRouteImport } from './routes/apply/$serviceCode/details'
-import { Route as ApplyServiceCodeCaseRouteImport } from './routes/apply/$serviceCode/case'
-import { Route as AuthedSystemAdminSecurityRouteImport } from './routes/_authed/system-admin/security'
-import { Route as AuthedSystemAdminHealthRouteImport } from './routes/_authed/system-admin/health'
-import { Route as AuthedSystemAdminAuditRouteImport } from './routes/_authed/system-admin/audit'
-import { Route as AuthedSystemAdminAccountsRouteImport } from './routes/_authed/system-admin/accounts'
-import { Route as AuthedRequestsRequestIdRouteImport } from './routes/_authed/requests/$requestId'
-import { Route as AuthedMyRequestsRequestIdRouteImport } from './routes/_authed/my-requests/$requestId'
-import { Route as AuthedAdminStaffRouteImport } from './routes/_authed/admin/staff'
-import { Route as AuthedAdminServicesRouteImport } from './routes/_authed/admin/services'
-import { Route as AuthedAdminReportsRouteImport } from './routes/_authed/admin/reports'
-import { Route as AuthedserviceServicesRouteImport } from './routes/_authed/(service)/services'
-import { Route as AuthedserviceServiceServiceCodeRouteImport } from './routes/_authed/(service)/service.$serviceCode'
+import { Route as AuthedDashboardRouteRouteImport } from './routes/_authed/_dashboard/route'
+import { Route as AuthedDashboardStaffDashboardRouteImport } from './routes/_authed/_dashboard/staff-dashboard'
+import { Route as AuthedDashboardPaymentHistoryRouteImport } from './routes/_authed/_dashboard/payment-history'
+import { Route as AuthedDashboardNotificationsRouteImport } from './routes/_authed/_dashboard/notifications'
+import { Route as AuthedDashboardDashboardRouteImport } from './routes/_authed/_dashboard/dashboard'
+import { Route as AuthedDashboardCashierRouteImport } from './routes/_authed/_dashboard/cashier'
+import { Route as AuthedApplyServiceCodeRouteRouteImport } from './routes/_authed/apply/$serviceCode/route'
+import { Route as AuthedApplyServiceCodeIndexRouteImport } from './routes/_authed/apply/$serviceCode/index'
+import { Route as AuthedDashboardRequestsIndexRouteImport } from './routes/_authed/_dashboard/requests/index'
+import { Route as AuthedDashboardMyRequestsIndexRouteImport } from './routes/_authed/_dashboard/my-requests/index'
+import { Route as AuthedDashboardAdminIndexRouteImport } from './routes/_authed/_dashboard/admin/index'
+import { Route as AuthedApplyServiceCodeReviewRouteImport } from './routes/_authed/apply/$serviceCode/review'
+import { Route as AuthedApplyServiceCodeDocumentsRouteImport } from './routes/_authed/apply/$serviceCode/documents'
+import { Route as AuthedApplyServiceCodeDetailsRouteImport } from './routes/_authed/apply/$serviceCode/details'
+import { Route as AuthedApplyServiceCodeCaseRouteImport } from './routes/_authed/apply/$serviceCode/case'
+import { Route as AuthedDashboardSystemAdminSecurityRouteImport } from './routes/_authed/_dashboard/system-admin/security'
+import { Route as AuthedDashboardSystemAdminHealthRouteImport } from './routes/_authed/_dashboard/system-admin/health'
+import { Route as AuthedDashboardSystemAdminAuditRouteImport } from './routes/_authed/_dashboard/system-admin/audit'
+import { Route as AuthedDashboardSystemAdminAccountsRouteImport } from './routes/_authed/_dashboard/system-admin/accounts'
+import { Route as AuthedDashboardRequestsRequestIdRouteImport } from './routes/_authed/_dashboard/requests/$requestId'
+import { Route as AuthedDashboardMyRequestsRequestIdRouteImport } from './routes/_authed/_dashboard/my-requests/$requestId'
+import { Route as AuthedDashboardAdminStaffRouteImport } from './routes/_authed/_dashboard/admin/staff'
+import { Route as AuthedDashboardAdminServicesRouteImport } from './routes/_authed/_dashboard/admin/services'
+import { Route as AuthedDashboardAdminReportsRouteImport } from './routes/_authed/_dashboard/admin/reports'
+import { Route as AuthedDashboardserviceServicesRouteImport } from './routes/_authed/_dashboard/(service)/services'
 
 const TrackRoute = TrackRouteImport.update({
   id: '/track',
@@ -106,135 +106,152 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthedStaffDashboardRoute = AuthedStaffDashboardRouteImport.update({
-  id: '/staff-dashboard',
-  path: '/staff-dashboard',
+const AuthedDashboardRouteRoute = AuthedDashboardRouteRouteImport.update({
+  id: '/_dashboard',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
-const AuthedPaymentHistoryRoute = AuthedPaymentHistoryRouteImport.update({
-  id: '/payment-history',
-  path: '/payment-history',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
-const AuthedNotificationsRoute = AuthedNotificationsRouteImport.update({
-  id: '/notifications',
-  path: '/notifications',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
-const AuthedDashboardRoute = AuthedDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
-const AuthedCashierRoute = AuthedCashierRouteImport.update({
+const AuthedDashboardStaffDashboardRoute =
+  AuthedDashboardStaffDashboardRouteImport.update({
+    id: '/staff-dashboard',
+    path: '/staff-dashboard',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedDashboardPaymentHistoryRoute =
+  AuthedDashboardPaymentHistoryRouteImport.update({
+    id: '/payment-history',
+    path: '/payment-history',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedDashboardNotificationsRoute =
+  AuthedDashboardNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedDashboardDashboardRoute =
+  AuthedDashboardDashboardRouteImport.update({
+    id: '/dashboard',
+    path: '/dashboard',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedDashboardCashierRoute = AuthedDashboardCashierRouteImport.update({
   id: '/cashier',
   path: '/cashier',
-  getParentRoute: () => AuthedRouteRoute,
+  getParentRoute: () => AuthedDashboardRouteRoute,
 } as any)
-const ApplyServiceCodeRouteRoute = ApplyServiceCodeRouteRouteImport.update({
-  id: '/apply/$serviceCode',
-  path: '/apply/$serviceCode',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApplyServiceCodeIndexRoute = ApplyServiceCodeIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => ApplyServiceCodeRouteRoute,
-} as any)
-const AuthedRequestsIndexRoute = AuthedRequestsIndexRouteImport.update({
-  id: '/requests/',
-  path: '/requests/',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
-const AuthedMyRequestsIndexRoute = AuthedMyRequestsIndexRouteImport.update({
-  id: '/my-requests/',
-  path: '/my-requests/',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
-const AuthedAdminIndexRoute = AuthedAdminIndexRouteImport.update({
-  id: '/admin/',
-  path: '/admin/',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
-const ApplyServiceCodeReviewRoute = ApplyServiceCodeReviewRouteImport.update({
-  id: '/review',
-  path: '/review',
-  getParentRoute: () => ApplyServiceCodeRouteRoute,
-} as any)
-const ApplyServiceCodeDocumentsRoute =
-  ApplyServiceCodeDocumentsRouteImport.update({
+const AuthedApplyServiceCodeRouteRoute =
+  AuthedApplyServiceCodeRouteRouteImport.update({
+    id: '/apply/$serviceCode',
+    path: '/apply/$serviceCode',
+    getParentRoute: () => AuthedRouteRoute,
+  } as any)
+const AuthedApplyServiceCodeIndexRoute =
+  AuthedApplyServiceCodeIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthedApplyServiceCodeRouteRoute,
+  } as any)
+const AuthedDashboardRequestsIndexRoute =
+  AuthedDashboardRequestsIndexRouteImport.update({
+    id: '/requests/',
+    path: '/requests/',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedDashboardMyRequestsIndexRoute =
+  AuthedDashboardMyRequestsIndexRouteImport.update({
+    id: '/my-requests/',
+    path: '/my-requests/',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedDashboardAdminIndexRoute =
+  AuthedDashboardAdminIndexRouteImport.update({
+    id: '/admin/',
+    path: '/admin/',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedApplyServiceCodeReviewRoute =
+  AuthedApplyServiceCodeReviewRouteImport.update({
+    id: '/review',
+    path: '/review',
+    getParentRoute: () => AuthedApplyServiceCodeRouteRoute,
+  } as any)
+const AuthedApplyServiceCodeDocumentsRoute =
+  AuthedApplyServiceCodeDocumentsRouteImport.update({
     id: '/documents',
     path: '/documents',
-    getParentRoute: () => ApplyServiceCodeRouteRoute,
+    getParentRoute: () => AuthedApplyServiceCodeRouteRoute,
   } as any)
-const ApplyServiceCodeDetailsRoute = ApplyServiceCodeDetailsRouteImport.update({
-  id: '/details',
-  path: '/details',
-  getParentRoute: () => ApplyServiceCodeRouteRoute,
-} as any)
-const ApplyServiceCodeCaseRoute = ApplyServiceCodeCaseRouteImport.update({
-  id: '/case',
-  path: '/case',
-  getParentRoute: () => ApplyServiceCodeRouteRoute,
-} as any)
-const AuthedSystemAdminSecurityRoute =
-  AuthedSystemAdminSecurityRouteImport.update({
+const AuthedApplyServiceCodeDetailsRoute =
+  AuthedApplyServiceCodeDetailsRouteImport.update({
+    id: '/details',
+    path: '/details',
+    getParentRoute: () => AuthedApplyServiceCodeRouteRoute,
+  } as any)
+const AuthedApplyServiceCodeCaseRoute =
+  AuthedApplyServiceCodeCaseRouteImport.update({
+    id: '/case',
+    path: '/case',
+    getParentRoute: () => AuthedApplyServiceCodeRouteRoute,
+  } as any)
+const AuthedDashboardSystemAdminSecurityRoute =
+  AuthedDashboardSystemAdminSecurityRouteImport.update({
     id: '/system-admin/security',
     path: '/system-admin/security',
-    getParentRoute: () => AuthedRouteRoute,
+    getParentRoute: () => AuthedDashboardRouteRoute,
   } as any)
-const AuthedSystemAdminHealthRoute = AuthedSystemAdminHealthRouteImport.update({
-  id: '/system-admin/health',
-  path: '/system-admin/health',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
-const AuthedSystemAdminAuditRoute = AuthedSystemAdminAuditRouteImport.update({
-  id: '/system-admin/audit',
-  path: '/system-admin/audit',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
-const AuthedSystemAdminAccountsRoute =
-  AuthedSystemAdminAccountsRouteImport.update({
+const AuthedDashboardSystemAdminHealthRoute =
+  AuthedDashboardSystemAdminHealthRouteImport.update({
+    id: '/system-admin/health',
+    path: '/system-admin/health',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedDashboardSystemAdminAuditRoute =
+  AuthedDashboardSystemAdminAuditRouteImport.update({
+    id: '/system-admin/audit',
+    path: '/system-admin/audit',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedDashboardSystemAdminAccountsRoute =
+  AuthedDashboardSystemAdminAccountsRouteImport.update({
     id: '/system-admin/accounts',
     path: '/system-admin/accounts',
-    getParentRoute: () => AuthedRouteRoute,
+    getParentRoute: () => AuthedDashboardRouteRoute,
   } as any)
-const AuthedRequestsRequestIdRoute = AuthedRequestsRequestIdRouteImport.update({
-  id: '/requests/$requestId',
-  path: '/requests/$requestId',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
-const AuthedMyRequestsRequestIdRoute =
-  AuthedMyRequestsRequestIdRouteImport.update({
+const AuthedDashboardRequestsRequestIdRoute =
+  AuthedDashboardRequestsRequestIdRouteImport.update({
+    id: '/requests/$requestId',
+    path: '/requests/$requestId',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedDashboardMyRequestsRequestIdRoute =
+  AuthedDashboardMyRequestsRequestIdRouteImport.update({
     id: '/my-requests/$requestId',
     path: '/my-requests/$requestId',
-    getParentRoute: () => AuthedRouteRoute,
+    getParentRoute: () => AuthedDashboardRouteRoute,
   } as any)
-const AuthedAdminStaffRoute = AuthedAdminStaffRouteImport.update({
-  id: '/admin/staff',
-  path: '/admin/staff',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
-const AuthedAdminServicesRoute = AuthedAdminServicesRouteImport.update({
-  id: '/admin/services',
-  path: '/admin/services',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
-const AuthedAdminReportsRoute = AuthedAdminReportsRouteImport.update({
-  id: '/admin/reports',
-  path: '/admin/reports',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
-const AuthedserviceServicesRoute = AuthedserviceServicesRouteImport.update({
-  id: '/(service)/services',
-  path: '/services',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
-const AuthedserviceServiceServiceCodeRoute =
-  AuthedserviceServiceServiceCodeRouteImport.update({
-    id: '/(service)/service/$serviceCode',
-    path: '/service/$serviceCode',
-    getParentRoute: () => AuthedRouteRoute,
+const AuthedDashboardAdminStaffRoute =
+  AuthedDashboardAdminStaffRouteImport.update({
+    id: '/admin/staff',
+    path: '/admin/staff',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedDashboardAdminServicesRoute =
+  AuthedDashboardAdminServicesRouteImport.update({
+    id: '/admin/services',
+    path: '/admin/services',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedDashboardAdminReportsRoute =
+  AuthedDashboardAdminReportsRouteImport.update({
+    id: '/admin/reports',
+    path: '/admin/reports',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedDashboardserviceServicesRoute =
+  AuthedDashboardserviceServicesRouteImport.update({
+    id: '/(service)/services',
+    path: '/services',
+    getParentRoute: () => AuthedDashboardRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -247,33 +264,32 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/track': typeof TrackRoute
-  '/apply/$serviceCode': typeof ApplyServiceCodeRouteRouteWithChildren
-  '/cashier': typeof AuthedCashierRoute
-  '/dashboard': typeof AuthedDashboardRoute
-  '/notifications': typeof AuthedNotificationsRoute
-  '/payment-history': typeof AuthedPaymentHistoryRoute
-  '/staff-dashboard': typeof AuthedStaffDashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/apply/': typeof ApplyIndexRoute
-  '/services': typeof AuthedserviceServicesRoute
-  '/admin/reports': typeof AuthedAdminReportsRoute
-  '/admin/services': typeof AuthedAdminServicesRoute
-  '/admin/staff': typeof AuthedAdminStaffRoute
-  '/my-requests/$requestId': typeof AuthedMyRequestsRequestIdRoute
-  '/requests/$requestId': typeof AuthedRequestsRequestIdRoute
-  '/system-admin/accounts': typeof AuthedSystemAdminAccountsRoute
-  '/system-admin/audit': typeof AuthedSystemAdminAuditRoute
-  '/system-admin/health': typeof AuthedSystemAdminHealthRoute
-  '/system-admin/security': typeof AuthedSystemAdminSecurityRoute
-  '/apply/$serviceCode/case': typeof ApplyServiceCodeCaseRoute
-  '/apply/$serviceCode/details': typeof ApplyServiceCodeDetailsRoute
-  '/apply/$serviceCode/documents': typeof ApplyServiceCodeDocumentsRoute
-  '/apply/$serviceCode/review': typeof ApplyServiceCodeReviewRoute
-  '/admin/': typeof AuthedAdminIndexRoute
-  '/my-requests/': typeof AuthedMyRequestsIndexRoute
-  '/requests/': typeof AuthedRequestsIndexRoute
-  '/apply/$serviceCode/': typeof ApplyServiceCodeIndexRoute
-  '/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
+  '/apply/$serviceCode': typeof AuthedApplyServiceCodeRouteRouteWithChildren
+  '/cashier': typeof AuthedDashboardCashierRoute
+  '/dashboard': typeof AuthedDashboardDashboardRoute
+  '/notifications': typeof AuthedDashboardNotificationsRoute
+  '/payment-history': typeof AuthedDashboardPaymentHistoryRoute
+  '/staff-dashboard': typeof AuthedDashboardStaffDashboardRoute
+  '/services': typeof AuthedDashboardserviceServicesRoute
+  '/admin/reports': typeof AuthedDashboardAdminReportsRoute
+  '/admin/services': typeof AuthedDashboardAdminServicesRoute
+  '/admin/staff': typeof AuthedDashboardAdminStaffRoute
+  '/my-requests/$requestId': typeof AuthedDashboardMyRequestsRequestIdRoute
+  '/requests/$requestId': typeof AuthedDashboardRequestsRequestIdRoute
+  '/system-admin/accounts': typeof AuthedDashboardSystemAdminAccountsRoute
+  '/system-admin/audit': typeof AuthedDashboardSystemAdminAuditRoute
+  '/system-admin/health': typeof AuthedDashboardSystemAdminHealthRoute
+  '/system-admin/security': typeof AuthedDashboardSystemAdminSecurityRoute
+  '/apply/$serviceCode/case': typeof AuthedApplyServiceCodeCaseRoute
+  '/apply/$serviceCode/details': typeof AuthedApplyServiceCodeDetailsRoute
+  '/apply/$serviceCode/documents': typeof AuthedApplyServiceCodeDocumentsRoute
+  '/apply/$serviceCode/review': typeof AuthedApplyServiceCodeReviewRoute
+  '/admin/': typeof AuthedDashboardAdminIndexRoute
+  '/my-requests/': typeof AuthedDashboardMyRequestsIndexRoute
+  '/requests/': typeof AuthedDashboardRequestsIndexRoute
+  '/apply/$serviceCode/': typeof AuthedApplyServiceCodeIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -285,32 +301,31 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/track': typeof TrackRoute
-  '/cashier': typeof AuthedCashierRoute
-  '/dashboard': typeof AuthedDashboardRoute
-  '/notifications': typeof AuthedNotificationsRoute
-  '/payment-history': typeof AuthedPaymentHistoryRoute
-  '/staff-dashboard': typeof AuthedStaffDashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/apply': typeof ApplyIndexRoute
-  '/services': typeof AuthedserviceServicesRoute
-  '/admin/reports': typeof AuthedAdminReportsRoute
-  '/admin/services': typeof AuthedAdminServicesRoute
-  '/admin/staff': typeof AuthedAdminStaffRoute
-  '/my-requests/$requestId': typeof AuthedMyRequestsRequestIdRoute
-  '/requests/$requestId': typeof AuthedRequestsRequestIdRoute
-  '/system-admin/accounts': typeof AuthedSystemAdminAccountsRoute
-  '/system-admin/audit': typeof AuthedSystemAdminAuditRoute
-  '/system-admin/health': typeof AuthedSystemAdminHealthRoute
-  '/system-admin/security': typeof AuthedSystemAdminSecurityRoute
-  '/apply/$serviceCode/case': typeof ApplyServiceCodeCaseRoute
-  '/apply/$serviceCode/details': typeof ApplyServiceCodeDetailsRoute
-  '/apply/$serviceCode/documents': typeof ApplyServiceCodeDocumentsRoute
-  '/apply/$serviceCode/review': typeof ApplyServiceCodeReviewRoute
-  '/admin': typeof AuthedAdminIndexRoute
-  '/my-requests': typeof AuthedMyRequestsIndexRoute
-  '/requests': typeof AuthedRequestsIndexRoute
-  '/apply/$serviceCode': typeof ApplyServiceCodeIndexRoute
-  '/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
+  '/cashier': typeof AuthedDashboardCashierRoute
+  '/dashboard': typeof AuthedDashboardDashboardRoute
+  '/notifications': typeof AuthedDashboardNotificationsRoute
+  '/payment-history': typeof AuthedDashboardPaymentHistoryRoute
+  '/staff-dashboard': typeof AuthedDashboardStaffDashboardRoute
+  '/services': typeof AuthedDashboardserviceServicesRoute
+  '/admin/reports': typeof AuthedDashboardAdminReportsRoute
+  '/admin/services': typeof AuthedDashboardAdminServicesRoute
+  '/admin/staff': typeof AuthedDashboardAdminStaffRoute
+  '/my-requests/$requestId': typeof AuthedDashboardMyRequestsRequestIdRoute
+  '/requests/$requestId': typeof AuthedDashboardRequestsRequestIdRoute
+  '/system-admin/accounts': typeof AuthedDashboardSystemAdminAccountsRoute
+  '/system-admin/audit': typeof AuthedDashboardSystemAdminAuditRoute
+  '/system-admin/health': typeof AuthedDashboardSystemAdminHealthRoute
+  '/system-admin/security': typeof AuthedDashboardSystemAdminSecurityRoute
+  '/apply/$serviceCode/case': typeof AuthedApplyServiceCodeCaseRoute
+  '/apply/$serviceCode/details': typeof AuthedApplyServiceCodeDetailsRoute
+  '/apply/$serviceCode/documents': typeof AuthedApplyServiceCodeDocumentsRoute
+  '/apply/$serviceCode/review': typeof AuthedApplyServiceCodeReviewRoute
+  '/admin': typeof AuthedDashboardAdminIndexRoute
+  '/my-requests': typeof AuthedDashboardMyRequestsIndexRoute
+  '/requests': typeof AuthedDashboardRequestsIndexRoute
+  '/apply/$serviceCode': typeof AuthedApplyServiceCodeIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -324,33 +339,33 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/track': typeof TrackRoute
-  '/apply/$serviceCode': typeof ApplyServiceCodeRouteRouteWithChildren
-  '/_authed/cashier': typeof AuthedCashierRoute
-  '/_authed/dashboard': typeof AuthedDashboardRoute
-  '/_authed/notifications': typeof AuthedNotificationsRoute
-  '/_authed/payment-history': typeof AuthedPaymentHistoryRoute
-  '/_authed/staff-dashboard': typeof AuthedStaffDashboardRoute
+  '/_authed/_dashboard': typeof AuthedDashboardRouteRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
   '/apply/': typeof ApplyIndexRoute
-  '/_authed/(service)/services': typeof AuthedserviceServicesRoute
-  '/_authed/admin/reports': typeof AuthedAdminReportsRoute
-  '/_authed/admin/services': typeof AuthedAdminServicesRoute
-  '/_authed/admin/staff': typeof AuthedAdminStaffRoute
-  '/_authed/my-requests/$requestId': typeof AuthedMyRequestsRequestIdRoute
-  '/_authed/requests/$requestId': typeof AuthedRequestsRequestIdRoute
-  '/_authed/system-admin/accounts': typeof AuthedSystemAdminAccountsRoute
-  '/_authed/system-admin/audit': typeof AuthedSystemAdminAuditRoute
-  '/_authed/system-admin/health': typeof AuthedSystemAdminHealthRoute
-  '/_authed/system-admin/security': typeof AuthedSystemAdminSecurityRoute
-  '/apply/$serviceCode/case': typeof ApplyServiceCodeCaseRoute
-  '/apply/$serviceCode/details': typeof ApplyServiceCodeDetailsRoute
-  '/apply/$serviceCode/documents': typeof ApplyServiceCodeDocumentsRoute
-  '/apply/$serviceCode/review': typeof ApplyServiceCodeReviewRoute
-  '/_authed/admin/': typeof AuthedAdminIndexRoute
-  '/_authed/my-requests/': typeof AuthedMyRequestsIndexRoute
-  '/_authed/requests/': typeof AuthedRequestsIndexRoute
-  '/apply/$serviceCode/': typeof ApplyServiceCodeIndexRoute
-  '/_authed/(service)/service/$serviceCode': typeof AuthedserviceServiceServiceCodeRoute
+  '/_authed/apply/$serviceCode': typeof AuthedApplyServiceCodeRouteRouteWithChildren
+  '/_authed/_dashboard/cashier': typeof AuthedDashboardCashierRoute
+  '/_authed/_dashboard/dashboard': typeof AuthedDashboardDashboardRoute
+  '/_authed/_dashboard/notifications': typeof AuthedDashboardNotificationsRoute
+  '/_authed/_dashboard/payment-history': typeof AuthedDashboardPaymentHistoryRoute
+  '/_authed/_dashboard/staff-dashboard': typeof AuthedDashboardStaffDashboardRoute
+  '/_authed/_dashboard/(service)/services': typeof AuthedDashboardserviceServicesRoute
+  '/_authed/_dashboard/admin/reports': typeof AuthedDashboardAdminReportsRoute
+  '/_authed/_dashboard/admin/services': typeof AuthedDashboardAdminServicesRoute
+  '/_authed/_dashboard/admin/staff': typeof AuthedDashboardAdminStaffRoute
+  '/_authed/_dashboard/my-requests/$requestId': typeof AuthedDashboardMyRequestsRequestIdRoute
+  '/_authed/_dashboard/requests/$requestId': typeof AuthedDashboardRequestsRequestIdRoute
+  '/_authed/_dashboard/system-admin/accounts': typeof AuthedDashboardSystemAdminAccountsRoute
+  '/_authed/_dashboard/system-admin/audit': typeof AuthedDashboardSystemAdminAuditRoute
+  '/_authed/_dashboard/system-admin/health': typeof AuthedDashboardSystemAdminHealthRoute
+  '/_authed/_dashboard/system-admin/security': typeof AuthedDashboardSystemAdminSecurityRoute
+  '/_authed/apply/$serviceCode/case': typeof AuthedApplyServiceCodeCaseRoute
+  '/_authed/apply/$serviceCode/details': typeof AuthedApplyServiceCodeDetailsRoute
+  '/_authed/apply/$serviceCode/documents': typeof AuthedApplyServiceCodeDocumentsRoute
+  '/_authed/apply/$serviceCode/review': typeof AuthedApplyServiceCodeReviewRoute
+  '/_authed/_dashboard/admin/': typeof AuthedDashboardAdminIndexRoute
+  '/_authed/_dashboard/my-requests/': typeof AuthedDashboardMyRequestsIndexRoute
+  '/_authed/_dashboard/requests/': typeof AuthedDashboardRequestsIndexRoute
+  '/_authed/apply/$serviceCode/': typeof AuthedApplyServiceCodeIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -364,14 +379,14 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/track'
+    | '/auth/callback'
+    | '/apply/'
     | '/apply/$serviceCode'
     | '/cashier'
     | '/dashboard'
     | '/notifications'
     | '/payment-history'
     | '/staff-dashboard'
-    | '/auth/callback'
-    | '/apply/'
     | '/services'
     | '/admin/reports'
     | '/admin/services'
@@ -390,7 +405,6 @@ export interface FileRouteTypes {
     | '/my-requests/'
     | '/requests/'
     | '/apply/$serviceCode/'
-    | '/service/$serviceCode'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -402,13 +416,13 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/track'
+    | '/auth/callback'
+    | '/apply'
     | '/cashier'
     | '/dashboard'
     | '/notifications'
     | '/payment-history'
     | '/staff-dashboard'
-    | '/auth/callback'
-    | '/apply'
     | '/services'
     | '/admin/reports'
     | '/admin/services'
@@ -427,7 +441,6 @@ export interface FileRouteTypes {
     | '/my-requests'
     | '/requests'
     | '/apply/$serviceCode'
-    | '/service/$serviceCode'
   id:
     | '__root__'
     | '/'
@@ -440,33 +453,33 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/track'
-    | '/apply/$serviceCode'
-    | '/_authed/cashier'
-    | '/_authed/dashboard'
-    | '/_authed/notifications'
-    | '/_authed/payment-history'
-    | '/_authed/staff-dashboard'
+    | '/_authed/_dashboard'
     | '/auth/callback'
     | '/apply/'
-    | '/_authed/(service)/services'
-    | '/_authed/admin/reports'
-    | '/_authed/admin/services'
-    | '/_authed/admin/staff'
-    | '/_authed/my-requests/$requestId'
-    | '/_authed/requests/$requestId'
-    | '/_authed/system-admin/accounts'
-    | '/_authed/system-admin/audit'
-    | '/_authed/system-admin/health'
-    | '/_authed/system-admin/security'
-    | '/apply/$serviceCode/case'
-    | '/apply/$serviceCode/details'
-    | '/apply/$serviceCode/documents'
-    | '/apply/$serviceCode/review'
-    | '/_authed/admin/'
-    | '/_authed/my-requests/'
-    | '/_authed/requests/'
-    | '/apply/$serviceCode/'
-    | '/_authed/(service)/service/$serviceCode'
+    | '/_authed/apply/$serviceCode'
+    | '/_authed/_dashboard/cashier'
+    | '/_authed/_dashboard/dashboard'
+    | '/_authed/_dashboard/notifications'
+    | '/_authed/_dashboard/payment-history'
+    | '/_authed/_dashboard/staff-dashboard'
+    | '/_authed/_dashboard/(service)/services'
+    | '/_authed/_dashboard/admin/reports'
+    | '/_authed/_dashboard/admin/services'
+    | '/_authed/_dashboard/admin/staff'
+    | '/_authed/_dashboard/my-requests/$requestId'
+    | '/_authed/_dashboard/requests/$requestId'
+    | '/_authed/_dashboard/system-admin/accounts'
+    | '/_authed/_dashboard/system-admin/audit'
+    | '/_authed/_dashboard/system-admin/health'
+    | '/_authed/_dashboard/system-admin/security'
+    | '/_authed/apply/$serviceCode/case'
+    | '/_authed/apply/$serviceCode/details'
+    | '/_authed/apply/$serviceCode/documents'
+    | '/_authed/apply/$serviceCode/review'
+    | '/_authed/_dashboard/admin/'
+    | '/_authed/_dashboard/my-requests/'
+    | '/_authed/_dashboard/requests/'
+    | '/_authed/apply/$serviceCode/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -480,7 +493,6 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
   TrackRoute: typeof TrackRoute
-  ApplyServiceCodeRouteRoute: typeof ApplyServiceCodeRouteRouteWithChildren
   AuthCallbackRoute: typeof AuthCallbackRoute
   ApplyIndexRoute: typeof ApplyIndexRoute
 }
@@ -571,252 +583,268 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authed/staff-dashboard': {
-      id: '/_authed/staff-dashboard'
+    '/_authed/_dashboard': {
+      id: '/_authed/_dashboard'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthedDashboardRouteRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/_dashboard/staff-dashboard': {
+      id: '/_authed/_dashboard/staff-dashboard'
       path: '/staff-dashboard'
       fullPath: '/staff-dashboard'
-      preLoaderRoute: typeof AuthedStaffDashboardRouteImport
-      parentRoute: typeof AuthedRouteRoute
+      preLoaderRoute: typeof AuthedDashboardStaffDashboardRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
     }
-    '/_authed/payment-history': {
-      id: '/_authed/payment-history'
+    '/_authed/_dashboard/payment-history': {
+      id: '/_authed/_dashboard/payment-history'
       path: '/payment-history'
       fullPath: '/payment-history'
-      preLoaderRoute: typeof AuthedPaymentHistoryRouteImport
-      parentRoute: typeof AuthedRouteRoute
+      preLoaderRoute: typeof AuthedDashboardPaymentHistoryRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
     }
-    '/_authed/notifications': {
-      id: '/_authed/notifications'
+    '/_authed/_dashboard/notifications': {
+      id: '/_authed/_dashboard/notifications'
       path: '/notifications'
       fullPath: '/notifications'
-      preLoaderRoute: typeof AuthedNotificationsRouteImport
-      parentRoute: typeof AuthedRouteRoute
+      preLoaderRoute: typeof AuthedDashboardNotificationsRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
     }
-    '/_authed/dashboard': {
-      id: '/_authed/dashboard'
+    '/_authed/_dashboard/dashboard': {
+      id: '/_authed/_dashboard/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
-      preLoaderRoute: typeof AuthedDashboardRouteImport
-      parentRoute: typeof AuthedRouteRoute
+      preLoaderRoute: typeof AuthedDashboardDashboardRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
     }
-    '/_authed/cashier': {
-      id: '/_authed/cashier'
+    '/_authed/_dashboard/cashier': {
+      id: '/_authed/_dashboard/cashier'
       path: '/cashier'
       fullPath: '/cashier'
-      preLoaderRoute: typeof AuthedCashierRouteImport
-      parentRoute: typeof AuthedRouteRoute
+      preLoaderRoute: typeof AuthedDashboardCashierRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
     }
-    '/apply/$serviceCode': {
-      id: '/apply/$serviceCode'
+    '/_authed/apply/$serviceCode': {
+      id: '/_authed/apply/$serviceCode'
       path: '/apply/$serviceCode'
       fullPath: '/apply/$serviceCode'
-      preLoaderRoute: typeof ApplyServiceCodeRouteRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthedApplyServiceCodeRouteRouteImport
+      parentRoute: typeof AuthedRouteRoute
     }
-    '/apply/$serviceCode/': {
-      id: '/apply/$serviceCode/'
+    '/_authed/apply/$serviceCode/': {
+      id: '/_authed/apply/$serviceCode/'
       path: '/'
       fullPath: '/apply/$serviceCode/'
-      preLoaderRoute: typeof ApplyServiceCodeIndexRouteImport
-      parentRoute: typeof ApplyServiceCodeRouteRoute
+      preLoaderRoute: typeof AuthedApplyServiceCodeIndexRouteImport
+      parentRoute: typeof AuthedApplyServiceCodeRouteRoute
     }
-    '/_authed/requests/': {
-      id: '/_authed/requests/'
+    '/_authed/_dashboard/requests/': {
+      id: '/_authed/_dashboard/requests/'
       path: '/requests'
       fullPath: '/requests/'
-      preLoaderRoute: typeof AuthedRequestsIndexRouteImport
-      parentRoute: typeof AuthedRouteRoute
+      preLoaderRoute: typeof AuthedDashboardRequestsIndexRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
     }
-    '/_authed/my-requests/': {
-      id: '/_authed/my-requests/'
+    '/_authed/_dashboard/my-requests/': {
+      id: '/_authed/_dashboard/my-requests/'
       path: '/my-requests'
       fullPath: '/my-requests/'
-      preLoaderRoute: typeof AuthedMyRequestsIndexRouteImport
-      parentRoute: typeof AuthedRouteRoute
+      preLoaderRoute: typeof AuthedDashboardMyRequestsIndexRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
     }
-    '/_authed/admin/': {
-      id: '/_authed/admin/'
+    '/_authed/_dashboard/admin/': {
+      id: '/_authed/_dashboard/admin/'
       path: '/admin'
       fullPath: '/admin/'
-      preLoaderRoute: typeof AuthedAdminIndexRouteImport
-      parentRoute: typeof AuthedRouteRoute
+      preLoaderRoute: typeof AuthedDashboardAdminIndexRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
     }
-    '/apply/$serviceCode/review': {
-      id: '/apply/$serviceCode/review'
+    '/_authed/apply/$serviceCode/review': {
+      id: '/_authed/apply/$serviceCode/review'
       path: '/review'
       fullPath: '/apply/$serviceCode/review'
-      preLoaderRoute: typeof ApplyServiceCodeReviewRouteImport
-      parentRoute: typeof ApplyServiceCodeRouteRoute
+      preLoaderRoute: typeof AuthedApplyServiceCodeReviewRouteImport
+      parentRoute: typeof AuthedApplyServiceCodeRouteRoute
     }
-    '/apply/$serviceCode/documents': {
-      id: '/apply/$serviceCode/documents'
+    '/_authed/apply/$serviceCode/documents': {
+      id: '/_authed/apply/$serviceCode/documents'
       path: '/documents'
       fullPath: '/apply/$serviceCode/documents'
-      preLoaderRoute: typeof ApplyServiceCodeDocumentsRouteImport
-      parentRoute: typeof ApplyServiceCodeRouteRoute
+      preLoaderRoute: typeof AuthedApplyServiceCodeDocumentsRouteImport
+      parentRoute: typeof AuthedApplyServiceCodeRouteRoute
     }
-    '/apply/$serviceCode/details': {
-      id: '/apply/$serviceCode/details'
+    '/_authed/apply/$serviceCode/details': {
+      id: '/_authed/apply/$serviceCode/details'
       path: '/details'
       fullPath: '/apply/$serviceCode/details'
-      preLoaderRoute: typeof ApplyServiceCodeDetailsRouteImport
-      parentRoute: typeof ApplyServiceCodeRouteRoute
+      preLoaderRoute: typeof AuthedApplyServiceCodeDetailsRouteImport
+      parentRoute: typeof AuthedApplyServiceCodeRouteRoute
     }
-    '/apply/$serviceCode/case': {
-      id: '/apply/$serviceCode/case'
+    '/_authed/apply/$serviceCode/case': {
+      id: '/_authed/apply/$serviceCode/case'
       path: '/case'
       fullPath: '/apply/$serviceCode/case'
-      preLoaderRoute: typeof ApplyServiceCodeCaseRouteImport
-      parentRoute: typeof ApplyServiceCodeRouteRoute
+      preLoaderRoute: typeof AuthedApplyServiceCodeCaseRouteImport
+      parentRoute: typeof AuthedApplyServiceCodeRouteRoute
     }
-    '/_authed/system-admin/security': {
-      id: '/_authed/system-admin/security'
+    '/_authed/_dashboard/system-admin/security': {
+      id: '/_authed/_dashboard/system-admin/security'
       path: '/system-admin/security'
       fullPath: '/system-admin/security'
-      preLoaderRoute: typeof AuthedSystemAdminSecurityRouteImport
-      parentRoute: typeof AuthedRouteRoute
+      preLoaderRoute: typeof AuthedDashboardSystemAdminSecurityRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
     }
-    '/_authed/system-admin/health': {
-      id: '/_authed/system-admin/health'
+    '/_authed/_dashboard/system-admin/health': {
+      id: '/_authed/_dashboard/system-admin/health'
       path: '/system-admin/health'
       fullPath: '/system-admin/health'
-      preLoaderRoute: typeof AuthedSystemAdminHealthRouteImport
-      parentRoute: typeof AuthedRouteRoute
+      preLoaderRoute: typeof AuthedDashboardSystemAdminHealthRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
     }
-    '/_authed/system-admin/audit': {
-      id: '/_authed/system-admin/audit'
+    '/_authed/_dashboard/system-admin/audit': {
+      id: '/_authed/_dashboard/system-admin/audit'
       path: '/system-admin/audit'
       fullPath: '/system-admin/audit'
-      preLoaderRoute: typeof AuthedSystemAdminAuditRouteImport
-      parentRoute: typeof AuthedRouteRoute
+      preLoaderRoute: typeof AuthedDashboardSystemAdminAuditRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
     }
-    '/_authed/system-admin/accounts': {
-      id: '/_authed/system-admin/accounts'
+    '/_authed/_dashboard/system-admin/accounts': {
+      id: '/_authed/_dashboard/system-admin/accounts'
       path: '/system-admin/accounts'
       fullPath: '/system-admin/accounts'
-      preLoaderRoute: typeof AuthedSystemAdminAccountsRouteImport
-      parentRoute: typeof AuthedRouteRoute
+      preLoaderRoute: typeof AuthedDashboardSystemAdminAccountsRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
     }
-    '/_authed/requests/$requestId': {
-      id: '/_authed/requests/$requestId'
+    '/_authed/_dashboard/requests/$requestId': {
+      id: '/_authed/_dashboard/requests/$requestId'
       path: '/requests/$requestId'
       fullPath: '/requests/$requestId'
-      preLoaderRoute: typeof AuthedRequestsRequestIdRouteImport
-      parentRoute: typeof AuthedRouteRoute
+      preLoaderRoute: typeof AuthedDashboardRequestsRequestIdRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
     }
-    '/_authed/my-requests/$requestId': {
-      id: '/_authed/my-requests/$requestId'
+    '/_authed/_dashboard/my-requests/$requestId': {
+      id: '/_authed/_dashboard/my-requests/$requestId'
       path: '/my-requests/$requestId'
       fullPath: '/my-requests/$requestId'
-      preLoaderRoute: typeof AuthedMyRequestsRequestIdRouteImport
-      parentRoute: typeof AuthedRouteRoute
+      preLoaderRoute: typeof AuthedDashboardMyRequestsRequestIdRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
     }
-    '/_authed/admin/staff': {
-      id: '/_authed/admin/staff'
+    '/_authed/_dashboard/admin/staff': {
+      id: '/_authed/_dashboard/admin/staff'
       path: '/admin/staff'
       fullPath: '/admin/staff'
-      preLoaderRoute: typeof AuthedAdminStaffRouteImport
-      parentRoute: typeof AuthedRouteRoute
+      preLoaderRoute: typeof AuthedDashboardAdminStaffRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
     }
-    '/_authed/admin/services': {
-      id: '/_authed/admin/services'
+    '/_authed/_dashboard/admin/services': {
+      id: '/_authed/_dashboard/admin/services'
       path: '/admin/services'
       fullPath: '/admin/services'
-      preLoaderRoute: typeof AuthedAdminServicesRouteImport
-      parentRoute: typeof AuthedRouteRoute
+      preLoaderRoute: typeof AuthedDashboardAdminServicesRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
     }
-    '/_authed/admin/reports': {
-      id: '/_authed/admin/reports'
+    '/_authed/_dashboard/admin/reports': {
+      id: '/_authed/_dashboard/admin/reports'
       path: '/admin/reports'
       fullPath: '/admin/reports'
-      preLoaderRoute: typeof AuthedAdminReportsRouteImport
-      parentRoute: typeof AuthedRouteRoute
+      preLoaderRoute: typeof AuthedDashboardAdminReportsRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
     }
-    '/_authed/(service)/services': {
-      id: '/_authed/(service)/services'
+    '/_authed/_dashboard/(service)/services': {
+      id: '/_authed/_dashboard/(service)/services'
       path: '/services'
       fullPath: '/services'
-      preLoaderRoute: typeof AuthedserviceServicesRouteImport
-      parentRoute: typeof AuthedRouteRoute
-    }
-    '/_authed/(service)/service/$serviceCode': {
-      id: '/_authed/(service)/service/$serviceCode'
-      path: '/service/$serviceCode'
-      fullPath: '/service/$serviceCode'
-      preLoaderRoute: typeof AuthedserviceServiceServiceCodeRouteImport
-      parentRoute: typeof AuthedRouteRoute
+      preLoaderRoute: typeof AuthedDashboardserviceServicesRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
     }
   }
 }
 
+interface AuthedDashboardRouteRouteChildren {
+  AuthedDashboardCashierRoute: typeof AuthedDashboardCashierRoute
+  AuthedDashboardDashboardRoute: typeof AuthedDashboardDashboardRoute
+  AuthedDashboardNotificationsRoute: typeof AuthedDashboardNotificationsRoute
+  AuthedDashboardPaymentHistoryRoute: typeof AuthedDashboardPaymentHistoryRoute
+  AuthedDashboardStaffDashboardRoute: typeof AuthedDashboardStaffDashboardRoute
+  AuthedDashboardserviceServicesRoute: typeof AuthedDashboardserviceServicesRoute
+  AuthedDashboardAdminReportsRoute: typeof AuthedDashboardAdminReportsRoute
+  AuthedDashboardAdminServicesRoute: typeof AuthedDashboardAdminServicesRoute
+  AuthedDashboardAdminStaffRoute: typeof AuthedDashboardAdminStaffRoute
+  AuthedDashboardMyRequestsRequestIdRoute: typeof AuthedDashboardMyRequestsRequestIdRoute
+  AuthedDashboardRequestsRequestIdRoute: typeof AuthedDashboardRequestsRequestIdRoute
+  AuthedDashboardSystemAdminAccountsRoute: typeof AuthedDashboardSystemAdminAccountsRoute
+  AuthedDashboardSystemAdminAuditRoute: typeof AuthedDashboardSystemAdminAuditRoute
+  AuthedDashboardSystemAdminHealthRoute: typeof AuthedDashboardSystemAdminHealthRoute
+  AuthedDashboardSystemAdminSecurityRoute: typeof AuthedDashboardSystemAdminSecurityRoute
+  AuthedDashboardAdminIndexRoute: typeof AuthedDashboardAdminIndexRoute
+  AuthedDashboardMyRequestsIndexRoute: typeof AuthedDashboardMyRequestsIndexRoute
+  AuthedDashboardRequestsIndexRoute: typeof AuthedDashboardRequestsIndexRoute
+}
+
+const AuthedDashboardRouteRouteChildren: AuthedDashboardRouteRouteChildren = {
+  AuthedDashboardCashierRoute: AuthedDashboardCashierRoute,
+  AuthedDashboardDashboardRoute: AuthedDashboardDashboardRoute,
+  AuthedDashboardNotificationsRoute: AuthedDashboardNotificationsRoute,
+  AuthedDashboardPaymentHistoryRoute: AuthedDashboardPaymentHistoryRoute,
+  AuthedDashboardStaffDashboardRoute: AuthedDashboardStaffDashboardRoute,
+  AuthedDashboardserviceServicesRoute: AuthedDashboardserviceServicesRoute,
+  AuthedDashboardAdminReportsRoute: AuthedDashboardAdminReportsRoute,
+  AuthedDashboardAdminServicesRoute: AuthedDashboardAdminServicesRoute,
+  AuthedDashboardAdminStaffRoute: AuthedDashboardAdminStaffRoute,
+  AuthedDashboardMyRequestsRequestIdRoute:
+    AuthedDashboardMyRequestsRequestIdRoute,
+  AuthedDashboardRequestsRequestIdRoute: AuthedDashboardRequestsRequestIdRoute,
+  AuthedDashboardSystemAdminAccountsRoute:
+    AuthedDashboardSystemAdminAccountsRoute,
+  AuthedDashboardSystemAdminAuditRoute: AuthedDashboardSystemAdminAuditRoute,
+  AuthedDashboardSystemAdminHealthRoute: AuthedDashboardSystemAdminHealthRoute,
+  AuthedDashboardSystemAdminSecurityRoute:
+    AuthedDashboardSystemAdminSecurityRoute,
+  AuthedDashboardAdminIndexRoute: AuthedDashboardAdminIndexRoute,
+  AuthedDashboardMyRequestsIndexRoute: AuthedDashboardMyRequestsIndexRoute,
+  AuthedDashboardRequestsIndexRoute: AuthedDashboardRequestsIndexRoute,
+}
+
+const AuthedDashboardRouteRouteWithChildren =
+  AuthedDashboardRouteRoute._addFileChildren(AuthedDashboardRouteRouteChildren)
+
+interface AuthedApplyServiceCodeRouteRouteChildren {
+  AuthedApplyServiceCodeCaseRoute: typeof AuthedApplyServiceCodeCaseRoute
+  AuthedApplyServiceCodeDetailsRoute: typeof AuthedApplyServiceCodeDetailsRoute
+  AuthedApplyServiceCodeDocumentsRoute: typeof AuthedApplyServiceCodeDocumentsRoute
+  AuthedApplyServiceCodeReviewRoute: typeof AuthedApplyServiceCodeReviewRoute
+  AuthedApplyServiceCodeIndexRoute: typeof AuthedApplyServiceCodeIndexRoute
+}
+
+const AuthedApplyServiceCodeRouteRouteChildren: AuthedApplyServiceCodeRouteRouteChildren =
+  {
+    AuthedApplyServiceCodeCaseRoute: AuthedApplyServiceCodeCaseRoute,
+    AuthedApplyServiceCodeDetailsRoute: AuthedApplyServiceCodeDetailsRoute,
+    AuthedApplyServiceCodeDocumentsRoute: AuthedApplyServiceCodeDocumentsRoute,
+    AuthedApplyServiceCodeReviewRoute: AuthedApplyServiceCodeReviewRoute,
+    AuthedApplyServiceCodeIndexRoute: AuthedApplyServiceCodeIndexRoute,
+  }
+
+const AuthedApplyServiceCodeRouteRouteWithChildren =
+  AuthedApplyServiceCodeRouteRoute._addFileChildren(
+    AuthedApplyServiceCodeRouteRouteChildren,
+  )
+
 interface AuthedRouteRouteChildren {
-  AuthedCashierRoute: typeof AuthedCashierRoute
-  AuthedDashboardRoute: typeof AuthedDashboardRoute
-  AuthedNotificationsRoute: typeof AuthedNotificationsRoute
-  AuthedPaymentHistoryRoute: typeof AuthedPaymentHistoryRoute
-  AuthedStaffDashboardRoute: typeof AuthedStaffDashboardRoute
-  AuthedserviceServicesRoute: typeof AuthedserviceServicesRoute
-  AuthedAdminReportsRoute: typeof AuthedAdminReportsRoute
-  AuthedAdminServicesRoute: typeof AuthedAdminServicesRoute
-  AuthedAdminStaffRoute: typeof AuthedAdminStaffRoute
-  AuthedMyRequestsRequestIdRoute: typeof AuthedMyRequestsRequestIdRoute
-  AuthedRequestsRequestIdRoute: typeof AuthedRequestsRequestIdRoute
-  AuthedSystemAdminAccountsRoute: typeof AuthedSystemAdminAccountsRoute
-  AuthedSystemAdminAuditRoute: typeof AuthedSystemAdminAuditRoute
-  AuthedSystemAdminHealthRoute: typeof AuthedSystemAdminHealthRoute
-  AuthedSystemAdminSecurityRoute: typeof AuthedSystemAdminSecurityRoute
-  AuthedAdminIndexRoute: typeof AuthedAdminIndexRoute
-  AuthedMyRequestsIndexRoute: typeof AuthedMyRequestsIndexRoute
-  AuthedRequestsIndexRoute: typeof AuthedRequestsIndexRoute
-  AuthedserviceServiceServiceCodeRoute: typeof AuthedserviceServiceServiceCodeRoute
+  AuthedDashboardRouteRoute: typeof AuthedDashboardRouteRouteWithChildren
+  AuthedApplyServiceCodeRouteRoute: typeof AuthedApplyServiceCodeRouteRouteWithChildren
 }
 
 const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
-  AuthedCashierRoute: AuthedCashierRoute,
-  AuthedDashboardRoute: AuthedDashboardRoute,
-  AuthedNotificationsRoute: AuthedNotificationsRoute,
-  AuthedPaymentHistoryRoute: AuthedPaymentHistoryRoute,
-  AuthedStaffDashboardRoute: AuthedStaffDashboardRoute,
-  AuthedserviceServicesRoute: AuthedserviceServicesRoute,
-  AuthedAdminReportsRoute: AuthedAdminReportsRoute,
-  AuthedAdminServicesRoute: AuthedAdminServicesRoute,
-  AuthedAdminStaffRoute: AuthedAdminStaffRoute,
-  AuthedMyRequestsRequestIdRoute: AuthedMyRequestsRequestIdRoute,
-  AuthedRequestsRequestIdRoute: AuthedRequestsRequestIdRoute,
-  AuthedSystemAdminAccountsRoute: AuthedSystemAdminAccountsRoute,
-  AuthedSystemAdminAuditRoute: AuthedSystemAdminAuditRoute,
-  AuthedSystemAdminHealthRoute: AuthedSystemAdminHealthRoute,
-  AuthedSystemAdminSecurityRoute: AuthedSystemAdminSecurityRoute,
-  AuthedAdminIndexRoute: AuthedAdminIndexRoute,
-  AuthedMyRequestsIndexRoute: AuthedMyRequestsIndexRoute,
-  AuthedRequestsIndexRoute: AuthedRequestsIndexRoute,
-  AuthedserviceServiceServiceCodeRoute: AuthedserviceServiceServiceCodeRoute,
+  AuthedDashboardRouteRoute: AuthedDashboardRouteRouteWithChildren,
+  AuthedApplyServiceCodeRouteRoute:
+    AuthedApplyServiceCodeRouteRouteWithChildren,
 }
 
 const AuthedRouteRouteWithChildren = AuthedRouteRoute._addFileChildren(
   AuthedRouteRouteChildren,
 )
-
-interface ApplyServiceCodeRouteRouteChildren {
-  ApplyServiceCodeCaseRoute: typeof ApplyServiceCodeCaseRoute
-  ApplyServiceCodeDetailsRoute: typeof ApplyServiceCodeDetailsRoute
-  ApplyServiceCodeDocumentsRoute: typeof ApplyServiceCodeDocumentsRoute
-  ApplyServiceCodeReviewRoute: typeof ApplyServiceCodeReviewRoute
-  ApplyServiceCodeIndexRoute: typeof ApplyServiceCodeIndexRoute
-}
-
-const ApplyServiceCodeRouteRouteChildren: ApplyServiceCodeRouteRouteChildren = {
-  ApplyServiceCodeCaseRoute: ApplyServiceCodeCaseRoute,
-  ApplyServiceCodeDetailsRoute: ApplyServiceCodeDetailsRoute,
-  ApplyServiceCodeDocumentsRoute: ApplyServiceCodeDocumentsRoute,
-  ApplyServiceCodeReviewRoute: ApplyServiceCodeReviewRoute,
-  ApplyServiceCodeIndexRoute: ApplyServiceCodeIndexRoute,
-}
-
-const ApplyServiceCodeRouteRouteWithChildren =
-  ApplyServiceCodeRouteRoute._addFileChildren(
-    ApplyServiceCodeRouteRouteChildren,
-  )
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -829,7 +857,6 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
   TrackRoute: TrackRoute,
-  ApplyServiceCodeRouteRoute: ApplyServiceCodeRouteRouteWithChildren,
   AuthCallbackRoute: AuthCallbackRoute,
   ApplyIndexRoute: ApplyIndexRoute,
 }

@@ -1,7 +1,8 @@
-// ─── Service-layer UI utilities ──────────────────────────────────────────────
-// Shared by ServiceHero, RequirementChecklist, ServiceDetailSheet, ServiceCard.
+// ─── Service-layer utilities ──────────────────────────────────────────────
+// Shared by ServiceHero, ServiceDetailSheet, ServiceCard, the apply wizard's
+// documents step, and submitRequestFn (server-side mandatory-document check).
 // Keep all parsing / formatting / content-filtering logic here so every
-// component that renders service data stays in sync.
+// consumer of service/requirement data stays in sync.
 
 /**
  * Split a `requirement_name` string into a document name (primary) and
@@ -203,4 +204,38 @@ export function getServiceCategory(
 ): ServiceCategory | null {
   if (!departmentId) return null;
   return CATEGORY_BY_DEPARTMENT[departmentId] ?? null;
+}
+
+// ─── Requirement case-tag applicability ──────────────────────────────────────
+// Pure logic, no React/DOM dependency — used by both the applicant wizard
+// (client) and submitRequestFn's mandatory-document check (server), so it
+// lives here rather than in a component file.
+
+export interface RequirementCaseTag {
+  case_tag?: string | null;
+}
+
+/**
+ * Whether a requirement applies to the currently selected service code, based
+ * on its case_tag. Requirements with no case_tag always apply.
+ */
+export function isVisible(
+  req: RequirementCaseTag,
+  selectedCode?: string | null,
+): boolean {
+  if (!req.case_tag) return true;
+  if (!selectedCode) return false;
+  const code = selectedCode.toUpperCase();
+  switch (req.case_tag) {
+    case "marital_only":
+      return code.includes("MARITAL") && !code.includes("NONMARITAL");
+    case "non_marital_only":
+      return code.includes("NONMARITAL");
+    case "brap_only":
+      return code.includes("BRAP");
+    case "foreigner_only":
+      return true;
+    default:
+      return true;
+  }
 }

@@ -16,6 +16,7 @@ import type { RequestDetail } from "~/features/requests/requests.queries";
 import {
   advanceRequestStatusFn,
   getAttachmentSignedUrlFn,
+  revertAttachmentVerificationFn,
   setAttachmentVerificationFn,
 } from "~/features/requests/requests.mutations";
 import { PaymentVerificationPanel } from "~/features/requests/components/PaymentVerificationPanel";
@@ -66,6 +67,20 @@ export default function RequestDetailPage({ request, onUpdated }: RequestDetailP
   const available = nextStatuses(request.status);
 
   const canProcess = can("requests:process");
+  const canApproveRelease = can("requests:approve_release");
+  const canReverseVerification = can("requests:reverse_verification");
+  const hasUnresolvedAttachments = request.attachments.some(
+    (doc) => doc.verificationStatus !== "approved",
+  );
+  const visibleTransitions = available.filter((s) => {
+    if (s === "ready_for_release" && !canApproveRelease) return false;
+    if (s === "processing" && hasUnresolvedAttachments) return false;
+    return true;
+  });
+  const needsApprovalPermission =
+    available.includes("ready_for_release") && !canApproveRelease;
+  const needsAttachmentsResolved =
+    available.includes("processing") && hasUnresolvedAttachments;
 
   async function handleTransition(to: RequestStatus) {
     if (REASON_REQUIRED.includes(to) && !remarks.trim()) {
@@ -106,6 +121,19 @@ export default function RequestDetailPage({ request, onUpdated }: RequestDetailP
       toast.error(res.message);
       return false;
     }
+    onUpdated();
+    return true;
+  }
+
+  async function handleAttachmentRevert(attachmentId: string, reason: string) {
+    const res = await revertAttachmentVerificationFn({
+      data: { attachmentId, reason },
+    });
+    if (res.error) {
+      toast.error(res.message);
+      return false;
+    }
+    toast.success("Decision reopened — the document is pending review again.");
     onUpdated();
     return true;
   }
@@ -189,7 +217,9 @@ export default function RequestDetailPage({ request, onUpdated }: RequestDetailP
                     key={doc.id}
                     doc={doc}
                     canProcess={canProcess}
+                    canReverse={canReverseVerification}
                     onDecide={handleAttachmentDecision}
+                    onRevert={handleAttachmentRevert}
                   />
                 ))}
               </div>
@@ -199,24 +229,37 @@ export default function RequestDetailPage({ request, onUpdated }: RequestDetailP
           <section className="rounded-xl border border-border bg-white p-6">
             <h2 className="mb-4 text-lg font-bold text-foreground">History</h2>
             <ol className="civic-stagger-auto flex flex-col gap-4">
-              {request.logs.map((log) => (
-                <li key={log.id} className="flex gap-4">
-                  <div className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" />
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">
-                      {getStatusDetails(log.actionStatus).label}
-                    </p>
-                    {log.remarks && (
-                      <p className="text-sm text-muted-foreground">
-                        {log.remarks}
+              {request.logs.map((log, index) => {
+                const logStatus = getStatusDetails(log.actionStatus);
+                // Logs come back oldest-first, so the last entry is the
+                // request's current status — the one thing worth the eye
+                // landing on first in an otherwise-quiet gray timeline.
+                const isCurrent = index === request.logs.length - 1;
+                return (
+                  <li key={log.id} className="flex gap-4">
+                    <div
+                      className={`shrink-0 rounded-full ${logStatus.dot} ${
+                        isCurrent
+                          ? "mt-1 size-3 ring-4 ring-primary/15"
+                          : "mt-1.5 size-2"
+                      }`}
+                    />
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">
+                        {logStatus.label}
                       </p>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      {formatDateTime(log.createdAt)} · {log.actorName}
-                    </p>
-                  </div>
-                </li>
-              ))}
+                      {log.remarks && (
+                        <p className="text-sm text-muted-foreground">
+                          {log.remarks}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        {formatDateTime(log.createdAt)} · {log.actorName}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
             </ol>
           </section>
         </div>
@@ -238,34 +281,55 @@ export default function RequestDetailPage({ request, onUpdated }: RequestDetailP
               </p>
             ) : (
               <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="remarks">
-                    Remarks
-                    {available.some((s) => REASON_REQUIRED.includes(s))
-                      ? " (required to reject or mark incomplete)"
-                      : " (optional)"}
-                  </Label>
-                  <Textarea
-                    id="remarks"
-                    rows={3}
-                    value={remarks}
-                    onChange={(e) => setRemarks(e.target.value)}
-                    placeholder="What should the applicant know?"
-                  />
-                </div>
+                {visibleTransitions.length > 0 && (
+                  <>
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor="remarks">
+                        Remarks
+                        {visibleTransitions.some((s) => REASON_REQUIRED.includes(s))
+                          ? " (required to reject or mark incomplete)"
+                          : " (optional)"}
+                      </Label>
+                      <Textarea
+                        id="remarks"
+                        rows={3}
+                        value={remarks}
+                        onChange={(e) => setRemarks(e.target.value)}
+                        placeholder="What should the applicant know?"
+                      />
+                    </div>
 
-                <div className="civic-stagger-auto flex flex-col gap-3">
-                  {available.map((next) => (
-                    <Button
-                      key={next}
-                      variant={next === "rejected" ? "outline" : "default"}
-                      disabled={busy}
-                      onClick={() => handleTransition(next)}
-                    >
-                      {TRANSITION_LABELS[next]}
-                    </Button>
-                  ))}
-                </div>
+                    <div className="civic-stagger-auto flex flex-col gap-3">
+                      {visibleTransitions.map((next) => (
+                        <Button
+                          key={next}
+                          variant={next === "rejected" ? "outline" : "default"}
+                          disabled={busy}
+                          onClick={() => handleTransition(next)}
+                        >
+                          {TRANSITION_LABELS[next]}
+                        </Button>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {needsAttachmentsResolved && (
+                  <p className="civic-enter-sm rounded-lg border border-warning/20 bg-warning/5 p-3 text-xs text-warning-strong">
+                    Every uploaded requirement needs to be accepted first —
+                    some are still pending or rejected.
+                  </p>
+                )}
+
+                {needsApprovalPermission && (
+                  <p className="civic-enter-sm rounded-lg border border-warning/20 bg-warning/5 p-3 text-xs text-warning-strong">
+                    This request is ready for final sign-off, but approving it
+                    for release requires a supervisor or admin.{" "}
+                    {visibleTransitions.length > 0
+                      ? "You can still send it back to processing or reject it below."
+                      : "Ask a supervisor or admin to approve it."}
+                  </p>
+                )}
 
                 {request.status === "ready_for_release" &&
                   request.paymentStatus !== "verified" && (
@@ -279,6 +343,7 @@ export default function RequestDetailPage({ request, onUpdated }: RequestDetailP
 
           <PaymentVerificationPanel
             requestId={request.id}
+            status={request.status}
             feesDue={request.feesDue}
             paymentStatus={request.paymentStatus}
             orNumber={request.orNumber}
@@ -302,19 +367,25 @@ function getFileKind(url: string): "image" | "pdf" | "other" {
 function AttachmentRow({
   doc,
   canProcess,
+  canReverse,
   onDecide,
+  onRevert,
 }: {
   doc: AttachmentDoc;
   canProcess: boolean;
+  canReverse: boolean;
   onDecide: (
     attachmentId: string,
     status: "approved" | "rejected",
     reason?: string,
   ) => Promise<boolean>;
+  onRevert: (attachmentId: string, reason: string) => Promise<boolean>;
 }) {
   const [busy, setBusy] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
+  const [reverting, setReverting] = useState(false);
+  const [revertReason, setRevertReason] = useState("");
   const [viewing, setViewing] = useState(false);
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
 
@@ -351,6 +422,20 @@ function AttachmentRow({
       if (ok) {
         setRejecting(false);
         setReason("");
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleConfirmRevert() {
+    if (!revertReason.trim()) return;
+    setBusy(true);
+    try {
+      const ok = await onRevert(doc.id, revertReason.trim());
+      if (ok) {
+        setReverting(false);
+        setRevertReason("");
       }
     } finally {
       setBusy(false);
@@ -403,8 +488,54 @@ function AttachmentRow({
               </Button>
             </>
           )}
+          {canReverse && doc.verificationStatus !== "pending" && !reverting && (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={busy}
+              onClick={() => setReverting(true)}
+            >
+              Undo decision
+            </Button>
+          )}
         </div>
       </div>
+
+      {reverting && (
+        <div className="civic-enter-sm flex flex-col gap-2 rounded-lg border border-border-light bg-muted/30 p-3">
+          <Label htmlFor={`revert-reason-${doc.id}`}>
+            Why is this decision being reopened?
+          </Label>
+          <Textarea
+            id={`revert-reason-${doc.id}`}
+            rows={2}
+            value={revertReason}
+            onChange={(e) => setRevertReason(e.target.value)}
+            placeholder="What happened, so there's a record of why this was reopened?"
+          />
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy || !revertReason.trim()}
+              onClick={handleConfirmRevert}
+            >
+              Confirm undo
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={busy}
+              onClick={() => {
+                setReverting(false);
+                setRevertReason("");
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
 
       {rejecting && (
         <div className="civic-enter-sm flex flex-col gap-2 rounded-lg border border-border-light bg-muted/30 p-3">

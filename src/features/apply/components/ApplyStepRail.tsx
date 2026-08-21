@@ -34,23 +34,25 @@ export function ApplyStepRail({
 
   return (
     <div className="border-b border-border-light bg-white">
-      <div className="flex items-center justify-between gap-4 px-7 py-3">
+      <div className="flex items-center justify-between gap-4 px-5 py-3 sm:px-8">
         <div className="flex min-w-0 items-center gap-3">
-          <Link to="/" aria-label="CiviCheck home" className="shrink-0">
+          <Link to="/dashboard" aria-label="Back to your dashboard" className="shrink-0">
             <CiviCheckIdentity compact className="[&>span:last-child]:hidden" />
           </Link>
-          <span className="text-lg font-bold text-foreground">CiviCheck</span>
-          <div className="h-4.5 w-px shrink-0 bg-border-light" />
+          <span className="hidden text-lg font-bold text-foreground sm:inline">CiviCheck</span>
+          <div className="hidden h-4.5 w-px shrink-0 bg-border-light sm:block" />
           <span className="truncate text-sm text-muted-foreground">
             {serviceName} · draft in progress
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-4.5">
-          {savedLabel && <span className="text-sm text-muted-foreground">{savedLabel}</span>}
+          {savedLabel && (
+            <span className="hidden text-sm text-muted-foreground sm:inline">{savedLabel}</span>
+          )}
         </div>
       </div>
 
-      <div className="flex items-center gap-3 px-7 py-3">
+      <div className="flex items-center gap-2 px-5 py-3 sm:gap-3 sm:px-8">
         {STEPS.map(({ step, label }, index) => {
           const isDone = step < currentStep;
           const isCurrent = step === currentStep;
@@ -68,8 +70,12 @@ export function ApplyStepRail({
                 >
                   {isDone ? <Check className="civic-enter-scale size-3" /> : step}
                 </span>
+                {/* Full labels reflow the rail into an overflowing single line
+                    below `sm` — the "Step X of 4" heading inside the wizard
+                    card already carries this text there, so the rail can drop
+                    to circles-and-connectors only instead of duplicating it. */}
                 <span
-                  className={`whitespace-nowrap text-sm transition-colors duration-300 ${
+                  className={`sr-only whitespace-nowrap text-sm transition-colors duration-300 sm:not-sr-only ${
                     isCurrent
                       ? "font-bold text-foreground"
                       : isDone
