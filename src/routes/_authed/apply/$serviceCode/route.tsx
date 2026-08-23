@@ -16,13 +16,13 @@ import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
 // service-detail loader.
 export const Route = createFileRoute("/_authed/apply/$serviceCode")({
   loader: ({ params }) => getServiceDetail({ data: params.serviceCode }),
-  // Stepping back and forth through details → case → documents → review
+  // Stepping back and forth through case → details → documents → review
   // re-runs this loader; the service definition can't change mid-application.
   staleTime: 5 * 60_000,
   component: ApplyLayout,
 });
 
-const STEP_PATHS = ["details", "case", "documents", "review"] as const;
+const STEP_PATHS = ["case", "details", "documents", "review"] as const;
 
 function ApplyLayout() {
   const { serviceCode } = Route.useParams();

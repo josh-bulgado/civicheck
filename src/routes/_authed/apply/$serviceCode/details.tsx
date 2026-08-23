@@ -1,8 +1,22 @@
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Controller, useForm } from "react-hook-form";
+import {
+  Controller,
+  useFieldArray,
+  useForm,
+  useWatch,
+  type Control,
+  type UseFormSetValue,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Phone } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "~/components/ui/accordion";
 import {
   Field,
   FieldError,
@@ -27,20 +41,30 @@ import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
 import { RequestSummaryCard } from "~/features/apply/components/RequestSummaryCard";
 import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
+import {
+  impliedSex,
+  reconcileSubjects,
+  subjectsMatchRoles,
+} from "~/lib/subject-fields";
 import { Route as ApplyLayoutRoute } from "./route";
 
 export const Route = createFileRoute("/_authed/apply/$serviceCode/details")({
   component: DetailsStepRoute,
 });
 
-const detailsSchema = z.object({
-  subjectFirstName: z.string().min(1, "First name is required"),
-  subjectMiddleName: z.string(),
-  subjectLastName: z.string().min(1, "Last name is required"),
-  subjectSuffix: z.string(),
-  subjectSex: z.enum(["male", "female"], {
+const subjectSchema = z.object({
+  role: z.string(),
+  firstName: z.string().min(1, "First name is required"),
+  middleName: z.string(),
+  lastName: z.string().min(1, "Last name is required"),
+  suffix: z.string(),
+  sex: z.enum(["male", "female"], {
     errorMap: () => ({ message: "Select the sex on record" }),
   }),
+});
+
+const detailsSchema = z.object({
+  subjects: z.array(subjectSchema).min(1),
   contactNumber: z
     .string()
     .refine(
@@ -79,37 +103,264 @@ const SEXES = [
 
 const SEX_ITEMS = [{ value: NO_SEX, label: "Select sex" }, ...SEXES];
 
+// A single service has nothing to auto-advance to, so its field grid gets a
+// stable no-op instead of a fresh closure every render.
+function NOOP() {}
+
+/** Matches the required fields in `subjectSchema` — first/last name, plus sex
+ * when it isn't implied by the role. */
+function isSubjectComplete(
+  subject: DetailsValues["subjects"][number],
+  role: string,
+) {
+  if (!subject.firstName.trim() || !subject.lastName.trim()) return false;
+  if (impliedSex(role) === null && !subject.sex) return false;
+  return true;
+}
+
+/** The name/suffix/sex inputs for one subject — reused for both the plain
+ * single-subject layout and each accordion item when there's more than one. */
+function SubjectFieldGrid({
+  control,
+  setValue,
+  index,
+  role,
+  onFieldBlur,
+}: {
+  control: Control<DetailsValues>;
+  setValue: UseFormSetValue<DetailsValues>;
+  index: number;
+  role: string;
+  /** Called when the applicant leaves any field in this block. */
+  onFieldBlur: () => void;
+}) {
+  const skipSex = impliedSex(role) !== null;
+  // Generational suffixes (Jr., Sr., III...) are a male naming convention —
+  // don't ask for one on a role that's implied to be a woman, or once the
+  // applicant has picked "Female" for a role (like Child) where sex isn't
+  // implied and is chosen instead.
+  const watchedSex = useWatch({ control, name: `subjects.${index}.sex` });
+  const skipSuffix = (impliedSex(role) ?? watchedSex) === "female";
+
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <Controller
+        control={control}
+        name={`subjects.${index}.firstName`}
+        render={({ field, fieldState }) => (
+          <Field data-invalid={fieldState.invalid}>
+            <FieldLabel htmlFor={`subject-${index}-firstName`}>First name</FieldLabel>
+            <Input
+              id={`subject-${index}-firstName`}
+              placeholder="Juan"
+              {...field}
+              onBlur={() => {
+                field.onBlur();
+                onFieldBlur();
+              }}
+            />
+            {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+          </Field>
+        )}
+      />
+      <Controller
+        control={control}
+        name={`subjects.${index}.middleName`}
+        render={({ field }) => (
+          <Field>
+            <FieldLabel htmlFor={`subject-${index}-middleName`}>Middle name</FieldLabel>
+            <Input
+              id={`subject-${index}-middleName`}
+              placeholder="Santos"
+              {...field}
+              onBlur={() => {
+                field.onBlur();
+                onFieldBlur();
+              }}
+            />
+          </Field>
+        )}
+      />
+      <Controller
+        control={control}
+        name={`subjects.${index}.lastName`}
+        render={({ field, fieldState }) => (
+          <Field data-invalid={fieldState.invalid}>
+            <FieldLabel htmlFor={`subject-${index}-lastName`}>Last name</FieldLabel>
+            <Input
+              id={`subject-${index}-lastName`}
+              placeholder="Dela Cruz"
+              {...field}
+              onBlur={() => {
+                field.onBlur();
+                onFieldBlur();
+              }}
+            />
+            {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+          </Field>
+        )}
+      />
+      {!skipSuffix && (
+        <Controller
+          control={control}
+          name={`subjects.${index}.suffix`}
+          render={({ field }) => (
+            <Field>
+              <FieldLabel htmlFor={`subject-${index}-suffix`}>Suffix</FieldLabel>
+              <Select
+                items={SUFFIXES}
+                value={field.value || NO_SUFFIX}
+                onValueChange={(value) =>
+                  field.onChange(value === NO_SUFFIX ? "" : value)
+                }
+              >
+                <SelectTrigger
+                  id={`subject-${index}-suffix`}
+                  className="w-full"
+                  onBlur={onFieldBlur}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUFFIXES.map((suffix) => (
+                    <SelectItem key={suffix.label} value={suffix.value}>
+                      {suffix.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
+        />
+      )}
+      {!skipSex && (
+        <Controller
+          control={control}
+          name={`subjects.${index}.sex`}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor={`subject-${index}-sex`}>Sex</FieldLabel>
+              <Select<"male" | "female" | typeof NO_SEX>
+                items={SEX_ITEMS}
+                value={(field.value as "male" | "female" | "") || NO_SEX}
+                onValueChange={(value) => {
+                  const next = value === NO_SEX ? "" : value;
+                  field.onChange(next);
+                  // Suffix disappears the moment this role is female — clear
+                  // it right here instead of letting a stray value ride
+                  // along in `form_data` unseen.
+                  if (next === "female") {
+                    setValue(`subjects.${index}.suffix`, "");
+                  }
+                }}
+              >
+                <SelectTrigger
+                  id={`subject-${index}-sex`}
+                  className="w-full"
+                  onBlur={onFieldBlur}
+                >
+                  <SelectValue placeholder="Select sex" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SEX_ITEMS.map((sex) => (
+                    <SelectItem key={sex.value} value={sex.value}>
+                      {sex.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+      )}
+    </div>
+  );
+}
+
 function DetailsStepRoute() {
   const { serviceCode } = Route.useParams();
   const navigate = useNavigate();
   const { displayName, services } = ApplyLayoutRoute.useLoaderData();
-  const { draft, update } = useApplyDraft(serviceCode);
+  const { draft, update, hydrated } = useApplyDraft(serviceCode);
   const selectedService =
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
+  const roles = selectedService?.party_roles?.length
+    ? selectedService.party_roles
+    : ["Subject"];
+
+  // Most services ask about one person; Marriage License asks about two. Keep
+  // `draft.subjects` in sync with whichever service is selected, preserving
+  // anything already typed when the count/roles match.
+  useEffect(() => {
+    if (!hydrated) return;
+    if (subjectsMatchRoles(draft.subjects, roles)) return;
+    update((prev) => ({ subjects: reconcileSubjects(prev.subjects, roles) }));
+    // `roles` is a new array each render (derived from loader data), so key
+    // the effect on its contents instead of its reference.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, roles.join("|"), draft.subjects, update]);
 
   const form = useForm<DetailsValues>({
     resolver: zodResolver(detailsSchema),
     mode: "onBlur",
     values: {
-      subjectFirstName: draft.details.subjectFirstName,
-      subjectMiddleName: draft.details.subjectMiddleName,
-      subjectLastName: draft.details.subjectLastName,
-      subjectSuffix: draft.details.subjectSuffix,
-      subjectSex: draft.details.subjectSex as "male" | "female",
-      contactNumber: draft.details.contactNumber,
+      subjects: reconcileSubjects(
+        draft.subjects,
+        roles,
+      ) as DetailsValues["subjects"],
+      contactNumber: draft.contactNumber,
     },
   });
 
+  const subjectFields = useFieldArray({ control: form.control, name: "subjects" });
+  const showRoleLabels = subjectFields.fields.length > 1;
+
+  // Child's section starts open; once the applicant leaves a section whose
+  // required fields are all filled in, close it and open the next one.
+  const fieldIds = subjectFields.fields.map((f) => f.id).join("|");
+  const [openIds, setOpenIds] = useState<string[]>([]);
+  const advancedIndexes = useRef<Set<number>>(new Set());
+
+  // Re-derive which section starts open whenever the resolved role set
+  // changes shape — adjusted here during render rather than in an effect,
+  // so it lands in the same commit instead of causing an extra render pass.
+  const [seenFieldIds, setSeenFieldIds] = useState(fieldIds);
+  if (fieldIds !== seenFieldIds) {
+    setSeenFieldIds(fieldIds);
+    setOpenIds(subjectFields.fields[0] ? [subjectFields.fields[0].id] : []);
+    advancedIndexes.current = new Set();
+  }
+
+  function handleSectionBlur(index: number) {
+    if (advancedIndexes.current.has(index)) return;
+    const field = subjectFields.fields[index];
+    if (!field) return;
+    if (!isSubjectComplete(form.getValues(`subjects.${index}`), field.role)) return;
+
+    advancedIndexes.current.add(index);
+    const nextField = subjectFields.fields[index + 1];
+    setOpenIds((prev) => {
+      const next = prev.filter((id) => id !== field.id);
+      if (nextField && !next.includes(nextField.id)) next.push(nextField.id);
+      return next;
+    });
+  }
+
   function onSubmit(values: DetailsValues) {
-    update((prev) => ({ details: { ...prev.details, ...values } }));
-    navigate({ to: "/apply/$serviceCode/case", params: { serviceCode } });
+    update(() => ({ subjects: values.subjects, contactNumber: values.contactNumber }));
+    navigate({ to: "/apply/$serviceCode/documents", params: { serviceCode } });
   }
 
   return (
     <WizardShell
-      step={1}
+      step={2}
       title="Who is this document for?"
-      description="Enter the full name of the person named on the civil registry record, exactly as it should appear."
+      description={
+        showRoleLabels
+          ? "Enter each party's full name exactly as it should appear on the civil registry record."
+          : "Enter the full name of the person named on the civil registry record, exactly as it should appear."
+      }
       sidebar={
         selectedService && (
           <RequestSummaryCard serviceName={displayName} fee={selectedService.fee} />
@@ -117,101 +368,40 @@ function DetailsStepRoute() {
       }
     >
       <div className="flex flex-col gap-6">
-        <FieldGroup>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Controller
-              control={form.control}
-              name="subjectFirstName"
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="subjectFirstName">First name</FieldLabel>
-                  <Input id="subjectFirstName" placeholder="Juan" {...field} />
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                </Field>
-              )}
-            />
-            <Controller
-              control={form.control}
-              name="subjectMiddleName"
-              render={({ field }) => (
-                <Field>
-                  <FieldLabel htmlFor="subjectMiddleName">Middle name</FieldLabel>
-                  <Input id="subjectMiddleName" placeholder="Santos" {...field} />
-                </Field>
-              )}
-            />
-            <Controller
-              control={form.control}
-              name="subjectLastName"
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="subjectLastName">Last name</FieldLabel>
-                  <Input id="subjectLastName" placeholder="Dela Cruz" {...field} />
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                </Field>
-              )}
-            />
-            <Controller
-              control={form.control}
-              name="subjectSuffix"
-              render={({ field }) => (
-                <Field>
-                  <FieldLabel htmlFor="subjectSuffix">Suffix</FieldLabel>
-                  <Select
-                    // Without `items`, the trigger prints the raw value ("none")
-                    // instead of the option's label ("None").
-                    items={SUFFIXES}
-                    // `values` only lands once the draft hydrates, so an empty
-                    // or missing suffix both read as the "None" option.
-                    value={field.value || NO_SUFFIX}
-                    onValueChange={(value) =>
-                      field.onChange(value === NO_SUFFIX ? "" : value)
-                    }
-                  >
-                    <SelectTrigger id="subjectSuffix" className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SUFFIXES.map((suffix) => (
-                        <SelectItem key={suffix.label} value={suffix.value}>
-                          {suffix.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-              )}
-            />
-            <Controller
-              control={form.control}
-              name="subjectSex"
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="subjectSex">Sex</FieldLabel>
-                  <Select<"male" | "female" | typeof NO_SEX>
-                    items={SEX_ITEMS}
-                    value={field.value || NO_SEX}
-                    onValueChange={(value) =>
-                      field.onChange(value === NO_SEX ? "" : value)
-                    }
-                  >
-                    <SelectTrigger id="subjectSex" className="w-full">
-                      <SelectValue placeholder="Select sex" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SEX_ITEMS.map((sex) => (
-                        <SelectItem key={sex.value} value={sex.value}>
-                          {sex.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                </Field>
-              )}
-            />
-          </div>
+        {showRoleLabels ? (
+          <Accordion multiple value={openIds} onValueChange={setOpenIds}>
+            {subjectFields.fields.map((subjectField, index) => (
+              <AccordionItem key={subjectField.id} value={subjectField.id}>
+                <AccordionTrigger>
+                  {subjectField.role}&rsquo;s information
+                </AccordionTrigger>
+                <AccordionContent>
+                  <SubjectFieldGrid
+                    control={form.control}
+                    setValue={form.setValue}
+                    index={index}
+                    role={subjectField.role}
+                    onFieldBlur={() => handleSectionBlur(index)}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        ) : (
+          subjectFields.fields.map((subjectField, index) => (
+            <FieldGroup key={subjectField.id}>
+              <SubjectFieldGrid
+                control={form.control}
+                setValue={form.setValue}
+                index={index}
+                role={subjectField.role}
+                onFieldBlur={NOOP}
+              />
+            </FieldGroup>
+          ))
+        )}
 
+        <FieldGroup>
           <Controller
             control={form.control}
             name="contactNumber"
@@ -238,8 +428,11 @@ function DetailsStepRoute() {
         </FieldGroup>
 
         <WizardFooterActions
+          onBack={() =>
+            navigate({ to: "/apply/$serviceCode/case", params: { serviceCode } })
+          }
           onContinue={form.handleSubmit(onSubmit)}
-          continueLabel="Continue to case details"
+          continueLabel="Continue to documents"
         />
       </div>
     </WizardShell>

@@ -7,6 +7,8 @@ import { submitRequestFn } from "~/features/services/services.mutations";
 import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
 import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
+import { placeTypeLabel } from "~/lib/case-fields";
+import { flattenSubjects, impliedSex, subjectFullName } from "~/lib/subject-fields";
 import { Route as ApplyLayoutRoute } from "./route";
 
 export const Route = createFileRoute("/_authed/apply/$serviceCode/review")({
@@ -30,26 +32,20 @@ function ReviewStepRoute() {
     [services, draft.selectedServiceCode],
   );
 
-  const fullName = [
-    draft.details.subjectFirstName,
-    draft.details.subjectMiddleName,
-    draft.details.subjectLastName,
-    draft.details.subjectSuffix,
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  const sexLabel =
-    draft.details.subjectSex === "male"
-      ? "Male"
-      : draft.details.subjectSex === "female"
-        ? "Female"
-        : "—";
+  const showRoleLabels = draft.subjects.length > 1;
+  const sexLabel = (sex: string) =>
+    sex === "male" ? "Male" : sex === "female" ? "Female" : "—";
 
   const finalPurpose =
     draft.caseAnswers.purpose === "Other"
       ? draft.caseAnswers.otherPurpose
       : draft.caseAnswers.purpose;
+
+  const dateLabel = selectedService?.event_date_label || "Date of event";
+  const placeLabel = selectedService?.event_place_label || "Place of event";
+  const referenceLabel = selectedService?.reference_number_label;
+  const asksPurpose = selectedService?.asks_purpose ?? true;
+  const asksBirthDetails = selectedService?.asks_birth_details ?? false;
 
   async function handleSubmit() {
     if (!selectedService) return;
@@ -61,16 +57,22 @@ function ReviewStepRoute() {
           serviceCode: selectedService.service_code,
           fee: Number(selectedService.fee),
           formData: {
-            subject_first_name: draft.details.subjectFirstName,
-            subject_middle_name: draft.details.subjectMiddleName,
-            subject_last_name: draft.details.subjectLastName,
-            subject_suffix: draft.details.subjectSuffix,
-            subject_sex: draft.details.subjectSex,
-            contact_number: draft.details.contactNumber,
-            event_date: draft.details.eventDate,
-            event_place: draft.details.eventPlace,
-            purpose: finalPurpose,
+            ...flattenSubjects(draft.subjects),
+            contact_number: draft.contactNumber,
+            event_date: draft.eventDate,
+            event_place: draft.eventPlace,
             additional_notes: draft.caseAnswers.additionalNotes,
+            ...(asksPurpose ? { purpose: finalPurpose } : {}),
+            ...(referenceLabel
+              ? { reference_number: draft.caseAnswers.referenceNumber }
+              : {}),
+            ...(asksBirthDetails
+              ? {
+                  place_type: draft.caseAnswers.placeType,
+                  informant_name: draft.caseAnswers.informantName,
+                  informant_relationship: draft.caseAnswers.informantRelationship,
+                }
+              : {}),
           },
           documents: draft.documents.map((d) => ({
             requirementName: d.requirementName,
@@ -138,11 +140,25 @@ function ReviewStepRoute() {
             navigate({ to: "/apply/$serviceCode/details", params: { serviceCode } })
           }
         >
-          <ReviewRow label="Subject" value={fullName || "—"} />
-          <ReviewRow label="Sex" value={sexLabel} />
+          {draft.subjects.map((subject, index) => (
+            <ReviewRow
+              key={`name-${index}`}
+              label={showRoleLabels ? subject.role : "Subject"}
+              value={subjectFullName(subject) || "—"}
+            />
+          ))}
+          {draft.subjects
+            .filter((subject) => impliedSex(subject.role) === null)
+            .map((subject, index) => (
+              <ReviewRow
+                key={`sex-${index}`}
+                label={showRoleLabels ? `${subject.role}'s sex` : "Sex"}
+                value={sexLabel(subject.sex)}
+              />
+            ))}
           <ReviewRow
             label="Contact number"
-            value={draft.details.contactNumber ? `+63 ${draft.details.contactNumber}` : "—"}
+            value={draft.contactNumber ? `+63 ${draft.contactNumber}` : "—"}
           />
         </EditSection>
 
@@ -152,9 +168,31 @@ function ReviewStepRoute() {
             navigate({ to: "/apply/$serviceCode/case", params: { serviceCode } })
           }
         >
-          <ReviewRow label="Date of event" value={draft.details.eventDate || "—"} />
-          <ReviewRow label="Place" value={draft.details.eventPlace || "—"} />
-          <ReviewRow label="Purpose" value={finalPurpose || "—"} />
+          <ReviewRow label={dateLabel} value={draft.eventDate || "—"} />
+          <ReviewRow label={placeLabel} value={draft.eventPlace || "—"} />
+          {asksBirthDetails && (
+            <>
+              <ReviewRow
+                label="Place type"
+                value={placeTypeLabel(draft.caseAnswers.placeType)}
+              />
+              <ReviewRow
+                label="Informant"
+                value={draft.caseAnswers.informantName || "—"}
+              />
+              <ReviewRow
+                label="Informant's relationship"
+                value={draft.caseAnswers.informantRelationship || "—"}
+              />
+            </>
+          )}
+          {referenceLabel && (
+            <ReviewRow
+              label={referenceLabel}
+              value={draft.caseAnswers.referenceNumber || "—"}
+            />
+          )}
+          {asksPurpose && <ReviewRow label="Purpose" value={finalPurpose || "—"} />}
           <ReviewRow label="Notes" value={draft.caseAnswers.additionalNotes || "None"} />
         </EditSection>
 

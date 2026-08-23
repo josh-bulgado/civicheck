@@ -1,14 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { isDepartmentScopedRole } from "~/lib/permissions";
 import { insertRequestWithTrackingNumber } from "~/features/requests/tracking-number";
+import { flattenSubjects, type SubjectFields } from "~/lib/subject-fields";
 import { requireActiveSession } from "~/server/auth";
 
 export const encodeWalkInFn = createServerFn({ method: "POST" })
   .validator(
     (data: {
       serviceCode: string;
-      subjectFirstName: string;
-      subjectLastName: string;
+      subjects: SubjectFields[];
       purpose?: string;
       contactNumber?: string;
     }) => data,
@@ -18,10 +18,13 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       "requests:encode_walkin",
     );
 
-    const firstName = data.subjectFirstName.trim();
-    const lastName = data.subjectLastName.trim();
-    if (!firstName || !lastName) {
-      return { error: true, message: "Enter the applicant's first and last name." };
+    const subjects = data.subjects.map((subject) => ({
+      ...subject,
+      firstName: subject.firstName.trim(),
+      lastName: subject.lastName.trim(),
+    }));
+    if (subjects.length === 0 || subjects.some((s) => !s.firstName || !s.lastName)) {
+      return { error: true, message: "Enter each person's first and last name." };
     }
 
     const { data: service, error: serviceError } = await supabase
@@ -44,8 +47,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       request_type: service.service_code,
       fees_due: Number(service.fee ?? 0),
       form_data: {
-        subject_first_name: firstName,
-        subject_last_name: lastName,
+        ...flattenSubjects(subjects),
         purpose: data.purpose?.trim() || null,
         contact_number: data.contactNumber?.trim() || null,
         encoded_by: user.id,
@@ -67,6 +69,6 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       error: false,
       requestId: created.requestId,
       trackingNumber: created.trackingNumber,
-      applicantName: `${firstName} ${lastName}`,
+      applicantName: `${subjects[0].firstName} ${subjects[0].lastName}`,
     };
   });

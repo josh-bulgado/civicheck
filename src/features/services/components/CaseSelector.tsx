@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
 import { Label } from "~/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
@@ -13,6 +13,22 @@ interface CaseSelectorProps {
   services: Service[];
   selectedCode: string | null;
   onSelect: (code: string) => void;
+  /**
+   * Pre-answered dimensions — set when the applicant arrived here via the
+   * On-Time/Delayed birth-registration redirect, which already knows the
+   * marital status and age bracket from the group they switched from. The
+   * corresponding question is skipped rather than re-asked.
+   */
+  presetAge?: string | null;
+  presetMarital?: string | null;
+}
+
+/** Marital status implied by a service's charter name, or null if it doesn't say. */
+export function inferMaritalStatus(name: string): "marital" | "non-marital" | null {
+  const n = name.toLowerCase();
+  if (n.includes("non-marital") || n.includes("nonmarital")) return "non-marital";
+  if (n.includes("marital")) return "marital";
+  return null;
 }
 
 // Parse the DCOLB-style service codes into selection dimensions.
@@ -29,8 +45,8 @@ function parseSelectionSteps(services: Service[]) {
     if (name.includes("80")) ages.add("80+");
     if (name.includes("brap")) programs.add("brap");
     if (name.includes("normal")) programs.add("normal");
-    if (name.includes("non-marital") || name.includes("nonmarital")) maritalStatuses.add("non-marital");
-    if ((name.includes("marital") && !name.includes("non-marital") && !name.includes("nonmarital"))) maritalStatuses.add("marital");
+    const marital = inferMaritalStatus(name);
+    if (marital) maritalStatuses.add(marital);
   }
 
   return {
@@ -55,12 +71,31 @@ function matches(name: string, age: string | null, program: string | null, marit
   return true;
 }
 
-export function CaseSelector({ services, selectedCode, onSelect }: CaseSelectorProps) {
+export function CaseSelector({
+  services,
+  selectedCode,
+  onSelect,
+  presetAge = null,
+  presetMarital = null,
+}: CaseSelectorProps) {
   const steps = parseSelectionSteps(services);
 
-  const [age, setAge] = useState<string | null>(null);
+  const [age, setAge] = useState<string | null>(presetAge);
   const [program, setProgram] = useState<string | null>(null);
-  const [marital, setMarital] = useState<string | null>(null);
+  const [marital, setMarital] = useState<string | null>(presetMarital);
+
+  const showAge = steps.hasAge && !presetAge;
+  const showMarital = steps.hasMarital && !presetMarital;
+  // With both age and marital already known, at most one question (Program)
+  // remains — numbering a single question adds nothing.
+  const showNumbers =
+    [showAge, steps.hasProgram, showMarital].filter(Boolean).length > 1;
+  let stepCounter = 0;
+  function stepPrefix(visible: boolean) {
+    if (!visible || !showNumbers) return "";
+    stepCounter += 1;
+    return `${stepCounter}. `;
+  }
 
   // When age changes, reset downstream
   const handleAge = (val: string) => {
@@ -93,6 +128,18 @@ export function CaseSelector({ services, selectedCode, onSelect }: CaseSelectorP
     }
   };
 
+  // Edge case (not hit by today's groups, all of which also have a Program
+  // dimension): both age and marital arrived preset and nothing else needs
+  // asking — resolve immediately instead of leaving the selector blank.
+  useEffect(() => {
+    if (selectedCode || showAge || steps.hasProgram || showMarital) return;
+    const match = services.find((s) => matches(s.name, age, program, marital));
+    if (match) onSelect(match.service_code);
+    // Runs once per mount of a fully-preset selector; `services`/`onSelect`
+    // are stable for the lifetime of one wizard session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // If only 1 service in group, no selection needed
   if (services.length === 1) return null;
 
@@ -109,10 +156,10 @@ export function CaseSelector({ services, selectedCode, onSelect }: CaseSelectorP
 
       <CardContent className="pt-4 space-y-6">
         {/* Step 1: Age */}
-        {steps.hasAge && (
+        {showAge && (
           <div className="space-y-3">
             <p className="text-sm font-semibold text-foreground">
-              1. Age of the person to be registered
+              {stepPrefix(true)}Age of the person to be registered
             </p>
             <RadioGroup
               value={age ?? ""}
@@ -142,7 +189,7 @@ export function CaseSelector({ services, selectedCode, onSelect }: CaseSelectorP
         {steps.hasProgram && age && (
           <div className="space-y-3">
             <p className="text-sm font-semibold text-foreground">
-              2. Registration program
+              {stepPrefix(true)}Registration program
             </p>
             <RadioGroup
               value={program ?? ""}
@@ -174,10 +221,10 @@ export function CaseSelector({ services, selectedCode, onSelect }: CaseSelectorP
         )}
 
         {/* Step 3: Marital status — shown after program=normal, OR directly if no age/program steps */}
-        {steps.hasMarital && (program === "normal" || (!steps.hasAge && !steps.hasProgram)) && (
+        {showMarital && (program === "normal" || (!steps.hasAge && !steps.hasProgram)) && (
           <div className="space-y-3">
             <p className="text-sm font-semibold text-foreground">
-              {steps.hasAge || steps.hasProgram ? "3." : "1."} Status of the child
+              {stepPrefix(true)}Are the child&rsquo;s parents legally married?
             </p>
             <RadioGroup
               value={marital ?? ""}
@@ -197,7 +244,7 @@ export function CaseSelector({ services, selectedCode, onSelect }: CaseSelectorP
                   >
                     <RadioGroupItem value={m} id={`marital-${m}`} />
                     <Label htmlFor={`marital-${m}`} className="cursor-pointer text-sm">
-                      <span className="font-medium capitalize">{m} Child</span>
+                      <span className="font-medium">{m === "marital" ? "Yes" : "No"}</span>
                       {match && (
                         <span className="case-helper mt-0.5 block text-xs text-muted-foreground">
                           {Number(match.fee) === 0 ? "Free" : `₱${Number(match.fee).toFixed(2)}`}

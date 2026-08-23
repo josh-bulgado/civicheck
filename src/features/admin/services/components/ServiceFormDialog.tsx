@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
 import {
   Collapsible,
   CollapsibleContent,
@@ -48,6 +49,7 @@ import { getServiceChecklist } from "../services.queries";
 import { useCreateServiceWithRequirements } from "../hooks/useCreateServiceWithRequirements";
 import { useUpdateServiceWithRequirements } from "../hooks/useUpdateServiceWithRequirements";
 import type {
+  EventDateDirection,
   Service,
   ServiceClassification,
   ServiceRequirement,
@@ -95,7 +97,14 @@ function buildFormSchema(takenCodes: Set<string>) {
     // request queue rather than blocking the save.
     department_id: z.string().optional(),
     steps: z.array(z.object({ value: z.string() })),
+    party_roles: z.array(z.object({ value: z.string() })),
     requirements: z.array(requirementSchema),
+    event_date_label: z.string().optional(),
+    event_place_label: z.string().optional(),
+    event_date_direction: z.enum(["past", "future", "any"]),
+    reference_number_label: z.string().optional(),
+    asks_purpose: z.boolean(),
+    asks_birth_details: z.boolean(),
     display_group: z.string().optional(),
     display_name: z.string().optional(),
     requirement_group: z.string().optional(),
@@ -134,6 +143,17 @@ const STEP_PLACEHOLDERS = [
   "CLAIM — what the applicant receives, and when.",
 ];
 
+// Every service asks about at least one person; only Marriage License (so far)
+// asks about two, so the placeholder reflects the common case. A function, not
+// a constant, so each caller gets its own array instance to mutate.
+const defaultPartyRoles = () => [{ value: "Subject" }];
+
+const DATE_DIRECTIONS: { value: EventDateDirection; label: string }[] = [
+  { value: "past", label: "Past dates only" },
+  { value: "future", label: "Future dates only" },
+  { value: "any", label: "Any date" },
+];
+
 const EMPTY_REQUIREMENT = {
   requirement_name: "",
   where_to_secure: "",
@@ -150,7 +170,14 @@ function emptyDefaults(): FormValues {
     processing_time: "",
     department_id: UNASSIGNED_DEPARTMENT_VALUE,
     steps: STEP_PLACEHOLDERS.map(() => ({ value: "" })),
+    party_roles: defaultPartyRoles(),
     requirements: [{ ...EMPTY_REQUIREMENT }],
+    event_date_label: "",
+    event_place_label: "",
+    event_date_direction: "past",
+    reference_number_label: "",
+    asks_purpose: true,
+    asks_birth_details: false,
     display_group: "",
     display_name: "",
     requirement_group: "",
@@ -166,8 +193,17 @@ function serviceDefaults(service: Service): FormValues {
     processing_time: service.processing_time ?? "",
     department_id: service.department_id ?? UNASSIGNED_DEPARTMENT_VALUE,
     steps: (service.steps_description ?? []).map((value) => ({ value })),
+    party_roles: service.party_roles?.length
+      ? service.party_roles.map((value) => ({ value }))
+      : defaultPartyRoles(),
     // Filled in once the checklist loads.
     requirements: [],
+    event_date_label: service.event_date_label ?? "",
+    event_place_label: service.event_place_label ?? "",
+    event_date_direction: service.event_date_direction,
+    reference_number_label: service.reference_number_label ?? "",
+    asks_purpose: service.asks_purpose,
+    asks_birth_details: service.asks_birth_details,
     display_group: service.display_group ?? "",
     display_name: service.display_name ?? "",
     requirement_group: service.requirement_group ?? "",
@@ -241,6 +277,10 @@ export function ServiceFormDialog({
   });
 
   const stepFields = useFieldArray({ control: form.control, name: "steps" });
+  const partyRoleFields = useFieldArray({
+    control: form.control,
+    name: "party_roles",
+  });
   const requirementFields = useFieldArray({
     control: form.control,
     name: "requirements",
@@ -331,6 +371,18 @@ export function ServiceFormDialog({
       "steps",
       (source.steps_description ?? []).map((value) => ({ value })),
     );
+    form.setValue(
+      "party_roles",
+      source.party_roles?.length
+        ? source.party_roles.map((value) => ({ value }))
+        : defaultPartyRoles(),
+    );
+    form.setValue("event_date_label", source.event_date_label ?? "");
+    form.setValue("event_place_label", source.event_place_label ?? "");
+    form.setValue("event_date_direction", source.event_date_direction);
+    form.setValue("reference_number_label", source.reference_number_label ?? "");
+    form.setValue("asks_purpose", source.asks_purpose);
+    form.setValue("asks_birth_details", source.asks_birth_details);
 
     setChecklistLoading(true);
     try {
@@ -357,6 +409,10 @@ export function ServiceFormDialog({
       .map((step) => step.value.trim())
       .filter((step) => step.length > 0);
 
+    const partyRoles = values.party_roles
+      .map((role) => role.value.trim())
+      .filter((role) => role.length > 0);
+
     const requirements = values.requirements.map((requirement) => ({
       requirement_name: requirement.requirement_name.trim(),
       where_to_secure: requirement.where_to_secure?.trim() || null,
@@ -375,6 +431,14 @@ export function ServiceFormDialog({
           ? null
           : values.department_id,
       steps_description: steps,
+      // Never save zero roles — the intake form needs at least one person block.
+      party_roles: partyRoles.length > 0 ? partyRoles : ["Subject"],
+      event_date_label: values.event_date_label?.trim() || null,
+      event_place_label: values.event_place_label?.trim() || null,
+      event_date_direction: values.event_date_direction,
+      reference_number_label: values.reference_number_label?.trim() || null,
+      asks_purpose: values.asks_purpose,
+      asks_birth_details: values.asks_birth_details,
       display_group: values.display_group?.trim() || null,
       display_name: values.display_name?.trim() || null,
       requirement_group: values.requirement_group?.trim() || null,
@@ -733,6 +797,221 @@ export function ServiceFormDialog({
                   <Plus className="mr-1.5 size-3.5" />
                   Add step
                 </Button>
+              </div>
+
+              {/* ── Person roles ───────────────────────────────────────── */}
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Person Roles
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Who this service&rsquo;s intake form asks about. Most
+                    services need just one — the record&rsquo;s subject.
+                    Marriage License needs two: Bride and Groom.
+                  </p>
+                </div>
+
+                {partyRoleFields.fields.map((roleField, index) => (
+                  <div key={roleField.id} className="flex items-center gap-2">
+                    <Controller
+                      control={form.control}
+                      name={`party_roles.${index}.value`}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          placeholder="Subject"
+                          aria-label={`Person role ${index + 1}`}
+                        />
+                      )}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 text-muted-foreground hover:text-destructive"
+                      disabled={partyRoleFields.fields.length <= 1}
+                      onClick={() => partyRoleFields.remove(index)}
+                      aria-label={`Remove person role ${index + 1}`}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                ))}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => partyRoleFields.append({ value: "" })}
+                >
+                  <Plus className="mr-1.5 size-3.5" />
+                  Add person role
+                </Button>
+              </div>
+
+              {/* ── Case details ────────────────────────────────────────── */}
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Case Details
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    How the applicant&rsquo;s case-details step reads for this
+                    service. Leave the labels blank to use the generic
+                    &ldquo;Date of event&rdquo; / &ldquo;Place of
+                    event&rdquo; wording.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Controller
+                    control={form.control}
+                    name="event_date_label"
+                    render={({ field }) => (
+                      <Field>
+                        <FieldLabel htmlFor="service-event-date-label">
+                          Date label
+                        </FieldLabel>
+                        <Input
+                          {...field}
+                          id="service-event-date-label"
+                          placeholder="Date of event"
+                        />
+                      </Field>
+                    )}
+                  />
+
+                  <Controller
+                    control={form.control}
+                    name="event_place_label"
+                    render={({ field }) => (
+                      <Field>
+                        <FieldLabel htmlFor="service-event-place-label">
+                          Place label
+                        </FieldLabel>
+                        <Input
+                          {...field}
+                          id="service-event-place-label"
+                          placeholder="Place of event"
+                        />
+                      </Field>
+                    )}
+                  />
+                </div>
+
+                <Controller
+                  control={form.control}
+                  name="event_date_direction"
+                  render={({ field }) => (
+                    <Field>
+                      <FieldLabel htmlFor="service-event-date-direction">
+                        Date direction
+                      </FieldLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger
+                          id="service-event-date-direction"
+                          className="w-full"
+                        >
+                          <SelectValue>
+                            {(value) =>
+                              DATE_DIRECTIONS.find((d) => d.value === value)
+                                ?.label
+                            }
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            {DATE_DIRECTIONS.map((direction) => (
+                              <SelectItem
+                                key={direction.value}
+                                value={direction.value}
+                              >
+                                {direction.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      <FieldDescription>
+                        Most services register something that already
+                        happened. Use &ldquo;Future dates only&rdquo; for a
+                        prospective service like Marriage License.
+                      </FieldDescription>
+                    </Field>
+                  )}
+                />
+
+                <Controller
+                  control={form.control}
+                  name="reference_number_label"
+                  render={({ field }) => (
+                    <Field>
+                      <FieldLabel htmlFor="service-reference-number-label">
+                        Reference number label{" "}
+                        <span className="font-normal text-muted-foreground">
+                          (optional)
+                        </span>
+                      </FieldLabel>
+                      <Input
+                        {...field}
+                        id="service-reference-number-label"
+                        placeholder="Leave blank to hide this field"
+                      />
+                      <FieldDescription>
+                        Adds an optional field to the case step so staff can
+                        start looking up an existing record or case before the
+                        applicant&rsquo;s visit, e.g. &ldquo;Registry/OCT
+                        number (if known)&rdquo;.
+                      </FieldDescription>
+                    </Field>
+                  )}
+                />
+
+                <Controller
+                  control={form.control}
+                  name="asks_purpose"
+                  render={({ field }) => (
+                    <label className="flex cursor-pointer items-start gap-2.5">
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={(checked) => field.onChange(checked === true)}
+                        className="mt-0.5"
+                      />
+                      <span className="text-sm text-foreground">
+                        Ask &ldquo;Purpose of request&rdquo;
+                        <span className="block text-xs font-normal text-muted-foreground">
+                          Only relevant when the applicant is requesting a copy of
+                          something that already exists (e.g. CTC). Turn this off
+                          for registration/license/correction services — there&rsquo;s
+                          no downstream &ldquo;purpose&rdquo; to ask about.
+                        </span>
+                      </span>
+                    </label>
+                  )}
+                />
+
+                <Controller
+                  control={form.control}
+                  name="asks_birth_details"
+                  render={({ field }) => (
+                    <label className="flex cursor-pointer items-start gap-2.5">
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={(checked) => field.onChange(checked === true)}
+                        className="mt-0.5"
+                      />
+                      <span className="text-sm text-foreground">
+                        Ask birth-specific details
+                        <span className="block text-xs font-normal text-muted-foreground">
+                          Adds who the informant is and whether the birth took
+                          place at a hospital/clinic or at home. Only turn this on
+                          for birth registration services.
+                        </span>
+                      </span>
+                    </label>
+                  )}
+                />
               </div>
 
               {/* ── Checklist of requirements ──────────────────────────── */}

@@ -33,6 +33,20 @@ function formatKey(key: string) {
     .join(" ");
 }
 
+/**
+ * `event_date`/`event_place`/`reference_number` carry a per-service label
+ * (e.g. "Date of birth" for a birth service) configured in Admin → Services —
+ * show that instead of the generic humanized key when the service set one.
+ */
+function formDataLabel(key: string, request: MyRequestDetail) {
+  if (key === "event_date" && request.eventDateLabel) return request.eventDateLabel;
+  if (key === "event_place" && request.eventPlaceLabel) return request.eventPlaceLabel;
+  if (key === "reference_number" && request.referenceNumberLabel) {
+    return request.referenceNumberLabel;
+  }
+  return formatKey(key);
+}
+
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString("en-US", {
     month: "short",
@@ -113,7 +127,7 @@ export default function MyRequestDetailPage({ request, onUpdated }: MyRequestDet
                 return (
                   <div key={key}>
                     <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                      {formatKey(key)}
+                      {formDataLabel(key, request)}
                     </dt>
                     <dd className="text-sm text-foreground">
                       {key === "event_date"

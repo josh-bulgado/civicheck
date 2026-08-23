@@ -8,6 +8,8 @@ export interface EncodableService {
   fee: number;
   displayGroup: string | null;
   processingTime: string;
+  /** Who this service asks about, e.g. ["Subject"] or ["Bride", "Groom"]. */
+  partyRoles: string[];
 }
 
 export const getEncodableServicesFn = createServerFn({ method: "GET" }).handler(
@@ -19,7 +21,7 @@ export const getEncodableServicesFn = createServerFn({ method: "GET" }).handler(
     let query = supabase
       .from("services_registry")
       .select(
-        "service_code, name, display_name, fee, department_id, display_group, processing_time",
+        "service_code, name, display_name, fee, department_id, display_group, processing_time, party_roles",
       )
       .order("name", { ascending: true });
 
@@ -37,6 +39,7 @@ export const getEncodableServicesFn = createServerFn({ method: "GET" }).handler(
       fee: Number(service.fee ?? 0),
       displayGroup: service.display_group,
       processingTime: service.processing_time,
+      partyRoles: service.party_roles?.length ? service.party_roles : ["Subject"],
     }));
   },
 );

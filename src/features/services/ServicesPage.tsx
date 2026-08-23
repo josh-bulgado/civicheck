@@ -443,7 +443,7 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                               Save checklist
                             </Link>
                             <Link
-                              to="/apply/$serviceCode/details"
+                              to="/apply/$serviceCode/case"
                               params={{
                                 serviceCode:
                                   service.display_group ?? service.service_code,

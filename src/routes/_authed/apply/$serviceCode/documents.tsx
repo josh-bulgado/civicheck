@@ -11,6 +11,7 @@ import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
 import { RequestSummaryCard } from "~/features/apply/components/RequestSummaryCard";
 import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
+import { subjectFullName } from "~/lib/subject-fields";
 import { Route as ApplyLayoutRoute } from "./route";
 
 export const Route = createFileRoute("/_authed/apply/$serviceCode/documents")({
@@ -32,9 +33,7 @@ function DocumentsStepRoute() {
   const { draft, update, hydrated } = useApplyDraft(serviceCode);
   const selectedService =
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
-  const subjectName = [draft.details.subjectFirstName, draft.details.subjectLastName]
-    .filter(Boolean)
-    .join(" ");
+  const subjectName = subjectFullName(draft.subjects[0]);
   const purpose =
     draft.caseAnswers.purpose === "Other"
       ? draft.caseAnswers.otherPurpose
@@ -119,7 +118,7 @@ function DocumentsStepRoute() {
             serviceName={displayName}
             fee={selectedService.fee}
             subjectName={subjectName || undefined}
-            purpose={purpose || undefined}
+            purpose={selectedService?.asks_purpose ? purpose || undefined : undefined}
           />
         )
       }
@@ -239,7 +238,7 @@ function DocumentsStepRoute() {
 
       <WizardFooterActions
         onBack={() =>
-          navigate({ to: "/apply/$serviceCode/case", params: { serviceCode } })
+          navigate({ to: "/apply/$serviceCode/details", params: { serviceCode } })
         }
         onContinue={() =>
           navigate({ to: "/apply/$serviceCode/review", params: { serviceCode } })

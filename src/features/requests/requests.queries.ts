@@ -34,6 +34,9 @@ type ServiceEmbed = {
   processing_time?: string;
   department_id?: string | null;
   departments?: { id: string; name: string } | { id: string; name: string }[] | null;
+  event_date_label?: string | null;
+  event_place_label?: string | null;
+  reference_number_label?: string | null;
 };
 
 /**
@@ -291,7 +294,8 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       .select(
         `id, tracking_number, request_type, status, payment_status, or_number,
          fees_due, form_data, applicant_id, created_at, updated_at,
-         services_registry(name, display_name, processing_time, department_id, departments(id, name)),
+         services_registry(name, display_name, processing_time, department_id, departments(id, name),
+           event_date_label, event_place_label, reference_number_label),
          profiles(first_name, last_name)`,
       )
       .eq("id", data.requestId)
@@ -338,6 +342,9 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       serviceName: service?.display_name || service?.name || row.request_type,
       ...departmentOf(service),
       processingTime: service?.processing_time ?? null,
+      eventDateLabel: service?.event_date_label ?? null,
+      eventPlaceLabel: service?.event_place_label ?? null,
+      referenceNumberLabel: service?.reference_number_label ?? null,
       applicantName: applicantNameOf(row),
       createdAt: row.created_at,
       updatedAt: row.updated_at,

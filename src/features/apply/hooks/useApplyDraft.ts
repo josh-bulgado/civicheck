@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import type { SubjectFields } from "~/lib/subject-fields";
 
 export interface ApplyDraftDocument {
   requirementId: string;
@@ -11,20 +12,28 @@ export interface ApplyDraftDocument {
 
 export interface ApplyDraft {
   selectedServiceCode: string | null;
-  details: {
-    subjectFirstName: string;
-    subjectMiddleName: string;
-    subjectLastName: string;
-    subjectSuffix: string;
-    subjectSex: string;
-    contactNumber: string;
-    eventDate: string;
-    eventPlace: string;
-  };
+  /**
+   * Set only when this draft was seeded by a cross-group redirect (see
+   * `seedDraftForGroup`) — consumed once by the case-selector step to skip
+   * questions already answered in the group the applicant switched from.
+   */
+  presetAge: string | null;
+  presetMarital: string | null;
+  /** One entry per person the service asks about — see `subject-fields.ts`. */
+  subjects: SubjectFields[];
+  contactNumber: string;
+  eventDate: string;
+  eventPlace: string;
   caseAnswers: {
     purpose: string;
     otherPurpose: string;
     additionalNotes: string;
+    /** Only meaningful when the service defines `reference_number_label`. */
+    referenceNumber: string;
+    /** The rest are only meaningful when the service has `asks_birth_details`. */
+    placeType: string;
+    informantName: string;
+    informantRelationship: string;
   };
   documents: ApplyDraftDocument[];
   updatedAt: string | null;
@@ -32,20 +41,20 @@ export interface ApplyDraft {
 
 export const DEFAULT_APPLY_DRAFT: ApplyDraft = {
   selectedServiceCode: null,
-  details: {
-    subjectFirstName: "",
-    subjectMiddleName: "",
-    subjectLastName: "",
-    subjectSuffix: "",
-    subjectSex: "",
-    contactNumber: "",
-    eventDate: "",
-    eventPlace: "",
-  },
+  presetAge: null,
+  presetMarital: null,
+  subjects: [],
+  contactNumber: "",
+  eventDate: "",
+  eventPlace: "",
   caseAnswers: {
     purpose: "Local Use (ID, Barangay, etc.)",
     otherPurpose: "",
     additionalNotes: "",
+    referenceNumber: "",
+    placeType: "",
+    informantName: "",
+    informantRelationship: "",
   },
   documents: [],
   updatedAt: null,
@@ -53,6 +62,25 @@ export const DEFAULT_APPLY_DRAFT: ApplyDraft = {
 
 function storageKey(groupOrCode: string) {
   return `civicheck.apply.${groupOrCode}`;
+}
+
+/**
+ * Writes a fresh draft under a *different* group/code's storage key — used
+ * when the On-Time/Delayed birth-registration redirect switches the
+ * applicant to a different `display_group`, which has its own draft key.
+ * Not a hook: this fires once, outside of any component bound to that key.
+ */
+export function seedDraftForGroup(groupOrCode: string, seed: Partial<ApplyDraft>) {
+  const next: ApplyDraft = {
+    ...DEFAULT_APPLY_DRAFT,
+    ...seed,
+    updatedAt: new Date().toISOString(),
+  };
+  try {
+    window.localStorage.setItem(storageKey(groupOrCode), JSON.stringify(next));
+  } catch {
+    // storage unavailable/full — the target step falls back to a blank draft
+  }
 }
 
 export function useApplyDraft(groupOrCode: string) {

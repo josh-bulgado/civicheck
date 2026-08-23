@@ -72,3 +72,25 @@ export function addMonths(date: Date, months: number): Date {
   next.setDate(Math.min(date.getDate(), lastDay));
   return next;
 }
+
+/** Whole days from `fromKey` to `toKey` (positive when `toKey` is later). Falls back to 0 for an unparsable key. */
+export function diffInDays(fromKey: string, toKey: string): number {
+  const from = fromDateKey(fromKey);
+  const to = fromDateKey(toKey);
+  if (!from || !to) return 0;
+  const msPerDay = 24 * 60 * 60 * 1000;
+  return Math.round((to.getTime() - from.getTime()) / msPerDay);
+}
+
+/** Age in whole years as of `asOfKey` (defaults to today). Falls back to 0 for an unparsable key. */
+export function ageInYears(birthDateKey: string, asOfKey: string = toDateKey()): number {
+  const birth = fromDateKey(birthDateKey);
+  const asOf = fromDateKey(asOfKey);
+  if (!birth || !asOf) return 0;
+  let age = asOf.getFullYear() - birth.getFullYear();
+  const hasHadBirthdayThisYear =
+    asOf.getMonth() > birth.getMonth() ||
+    (asOf.getMonth() === birth.getMonth() && asOf.getDate() >= birth.getDate());
+  if (!hasHadBirthdayThisYear) age -= 1;
+  return Math.max(age, 0);
+}

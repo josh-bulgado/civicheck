@@ -3,8 +3,8 @@ import { Check } from "lucide-react";
 import { CiviCheckIdentity } from "~/components/brand/civic-identity";
 
 const STEPS = [
-  { step: 1, label: "Your details" },
-  { step: 2, label: "About your case" },
+  { step: 1, label: "About your case" },
+  { step: 2, label: "Your details" },
   { step: 3, label: "Upload documents" },
   { step: 4, label: "Review and submit" },
 ] as const;
