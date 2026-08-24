@@ -5,6 +5,7 @@ import {
   useRouter,
 } from '@tanstack/react-router'
 import type { ErrorComponentProps } from '@tanstack/react-router'
+import { Button, buttonVariants } from '~/components/ui/button'
 
 export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
   const router = useRouter()
@@ -18,25 +19,26 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
     <div className="min-w-0 flex-1 p-4 flex flex-col items-center justify-center gap-6">
       <ErrorComponent error={error} />
       <div className="flex gap-2 items-center flex-wrap">
-        <button
+        <Button
+          type="button"
+          size="lg"
           onClick={() => {
             router.invalidate()
           }}
-          className="min-h-10 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-hover"
         >
           Try Again
-        </button>
+        </Button>
         {isRoot ? (
           <Link
             to="/"
-            className="min-h-10 rounded-lg border border-border bg-white px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted"
+            className={buttonVariants({ variant: 'outline', size: 'lg' })}
           >
             Home
           </Link>
         ) : (
           <Link
             to="/"
-            className="min-h-10 rounded-lg border border-border bg-white px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted"
+            className={buttonVariants({ variant: 'outline', size: 'lg' })}
             onClick={(e) => {
               e.preventDefault()
               window.history.back()

@@ -244,7 +244,7 @@ const RegisterForm = () => {
               control={form.control}
               name="noMiddleName"
               render={({ field }) => (
-                <label className="flex w-fit items-center gap-2.5 text-[12.5px] text-muted-2">
+                <Field orientation="horizontal" className="w-fit">
                   <Checkbox
                     id="noMiddleName"
                     checked={field.value === true}
@@ -259,8 +259,10 @@ const RegisterForm = () => {
                       }
                     }}
                   />
-                  I have no middle name
-                </label>
+                  <FieldLabel htmlFor="noMiddleName">
+                    I have no middle name
+                  </FieldLabel>
+                </Field>
               )}
             />
           </div>
@@ -337,8 +339,12 @@ const RegisterForm = () => {
             control={form.control}
             name="agreeToTerms"
             render={({ field, fieldState }) => (
-              <div style={staggerStyle(4)} className="flex flex-col gap-1.5 pt-1 pb-1.5">
-                <div className="flex items-start gap-2.5">
+              <Field
+                data-invalid={fieldState.invalid}
+                style={staggerStyle(4)}
+                className="gap-1.5 pt-1 pb-1.5"
+              >
+                <Field orientation="horizontal">
                   <Checkbox
                     id="agreeToTerms"
                     checked={field.value === true}
@@ -346,9 +352,8 @@ const RegisterForm = () => {
                       field.onChange(checked === true)
                     }
                     aria-invalid={fieldState.invalid}
-                    className="mt-0.5"
                   />
-                  <label
+                  <FieldLabel
                     htmlFor="agreeToTerms"
                     className="text-[13px] leading-snug text-body"
                   >
@@ -361,12 +366,12 @@ const RegisterForm = () => {
                       Privacy Notice
                     </Link>
                     .
-                  </label>
-                </div>
+                  </FieldLabel>
+                </Field>
                 {fieldState.invalid && (
                   <FieldError errors={[fieldState.error]} />
                 )}
-              </div>
+              </Field>
             )}
           />
 

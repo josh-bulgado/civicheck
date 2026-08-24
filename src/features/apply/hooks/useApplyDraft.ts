@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import type { SubjectFields } from "~/lib/subject-fields";
 
+const APPLY_DRAFT_EVENT = "civicheck:apply-draft";
+
+interface ApplyDraftEventDetail {
+  key: string;
+  draft: ApplyDraft;
+}
+
 export interface ApplyDraftDocument {
   requirementId: string;
   requirementName: string;
@@ -64,6 +71,14 @@ function storageKey(groupOrCode: string) {
   return `civicheck.apply.${groupOrCode}`;
 }
 
+function notifyDraftChange(key: string, draft: ApplyDraft) {
+  window.dispatchEvent(
+    new CustomEvent<ApplyDraftEventDetail>(APPLY_DRAFT_EVENT, {
+      detail: { key, draft },
+    }),
+  );
+}
+
 /**
  * Writes a fresh draft under a *different* group/code's storage key — used
  * when the On-Time/Delayed birth-registration redirect switches the
@@ -76,11 +91,13 @@ export function seedDraftForGroup(groupOrCode: string, seed: Partial<ApplyDraft>
     ...seed,
     updatedAt: new Date().toISOString(),
   };
+  const key = storageKey(groupOrCode);
   try {
-    window.localStorage.setItem(storageKey(groupOrCode), JSON.stringify(next));
+    window.localStorage.setItem(key, JSON.stringify(next));
   } catch {
     // storage unavailable/full — the target step falls back to a blank draft
   }
+  notifyDraftChange(key, next);
 }
 
 export function useApplyDraft(groupOrCode: string) {
@@ -89,6 +106,11 @@ export function useApplyDraft(groupOrCode: string) {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    function handleDraftChange(event: Event) {
+      const { detail } = event as CustomEvent<ApplyDraftEventDetail>;
+      if (detail.key === key) setDraft(detail.draft);
+    }
+
     try {
       const raw = window.localStorage.getItem(key);
       if (raw) setDraft({ ...DEFAULT_APPLY_DRAFT, ...JSON.parse(raw) });
@@ -96,6 +118,8 @@ export function useApplyDraft(groupOrCode: string) {
       // corrupt or unavailable draft — start fresh
     }
     setHydrated(true);
+    window.addEventListener(APPLY_DRAFT_EVENT, handleDraftChange);
+    return () => window.removeEventListener(APPLY_DRAFT_EVENT, handleDraftChange);
   }, [key]);
 
   const update = useCallback(
@@ -112,6 +136,7 @@ export function useApplyDraft(groupOrCode: string) {
         } catch {
           // storage unavailable/full — draft still works for this session
         }
+        queueMicrotask(() => notifyDraftChange(key, next));
         return next;
       });
     },
@@ -125,6 +150,7 @@ export function useApplyDraft(groupOrCode: string) {
       // ignore
     }
     setDraft(DEFAULT_APPLY_DRAFT);
+    notifyDraftChange(key, DEFAULT_APPLY_DRAFT);
   }, [key]);
 
   return { draft, update, clear, hydrated };

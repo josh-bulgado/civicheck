@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Building2, CalendarClock, Files, ShieldCheck } from "lucide-react";
 import { CountUp } from "~/components/motion/count-up";
 import { enterDelay, staggerStyle } from "~/components/motion/stagger";
+import { Button } from "~/components/ui/button";
 import ServiceCard from "~/features/services/components/ServiceCard";
 import { ServiceDirectory } from "~/features/services/components/ServiceDirectory";
 import {
@@ -247,13 +248,14 @@ export default function ServiceCatalogPage({
 
             {remainingCount > 0 && (
               <div className="flex justify-center pt-1">
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="lg"
                   onClick={() => setShowAll(true)}
-                  className="civic-press whitespace-nowrap rounded-lg border border-control-border bg-white px-7 py-3.5 text-base font-bold text-foreground hover:bg-surface-subtle"
                 >
                   Show the remaining {remainingCount} service{remainingCount === 1 ? "" : "s"}
-                </button>
+                </Button>
               </div>
             )}
           </div>

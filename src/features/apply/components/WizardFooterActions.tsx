@@ -29,8 +29,12 @@ export function WizardFooterActions({
       ) : (
         <span />
       )}
-      <div className="flex items-center gap-4">
-        {note && <p className="text-sm text-muted-foreground">{note}</p>}
+      <div className="flex flex-wrap items-center justify-end gap-4">
+        {note && (
+          <p className="text-sm text-muted-foreground" aria-live="polite">
+            {note}
+          </p>
+        )}
         <Button
           type="button"
           onClick={onContinue}
@@ -39,7 +43,7 @@ export function WizardFooterActions({
           {/* A spinner alongside the label makes the wait legible as work in
               progress rather than a button that simply stopped responding. */}
           {continuePending && <Spinner aria-hidden="true" />}
-          {continuePending ? "Saving..." : continueLabel}
+          {continuePending ? "Saving…" : continueLabel}
         </Button>
       </div>
     </div>

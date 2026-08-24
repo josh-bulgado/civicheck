@@ -3,6 +3,7 @@ import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CityGovernmentIdentity, CiviCheckIdentity } from "~/components/brand/civic-identity";
 import { staggerStyle } from "~/components/motion/stagger";
+import { Button, buttonVariants } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 
 const publicLinks = [
@@ -47,15 +48,17 @@ const SiteHeader = () => {
           <Link to="/login" className="text-base font-bold text-primary hover:text-primary-hover">
             Sign in
           </Link>
-          <Link to="/signup" className="inline-flex min-h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-white transition-colors hover:bg-primary-hover">
+          <Link to="/signup" className={buttonVariants({ size: "lg" })}>
             Get started
           </Link>
         </nav>
 
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-lg"
           onClick={() => setMobileMenuOpen((open) => !open)}
-          className="civic-press flex size-11 items-center justify-center rounded-lg text-foreground hover:bg-muted md:hidden"
+          className="md:hidden"
           aria-expanded={mobileMenuOpen}
           aria-controls="mobile-navigation"
           aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
@@ -74,7 +77,7 @@ const SiteHeader = () => {
               )}
             />
           </span>
-        </button>
+        </Button>
       </div>
 
       {mobileMenuOpen ? (

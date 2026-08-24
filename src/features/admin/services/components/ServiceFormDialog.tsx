@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
+import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Checkbox } from "~/components/ui/checkbox";
 import {
   Collapsible,
@@ -25,6 +26,8 @@ import {
   FieldError,
   FieldGroup,
   FieldLabel,
+  FieldLegend,
+  FieldSet,
 } from "~/components/ui/field";
 import {
   InputGroup,
@@ -492,11 +495,13 @@ export function ServiceFormDialog({
 
         <form onSubmit={form.handleSubmit(onSubmit)}>
           {submitted && mutation.error && (
-            <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">
-              {mutation.error instanceof Error
-                ? mutation.error.message
-                : "Unable to save the service. Please try again."}
-            </div>
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>
+                {mutation.error instanceof Error
+                  ? mutation.error.message
+                  : "Unable to save the service. Please try again."}
+              </AlertDescription>
+            </Alert>
           )}
 
           <div className="max-h-[65vh] overflow-y-auto pr-1">
@@ -972,13 +977,13 @@ export function ServiceFormDialog({
                   control={form.control}
                   name="asks_purpose"
                   render={({ field }) => (
-                    <label className="flex cursor-pointer items-start gap-2.5">
+                    <Field orientation="horizontal">
                       <Checkbox
+                        id="service-asks-purpose"
                         checked={field.value}
                         onCheckedChange={(checked) => field.onChange(checked === true)}
-                        className="mt-0.5"
                       />
-                      <span className="text-sm text-foreground">
+                      <FieldLabel htmlFor="service-asks-purpose">
                         Ask &ldquo;Purpose of request&rdquo;
                         <span className="block text-xs font-normal text-muted-foreground">
                           Only relevant when the applicant is requesting a copy of
@@ -986,8 +991,8 @@ export function ServiceFormDialog({
                           for registration/license/correction services — there&rsquo;s
                           no downstream &ldquo;purpose&rdquo; to ask about.
                         </span>
-                      </span>
-                    </label>
+                      </FieldLabel>
+                    </Field>
                   )}
                 />
 
@@ -995,21 +1000,21 @@ export function ServiceFormDialog({
                   control={form.control}
                   name="asks_birth_details"
                   render={({ field }) => (
-                    <label className="flex cursor-pointer items-start gap-2.5">
+                    <Field orientation="horizontal">
                       <Checkbox
+                        id="service-asks-birth-details"
                         checked={field.value}
                         onCheckedChange={(checked) => field.onChange(checked === true)}
-                        className="mt-0.5"
                       />
-                      <span className="text-sm text-foreground">
+                      <FieldLabel htmlFor="service-asks-birth-details">
                         Ask birth-specific details
                         <span className="block text-xs font-normal text-muted-foreground">
                           Adds who the informant is and whether the birth took
                           place at a hospital/clinic or at home. Only turn this on
                           for birth registration services.
                         </span>
-                      </span>
-                    </label>
+                      </FieldLabel>
+                    </Field>
                   )}
                 />
               </div>
@@ -1119,8 +1124,8 @@ export function ServiceFormDialog({
                             control={form.control}
                             name={`requirements.${index}.is_mandatory`}
                             render={({ field }) => (
-                              <Field>
-                                <FieldLabel>Applies to</FieldLabel>
+                              <FieldSet>
+                                <FieldLegend variant="label">Applies to</FieldLegend>
                                 <RadioGroup
                                   value={
                                     field.value ? "required" : "conditional"
@@ -1130,22 +1135,26 @@ export function ServiceFormDialog({
                                   }
                                   className="grid-cols-2 gap-2"
                                 >
-                                  <label className="flex cursor-pointer items-center gap-2 rounded-md border border-border-strong bg-white px-2.5 py-2 text-xs font-medium">
-                                    <RadioGroupItem
-                                      value="required"
-                                      id={`requirement-required-${index}`}
-                                    />
-                                    Required
-                                  </label>
-                                  <label className="flex cursor-pointer items-center gap-2 rounded-md border border-border-strong bg-white px-2.5 py-2 text-xs font-medium">
-                                    <RadioGroupItem
-                                      value="conditional"
-                                      id={`requirement-conditional-${index}`}
-                                    />
-                                    If applicable
-                                  </label>
+                                  <FieldLabel htmlFor={`requirement-required-${index}`}>
+                                    <Field orientation="horizontal">
+                                      <RadioGroupItem
+                                        value="required"
+                                        id={`requirement-required-${index}`}
+                                      />
+                                      Required
+                                    </Field>
+                                  </FieldLabel>
+                                  <FieldLabel htmlFor={`requirement-conditional-${index}`}>
+                                    <Field orientation="horizontal">
+                                      <RadioGroupItem
+                                        value="conditional"
+                                        id={`requirement-conditional-${index}`}
+                                      />
+                                      If applicable
+                                    </Field>
+                                  </FieldLabel>
                                 </RadioGroup>
-                              </Field>
+                              </FieldSet>
                             )}
                           />
                         </div>

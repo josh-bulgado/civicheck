@@ -1,7 +1,19 @@
 import { useEffect, useState } from "react";
+import { CheckCircle2 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
-import { Label } from "~/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import {
+  Field,
+  FieldContent,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "~/components/ui/field";
+
+const choiceGroupClass =
+  "grid grid-cols-1 gap-0 overflow-hidden rounded-lg border border-border bg-white divide-y divide-border-light sm:grid-cols-2 sm:divide-x sm:divide-y-0";
+
+const choiceLabelClass =
+  "cursor-pointer has-[>[data-slot=field]]:rounded-none has-[>[data-slot=field]]:border-0 transition-colors hover:bg-primary-tint focus-within:bg-primary-tint has-data-checked:bg-primary-soft/70";
 
 interface Service {
   service_code: string;
@@ -146,129 +158,135 @@ export function CaseSelector({
   const selectedService = services.find((s) => s.service_code === selectedCode);
 
   return (
-    <Card size="sm" className="border-l-4 border-l-brand-gold">
-      <CardHeader className="border-b border-border pb-3">
-        <CardTitle className="text-base font-bold text-foreground">Select Your Case</CardTitle>
-        <p className="text-xs text-muted-foreground">
-          Answer the questions below to find the right service for your situation.
+    <section
+      aria-labelledby="case-selector-title"
+      className="border-y border-border-light py-5 sm:py-6"
+    >
+      <div>
+        <h2
+          id="case-selector-title"
+          className="text-pretty text-lg font-bold text-foreground"
+        >
+          Find the right service
+        </h2>
+        <p className="mt-1 max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground">
+          Choose the answers that match this case. We&rsquo;ll select the correct
+          service.
         </p>
-      </CardHeader>
+      </div>
 
-      <CardContent className="pt-4 space-y-6">
+      <div className="mt-6 flex flex-col gap-6">
         {/* Step 1: Age */}
         {showAge && (
-          <div className="space-y-3">
-            <p className="text-sm font-semibold text-foreground">
+          <FieldSet className="civic-enter-sm gap-3">
+            <FieldLegend variant="label">
               {stepPrefix(true)}Age of the person to be registered
-            </p>
+            </FieldLegend>
             <RadioGroup
               value={age ?? ""}
               onValueChange={handleAge}
-              className="grid grid-cols-2 gap-3"
+              className={choiceGroupClass}
             >
               {steps.ages.map((a) => (
-                <label
+                <FieldLabel
                   key={a}
-                  className={`flex items-center gap-3 rounded-lg border p-3.5 cursor-pointer transition-colors ${
-                    age === a
-                      ? "border-primary bg-primary text-white shadow-sm [&_.case-helper]:text-white/70"
-                      : "border-border-strong bg-white text-foreground hover:border-primary/40 hover:bg-surface-subtle"
-                  }`}
+                  htmlFor={`age-${a}`}
+                  className={choiceLabelClass}
                 >
-                  <RadioGroupItem value={a} id={`age-${a}`} />
-                  <Label htmlFor={`age-${a}`} className="cursor-pointer font-medium text-sm">
-                    {a === "0-79" ? "0 – 79 years old" : "80 years old and above"}
-                  </Label>
-                </label>
+                  <Field orientation="horizontal" className="min-h-14">
+                    <RadioGroupItem value={a} id={`age-${a}`} />
+                    <FieldContent>
+                      {a === "0-79" ? "0 – 79 years old" : "80 years old and above"}
+                    </FieldContent>
+                  </Field>
+                </FieldLabel>
               ))}
             </RadioGroup>
-          </div>
+          </FieldSet>
         )}
 
         {/* Step 2: Program (only after age picked) */}
         {steps.hasProgram && age && (
-          <div className="space-y-3">
-            <p className="text-sm font-semibold text-foreground">
+          <FieldSet className="civic-enter-sm gap-3">
+            <FieldLegend variant="label">
               {stepPrefix(true)}Registration program
-            </p>
+            </FieldLegend>
             <RadioGroup
               value={program ?? ""}
               onValueChange={handleProgram}
-              className="grid grid-cols-2 gap-3"
+              className={choiceGroupClass}
             >
               {steps.programs.map((p) => (
-                <label
+                <FieldLabel
                   key={p}
-                  className={`flex items-center gap-3 rounded-lg border p-3.5 cursor-pointer transition-colors ${
-                    program === p
-                      ? "border-primary bg-primary text-white shadow-sm [&_.case-helper]:text-white/70"
-                      : "border-border-strong bg-white text-foreground hover:border-primary/40 hover:bg-surface-subtle"
-                  }`}
+                  htmlFor={`prog-${p}`}
+                  className={choiceLabelClass}
                 >
-                  <RadioGroupItem value={p} id={`prog-${p}`} />
-                  <Label htmlFor={`prog-${p}`} className="cursor-pointer text-sm">
-                    <span className="font-medium">
-                      {p === "brap" ? "Under BRAP" : "Normal"}
-                    </span>
-                    <span className="case-helper mt-0.5 block text-xs text-muted-foreground">
-                      {p === "brap" ? "Free — PSA assisted program" : "Standard registration"}
-                    </span>
-                  </Label>
-                </label>
+                  <Field orientation="horizontal" className="min-h-16">
+                    <RadioGroupItem value={p} id={`prog-${p}`} />
+                    <FieldContent>
+                      <span className="font-medium">
+                        {p === "brap"
+                          ? "BRAP-assisted registration"
+                          : "Standard registration"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {p === "brap"
+                          ? "PSA-assisted program"
+                          : "Regular filing process"}
+                      </span>
+                    </FieldContent>
+                  </Field>
+                </FieldLabel>
               ))}
             </RadioGroup>
-          </div>
+          </FieldSet>
         )}
 
         {/* Step 3: Marital status — shown after program=normal, OR directly if no age/program steps */}
         {showMarital && (program === "normal" || (!steps.hasAge && !steps.hasProgram)) && (
-          <div className="space-y-3">
-            <p className="text-sm font-semibold text-foreground">
+          <FieldSet className="civic-enter-sm gap-3">
+            <FieldLegend variant="label">
               {stepPrefix(true)}Are the child&rsquo;s parents legally married?
-            </p>
+            </FieldLegend>
             <RadioGroup
               value={marital ?? ""}
               onValueChange={handleMarital}
-              className="grid grid-cols-2 gap-3"
+              className={choiceGroupClass}
             >
-              {steps.maritalStatuses.map((m) => {
-                const match = services.find((s) => matches(s.name, age, program, m));
-                return (
-                  <label
-                    key={m}
-                    className={`flex items-center gap-3 rounded-lg border p-3.5 cursor-pointer transition-colors ${
-                      marital === m
-                        ? "border-primary bg-primary text-white shadow-sm [&_.case-helper]:text-white/70"
-                        : "border-border-strong bg-white text-foreground hover:border-primary/40 hover:bg-surface-subtle"
-                    }`}
-                  >
+              {steps.maritalStatuses.map((m) => (
+                <FieldLabel
+                  key={m}
+                  htmlFor={`marital-${m}`}
+                  className={choiceLabelClass}
+                >
+                  <Field orientation="horizontal" className="min-h-14">
                     <RadioGroupItem value={m} id={`marital-${m}`} />
-                    <Label htmlFor={`marital-${m}`} className="cursor-pointer text-sm">
-                      <span className="font-medium">{m === "marital" ? "Yes" : "No"}</span>
-                      {match && (
-                        <span className="case-helper mt-0.5 block text-xs text-muted-foreground">
-                          {Number(match.fee) === 0 ? "Free" : `₱${Number(match.fee).toFixed(2)}`}
-                        </span>
-                      )}
-                    </Label>
-                  </label>
-                );
-              })}
+                    <FieldContent>
+                      <span className="font-medium">
+                        {m === "marital" ? "Yes" : "No"}
+                      </span>
+                    </FieldContent>
+                  </Field>
+                </FieldLabel>
+              ))}
             </RadioGroup>
-          </div>
+          </FieldSet>
         )}
 
-        {/* Selected result summary */}
+        {/* The exact service and fee are shown in the selected-service strip above. */}
         {selectedService && (
-          <div className="rounded-lg border border-primary/25 bg-primary-soft px-4 py-3 text-sm text-primary-hover">
-            <span className="font-semibold">Selected: </span>
-            {selectedService.name} —{" "}
-            <span className="font-semibold">
-              {Number(selectedService.fee) === 0 ? "Free" : `₱${Number(selectedService.fee).toFixed(2)}`}
-            </span>
+          <div
+            role="status"
+            aria-live="polite"
+            className="civic-enter-sm flex items-center gap-2 border-t border-success/20 pt-4 text-sm font-semibold text-success"
+          >
+            <CheckCircle2 className="size-4.5 shrink-0" aria-hidden="true" />
+            Service selected. Check the selection above before continuing.
+            <span className="sr-only">{selectedService.name}</span>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }

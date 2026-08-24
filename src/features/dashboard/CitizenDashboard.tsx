@@ -12,6 +12,16 @@ import {
 } from "lucide-react";
 import { CountUp } from "~/components/motion/count-up";
 import { staggerStyle } from "~/components/motion/stagger";
+import { Badge } from "~/components/ui/badge";
+import { buttonVariants } from "~/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import {
   TERMINAL_STATUSES,
@@ -209,59 +219,57 @@ export function CitizenDashboard({
         ) : (
           <>
             <div className="hidden overflow-x-auto md:block">
-              <table className="w-full border-collapse text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-surface-subtle font-medium text-muted-foreground">
-                    <th className="p-4">Tracking Number</th>
-                    <th className="p-4">Document Type</th>
-                    <th className="p-4">Status</th>
-                    <th className="p-4">Submitted</th>
-                    <th className="p-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="civic-stagger divide-y divide-border">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-surface-subtle">
+                    <TableHead className="p-4">Tracking Number</TableHead>
+                    <TableHead className="p-4">Document Type</TableHead>
+                    <TableHead className="p-4">Status</TableHead>
+                    <TableHead className="p-4">Submitted</TableHead>
+                    <TableHead className="p-4 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="civic-stagger">
                   {activeRequests.slice(0, ACTIVE_PREVIEW_COUNT).map((request, index) => {
                     const status = getStatusDetails(request.status);
                     return (
-                      <tr
+                      <TableRow
                         key={request.id}
                         style={staggerStyle(index)}
                         className="transition-colors duration-200 hover:bg-surface-subtle"
                       >
-                        <td className="p-4 font-mono font-semibold text-foreground">
+                        <TableCell className="p-4 font-mono font-semibold text-foreground">
                           {request.tracking_number}
-                        </td>
-                        <td className="p-4 font-medium text-foreground">
+                        </TableCell>
+                        <TableCell className="p-4 font-medium text-foreground">
                           {request.services_registry?.name || request.request_type}
-                        </td>
-                        <td className="p-4">
-                          <span
-                            className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${status.styles}`}
-                          >
+                        </TableCell>
+                        <TableCell className="p-4">
+                          <Badge variant={status.variant}>
                             {status.label}
-                          </span>
-                        </td>
-                        <td className="p-4 text-muted-foreground">
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="p-4 text-muted-foreground">
                           {new Date(request.created_at).toLocaleDateString("en-US", {
                             month: "short",
                             day: "numeric",
                             year: "numeric",
                           })}
-                        </td>
-                        <td className="p-4 text-right">
+                        </TableCell>
+                        <TableCell className="p-4 text-right">
                           <Link
                             to="/my-requests/$requestId"
                             params={{ requestId: request.id }}
-                            className="civic-press inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
+                            className={buttonVariants({ variant: "outline", size: "sm" })}
                           >
                             Details
                           </Link>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
 
             <div className="civic-stagger divide-y divide-border md:hidden">

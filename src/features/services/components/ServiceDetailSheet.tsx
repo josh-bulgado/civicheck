@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import {
   Sheet,
   SheetContent,
+  SheetClose,
   SheetHeader,
   SheetTitle,
   SheetDescription,
 } from "~/components/ui/sheet";
+import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { Separator } from "~/components/ui/separator";
 import {
@@ -291,19 +293,20 @@ export function ServiceDetailSheet({
         {/* Footer */}
         <div className="p-4 border-t border-border bg-muted/30 flex justify-end gap-2">
           {onEdit && (
-            <button
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={() => onEdit(service)}
-              className="px-4 py-2 border border-border-strong bg-white text-foreground hover:bg-surface-subtle rounded-lg text-xs font-medium transition-colors shadow-sm cursor-pointer"
             >
               Edit Service
-            </button>
+            </Button>
           )}
-          <button
-            onClick={() => onOpenChange(false)}
-            className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg text-xs font-medium transition-colors shadow-sm cursor-pointer"
+          <SheetClose
+            render={<Button type="button" size="sm" />}
           >
             Close Panel
-          </button>
+          </SheetClose>
         </div>
       </SheetContent>
     </Sheet>

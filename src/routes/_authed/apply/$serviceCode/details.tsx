@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   Controller,
@@ -33,13 +33,13 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
 import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
-import { RequestSummaryCard } from "~/features/apply/components/RequestSummaryCard";
 import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
 import {
   impliedSex,
@@ -103,21 +103,6 @@ const SEXES = [
 
 const SEX_ITEMS = [{ value: NO_SEX, label: "Select sex" }, ...SEXES];
 
-// A single service has nothing to auto-advance to, so its field grid gets a
-// stable no-op instead of a fresh closure every render.
-function NOOP() {}
-
-/** Matches the required fields in `subjectSchema` — first/last name, plus sex
- * when it isn't implied by the role. */
-function isSubjectComplete(
-  subject: DetailsValues["subjects"][number],
-  role: string,
-) {
-  if (!subject.firstName.trim() || !subject.lastName.trim()) return false;
-  if (impliedSex(role) === null && !subject.sex) return false;
-  return true;
-}
-
 /** The name/suffix/sex inputs for one subject — reused for both the plain
  * single-subject layout and each accordion item when there's more than one. */
 function SubjectFieldGrid({
@@ -125,14 +110,11 @@ function SubjectFieldGrid({
   setValue,
   index,
   role,
-  onFieldBlur,
 }: {
   control: Control<DetailsValues>;
   setValue: UseFormSetValue<DetailsValues>;
   index: number;
   role: string;
-  /** Called when the applicant leaves any field in this block. */
-  onFieldBlur: () => void;
 }) {
   const skipSex = impliedSex(role) !== null;
   // Generational suffixes (Jr., Sr., III...) are a male naming convention —
@@ -153,11 +135,8 @@ function SubjectFieldGrid({
             <Input
               id={`subject-${index}-firstName`}
               placeholder="Juan"
+              autoComplete="off"
               {...field}
-              onBlur={() => {
-                field.onBlur();
-                onFieldBlur();
-              }}
             />
             {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
           </Field>
@@ -172,11 +151,8 @@ function SubjectFieldGrid({
             <Input
               id={`subject-${index}-middleName`}
               placeholder="Santos"
+              autoComplete="off"
               {...field}
-              onBlur={() => {
-                field.onBlur();
-                onFieldBlur();
-              }}
             />
           </Field>
         )}
@@ -190,11 +166,8 @@ function SubjectFieldGrid({
             <Input
               id={`subject-${index}-lastName`}
               placeholder="Dela Cruz"
+              autoComplete="off"
               {...field}
-              onBlur={() => {
-                field.onBlur();
-                onFieldBlur();
-              }}
             />
             {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
           </Field>
@@ -217,16 +190,17 @@ function SubjectFieldGrid({
                 <SelectTrigger
                   id={`subject-${index}-suffix`}
                   className="w-full"
-                  onBlur={onFieldBlur}
                 >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {SUFFIXES.map((suffix) => (
-                    <SelectItem key={suffix.label} value={suffix.value}>
-                      {suffix.label}
-                    </SelectItem>
-                  ))}
+                  <SelectGroup>
+                    {SUFFIXES.map((suffix) => (
+                      <SelectItem key={suffix.label} value={suffix.value}>
+                        {suffix.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
             </Field>
@@ -257,16 +231,17 @@ function SubjectFieldGrid({
                 <SelectTrigger
                   id={`subject-${index}-sex`}
                   className="w-full"
-                  onBlur={onFieldBlur}
                 >
                   <SelectValue placeholder="Select sex" />
                 </SelectTrigger>
                 <SelectContent>
-                  {SEX_ITEMS.map((sex) => (
-                    <SelectItem key={sex.value} value={sex.value}>
-                      {sex.label}
-                    </SelectItem>
-                  ))}
+                  <SelectGroup>
+                    {SEX_ITEMS.map((sex) => (
+                      <SelectItem key={sex.value} value={sex.value}>
+                        {sex.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
@@ -281,7 +256,7 @@ function SubjectFieldGrid({
 function DetailsStepRoute() {
   const { serviceCode } = Route.useParams();
   const navigate = useNavigate();
-  const { displayName, services } = ApplyLayoutRoute.useLoaderData();
+  const { services } = ApplyLayoutRoute.useLoaderData();
   const { draft, update, hydrated } = useApplyDraft(serviceCode);
   const selectedService =
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
@@ -316,11 +291,12 @@ function DetailsStepRoute() {
   const subjectFields = useFieldArray({ control: form.control, name: "subjects" });
   const showRoleLabels = subjectFields.fields.length > 1;
 
-  // Child's section starts open; once the applicant leaves a section whose
-  // required fields are all filled in, close it and open the next one.
+  // Keep sections user-controlled. Automatically collapsing a completed person
+  // can hide a mistake immediately after the applicant leaves a field.
   const fieldIds = subjectFields.fields.map((f) => f.id).join("|");
-  const [openIds, setOpenIds] = useState<string[]>([]);
-  const advancedIndexes = useRef<Set<number>>(new Set());
+  const [openIds, setOpenIds] = useState<string[]>(() =>
+    subjectFields.fields[0] ? [subjectFields.fields[0].id] : [],
+  );
 
   // Re-derive which section starts open whenever the resolved role set
   // changes shape — adjusted here during render rather than in an effect,
@@ -329,22 +305,6 @@ function DetailsStepRoute() {
   if (fieldIds !== seenFieldIds) {
     setSeenFieldIds(fieldIds);
     setOpenIds(subjectFields.fields[0] ? [subjectFields.fields[0].id] : []);
-    advancedIndexes.current = new Set();
-  }
-
-  function handleSectionBlur(index: number) {
-    if (advancedIndexes.current.has(index)) return;
-    const field = subjectFields.fields[index];
-    if (!field) return;
-    if (!isSubjectComplete(form.getValues(`subjects.${index}`), field.role)) return;
-
-    advancedIndexes.current.add(index);
-    const nextField = subjectFields.fields[index + 1];
-    setOpenIds((prev) => {
-      const next = prev.filter((id) => id !== field.id);
-      if (nextField && !next.includes(nextField.id)) next.push(nextField.id);
-      return next;
-    });
   }
 
   function onSubmit(values: DetailsValues) {
@@ -361,11 +321,6 @@ function DetailsStepRoute() {
           ? "Enter each party's full name exactly as it should appear on the civil registry record."
           : "Enter the full name of the person named on the civil registry record, exactly as it should appear."
       }
-      sidebar={
-        selectedService && (
-          <RequestSummaryCard serviceName={displayName} fee={selectedService.fee} />
-        )
-      }
     >
       <div className="flex flex-col gap-6">
         {showRoleLabels ? (
@@ -381,7 +336,6 @@ function DetailsStepRoute() {
                     setValue={form.setValue}
                     index={index}
                     role={subjectField.role}
-                    onFieldBlur={() => handleSectionBlur(index)}
                   />
                 </AccordionContent>
               </AccordionItem>
@@ -395,7 +349,6 @@ function DetailsStepRoute() {
                 setValue={form.setValue}
                 index={index}
                 role={subjectField.role}
-                onFieldBlur={NOOP}
               />
             </FieldGroup>
           ))
@@ -416,7 +369,9 @@ function DetailsStepRoute() {
                   <InputGroupInput
                     {...field}
                     id="contactNumber"
+                    type="tel"
                     inputMode="numeric"
+                    autoComplete="tel-national"
                     placeholder="9171234567"
                     aria-invalid={fieldState.invalid}
                   />

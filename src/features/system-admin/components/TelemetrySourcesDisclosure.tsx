@@ -8,20 +8,37 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { healthDataSources } from "../system-health.constants";
+import { cn } from "~/lib/utils";
 
 export function TelemetrySourcesDisclosure() {
+  const [open, setOpen] = useState(false);
+
   return (
-    <details className="dashboard-panel group overflow-hidden">
-      <summary className="flex touch-manipulation cursor-pointer list-none items-center justify-between gap-4 rounded-xl px-5 py-4 font-bold text-foreground transition-[background-color] duration-200 hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-6">
+    <Collapsible
+      open={open}
+      onOpenChange={setOpen}
+      className="dashboard-panel overflow-hidden"
+    >
+      <CollapsibleTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-auto w-full justify-between rounded-none px-5 py-4 whitespace-normal sm:px-6"
+          />
+        }
+      >
         <span>Telemetry Sources &amp; Privacy Boundary</span>
-        <span className="text-xs font-semibold text-primary group-open:hidden">
-          Show Details
+        <span className="flex items-center gap-2 text-xs text-muted-foreground">
+          {open ? "Hide details" : "Show details"}
+          <ChevronDown
+            data-icon="inline-end"
+            className={cn("transition-transform", open && "rotate-180")}
+            aria-hidden="true"
+          />
         </span>
-        <span className="hidden text-xs font-semibold text-primary group-open:inline">
-          Hide Details
-        </span>
-      </summary>
-      <div className="border-t border-border px-5 py-5 sm:px-6">
+      </CollapsibleTrigger>
+      <CollapsibleContent className="border-t border-border px-5 py-5 sm:px-6">
         <p className="max-w-3xl text-pretty text-sm leading-6 text-muted-foreground">
           Health records contain operational metadata only. This dashboard does
           not query or store citizen form values, document paths, file names,
@@ -62,7 +79,15 @@ export function TelemetrySourcesDisclosure() {
             </TableBody>
           </Table>
         </div>
-      </div>
-    </details>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
+import { Button } from "~/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "~/components/ui/collapsible";

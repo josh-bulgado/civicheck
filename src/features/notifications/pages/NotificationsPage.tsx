@@ -1,7 +1,16 @@
 import { Link } from "@tanstack/react-router";
 import { Bell, Check, FileText } from "lucide-react";
-import { Button } from "~/components/ui/button";
 import { staggerStyle } from "~/components/motion/stagger";
+import { Button, buttonVariants } from "~/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "~/components/ui/empty";
+import { cn } from "~/lib/utils";
 import {
   markAllNotificationsReadFn,
   markNotificationReadFn,
@@ -59,7 +68,7 @@ export default function NotificationsPage({ notifications, onUpdated }: Notifica
               className="civic-press shrink-0 bg-white text-primary hover:bg-primary-soft"
               onClick={handleMarkAllRead}
             >
-              <Check className="size-4" />
+              <Check data-icon="inline-start" />
               Mark all as read
             </Button>
           )}
@@ -67,35 +76,39 @@ export default function NotificationsPage({ notifications, onUpdated }: Notifica
       </header>
 
       {notifications.length === 0 ? (
-        <div className="dashboard-panel civic-enter-scale mx-auto mt-8 max-w-lg space-y-4 px-6 py-16 text-center">
-          <div className="mx-auto flex size-14 items-center justify-center rounded-xl bg-primary text-white shadow-md">
-            <Bell className="w-6 h-6" />
-          </div>
-          <div className="space-y-1.5">
-            <h3 className="font-semibold text-foreground">Nothing yet</h3>
-            <p className="text-sm text-muted-foreground">
+        <Empty className="dashboard-panel civic-enter-scale mx-auto mt-8 max-w-lg border-0 px-6 py-16">
+          <EmptyHeader>
+            <EmptyMedia variant="icon" className="bg-primary text-white shadow-md">
+              <Bell />
+            </EmptyMedia>
+            <EmptyTitle>Nothing yet</EmptyTitle>
+            <EmptyDescription>
               You'll see updates here as soon as your requests move forward.
-            </p>
-          </div>
-          <Link
-            to="/my-requests"
-            className="inline-flex min-h-10 items-center rounded-lg border border-border bg-white px-3.5 py-1.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
-          >
-            View my requests
-          </Link>
-        </div>
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Link
+              to="/my-requests"
+              className={buttonVariants({ variant: "outline", size: "lg" })}
+            >
+              View my requests
+            </Link>
+          </EmptyContent>
+        </Empty>
       ) : (
         <div className="dashboard-panel overflow-hidden">
           <div className="civic-stagger divide-y divide-border">
             {notifications.map((notification, index) => (
-              <button
+              <Button
                 key={notification.id}
                 type="button"
+                variant="ghost"
                 style={staggerStyle(index)}
                 onClick={() => handleMarkRead(notification)}
-                className={`flex w-full items-start gap-4 p-5 text-left transition-colors duration-200 hover:bg-surface-subtle ${
-                  notification.isRead ? "" : "bg-primary-soft/40"
-                }`}
+                className={cn(
+                  "h-auto w-full items-start justify-start gap-4 rounded-none p-5 text-left whitespace-normal",
+                  !notification.isRead && "bg-primary-soft/40",
+                )}
               >
                 <div
                   className={`mt-1 flex size-9 shrink-0 items-center justify-center rounded-lg ${
@@ -104,7 +117,7 @@ export default function NotificationsPage({ notifications, onUpdated }: Notifica
                       : "bg-primary text-white"
                   }`}
                 >
-                  <FileText className="size-4" />
+                  <FileText />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -124,7 +137,7 @@ export default function NotificationsPage({ notifications, onUpdated }: Notifica
                     {notification.trackingNumber} · {formatDateTime(notification.sentAt)}
                   </p>
                 </div>
-              </button>
+              </Button>
             ))}
           </div>
         </div>

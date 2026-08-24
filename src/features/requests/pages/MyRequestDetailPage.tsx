@@ -2,7 +2,9 @@ import { Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, ExternalLink, Upload } from "lucide-react";
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -57,14 +59,16 @@ function formatDateTime(value: string) {
   });
 }
 
-function getAttachmentStatusStyles(status: string) {
+function getAttachmentStatusVariant(
+  status: string,
+): "success" | "destructive" | "warning" {
   switch (status) {
     case "approved":
-      return "status-success";
+      return "success";
     case "rejected":
-      return "status-error";
+      return "destructive";
     default:
-      return "status-warning";
+      return "warning";
   }
 }
 
@@ -101,18 +105,18 @@ export default function MyRequestDetailPage({ request, onUpdated }: MyRequestDet
             <p className="mt-2 text-sm text-white/75">{request.serviceName}</p>
           </div>
           <div className="civic-stagger flex flex-wrap gap-2">
-            <span
+            <Badge
+              variant={status.variant}
               style={staggerStyle(0)}
-              className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium ${status.styles}`}
             >
               {status.label}
-            </span>
-            <span
+            </Badge>
+            <Badge
+              variant={payment.variant}
               style={staggerStyle(1)}
-              className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium ${payment.styles}`}
             >
               {payment.label}
-            </span>
+            </Badge>
           </div>
         </div>
       </header>
@@ -303,23 +307,24 @@ function AttachmentRow({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-foreground">{doc.requirementName}</p>
-          <span
-            className={`mt-1 inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium capitalize ${getAttachmentStatusStyles(doc.verificationStatus)}`}
+          <Badge
+            variant={getAttachmentStatusVariant(doc.verificationStatus)}
+            className="mt-1 capitalize"
           >
             {doc.verificationStatus}
-          </span>
+          </Badge>
           {doc.verificationStatus === "rejected" && doc.rejectionReason && (
             <p className="mt-1 text-xs text-destructive">{doc.rejectionReason}</p>
           )}
         </div>
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="ghost" disabled={viewing} onClick={handleViewFile}>
-            <ExternalLink className="size-4" />
+            <ExternalLink data-icon="inline-start" />
             View file
           </Button>
           {doc.verificationStatus === "rejected" && (
             <>
-              <input
+              <Input
                 ref={fileInput}
                 type="file"
                 accept={ACCEPT}
@@ -335,7 +340,7 @@ function AttachmentRow({
                 disabled={submitting}
                 onClick={() => fileInput.current?.click()}
               >
-                <Upload className="size-4" />
+                <Upload data-icon="inline-start" />
                 {submitting ? "Uploading..." : "Resubmit"}
               </Button>
             </>

@@ -1,7 +1,21 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 import { FileText, Upload, X } from "lucide-react";
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import { Skeleton } from "~/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "~/components/ui/alert-dialog";
 import { isVisible, parseRequirementName } from "~/features/services/service-utils";
 import {
   uploadRequestDocumentFn,
@@ -29,16 +43,22 @@ function formatSize(bytes: number) {
 function DocumentsStepRoute() {
   const { serviceCode } = Route.useParams();
   const navigate = useNavigate();
-  const { requirements, displayName, services } = ApplyLayoutRoute.useLoaderData();
+  const { requirements, services } = ApplyLayoutRoute.useLoaderData();
   const { draft, update, hydrated } = useApplyDraft(serviceCode);
   const selectedService =
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
-  const subjectName = subjectFullName(draft.subjects[0]);
+  const subjectSummaries = draft.subjects.flatMap((subject) => {
+    const name = subjectFullName(subject);
+    return name ? [{ role: subject.role, name }] : [];
+  });
   const purpose =
     draft.caseAnswers.purpose === "Other"
       ? draft.caseAnswers.otherPurpose
       : draft.caseAnswers.purpose;
-  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<{
+    requirementId: string;
+    type: "upload" | "remove";
+  } | null>(null);
   const [rowError, setRowError] = useState<Record<string, string>>({});
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -61,7 +81,7 @@ function DocumentsStepRoute() {
 
   async function handleFile(requirementId: string, requirementName: string, file: File) {
     setRowError((prev) => ({ ...prev, [requirementId]: "" }));
-    setPendingId(requirementId);
+    setPendingAction({ requirementId, type: "upload" });
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -94,17 +114,41 @@ function DocumentsStepRoute() {
         ],
       }));
     } finally {
-      setPendingId(null);
+      setPendingAction(null);
     }
   }
 
   async function handleRemove(requirementId: string) {
     const existing = documentsByRequirement.get(requirementId);
     if (!existing) return;
-    await deleteRequestDocumentFn({ data: { storagePath: existing.storagePath } });
-    update((prev) => ({
-      documents: prev.documents.filter((d) => d.requirementId !== requirementId),
-    }));
+    setRowError((previous) => ({ ...previous, [requirementId]: "" }));
+    setPendingAction({ requirementId, type: "remove" });
+    try {
+      const result = await deleteRequestDocumentFn({
+        data: { storagePath: existing.storagePath },
+      });
+      if (result.error) {
+        setRowError((previous) => ({
+          ...previous,
+          [requirementId]:
+            result.message || "The upload could not be removed. Try again.",
+        }));
+        return;
+      }
+      update((previous) => ({
+        documents: previous.documents.filter(
+          (document) => document.requirementId !== requirementId,
+        ),
+      }));
+    } catch {
+      setRowError((previous) => ({
+        ...previous,
+        [requirementId]:
+          "The upload could not be removed. Check your connection and try again.",
+      }));
+    } finally {
+      setPendingAction(null);
+    }
   }
 
   return (
@@ -113,11 +157,10 @@ function DocumentsStepRoute() {
       title="Upload your documents"
       description="Upload each required document so CCRO staff can pre-check it before your visit. Accepted formats: JPG, PNG, or PDF, up to 10 MB each."
       sidebar={
-        selectedService && (
+        (subjectSummaries.length > 0 ||
+          (selectedService?.asks_purpose && purpose)) && (
           <RequestSummaryCard
-            serviceName={displayName}
-            fee={selectedService.fee}
-            subjectName={subjectName || undefined}
+            subjects={subjectSummaries}
             purpose={selectedService?.asks_purpose ? purpose || undefined : undefined}
           />
         )
@@ -129,7 +172,14 @@ function DocumentsStepRoute() {
             <h2 className="text-base font-bold text-foreground">
               {uploadedCount} of {mandatoryReqs.length} uploaded
             </h2>
-            <div className="h-2 w-35 shrink-0 overflow-hidden rounded-full bg-border-lighter">
+            <div
+              role="progressbar"
+              aria-label="Required documents uploaded"
+              aria-valuemin={0}
+              aria-valuemax={mandatoryReqs.length}
+              aria-valuenow={uploadedCount}
+              className="h-2 w-35 shrink-0 overflow-hidden rounded-full bg-border-lighter"
+            >
               <div
                 className="h-full rounded-full bg-primary transition-[width]"
                 style={{ width: `${(uploadedCount / mandatoryReqs.length) * 100}%` }}
@@ -139,7 +189,7 @@ function DocumentsStepRoute() {
         )}
 
         {!hydrated ? (
-          <div className="h-24 animate-pulse rounded-xl bg-muted" />
+          <Skeleton className="h-24 rounded-xl" />
         ) : mandatoryReqs.length === 0 ? (
           <p className="rounded-[10px] border border-dashed border-dashed-border bg-white p-5 text-sm italic text-muted-foreground">
             No specific required documents are listed for this service — you can continue.
@@ -149,13 +199,14 @@ function DocumentsStepRoute() {
             {mandatoryReqs.map((req) => {
               const { primary } = parseRequirementName(req.requirement_name);
               const doc = documentsByRequirement.get(req.id);
-              const isPending = pendingId === req.id;
+              const isPending = pendingAction?.requirementId === req.id;
               const error = rowError[req.id];
 
               return (
                 <div
                   key={req.id}
-                  className={`flex items-center gap-4 rounded-[10px] border px-5 py-4.5 ${
+                  aria-busy={isPending}
+                  className={`grid grid-cols-[auto_minmax(0,1fr)] items-center gap-4 rounded-[10px] border px-5 py-4.5 sm:grid-cols-[auto_minmax(0,1fr)_auto] ${
                     doc ? "border-border bg-white" : "border-dashed border-dashed-border bg-white"
                   }`}
                 >
@@ -167,10 +218,14 @@ function DocumentsStepRoute() {
                     <FileText className="size-6" />
                   </div>
 
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0" aria-live="polite">
                     <p className="truncate text-base font-bold text-foreground">{primary}</p>
                     {isPending ? (
-                      <p className="text-sm text-muted-foreground">Uploading...</p>
+                      <p className="text-sm text-muted-foreground">
+                        {pendingAction.type === "remove"
+                          ? "Removing…"
+                          : "Uploading…"}
+                      </p>
                     ) : error ? (
                       <p className="text-sm text-warning-strong">{error}</p>
                     ) : doc ? (
@@ -182,7 +237,7 @@ function DocumentsStepRoute() {
                     )}
                   </div>
 
-                  <input
+                  <Input
                     ref={(el) => {
                       fileInputs.current[req.id] = el;
                     }}
@@ -197,25 +252,55 @@ function DocumentsStepRoute() {
                   />
 
                   {doc ? (
-                    <div className="flex shrink-0 items-center gap-3">
-                      <span className="rounded-full bg-success-soft px-3 py-1 text-xs font-bold text-success">
+                    <div className="col-span-2 flex shrink-0 items-center justify-end gap-2 sm:col-span-1">
+                      <Badge variant="success">
                         Uploaded
-                      </span>
-                      <button
+                      </Badge>
+                      <Button
                         type="button"
+                        variant="link"
+                        size="sm"
+                        disabled={isPending}
                         onClick={() => fileInputs.current[req.id]?.click()}
-                        className="text-sm font-bold text-primary hover:text-primary-hover"
                       >
                         Replace
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleRemove(req.id)}
-                        aria-label={`Remove ${primary}`}
-                        className="text-muted-foreground hover:text-destructive"
-                      >
-                        <X className="size-4" />
-                      </button>
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger
+                          render={
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              disabled={isPending}
+                              aria-label={`Remove ${primary}`}
+                            />
+                          }
+                        >
+                          <X />
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              Remove this upload?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {doc.fileName} will be removed from this draft. You
+                              will need to upload the requirement again before
+                              continuing.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Keep upload</AlertDialogCancel>
+                            <AlertDialogAction
+                              variant="destructive"
+                              onClick={() => handleRemove(req.id)}
+                            >
+                              Remove upload
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   ) : (
                     <Button
@@ -223,9 +308,9 @@ function DocumentsStepRoute() {
                       size="sm"
                       disabled={isPending}
                       onClick={() => fileInputs.current[req.id]?.click()}
-                      className="shrink-0"
+                      className="col-span-2 shrink-0 justify-self-end sm:col-span-1"
                     >
-                      <Upload className="size-3.5" />
+                      <Upload data-icon="inline-start" />
                       Upload
                     </Button>
                   )}

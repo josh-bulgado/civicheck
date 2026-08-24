@@ -2,7 +2,9 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CalendarClock } from "lucide-react";
 import { z } from "zod";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
   Field,
   FieldError,
@@ -17,6 +19,7 @@ import { ageInYears, diffInDays, toDateKey } from "~/lib/date";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -24,8 +27,11 @@ import {
 import { BirthTrackRedirectDialog } from "~/features/apply/components/BirthTrackRedirectDialog";
 import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
-import { RequestSummaryCard } from "~/features/apply/components/RequestSummaryCard";
-import { seedDraftForGroup, useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
+import { isVisible } from "~/features/services/service-utils";
+import {
+  seedDraftForGroup,
+  useApplyDraft,
+} from "~/features/apply/hooks/useApplyDraft";
 import { INFORMANT_RELATIONSHIPS, PLACE_TYPES } from "~/lib/case-fields";
 import {
   CaseSelector,
@@ -47,10 +53,25 @@ const PURPOSES = [
   "Other",
 ];
 
+const PURPOSE_OPTIONS = PURPOSES.map((purpose) => ({
+  label: purpose,
+  value: purpose,
+}));
+
+const INFORMANT_RELATIONSHIP_OPTIONS = INFORMANT_RELATIONSHIPS.map(
+  (relationship) => ({
+    label: relationship,
+    value: relationship,
+  }),
+);
+
 // On-Time birth registration only covers births within this window; outside
 // it (or, in reverse, a Delayed application for a birth still within it),
 // the applicant is nudged toward the other track. See `checkBirthTrack`.
 const ON_TIME_WINDOW_DAYS = 30;
+const MARRIAGE_LICENSE_CODE = "MARRIAGE_LICENSE";
+const MARRIAGE_NOTICE_DAYS = 10;
+const RECOMMENDED_MARRIAGE_LEAD_DAYS = 21;
 const OPPOSITE_BIRTH_GROUP: Record<string, string> = {
   birth_ontime: "birth_delayed",
   birth_delayed: "birth_ontime",
@@ -84,20 +105,59 @@ function mismatchDirection(
 ): RedirectDirection | null {
   if (!dateKey || !birthGroup) return null;
   const daysAgo = diffInDays(dateKey, toDateKey());
-  if (birthGroup === "birth_ontime" && daysAgo > ON_TIME_WINDOW_DAYS) return "toDelayed";
-  if (birthGroup === "birth_delayed" && daysAgo >= 0 && daysAgo <= ON_TIME_WINDOW_DAYS) {
+  if (birthGroup === "birth_ontime" && daysAgo > ON_TIME_WINDOW_DAYS)
+    return "toDelayed";
+  if (
+    birthGroup === "birth_delayed" &&
+    daysAgo >= 0 &&
+    daysAgo <= ON_TIME_WINDOW_DAYS
+  ) {
     return "toOnTime";
   }
+  return null;
+}
+
+function formatLeadTime(days: number) {
+  if (days === 0) return "today";
+  if (days === 1) return "1 day away";
+  return `${days} days away`;
+}
+
+function getMarriageTimingNotice(
+  serviceCode: string | undefined,
+  intendedDate: string,
+) {
+  if (serviceCode !== MARRIAGE_LICENSE_CODE || !intendedDate) return null;
+
+  const daysUntilMarriage = diffInDays(toDateKey(), intendedDate);
+  if (daysUntilMarriage < 0) return null;
+
+  if (daysUntilMarriage <= MARRIAGE_NOTICE_DAYS) {
+    return {
+      title: "Your intended marriage date is too soon",
+      description: `This date is ${formatLeadTime(daysUntilMarriage)}. A marriage license is issued only after the required 10-day public-notice period, and you must first attend the scheduled family-planning and pre-marriage counseling session. Choose a later date; planning at least 3 weeks ahead is safer.`,
+    };
+  }
+
+  if (daysUntilMarriage < RECOMMENDED_MARRIAGE_LEAD_DAYS) {
+    return {
+      title: "Allow more time before the wedding",
+      description: `This date is ${formatLeadTime(daysUntilMarriage)}. The schedule may be tight after the family-planning and pre-marriage counseling session, document processing, and the required 10-day public-notice period. Planning at least 3 weeks ahead is safer.`,
+    };
+  }
+
   return null;
 }
 
 function CaseStepRoute() {
   const { serviceCode } = Route.useParams();
   const navigate = useNavigate();
-  const { isGroup, displayName, services } = ApplyLayoutRoute.useLoaderData();
+  const { isGroup, requirements, services } =
+    ApplyLayoutRoute.useLoaderData();
   const { draft, update, hydrated, clear } = useApplyDraft(serviceCode);
   const selectedService =
-    services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
+    services.find((s) => s.service_code === draft.selectedServiceCode) ??
+    services[0];
   const dateLabel = selectedService?.event_date_label || "Date of event";
   const placeLabel = selectedService?.event_place_label || "Place of event";
   const referenceLabel = selectedService?.reference_number_label;
@@ -117,7 +177,9 @@ function CaseStepRoute() {
   // "which birth track am I on" regardless of which specific variant applies.
   const birthGroup = services[0]?.display_group ?? null;
   const targetBirthGroup =
-    asksBirthDetails && birthGroup ? (OPPOSITE_BIRTH_GROUP[birthGroup] ?? null) : null;
+    asksBirthDetails && birthGroup
+      ? (OPPOSITE_BIRTH_GROUP[birthGroup] ?? null)
+      : null;
 
   const form = useForm<CaseValues>({
     resolver: zodResolver(caseSchema),
@@ -138,6 +200,10 @@ function CaseStepRoute() {
   const purpose = form.watch("purpose");
   const placeType = form.watch("placeType");
   const watchedEventDate = form.watch("eventDate");
+  const marriageTimingNotice = getMarriageTimingNotice(
+    selectedService?.service_code,
+    watchedEventDate,
+  );
 
   // Recomputed from whatever date is currently in the form — not just at the
   // moment it was picked — so dismissing the dialog without actually fixing
@@ -146,7 +212,8 @@ function CaseStepRoute() {
     ? mismatchDirection(watchedEventDate, birthGroup)
     : null;
 
-  const [redirectDirection, setRedirectDirection] = useState<RedirectDirection | null>(null);
+  const [redirectDirection, setRedirectDirection] =
+    useState<RedirectDirection | null>(null);
   // A date the applicant already dismissed the prompt for shouldn't re-prompt
   // on every subsequent blur — only a genuinely new date re-triggers the check.
   const lastCheckedDate = useRef<string | null>(null);
@@ -187,7 +254,10 @@ function CaseStepRoute() {
     });
     clear();
     setRedirectDirection(null);
-    navigate({ to: "/apply/$serviceCode/case", params: { serviceCode: targetBirthGroup } });
+    navigate({
+      to: "/apply/$serviceCode/case",
+      params: { serviceCode: targetBirthGroup },
+    });
   }
 
   function onSubmit(values: CaseValues) {
@@ -207,23 +277,35 @@ function CaseStepRoute() {
     navigate({ to: "/apply/$serviceCode/details", params: { serviceCode } });
   }
 
+  function handleServiceSelect(code: string) {
+    update((previous) => {
+      if (!code) return { selectedServiceCode: null };
+      const visibleRequirementIds = new Set(
+        requirements
+          .filter((requirement) => isVisible(requirement, code))
+          .map((requirement) => requirement.id),
+      );
+      return {
+        selectedServiceCode: code,
+        documents: previous.documents.filter((document) =>
+          visibleRequirementIds.has(document.requirementId),
+        ),
+      };
+    });
+  }
+
   return (
     <WizardShell
       step={1}
       title="Tell us about your case"
       description="A few quick questions to find the right service and get the details of your case."
-      sidebar={
-        selectedService && (
-          <RequestSummaryCard serviceName={displayName} fee={selectedService.fee} />
-        )
-      }
     >
       <div className="flex flex-col gap-6">
         {isGroup && (
           <CaseSelector
             services={services}
             selectedCode={draft.selectedServiceCode}
-            onSelect={(code) => update({ selectedServiceCode: code })}
+            onSelect={handleServiceSelect}
             presetAge={draft.presetAge}
             presetMarital={draft.presetMarital}
           />
@@ -235,7 +317,9 @@ function CaseStepRoute() {
               control={form.control}
               name="eventDate"
               render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid || Boolean(currentMismatch)}>
+                <Field
+                  data-invalid={fieldState.invalid || Boolean(currentMismatch)}
+                >
                   <FieldLabel htmlFor="eventDate">{dateLabel}</FieldLabel>
                   <DatePicker
                     id="eventDate"
@@ -255,7 +339,9 @@ function CaseStepRoute() {
                     placeholder={`Select the ${dateLabel.toLowerCase()}`}
                     invalid={fieldState.invalid || Boolean(currentMismatch)}
                   />
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
                   {!fieldState.invalid && currentMismatch && (
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm text-warning-strong">
@@ -269,7 +355,11 @@ function CaseStepRoute() {
                         size="sm"
                         onClick={handleSwitchTrack}
                       >
-                        Switch to {currentMismatch === "toDelayed" ? "Delayed" : "On-Time"} Registration
+                        Switch to{" "}
+                        {currentMismatch === "toDelayed"
+                          ? "Delayed"
+                          : "On-Time"}{" "}
+                        Registration
                       </Button>
                     </div>
                   )}
@@ -284,6 +374,7 @@ function CaseStepRoute() {
                   <FieldLabel htmlFor="eventPlace">{placeLabel}</FieldLabel>
                   <Input
                     id="eventPlace"
+                    autoComplete="off"
                     placeholder={
                       placeType === "home"
                         ? "e.g. Purok 2, Barangay Imalnod, Legazpi City"
@@ -293,11 +384,23 @@ function CaseStepRoute() {
                     }
                     {...field}
                   />
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
                 </Field>
               )}
             />
           </div>
+
+          {marriageTimingNotice ? (
+            <Alert variant="warning" role="status" aria-live="polite">
+              <CalendarClock aria-hidden="true" />
+              <AlertTitle>{marriageTimingNotice.title}</AlertTitle>
+              <AlertDescription>
+                {marriageTimingNotice.description}
+              </AlertDescription>
+            </Alert>
+          ) : null}
 
           {asksBirthDetails && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -306,17 +409,28 @@ function CaseStepRoute() {
                 name="placeType"
                 render={({ field }) => (
                   <Field>
-                    <FieldLabel htmlFor="placeType">Where did the birth take place?</FieldLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="placeType" className="w-full">
+                    <FieldLabel htmlFor="placeType">
+                      Where did the birth take place?
+                    </FieldLabel>
+                    <Select
+                      items={PLACE_TYPES}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger
+                        id="placeType"
+                        className="w-full capitalize"
+                      >
                         <SelectValue placeholder="Select one" />
                       </SelectTrigger>
                       <SelectContent>
-                        {PLACE_TYPES.map((t) => (
-                          <SelectItem key={t.value} value={t.value}>
-                            {t.label}
-                          </SelectItem>
-                        ))}
+                        <SelectGroup>
+                          {PLACE_TYPES.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
                       </SelectContent>
                     </Select>
                   </Field>
@@ -331,16 +445,28 @@ function CaseStepRoute() {
                     <FieldLabel htmlFor="informantRelationship">
                       Informant&rsquo;s relationship to the child
                     </FieldLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="informantRelationship" className="w-full">
+                    <Select
+                      items={INFORMANT_RELATIONSHIP_OPTIONS}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger
+                        id="informantRelationship"
+                        className="w-full capitalize"
+                      >
                         <SelectValue placeholder="Select one" />
                       </SelectTrigger>
                       <SelectContent>
-                        {INFORMANT_RELATIONSHIPS.map((r) => (
-                          <SelectItem key={r} value={r}>
-                            {r}
-                          </SelectItem>
-                        ))}
+                        <SelectGroup>
+                          {INFORMANT_RELATIONSHIPS.map((relationship) => (
+                            <SelectItem
+                              key={relationship}
+                              value={relationship}
+                            >
+                              {relationship}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
                       </SelectContent>
                     </Select>
                   </Field>
@@ -352,9 +478,12 @@ function CaseStepRoute() {
                 name="informantName"
                 render={({ field }) => (
                   <Field className="sm:col-span-2">
-                    <FieldLabel htmlFor="informantName">Informant&rsquo;s name</FieldLabel>
+                    <FieldLabel htmlFor="informantName">
+                      Informant&rsquo;s name
+                    </FieldLabel>
                     <Input
                       id="informantName"
+                      autoComplete="off"
                       placeholder="Full name of the person reporting the birth"
                       {...field}
                     />
@@ -373,7 +502,11 @@ function CaseStepRoute() {
                   <FieldLabel htmlFor="referenceNumber">
                     {referenceLabel}
                   </FieldLabel>
-                  <Input id="referenceNumber" {...field} />
+                  <Input
+                    id="referenceNumber"
+                    autoComplete="off"
+                    {...field}
+                  />
                 </Field>
               )}
             />
@@ -386,16 +519,22 @@ function CaseStepRoute() {
               render={({ field }) => (
                 <Field>
                   <FieldLabel htmlFor="purpose">Purpose of request</FieldLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select
+                    items={PURPOSE_OPTIONS}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
                     <SelectTrigger id="purpose">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {PURPOSES.map((p) => (
-                        <SelectItem key={p} value={p}>
-                          {p}
-                        </SelectItem>
-                      ))}
+                      <SelectGroup>
+                        {PURPOSES.map((purpose) => (
+                          <SelectItem key={purpose} value={purpose}>
+                            {purpose}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                 </Field>
@@ -409,9 +548,17 @@ function CaseStepRoute() {
               name="otherPurpose"
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="otherPurpose">Specify purpose</FieldLabel>
-                  <Input id="otherPurpose" {...field} />
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  <FieldLabel htmlFor="otherPurpose">
+                    Specify purpose
+                  </FieldLabel>
+                  <Input
+                    id="otherPurpose"
+                    autoComplete="off"
+                    {...field}
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
                 </Field>
               )}
             />
@@ -427,7 +574,8 @@ function CaseStepRoute() {
                 </FieldLabel>
                 <Textarea
                   id="additionalNotes"
-                  placeholder="Any special requests or instructions..."
+                  autoComplete="off"
+                  placeholder="Any special requests or instructions…"
                   rows={3}
                   {...field}
                 />
@@ -439,7 +587,9 @@ function CaseStepRoute() {
         <WizardFooterActions
           onContinue={form.handleSubmit(onSubmit)}
           continueLabel="Continue to your details"
-          continueDisabled={(isGroup && !draft.selectedServiceCode) || currentMismatch !== null}
+          continueDisabled={
+            (isGroup && !draft.selectedServiceCode) || currentMismatch !== null
+          }
           note={
             currentMismatch
               ? "Resolve the date above before continuing."

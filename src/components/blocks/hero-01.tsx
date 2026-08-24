@@ -1,8 +1,16 @@
 import * as React from "react";
-import { ArrowRight, Menu, X } from "lucide-react";
+import { ArrowRight, Menu } from "lucide-react";
 
-import { Button } from "~/components/ui/button";
+import { Button, buttonVariants } from "~/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "~/components/ui/sheet";
 import { Link } from "@tanstack/react-router";
+import { cn } from "~/lib/utils";
 
 const navItems = ["Blocks", "Pricing", "Docs", "Changelog"];
 
@@ -45,66 +53,58 @@ export default function Hero01() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="ghost"
-            className="hidden rounded-full sm:inline-flex"
+          <Link
+            to="/login"
+            className={cn(
+              buttonVariants({ size: "sm", variant: "ghost" }),
+              "hidden rounded-full sm:inline-flex",
+            )}
           >
-            <Link to="/login">Sign in</Link>
-          </Button>
-          <Button size="sm" className="rounded-full px-4">
-            <Link to="/signup">Get started</Link>
-          </Button>
-          <button
-            type="button"
-            onClick={() => setMenuOpen(true)}
-            aria-label="Open menu"
-            className="grid size-9 place-items-center rounded-full border border-border text-foreground md:hidden"
+            Sign in
+          </Link>
+          <Link
+            to="/signup"
+            className={cn(buttonVariants({ size: "sm" }), "rounded-full")}
           >
-            <Menu className="size-4" />
-          </button>
+            Get started
+          </Link>
+          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+            <SheetTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="rounded-full md:hidden"
+                />
+              }
+            >
+              <Menu />
+              <span className="sr-only">Open menu</span>
+            </SheetTrigger>
+            <SheetContent side="top" className="md:hidden">
+              <SheetHeader>
+                <SheetTitle>blockus</SheetTitle>
+              </SheetHeader>
+              <nav aria-label="Mobile navigation" className="px-4 pb-4">
+                <ul className="mt-5 flex flex-col">
+                  {navItems.map((item) => (
+                    <li key={item}>
+                      <a
+                        href={`#${item.toLowerCase()}`}
+                        onClick={() => setMenuOpen(false)}
+                        className="block rounded-md px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                      >
+                        {item}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            </SheetContent>
+          </Sheet>
         </div>
       </header>
-
-      {menuOpen && (
-        <div
-          className="fixed inset-0 z-50 md:hidden"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div
-            aria-hidden
-            className="absolute inset-0 bg-background/80 backdrop-blur-sm"
-            onClick={() => setMenuOpen(false)}
-          />
-          <div className="absolute inset-x-4 top-4 rounded-2xl border border-border bg-card p-5 shadow-2xl shadow-black/30">
-            <div className="flex items-center justify-between">
-              <span className="font-semibold tracking-tight">blockus</span>
-              <button
-                type="button"
-                onClick={() => setMenuOpen(false)}
-                aria-label="Close menu"
-                className="grid size-9 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-            <ul className="mt-5 flex flex-col">
-              {navItems.map((item) => (
-                <li key={item}>
-                  <a
-                    href={`#${item.toLowerCase()}`}
-                    onClick={() => setMenuOpen(false)}
-                    className="block rounded-md px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
-                  >
-                    {item}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      )}
 
       <div className="relative mx-auto flex max-w-3xl flex-col items-center gap-7 px-6 pt-24 text-center sm:pt-32">
         <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background/40 px-3 py-1 text-xs text-muted-foreground backdrop-blur">
@@ -130,7 +130,7 @@ export default function Hero01() {
 
         <Button size="lg" className="mt-2 rounded-full px-7">
           Browse the catalog
-          <ArrowRight />
+          <ArrowRight data-icon="inline-end" />
         </Button>
       </div>
     </section>

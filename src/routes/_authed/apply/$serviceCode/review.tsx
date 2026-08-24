@@ -2,10 +2,14 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Check, CheckCircle2 } from "lucide-react";
 import { Checkbox } from "~/components/ui/checkbox";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Button, buttonVariants } from "~/components/ui/button";
+import { Field, FieldLabel } from "~/components/ui/field";
 import { formatFee } from "~/features/services/service-utils";
 import { submitRequestFn } from "~/features/services/services.mutations";
 import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
+import { ChangeServiceButton } from "~/features/apply/components/ApplicationDocket";
 import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
 import { placeTypeLabel } from "~/lib/case-fields";
 import { flattenSubjects, impliedSex, subjectFullName } from "~/lib/subject-fields";
@@ -14,6 +18,18 @@ import { Route as ApplyLayoutRoute } from "./route";
 export const Route = createFileRoute("/_authed/apply/$serviceCode/review")({
   component: ReviewStepRoute,
 });
+
+const REVIEW_DATE_FORMATTER = new Intl.DateTimeFormat("en-PH", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
+
+function formatReviewDate(value: string) {
+  if (!value) return "—";
+  const date = new Date(value + "T00:00:00");
+  return Number.isNaN(date.getTime()) ? value : REVIEW_DATE_FORMATTER.format(date);
+}
 
 function ReviewStepRoute() {
   const { serviceCode } = Route.useParams();
@@ -82,14 +98,21 @@ function ReviewStepRoute() {
       });
 
       if (res.error) {
-        setSubmitError(res.message || "Something went wrong. Please try again.");
+        setSubmitError(
+          res.message ||
+            "The request could not be submitted. Review the details and try again.",
+        );
         return;
       }
 
       setResult({ trackingNumber: res.trackingNumber!, documentWarning: res.documentWarning });
       clear();
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Something went wrong.");
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : "The request could not reach the CCRO service. Check your connection and try again.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -116,7 +139,7 @@ function ReviewStepRoute() {
           <div className="flex flex-wrap gap-3">
             <Link
               to="/my-requests"
-              className="inline-flex min-h-11 items-center rounded-lg bg-primary px-5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
+              className={buttonVariants({ size: "lg" })}
             >
               View my requests
             </Link>
@@ -134,6 +157,31 @@ function ReviewStepRoute() {
       sidebar={<WhatHappensNextCard />}
     >
       <div className="flex flex-col gap-5">
+        <EditSection
+          title="Selected service"
+          action={
+            selectedService ? (
+              <ChangeServiceButton
+                serviceName={selectedService.name}
+                onDiscard={clear}
+                label="Change"
+              />
+            ) : null
+          }
+        >
+          <ReviewRow
+            label="Service"
+            value={selectedService?.name ?? displayName}
+          />
+          {selectedService && selectedService.name !== displayName ? (
+            <ReviewRow label="Service family" value={displayName} />
+          ) : null}
+          <ReviewRow
+            label="Fee at cashier"
+            value={selectedService ? formatFee(selectedService.fee) : "—"}
+          />
+        </EditSection>
+
         <EditSection
           title="Your details"
           onEdit={() =>
@@ -168,7 +216,7 @@ function ReviewStepRoute() {
             navigate({ to: "/apply/$serviceCode/case", params: { serviceCode } })
           }
         >
-          <ReviewRow label={dateLabel} value={draft.eventDate || "—"} />
+          <ReviewRow label={dateLabel} value={formatReviewDate(draft.eventDate)} />
           <ReviewRow label={placeLabel} value={draft.eventPlace || "—"} />
           {asksBirthDetails && (
             <>
@@ -209,9 +257,9 @@ function ReviewStepRoute() {
               {draft.documents.map((doc) => (
                 <div key={doc.requirementId} className="flex items-center gap-2.5 text-sm">
                   <span className="flex size-4.5 shrink-0 items-center justify-center rounded-[5px] bg-success text-[10px] font-bold text-white">
-                    <Check className="size-2.5" />
+                    <Check className="size-2.5" aria-hidden="true" />
                   </span>
-                  <span className="text-foreground">
+                  <span className="min-w-0 break-words text-foreground">
                     {doc.requirementName} — {doc.fileName}
                   </span>
                 </div>
@@ -233,21 +281,23 @@ function ReviewStepRoute() {
           </p>
         </div>
 
-        <label className="flex cursor-pointer items-start gap-2.5">
+        <Field orientation="horizontal">
           <Checkbox
+            id="confirm-application-details"
             checked={confirmed}
             onCheckedChange={(checked) => setConfirmed(checked === true)}
-            className="mt-0.5"
           />
-          <span className="text-sm leading-relaxed text-body-strong">
-            I confirm the details above are correct and I will bring the original documents.
-          </span>
-        </label>
+          <FieldLabel htmlFor="confirm-application-details">
+            I confirm the selected service and details above are correct, and I
+            will bring the original documents.
+          </FieldLabel>
+        </Field>
 
         {submitError && (
-          <p className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
-            {submitError}
-          </p>
+          <Alert variant="destructive">
+            <AlertTitle>Unable to submit request</AlertTitle>
+            <AlertDescription>{submitError}</AlertDescription>
+          </Alert>
         )}
       </div>
 
@@ -267,23 +317,29 @@ function ReviewStepRoute() {
 function EditSection({
   title,
   onEdit,
+  action,
   children,
 }: {
   title: string;
-  onEdit: () => void;
+  onEdit?: () => void;
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <div className="overflow-hidden rounded-[10px] border border-border-light">
       <div className="flex items-center justify-between gap-3 border-b border-border-light bg-background px-4.5 py-3">
         <span className="text-sm font-bold text-foreground">{title}</span>
-        <button
-          type="button"
-          onClick={onEdit}
-          className="text-sm font-bold text-primary hover:text-primary-hover"
-        >
-          Edit
-        </button>
+        {action ??
+          (onEdit ? (
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              onClick={onEdit}
+            >
+              Edit
+            </Button>
+          ) : null)}
       </div>
       <div className="grid grid-cols-1 gap-2.5 px-4.5 py-3.5 sm:grid-cols-2">{children}</div>
     </div>
@@ -292,9 +348,11 @@ function EditSection({
 
 function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-3 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="text-right font-bold text-foreground">{value}</span>
+    <div className="flex min-w-0 justify-between gap-3 text-sm">
+      <span className="shrink-0 text-muted-foreground">{label}</span>
+      <span className="min-w-0 break-words text-right font-bold text-foreground">
+        {value}
+      </span>
     </div>
   );
 }

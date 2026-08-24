@@ -114,18 +114,19 @@ export function OtpCodeForm({
 
       <div className="flex items-center justify-center gap-1 text-[13px] text-muted-2">
         <span>Didn&apos;t get a code?</span>
-        <button
+        <Button
           type="button"
+          variant="link"
+          size="xs"
           onClick={handleResend}
           disabled={isResending || cooldown > 0}
-          className="font-semibold text-primary underline underline-offset-2 hover:text-primary-hover disabled:cursor-not-allowed disabled:text-muted-2 disabled:no-underline"
         >
           {isResending
             ? "Resending…"
             : cooldown > 0
               ? `Resend in ${cooldown}s`
               : "Resend"}
-        </button>
+        </Button>
       </div>
     </form>
   );

@@ -5,6 +5,8 @@ import * as React from "react";
 import { useEffect } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { CiviCheckIdentity } from "~/components/brand/civic-identity";
+import { Button } from "~/components/ui/button";
+import { Kbd } from "~/components/ui/kbd";
 
 import {
   CommandDialog,
@@ -64,17 +66,19 @@ export function NavHeader({ items, workspace }: NavHeaderProps) {
             {workspace.label}
           </p>
         )}
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="lg"
           aria-label="Search CiviCheck navigation"
           className={cn(
-            "flex min-h-10 items-center overflow-hidden rounded-lg px-2 text-sidebar-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+            "w-full justify-between overflow-hidden",
             isCollapsed ? "justify-center" : "justify-between",
           )}
           onClick={() => setOpen(true)}
         >
           <div className="flex items-center gap-3 min-w-0">
-            <Search className="h-4 w-4 shrink-0" />
+            <Search data-icon="inline-start" />
             {!isCollapsed && (
               <span className="truncate text-sm font-medium">
                 Search
@@ -82,13 +86,9 @@ export function NavHeader({ items, workspace }: NavHeaderProps) {
             )}
           </div>
           {!isCollapsed && (
-            <div className="flex shrink-0 items-center justify-center rounded-md border border-sidebar-border bg-white/5 px-2 py-1">
-              <kbd className="inline-flex font-[inherit] text-xs font-medium text-sidebar-muted">
-                <span className="opacity-70">⌘K</span>
-              </kbd>
-            </div>
+            <Kbd>⌘K</Kbd>
           )}
-        </button>
+        </Button>
       </SidebarHeader>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
