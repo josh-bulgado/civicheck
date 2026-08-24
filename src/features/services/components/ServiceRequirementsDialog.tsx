@@ -66,6 +66,9 @@ const CASE_TAG_LABELS: Record<string, string> = {
   non_marital_only: "Non-marital child only",
   brap_only: "Barangay-assisted (BRAP) only",
   foreigner_only: "Foreign parent only",
+  parental_consent_required: "Ages 18–20",
+  parental_advice_required: "Ages 21–24",
+  foreign_national_spouse: "Foreign-national applicant",
 };
 
 const badgeToneClasses = {
@@ -84,9 +87,11 @@ function RequirementRow({
   const { caseLabel, name } = splitCaseLabel(requirement.requirement_name);
   const { primary, secondary } = parseRequirementName(name);
   const source = requirement.where_to_secure ?? secondary;
-  const caseTag = requirement.case_tag
-    ? (CASE_TAG_LABELS[requirement.case_tag] ?? null)
-    : null;
+  const caseTag = requirement.applies_when
+    ? "Depends on case answers"
+    : requirement.case_tag
+      ? (CASE_TAG_LABELS[requirement.case_tag] ?? null)
+      : null;
 
   return (
     <li className="flex flex-col gap-1 px-4 py-3">

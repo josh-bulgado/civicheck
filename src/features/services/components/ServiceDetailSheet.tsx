@@ -46,6 +46,7 @@ interface ServiceDetailSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEdit?: (service: Service) => void;
+  editLabel?: string;
 }
 
 export function ServiceDetailSheet({
@@ -53,6 +54,7 @@ export function ServiceDetailSheet({
   open,
   onOpenChange,
   onEdit,
+  editLabel = "Edit Service",
 }: ServiceDetailSheetProps) {
   const [requirements, setRequirements] = useState<ServiceRequirement[]>([]);
   const [loading, setLoading] = useState(false);
@@ -299,7 +301,7 @@ export function ServiceDetailSheet({
               size="sm"
               onClick={() => onEdit(service)}
             >
-              Edit Service
+              {editLabel}
             </Button>
           )}
           <SheetClose

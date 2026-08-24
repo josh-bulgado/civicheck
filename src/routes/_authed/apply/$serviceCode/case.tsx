@@ -11,8 +11,13 @@ import {
   DynamicFormFields,
   type DynamicFieldValues,
 } from "~/features/forms/components/DynamicFormFields";
-import { fieldsForStep } from "~/features/forms/form-template.utils";
-import { isVisible } from "~/features/services/service-utils";
+import { DerivedAnswerAlerts } from "~/features/forms/components/DerivedAnswerAlerts";
+import {
+  deriveTemplateAnswers,
+  fieldsForStep,
+  getDerivedAnswerFeedback,
+} from "~/features/forms/form-template.utils";
+import { isRequirementApplicable } from "~/features/services/service-utils";
 import {
   seedDraftForGroup,
   useApplyDraft,
@@ -93,6 +98,8 @@ function CaseStepRoute() {
     services.find((service) => service.service_code === draft.selectedServiceCode) ??
     services[0];
   const definition = selectedService.form_template!.definition;
+  const caseSelectorDefinition =
+    services[0]?.form_template?.definition.caseSelector;
   const caseFields = fieldsForStep(definition, "case").filter(
     (field) => field.type !== "person_group",
   );
@@ -127,6 +134,20 @@ function CaseStepRoute() {
     shouldUnregister: true,
   });
   const watchedValues = form.watch();
+  const derivedCaseAnswers = deriveTemplateAnswers(definition, {
+    ...draft.answers,
+    ...watchedValues,
+    ...draft.caseSelectorAnswers,
+  });
+  const selectorContextAnswers = Object.fromEntries(
+    Object.entries(derivedCaseAnswers).flatMap(([key, value]) =>
+      typeof value === "string" ? [[key, value]] : [],
+    ),
+  );
+  const blockingAgeFeedback = getDerivedAnswerFeedback(
+    definition,
+    derivedCaseAnswers,
+  ).find((feedback) => feedback.notice.blocksProgress);
   const watchedEventDate = watchedValues.event_date ?? "";
   const marriageTimingNotice = getMarriageTimingNotice(
     selectedService.service_code,
@@ -177,33 +198,68 @@ function CaseStepRoute() {
   }
 
   function onSubmit(values: DynamicFieldValues) {
-    update(() => ({
-      answers: { ...draft.answers, ...values },
-      eventDate: values.event_date ?? "",
-      eventPlace: values.event_place ?? "",
-      caseAnswers: {
-        purpose: values.purpose ?? "",
-        otherPurpose: values.purpose_other ?? "",
-        additionalNotes: values.additional_notes ?? "",
-        referenceNumber: values.reference_number ?? "",
-        placeType: values.place_type ?? "",
-        informantName: values.informant_name ?? "",
-        informantRelationship: values.informant_relationship ?? "",
-      },
-    }));
+    update((previous) => {
+      const answers = { ...previous.answers, ...values };
+      const answerBag = deriveTemplateAnswers(definition, {
+        ...answers,
+        ...previous.caseSelectorAnswers,
+      });
+      const visibleRequirementIds = new Set(
+        requirements
+          .filter((requirement) =>
+            isRequirementApplicable(
+              requirement,
+              previous.selectedServiceCode,
+              answerBag,
+            ),
+          )
+          .map((requirement) => requirement.id),
+      );
+      return {
+        answers,
+        eventDate: values.event_date ?? "",
+        eventPlace: values.event_place ?? "",
+        caseAnswers: {
+          purpose: values.purpose ?? "",
+          otherPurpose: values.purpose_other ?? "",
+          additionalNotes: values.additional_notes ?? "",
+          referenceNumber: values.reference_number ?? "",
+          placeType: values.place_type ?? "",
+          informantName: values.informant_name ?? "",
+          informantRelationship: values.informant_relationship ?? "",
+        },
+        documents: previous.documents.filter((document) =>
+          visibleRequirementIds.has(document.requirementId),
+        ),
+      };
+    });
     navigate({ to: "/apply/$serviceCode/details", params: { serviceCode } });
   }
 
   function handleServiceSelect(code: string) {
+    const currentValues = form.getValues();
     update((previous) => {
-      if (!code) return { selectedServiceCode: null };
+      if (!code) {
+        return {
+          selectedServiceCode: null,
+          answers: { ...previous.answers, ...currentValues },
+        };
+      }
+      const answerBag = deriveTemplateAnswers(definition, {
+        ...previous.answers,
+        ...watchedValues,
+        ...previous.caseSelectorAnswers,
+      });
       const visibleRequirementIds = new Set(
         requirements
-          .filter((requirement) => isVisible(requirement, code))
+          .filter((requirement) =>
+            isRequirementApplicable(requirement, code, answerBag),
+          )
           .map((requirement) => requirement.id),
       );
       return {
         selectedServiceCode: code,
+        answers: { ...previous.answers, ...currentValues },
         documents: previous.documents.filter((document) =>
           visibleRequirementIds.has(document.requirementId),
         ),
@@ -223,6 +279,15 @@ function CaseStepRoute() {
             services={services}
             selectedCode={draft.selectedServiceCode}
             onSelect={handleServiceSelect}
+            definition={caseSelectorDefinition}
+            answers={draft.caseSelectorAnswers}
+            contextAnswers={selectorContextAnswers}
+            onAnswersChange={(caseSelectorAnswers) =>
+              update((previous) => ({
+                caseSelectorAnswers,
+                answers: { ...previous.answers, ...form.getValues() },
+              }))
+            }
             presetAge={draft.presetAge}
             presetMarital={draft.presetMarital}
           />
@@ -234,6 +299,11 @@ function CaseStepRoute() {
           control={form.control}
           values={watchedValues}
           onDateChange={checkBirthTrack}
+        />
+
+        <DerivedAnswerAlerts
+          definition={definition}
+          answers={derivedCaseAnswers}
         />
 
         {marriageTimingNotice ? (
@@ -264,9 +334,17 @@ function CaseStepRoute() {
           onContinue={form.handleSubmit(onSubmit)}
           continueLabel="Continue to your details"
           continueDisabled={
-            (isGroup && !draft.selectedServiceCode) || currentMismatch !== null
+            (isGroup && !draft.selectedServiceCode) ||
+            currentMismatch !== null ||
+            Boolean(blockingAgeFeedback)
           }
-          note={currentMismatch ? "Resolve the date above before continuing." : undefined}
+          note={
+            blockingAgeFeedback
+              ? blockingAgeFeedback.notice.description
+              : currentMismatch
+                ? "Resolve the date above before continuing."
+                : undefined
+          }
         />
       </div>
 

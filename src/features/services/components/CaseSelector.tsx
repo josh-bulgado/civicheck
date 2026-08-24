@@ -8,6 +8,8 @@ import {
   FieldLegend,
   FieldSet,
 } from "~/components/ui/field";
+import type { CaseSelectorDefinition } from "~/features/forms/form-template.types";
+import { conditionRuleMatches } from "~/features/forms/form-template.utils";
 
 const choiceGroupClass =
   "grid grid-cols-1 gap-0 overflow-hidden rounded-lg border border-border bg-white divide-y divide-border-light sm:grid-cols-2 sm:divide-x sm:divide-y-0";
@@ -25,6 +27,10 @@ interface CaseSelectorProps {
   services: Service[];
   selectedCode: string | null;
   onSelect: (code: string) => void;
+  definition?: CaseSelectorDefinition;
+  answers?: Record<string, string>;
+  contextAnswers?: Record<string, string>;
+  onAnswersChange?: (answers: Record<string, string>) => void;
   /**
    * Pre-answered dimensions — set when the applicant arrived here via the
    * On-Time/Delayed birth-registration redirect, which already knows the
@@ -83,7 +89,7 @@ function matches(name: string, age: string | null, program: string | null, marit
   return true;
 }
 
-export function CaseSelector({
+function LegacyCaseSelector({
   services,
   selectedCode,
   onSelect,
@@ -282,11 +288,166 @@ export function CaseSelector({
             className="civic-enter-sm flex items-center gap-2 border-t border-success/20 pt-4 text-sm font-semibold text-success"
           >
             <CheckCircle2 className="size-4.5 shrink-0" aria-hidden="true" />
-            Service selected. Check the selection above before continuing.
+            Service selected. Complete the case details below before continuing.
             <span className="sr-only">{selectedService.name}</span>
           </div>
         )}
       </div>
     </section>
   );
+}
+
+function ConfiguredCaseSelector({
+  services,
+  selectedCode,
+  onSelect,
+  definition,
+  answers = {},
+  contextAnswers = {},
+  onAnswersChange,
+  presetAge,
+  presetMarital,
+}: CaseSelectorProps & { definition: CaseSelectorDefinition }) {
+  function resolve(nextAnswers: Record<string, string>) {
+    const answerBag = { ...contextAnswers, ...nextAnswers };
+    const visibleQuestions = definition.questions.filter((question) =>
+      conditionRuleMatches(question.visibleWhen, answerBag),
+    );
+    if (visibleQuestions.some((question) => !nextAnswers[question.key])) {
+      return null;
+    }
+    return (
+      definition.outcomes.find((outcome) =>
+        conditionRuleMatches(outcome.when, answerBag),
+      )?.serviceCode ?? null
+    );
+  }
+
+  function publishAnswers(nextAnswers: Record<string, string>) {
+    const cleaned = { ...nextAnswers };
+    for (const question of definition.questions) {
+      if (
+        !conditionRuleMatches(question.visibleWhen, {
+          ...contextAnswers,
+          ...cleaned,
+        })
+      ) {
+        delete cleaned[question.key];
+      }
+    }
+    onAnswersChange?.(cleaned);
+    onSelect(resolve(cleaned) ?? "");
+  }
+
+  useEffect(() => {
+    const seeded = { ...answers };
+    if (presetAge && definition.questions.some((question) => question.key === "age")) {
+      seeded.age = presetAge;
+    }
+    if (
+      presetMarital &&
+      definition.questions.some((question) => question.key === "marital")
+    ) {
+      seeded.marital = presetMarital;
+    }
+    if (Object.entries(seeded).some(([key, value]) => answers[key] !== value)) {
+      publishAnswers(seeded);
+    }
+    // Presets are one-time draft migration inputs. Publishing them again after
+    // every answer would overwrite a deliberate applicant change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetAge, presetMarital]);
+
+  const visibleQuestions = definition.questions.filter((question) =>
+    conditionRuleMatches(question.visibleWhen, {
+      ...contextAnswers,
+      ...answers,
+    }),
+  );
+  const resolvedCode = resolve(answers);
+  useEffect(() => {
+    const nextCode = resolvedCode ?? "";
+    if (nextCode !== (selectedCode ?? "")) onSelect(nextCode);
+  }, [resolvedCode, selectedCode, onSelect]);
+  const selectedService = services.find(
+    (service) => service.service_code === selectedCode,
+  );
+
+  return (
+    <section
+      aria-labelledby="case-selector-title"
+      className="border-y border-border-light py-5 sm:py-6"
+    >
+      <div>
+        <h2
+          id="case-selector-title"
+          className="text-pretty text-lg font-bold text-foreground"
+        >
+          {definition.title}
+        </h2>
+        <p className="mt-1 max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground">
+          {definition.description ??
+            "Choose the answers that match this case. We’ll select the correct service."}
+        </p>
+      </div>
+
+      <div className="mt-6 flex flex-col gap-6">
+        {visibleQuestions.map((question, index) => (
+          <FieldSet key={question.key} className="civic-enter-sm gap-3">
+            <FieldLegend variant="label">
+              {visibleQuestions.length > 1 ? `${index + 1}. ` : ""}
+              {question.label}
+            </FieldLegend>
+            {question.description ? (
+              <p className="text-xs text-muted-foreground">
+                {question.description}
+              </p>
+            ) : null}
+            <RadioGroup
+              value={answers[question.key] ?? ""}
+              onValueChange={(value) =>
+                publishAnswers({ ...answers, [question.key]: value })
+              }
+              className={choiceGroupClass}
+            >
+              {question.options.map((option) => (
+                <FieldLabel
+                  key={option.value}
+                  htmlFor={`case-${question.key}-${option.value}`}
+                  className={choiceLabelClass}
+                >
+                  <Field orientation="horizontal" className="min-h-14">
+                    <RadioGroupItem
+                      value={option.value}
+                      id={`case-${question.key}-${option.value}`}
+                    />
+                    <FieldContent>{option.label}</FieldContent>
+                  </Field>
+                </FieldLabel>
+              ))}
+            </RadioGroup>
+          </FieldSet>
+        ))}
+
+        {selectedService ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className="civic-enter-sm flex items-center gap-2 border-t border-success/20 pt-4 text-sm font-semibold text-success"
+          >
+            <CheckCircle2 className="size-4.5 shrink-0" aria-hidden="true" />
+            Service selected. Complete the case details below before continuing.
+            <span className="sr-only">{selectedService.name}</span>
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+export function CaseSelector(props: CaseSelectorProps) {
+  if (props.definition) {
+    return <ConfiguredCaseSelector {...props} definition={props.definition} />;
+  }
+  return <LegacyCaseSelector {...props} />;
 }

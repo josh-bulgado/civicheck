@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getSupabaseServerClient } from "~/utils/supabase";
 import type { Service, ServiceRequirement } from "./services.types";
 import { requireActiveSession } from "~/server/auth";
+import { parseConditionRule } from "~/features/forms/form-template.utils";
 
 export type { ServiceRequirement } from "./services.types";
 
@@ -44,7 +45,10 @@ export const getServiceChecklist = createServerFn({ method: "GET" })
       .order("is_mandatory", { ascending: false });
 
     if (error) throw new Error(error.message);
-    return (rows || []) as ServiceRequirement[];
+    return (rows ?? []).map((requirement) => ({
+      ...requirement,
+      applies_when: parseConditionRule(requirement.applies_when),
+    })) as ServiceRequirement[];
   });
 
 export const getServiceRequirements = createServerFn({ method: "GET" })
@@ -60,5 +64,8 @@ export const getServiceRequirements = createServerFn({ method: "GET" })
       .order("is_mandatory", { ascending: false });
 
     if (error) throw new Error(error.message);
-    return (data || []) as ServiceRequirement[];
+    return (data ?? []).map((requirement) => ({
+      ...requirement,
+      applies_when: parseConditionRule(requirement.applies_when),
+    })) as ServiceRequirement[];
   });

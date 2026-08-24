@@ -1,35 +1,22 @@
 import { useState } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
-import { Button } from "~/components/ui/button";
+import { buttonVariants } from "~/components/ui/button";
 import { ServiceDetailSheet } from "~/features/services/components/ServiceDetailSheet";
+import { cn } from "~/lib/utils";
 import { ServicesDataTable } from "./ServicesDataTable";
-import { ServiceFormDialog } from "./ServiceFormDialog";
-import type { Department } from "../../departments.queries";
+import type { ServiceDossier } from "./ServicesColumn";
 import type { Service } from "../services.types";
 
 interface ServicesTableSectionProps {
-  services: Service[];
-  departments: Department[];
+  services: ServiceDossier[];
 }
 
 export function ServicesTableSection({
   services,
-  departments,
 }: ServicesTableSectionProps) {
-  const [formOpen, setFormOpen] = useState(false);
-  // null while the form is open ⇒ create mode; a service ⇒ edit that service.
-  const [editing, setEditing] = useState<Service | null>(null);
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
-
-  function openCreate() {
-    setEditing(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(service: Service) {
-    setEditing(service);
-    setFormOpen(true);
-  }
+  const navigate = useNavigate();
+  const [selectedService, setSelectedService] = useState<ServiceDossier | null>(null);
 
   return (
     <section className="dashboard-panel overflow-hidden">
@@ -43,37 +30,49 @@ export function ServicesTableSection({
             processing steps.
           </p>
         </div>
-        <Button className="shrink-0" onClick={openCreate}>
-          <Plus className="w-4 h-4 mr-1.5" />
+        <Link
+          to="/admin/services/new"
+          className={cn(buttonVariants(), "shrink-0")}
+        >
+          <Plus aria-hidden="true" data-icon="inline-start" />
           Add Service
-        </Button>
+        </Link>
       </div>
 
       <div className="p-5 sm:p-6">
         <ServicesDataTable
           data={services}
           onView={setSelectedService}
-          onEdit={openEdit}
         />
       </div>
 
-      <ServiceFormDialog
-        open={formOpen}
-        onOpenChange={setFormOpen}
-        services={services}
-        departments={departments}
-        service={editing}
-      />
-
       <ServiceDetailSheet
         service={selectedService}
+        editLabel={
+          selectedService && selectedService.variant_count > 1
+            ? "Manage Service Group"
+            : "Edit Service"
+        }
         open={selectedService !== null}
         onOpenChange={(open) => {
           if (!open) setSelectedService(null);
         }}
-        onEdit={(service) => {
+        onEdit={() => {
+          const service = selectedService;
+          if (!service) return;
           setSelectedService(null);
-          openEdit(service);
+          if (service.variant_count > 1) {
+            navigate({
+              to: "/admin/services/groups/$displayGroup",
+              params: { displayGroup: service.dossier_key },
+              search: { scope: undefined },
+            });
+          } else {
+            navigate({
+              to: "/admin/services/$serviceCode/edit",
+              params: { serviceCode: service.service_code },
+            });
+          }
         }}
       />
     </section>

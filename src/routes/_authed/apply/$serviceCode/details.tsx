@@ -36,7 +36,11 @@ import {
   DynamicFormFields,
   type DynamicFieldValues,
 } from "~/features/forms/components/DynamicFormFields";
-import { fieldsForStep } from "~/features/forms/form-template.utils";
+import {
+  deriveTemplateAnswers,
+  fieldsForStep,
+} from "~/features/forms/form-template.utils";
+import { isRequirementApplicable } from "~/features/services/service-utils";
 import {
   impliedSex,
   reconcileSubjects,
@@ -248,7 +252,7 @@ function SubjectFieldGrid({
 function DetailsStepRoute() {
   const { serviceCode } = Route.useParams();
   const navigate = useNavigate();
-  const { services } = ApplyLayoutRoute.useLoaderData();
+  const { requirements, services } = ApplyLayoutRoute.useLoaderData();
   const { draft, update, hydrated } = useApplyDraft(serviceCode);
   const selectedService =
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
@@ -320,16 +324,39 @@ function DetailsStepRoute() {
           typeof values[field.key] === "string" ? values[field.key] : "",
         ]),
     );
-    update(() => ({
-      subjects: values.subjects,
-      contactNumber:
-        typeof values.contact_number === "string" ? values.contact_number : "",
-      answers: {
-        ...draft.answers,
+    update((previous) => {
+      const answers = {
+        ...previous.answers,
         ...dynamicValues,
         ...(personGroupField ? { [personGroupField.key]: values.subjects } : {}),
-      },
-    }));
+      };
+      const answerBag = deriveTemplateAnswers(definition, {
+        ...answers,
+        ...previous.caseSelectorAnswers,
+      });
+      const visibleRequirementIds = new Set(
+        requirements
+          .filter((requirement) =>
+            isRequirementApplicable(
+              requirement,
+              previous.selectedServiceCode,
+              answerBag,
+            ),
+          )
+          .map((requirement) => requirement.id),
+      );
+      return {
+        subjects: values.subjects,
+        contactNumber:
+          typeof values.contact_number === "string"
+            ? values.contact_number
+            : "",
+        answers,
+        documents: previous.documents.filter((document) =>
+          visibleRequirementIds.has(document.requirementId),
+        ),
+      };
+    });
     navigate({ to: "/apply/$serviceCode/documents", params: { serviceCode } });
   }
 

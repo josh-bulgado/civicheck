@@ -1,9 +1,16 @@
-import type { PublishedFormTemplate } from "~/features/forms/form-template.types";
+import type {
+  ConditionRule,
+  PublishedFormTemplate,
+} from "~/features/forms/form-template.types";
 
 // ─── Enums (mirroring DB check constraints) ─────────────────────────────────
 
 export type ServiceClassification = "simple" | "complex" | "highly_technical";
 export type EventDateDirection = "past" | "future" | "any";
+export type RequirementUploadScope =
+  | "request"
+  | "each_subject"
+  | "specific_subject";
 
 // ─── services_registry ───────────────────────────────────────────────────────
 
@@ -85,6 +92,11 @@ export interface ServiceRequirement {
   requirement_group: string | null;
   where_to_secure: string | null;
   case_tag: string | null;
+  /** Database-backed rule evaluated against case-selector and form answers. */
+  applies_when: ConditionRule | null;
+  requires_upload: boolean;
+  upload_scope: RequirementUploadScope;
+  subject_role: string | null;
 }
 
 export interface CreateServiceRequirementInput {
@@ -94,6 +106,10 @@ export interface CreateServiceRequirementInput {
   requirement_group?: string | null;
   where_to_secure?: string | null;
   case_tag?: string | null;
+  applies_when?: ConditionRule | null;
+  requires_upload?: boolean;
+  upload_scope?: RequirementUploadScope;
+  subject_role?: string | null;
 }
 
 export interface UpdateServiceRequirementInput {
@@ -102,6 +118,10 @@ export interface UpdateServiceRequirementInput {
   requirement_group?: string | null;
   where_to_secure?: string | null;
   case_tag?: string | null;
+  applies_when?: ConditionRule | null;
+  requires_upload?: boolean;
+  upload_scope?: RequirementUploadScope;
+  subject_role?: string | null;
 }
 
 // ─── Combined create (service + its checklist in one call) ───────────────────

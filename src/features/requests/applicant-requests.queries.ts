@@ -75,7 +75,7 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
     const [attachments, logs] = await Promise.all([
       supabase
         .from("requirements_attachments")
-        .select("id, requirement_name, verification_status, rejection_reason, uploaded_at")
+        .select("id, requirement_name, subject_role, verification_status, rejection_reason, uploaded_at")
         .eq("request_id", data.requestId)
         .order("uploaded_at", { ascending: true }),
       supabase
@@ -106,6 +106,7 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
       attachments: (attachments.data ?? []).map((a) => ({
         id: a.id,
         requirementName: a.requirement_name,
+        subjectRole: a.subject_role,
         verificationStatus: a.verification_status,
         rejectionReason: a.rejection_reason,
       })),

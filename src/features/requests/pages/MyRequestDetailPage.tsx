@@ -245,6 +245,7 @@ export default function MyRequestDetailPage({ request, onUpdated }: MyRequestDet
 type AttachmentDoc = {
   id: string;
   requirementName: string;
+  subjectRole: string | null;
   verificationStatus: string;
   rejectionReason: string | null;
 };
@@ -307,7 +308,10 @@ function AttachmentRow({
     <div className="flex flex-col gap-3 rounded-lg border border-border-light p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-foreground">{doc.requirementName}</p>
+          <p className="truncate text-sm font-semibold text-foreground">
+            {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
+            {doc.requirementName}
+          </p>
           <Badge
             variant={getAttachmentStatusVariant(doc.verificationStatus)}
             className="mt-1 capitalize"
@@ -352,7 +356,10 @@ function AttachmentRow({
       <Dialog open={viewerUrl != null} onOpenChange={(open) => !open && setViewerUrl(null)}>
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{doc.requirementName}</DialogTitle>
+            <DialogTitle>
+              {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
+              {doc.requirementName}
+            </DialogTitle>
           </DialogHeader>
           {viewerUrl && (
             <div className="flex max-h-[75vh] flex-col items-center overflow-auto">

@@ -146,9 +146,9 @@ export const updateService = createServerFn({ method: "POST" })
  * Update a service and replace its requirement checklist.
  *
  * The checklist is replaced wholesale rather than diffed row by row: nothing
- * references `service_requirements_metadata.id`, so the rows are safe to
- * recreate, and a replace keeps the saved state identical to what the admin saw
- * in the form.
+ * Existing request attachments reference metadata rows with ON DELETE SET NULL,
+ * so historical uploads remain intact when the editable checklist is recreated.
+ * A replace keeps the saved state identical to what the admin saw in the form.
  *
  * Note this edits the checklist for the whole `requirement_group`. Where several
  * services share a group, all of them are affected — the form warns before

@@ -29,7 +29,10 @@ import type {
   ServiceRequirement,
 } from "~/features/admin/services/services.types";
 import type { PublishedFormTemplate } from "~/features/forms/form-template.types";
-import { parseFormTemplateDefinition } from "~/features/forms/form-template.utils";
+import {
+  parseConditionRule,
+  parseFormTemplateDefinition,
+} from "~/features/forms/form-template.utils";
 
 const TTL_MS = 5 * 60 * 1000;
 
@@ -101,7 +104,10 @@ async function fetchCatalogue(): Promise<ServiceCatalogue> {
   }
 
   const services = (servicesResult.data ?? []) as Service[];
-  const requirements = (requirementsResult.data ?? []) as ServiceRequirement[];
+  const requirements = (requirementsResult.data ?? []).map((requirement) => ({
+    ...requirement,
+    applies_when: parseConditionRule(requirement.applies_when),
+  })) as ServiceRequirement[];
 
   // Build the lookups once here instead of re-scanning the arrays on every read.
   const requirementsByKey = new Map<string, ServiceRequirement[]>();

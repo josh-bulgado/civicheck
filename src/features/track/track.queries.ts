@@ -50,7 +50,7 @@ export const trackRequestFn = createServerFn({ method: "POST" })
 
     const { data: attachments, error: attachmentsError } = await supabase
       .from("requirements_attachments")
-      .select("id, requirement_name, verification_status, rejection_reason")
+      .select("id, requirement_name, subject_role, verification_status, rejection_reason")
       .eq("request_id", request.id)
       .order("uploaded_at", { ascending: true });
 
@@ -73,6 +73,7 @@ export const trackRequestFn = createServerFn({ method: "POST" })
         attachments: (attachments ?? []).map((a) => ({
           id: a.id,
           requirementName: a.requirement_name,
+          subjectRole: a.subject_role,
           verificationStatus: a.verification_status,
           rejectionReason: a.rejection_reason,
         })),

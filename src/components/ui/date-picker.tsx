@@ -48,6 +48,9 @@ export function DatePicker({
   const minDate = fromDateKey(min);
   const maxDate = fromDateKey(max);
   const selected = fromDateKey(value);
+  const now = new Date();
+  const calendarStart = minDate ?? new Date(now.getFullYear() - 150, 0, 1);
+  const calendarEnd = maxDate ?? new Date(now.getFullYear() + 20, 11, 31);
   const todayKey = toDateKey();
   const todayInRange =
     (!min || todayKey >= min) && (!max || todayKey <= max);
@@ -103,6 +106,9 @@ export function DatePicker({
       <PopoverContent align="start" className="w-auto p-3">
         <Calendar
           mode="single"
+          captionLayout="dropdown"
+          startMonth={calendarStart}
+          endMonth={calendarEnd}
           selected={selected ?? undefined}
           onSelect={(date) => {
             if (date) commit(toDateKey(date));

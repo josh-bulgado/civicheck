@@ -168,6 +168,7 @@ export function FormTemplateBuilder({
                         <span className="truncate text-sm font-medium">{field.label}</span>
                         <Badge variant="secondary">{FIELD_TYPES.find((item) => item.value === field.type)?.label}</Badge>
                         {field.required ? <Badge>Required</Badge> : null}
+                        {field.visibleWhen ? <Badge variant="outline">Conditional</Badge> : null}
                       </CollapsibleTrigger>
                       <Button
                         type="button"
@@ -382,21 +383,35 @@ export function FormTemplateBuilder({
                         ) : null}
 
                         {field.visibleWhen ? (
-                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                          <FieldGroup className="gap-3 rounded-lg border border-border p-3">
+                            <div>
+                              <p className="text-sm font-semibold text-foreground">
+                                Conditional visibility
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Reveal this question only after the applicant selects the matching answer.
+                              </p>
+                            </div>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                             <Field>
-                              <FieldLabel>Show when field</FieldLabel>
+                              <FieldLabel>Earlier question</FieldLabel>
                               <Select
-                                items={fields.filter((candidate) => candidate.key !== field.key && candidate.type !== "person_group").map((candidate) => ({ value: candidate.key, label: candidate.label }))}
+                                items={fields.slice(0, index).filter((candidate) => candidate.type === "select").map((candidate) => ({ value: candidate.key, label: candidate.label }))}
                                 value={field.visibleWhen.field}
-                                onValueChange={(value) =>
+                                onValueChange={(value) => {
+                                  const source = fields.find((candidate) => candidate.key === value);
                                   updateField(step.value, index, {
-                                    visibleWhen: { ...field.visibleWhen!, field: value ?? "" },
-                                  })
-                                }
+                                    visibleWhen: {
+                                      ...field.visibleWhen!,
+                                      field: value ?? "",
+                                      value: source?.options?.[0]?.value ?? "",
+                                    },
+                                  });
+                                }}
                               >
                                 <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                                 <SelectContent><SelectGroup>
-                                  {fields.filter((candidate) => candidate.key !== field.key && candidate.type !== "person_group").map((candidate) => (
+                                  {fields.slice(0, index).filter((candidate) => candidate.type === "select").map((candidate) => (
                                     <SelectItem key={candidate.key} value={candidate.key}>{candidate.label}</SelectItem>
                                   ))}
                                 </SelectGroup></SelectContent>
@@ -417,12 +432,31 @@ export function FormTemplateBuilder({
                               </Select>
                             </Field>
                             <Field>
-                              <FieldLabel>Value</FieldLabel>
-                              <Input
-                                value={field.visibleWhen.value}
-                                onChange={(event) => updateField(step.value, index, { visibleWhen: { ...field.visibleWhen!, value: event.target.value } })}
-                              />
+                              <FieldLabel>Selected answer</FieldLabel>
+                              {fields.find((candidate) => candidate.key === field.visibleWhen?.field)?.options?.length ? (
+                                <Select
+                                  value={field.visibleWhen.value}
+                                  onValueChange={(value) =>
+                                    updateField(step.value, index, {
+                                      visibleWhen: { ...field.visibleWhen!, value: value ?? "" },
+                                    })
+                                  }
+                                >
+                                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                                  <SelectContent><SelectGroup>
+                                    {fields.find((candidate) => candidate.key === field.visibleWhen?.field)?.options?.map((option) => (
+                                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                    ))}
+                                  </SelectGroup></SelectContent>
+                                </Select>
+                              ) : (
+                                <Input
+                                  value={field.visibleWhen.value}
+                                  onChange={(event) => updateField(step.value, index, { visibleWhen: { ...field.visibleWhen!, value: event.target.value } })}
+                                />
+                              )}
                             </Field>
+                            </div>
                             <Button
                               type="button"
                               variant="ghost"
@@ -432,11 +466,9 @@ export function FormTemplateBuilder({
                             >
                               Remove condition
                             </Button>
-                          </div>
-                        ) : fields.some(
-                            (candidate) =>
-                              candidate.key !== field.key &&
-                              candidate.type !== "person_group",
+                          </FieldGroup>
+                        ) : fields.slice(0, index).some(
+                            (candidate) => candidate.type === "select",
                           ) && field.type !== "person_group" ? (
                           <Button
                             type="button"
@@ -444,13 +476,17 @@ export function FormTemplateBuilder({
                             size="sm"
                             className="self-start"
                             onClick={() => {
-                              const source = fields.find((candidate) => candidate.key !== field.key && candidate.type !== "person_group")!;
+                              const source = fields.slice(0, index).find((candidate) => candidate.type === "select")!;
                               updateField(step.value, index, {
-                                visibleWhen: { field: source.key, operator: "equals", value: "" },
+                                visibleWhen: {
+                                  field: source.key,
+                                  operator: "equals",
+                                  value: source.options?.[0]?.value ?? "",
+                                },
                               });
                             }}
                           >
-                            Add visibility condition
+                            Show this question conditionally
                           </Button>
                         ) : null}
                       </FieldGroup>

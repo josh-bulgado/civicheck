@@ -1,7 +1,11 @@
-import { toDateKey } from "~/lib/date";
+import { ageInYears, fromDateKey, toDateKey } from "~/lib/date";
 import { flattenSubjects, type SubjectFields } from "~/lib/subject-fields";
 import {
+  conditionRuleSchema,
   formTemplateDefinitionSchema,
+  type CaseSelectorQuestion,
+  type ConditionRule,
+  type FormCondition,
   type FormFieldDefinition,
   type FormStep,
   type FormTemplateDefinition,
@@ -163,6 +167,11 @@ export function parseFormTemplateDefinition(value: unknown): FormTemplateDefinit
   return formTemplateDefinitionSchema.parse(value);
 }
 
+export function parseConditionRule(value: unknown): ConditionRule | null {
+  const parsed = conditionRuleSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+}
+
 export function fieldsForStep(
   definition: FormTemplateDefinition,
   step: FormStep,
@@ -170,6 +179,230 @@ export function fieldsForStep(
   return definition.sections
     .filter((section) => section.step === step)
     .flatMap((section) => section.fields);
+}
+
+function answerString(
+  answers: TemplateAnswers | Record<string, string>,
+  key: string,
+) {
+  const answer = answers[key];
+  return typeof answer === "string" ? answer : "";
+}
+
+/**
+ * Recalculate all database-defined derived values from their source dates.
+ * Any submitted value for a derived key is discarded first, so callers cannot
+ * spoof an age bracket on either the client or server.
+ */
+export function deriveTemplateAnswers(
+  definition: FormTemplateDefinition,
+  answers: TemplateAnswers | Record<string, string>,
+  todayKey: string = toDateKey(),
+): TemplateAnswers {
+  const output: TemplateAnswers = { ...answers };
+  for (const derived of definition.derivedAnswers ?? []) {
+    delete output[derived.key];
+    const birthDateKey = answerString(output, derived.dateField);
+    const referenceDateKey = derived.referenceDateField
+      ? answerString(output, derived.referenceDateField)
+      : todayKey;
+    const birthDate = fromDateKey(birthDateKey);
+    const referenceDate = fromDateKey(referenceDateKey);
+    if (!birthDate || !referenceDate || birthDate > referenceDate) continue;
+
+    const age = ageInYears(birthDateKey, referenceDateKey);
+    const band = derived.bands.find(
+      (candidate) =>
+        age >= candidate.minAge &&
+        (candidate.maxAge === undefined || age <= candidate.maxAge),
+    );
+    if (band) output[derived.key] = band.value;
+  }
+  return output;
+}
+
+export function getDerivedAnswerFeedback(
+  definition: FormTemplateDefinition,
+  answers: TemplateAnswers | Record<string, string>,
+  todayKey: string = toDateKey(),
+) {
+  const effectiveAnswers = deriveTemplateAnswers(definition, answers, todayKey);
+  return (definition.derivedAnswers ?? []).flatMap((derived) => {
+    const value = answerString(effectiveAnswers, derived.key);
+    const band = derived.bands.find((candidate) => candidate.value === value);
+    if (!band?.notice) return [];
+    const birthDateKey = answerString(effectiveAnswers, derived.dateField);
+    const referenceDateKey = derived.referenceDateField
+      ? answerString(effectiveAnswers, derived.referenceDateField)
+      : todayKey;
+    const birthDate = fromDateKey(birthDateKey);
+    const referenceDate = fromDateKey(referenceDateKey);
+    if (!birthDate || !referenceDate || birthDate > referenceDate) return [];
+    return [
+      {
+        key: derived.key,
+        label: derived.label,
+        age: ageInYears(birthDateKey, referenceDateKey),
+        band,
+        notice: band.notice,
+      },
+    ];
+  });
+}
+
+function validateDerivedAnswers(
+  definition: FormTemplateDefinition,
+  answers: TemplateAnswers,
+): { success: true } | { success: false; message: string } {
+  const effectiveAnswers = deriveTemplateAnswers(definition, answers);
+  for (const derived of definition.derivedAnswers ?? []) {
+    if (!derived.required) continue;
+    const sourceDate = answerString(effectiveAnswers, derived.dateField);
+    const sourceField = definition.sections
+      .flatMap((section) => section.fields)
+      .find((field) => field.key === derived.dateField);
+    const referenceDate = derived.referenceDateField
+      ? answerString(effectiveAnswers, derived.referenceDateField)
+      : toDateKey();
+    const referenceField = derived.referenceDateField
+      ? definition.sections
+          .flatMap((section) => section.fields)
+          .find((field) => field.key === derived.referenceDateField)
+      : undefined;
+    if (!sourceDate) {
+      return {
+        success: false,
+        message: `${sourceField?.label ?? derived.label} is required.`,
+      };
+    }
+    if (!fromDateKey(sourceDate)) {
+      return {
+        success: false,
+        message: `${sourceField?.label ?? derived.label} must be a valid date.`,
+      };
+    }
+    if (!referenceDate) {
+      return {
+        success: false,
+        message: `${referenceField?.label ?? "Reference date"} is required.`,
+      };
+    }
+    if (!fromDateKey(referenceDate)) {
+      return {
+        success: false,
+        message: `${referenceField?.label ?? "Reference date"} must be a valid date.`,
+      };
+    }
+    if (sourceDate > referenceDate) {
+      return {
+        success: false,
+        message: `${sourceField?.label ?? derived.label} cannot be after ${referenceField?.label?.toLowerCase() ?? "the reference date"}.`,
+      };
+    }
+    if (!answerString(effectiveAnswers, derived.key)) {
+      return {
+        success: false,
+        message: `${derived.label} is outside the supported age range.`,
+      };
+    }
+    const blockingFeedback = getDerivedAnswerFeedback(
+      definition,
+      effectiveAnswers,
+    ).find(
+      (feedback) =>
+        feedback.key === derived.key && feedback.notice.blocksProgress,
+    );
+    if (blockingFeedback) {
+      return {
+        success: false,
+        message: blockingFeedback.notice.description,
+      };
+    }
+  }
+  return { success: true };
+}
+
+export function conditionMatches(
+  condition: FormCondition,
+  answers: TemplateAnswers | Record<string, string>,
+): boolean {
+  const value = answerString(answers, condition.field);
+  if (!value) return false;
+  return condition.operator === "equals"
+    ? value === condition.value
+    : value !== condition.value;
+}
+
+export function conditionRuleMatches(
+  rule: ConditionRule | null | undefined,
+  answers: TemplateAnswers | Record<string, string>,
+): boolean {
+  if (!rule) return true;
+  return rule.match === "all"
+    ? rule.conditions.every((condition) => conditionMatches(condition, answers))
+    : rule.conditions.some((condition) => conditionMatches(condition, answers));
+}
+
+export function visibleCaseSelectorQuestions(
+  definition: FormTemplateDefinition,
+  answers: TemplateAnswers | Record<string, string>,
+): CaseSelectorQuestion[] {
+  const effectiveAnswers = deriveTemplateAnswers(definition, answers);
+  return (definition.caseSelector?.questions ?? []).filter((question) =>
+    conditionRuleMatches(question.visibleWhen, effectiveAnswers),
+  );
+}
+
+export function resolveCaseSelectorServiceCode(
+  definition: FormTemplateDefinition,
+  answers: TemplateAnswers | Record<string, string>,
+): string | null {
+  const selector = definition.caseSelector;
+  if (!selector) return null;
+
+  const effectiveAnswers = deriveTemplateAnswers(definition, answers);
+
+  const visibleQuestions = visibleCaseSelectorQuestions(definition, effectiveAnswers);
+  if (visibleQuestions.some((question) => !answerString(effectiveAnswers, question.key))) {
+    return null;
+  }
+
+  return (
+    selector.outcomes.find((outcome) =>
+      conditionRuleMatches(outcome.when, effectiveAnswers),
+    )?.serviceCode ?? null
+  );
+}
+
+export function validateCaseSelectorAnswers(
+  definition: FormTemplateDefinition,
+  answers: TemplateAnswers,
+): { success: true; serviceCode: string | null } | { success: false; message: string } {
+  const selector = definition.caseSelector;
+  if (!selector) return { success: true, serviceCode: null };
+
+  const derivedValidation = validateDerivedAnswers(definition, answers);
+  if (!derivedValidation.success) return derivedValidation;
+  const effectiveAnswers = deriveTemplateAnswers(definition, answers);
+
+  for (const question of visibleCaseSelectorQuestions(definition, effectiveAnswers)) {
+    const value = answerString(effectiveAnswers, question.key);
+    if (!value) {
+      return { success: false, message: `${question.label} is required.` };
+    }
+    if (!question.options.some((option) => option.value === value)) {
+      return { success: false, message: `${question.label} has an invalid selection.` };
+    }
+  }
+
+  const serviceCode = resolveCaseSelectorServiceCode(definition, effectiveAnswers);
+  if (!serviceCode) {
+    return {
+      success: false,
+      message: "These case answers do not resolve to an available service variant.",
+    };
+  }
+  return { success: true, serviceCode };
 }
 
 export function isFieldVisible(
@@ -188,10 +421,16 @@ export function validateTemplateAnswers(
   definition: FormTemplateDefinition,
   answers: TemplateAnswers,
 ): { success: true } | { success: false; message: string } {
+  const effectiveAnswers = deriveTemplateAnswers(definition, answers);
+  const derivedValidation = validateDerivedAnswers(definition, effectiveAnswers);
+  if (!derivedValidation.success) return derivedValidation;
+  const selectorValidation = validateCaseSelectorAnswers(definition, effectiveAnswers);
+  if (!selectorValidation.success) return selectorValidation;
+
   for (const section of definition.sections) {
     for (const field of section.fields) {
-      if (!isFieldVisible(field, answers)) continue;
-      const answer = answers[field.key];
+      if (!isFieldVisible(field, effectiveAnswers)) continue;
+      const answer = effectiveAnswers[field.key];
 
       if (field.type === "person_group") {
         const subjects = Array.isArray(answer) ? answer : [];
@@ -251,7 +490,7 @@ export function validateTemplateAnswers(
       }
       if (field.type === "date") {
         const today = toDateKey();
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        if (!fromDateKey(value)) {
           return { success: false, message: `${field.label} must be a valid date.` };
         }
         if (field.dateDirection === "past" && value > today) {
@@ -270,11 +509,19 @@ export function flattenTemplateAnswers(
   definition: FormTemplateDefinition,
   answers: TemplateAnswers,
 ): Record<string, string> {
+  const effectiveAnswers = deriveTemplateAnswers(definition, answers);
   const output: Record<string, string> = {};
+  for (const question of visibleCaseSelectorQuestions(definition, effectiveAnswers)) {
+    output[question.key] = answerString(effectiveAnswers, question.key);
+  }
+  for (const derived of definition.derivedAnswers ?? []) {
+    const value = answerString(effectiveAnswers, derived.key);
+    if (value) output[derived.key] = value;
+  }
   for (const section of definition.sections) {
     for (const field of section.fields) {
-      if (!isFieldVisible(field, answers)) continue;
-      const value = answers[field.key];
+      if (!isFieldVisible(field, effectiveAnswers)) continue;
+      const value = effectiveAnswers[field.key];
       if (field.type === "person_group") {
         Object.assign(output, flattenSubjects((Array.isArray(value) ? value : []) as SubjectFields[]));
       } else if (typeof value === "string") {
@@ -297,6 +544,12 @@ export function templateFieldLabels(
   definition: FormTemplateDefinition,
 ): Record<string, string> {
   const labels: Record<string, string> = {};
+  for (const question of definition.caseSelector?.questions ?? []) {
+    labels[question.key] = question.label;
+  }
+  for (const derived of definition.derivedAnswers ?? []) {
+    labels[derived.key] = derived.label;
+  }
   for (const section of definition.sections) {
     for (const field of section.fields) {
       if (field.type !== "person_group") labels[field.key] = field.label;

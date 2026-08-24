@@ -1,10 +1,50 @@
 import { ColumnDef } from "@tanstack/react-table";
+import { Link } from "@tanstack/react-router";
 import { ArrowUpDown, Eye, Pencil } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
+import { Button, buttonVariants } from "~/components/ui/button";
+import { cn } from "~/lib/utils";
 import { Service } from "../services.types";
 
-export const columns: ColumnDef<Service>[] = [
+export interface ServiceDossier extends Service {
+  dossier_key: string;
+  variant_count: number;
+  variant_codes: string[];
+  minimum_fee: number;
+  maximum_fee: number;
+  processing_varies: boolean;
+}
+
+export function buildServiceDossiers(services: Service[]): ServiceDossier[] {
+  const groups = new Map<string, Service[]>();
+  for (const service of services) {
+    const key = service.display_group ?? service.service_code;
+    const group = groups.get(key);
+    if (group) group.push(service);
+    else groups.set(key, [service]);
+  }
+
+  return [...groups.entries()].map(([dossierKey, variants]) => {
+    const ordered = [...variants].sort((left, right) =>
+      left.service_code.localeCompare(right.service_code),
+    );
+    const representative = ordered[0];
+    const fees = ordered.map((variant) => Number(variant.fee));
+    return {
+      ...representative,
+      name: representative.display_name ?? representative.name,
+      dossier_key: dossierKey,
+      variant_count: ordered.length,
+      variant_codes: ordered.map((variant) => variant.service_code),
+      minimum_fee: Math.min(...fees),
+      maximum_fee: Math.max(...fees),
+      processing_varies:
+        new Set(ordered.map((variant) => variant.processing_time)).size > 1,
+    };
+  });
+}
+
+export const columns: ColumnDef<ServiceDossier>[] = [
   {
     accessorKey: "service_code",
     header: ({ column }) => (
@@ -15,13 +55,20 @@ export const columns: ColumnDef<Service>[] = [
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Service Code
-        <ArrowUpDown className="ml-1 w-3 h-3" />
+        <ArrowUpDown aria-hidden="true" data-icon="inline-end" />
       </Button>
     ),
     cell: ({ row }) => (
-      <span className="font-mono text-xs font-bold text-foreground">
-        {row.getValue("service_code")}
-      </span>
+      <div className="flex flex-col gap-1">
+        <span className="font-mono text-xs font-bold uppercase text-foreground">
+          {row.original.dossier_key}
+        </span>
+        {row.original.variant_count > 1 ? (
+          <Badge variant="secondary" className="w-fit text-[10px]">
+            {row.original.variant_count} internal variants
+          </Badge>
+        ) : null}
+      </div>
     ),
   },
   {
@@ -34,7 +81,7 @@ export const columns: ColumnDef<Service>[] = [
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Service Title
-        <ArrowUpDown className="ml-1 w-3 h-3" />
+        <ArrowUpDown aria-hidden="true" data-icon="inline-end" />
       </Button>
     ),
     cell: ({ row }) => {
@@ -45,13 +92,15 @@ export const columns: ColumnDef<Service>[] = [
             className="line-clamp-1 text-sm font-medium text-foreground"
             title={service.name}
           >
-            {service.name}
+            {service.display_name ?? service.name}
           </div>
           {service.display_group && (
             <div className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
               <span className="inline-block size-1.5 rounded-full bg-border" />
               Part of group:{" "}
-              <span className="font-semibold">{service.display_group}</span>
+              <span className="font-semibold uppercase">
+                {service.display_group}
+              </span>
             </div>
           )}
           <div className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
@@ -75,7 +124,7 @@ export const columns: ColumnDef<Service>[] = [
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Complexity
-        <ArrowUpDown className="ml-1 w-3 h-3" />
+        <ArrowUpDown aria-hidden="true" data-icon="inline-end" />
       </Button>
     ),
     cell: ({ row }) => {
@@ -118,15 +167,20 @@ export const columns: ColumnDef<Service>[] = [
       </Button>
     ),
     cell: ({ row }) => {
-      const fee = row.getValue<number>("fee");
+      const minimumFee = row.original.minimum_fee;
+      const maximumFee = row.original.maximum_fee;
+      const formatAmount = (amount: number) =>
+        amount === 0
+          ? "Free"
+          : `₱${amount.toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`;
       return (
         <span className="text-sm font-semibold text-foreground">
-          {fee === 0 || fee === null
-            ? "Free / Varies"
-            : `₱${Number(fee).toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}`}
+          {minimumFee === maximumFee
+            ? formatAmount(minimumFee)
+            : `${formatAmount(minimumFee)}–${formatAmount(maximumFee)}`}
         </span>
       );
     },
@@ -141,9 +195,15 @@ export const columns: ColumnDef<Service>[] = [
     cell: ({ row }) => (
       <span
         className="block max-w-[150px] truncate text-xs text-muted-foreground"
-        title={row.getValue("processing_time")}
+        title={
+          row.original.processing_varies
+            ? "Processing time varies by internal case"
+            : row.original.processing_time
+        }
       >
-        {row.getValue("processing_time") || "N/A"}
+        {row.original.processing_varies
+          ? "Varies by case"
+          : row.original.processing_time || "N/A"}
       </span>
     ),
   },
@@ -157,8 +217,7 @@ export const columns: ColumnDef<Service>[] = [
     cell: ({ row, table }) => {
       const meta = table.options.meta as
         | {
-            onView?: (service: Service) => void;
-            onEdit?: (service: Service) => void;
+            onView?: (service: ServiceDossier) => void;
           }
         | undefined;
       return (
@@ -170,21 +229,39 @@ export const columns: ColumnDef<Service>[] = [
               e.stopPropagation();
               meta?.onView?.(row.original);
             }}
+            aria-label={`View ${row.original.name}`}
             title="View Service Details"
           >
-            <Eye className="w-4 h-4" />
+            <Eye aria-hidden="true" />
           </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              meta?.onEdit?.(row.original);
-            }}
-            title="Edit Service"
-          >
-            <Pencil className="w-4 h-4" />
-          </Button>
+          {row.original.variant_count > 1 ? (
+            <Link
+              to="/admin/services/groups/$displayGroup"
+              params={{ displayGroup: row.original.dossier_key }}
+              search={{ scope: undefined }}
+              onClick={(event) => event.stopPropagation()}
+              className={cn(
+                buttonVariants({ variant: "outline", size: "icon" }),
+              )}
+              aria-label={`Manage ${row.original.name} group`}
+              title="Manage Service Group"
+            >
+              <Pencil aria-hidden="true" />
+            </Link>
+          ) : (
+            <Link
+              to="/admin/services/$serviceCode/edit"
+              params={{ serviceCode: row.original.service_code }}
+              onClick={(event) => event.stopPropagation()}
+              className={cn(
+                buttonVariants({ variant: "outline", size: "icon" }),
+              )}
+              aria-label={`Edit ${row.original.name}`}
+              title="Edit Service"
+            >
+              <Pencil aria-hidden="true" />
+            </Link>
+          )}
         </div>
       );
     },

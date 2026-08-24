@@ -18,22 +18,19 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { SlidersHorizontal } from "lucide-react";
-import { Service } from "../services.types";
-import { columns } from "./ServicesColumn";
+import { columns, type ServiceDossier } from "./ServicesColumn";
 import { ServicesTableToolbar, type ClassificationFilter } from "./ServicesTableToolbar";
 import { Button } from "~/components/ui/button";
 import { DataTablePagination } from "~/components/ui/data-table-pagination";
 
 interface ServicesDataTableProps {
-  data: Service[];
-  onView?: (service: Service) => void;
-  onEdit?: (service: Service) => void;
+  data: ServiceDossier[];
+  onView?: (service: ServiceDossier) => void;
 }
 
 export function ServicesDataTable({
   data,
   onView,
-  onEdit,
 }: ServicesDataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -55,11 +52,16 @@ export function ServicesDataTable({
     globalFilterFn: (row, _columnId, filterValue: string) => {
       const search = filterValue.toLowerCase();
       return (
-        row.original.name.toLowerCase().includes(search) ||
-        row.original.service_code.toLowerCase().includes(search)
+        (row.original.display_name ?? row.original.name)
+          .toLowerCase()
+          .includes(search) ||
+        row.original.dossier_key.toLowerCase().includes(search) ||
+        row.original.variant_codes.some((code) =>
+          code.toLowerCase().includes(search),
+        )
       );
     },
-    meta: { onView, onEdit },
+    meta: { onView },
   });
 
   const handleClassificationFilter = (value: ClassificationFilter) => {
@@ -77,7 +79,7 @@ export function ServicesDataTable({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
 
       <ServicesTableToolbar
         globalFilter={globalFilter}
@@ -108,8 +110,7 @@ export function ServicesDataTable({
                 table.getRowModel().rows.map((row) => (
                   <TableRow
                     key={row.id}
-                    onClick={() => onView?.(row.original)}
-                    className="cursor-pointer transition-colors hover:bg-surface-subtle active:bg-secondary"
+                    className="transition-colors hover:bg-surface-subtle"
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
@@ -121,11 +122,11 @@ export function ServicesDataTable({
               ) : (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">
-                    <div className="flex flex-col items-center justify-center space-y-2">
-                      <SlidersHorizontal className="size-8 text-muted-foreground/50" />
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <SlidersHorizontal aria-hidden="true" className="size-8 text-muted-foreground/50" />
                       <p className="text-sm font-medium">No services found matching your filters.</p>
                       <Button variant="link" size="sm" onClick={handleClearFilters} className="text-xs h-auto p-0">
-                        Clear filters
+                        Clear Filters
                       </Button>
                     </div>
                   </TableCell>

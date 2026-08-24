@@ -464,6 +464,7 @@ function AttachmentRow({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-foreground">
+            {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
             {doc.requirementName}
           </p>
           <p className="text-xs capitalize text-muted-foreground">
@@ -594,7 +595,10 @@ function AttachmentRow({
       >
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{doc.requirementName}</DialogTitle>
+            <DialogTitle>
+              {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
+              {doc.requirementName}
+            </DialogTitle>
           </DialogHeader>
           {viewerUrl && (
             <div className="flex max-h-[75vh] flex-col items-center overflow-auto">

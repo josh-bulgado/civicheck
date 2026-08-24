@@ -5,13 +5,24 @@ import { Checkbox } from "~/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { Field, FieldLabel } from "~/components/ui/field";
-import { formatFee } from "~/features/services/service-utils";
+import {
+  formatFee,
+  isRequirementApplicable,
+} from "~/features/services/service-utils";
+import {
+  expandRequirementUploadSlots,
+  requirementUploadKey,
+} from "~/features/services/requirement-upload.utils";
 import { submitRequestFn } from "~/features/services/services.mutations";
 import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
 import { ChangeServiceButton } from "~/features/apply/components/ApplicationDocket";
 import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
-import { isFieldVisible } from "~/features/forms/form-template.utils";
+import {
+  deriveTemplateAnswers,
+  isFieldVisible,
+  visibleCaseSelectorQuestions,
+} from "~/features/forms/form-template.utils";
 import type {
   FormFieldDefinition,
   TemplateAnswers,
@@ -48,7 +59,7 @@ function formatFieldAnswer(field: FormFieldDefinition, value: string) {
 function ReviewStepRoute() {
   const { serviceCode } = Route.useParams();
   const navigate = useNavigate();
-  const { displayName, services } = ApplyLayoutRoute.useLoaderData();
+  const { displayName, services, requirements } = ApplyLayoutRoute.useLoaderData();
   const { draft, clear } = useApplyDraft(serviceCode);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -73,10 +84,28 @@ function ReviewStepRoute() {
       .filter((field) => field.type === "person_group")
       .map((field) => [field.key, draft.subjects]),
   );
-  const answerBag: TemplateAnswers = {
+  const answerBag: TemplateAnswers = deriveTemplateAnswers(definition, {
     ...draft.answers,
+    ...draft.caseSelectorAnswers,
     ...personGroupAnswers,
-  };
+  });
+  const activeDocumentKeys = new Set(
+    expandRequirementUploadSlots(
+      requirements.filter((requirement) =>
+        isRequirementApplicable(
+          requirement,
+          selectedService.service_code,
+          answerBag,
+        ),
+      ),
+      draft.subjects,
+    ).map((slot) => slot.key),
+  );
+  const activeDocuments = draft.documents.filter((document) =>
+    activeDocumentKeys.has(
+      requirementUploadKey(document.requirementId, document.subjectRole),
+    ),
+  );
 
   async function handleSubmit() {
     if (!selectedService) return;
@@ -88,8 +117,10 @@ function ReviewStepRoute() {
           serviceCode: selectedService.service_code,
           templateVersionId: selectedService.form_template?.versionId ?? null,
           answers: answerBag,
-          documents: draft.documents.map((d) => ({
+          documents: activeDocuments.map((d) => ({
+            requirementId: d.requirementId,
             requirementName: d.requirementName,
+            subjectRole: d.subjectRole,
             fileUrl: d.storagePath,
           })),
         },
@@ -178,6 +209,22 @@ function ReviewStepRoute() {
             label="Fee at cashier"
             value={selectedService ? formatFee(selectedService.fee) : "—"}
           />
+          {visibleCaseSelectorQuestions(definition, answerBag).map(
+            (question) => {
+              const answer = answerBag[question.key];
+              const value = typeof answer === "string" ? answer : "";
+              return (
+                <ReviewRow
+                  key={question.key}
+                  label={question.label}
+                  value={
+                    question.options.find((option) => option.value === value)
+                      ?.label ?? (value || "—")
+                  }
+                />
+              );
+            },
+          )}
         </EditSection>
 
         {definition.sections.map((section) => (
@@ -233,21 +280,25 @@ function ReviewStepRoute() {
         ))}
 
         <EditSection
-          title={`Documents · ${draft.documents.length} uploaded`}
+          title={`Documents · ${activeDocuments.length} uploaded`}
           onEdit={() =>
             navigate({ to: "/apply/$serviceCode/documents", params: { serviceCode } })
           }
         >
-          {draft.documents.length === 0 ? (
+          {activeDocuments.length === 0 ? (
             <p className="text-sm text-muted-foreground">No documents uploaded yet.</p>
           ) : (
             <div className="flex flex-col gap-2.5">
-              {draft.documents.map((doc) => (
-                <div key={doc.requirementId} className="flex items-center gap-2.5 text-sm">
+              {activeDocuments.map((doc) => (
+                <div
+                  key={`${doc.requirementId}-${doc.subjectRole ?? "request"}`}
+                  className="flex items-center gap-2.5 text-sm"
+                >
                   <span className="flex size-4.5 shrink-0 items-center justify-center rounded-[5px] bg-success text-[10px] font-bold text-white">
                     <Check className="size-2.5" aria-hidden="true" />
                   </span>
                   <span className="min-w-0 break-words text-foreground">
+                    {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
                     {doc.requirementName} — {doc.fileName}
                   </span>
                 </div>

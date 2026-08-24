@@ -12,6 +12,8 @@ interface ApplyDraftEventDetail {
 export interface ApplyDraftDocument {
   requirementId: string;
   requirementName: string;
+  /** Null for shared request documents; otherwise the owning party role. */
+  subjectRole: string | null;
   storagePath: string;
   fileName: string;
   fileSize: number;
@@ -20,6 +22,8 @@ export interface ApplyDraftDocument {
 
 export interface ApplyDraft {
   selectedServiceCode: string | null;
+  /** Answers to the database-backed service-variant questions. */
+  caseSelectorAnswers: Record<string, string>;
   /**
    * Set only when this draft was seeded by a cross-group redirect (see
    * `seedDraftForGroup`) — consumed once by the case-selector step to skip
@@ -51,6 +55,7 @@ export interface ApplyDraft {
 
 export const DEFAULT_APPLY_DRAFT: ApplyDraft = {
   selectedServiceCode: null,
+  caseSelectorAnswers: {},
   presetAge: null,
   presetMarital: null,
   subjects: [],
@@ -78,6 +83,7 @@ function withMigratedAnswers(value: Partial<ApplyDraft>): ApplyDraft {
   return {
     ...DEFAULT_APPLY_DRAFT,
     ...value,
+    caseSelectorAnswers: value.caseSelectorAnswers ?? {},
     answers: {
       event_date: value.eventDate ?? "",
       event_place: value.eventPlace ?? "",
@@ -92,6 +98,10 @@ function withMigratedAnswers(value: Partial<ApplyDraft>): ApplyDraft {
       contact_number: value.contactNumber ?? "",
       ...(value.answers ?? {}),
     },
+    documents: (value.documents ?? []).map((document) => ({
+      ...document,
+      subjectRole: document.subjectRole ?? null,
+    })),
   };
 }
 

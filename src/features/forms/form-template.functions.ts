@@ -116,6 +116,39 @@ export const publishServiceFormTemplateFn = createServerFn({ method: "POST" })
       binding = createdBinding;
     }
 
+    if (data.definition.caseSelector) {
+      const { data: boundServices, error: boundServicesError } = await context.supabase
+        .from("service_form_templates")
+        .select("service_code")
+        .eq("template_id", binding.template_id);
+      if (boundServicesError) throw new Error(boundServicesError.message);
+
+      const allowedCodes = new Set(
+        (boundServices ?? []).map((service) => service.service_code),
+      );
+      const outcomeCodes = new Set(
+        data.definition.caseSelector.outcomes.map(
+          (outcome) => outcome.serviceCode,
+        ),
+      );
+      const invalidCode = [...outcomeCodes].find(
+        (serviceCode) => !allowedCodes.has(serviceCode),
+      );
+      if (invalidCode) {
+        throw new Error(
+          `Case routing outcome "${invalidCode}" is not bound to this form template.`,
+        );
+      }
+      const missingCode = [...allowedCodes].find(
+        (serviceCode) => !outcomeCodes.has(serviceCode),
+      );
+      if (missingCode) {
+        throw new Error(
+          `Case routing does not include the internal variant "${missingCode}".`,
+        );
+      }
+    }
+
     const { data: latest } = await context.supabase
       .from("form_template_versions")
       .select("version")

@@ -44,6 +44,7 @@ type TrackValues = z.infer<typeof trackSchema>;
 type TrackAttachment = {
   id: string;
   requirementName: string;
+  subjectRole: string | null;
   verificationStatus: string;
   rejectionReason: string | null;
 };
@@ -315,7 +316,10 @@ function AttachmentTrackRow({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-light p-4 text-sm">
       <div className="min-w-0">
-        <p className="truncate font-semibold text-foreground">{doc.requirementName}</p>
+        <p className="truncate font-semibold text-foreground">
+          {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
+          {doc.requirementName}
+        </p>
         <Badge
           variant={getAttachmentStatusVariant(doc.verificationStatus)}
           className="mt-1 capitalize"

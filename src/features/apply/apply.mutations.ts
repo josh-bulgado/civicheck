@@ -12,15 +12,16 @@ export const uploadRequestDocumentFn = createServerFn({ method: "POST" })
     const file = data.get("file");
     const serviceCode = data.get("serviceCode")?.toString();
     const requirementId = data.get("requirementId")?.toString();
+    const subjectRole = data.get("subjectRole")?.toString() || null;
     if (!(file instanceof File)) throw new Error("Missing file");
     if (!serviceCode) throw new Error("Missing serviceCode");
     if (!requirementId) throw new Error("Missing requirementId");
-    return { file, serviceCode, requirementId };
+    return { file, serviceCode, requirementId, subjectRole };
   })
   .handler(async ({ data }) => {
     const { supabase, user } = await requireActiveSession("requests:create");
 
-    const { file, serviceCode, requirementId } = data;
+    const { file, serviceCode, requirementId, subjectRole } = data;
 
     if (!ALLOWED_TYPES.includes(file.type)) {
       return {
@@ -33,7 +34,8 @@ export const uploadRequestDocumentFn = createServerFn({ method: "POST" })
     }
 
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const path = `${user.id}/${serviceCode}/${requirementId}/${Date.now()}-${safeName}`;
+    const safeRole = (subjectRole ?? "request").replace(/[^a-zA-Z0-9_-]/g, "_");
+    const path = `${user.id}/${serviceCode}/${requirementId}/${safeRole}/${Date.now()}-${safeName}`;
 
     const { error: uploadError } = await supabase.storage
       .from("request-documents")
