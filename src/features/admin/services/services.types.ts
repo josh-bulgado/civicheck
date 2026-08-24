@@ -1,3 +1,5 @@
+import type { PublishedFormTemplate } from "~/features/forms/form-template.types";
+
 // ─── Enums (mirroring DB check constraints) ─────────────────────────────────
 
 export type ServiceClassification = "simple" | "complex" | "highly_technical";
@@ -30,6 +32,8 @@ export interface Service {
   asks_purpose: boolean;
   /** Whether the case step asks for the informant and whether birth was at a hospital or at home. */
   asks_birth_details: boolean;
+  /** Active, published application form resolved through service_form_templates. */
+  form_template?: PublishedFormTemplate;
 }
 
 export interface CreateServiceInput {

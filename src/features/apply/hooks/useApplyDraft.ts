@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { SubjectFields } from "~/lib/subject-fields";
+import type { TemplateAnswers } from "~/features/forms/form-template.types";
 
 const APPLY_DRAFT_EVENT = "civicheck:apply-draft";
 
@@ -28,6 +29,8 @@ export interface ApplyDraft {
   presetMarital: string | null;
   /** One entry per person the service asks about — see `subject-fields.ts`. */
   subjects: SubjectFields[];
+  /** Answers keyed by the immutable field keys in the published form template. */
+  answers: TemplateAnswers;
   contactNumber: string;
   eventDate: string;
   eventPlace: string;
@@ -51,6 +54,9 @@ export const DEFAULT_APPLY_DRAFT: ApplyDraft = {
   presetAge: null,
   presetMarital: null,
   subjects: [],
+  answers: {
+    purpose: "Local Use (ID, Barangay, etc.)",
+  },
   contactNumber: "",
   eventDate: "",
   eventPlace: "",
@@ -66,6 +72,28 @@ export const DEFAULT_APPLY_DRAFT: ApplyDraft = {
   documents: [],
   updatedAt: null,
 };
+
+function withMigratedAnswers(value: Partial<ApplyDraft>): ApplyDraft {
+  const legacyCase = value.caseAnswers ?? DEFAULT_APPLY_DRAFT.caseAnswers;
+  return {
+    ...DEFAULT_APPLY_DRAFT,
+    ...value,
+    answers: {
+      event_date: value.eventDate ?? "",
+      event_place: value.eventPlace ?? "",
+      purpose: legacyCase.purpose ?? "Local Use (ID, Barangay, etc.)",
+      purpose_other: legacyCase.otherPurpose ?? "",
+      additional_notes: legacyCase.additionalNotes ?? "",
+      reference_number: legacyCase.referenceNumber ?? "",
+      place_type: legacyCase.placeType ?? "",
+      informant_name: legacyCase.informantName ?? "",
+      informant_relationship: legacyCase.informantRelationship ?? "",
+      subjects: value.subjects ?? [],
+      contact_number: value.contactNumber ?? "",
+      ...(value.answers ?? {}),
+    },
+  };
+}
 
 function storageKey(groupOrCode: string) {
   return `civicheck.apply.${groupOrCode}`;
@@ -87,8 +115,7 @@ function notifyDraftChange(key: string, draft: ApplyDraft) {
  */
 export function seedDraftForGroup(groupOrCode: string, seed: Partial<ApplyDraft>) {
   const next: ApplyDraft = {
-    ...DEFAULT_APPLY_DRAFT,
-    ...seed,
+    ...withMigratedAnswers(seed),
     updatedAt: new Date().toISOString(),
   };
   const key = storageKey(groupOrCode);
@@ -113,7 +140,7 @@ export function useApplyDraft(groupOrCode: string) {
 
     try {
       const raw = window.localStorage.getItem(key);
-      if (raw) setDraft({ ...DEFAULT_APPLY_DRAFT, ...JSON.parse(raw) });
+      if (raw) setDraft(withMigratedAnswers(JSON.parse(raw)));
     } catch {
       // corrupt or unavailable draft — start fresh
     }

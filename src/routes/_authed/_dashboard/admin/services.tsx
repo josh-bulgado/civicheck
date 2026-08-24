@@ -27,7 +27,13 @@ export const Route = createFileRoute("/_authed/_dashboard/admin/services")({
 function AdminServicesRoute() {
   const { services, departments } = Route.useLoaderData();
   useRealtimeRefresh({
-    tables: ["services_registry", "service_requirements_metadata"],
+    tables: [
+      "services_registry",
+      "service_requirements_metadata",
+      "form_templates",
+      "form_template_versions",
+      "service_form_templates",
+    ],
   });
   return <ServicesPage services={services} departments={departments} />;
 }

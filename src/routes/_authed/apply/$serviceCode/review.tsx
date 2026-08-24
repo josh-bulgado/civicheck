@@ -11,8 +11,12 @@ import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
 import { ChangeServiceButton } from "~/features/apply/components/ApplicationDocket";
 import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
-import { placeTypeLabel } from "~/lib/case-fields";
-import { flattenSubjects, impliedSex, subjectFullName } from "~/lib/subject-fields";
+import { isFieldVisible } from "~/features/forms/form-template.utils";
+import type {
+  FormFieldDefinition,
+  TemplateAnswers,
+} from "~/features/forms/form-template.types";
+import { impliedSex, subjectFullName } from "~/lib/subject-fields";
 import { Route as ApplyLayoutRoute } from "./route";
 
 export const Route = createFileRoute("/_authed/apply/$serviceCode/review")({
@@ -29,6 +33,16 @@ function formatReviewDate(value: string) {
   if (!value) return "—";
   const date = new Date(value + "T00:00:00");
   return Number.isNaN(date.getTime()) ? value : REVIEW_DATE_FORMATTER.format(date);
+}
+
+function formatFieldAnswer(field: FormFieldDefinition, value: string) {
+  if (!value) return "—";
+  if (field.type === "date") return formatReviewDate(value);
+  if (field.type === "phone") return `+63 ${value}`;
+  if (field.type === "select") {
+    return field.options?.find((option) => option.value === value)?.label ?? value;
+  }
+  return value;
 }
 
 function ReviewStepRoute() {
@@ -52,16 +66,17 @@ function ReviewStepRoute() {
   const sexLabel = (sex: string) =>
     sex === "male" ? "Male" : sex === "female" ? "Female" : "—";
 
-  const finalPurpose =
-    draft.caseAnswers.purpose === "Other"
-      ? draft.caseAnswers.otherPurpose
-      : draft.caseAnswers.purpose;
-
-  const dateLabel = selectedService?.event_date_label || "Date of event";
-  const placeLabel = selectedService?.event_place_label || "Place of event";
-  const referenceLabel = selectedService?.reference_number_label;
-  const asksPurpose = selectedService?.asks_purpose ?? true;
-  const asksBirthDetails = selectedService?.asks_birth_details ?? false;
+  const definition = selectedService.form_template!.definition;
+  const personGroupAnswers = Object.fromEntries(
+    definition.sections
+      .flatMap((section) => section.fields)
+      .filter((field) => field.type === "person_group")
+      .map((field) => [field.key, draft.subjects]),
+  );
+  const answerBag: TemplateAnswers = {
+    ...draft.answers,
+    ...personGroupAnswers,
+  };
 
   async function handleSubmit() {
     if (!selectedService) return;
@@ -71,25 +86,8 @@ function ReviewStepRoute() {
       const res = await submitRequestFn({
         data: {
           serviceCode: selectedService.service_code,
-          fee: Number(selectedService.fee),
-          formData: {
-            ...flattenSubjects(draft.subjects),
-            contact_number: draft.contactNumber,
-            event_date: draft.eventDate,
-            event_place: draft.eventPlace,
-            additional_notes: draft.caseAnswers.additionalNotes,
-            ...(asksPurpose ? { purpose: finalPurpose } : {}),
-            ...(referenceLabel
-              ? { reference_number: draft.caseAnswers.referenceNumber }
-              : {}),
-            ...(asksBirthDetails
-              ? {
-                  place_type: draft.caseAnswers.placeType,
-                  informant_name: draft.caseAnswers.informantName,
-                  informant_relationship: draft.caseAnswers.informantRelationship,
-                }
-              : {}),
-          },
+          templateVersionId: selectedService.form_template?.versionId ?? null,
+          answers: answerBag,
           documents: draft.documents.map((d) => ({
             requirementName: d.requirementName,
             fileUrl: d.storagePath,
@@ -182,67 +180,57 @@ function ReviewStepRoute() {
           />
         </EditSection>
 
-        <EditSection
-          title="Your details"
-          onEdit={() =>
-            navigate({ to: "/apply/$serviceCode/details", params: { serviceCode } })
-          }
-        >
-          {draft.subjects.map((subject, index) => (
-            <ReviewRow
-              key={`name-${index}`}
-              label={showRoleLabels ? subject.role : "Subject"}
-              value={subjectFullName(subject) || "—"}
-            />
-          ))}
-          {draft.subjects
-            .filter((subject) => impliedSex(subject.role) === null)
-            .map((subject, index) => (
-              <ReviewRow
-                key={`sex-${index}`}
-                label={showRoleLabels ? `${subject.role}'s sex` : "Sex"}
-                value={sexLabel(subject.sex)}
-              />
-            ))}
-          <ReviewRow
-            label="Contact number"
-            value={draft.contactNumber ? `+63 ${draft.contactNumber}` : "—"}
-          />
-        </EditSection>
-
-        <EditSection
-          title="About your case"
-          onEdit={() =>
-            navigate({ to: "/apply/$serviceCode/case", params: { serviceCode } })
-          }
-        >
-          <ReviewRow label={dateLabel} value={formatReviewDate(draft.eventDate)} />
-          <ReviewRow label={placeLabel} value={draft.eventPlace || "—"} />
-          {asksBirthDetails && (
-            <>
-              <ReviewRow
-                label="Place type"
-                value={placeTypeLabel(draft.caseAnswers.placeType)}
-              />
-              <ReviewRow
-                label="Informant"
-                value={draft.caseAnswers.informantName || "—"}
-              />
-              <ReviewRow
-                label="Informant's relationship"
-                value={draft.caseAnswers.informantRelationship || "—"}
-              />
-            </>
-          )}
-          {referenceLabel && (
-            <ReviewRow
-              label={referenceLabel}
-              value={draft.caseAnswers.referenceNumber || "—"}
-            />
-          )}
-          {asksPurpose && <ReviewRow label="Purpose" value={finalPurpose || "—"} />}
-          <ReviewRow label="Notes" value={draft.caseAnswers.additionalNotes || "None"} />
-        </EditSection>
+        {definition.sections.map((section) => (
+          <EditSection
+            key={section.key}
+            title={section.title}
+            onEdit={() =>
+              navigate({
+                to:
+                  section.step === "case"
+                    ? "/apply/$serviceCode/case"
+                    : "/apply/$serviceCode/details",
+                params: { serviceCode },
+              })
+            }
+          >
+            {section.fields
+              .filter((field) => isFieldVisible(field, answerBag))
+              .flatMap((field) => {
+                if (field.type === "person_group") {
+                  return [
+                    ...draft.subjects.map((subject, index) => (
+                      <ReviewRow
+                        key={`${field.key}-name-${index}`}
+                        label={showRoleLabels ? subject.role : field.label}
+                        value={subjectFullName(subject) || "—"}
+                      />
+                    )),
+                    ...draft.subjects
+                      .filter((subject) => impliedSex(subject.role) === null)
+                      .map((subject, index) => (
+                        <ReviewRow
+                          key={`${field.key}-sex-${index}`}
+                          label={showRoleLabels ? `${subject.role}'s sex` : "Sex"}
+                          value={sexLabel(subject.sex)}
+                        />
+                      )),
+                  ];
+                }
+                const answer = answerBag[field.key];
+                return [
+                  <ReviewRow
+                    key={field.key}
+                    label={field.label}
+                    value={formatFieldAnswer(
+                      field,
+                      typeof answer === "string" ? answer : "",
+                    )}
+                  />,
+                ];
+              })}
+          </EditSection>
+        ))}
 
         <EditSection
           title={`Documents · ${draft.documents.length} uploaded`}

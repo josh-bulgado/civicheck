@@ -2,6 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireActiveSession } from "~/server/auth";
 import { isDepartmentScopedRole } from "~/lib/permissions";
+import {
+  parseFormTemplateDefinition,
+  templateFieldLabels,
+} from "~/features/forms/form-template.utils";
 
 const trackingLookupSchema = z.object({ trackingNumber: z.string().min(1) });
 const requestIdSchema = z.object({ requestId: z.string().uuid() });
@@ -61,6 +65,16 @@ function applicantNameOf(row: any): string {
   const form = row.form_data ?? {};
   const fromForm = `${form.subject_first_name ?? ""} ${form.subject_last_name ?? ""}`.trim();
   return fromForm || "—";
+}
+
+function fieldLabelsOf(row: any): Record<string, string> {
+  const version = one<{ definition?: unknown }>(row.form_template_versions);
+  if (!version?.definition) return {};
+  try {
+    return templateFieldLabels(parseFormTemplateDefinition(version.definition));
+  } catch {
+    return {};
+  }
 }
 
 /**
@@ -296,7 +310,8 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
          fees_due, form_data, applicant_id, created_at, updated_at,
          services_registry(name, display_name, processing_time, department_id, departments(id, name),
            event_date_label, event_place_label, reference_number_label),
-         profiles(first_name, last_name)`,
+         profiles(first_name, last_name),
+         form_template_versions(definition)`,
       )
       .eq("id", data.requestId)
       .single();
@@ -345,6 +360,7 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       eventDateLabel: service?.event_date_label ?? null,
       eventPlaceLabel: service?.event_place_label ?? null,
       referenceNumberLabel: service?.reference_number_label ?? null,
+      fieldLabels: fieldLabelsOf(row),
       applicantName: applicantNameOf(row),
       createdAt: row.created_at,
       updatedAt: row.updated_at,

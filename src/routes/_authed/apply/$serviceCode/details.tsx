@@ -8,9 +8,6 @@ import {
   type Control,
   type UseFormSetValue,
 } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Phone } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -25,12 +22,6 @@ import {
 } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-  InputGroupText,
-} from "~/components/ui/input-group";
-import {
   Select,
   SelectContent,
   SelectGroup,
@@ -42,6 +33,11 @@ import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
 import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
 import {
+  DynamicFormFields,
+  type DynamicFieldValues,
+} from "~/features/forms/components/DynamicFormFields";
+import { fieldsForStep } from "~/features/forms/form-template.utils";
+import {
   impliedSex,
   reconcileSubjects,
   subjectsMatchRoles,
@@ -52,28 +48,18 @@ export const Route = createFileRoute("/_authed/apply/$serviceCode/details")({
   component: DetailsStepRoute,
 });
 
-const subjectSchema = z.object({
-  role: z.string(),
-  firstName: z.string().min(1, "First name is required"),
-  middleName: z.string(),
-  lastName: z.string().min(1, "Last name is required"),
-  suffix: z.string(),
-  sex: z.enum(["male", "female"], {
-    errorMap: () => ({ message: "Select the sex on record" }),
-  }),
-});
+type DetailsSubject = {
+  role: string;
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  suffix: string;
+  sex: string;
+};
 
-const detailsSchema = z.object({
-  subjects: z.array(subjectSchema).min(1),
-  contactNumber: z
-    .string()
-    .refine(
-      (value) => value === "" || /^9\d{9}$/.test(value),
-      "Enter a valid 10-digit mobile number, e.g. 9171234567",
-    ),
-});
-
-type DetailsValues = z.infer<typeof detailsSchema>;
+type DetailsValues = Record<string, string | DetailsSubject[]> & {
+  subjects: DetailsSubject[];
+};
 
 // The draft stores "no suffix" as an empty string, but Base UI reads an empty
 // value as "nothing selected" and renders no label for it, so the option needs
@@ -111,8 +97,8 @@ function SubjectFieldGrid({
   index,
   role,
 }: {
-  control: Control<DetailsValues>;
-  setValue: UseFormSetValue<DetailsValues>;
+  control: Control<any>;
+  setValue: UseFormSetValue<any>;
   index: number;
   role: string;
 }) {
@@ -129,12 +115,14 @@ function SubjectFieldGrid({
       <Controller
         control={control}
         name={`subjects.${index}.firstName`}
+        rules={{ required: "First name is required" }}
         render={({ field, fieldState }) => (
           <Field data-invalid={fieldState.invalid}>
             <FieldLabel htmlFor={`subject-${index}-firstName`}>First name</FieldLabel>
             <Input
               id={`subject-${index}-firstName`}
               placeholder="Juan"
+              maxLength={120}
               autoComplete="off"
               {...field}
             />
@@ -151,6 +139,7 @@ function SubjectFieldGrid({
             <Input
               id={`subject-${index}-middleName`}
               placeholder="Santos"
+              maxLength={120}
               autoComplete="off"
               {...field}
             />
@@ -160,12 +149,14 @@ function SubjectFieldGrid({
       <Controller
         control={control}
         name={`subjects.${index}.lastName`}
+        rules={{ required: "Last name is required" }}
         render={({ field, fieldState }) => (
           <Field data-invalid={fieldState.invalid}>
             <FieldLabel htmlFor={`subject-${index}-lastName`}>Last name</FieldLabel>
             <Input
               id={`subject-${index}-lastName`}
               placeholder="Dela Cruz"
+              maxLength={120}
               autoComplete="off"
               {...field}
             />
@@ -211,6 +202,7 @@ function SubjectFieldGrid({
         <Controller
           control={control}
           name={`subjects.${index}.sex`}
+          rules={{ required: "Select the sex on record" }}
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
               <FieldLabel htmlFor={`subject-${index}-sex`}>Sex</FieldLabel>
@@ -260,6 +252,10 @@ function DetailsStepRoute() {
   const { draft, update, hydrated } = useApplyDraft(serviceCode);
   const selectedService =
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
+  const definition = selectedService.form_template!.definition;
+  const detailsFields = fieldsForStep(definition, "details");
+  const personGroupField = detailsFields.find((field) => field.type === "person_group");
+  const hasPersonGroup = Boolean(personGroupField);
   const roles = selectedService?.party_roles?.length
     ? selectedService.party_roles
     : ["Subject"];
@@ -268,28 +264,36 @@ function DetailsStepRoute() {
   // `draft.subjects` in sync with whichever service is selected, preserving
   // anything already typed when the count/roles match.
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !hasPersonGroup) return;
     if (subjectsMatchRoles(draft.subjects, roles)) return;
     update((prev) => ({ subjects: reconcileSubjects(prev.subjects, roles) }));
     // `roles` is a new array each render (derived from loader data), so key
     // the effect on its contents instead of its reference.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated, roles.join("|"), draft.subjects, update]);
+  }, [hydrated, hasPersonGroup, roles.join("|"), draft.subjects, update]);
+
+  const detailAnswers = Object.fromEntries(
+    detailsFields
+      .filter((field) => field.type !== "person_group")
+      .map((field) => [
+        field.key,
+        typeof draft.answers[field.key] === "string" ? draft.answers[field.key] : "",
+      ]),
+  );
 
   const form = useForm<DetailsValues>({
-    resolver: zodResolver(detailsSchema),
     mode: "onBlur",
+    shouldUnregister: true,
     values: {
-      subjects: reconcileSubjects(
-        draft.subjects,
-        roles,
-      ) as DetailsValues["subjects"],
-      contactNumber: draft.contactNumber,
+      ...detailAnswers,
+      subjects: hasPersonGroup
+        ? (reconcileSubjects(draft.subjects, roles) as DetailsValues["subjects"])
+        : [],
     },
   });
 
   const subjectFields = useFieldArray({ control: form.control, name: "subjects" });
-  const showRoleLabels = subjectFields.fields.length > 1;
+  const showRoleLabels = hasPersonGroup && subjectFields.fields.length > 1;
 
   // Keep sections user-controlled. Automatically collapsing a completed person
   // can hide a mistake immediately after the applicant leaves a field.
@@ -308,7 +312,24 @@ function DetailsStepRoute() {
   }
 
   function onSubmit(values: DetailsValues) {
-    update(() => ({ subjects: values.subjects, contactNumber: values.contactNumber }));
+    const dynamicValues = Object.fromEntries(
+      detailsFields
+        .filter((field) => field.type !== "person_group")
+        .map((field) => [
+          field.key,
+          typeof values[field.key] === "string" ? values[field.key] : "",
+        ]),
+    );
+    update(() => ({
+      subjects: values.subjects,
+      contactNumber:
+        typeof values.contact_number === "string" ? values.contact_number : "",
+      answers: {
+        ...draft.answers,
+        ...dynamicValues,
+        ...(personGroupField ? { [personGroupField.key]: values.subjects } : {}),
+      },
+    }));
     navigate({ to: "/apply/$serviceCode/documents", params: { serviceCode } });
   }
 
@@ -323,7 +344,7 @@ function DetailsStepRoute() {
       }
     >
       <div className="flex flex-col gap-6">
-        {showRoleLabels ? (
+        {hasPersonGroup && showRoleLabels ? (
           <Accordion multiple value={openIds} onValueChange={setOpenIds}>
             {subjectFields.fields.map((subjectField, index) => (
               <AccordionItem key={subjectField.id} value={subjectField.id}>
@@ -341,7 +362,7 @@ function DetailsStepRoute() {
               </AccordionItem>
             ))}
           </Accordion>
-        ) : (
+        ) : hasPersonGroup ? (
           subjectFields.fields.map((subjectField, index) => (
             <FieldGroup key={subjectField.id}>
               <SubjectFieldGrid
@@ -352,35 +373,14 @@ function DetailsStepRoute() {
               />
             </FieldGroup>
           ))
-        )}
+        ) : null}
 
-        <FieldGroup>
-          <Controller
-            control={form.control}
-            name="contactNumber"
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="contactNumber">Contact number (optional)</FieldLabel>
-                <InputGroup>
-                  <InputGroupAddon>
-                    <Phone size={16} aria-hidden="true" />
-                    <InputGroupText>+63</InputGroupText>
-                  </InputGroupAddon>
-                  <InputGroupInput
-                    {...field}
-                    id="contactNumber"
-                    type="tel"
-                    inputMode="numeric"
-                    autoComplete="tel-national"
-                    placeholder="9171234567"
-                    aria-invalid={fieldState.invalid}
-                  />
-                </InputGroup>
-                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-              </Field>
-            )}
-          />
-        </FieldGroup>
+        <DynamicFormFields
+          definition={definition}
+          step="details"
+          control={form.control}
+          values={form.watch() as unknown as DynamicFieldValues}
+        />
 
         <WizardFooterActions
           onBack={() =>

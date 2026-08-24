@@ -28,6 +28,8 @@ import type {
   Service,
   ServiceRequirement,
 } from "~/features/admin/services/services.types";
+import type { PublishedFormTemplate } from "~/features/forms/form-template.types";
+import { parseFormTemplateDefinition } from "~/features/forms/form-template.utils";
 
 const TTL_MS = 5 * 60 * 1000;
 
@@ -45,6 +47,7 @@ export interface ServiceCatalogue {
   /** Every service in a `display_group`, in `service_code` order. */
   servicesByGroup: Map<string, Service[]>;
   servicesByCode: Map<string, Service>;
+  formTemplatesByService: Map<string, PublishedFormTemplate>;
 }
 
 let entry: { promise: Promise<ServiceCatalogue>; expiresAt: number } | null =
@@ -55,7 +58,13 @@ async function fetchCatalogue(): Promise<ServiceCatalogue> {
 
   // Independent queries — issue both at once rather than paying two serial
   // round trips to Supabase.
-  const [servicesResult, requirementsResult] = await Promise.all([
+  const [
+    servicesResult,
+    requirementsResult,
+    templatesResult,
+    versionsResult,
+    bindingsResult,
+  ] = await Promise.all([
     supabase
       .from("services_registry")
       .select("*")
@@ -66,10 +75,30 @@ async function fetchCatalogue(): Promise<ServiceCatalogue> {
       // Mandatory first, so callers that de-duplicate by name keep the stricter
       // copy of a requirement that appears under several keys.
       .order("is_mandatory", { ascending: false }),
+    supabase.from("form_templates").select("id, template_key, name, active_version_id"),
+    supabase
+      .from("form_template_versions")
+      .select("id, template_id, version, status, definition")
+      .eq("status", "published"),
+    supabase.from("service_form_templates").select("service_code, template_id"),
   ]);
 
   if (servicesResult.error) throw new Error(servicesResult.error.message);
   if (requirementsResult.error) throw new Error(requirementsResult.error.message);
+
+  // The form-template migration may not have been applied yet in a local
+  // environment. Service reads keep working through the legacy fallback in
+  // getServiceDetail; any other template error is surfaced normally.
+  const templateTablesMissing = [
+    templatesResult.error,
+    versionsResult.error,
+    bindingsResult.error,
+  ].some((error) => error?.code === "42P01" || error?.code === "PGRST205");
+  if (!templateTablesMissing) {
+    if (templatesResult.error) throw new Error(templatesResult.error.message);
+    if (versionsResult.error) throw new Error(versionsResult.error.message);
+    if (bindingsResult.error) throw new Error(bindingsResult.error.message);
+  }
 
   const services = (servicesResult.data ?? []) as Service[];
   const requirements = (requirementsResult.data ?? []) as ServiceRequirement[];
@@ -109,6 +138,32 @@ async function fetchCatalogue(): Promise<ServiceCatalogue> {
     bucket.sort((a, b) => a.service_code.localeCompare(b.service_code));
   }
 
+  const versionById = new Map(
+    (versionsResult.data ?? []).map((version: any) => [version.id, version]),
+  );
+  const templateById = new Map(
+    (templatesResult.data ?? []).map((template: any) => [template.id, template]),
+  );
+  const formTemplatesByService = new Map<string, PublishedFormTemplate>();
+  for (const binding of bindingsResult.data ?? []) {
+    const template = templateById.get((binding as any).template_id) as any;
+    const version = template ? (versionById.get(template.active_version_id) as any) : null;
+    if (!template || !version) continue;
+    try {
+      formTemplatesByService.set((binding as any).service_code, {
+        templateId: template.id,
+        templateKey: template.template_key,
+        templateName: template.name,
+        versionId: version.id,
+        version: version.version,
+        definition: parseFormTemplateDefinition(version.definition),
+      });
+    } catch {
+      // A malformed admin-authored definition should not take the entire
+      // services directory down. getServiceDetail supplies the safe fallback.
+    }
+  }
+
   return {
     services,
     requirements,
@@ -116,6 +171,7 @@ async function fetchCatalogue(): Promise<ServiceCatalogue> {
     requirementsByGroup,
     servicesByGroup,
     servicesByCode,
+    formTemplatesByService,
   };
 }
 

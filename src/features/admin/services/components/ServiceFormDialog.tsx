@@ -48,6 +48,14 @@ import {
 import { Spinner } from "~/components/ui/spinner";
 import { parseRequirementName } from "~/features/services/service-utils";
 import type { Department } from "~/features/admin/departments.queries";
+import { FormTemplateBuilder } from "~/features/forms/components/FormTemplateBuilder";
+import {
+  getServiceFormTemplateFn,
+  publishServiceFormTemplateFn,
+} from "~/features/forms/form-template.functions";
+import { formTemplateDefinitionSchema } from "~/features/forms/form-template.types";
+import type { FormTemplateDefinition } from "~/features/forms/form-template.types";
+import { buildLegacyFormDefinition } from "~/features/forms/form-template.utils";
 import { getServiceChecklist } from "../services.queries";
 import { useCreateServiceWithRequirements } from "../hooks/useCreateServiceWithRequirements";
 import { useUpdateServiceWithRequirements } from "../hooks/useUpdateServiceWithRequirements";
@@ -164,6 +172,16 @@ const EMPTY_REQUIREMENT = {
   case_tag: "",
 };
 
+function genericFormDefinition(): FormTemplateDefinition {
+  return buildLegacyFormDefinition({
+    service_code: "NEW_SERVICE",
+    name: "New service",
+    event_date_direction: "past",
+    asks_purpose: true,
+    asks_birth_details: false,
+  });
+}
+
 function emptyDefaults(): FormValues {
   return {
     service_code: "",
@@ -257,6 +275,13 @@ export function ServiceFormDialog({
   const [presetCode, setPresetCode] = useState("");
   const [checklistLoading, setChecklistLoading] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [templateLoading, setTemplateLoading] = useState(false);
+  const [templateName, setTemplateName] = useState("Application form");
+  const [templateVersion, setTemplateVersion] = useState(0);
+  const [templateSharedCodes, setTemplateSharedCodes] = useState<string[]>([]);
+  const [publishedFieldKeys, setPublishedFieldKeys] = useState<string[]>([]);
+  const [formDefinition, setFormDefinition] =
+    useState<FormTemplateDefinition>(genericFormDefinition);
   // The dialog stays mounted across open/close, so a failed attempt would leave
   // a stale banner on the next open unless we scope it to the current session.
   const [submitted, setSubmitted] = useState(false);
@@ -297,12 +322,18 @@ export function ServiceFormDialog({
 
     if (!service) {
       reset(emptyDefaults());
+      setTemplateName("Application form");
+      setTemplateVersion(0);
+      setTemplateSharedCodes([]);
+      setPublishedFieldKeys([]);
+      setFormDefinition(genericFormDefinition());
       return;
     }
 
     reset(serviceDefaults(service));
     let cancelled = false;
     setChecklistLoading(true);
+    setTemplateLoading(true);
 
     getServiceChecklist({
       data: {
@@ -319,6 +350,29 @@ export function ServiceFormDialog({
       })
       .finally(() => {
         if (!cancelled) setChecklistLoading(false);
+      });
+
+    getServiceFormTemplateFn({ data: service.service_code })
+      .then((template) => {
+        if (cancelled) return;
+        setTemplateName(template?.templateName ?? `${service.name} application`);
+        setTemplateVersion(template?.version ?? 0);
+        setTemplateSharedCodes(template?.sharedServiceCodes ?? [service.service_code]);
+        setFormDefinition(template?.definition ?? buildLegacyFormDefinition(service));
+        setPublishedFieldKeys(
+          template?.definition.sections.flatMap((section) =>
+            section.fields.map((field) => field.key),
+          ) ?? [],
+        );
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setFormDefinition(buildLegacyFormDefinition(service));
+        setPublishedFieldKeys([]);
+        toast.error("Could not load this service's application form.");
+      })
+      .finally(() => {
+        if (!cancelled) setTemplateLoading(false);
       });
 
     return () => {
@@ -348,6 +402,11 @@ export function ServiceFormDialog({
     setPresetCode("");
     setAdvancedOpen(false);
     setSubmitted(false);
+    setTemplateName("Application form");
+    setTemplateVersion(0);
+    setTemplateSharedCodes([]);
+    setPublishedFieldKeys([]);
+    setFormDefinition(genericFormDefinition());
     onOpenChange(false);
   }
 
@@ -387,6 +446,21 @@ export function ServiceFormDialog({
     form.setValue("asks_purpose", source.asks_purpose);
     form.setValue("asks_birth_details", source.asks_birth_details);
 
+    setTemplateLoading(true);
+    try {
+      const template = await getServiceFormTemplateFn({ data: source.service_code });
+      setTemplateName(`${source.name} application`);
+      setTemplateVersion(0);
+      setTemplateSharedCodes([]);
+      setPublishedFieldKeys([]);
+      setFormDefinition(template?.definition ?? buildLegacyFormDefinition(source));
+    } catch {
+      setFormDefinition(buildLegacyFormDefinition(source));
+      toast.error("Copied the service, but its application form could not be loaded.");
+    } finally {
+      setTemplateLoading(false);
+    }
+
     setChecklistLoading(true);
     try {
       const rows = await getServiceChecklist({
@@ -407,6 +481,12 @@ export function ServiceFormDialog({
 
   async function onSubmit(values: FormValues) {
     setSubmitted(true);
+
+    const parsedDefinition = formTemplateDefinitionSchema.safeParse(formDefinition);
+    if (!parsedDefinition.success) {
+      toast.error(parsedDefinition.error.issues[0]?.message ?? "Check the application form fields.");
+      return;
+    }
 
     const steps = values.steps
       .map((step) => step.value.trim())
@@ -463,7 +543,28 @@ export function ServiceFormDialog({
           },
         });
 
-    if (saved) closeAndReset();
+    if (saved) {
+      try {
+        await publishServiceFormTemplateFn({
+          data: {
+            serviceCode: isEdit ? service.service_code : values.service_code.trim(),
+            templateName: templateName.trim() || `${values.name.trim()} application`,
+            definition: parsedDefinition.data,
+          },
+        });
+      } catch (error) {
+        toast.error("The service was saved, but its application form was not published.", {
+          description: error instanceof Error ? error.message : undefined,
+        });
+        return;
+      }
+      toast.success(
+        isEdit
+          ? "Service and application form published."
+          : "Service created and application form published.",
+      );
+      closeAndReset();
+    }
   }
 
   return (
@@ -862,10 +963,9 @@ export function ServiceFormDialog({
                     Case Details
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    How the applicant&rsquo;s case-details step reads for this
-                    service. Leave the labels blank to use the generic
-                    &ldquo;Date of event&rdquo; / &ldquo;Place of
-                    event&rdquo; wording.
+                    Compatibility metadata for older requests and protected
+                    workflow behavior. Change the questions applicants see in
+                    the versioned Application Form Template below.
                   </p>
                 </div>
 
@@ -1017,6 +1117,55 @@ export function ServiceFormDialog({
                     </Field>
                   )}
                 />
+              </div>
+
+              {/* ── Versioned application form ────────────────────────── */}
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-medium text-foreground">
+                    Application Form Template
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Fields shown in the citizen application wizard. Saving publishes
+                    an immutable new version{templateVersion > 0 ? ` after version ${templateVersion}` : ""}.
+                  </p>
+                </div>
+
+                <Field>
+                  <FieldLabel htmlFor="service-form-template-name">Template name</FieldLabel>
+                  <Input
+                    id="service-form-template-name"
+                    value={templateName}
+                    onChange={(event) => setTemplateName(event.target.value)}
+                    placeholder="Birth registration application"
+                  />
+                  <FieldDescription>
+                    A reusable administrative name. It is not shown as a question to applicants.
+                  </FieldDescription>
+                </Field>
+
+                {templateSharedCodes.length > 1 ? (
+                  <Alert variant="warning">
+                    <AlertTriangle aria-hidden="true" />
+                    <AlertDescription>
+                      This form template is shared by {templateSharedCodes.length} service variants:
+                      {" "}{templateSharedCodes.join(", ")}. Publishing changes the active form for all of them.
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
+
+                {templateLoading ? (
+                  <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 py-6 text-xs text-muted-foreground">
+                    <Spinner />
+                    Loading application form&hellip;
+                  </div>
+                ) : (
+                  <FormTemplateBuilder
+                    definition={formDefinition}
+                    onChange={setFormDefinition}
+                    immutableKeys={publishedFieldKeys}
+                  />
+                )}
               </div>
 
               {/* ── Checklist of requirements ──────────────────────────── */}
@@ -1295,17 +1444,22 @@ export function ServiceFormDialog({
             </Button>
             <Button
               type="submit"
-              disabled={mutation.status === "pending" || checklistLoading}
+              disabled={
+                mutation.status === "pending" ||
+                form.formState.isSubmitting ||
+                checklistLoading ||
+                templateLoading
+              }
             >
-              {mutation.status === "pending" ? (
+              {mutation.status === "pending" || form.formState.isSubmitting ? (
                 <span className="flex items-center gap-2">
                   <Spinner className="size-4" />
-                  {isEdit ? "Saving changes…" : "Creating service…"}
+                  {isEdit ? "Saving and publishing…" : "Creating and publishing…"}
                 </span>
               ) : isEdit ? (
-                "Save changes"
+                "Save & publish"
               ) : (
-                "Create service"
+                "Create & publish"
               )}
             </Button>
           </DialogFooter>

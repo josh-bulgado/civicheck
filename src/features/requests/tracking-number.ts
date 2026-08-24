@@ -7,6 +7,7 @@ export type NewRequestValues = {
   request_type: string;
   form_data: unknown;
   fees_due: number;
+  form_template_version_id?: string | null;
   status?: string;
 };
 

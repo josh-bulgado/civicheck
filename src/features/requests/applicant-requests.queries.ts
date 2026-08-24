@@ -1,8 +1,22 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireActiveSession } from "~/server/auth";
+import {
+  parseFormTemplateDefinition,
+  templateFieldLabels,
+} from "~/features/forms/form-template.utils";
 
 function one<T>(value: T | T[] | null | undefined): T | undefined {
   return Array.isArray(value) ? value[0] : (value ?? undefined);
+}
+
+function fieldLabelsOf(row: any): Record<string, string> {
+  const version = one<{ definition?: unknown }>(row.form_template_versions);
+  if (!version?.definition) return {};
+  try {
+    return templateFieldLabels(parseFormTemplateDefinition(version.definition));
+  } catch {
+    return {};
+  }
 }
 
 /** The applicant's own request list — feeds `/my-requests`. */
@@ -40,7 +54,8 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
         `id, tracking_number, request_type, status, payment_status,
          fees_due, form_data, created_at, updated_at,
          services_registry(name, display_name, processing_time,
-           event_date_label, event_place_label, reference_number_label)`,
+           event_date_label, event_place_label, reference_number_label),
+         form_template_versions(definition)`,
       )
       .eq("id", data.requestId)
       .eq("applicant_id", user.id)
@@ -85,6 +100,7 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
       eventDateLabel: service?.event_date_label ?? null,
       eventPlaceLabel: service?.event_place_label ?? null,
       referenceNumberLabel: service?.reference_number_label ?? null,
+      fieldLabels: fieldLabelsOf(row),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       attachments: (attachments.data ?? []).map((a) => ({

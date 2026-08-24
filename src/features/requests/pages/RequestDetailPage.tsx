@@ -45,6 +45,7 @@ function formatKey(key: string) {
  * show that instead of the generic humanized key when the service set one.
  */
 function formDataLabel(key: string, request: RequestDetail) {
+  if (request.fieldLabels[key]) return request.fieldLabels[key];
   if (key === "event_date" && request.eventDateLabel) return request.eventDateLabel;
   if (key === "event_place" && request.eventPlaceLabel) return request.eventPlaceLabel;
   if (key === "reference_number" && request.referenceNumberLabel) {

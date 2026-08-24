@@ -1,21 +1,46 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireActiveSession } from "~/server/auth";
 import { insertRequestWithTrackingNumber } from "~/features/requests/tracking-number";
 import { isVisible } from "~/features/services/service-utils";
 import { loadServiceCatalogue, resolveServices } from "~/features/services/services.catalogue";
+import {
+  buildLegacyFormDefinition,
+  flattenTemplateAnswers,
+  parseFormTemplateDefinition,
+  validateTemplateAnswers,
+} from "~/features/forms/form-template.utils";
+
+const subjectAnswerSchema = z.object({
+  role: z.string().max(160),
+  firstName: z.string().max(120),
+  middleName: z.string().max(120),
+  lastName: z.string().max(120),
+  suffix: z.string().max(120),
+  sex: z.string().max(16),
+});
+
+const answersSchema = z
+  .record(z.union([z.string().max(2_000), z.array(subjectAnswerSchema).max(10)]))
+  .refine((answers) => Object.keys(answers).length <= 110, "Too many form answers");
+
+const submitRequestSchema = z.object({
+  serviceCode: z.string().trim().min(1),
+  templateVersionId: z.string().uuid().nullable(),
+  answers: answersSchema,
+  documents: z
+    .array(
+      z.object({
+        requirementName: z.string().min(1),
+        fileUrl: z.string().min(1),
+      }),
+    )
+    .max(100)
+    .optional(),
+});
 
 export const submitRequestFn = createServerFn({ method: "POST" })
-  .validator(
-    (d: {
-      serviceCode: string;
-      fee: number;
-      formData: any;
-      documents?: Array<{
-        requirementName: string;
-        fileUrl: string;
-      }>;
-    }) => d,
-  )
+  .validator(submitRequestSchema)
   .handler(async ({ data }) => {
     const { supabase, user } = await requireActiveSession("requests:create");
 
@@ -31,6 +56,7 @@ export const submitRequestFn = createServerFn({ method: "POST" })
     if (resolvedServices.length === 0) {
       return { error: true, message: "Unknown service." };
     }
+    const selectedService = resolvedServices[0];
     const requirementKey = isGroup
       ? resolvedServices[0].display_group!
       : (resolvedServices[0].requirement_group ?? data.serviceCode);
@@ -50,11 +76,61 @@ export const submitRequestFn = createServerFn({ method: "POST" })
       };
     }
 
+    let definition = buildLegacyFormDefinition(selectedService);
+    let templateVersionId: string | null = null;
+    const bindingResult = await supabase
+      .from("service_form_templates")
+      .select("template_id")
+      .eq("service_code", data.serviceCode)
+      .maybeSingle();
+    const bindingTableMissing =
+      bindingResult.error?.code === "42P01" || bindingResult.error?.code === "PGRST205";
+    if (bindingResult.error && !bindingTableMissing) {
+      return { error: true, message: "The application form could not be verified." };
+    }
+
+    if (bindingResult.data) {
+      if (!data.templateVersionId) {
+        return { error: true, message: "The published application form version is required." };
+      }
+      const versionResult = await supabase
+        .from("form_template_versions")
+        .select("id, template_id, status, definition")
+        .eq("id", data.templateVersionId)
+        .maybeSingle();
+      if (versionResult.error) {
+        return { error: true, message: "The application form could not be verified." };
+      }
+      const version = versionResult.data;
+      if (
+        !version ||
+        version.status !== "published" ||
+        version.template_id !== bindingResult.data.template_id
+      ) {
+        return { error: true, message: "This application form version is not valid." };
+      }
+      try {
+        definition = parseFormTemplateDefinition(version.definition);
+      } catch {
+        return { error: true, message: "The published application form is invalid." };
+      }
+      templateVersionId = version.id;
+    } else if (data.templateVersionId) {
+      return { error: true, message: "This service is not bound to that application form." };
+    }
+
+    const validation = validateTemplateAnswers(definition, data.answers);
+    if (!validation.success) {
+      return { error: true, message: validation.message };
+    }
+    const formData = flattenTemplateAnswers(definition, data.answers);
+
     const created = await insertRequestWithTrackingNumber(supabase, {
       applicant_id: user.id,
       request_type: data.serviceCode,
-      form_data: data.formData,
-      fees_due: data.fee,
+      form_data: formData,
+      fees_due: Number(selectedService.fee),
+      form_template_version_id: templateVersionId,
     });
     if (created.error) {
       return { error: true, message: created.message };
