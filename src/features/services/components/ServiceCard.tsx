@@ -4,6 +4,8 @@ import {
   useServiceEntry,
   type ServiceEntryProps,
 } from "~/features/services/components/useServiceEntry";
+import { Button } from "~/components/ui/button";
+import { cn } from "~/lib/utils";
 
 /**
  * Compact density: roughly half the height of the old tile. The title leads,
@@ -55,21 +57,22 @@ const ServiceCard = (service: ServiceEntryProps & { canApply?: boolean }) => {
 
       <div className="flex gap-2">
         {canApply && (
-          <button
+          <Button
             type="button"
             onClick={entry.startApply}
-            className="civic-press inline-flex min-h-9 flex-1 cursor-pointer items-center justify-center rounded-lg bg-primary px-4 text-[14px] font-bold text-primary-foreground outline-none hover:bg-primary-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="flex-1"
           >
             Apply
-          </button>
+          </Button>
         )}
-        <button
+        <Button
           type="button"
+          variant="outline"
           onClick={entry.openRequirements}
-          className={`civic-press inline-flex min-h-9 cursor-pointer items-center justify-center rounded-lg border border-control-border bg-white px-3 text-[14px] font-bold text-body-strong outline-none hover:bg-surface-subtle focus-visible:ring-3 focus-visible:ring-ring/50 ${canApply ? "" : "flex-1"}`}
+          className={cn(!canApply && "flex-1")}
         >
           Requirements
-        </button>
+        </Button>
       </div>
 
       <ServiceEntryDialogs entry={entry} />

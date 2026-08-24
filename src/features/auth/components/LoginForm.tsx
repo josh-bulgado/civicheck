@@ -249,15 +249,16 @@ export function LoginForm({
               style={staggerStyle(2)}
               className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 pt-0.5"
             >
-              <label className="flex items-center gap-2.5 text-[13.5px] text-body">
+              <Field orientation="horizontal" className="w-auto">
                 <Checkbox
+                  id="keep-signed-in"
                   checked={keepSignedIn}
                   onCheckedChange={(checked) =>
                     setKeepSignedIn(checked === true)
                   }
                 />
-                Keep me signed in
-              </label>
+                <FieldLabel htmlFor="keep-signed-in">Keep me signed in</FieldLabel>
+              </Field>
 
               <Link to="/forgot-password" className={authLinkClass}>
                 Forgot password

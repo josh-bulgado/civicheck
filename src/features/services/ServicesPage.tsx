@@ -2,6 +2,26 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Search, ChevronDown, ArrowRight } from "lucide-react";
 import { enterDelay, staggerStyle } from "~/components/motion/stagger";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Button, buttonVariants } from "~/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "~/components/ui/collapsible";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "~/components/ui/empty";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "~/components/ui/input-group";
+import { Skeleton } from "~/components/ui/skeleton";
+import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import SiteHeader from "~/features/landing/components/SiteHeader";
 import SiteFooter from "~/features/landing/components/SiteFooter";
 import { getAllServicesWithRequirements } from "~/features/services/services.queries";
@@ -19,6 +39,7 @@ import {
   cleanStepText,
   formatFee,
 } from "~/features/services/service-utils";
+import { cn } from "~/lib/utils";
 
 interface ServicesPageProps {
   selectedCode?: string;
@@ -98,14 +119,6 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
     };
   }, [selectedCode, reloadToken]);
 
-  const toggleExpand = (code: string) => {
-    setExpandedCodes((prev) => ({ ...prev, [code]: !prev[code] }));
-  };
-
-  const toggleConditional = (code: string) => {
-    setConditionalOpen((prev) => ({ ...prev, [code]: !prev[code] }));
-  };
-
   const requirementsByService = useMemo(() => {
     const map = new Map<string, ServiceRequirement[]>();
     for (const service of services) {
@@ -158,47 +171,50 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
           </p>
         </div>
 
-        <div className="civic-enter relative mb-5" style={enterDelay(80)}>
-          <Search className="pointer-events-none absolute left-5 top-1/2 size-4.5 -translate-y-1/2 text-muted-foreground transition-colors" />
-          <input
+        <InputGroup className="civic-enter mb-5 h-13.5" style={enterDelay(80)}>
+          <InputGroupInput
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search for a service or requirement..."
-            className="h-13.5 w-full rounded-[10px] border border-control-border bg-white pl-12 pr-4 text-[17px] text-foreground outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-muted-foreground focus:border-primary focus:ring-[3px] focus:ring-primary/15"
+            className="text-[17px]"
           />
-        </div>
+          <InputGroupAddon>
+            <Search aria-hidden="true" />
+          </InputGroupAddon>
+        </InputGroup>
 
-        <div
+        <ToggleGroup
+          aria-label="Filter services by category"
+          value={[activePill]}
+          onValueChange={(values: string[]) => {
+            const nextPill = values[0] as PillKey | undefined;
+            if (nextPill) setActivePill(nextPill);
+          }}
+          variant="outline"
+          size="lg"
+          spacing={2}
           className="civic-stagger mb-8 flex flex-wrap gap-2.5"
           style={{ "--stagger-step": "40ms" } as React.CSSProperties}
         >
-          {pills.map((pill, index) => {
-            const active = activePill === pill.key;
-            return (
-              <button
-                key={pill.key}
-                type="button"
-                onClick={() => setActivePill(pill.key)}
-                style={staggerStyle(index, 120)}
-                className={
-                  active
-                    ? "civic-press rounded-full bg-foreground px-4.5 py-2.5 text-[15px] font-bold text-white"
-                    : "civic-press rounded-full border border-control-border bg-white px-4.5 py-2.5 text-[15px] text-body-strong hover:border-dashed-border hover:bg-surface-subtle"
-                }
-              >
-                {pill.label}
-              </button>
-            );
-          })}
-        </div>
+          {pills.map((pill, index) => (
+            <ToggleGroupItem
+              key={pill.key}
+              value={pill.key}
+              style={staggerStyle(index, 120)}
+              className="rounded-full"
+            >
+              {pill.label}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
 
         {loading && (
-          <div className="civic-stagger space-y-3">
+          <div className="civic-stagger flex flex-col gap-3">
             {[0, 1, 2].map((i) => (
-              <div
+              <Skeleton
                 key={i}
-                className="civic-skeleton h-18 rounded-xl"
+                className="h-18 rounded-xl"
                 style={staggerStyle(i)}
               />
             ))}
@@ -206,35 +222,37 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
         )}
 
         {!loading && error && (
-          <div className="civic-enter-scale rounded-xl border border-destructive/20 bg-destructive/5 p-8 text-center">
-            <p className="mb-3 text-sm font-medium text-destructive">{error}</p>
-            <button
+          <Alert variant="destructive" className="civic-enter-scale">
+            <AlertTitle>Unable to load services</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => {
                 invalidateServiceCache(serviceCacheKeys.allWithRequirements());
                 setReloadToken((n) => n + 1);
               }}
-              className="civic-press inline-flex items-center rounded-lg border border-control-border bg-white px-4 py-2 text-sm font-semibold text-foreground hover:bg-background"
             >
               Try again
-            </button>
-          </div>
+            </Button>
+          </Alert>
         )}
 
         {!loading && !error && filteredServices.length === 0 && (
-          <div className="civic-enter-scale rounded-xl border border-border bg-white p-10 text-center">
-            <p className="mb-1 text-sm font-semibold text-foreground">
-              No services found
-            </p>
-            <p className="text-sm text-muted-foreground">
+          <Empty className="civic-enter-scale border">
+            <EmptyHeader>
+              <EmptyTitle>No services found</EmptyTitle>
+              <EmptyDescription>
               Try clearing the search or filters and browse the full list
               instead.
-            </p>
-          </div>
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         )}
 
         {!loading && !error && filteredServices.length > 0 && (
-          <div className="civic-stagger space-y-4">
+          <div className="civic-stagger flex flex-col gap-4">
             {filteredServices.map((service, serviceIndex) => {
               const isExpanded = !!expandedCodes[service.service_code];
               const isConditionalOpen = !!conditionalOpen[service.service_code];
@@ -249,20 +267,30 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                 .filter((s) => s.length > 0);
 
               return (
-                <div
+                <Collapsible
                   key={service.service_code}
                   id={`service-${service.service_code}`}
+                  open={isExpanded}
+                  onOpenChange={(open) =>
+                    setExpandedCodes((previous) => ({
+                      ...previous,
+                      [service.service_code]: open,
+                    }))
+                  }
                   style={staggerStyle(serviceIndex)}
                   className="civic-interactive overflow-hidden rounded-xl border border-border bg-white hover:border-border-strong hover:shadow-[0_4px_14px_rgba(23,33,43,0.06)]"
                 >
-                  <button
-                    type="button"
-                    onClick={() => toggleExpand(service.service_code)}
-                    className={`flex w-full items-center justify-between gap-4 px-5 py-4.5 text-left transition-colors duration-200 ${
-                      isExpanded
-                        ? "border-b border-border-light"
-                        : "hover:bg-background"
-                    }`}
+                  <CollapsibleTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className={cn(
+                          "h-auto w-full justify-between rounded-none px-5 py-4.5 text-left whitespace-normal",
+                          isExpanded && "border-b border-border-light",
+                        )}
+                      />
+                    }
                   >
                     <div>
                       <span className="block text-base font-bold leading-snug text-foreground">
@@ -275,28 +303,16 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                       )}
                     </div>
                     <ChevronDown
-                      className={`size-4.5 shrink-0 text-muted-foreground transition-transform duration-200 ${
-                        isExpanded ? "rotate-180 text-primary" : ""
-                      }`}
+                      data-icon="inline-end"
+                      className={cn(
+                        "transition-transform duration-200",
+                        isExpanded && "rotate-180 text-primary",
+                      )}
+                      aria-hidden="true"
                     />
-                  </button>
+                  </CollapsibleTrigger>
 
-                  {/*
-                    Animating `grid-template-rows` between 0fr and 1fr expands to
-                    the content's own height. The previous `max-height: 3000px`
-                    made every panel travel the same 3000px regardless of how
-                    tall it actually was, so short checklists snapped open and
-                    long ones appeared to stall — the timing never matched the
-                    content.
-                  */}
-                  <div
-                    className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
-                      isExpanded
-                        ? "grid-rows-[1fr] opacity-100"
-                        : "grid-rows-[0fr] opacity-0"
-                    }`}
-                  >
-                    <div className="overflow-hidden">
+                  <CollapsibleContent>
                       <div className="flex flex-col gap-5 px-5 py-5">
                         <div className="grid grid-cols-2 divide-x divide-border-light rounded-[10px] border border-border-light">
                           <div className="flex flex-col gap-1 px-4 py-3.5">
@@ -353,33 +369,40 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                         </div>
 
                         {conditionalReqs.length > 0 && (
-                          <div className="flex flex-col gap-2.5">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                toggleConditional(service.service_code)
+                          <Collapsible
+                            open={isConditionalOpen}
+                            onOpenChange={(open) =>
+                              setConditionalOpen((previous) => ({
+                                ...previous,
+                                [service.service_code]: open,
+                              }))
+                            }
+                            className="flex flex-col gap-2.5"
+                          >
+                            <CollapsibleTrigger
+                              render={
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  className="h-auto w-full justify-between px-0 text-left whitespace-normal"
+                                />
                               }
-                              className="flex w-full items-center justify-between text-left"
                             >
                               <h4 className="text-sm font-bold text-foreground">
                                 Only if it applies to you (
                                 {conditionalReqs.length})
                               </h4>
                               <ChevronDown
-                                className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
-                                  isConditionalOpen ? "rotate-180" : ""
-                                }`}
+                                data-icon="inline-end"
+                                className={cn(
+                                  "transition-transform duration-200",
+                                  isConditionalOpen && "rotate-180",
+                                )}
+                                aria-hidden="true"
                               />
-                            </button>
+                            </CollapsibleTrigger>
 
-                            <div
-                              className={`grid transition-[grid-template-rows,opacity] duration-250 ease-out ${
-                                isConditionalOpen
-                                  ? "grid-rows-[1fr] opacity-100"
-                                  : "grid-rows-[0fr] opacity-0"
-                              }`}
-                            >
-                              <div className="overflow-hidden">
+                            <CollapsibleContent>
                                 <div className="divide-y divide-warning-border/40 rounded-[10px] border border-warning-border bg-warning-soft">
                                   {conditionalReqs.map((req) => {
                                     const { primary, secondary } =
@@ -399,9 +422,8 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                                     );
                                   })}
                                 </div>
-                              </div>
-                            </div>
-                          </div>
+                            </CollapsibleContent>
+                          </Collapsible>
                         )}
 
                         {cleanedSteps.length > 0 && (
@@ -438,17 +460,20 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                             <Link
                               to="/login"
                               search={{ redirect: "/requirements" }}
-                              className="inline-flex min-h-9 items-center rounded-lg border border-control-border bg-white px-4 text-xs font-semibold text-foreground transition-colors hover:bg-white/80"
+                              className={buttonVariants({
+                                variant: "outline",
+                                size: "sm",
+                              })}
                             >
                               Save checklist
                             </Link>
                             <Link
-                              to="/apply/$serviceCode/details"
+                              to="/apply/$serviceCode/case"
                               params={{
                                 serviceCode:
                                   service.display_group ?? service.service_code,
                               }}
-                              className="civic-press civic-nudge inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-xs font-semibold text-white hover:bg-primary-hover"
+                              className={buttonVariants({ size: "sm" })}
                             >
                               Start application
                               <ArrowRight className="size-3.5" />
@@ -456,9 +481,8 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                </div>
+                  </CollapsibleContent>
+                </Collapsible>
               );
             })}
           </div>

@@ -39,6 +39,21 @@ function formatKey(key: string) {
     .join(" ");
 }
 
+/**
+ * `event_date`/`event_place`/`reference_number` carry a per-service label
+ * (e.g. "Date of birth" for a birth service) configured in Admin → Services —
+ * show that instead of the generic humanized key when the service set one.
+ */
+function formDataLabel(key: string, request: RequestDetail) {
+  if (request.fieldLabels[key]) return request.fieldLabels[key];
+  if (key === "event_date" && request.eventDateLabel) return request.eventDateLabel;
+  if (key === "event_place" && request.eventPlaceLabel) return request.eventPlaceLabel;
+  if (key === "reference_number" && request.referenceNumberLabel) {
+    return request.referenceNumberLabel;
+  }
+  return formatKey(key);
+}
+
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString("en-US", {
     month: "short",
@@ -191,7 +206,7 @@ export default function RequestDetailPage({ request, onUpdated }: RequestDetailP
               {Object.entries(request.formData).map(([key, value]) => (
                 <div key={key}>
                   <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                    {formatKey(key)}
+                    {formDataLabel(key, request)}
                   </dt>
                   <dd className="text-sm text-foreground">
                     {value == null || value === "" ? "—" : String(value)}
@@ -449,6 +464,7 @@ function AttachmentRow({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-foreground">
+            {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
             {doc.requirementName}
           </p>
           <p className="text-xs capitalize text-muted-foreground">
@@ -579,7 +595,10 @@ function AttachmentRow({
       >
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{doc.requirementName}</DialogTitle>
+            <DialogTitle>
+              {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
+              {doc.requirementName}
+            </DialogTitle>
           </DialogHeader>
           {viewerUrl && (
             <div className="flex max-h-[75vh] flex-col items-center overflow-auto">

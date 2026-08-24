@@ -1,7 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { CheckCircle2 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
-import { Label } from "~/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import {
+  Field,
+  FieldContent,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "~/components/ui/field";
+import type { CaseSelectorDefinition } from "~/features/forms/form-template.types";
+import { conditionRuleMatches } from "~/features/forms/form-template.utils";
+
+const choiceGroupClass =
+  "grid grid-cols-1 gap-0 overflow-hidden rounded-lg border border-border bg-white divide-y divide-border-light sm:grid-cols-2 sm:divide-x sm:divide-y-0";
+
+const choiceLabelClass =
+  "cursor-pointer has-[>[data-slot=field]]:rounded-none has-[>[data-slot=field]]:border-0 transition-colors hover:bg-primary-tint focus-within:bg-primary-tint has-data-checked:bg-primary-soft/70";
 
 interface Service {
   service_code: string;
@@ -13,6 +27,26 @@ interface CaseSelectorProps {
   services: Service[];
   selectedCode: string | null;
   onSelect: (code: string) => void;
+  definition?: CaseSelectorDefinition;
+  answers?: Record<string, string>;
+  contextAnswers?: Record<string, string>;
+  onAnswersChange?: (answers: Record<string, string>) => void;
+  /**
+   * Pre-answered dimensions — set when the applicant arrived here via the
+   * On-Time/Delayed birth-registration redirect, which already knows the
+   * marital status and age bracket from the group they switched from. The
+   * corresponding question is skipped rather than re-asked.
+   */
+  presetAge?: string | null;
+  presetMarital?: string | null;
+}
+
+/** Marital status implied by a service's charter name, or null if it doesn't say. */
+export function inferMaritalStatus(name: string): "marital" | "non-marital" | null {
+  const n = name.toLowerCase();
+  if (n.includes("non-marital") || n.includes("nonmarital")) return "non-marital";
+  if (n.includes("marital")) return "marital";
+  return null;
 }
 
 // Parse the DCOLB-style service codes into selection dimensions.
@@ -29,8 +63,8 @@ function parseSelectionSteps(services: Service[]) {
     if (name.includes("80")) ages.add("80+");
     if (name.includes("brap")) programs.add("brap");
     if (name.includes("normal")) programs.add("normal");
-    if (name.includes("non-marital") || name.includes("nonmarital")) maritalStatuses.add("non-marital");
-    if ((name.includes("marital") && !name.includes("non-marital") && !name.includes("nonmarital"))) maritalStatuses.add("marital");
+    const marital = inferMaritalStatus(name);
+    if (marital) maritalStatuses.add(marital);
   }
 
   return {
@@ -55,12 +89,31 @@ function matches(name: string, age: string | null, program: string | null, marit
   return true;
 }
 
-export function CaseSelector({ services, selectedCode, onSelect }: CaseSelectorProps) {
+function LegacyCaseSelector({
+  services,
+  selectedCode,
+  onSelect,
+  presetAge = null,
+  presetMarital = null,
+}: CaseSelectorProps) {
   const steps = parseSelectionSteps(services);
 
-  const [age, setAge] = useState<string | null>(null);
+  const [age, setAge] = useState<string | null>(presetAge);
   const [program, setProgram] = useState<string | null>(null);
-  const [marital, setMarital] = useState<string | null>(null);
+  const [marital, setMarital] = useState<string | null>(presetMarital);
+
+  const showAge = steps.hasAge && !presetAge;
+  const showMarital = steps.hasMarital && !presetMarital;
+  // With both age and marital already known, at most one question (Program)
+  // remains — numbering a single question adds nothing.
+  const showNumbers =
+    [showAge, steps.hasProgram, showMarital].filter(Boolean).length > 1;
+  let stepCounter = 0;
+  function stepPrefix(visible: boolean) {
+    if (!visible || !showNumbers) return "";
+    stepCounter += 1;
+    return `${stepCounter}. `;
+  }
 
   // When age changes, reset downstream
   const handleAge = (val: string) => {
@@ -93,135 +146,308 @@ export function CaseSelector({ services, selectedCode, onSelect }: CaseSelectorP
     }
   };
 
+  // Edge case (not hit by today's groups, all of which also have a Program
+  // dimension): both age and marital arrived preset and nothing else needs
+  // asking — resolve immediately instead of leaving the selector blank.
+  useEffect(() => {
+    if (selectedCode || showAge || steps.hasProgram || showMarital) return;
+    const match = services.find((s) => matches(s.name, age, program, marital));
+    if (match) onSelect(match.service_code);
+    // Runs once per mount of a fully-preset selector; `services`/`onSelect`
+    // are stable for the lifetime of one wizard session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // If only 1 service in group, no selection needed
   if (services.length === 1) return null;
 
   const selectedService = services.find((s) => s.service_code === selectedCode);
 
   return (
-    <Card size="sm" className="border-l-4 border-l-brand-gold">
-      <CardHeader className="border-b border-border pb-3">
-        <CardTitle className="text-base font-bold text-foreground">Select Your Case</CardTitle>
-        <p className="text-xs text-muted-foreground">
-          Answer the questions below to find the right service for your situation.
+    <section
+      aria-labelledby="case-selector-title"
+      className="border-y border-border-light py-5 sm:py-6"
+    >
+      <div>
+        <h2
+          id="case-selector-title"
+          className="text-pretty text-lg font-bold text-foreground"
+        >
+          Find the right service
+        </h2>
+        <p className="mt-1 max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground">
+          Choose the answers that match this case. We&rsquo;ll select the correct
+          service.
         </p>
-      </CardHeader>
+      </div>
 
-      <CardContent className="pt-4 space-y-6">
+      <div className="mt-6 flex flex-col gap-6">
         {/* Step 1: Age */}
-        {steps.hasAge && (
-          <div className="space-y-3">
-            <p className="text-sm font-semibold text-foreground">
-              1. Age of the person to be registered
-            </p>
+        {showAge && (
+          <FieldSet className="civic-enter-sm gap-3">
+            <FieldLegend variant="label">
+              {stepPrefix(true)}Age of the person to be registered
+            </FieldLegend>
             <RadioGroup
               value={age ?? ""}
               onValueChange={handleAge}
-              className="grid grid-cols-2 gap-3"
+              className={choiceGroupClass}
             >
               {steps.ages.map((a) => (
-                <label
+                <FieldLabel
                   key={a}
-                  className={`flex items-center gap-3 rounded-lg border p-3.5 cursor-pointer transition-colors ${
-                    age === a
-                      ? "border-primary bg-primary text-white shadow-sm [&_.case-helper]:text-white/70"
-                      : "border-border-strong bg-white text-foreground hover:border-primary/40 hover:bg-surface-subtle"
-                  }`}
+                  htmlFor={`age-${a}`}
+                  className={choiceLabelClass}
                 >
-                  <RadioGroupItem value={a} id={`age-${a}`} />
-                  <Label htmlFor={`age-${a}`} className="cursor-pointer font-medium text-sm">
-                    {a === "0-79" ? "0 – 79 years old" : "80 years old and above"}
-                  </Label>
-                </label>
+                  <Field orientation="horizontal" className="min-h-14">
+                    <RadioGroupItem value={a} id={`age-${a}`} />
+                    <FieldContent>
+                      {a === "0-79" ? "0 – 79 years old" : "80 years old and above"}
+                    </FieldContent>
+                  </Field>
+                </FieldLabel>
               ))}
             </RadioGroup>
-          </div>
+          </FieldSet>
         )}
 
         {/* Step 2: Program (only after age picked) */}
         {steps.hasProgram && age && (
-          <div className="space-y-3">
-            <p className="text-sm font-semibold text-foreground">
-              2. Registration program
-            </p>
+          <FieldSet className="civic-enter-sm gap-3">
+            <FieldLegend variant="label">
+              {stepPrefix(true)}Registration program
+            </FieldLegend>
             <RadioGroup
               value={program ?? ""}
               onValueChange={handleProgram}
-              className="grid grid-cols-2 gap-3"
+              className={choiceGroupClass}
             >
               {steps.programs.map((p) => (
-                <label
+                <FieldLabel
                   key={p}
-                  className={`flex items-center gap-3 rounded-lg border p-3.5 cursor-pointer transition-colors ${
-                    program === p
-                      ? "border-primary bg-primary text-white shadow-sm [&_.case-helper]:text-white/70"
-                      : "border-border-strong bg-white text-foreground hover:border-primary/40 hover:bg-surface-subtle"
-                  }`}
+                  htmlFor={`prog-${p}`}
+                  className={choiceLabelClass}
                 >
-                  <RadioGroupItem value={p} id={`prog-${p}`} />
-                  <Label htmlFor={`prog-${p}`} className="cursor-pointer text-sm">
-                    <span className="font-medium">
-                      {p === "brap" ? "Under BRAP" : "Normal"}
-                    </span>
-                    <span className="case-helper mt-0.5 block text-xs text-muted-foreground">
-                      {p === "brap" ? "Free — PSA assisted program" : "Standard registration"}
-                    </span>
-                  </Label>
-                </label>
+                  <Field orientation="horizontal" className="min-h-16">
+                    <RadioGroupItem value={p} id={`prog-${p}`} />
+                    <FieldContent>
+                      <span className="font-medium">
+                        {p === "brap"
+                          ? "BRAP-assisted registration"
+                          : "Standard registration"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {p === "brap"
+                          ? "PSA-assisted program"
+                          : "Regular filing process"}
+                      </span>
+                    </FieldContent>
+                  </Field>
+                </FieldLabel>
               ))}
             </RadioGroup>
-          </div>
+          </FieldSet>
         )}
 
         {/* Step 3: Marital status — shown after program=normal, OR directly if no age/program steps */}
-        {steps.hasMarital && (program === "normal" || (!steps.hasAge && !steps.hasProgram)) && (
-          <div className="space-y-3">
-            <p className="text-sm font-semibold text-foreground">
-              {steps.hasAge || steps.hasProgram ? "3." : "1."} Status of the child
-            </p>
+        {showMarital && (program === "normal" || (!steps.hasAge && !steps.hasProgram)) && (
+          <FieldSet className="civic-enter-sm gap-3">
+            <FieldLegend variant="label">
+              {stepPrefix(true)}Are the child&rsquo;s parents legally married?
+            </FieldLegend>
             <RadioGroup
               value={marital ?? ""}
               onValueChange={handleMarital}
-              className="grid grid-cols-2 gap-3"
+              className={choiceGroupClass}
             >
-              {steps.maritalStatuses.map((m) => {
-                const match = services.find((s) => matches(s.name, age, program, m));
-                return (
-                  <label
-                    key={m}
-                    className={`flex items-center gap-3 rounded-lg border p-3.5 cursor-pointer transition-colors ${
-                      marital === m
-                        ? "border-primary bg-primary text-white shadow-sm [&_.case-helper]:text-white/70"
-                        : "border-border-strong bg-white text-foreground hover:border-primary/40 hover:bg-surface-subtle"
-                    }`}
-                  >
+              {steps.maritalStatuses.map((m) => (
+                <FieldLabel
+                  key={m}
+                  htmlFor={`marital-${m}`}
+                  className={choiceLabelClass}
+                >
+                  <Field orientation="horizontal" className="min-h-14">
                     <RadioGroupItem value={m} id={`marital-${m}`} />
-                    <Label htmlFor={`marital-${m}`} className="cursor-pointer text-sm">
-                      <span className="font-medium capitalize">{m} Child</span>
-                      {match && (
-                        <span className="case-helper mt-0.5 block text-xs text-muted-foreground">
-                          {Number(match.fee) === 0 ? "Free" : `₱${Number(match.fee).toFixed(2)}`}
-                        </span>
-                      )}
-                    </Label>
-                  </label>
-                );
-              })}
+                    <FieldContent>
+                      <span className="font-medium">
+                        {m === "marital" ? "Yes" : "No"}
+                      </span>
+                    </FieldContent>
+                  </Field>
+                </FieldLabel>
+              ))}
             </RadioGroup>
-          </div>
+          </FieldSet>
         )}
 
-        {/* Selected result summary */}
+        {/* The exact service and fee are shown in the selected-service strip above. */}
         {selectedService && (
-          <div className="rounded-lg border border-primary/25 bg-primary-soft px-4 py-3 text-sm text-primary-hover">
-            <span className="font-semibold">Selected: </span>
-            {selectedService.name} —{" "}
-            <span className="font-semibold">
-              {Number(selectedService.fee) === 0 ? "Free" : `₱${Number(selectedService.fee).toFixed(2)}`}
-            </span>
+          <div
+            role="status"
+            aria-live="polite"
+            className="civic-enter-sm flex items-center gap-2 border-t border-success/20 pt-4 text-sm font-semibold text-success"
+          >
+            <CheckCircle2 className="size-4.5 shrink-0" aria-hidden="true" />
+            Service selected. Complete the case details below before continuing.
+            <span className="sr-only">{selectedService.name}</span>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
+}
+
+function ConfiguredCaseSelector({
+  services,
+  selectedCode,
+  onSelect,
+  definition,
+  answers = {},
+  contextAnswers = {},
+  onAnswersChange,
+  presetAge,
+  presetMarital,
+}: CaseSelectorProps & { definition: CaseSelectorDefinition }) {
+  function resolve(nextAnswers: Record<string, string>) {
+    const answerBag = { ...contextAnswers, ...nextAnswers };
+    const visibleQuestions = definition.questions.filter((question) =>
+      conditionRuleMatches(question.visibleWhen, answerBag),
+    );
+    if (visibleQuestions.some((question) => !nextAnswers[question.key])) {
+      return null;
+    }
+    return (
+      definition.outcomes.find((outcome) =>
+        conditionRuleMatches(outcome.when, answerBag),
+      )?.serviceCode ?? null
+    );
+  }
+
+  function publishAnswers(nextAnswers: Record<string, string>) {
+    const cleaned = { ...nextAnswers };
+    for (const question of definition.questions) {
+      if (
+        !conditionRuleMatches(question.visibleWhen, {
+          ...contextAnswers,
+          ...cleaned,
+        })
+      ) {
+        delete cleaned[question.key];
+      }
+    }
+    onAnswersChange?.(cleaned);
+    onSelect(resolve(cleaned) ?? "");
+  }
+
+  useEffect(() => {
+    const seeded = { ...answers };
+    if (presetAge && definition.questions.some((question) => question.key === "age")) {
+      seeded.age = presetAge;
+    }
+    if (
+      presetMarital &&
+      definition.questions.some((question) => question.key === "marital")
+    ) {
+      seeded.marital = presetMarital;
+    }
+    if (Object.entries(seeded).some(([key, value]) => answers[key] !== value)) {
+      publishAnswers(seeded);
+    }
+    // Presets are one-time draft migration inputs. Publishing them again after
+    // every answer would overwrite a deliberate applicant change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetAge, presetMarital]);
+
+  const visibleQuestions = definition.questions.filter((question) =>
+    conditionRuleMatches(question.visibleWhen, {
+      ...contextAnswers,
+      ...answers,
+    }),
+  );
+  const resolvedCode = resolve(answers);
+  useEffect(() => {
+    const nextCode = resolvedCode ?? "";
+    if (nextCode !== (selectedCode ?? "")) onSelect(nextCode);
+  }, [resolvedCode, selectedCode, onSelect]);
+  const selectedService = services.find(
+    (service) => service.service_code === selectedCode,
+  );
+
+  return (
+    <section
+      aria-labelledby="case-selector-title"
+      className="border-y border-border-light py-5 sm:py-6"
+    >
+      <div>
+        <h2
+          id="case-selector-title"
+          className="text-pretty text-lg font-bold text-foreground"
+        >
+          {definition.title}
+        </h2>
+        <p className="mt-1 max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground">
+          {definition.description ??
+            "Choose the answers that match this case. We’ll select the correct service."}
+        </p>
+      </div>
+
+      <div className="mt-6 flex flex-col gap-6">
+        {visibleQuestions.map((question, index) => (
+          <FieldSet key={question.key} className="civic-enter-sm gap-3">
+            <FieldLegend variant="label">
+              {visibleQuestions.length > 1 ? `${index + 1}. ` : ""}
+              {question.label}
+            </FieldLegend>
+            {question.description ? (
+              <p className="text-xs text-muted-foreground">
+                {question.description}
+              </p>
+            ) : null}
+            <RadioGroup
+              value={answers[question.key] ?? ""}
+              onValueChange={(value) =>
+                publishAnswers({ ...answers, [question.key]: value })
+              }
+              className={choiceGroupClass}
+            >
+              {question.options.map((option) => (
+                <FieldLabel
+                  key={option.value}
+                  htmlFor={`case-${question.key}-${option.value}`}
+                  className={choiceLabelClass}
+                >
+                  <Field orientation="horizontal" className="min-h-14">
+                    <RadioGroupItem
+                      value={option.value}
+                      id={`case-${question.key}-${option.value}`}
+                    />
+                    <FieldContent>{option.label}</FieldContent>
+                  </Field>
+                </FieldLabel>
+              ))}
+            </RadioGroup>
+          </FieldSet>
+        ))}
+
+        {selectedService ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className="civic-enter-sm flex items-center gap-2 border-t border-success/20 pt-4 text-sm font-semibold text-success"
+          >
+            <CheckCircle2 className="size-4.5 shrink-0" aria-hidden="true" />
+            Service selected. Complete the case details below before continuing.
+            <span className="sr-only">{selectedService.name}</span>
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+export function CaseSelector(props: CaseSelectorProps) {
+  if (props.definition) {
+    return <ConfiguredCaseSelector {...props} definition={props.definition} />;
+  }
+  return <LegacyCaseSelector {...props} />;
 }

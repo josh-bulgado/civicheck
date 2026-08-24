@@ -9,11 +9,15 @@ import {
 } from "lucide-react";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Button } from "~/components/ui/button";
+import { Skeleton } from "~/components/ui/skeleton";
 import {
   Collapsible,
   CollapsibleContent,
@@ -36,6 +40,7 @@ import {
   splitCaseLabel,
   summarizeWait,
 } from "~/features/services/service-utils";
+import { cn } from "~/lib/utils";
 
 interface ServiceRequirementsDialogProps {
   /** `display_group ?? service_code` — the same code the apply flow routes on. */
@@ -61,6 +66,9 @@ const CASE_TAG_LABELS: Record<string, string> = {
   non_marital_only: "Non-marital child only",
   brap_only: "Barangay-assisted (BRAP) only",
   foreigner_only: "Foreign parent only",
+  parental_consent_required: "Ages 18–20",
+  parental_advice_required: "Ages 21–24",
+  foreign_national_spouse: "Foreign-national applicant",
 };
 
 const badgeToneClasses = {
@@ -79,9 +87,11 @@ function RequirementRow({
   const { caseLabel, name } = splitCaseLabel(requirement.requirement_name);
   const { primary, secondary } = parseRequirementName(name);
   const source = requirement.where_to_secure ?? secondary;
-  const caseTag = requirement.case_tag
-    ? (CASE_TAG_LABELS[requirement.case_tag] ?? null)
-    : null;
+  const caseTag = requirement.applies_when
+    ? "Depends on case answers"
+    : requirement.case_tag
+      ? (CASE_TAG_LABELS[requirement.case_tag] ?? null)
+      : null;
 
   return (
     <li className="flex flex-col gap-1 px-4 py-3">
@@ -231,11 +241,11 @@ export function ServiceRequirementsDialog({
           </div>
 
           {loading && (
-            <div className="civic-stagger mt-5 space-y-3">
+            <div className="civic-stagger mt-5 flex flex-col gap-3">
               {[0, 1, 2, 3].map((i) => (
-                <div
+                <Skeleton
                   key={i}
-                  className="civic-skeleton h-14 rounded-[10px]"
+                  className="h-14 rounded-[10px]"
                   style={staggerStyle(i)}
                 />
               ))}
@@ -243,16 +253,18 @@ export function ServiceRequirementsDialog({
           )}
 
           {!loading && error && (
-            <div className="civic-enter-scale mt-5 rounded-[10px] border border-destructive/20 bg-destructive/5 p-6 text-center">
-              <p className="mb-3 text-sm font-medium text-destructive">{error}</p>
-              <button
+            <Alert variant="destructive" className="civic-enter-scale mt-5">
+              <AlertTitle>Unable to load requirements</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={retry}
-                className="civic-press inline-flex min-h-9 items-center rounded-lg border border-control-border bg-white px-4 text-sm font-semibold text-foreground hover:bg-surface-subtle"
               >
                 Try again
-              </button>
-            </div>
+              </Button>
+            </Alert>
           )}
 
           {!loading && !error && overview && (
@@ -307,7 +319,15 @@ export function ServiceRequirementsDialog({
                   onOpenChange={setConditionalOpen}
                   className="flex flex-col gap-2.5"
                 >
-                  <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between gap-3 text-left select-none">
+                  <CollapsibleTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="h-auto w-full justify-between px-0 text-left whitespace-normal"
+                      />
+                    }
+                  >
                     <h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
                       <AlertTriangle
                         className="size-3.5 text-warning"
@@ -316,9 +336,11 @@ export function ServiceRequirementsDialog({
                       Only if it applies to you ({conditionalReqs.length})
                     </h3>
                     <ChevronDown
-                      className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
-                        conditionalOpen ? "rotate-180" : ""
-                      }`}
+                      data-icon="inline-end"
+                      className={cn(
+                        "transition-transform duration-200",
+                        conditionalOpen && "rotate-180",
+                      )}
                       aria-hidden="true"
                     />
                   </CollapsibleTrigger>
@@ -366,22 +388,20 @@ export function ServiceRequirementsDialog({
               : "Reference only — cross-check this against what the visitor has on hand."}
           </p>
           <div className="flex shrink-0 gap-2.5">
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              className="civic-press inline-flex min-h-10 items-center justify-center rounded-lg border border-border-strong bg-white px-4 text-sm font-bold text-foreground outline-none hover:bg-surface-subtle focus-visible:ring-3 focus-visible:ring-ring/50"
+            <DialogClose
+              render={<Button type="button" variant="outline" size="lg" />}
             >
               Close
-            </button>
+            </DialogClose>
             {onApply && (
-              <button
+              <Button
                 type="button"
+                size="lg"
                 onClick={onApply}
-                className="civic-press civic-nudge inline-flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground outline-none hover:bg-primary-hover focus-visible:ring-3 focus-visible:ring-ring/50"
               >
                 Apply
-                <ArrowRight className="size-4" aria-hidden="true" />
-              </button>
+                <ArrowRight data-icon="inline-end" aria-hidden="true" />
+              </Button>
             )}
           </div>
         </div>

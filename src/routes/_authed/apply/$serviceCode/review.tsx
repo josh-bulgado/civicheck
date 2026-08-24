@@ -2,21 +2,64 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Check, CheckCircle2 } from "lucide-react";
 import { Checkbox } from "~/components/ui/checkbox";
-import { formatFee } from "~/features/services/service-utils";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Button, buttonVariants } from "~/components/ui/button";
+import { Field, FieldLabel } from "~/components/ui/field";
+import {
+  formatFee,
+  isRequirementApplicable,
+} from "~/features/services/service-utils";
+import {
+  expandRequirementUploadSlots,
+  requirementUploadKey,
+} from "~/features/services/requirement-upload.utils";
 import { submitRequestFn } from "~/features/services/services.mutations";
 import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
+import { ChangeServiceButton } from "~/features/apply/components/ApplicationDocket";
 import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
+import {
+  deriveTemplateAnswers,
+  isFieldVisible,
+  visibleCaseSelectorQuestions,
+} from "~/features/forms/form-template.utils";
+import type {
+  FormFieldDefinition,
+  TemplateAnswers,
+} from "~/features/forms/form-template.types";
+import { impliedSex, subjectFullName } from "~/lib/subject-fields";
 import { Route as ApplyLayoutRoute } from "./route";
 
 export const Route = createFileRoute("/_authed/apply/$serviceCode/review")({
   component: ReviewStepRoute,
 });
 
+const REVIEW_DATE_FORMATTER = new Intl.DateTimeFormat("en-PH", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
+
+function formatReviewDate(value: string) {
+  if (!value) return "—";
+  const date = new Date(value + "T00:00:00");
+  return Number.isNaN(date.getTime()) ? value : REVIEW_DATE_FORMATTER.format(date);
+}
+
+function formatFieldAnswer(field: FormFieldDefinition, value: string) {
+  if (!value) return "—";
+  if (field.type === "date") return formatReviewDate(value);
+  if (field.type === "phone") return `+63 ${value}`;
+  if (field.type === "select") {
+    return field.options?.find((option) => option.value === value)?.label ?? value;
+  }
+  return value;
+}
+
 function ReviewStepRoute() {
   const { serviceCode } = Route.useParams();
   const navigate = useNavigate();
-  const { displayName, services } = ApplyLayoutRoute.useLoaderData();
+  const { displayName, services, requirements } = ApplyLayoutRoute.useLoaderData();
   const { draft, clear } = useApplyDraft(serviceCode);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -30,26 +73,39 @@ function ReviewStepRoute() {
     [services, draft.selectedServiceCode],
   );
 
-  const fullName = [
-    draft.details.subjectFirstName,
-    draft.details.subjectMiddleName,
-    draft.details.subjectLastName,
-    draft.details.subjectSuffix,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const showRoleLabels = draft.subjects.length > 1;
+  const sexLabel = (sex: string) =>
+    sex === "male" ? "Male" : sex === "female" ? "Female" : "—";
 
-  const sexLabel =
-    draft.details.subjectSex === "male"
-      ? "Male"
-      : draft.details.subjectSex === "female"
-        ? "Female"
-        : "—";
-
-  const finalPurpose =
-    draft.caseAnswers.purpose === "Other"
-      ? draft.caseAnswers.otherPurpose
-      : draft.caseAnswers.purpose;
+  const definition = selectedService.form_template!.definition;
+  const personGroupAnswers = Object.fromEntries(
+    definition.sections
+      .flatMap((section) => section.fields)
+      .filter((field) => field.type === "person_group")
+      .map((field) => [field.key, draft.subjects]),
+  );
+  const answerBag: TemplateAnswers = deriveTemplateAnswers(definition, {
+    ...draft.answers,
+    ...draft.caseSelectorAnswers,
+    ...personGroupAnswers,
+  });
+  const activeDocumentKeys = new Set(
+    expandRequirementUploadSlots(
+      requirements.filter((requirement) =>
+        isRequirementApplicable(
+          requirement,
+          selectedService.service_code,
+          answerBag,
+        ),
+      ),
+      draft.subjects,
+    ).map((slot) => slot.key),
+  );
+  const activeDocuments = draft.documents.filter((document) =>
+    activeDocumentKeys.has(
+      requirementUploadKey(document.requirementId, document.subjectRole),
+    ),
+  );
 
   async function handleSubmit() {
     if (!selectedService) return;
@@ -59,35 +115,33 @@ function ReviewStepRoute() {
       const res = await submitRequestFn({
         data: {
           serviceCode: selectedService.service_code,
-          fee: Number(selectedService.fee),
-          formData: {
-            subject_first_name: draft.details.subjectFirstName,
-            subject_middle_name: draft.details.subjectMiddleName,
-            subject_last_name: draft.details.subjectLastName,
-            subject_suffix: draft.details.subjectSuffix,
-            subject_sex: draft.details.subjectSex,
-            contact_number: draft.details.contactNumber,
-            event_date: draft.details.eventDate,
-            event_place: draft.details.eventPlace,
-            purpose: finalPurpose,
-            additional_notes: draft.caseAnswers.additionalNotes,
-          },
-          documents: draft.documents.map((d) => ({
+          templateVersionId: selectedService.form_template?.versionId ?? null,
+          answers: answerBag,
+          documents: activeDocuments.map((d) => ({
+            requirementId: d.requirementId,
             requirementName: d.requirementName,
+            subjectRole: d.subjectRole,
             fileUrl: d.storagePath,
           })),
         },
       });
 
       if (res.error) {
-        setSubmitError(res.message || "Something went wrong. Please try again.");
+        setSubmitError(
+          res.message ||
+            "The request could not be submitted. Review the details and try again.",
+        );
         return;
       }
 
       setResult({ trackingNumber: res.trackingNumber!, documentWarning: res.documentWarning });
       clear();
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Something went wrong.");
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : "The request could not reach the CCRO service. Check your connection and try again.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -114,7 +168,7 @@ function ReviewStepRoute() {
           <div className="flex flex-wrap gap-3">
             <Link
               to="/my-requests"
-              className="inline-flex min-h-11 items-center rounded-lg bg-primary px-5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
+              className={buttonVariants({ size: "lg" })}
             >
               View my requests
             </Link>
@@ -133,47 +187,118 @@ function ReviewStepRoute() {
     >
       <div className="flex flex-col gap-5">
         <EditSection
-          title="Your details"
-          onEdit={() =>
-            navigate({ to: "/apply/$serviceCode/details", params: { serviceCode } })
+          title="Selected service"
+          action={
+            selectedService ? (
+              <ChangeServiceButton
+                serviceName={selectedService.name}
+                onDiscard={clear}
+                label="Change"
+              />
+            ) : null
           }
         >
-          <ReviewRow label="Subject" value={fullName || "—"} />
-          <ReviewRow label="Sex" value={sexLabel} />
           <ReviewRow
-            label="Contact number"
-            value={draft.details.contactNumber ? `+63 ${draft.details.contactNumber}` : "—"}
+            label="Service"
+            value={selectedService?.name ?? displayName}
           />
+          {selectedService && selectedService.name !== displayName ? (
+            <ReviewRow label="Service family" value={displayName} />
+          ) : null}
+          <ReviewRow
+            label="Fee at cashier"
+            value={selectedService ? formatFee(selectedService.fee) : "—"}
+          />
+          {visibleCaseSelectorQuestions(definition, answerBag).map(
+            (question) => {
+              const answer = answerBag[question.key];
+              const value = typeof answer === "string" ? answer : "";
+              return (
+                <ReviewRow
+                  key={question.key}
+                  label={question.label}
+                  value={
+                    question.options.find((option) => option.value === value)
+                      ?.label ?? (value || "—")
+                  }
+                />
+              );
+            },
+          )}
         </EditSection>
 
-        <EditSection
-          title="About your case"
-          onEdit={() =>
-            navigate({ to: "/apply/$serviceCode/case", params: { serviceCode } })
-          }
-        >
-          <ReviewRow label="Date of event" value={draft.details.eventDate || "—"} />
-          <ReviewRow label="Place" value={draft.details.eventPlace || "—"} />
-          <ReviewRow label="Purpose" value={finalPurpose || "—"} />
-          <ReviewRow label="Notes" value={draft.caseAnswers.additionalNotes || "None"} />
-        </EditSection>
+        {definition.sections.map((section) => (
+          <EditSection
+            key={section.key}
+            title={section.title}
+            onEdit={() =>
+              navigate({
+                to:
+                  section.step === "case"
+                    ? "/apply/$serviceCode/case"
+                    : "/apply/$serviceCode/details",
+                params: { serviceCode },
+              })
+            }
+          >
+            {section.fields
+              .filter((field) => isFieldVisible(field, answerBag))
+              .flatMap((field) => {
+                if (field.type === "person_group") {
+                  return [
+                    ...draft.subjects.map((subject, index) => (
+                      <ReviewRow
+                        key={`${field.key}-name-${index}`}
+                        label={showRoleLabels ? subject.role : field.label}
+                        value={subjectFullName(subject) || "—"}
+                      />
+                    )),
+                    ...draft.subjects
+                      .filter((subject) => impliedSex(subject.role) === null)
+                      .map((subject, index) => (
+                        <ReviewRow
+                          key={`${field.key}-sex-${index}`}
+                          label={showRoleLabels ? `${subject.role}'s sex` : "Sex"}
+                          value={sexLabel(subject.sex)}
+                        />
+                      )),
+                  ];
+                }
+                const answer = answerBag[field.key];
+                return [
+                  <ReviewRow
+                    key={field.key}
+                    label={field.label}
+                    value={formatFieldAnswer(
+                      field,
+                      typeof answer === "string" ? answer : "",
+                    )}
+                  />,
+                ];
+              })}
+          </EditSection>
+        ))}
 
         <EditSection
-          title={`Documents · ${draft.documents.length} uploaded`}
+          title={`Documents · ${activeDocuments.length} uploaded`}
           onEdit={() =>
             navigate({ to: "/apply/$serviceCode/documents", params: { serviceCode } })
           }
         >
-          {draft.documents.length === 0 ? (
+          {activeDocuments.length === 0 ? (
             <p className="text-sm text-muted-foreground">No documents uploaded yet.</p>
           ) : (
             <div className="flex flex-col gap-2.5">
-              {draft.documents.map((doc) => (
-                <div key={doc.requirementId} className="flex items-center gap-2.5 text-sm">
+              {activeDocuments.map((doc) => (
+                <div
+                  key={`${doc.requirementId}-${doc.subjectRole ?? "request"}`}
+                  className="flex items-center gap-2.5 text-sm"
+                >
                   <span className="flex size-4.5 shrink-0 items-center justify-center rounded-[5px] bg-success text-[10px] font-bold text-white">
-                    <Check className="size-2.5" />
+                    <Check className="size-2.5" aria-hidden="true" />
                   </span>
-                  <span className="text-foreground">
+                  <span className="min-w-0 break-words text-foreground">
+                    {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
                     {doc.requirementName} — {doc.fileName}
                   </span>
                 </div>
@@ -195,21 +320,23 @@ function ReviewStepRoute() {
           </p>
         </div>
 
-        <label className="flex cursor-pointer items-start gap-2.5">
+        <Field orientation="horizontal">
           <Checkbox
+            id="confirm-application-details"
             checked={confirmed}
             onCheckedChange={(checked) => setConfirmed(checked === true)}
-            className="mt-0.5"
           />
-          <span className="text-sm leading-relaxed text-body-strong">
-            I confirm the details above are correct and I will bring the original documents.
-          </span>
-        </label>
+          <FieldLabel htmlFor="confirm-application-details">
+            I confirm the selected service and details above are correct, and I
+            will bring the original documents.
+          </FieldLabel>
+        </Field>
 
         {submitError && (
-          <p className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
-            {submitError}
-          </p>
+          <Alert variant="destructive">
+            <AlertTitle>Unable to submit request</AlertTitle>
+            <AlertDescription>{submitError}</AlertDescription>
+          </Alert>
         )}
       </div>
 
@@ -229,23 +356,29 @@ function ReviewStepRoute() {
 function EditSection({
   title,
   onEdit,
+  action,
   children,
 }: {
   title: string;
-  onEdit: () => void;
+  onEdit?: () => void;
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <div className="overflow-hidden rounded-[10px] border border-border-light">
       <div className="flex items-center justify-between gap-3 border-b border-border-light bg-background px-4.5 py-3">
         <span className="text-sm font-bold text-foreground">{title}</span>
-        <button
-          type="button"
-          onClick={onEdit}
-          className="text-sm font-bold text-primary hover:text-primary-hover"
-        >
-          Edit
-        </button>
+        {action ??
+          (onEdit ? (
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              onClick={onEdit}
+            >
+              Edit
+            </Button>
+          ) : null)}
       </div>
       <div className="grid grid-cols-1 gap-2.5 px-4.5 py-3.5 sm:grid-cols-2">{children}</div>
     </div>
@@ -254,9 +387,11 @@ function EditSection({
 
 function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-3 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="text-right font-bold text-foreground">{value}</span>
+    <div className="flex min-w-0 justify-between gap-3 text-sm">
+      <span className="shrink-0 text-muted-foreground">{label}</span>
+      <span className="min-w-0 break-words text-right font-bold text-foreground">
+        {value}
+      </span>
     </div>
   );
 }

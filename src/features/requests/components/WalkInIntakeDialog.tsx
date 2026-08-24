@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -22,6 +22,12 @@ import {
 import { encodeWalkInFn } from "~/features/requests/walk-in-intake.mutations";
 import type { EncodableService } from "~/features/requests/walk-in-intake.queries";
 import { ServiceRequirementsDialog } from "~/features/services/components/ServiceRequirementsDialog";
+import {
+  emptySubject,
+  reconcileSubjects,
+  subjectsMatchRoles,
+  type SubjectFields,
+} from "~/lib/subject-fields";
 
 interface WalkInIntakeDialogProps {
   services: EncodableService[];
@@ -33,8 +39,7 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
   const [submitting, setSubmitting] = useState(false);
   const [requirementsOpen, setRequirementsOpen] = useState(false);
   const [serviceCode, setServiceCode] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [subjects, setSubjects] = useState<SubjectFields[]>([emptySubject("Subject")]);
   const [purpose, setPurpose] = useState("");
   const [contactNumber, setContactNumber] = useState("");
   const [encodedRequest, setEncodedRequest] = useState<{
@@ -43,10 +48,24 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
 
   const selectedService = services.find((service) => service.serviceCode === serviceCode);
 
+  // Most services ask about one person; Marriage License asks about two.
+  // Resize the subject list to match whenever the selected service changes.
+  useEffect(() => {
+    const roles = selectedService?.partyRoles ?? ["Subject"];
+    setSubjects((prev) => (subjectsMatchRoles(prev, roles) ? prev : reconcileSubjects(prev, roles)));
+  }, [selectedService]);
+
+  const showRoleLabels = subjects.length > 1;
+
+  function updateSubject(index: number, patch: Partial<SubjectFields>) {
+    setSubjects((prev) =>
+      prev.map((subject, i) => (i === index ? { ...subject, ...patch } : subject)),
+    );
+  }
+
   function reset() {
     setServiceCode("");
-    setFirstName("");
-    setLastName("");
+    setSubjects([emptySubject("Subject")]);
     setPurpose("");
     setContactNumber("");
     setEncodedRequest(null);
@@ -60,8 +79,7 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
       const result = await encodeWalkInFn({
         data: {
           serviceCode,
-          subjectFirstName: firstName,
-          subjectLastName: lastName,
+          subjects,
           purpose,
           contactNumber,
         },
@@ -134,26 +152,39 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
                   </div>
                 </Field>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field>
-                    <FieldLabel htmlFor="walkin-first">First name</FieldLabel>
-                    <Input
-                      id="walkin-first"
-                      value={firstName}
-                      onChange={(event) => setFirstName(event.target.value)}
-                      required
-                    />
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="walkin-last">Last name</FieldLabel>
-                    <Input
-                      id="walkin-last"
-                      value={lastName}
-                      onChange={(event) => setLastName(event.target.value)}
-                      required
-                    />
-                  </Field>
-                </div>
+                {subjects.map((subject, index) => (
+                  <div key={index} className="space-y-3">
+                    {showRoleLabels && (
+                      <p className="text-sm font-medium text-foreground">
+                        {subject.role}
+                      </p>
+                    )}
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field>
+                        <FieldLabel htmlFor={`walkin-first-${index}`}>First name</FieldLabel>
+                        <Input
+                          id={`walkin-first-${index}`}
+                          value={subject.firstName}
+                          onChange={(event) =>
+                            updateSubject(index, { firstName: event.target.value })
+                          }
+                          required
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel htmlFor={`walkin-last-${index}`}>Last name</FieldLabel>
+                        <Input
+                          id={`walkin-last-${index}`}
+                          value={subject.lastName}
+                          onChange={(event) =>
+                            updateSubject(index, { lastName: event.target.value })
+                          }
+                          required
+                        />
+                      </Field>
+                    </div>
+                  </div>
+                ))}
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field>
@@ -180,7 +211,11 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
                   </Button>
                   <Button
                     type="submit"
-                    disabled={submitting || !serviceCode || !firstName.trim() || !lastName.trim()}
+                    disabled={
+                      submitting ||
+                      !serviceCode ||
+                      subjects.some((s) => !s.firstName.trim() || !s.lastName.trim())
+                    }
                   >
                     {submitting ? "Encoding..." : "Encode request"}
                   </Button>

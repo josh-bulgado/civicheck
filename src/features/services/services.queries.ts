@@ -4,6 +4,7 @@ import {
   loadServiceCatalogue,
   resolveServices,
 } from "~/features/services/services.catalogue";
+import { buildLegacyFormDefinition } from "~/features/forms/form-template.utils";
 
 // Every read below is derived from the in-process catalogue cache rather than
 // querying Supabase directly — see `services.catalogue.ts` for why that is safe
@@ -86,10 +87,23 @@ export const getServiceDetail = createServerFn({ method: "GET" })
       ? services[0].display_group!
       : (services[0].requirement_group ?? serviceCodeOrGroup);
 
+    const configuredServices = services.map((service) => ({
+      ...service,
+      form_template:
+        catalogue.formTemplatesByService.get(service.service_code) ?? {
+          templateId: null,
+          templateKey: `legacy-${service.service_code.toLowerCase()}`,
+          templateName: `${service.name} application`,
+          versionId: null,
+          version: 0,
+          definition: buildLegacyFormDefinition(service),
+        },
+    }));
+
     return {
       isGroup,
       displayName: services[0].display_name ?? services[0].name,
-      services,
+      services: configuredServices,
       requirements: catalogue.requirementsByGroup.get(requirementKey) ?? [],
     };
   });

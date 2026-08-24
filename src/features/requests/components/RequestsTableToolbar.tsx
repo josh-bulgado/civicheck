@@ -64,7 +64,10 @@ export function RequestsTableToolbar({
             <span className="hidden sm:inline">Department:</span>
           </div>
           {scopedDepartmentName ? (
-            <Badge variant="neutral" className="h-10 px-3 text-sm font-semibold">
+            <Badge
+              variant="neutral"
+              className="h-10 px-3 text-sm font-semibold"
+            >
               {scopedDepartmentName}
             </Badge>
           ) : (
@@ -79,11 +82,16 @@ export function RequestsTableToolbar({
                 className="h-10 w-48"
                 aria-label="Filter by department"
               >
-                <SelectValue placeholder="All departments" />
+                <SelectValue
+                  placeholder="All departments"
+                  className="capitalize"
+                />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem value={ALL_DEPARTMENTS}>All departments</SelectItem>
+                  <SelectItem value={ALL_DEPARTMENTS}>
+                    All departments
+                  </SelectItem>
                   {departments.map((department) => (
                     <SelectItem key={department.id} value={department.id}>
                       {department.name}

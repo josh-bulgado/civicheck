@@ -20,7 +20,13 @@ export function WizardShell({
     // what makes moving between them feel like a step rather than a redraw: the
     // card is torn down and rebuilt, which replays the entrance.
     <div key={step} className="mx-auto w-full max-w-350 px-5 py-7 sm:px-8">
-      <div className={sidebar ? "grid items-start gap-5 lg:grid-cols-[1fr_340px]" : ""}>
+      <div
+        className={
+          sidebar
+            ? "grid items-start gap-5 lg:grid-cols-[1fr_340px]"
+            : "mx-auto max-w-5xl"
+        }
+      >
         <div className="civic-enter civic-card p-6 sm:p-7">
           <div className="flex flex-col gap-1.5 pb-5">
             <p className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
@@ -37,7 +43,7 @@ export function WizardShell({
         </div>
         {sidebar && (
           <div
-            className="civic-enter mt-5 flex flex-col gap-4 lg:mt-0"
+            className="civic-enter mt-5 flex flex-col gap-4 lg:sticky lg:top-6 lg:mt-0"
             style={enterDelay(90)}
           >
             {sidebar}

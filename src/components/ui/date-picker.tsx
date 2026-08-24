@@ -45,10 +45,21 @@ export function DatePicker({
   className,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
+  const minDate = fromDateKey(min);
+  const maxDate = fromDateKey(max);
   const selected = fromDateKey(value);
+  const now = new Date();
+  const calendarStart = minDate ?? new Date(now.getFullYear() - 150, 0, 1);
+  const calendarEnd = maxDate ?? new Date(now.getFullYear() + 20, 11, 31);
   const todayKey = toDateKey();
   const todayInRange =
     (!min || todayKey >= min) && (!max || todayKey <= max);
+
+  function clampToRange(date: Date) {
+    if (minDate && date < minDate) return minDate;
+    if (maxDate && date > maxDate) return maxDate;
+    return date;
+  }
 
   function commit(next: string) {
     onValueChange(next);
@@ -94,10 +105,19 @@ export function DatePicker({
 
       <PopoverContent align="start" className="w-auto p-3">
         <Calendar
-          value={value}
-          onValueChange={commit}
-          min={min}
-          max={max}
+          mode="single"
+          captionLayout="dropdown"
+          startMonth={calendarStart}
+          endMonth={calendarEnd}
+          selected={selected ?? undefined}
+          onSelect={(date) => {
+            if (date) commit(toDateKey(date));
+          }}
+          defaultMonth={selected ?? clampToRange(new Date())}
+          disabled={[
+            ...(minDate ? [{ before: minDate }] : []),
+            ...(maxDate ? [{ after: maxDate }] : []),
+          ]}
           autoFocus
         />
         {(todayInRange || (clearable && value)) && (

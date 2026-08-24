@@ -51,7 +51,11 @@ export function AcceptInvitationForm() {
   const isPending = acceptInvitation.status === "pending";
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" noValidate>
+    <form
+      onSubmit={form.handleSubmit(onSubmit)}
+      className="flex flex-col gap-6"
+      noValidate
+    >
       {errorMessage ? (
         <Alert variant="destructive">
           <AlertCircleIcon />

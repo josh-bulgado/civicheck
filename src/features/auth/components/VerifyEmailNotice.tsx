@@ -6,6 +6,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { OtpCodeForm } from "./OtpCodeForm";
+import { Button } from "~/components/ui/button";
 
 export function VerifyEmailNotice({
   open,
@@ -58,13 +59,15 @@ export function VerifyEmailNotice({
           submitLabel="Confirm account"
         />
 
-        <button
+        <Button
           type="button"
+          variant="link"
+          size="sm"
           onClick={onUseDifferentEmail}
-          className="self-center text-[13px] font-semibold text-muted-2 underline underline-offset-2 hover:text-body"
+          className="self-center"
         >
           {dismissLabel}
-        </button>
+        </Button>
       </DialogContent>
     </Dialog>
   );

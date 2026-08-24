@@ -91,7 +91,7 @@ export function useServiceEntry(service: ServiceEntryProps, canApply = true) {
     setConfirmFromChecklist(false);
     setConfirmOpen(false);
     navigate({
-      to: "/apply/$serviceCode/details",
+      to: "/apply/$serviceCode/case",
       params: { serviceCode: routeCode },
     });
   }

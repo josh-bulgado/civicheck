@@ -1,71 +1,108 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { Controller, useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "~/components/ui/field";
-import { Input } from "~/components/ui/input";
-import { DatePicker } from "~/components/ui/date-picker";
-import { Textarea } from "~/components/ui/textarea";
-import { toDateKey } from "~/lib/date";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
-import { CaseSelector } from "~/features/services/components/CaseSelector";
+import { useEffect, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { CalendarClock } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Button } from "~/components/ui/button";
+import { BirthTrackRedirectDialog } from "~/features/apply/components/BirthTrackRedirectDialog";
 import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
-import { RequestSummaryCard } from "~/features/apply/components/RequestSummaryCard";
-import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
+import {
+  DynamicFormFields,
+  type DynamicFieldValues,
+} from "~/features/forms/components/DynamicFormFields";
+import { DerivedAnswerAlerts } from "~/features/forms/components/DerivedAnswerAlerts";
+import {
+  deriveTemplateAnswers,
+  fieldsForStep,
+  getDerivedAnswerFeedback,
+} from "~/features/forms/form-template.utils";
+import { isRequirementApplicable } from "~/features/services/service-utils";
+import {
+  seedDraftForGroup,
+  useApplyDraft,
+} from "~/features/apply/hooks/useApplyDraft";
+import { ageInYears, diffInDays, toDateKey } from "~/lib/date";
+import {
+  CaseSelector,
+  inferMaritalStatus,
+} from "~/features/services/components/CaseSelector";
 import { Route as ApplyLayoutRoute } from "./route";
 
 export const Route = createFileRoute("/_authed/apply/$serviceCode/case")({
   component: CaseStepRoute,
 });
 
-const PURPOSES = [
-  "Local Use (ID, Barangay, etc.)",
-  "Employment",
-  "Passport / Travel",
-  "School Records / Admission",
-  "Social Security (SSS/GSIS/etc.)",
-  "Legal / Court proceedings",
-  "Other",
-];
+const ON_TIME_WINDOW_DAYS = 30;
+const MARRIAGE_LICENSE_CODE = "MARRIAGE_LICENSE";
+const MARRIAGE_NOTICE_DAYS = 10;
+const RECOMMENDED_MARRIAGE_LEAD_DAYS = 21;
+const OPPOSITE_BIRTH_GROUP: Record<string, string> = {
+  birth_ontime: "birth_delayed",
+  birth_delayed: "birth_ontime",
+};
 
-const caseSchema = z
-  .object({
-    eventDate: z.string().min(1, "Date of event is required"),
-    eventPlace: z.string().min(1, "Place of event is required"),
-    purpose: z.string().min(1),
-    otherPurpose: z.string(),
-    additionalNotes: z.string(),
-  })
-  .refine((v) => v.purpose !== "Other" || v.otherPurpose.trim().length > 0, {
-    message: "Please specify the purpose",
-    path: ["otherPurpose"],
-  });
+type RedirectDirection = "toDelayed" | "toOnTime";
 
-type CaseValues = z.infer<typeof caseSchema>;
+function mismatchDirection(
+  dateKey: string,
+  birthGroup: string | null,
+): RedirectDirection | null {
+  if (!dateKey || !birthGroup) return null;
+  const daysAgo = diffInDays(dateKey, toDateKey());
+  if (birthGroup === "birth_ontime" && daysAgo > ON_TIME_WINDOW_DAYS) {
+    return "toDelayed";
+  }
+  if (
+    birthGroup === "birth_delayed" &&
+    daysAgo >= 0 &&
+    daysAgo <= ON_TIME_WINDOW_DAYS
+  ) {
+    return "toOnTime";
+  }
+  return null;
+}
+
+function formatLeadTime(days: number) {
+  if (days === 0) return "today";
+  if (days === 1) return "1 day away";
+  return `${days} days away`;
+}
+
+function getMarriageTimingNotice(serviceCode: string | undefined, intendedDate: string) {
+  if (serviceCode !== MARRIAGE_LICENSE_CODE || !intendedDate) return null;
+  const daysUntilMarriage = diffInDays(toDateKey(), intendedDate);
+  if (daysUntilMarriage < 0) return null;
+
+  if (daysUntilMarriage <= MARRIAGE_NOTICE_DAYS) {
+    return {
+      title: "Your intended marriage date is too soon",
+      description: `This date is ${formatLeadTime(daysUntilMarriage)}. A marriage license is issued only after the required 10-day public-notice period, and you must first attend the scheduled family-planning and pre-marriage counseling session. Choose a later date; planning at least 3 weeks ahead is safer.`,
+    };
+  }
+  if (daysUntilMarriage < RECOMMENDED_MARRIAGE_LEAD_DAYS) {
+    return {
+      title: "Allow more time before the wedding",
+      description: `This date is ${formatLeadTime(daysUntilMarriage)}. The schedule may be tight after the family-planning and pre-marriage counseling session, document processing, and the required 10-day public-notice period. Planning at least 3 weeks ahead is safer.`,
+    };
+  }
+  return null;
+}
 
 function CaseStepRoute() {
   const { serviceCode } = Route.useParams();
   const navigate = useNavigate();
-  const { isGroup, displayName, services } = ApplyLayoutRoute.useLoaderData();
-  const { draft, update, hydrated } = useApplyDraft(serviceCode);
+  const { isGroup, requirements, services } = ApplyLayoutRoute.useLoaderData();
+  const { draft, update, hydrated, clear } = useApplyDraft(serviceCode);
   const selectedService =
-    services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
-  const subjectName = [draft.details.subjectFirstName, draft.details.subjectLastName]
-    .filter(Boolean)
-    .join(" ");
+    services.find((service) => service.service_code === draft.selectedServiceCode) ??
+    services[0];
+  const definition = selectedService.form_template!.definition;
+  const caseSelectorDefinition =
+    services[0]?.form_template?.definition.caseSelector;
+  const caseFields = fieldsForStep(definition, "case").filter(
+    (field) => field.type !== "person_group",
+  );
 
   useEffect(() => {
     if (hydrated && !isGroup && !draft.selectedServiceCode) {
@@ -73,158 +110,251 @@ function CaseStepRoute() {
     }
   }, [hydrated, isGroup, draft.selectedServiceCode, services, update]);
 
-  const form = useForm<CaseValues>({
-    resolver: zodResolver(caseSchema),
+  const birthGroup = services[0]?.display_group ?? null;
+  const targetBirthGroup = selectedService.asks_birth_details
+    ? (OPPOSITE_BIRTH_GROUP[birthGroup ?? ""] ?? null)
+    : null;
+
+  const formValues = Object.fromEntries(
+    caseFields.map((field) => {
+      const value = draft.answers[field.key];
+      return [
+        field.key,
+        typeof value === "string"
+          ? value
+          : field.key === "purpose"
+            ? "Local Use (ID, Barangay, etc.)"
+            : "",
+      ];
+    }),
+  );
+  const form = useForm<DynamicFieldValues>({
     mode: "onBlur",
-    values: {
-      eventDate: draft.details.eventDate,
-      eventPlace: draft.details.eventPlace,
-      purpose: draft.caseAnswers.purpose,
-      otherPurpose: draft.caseAnswers.otherPurpose,
-      additionalNotes: draft.caseAnswers.additionalNotes,
-    },
+    values: formValues,
+    shouldUnregister: true,
   });
+  const watchedValues = form.watch();
+  const derivedCaseAnswers = deriveTemplateAnswers(definition, {
+    ...draft.answers,
+    ...watchedValues,
+    ...draft.caseSelectorAnswers,
+  });
+  const selectorContextAnswers = Object.fromEntries(
+    Object.entries(derivedCaseAnswers).flatMap(([key, value]) =>
+      typeof value === "string" ? [[key, value]] : [],
+    ),
+  );
+  const blockingAgeFeedback = getDerivedAnswerFeedback(
+    definition,
+    derivedCaseAnswers,
+  ).find((feedback) => feedback.notice.blocksProgress);
+  const watchedEventDate = watchedValues.event_date ?? "";
+  const marriageTimingNotice = getMarriageTimingNotice(
+    selectedService.service_code,
+    watchedEventDate,
+  );
+  const currentMismatch = targetBirthGroup
+    ? mismatchDirection(watchedEventDate, birthGroup)
+    : null;
 
-  const purpose = form.watch("purpose");
+  const [redirectDirection, setRedirectDirection] =
+    useState<RedirectDirection | null>(null);
+  const lastCheckedDate = useRef<string | null>(null);
 
-  function onSubmit(values: CaseValues) {
-    update((prev) => ({
-      details: {
-        ...prev.details,
-        eventDate: values.eventDate,
-        eventPlace: values.eventPlace,
-      },
+  function checkBirthTrack(fieldKey: string, dateKey: string) {
+    if (fieldKey !== "event_date" || lastCheckedDate.current === dateKey) return;
+    lastCheckedDate.current = dateKey;
+    const direction = mismatchDirection(dateKey, birthGroup);
+    if (direction) setRedirectDirection(direction);
+  }
+
+  function handleSwitchTrack() {
+    if (!targetBirthGroup) return;
+    const values = form.getValues();
+    seedDraftForGroup(targetBirthGroup, {
+      answers: { ...draft.answers, ...values },
+      eventDate: values.event_date ?? "",
+      eventPlace: values.event_place ?? "",
       caseAnswers: {
-        purpose: values.purpose,
-        otherPurpose: values.otherPurpose,
-        additionalNotes: values.additionalNotes,
+        purpose: values.purpose ?? "",
+        otherPurpose: values.purpose_other ?? "",
+        additionalNotes: values.additional_notes ?? "",
+        referenceNumber: values.reference_number ?? "",
+        placeType: values.place_type ?? "",
+        informantName: values.informant_name ?? "",
+        informantRelationship: values.informant_relationship ?? "",
       },
-    }));
-    navigate({ to: "/apply/$serviceCode/documents", params: { serviceCode } });
+      presetMarital: draft.selectedServiceCode
+        ? inferMaritalStatus(selectedService.name)
+        : null,
+      presetAge: ageInYears(values.event_date ?? "") >= 80 ? "80+" : "0-79",
+    });
+    clear();
+    setRedirectDirection(null);
+    navigate({
+      to: "/apply/$serviceCode/case",
+      params: { serviceCode: targetBirthGroup },
+    });
+  }
+
+  function onSubmit(values: DynamicFieldValues) {
+    update((previous) => {
+      const answers = { ...previous.answers, ...values };
+      const answerBag = deriveTemplateAnswers(definition, {
+        ...answers,
+        ...previous.caseSelectorAnswers,
+      });
+      const visibleRequirementIds = new Set(
+        requirements
+          .filter((requirement) =>
+            isRequirementApplicable(
+              requirement,
+              previous.selectedServiceCode,
+              answerBag,
+            ),
+          )
+          .map((requirement) => requirement.id),
+      );
+      return {
+        answers,
+        eventDate: values.event_date ?? "",
+        eventPlace: values.event_place ?? "",
+        caseAnswers: {
+          purpose: values.purpose ?? "",
+          otherPurpose: values.purpose_other ?? "",
+          additionalNotes: values.additional_notes ?? "",
+          referenceNumber: values.reference_number ?? "",
+          placeType: values.place_type ?? "",
+          informantName: values.informant_name ?? "",
+          informantRelationship: values.informant_relationship ?? "",
+        },
+        documents: previous.documents.filter((document) =>
+          visibleRequirementIds.has(document.requirementId),
+        ),
+      };
+    });
+    navigate({ to: "/apply/$serviceCode/details", params: { serviceCode } });
+  }
+
+  function handleServiceSelect(code: string) {
+    const currentValues = form.getValues();
+    update((previous) => {
+      if (!code) {
+        return {
+          selectedServiceCode: null,
+          answers: { ...previous.answers, ...currentValues },
+        };
+      }
+      const answerBag = deriveTemplateAnswers(definition, {
+        ...previous.answers,
+        ...watchedValues,
+        ...previous.caseSelectorAnswers,
+      });
+      const visibleRequirementIds = new Set(
+        requirements
+          .filter((requirement) =>
+            isRequirementApplicable(requirement, code, answerBag),
+          )
+          .map((requirement) => requirement.id),
+      );
+      return {
+        selectedServiceCode: code,
+        answers: { ...previous.answers, ...currentValues },
+        documents: previous.documents.filter((document) =>
+          visibleRequirementIds.has(document.requirementId),
+        ),
+      };
+    });
   }
 
   return (
     <WizardShell
-      step={2}
+      step={1}
       title="Tell us about your case"
-      description="A few details about the event and why you need this document — this determines which requirements apply to you."
-      sidebar={
-        selectedService && (
-          <RequestSummaryCard
-            serviceName={displayName}
-            fee={selectedService.fee}
-            subjectName={subjectName || undefined}
-          />
-        )
-      }
+      description="A few quick questions to find the right service and get the details of your case."
     >
       <div className="flex flex-col gap-6">
-        {isGroup && (
+        {isGroup ? (
           <CaseSelector
             services={services}
             selectedCode={draft.selectedServiceCode}
-            onSelect={(code) => update({ selectedServiceCode: code })}
+            onSelect={handleServiceSelect}
+            definition={caseSelectorDefinition}
+            answers={draft.caseSelectorAnswers}
+            contextAnswers={selectorContextAnswers}
+            onAnswersChange={(caseSelectorAnswers) =>
+              update((previous) => ({
+                caseSelectorAnswers,
+                answers: { ...previous.answers, ...form.getValues() },
+              }))
+            }
+            presetAge={draft.presetAge}
+            presetMarital={draft.presetMarital}
           />
-        )}
+        ) : null}
 
-        <FieldGroup>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Controller
-              control={form.control}
-              name="eventDate"
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="eventDate">Date of event</FieldLabel>
-                  <DatePicker
-                    id="eventDate"
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    onBlur={field.onBlur}
-                    max={toDateKey()}
-                    placeholder="Select the date of event"
-                    invalid={fieldState.invalid}
-                  />
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                </Field>
-              )}
-            />
-            <Controller
-              control={form.control}
-              name="eventPlace"
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="eventPlace">Place of event</FieldLabel>
-                  <Input id="eventPlace" placeholder="e.g. Legazpi City, Albay" {...field} />
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                </Field>
-              )}
-            />
-          </div>
+        <DynamicFormFields
+          definition={definition}
+          step="case"
+          control={form.control}
+          values={watchedValues}
+          onDateChange={checkBirthTrack}
+        />
 
-          <Controller
-            control={form.control}
-            name="purpose"
-            render={({ field }) => (
-              <Field>
-                <FieldLabel htmlFor="purpose">Purpose of request</FieldLabel>
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id="purpose">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PURPOSES.map((p) => (
-                      <SelectItem key={p} value={p}>
-                        {p}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-            )}
-          />
+        <DerivedAnswerAlerts
+          definition={definition}
+          answers={derivedCaseAnswers}
+        />
 
-          {purpose === "Other" && (
-            <Controller
-              control={form.control}
-              name="otherPurpose"
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="otherPurpose">Specify purpose</FieldLabel>
-                  <Input id="otherPurpose" {...field} />
-                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                </Field>
-              )}
-            />
-          )}
+        {marriageTimingNotice ? (
+          <Alert variant="warning" role="status" aria-live="polite">
+            <CalendarClock aria-hidden="true" />
+            <AlertTitle>{marriageTimingNotice.title}</AlertTitle>
+            <AlertDescription>{marriageTimingNotice.description}</AlertDescription>
+          </Alert>
+        ) : null}
 
-          <Controller
-            control={form.control}
-            name="additionalNotes"
-            render={({ field }) => (
-              <Field>
-                <FieldLabel htmlFor="additionalNotes">
-                  Additional notes (optional)
-                </FieldLabel>
-                <Textarea
-                  id="additionalNotes"
-                  placeholder="Any special requests or instructions..."
-                  rows={3}
-                  {...field}
-                />
-              </Field>
-            )}
-          />
-        </FieldGroup>
+        {currentMismatch ? (
+          <Alert variant="warning">
+            <AlertTitle>
+              {currentMismatch === "toDelayed"
+                ? "This date is more than 30 days ago"
+                : "This date is within the last 30 days"}
+            </AlertTitle>
+            <AlertDescription className="flex flex-wrap items-center gap-3">
+              Use the registration track that matches the birth date.
+              <Button type="button" variant="outline" size="sm" onClick={handleSwitchTrack}>
+                Switch to {currentMismatch === "toDelayed" ? "Delayed" : "On-Time"} Registration
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : null}
 
         <WizardFooterActions
-          onBack={() =>
-            navigate({ to: "/apply/$serviceCode/details", params: { serviceCode } })
-          }
           onContinue={form.handleSubmit(onSubmit)}
-          continueLabel="Continue to documents"
-          continueDisabled={isGroup && !draft.selectedServiceCode}
+          continueLabel="Continue to your details"
+          continueDisabled={
+            (isGroup && !draft.selectedServiceCode) ||
+            currentMismatch !== null ||
+            Boolean(blockingAgeFeedback)
+          }
+          note={
+            blockingAgeFeedback
+              ? blockingAgeFeedback.notice.description
+              : currentMismatch
+                ? "Resolve the date above before continuing."
+                : undefined
+          }
         />
       </div>
+
+      <BirthTrackRedirectDialog
+        open={redirectDirection !== null}
+        onOpenChange={(open) => !open && setRedirectDirection(null)}
+        direction={redirectDirection}
+        onKeepEditing={() => setRedirectDirection(null)}
+        onSwitch={handleSwitchTrack}
+      />
     </WizardShell>
   );
 }

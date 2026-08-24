@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
+import { Alert, AlertDescription } from "~/components/ui/alert";
 import {
   Field,
   FieldError,
@@ -103,12 +104,14 @@ export function StaffInviteDialog({
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           {(inviteMutation.data?.error || inviteMutation.error) && (
-            <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>
               {inviteMutation.data?.message ||
                 (inviteMutation.error instanceof Error
                   ? inviteMutation.error.message
                   : "Unable to send invitation. Please try again.")}
-            </div>
+              </AlertDescription>
+            </Alert>
           )}
           <FieldGroup>
             <div className="grid grid-cols-2 gap-4">

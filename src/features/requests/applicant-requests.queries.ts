@@ -1,8 +1,22 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireActiveSession } from "~/server/auth";
+import {
+  parseFormTemplateDefinition,
+  templateFieldLabels,
+} from "~/features/forms/form-template.utils";
 
 function one<T>(value: T | T[] | null | undefined): T | undefined {
   return Array.isArray(value) ? value[0] : (value ?? undefined);
+}
+
+function fieldLabelsOf(row: any): Record<string, string> {
+  const version = one<{ definition?: unknown }>(row.form_template_versions);
+  if (!version?.definition) return {};
+  try {
+    return templateFieldLabels(parseFormTemplateDefinition(version.definition));
+  } catch {
+    return {};
+  }
 }
 
 /** The applicant's own request list — feeds `/my-requests`. */
@@ -39,7 +53,9 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
       .select(
         `id, tracking_number, request_type, status, payment_status,
          fees_due, form_data, created_at, updated_at,
-         services_registry(name, display_name, processing_time)`,
+         services_registry(name, display_name, processing_time,
+           event_date_label, event_place_label, reference_number_label),
+         form_template_versions(definition)`,
       )
       .eq("id", data.requestId)
       .eq("applicant_id", user.id)
@@ -47,14 +63,19 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
 
     if (error || !row) throw new Error(error?.message ?? "Request not found");
 
-    const service = one<{ name?: string; display_name?: string; processing_time?: string }>(
-      row.services_registry,
-    );
+    const service = one<{
+      name?: string;
+      display_name?: string;
+      processing_time?: string;
+      event_date_label?: string | null;
+      event_place_label?: string | null;
+      reference_number_label?: string | null;
+    }>(row.services_registry);
 
     const [attachments, logs] = await Promise.all([
       supabase
         .from("requirements_attachments")
-        .select("id, requirement_name, verification_status, rejection_reason, uploaded_at")
+        .select("id, requirement_name, subject_role, verification_status, rejection_reason, uploaded_at")
         .eq("request_id", data.requestId)
         .order("uploaded_at", { ascending: true }),
       supabase
@@ -76,11 +97,16 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
       formData: (row.form_data ?? {}) as Record<string, string | number | boolean | null>,
       serviceName: service?.display_name || service?.name || row.request_type,
       processingTime: service?.processing_time ?? null,
+      eventDateLabel: service?.event_date_label ?? null,
+      eventPlaceLabel: service?.event_place_label ?? null,
+      referenceNumberLabel: service?.reference_number_label ?? null,
+      fieldLabels: fieldLabelsOf(row),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       attachments: (attachments.data ?? []).map((a) => ({
         id: a.id,
         requirementName: a.requirement_name,
+        subjectRole: a.subject_role,
         verificationStatus: a.verification_status,
         rejectionReason: a.rejection_reason,
       })),

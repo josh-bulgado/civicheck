@@ -2,6 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
+import { Alert, AlertDescription } from "~/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -104,12 +105,14 @@ function ManageStaffAccessForm({
   return (
     <form onSubmit={form.handleSubmit(onSubmit)}>
       {(updateAccess.data?.error || updateAccess.error) && (
-        <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">
-          {updateAccess.data?.message ||
-            (updateAccess.error instanceof Error
-              ? updateAccess.error.message
-              : "Unable to update staff access.")}
-        </div>
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>
+            {updateAccess.data?.message ||
+              (updateAccess.error instanceof Error
+                ? updateAccess.error.message
+                : "Unable to update staff access.")}
+          </AlertDescription>
+        </Alert>
       )}
 
       <FieldGroup>

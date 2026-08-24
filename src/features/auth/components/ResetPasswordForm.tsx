@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { CheckCircle, ArrowRight, AlertCircleIcon, Lock } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
-import { Button } from "~/components/ui/button";
+import { Button, buttonVariants } from "~/components/ui/button";
 import {
   Field,
   FieldError,
@@ -100,13 +100,16 @@ const ResetPasswordForm = () => {
               </div>
             </div>
 
-            <Button
-              className={cn(authButtonClass, "group")}
-              render={<Link to="/login" />}
+            <Link
+              to="/login"
+              className={cn(buttonVariants(), authButtonClass, "group")}
             >
               Go to sign in
-              <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" />
-            </Button>
+              <ArrowRight
+                data-icon="inline-end"
+                className="transition-transform duration-200 group-hover:translate-x-1"
+              />
+            </Link>
           </div>
         ) : (
           <form

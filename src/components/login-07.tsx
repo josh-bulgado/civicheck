@@ -2,7 +2,12 @@
 
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
-import { Input } from "~/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "~/components/ui/input-group";
 import { Label } from "~/components/ui/label";
 import { Separator } from "~/components/ui/separator";
 import { ArrowRight, Eye, EyeOff, Lock, Mail } from "lucide-react";
@@ -58,7 +63,7 @@ export default function Login07() {
 
         <div className="space-y-5">
           <Button variant="outline" className="w-full justify-center gap-2">
-            <GoogleIcon className="h-4 w-4" />
+            <GoogleIcon data-icon="inline-start" />
             Sign in with Google
           </Button>
 
@@ -73,17 +78,16 @@ export default function Login07() {
           <div className="space-y-6">
             <div>
               <Label htmlFor="email">Email</Label>
-              <div className="relative mt-2.5">
-                <Input
+              <InputGroup className="mt-2.5">
+                <InputGroupInput
                   id="email"
-                  className="peer ps-9"
                   placeholder="ephraim@blocks.so"
                   type="email"
                 />
-                <div className="text-muted-foreground/80 pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 peer-disabled:opacity-50">
-                  <Mail size={16} aria-hidden="true" />
-                </div>
-              </div>
+                <InputGroupAddon>
+                  <Mail aria-hidden="true" />
+                </InputGroupAddon>
+              </InputGroup>
             </div>
 
             <div>
@@ -93,31 +97,32 @@ export default function Login07() {
                   Forgot Password?
                 </a>
               </div>
-              <div className="relative mt-2.5">
-                <Input
+              <InputGroup className="mt-2.5">
+                <InputGroupInput
                   id="password"
-                  className="ps-9 pe-9"
                   placeholder="Enter your password"
                   type={isVisible ? "text" : "password"}
                 />
-                <div className="text-muted-foreground/80 pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 peer-disabled:opacity-50">
-                  <Lock size={16} aria-hidden="true" />
-                </div>
-                <button
-                  className="text-muted-foreground/80 hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 absolute inset-y-0 end-0 flex h-full w-9 items-center justify-center rounded-e-md transition-[color,box-shadow] outline-none focus:z-10 focus-visible:ring-[3px] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
+                <InputGroupAddon>
+                  <Lock aria-hidden="true" />
+                </InputGroupAddon>
+                <InputGroupAddon align="inline-end">
+                  <InputGroupButton
                   type="button"
+                  size="icon-xs"
                   onClick={toggleVisibility}
                   aria-label={isVisible ? "Hide password" : "Show password"}
                   aria-pressed={isVisible}
                   aria-controls="password"
                 >
                   {isVisible ? (
-                    <EyeOff size={16} aria-hidden="true" />
+                    <EyeOff aria-hidden="true" />
                   ) : (
-                    <Eye size={16} aria-hidden="true" />
+                    <Eye aria-hidden="true" />
                   )}
-                </button>
-              </div>
+                  </InputGroupButton>
+                </InputGroupAddon>
+              </InputGroup>
             </div>
 
             <div className="flex items-center gap-2 pt-1">
@@ -128,7 +133,7 @@ export default function Login07() {
 
           <Button className="w-full">
             Sign in
-            <ArrowRight className="h-4 w-4" />
+            <ArrowRight data-icon="inline-end" />
           </Button>
 
           <div className="text-center text-sm">

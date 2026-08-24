@@ -2,7 +2,9 @@ import { Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, ExternalLink, Upload } from "lucide-react";
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +35,21 @@ function formatKey(key: string) {
     .join(" ");
 }
 
+/**
+ * `event_date`/`event_place`/`reference_number` carry a per-service label
+ * (e.g. "Date of birth" for a birth service) configured in Admin → Services —
+ * show that instead of the generic humanized key when the service set one.
+ */
+function formDataLabel(key: string, request: MyRequestDetail) {
+  if (request.fieldLabels[key]) return request.fieldLabels[key];
+  if (key === "event_date" && request.eventDateLabel) return request.eventDateLabel;
+  if (key === "event_place" && request.eventPlaceLabel) return request.eventPlaceLabel;
+  if (key === "reference_number" && request.referenceNumberLabel) {
+    return request.referenceNumberLabel;
+  }
+  return formatKey(key);
+}
+
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString("en-US", {
     month: "short",
@@ -43,14 +60,16 @@ function formatDateTime(value: string) {
   });
 }
 
-function getAttachmentStatusStyles(status: string) {
+function getAttachmentStatusVariant(
+  status: string,
+): "success" | "destructive" | "warning" {
   switch (status) {
     case "approved":
-      return "status-success";
+      return "success";
     case "rejected":
-      return "status-error";
+      return "destructive";
     default:
-      return "status-warning";
+      return "warning";
   }
 }
 
@@ -87,18 +106,18 @@ export default function MyRequestDetailPage({ request, onUpdated }: MyRequestDet
             <p className="mt-2 text-sm text-white/75">{request.serviceName}</p>
           </div>
           <div className="civic-stagger flex flex-wrap gap-2">
-            <span
+            <Badge
+              variant={status.variant}
               style={staggerStyle(0)}
-              className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium ${status.styles}`}
             >
               {status.label}
-            </span>
-            <span
+            </Badge>
+            <Badge
+              variant={payment.variant}
               style={staggerStyle(1)}
-              className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium ${payment.styles}`}
             >
               {payment.label}
-            </span>
+            </Badge>
           </div>
         </div>
       </header>
@@ -113,7 +132,7 @@ export default function MyRequestDetailPage({ request, onUpdated }: MyRequestDet
                 return (
                   <div key={key}>
                     <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                      {formatKey(key)}
+                      {formDataLabel(key, request)}
                     </dt>
                     <dd className="text-sm text-foreground">
                       {key === "event_date"
@@ -226,6 +245,7 @@ export default function MyRequestDetailPage({ request, onUpdated }: MyRequestDet
 type AttachmentDoc = {
   id: string;
   requirementName: string;
+  subjectRole: string | null;
   verificationStatus: string;
   rejectionReason: string | null;
 };
@@ -288,24 +308,28 @@ function AttachmentRow({
     <div className="flex flex-col gap-3 rounded-lg border border-border-light p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-foreground">{doc.requirementName}</p>
-          <span
-            className={`mt-1 inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium capitalize ${getAttachmentStatusStyles(doc.verificationStatus)}`}
+          <p className="truncate text-sm font-semibold text-foreground">
+            {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
+            {doc.requirementName}
+          </p>
+          <Badge
+            variant={getAttachmentStatusVariant(doc.verificationStatus)}
+            className="mt-1 capitalize"
           >
             {doc.verificationStatus}
-          </span>
+          </Badge>
           {doc.verificationStatus === "rejected" && doc.rejectionReason && (
             <p className="mt-1 text-xs text-destructive">{doc.rejectionReason}</p>
           )}
         </div>
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="ghost" disabled={viewing} onClick={handleViewFile}>
-            <ExternalLink className="size-4" />
+            <ExternalLink data-icon="inline-start" />
             View file
           </Button>
           {doc.verificationStatus === "rejected" && (
             <>
-              <input
+              <Input
                 ref={fileInput}
                 type="file"
                 accept={ACCEPT}
@@ -321,7 +345,7 @@ function AttachmentRow({
                 disabled={submitting}
                 onClick={() => fileInput.current?.click()}
               >
-                <Upload className="size-4" />
+                <Upload data-icon="inline-start" />
                 {submitting ? "Uploading..." : "Resubmit"}
               </Button>
             </>
@@ -332,7 +356,10 @@ function AttachmentRow({
       <Dialog open={viewerUrl != null} onOpenChange={(open) => !open && setViewerUrl(null)}>
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{doc.requirementName}</DialogTitle>
+            <DialogTitle>
+              {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
+              {doc.requirementName}
+            </DialogTitle>
           </DialogHeader>
           {viewerUrl && (
             <div className="flex max-h-[75vh] flex-col items-center overflow-auto">

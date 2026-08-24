@@ -3,8 +3,8 @@ import { Check } from "lucide-react";
 import { CiviCheckIdentity } from "~/components/brand/civic-identity";
 
 const STEPS = [
-  { step: 1, label: "Your details" },
-  { step: 2, label: "About your case" },
+  { step: 1, label: "About your case" },
+  { step: 2, label: "Your details" },
   { step: 3, label: "Upload documents" },
   { step: 4, label: "Review and submit" },
 ] as const;
@@ -21,19 +21,17 @@ function formatSavedAt(updatedAt: string | null) {
 
 interface ApplyStepRailProps {
   currentStep: 1 | 2 | 3 | 4;
-  serviceName: string;
   draftUpdatedAt: string | null;
 }
 
 export function ApplyStepRail({
   currentStep,
-  serviceName,
   draftUpdatedAt,
 }: ApplyStepRailProps) {
   const savedLabel = formatSavedAt(draftUpdatedAt);
 
   return (
-    <div className="border-b border-border-light bg-white">
+    <header className="border-b border-border-light bg-white">
       <div className="flex items-center justify-between gap-4 px-5 py-3 sm:px-8">
         <div className="flex min-w-0 items-center gap-3">
           <Link to="/dashboard" aria-label="Back to your dashboard" className="shrink-0">
@@ -42,7 +40,7 @@ export function ApplyStepRail({
           <span className="hidden text-lg font-bold text-foreground sm:inline">CiviCheck</span>
           <div className="hidden h-4.5 w-px shrink-0 bg-border-light sm:block" />
           <span className="truncate text-sm text-muted-foreground">
-            {serviceName} · draft in progress
+            Application draft
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-4.5">
@@ -52,56 +50,72 @@ export function ApplyStepRail({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 px-5 py-3 sm:gap-3 sm:px-8">
-        {STEPS.map(({ step, label }, index) => {
-          const isDone = step < currentStep;
-          const isCurrent = step === currentStep;
-          return (
-            <div key={step} className="flex flex-1 items-center gap-3 last:flex-initial">
-              <div className="flex shrink-0 items-center gap-2">
-                <span
-                  className={`flex size-5.5 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-[background-color,color,border-color,transform] duration-300 ease-out ${
-                    isDone
-                      ? "bg-success text-white"
-                      : isCurrent
-                        ? "bg-primary text-white scale-110"
-                        : "border border-control-border text-disabled"
-                  }`}
-                >
-                  {isDone ? <Check className="civic-enter-scale size-3" /> : step}
-                </span>
-                {/* Full labels reflow the rail into an overflowing single line
-                    below `sm` — the "Step X of 4" heading inside the wizard
-                    card already carries this text there, so the rail can drop
-                    to circles-and-connectors only instead of duplicating it. */}
-                <span
-                  className={`sr-only whitespace-nowrap text-sm transition-colors duration-300 sm:not-sr-only ${
-                    isCurrent
-                      ? "font-bold text-foreground"
-                      : isDone
-                        ? "text-body-strong"
-                        : "text-disabled"
-                  }`}
-                >
-                  {label}
-                </span>
-              </div>
-              {index < STEPS.length - 1 && (
-                // The connector fills left-to-right as the step completes,
-                // instead of flipping colour in one frame. The track stays put
-                // and an overlay scales across it, so nothing reflows.
-                <div className="relative h-0.75 flex-1 overflow-hidden rounded-full bg-border-light">
-                  <div
-                    className={`absolute inset-0 origin-left rounded-full bg-success transition-transform duration-500 ease-out ${
-                      isDone ? "scale-x-100" : "scale-x-0"
+      <nav aria-label="Application progress">
+        <ol className="flex items-center gap-2 px-5 py-3 sm:gap-3 sm:px-8">
+          {STEPS.map(({ step, label }, index) => {
+            const isDone = step < currentStep;
+            const isCurrent = step === currentStep;
+            return (
+              <li
+                key={step}
+                aria-current={isCurrent ? "step" : undefined}
+                className="flex flex-1 items-center gap-3 last:flex-initial"
+              >
+                <div className="flex shrink-0 items-center gap-2">
+                  <span
+                    className={`flex size-5.5 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-[background-color,color,border-color,transform] duration-300 ease-out motion-reduce:transition-none ${
+                      isDone
+                        ? "bg-success text-white"
+                        : isCurrent
+                          ? "bg-primary text-white scale-110"
+                          : "border border-control-border text-disabled"
                     }`}
-                  />
+                  >
+                    {isDone ? (
+                      <Check
+                        className="civic-enter-scale size-3"
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      step
+                    )}
+                  </span>
+                  {/* Full labels reflow the rail into an overflowing single line
+                      below `sm` — the "Step X of 4" heading inside the wizard
+                      card already carries this text there, so the rail can drop
+                      to circles-and-connectors only instead of duplicating it. */}
+                  <span
+                    className={`sr-only whitespace-nowrap text-sm transition-colors duration-300 motion-reduce:transition-none sm:not-sr-only ${
+                      isCurrent
+                        ? "font-bold text-foreground"
+                        : isDone
+                          ? "text-body-strong"
+                          : "text-disabled"
+                    }`}
+                  >
+                    {label}
+                  </span>
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
+                {index < STEPS.length - 1 && (
+                  // The connector fills left-to-right as the step completes,
+                  // instead of flipping colour in one frame. The track stays put
+                  // and an overlay scales across it, so nothing reflows.
+                  <div
+                    aria-hidden="true"
+                    className="relative h-0.75 flex-1 overflow-hidden rounded-full bg-border-light"
+                  >
+                    <div
+                      className={`absolute inset-0 origin-left rounded-full bg-success transition-transform duration-500 ease-out motion-reduce:transition-none ${
+                        isDone ? "scale-x-100" : "scale-x-0"
+                      }`}
+                    />
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      </nav>
+    </header>
   );
 }

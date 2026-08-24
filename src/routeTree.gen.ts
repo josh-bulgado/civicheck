@@ -46,6 +46,9 @@ import { Route as AuthedDashboardAdminStaffRouteImport } from './routes/_authed/
 import { Route as AuthedDashboardAdminServicesRouteImport } from './routes/_authed/_dashboard/admin/services'
 import { Route as AuthedDashboardAdminReportsRouteImport } from './routes/_authed/_dashboard/admin/reports'
 import { Route as AuthedDashboardserviceServicesRouteImport } from './routes/_authed/_dashboard/(service)/services'
+import { Route as AuthedDashboardAdminServicesNewRouteImport } from './routes/_authed/_dashboard/admin/services_.new'
+import { Route as AuthedDashboardAdminServicesGroupsDisplayGroupRouteImport } from './routes/_authed/_dashboard/admin/services_.groups.$displayGroup'
+import { Route as AuthedDashboardAdminServicesServiceCodeEditRouteImport } from './routes/_authed/_dashboard/admin/services_.$serviceCode.edit'
 
 const TrackRoute = TrackRouteImport.update({
   id: '/track',
@@ -253,6 +256,24 @@ const AuthedDashboardserviceServicesRoute =
     path: '/services',
     getParentRoute: () => AuthedDashboardRouteRoute,
   } as any)
+const AuthedDashboardAdminServicesNewRoute =
+  AuthedDashboardAdminServicesNewRouteImport.update({
+    id: '/admin/services_/new',
+    path: '/admin/services/new',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedDashboardAdminServicesGroupsDisplayGroupRoute =
+  AuthedDashboardAdminServicesGroupsDisplayGroupRouteImport.update({
+    id: '/admin/services_/groups/$displayGroup',
+    path: '/admin/services/groups/$displayGroup',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedDashboardAdminServicesServiceCodeEditRoute =
+  AuthedDashboardAdminServicesServiceCodeEditRouteImport.update({
+    id: '/admin/services_/$serviceCode/edit',
+    path: '/admin/services/$serviceCode/edit',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -290,6 +311,9 @@ export interface FileRoutesByFullPath {
   '/my-requests/': typeof AuthedDashboardMyRequestsIndexRoute
   '/requests/': typeof AuthedDashboardRequestsIndexRoute
   '/apply/$serviceCode/': typeof AuthedApplyServiceCodeIndexRoute
+  '/admin/services/new': typeof AuthedDashboardAdminServicesNewRoute
+  '/admin/services/$serviceCode/edit': typeof AuthedDashboardAdminServicesServiceCodeEditRoute
+  '/admin/services/groups/$displayGroup': typeof AuthedDashboardAdminServicesGroupsDisplayGroupRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -326,6 +350,9 @@ export interface FileRoutesByTo {
   '/my-requests': typeof AuthedDashboardMyRequestsIndexRoute
   '/requests': typeof AuthedDashboardRequestsIndexRoute
   '/apply/$serviceCode': typeof AuthedApplyServiceCodeIndexRoute
+  '/admin/services/new': typeof AuthedDashboardAdminServicesNewRoute
+  '/admin/services/$serviceCode/edit': typeof AuthedDashboardAdminServicesServiceCodeEditRoute
+  '/admin/services/groups/$displayGroup': typeof AuthedDashboardAdminServicesGroupsDisplayGroupRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -366,6 +393,9 @@ export interface FileRoutesById {
   '/_authed/_dashboard/my-requests/': typeof AuthedDashboardMyRequestsIndexRoute
   '/_authed/_dashboard/requests/': typeof AuthedDashboardRequestsIndexRoute
   '/_authed/apply/$serviceCode/': typeof AuthedApplyServiceCodeIndexRoute
+  '/_authed/_dashboard/admin/services_/new': typeof AuthedDashboardAdminServicesNewRoute
+  '/_authed/_dashboard/admin/services_/$serviceCode/edit': typeof AuthedDashboardAdminServicesServiceCodeEditRoute
+  '/_authed/_dashboard/admin/services_/groups/$displayGroup': typeof AuthedDashboardAdminServicesGroupsDisplayGroupRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -405,6 +435,9 @@ export interface FileRouteTypes {
     | '/my-requests/'
     | '/requests/'
     | '/apply/$serviceCode/'
+    | '/admin/services/new'
+    | '/admin/services/$serviceCode/edit'
+    | '/admin/services/groups/$displayGroup'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -441,6 +474,9 @@ export interface FileRouteTypes {
     | '/my-requests'
     | '/requests'
     | '/apply/$serviceCode'
+    | '/admin/services/new'
+    | '/admin/services/$serviceCode/edit'
+    | '/admin/services/groups/$displayGroup'
   id:
     | '__root__'
     | '/'
@@ -480,6 +516,9 @@ export interface FileRouteTypes {
     | '/_authed/_dashboard/my-requests/'
     | '/_authed/_dashboard/requests/'
     | '/_authed/apply/$serviceCode/'
+    | '/_authed/_dashboard/admin/services_/new'
+    | '/_authed/_dashboard/admin/services_/$serviceCode/edit'
+    | '/_authed/_dashboard/admin/services_/groups/$displayGroup'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -758,6 +797,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedDashboardserviceServicesRouteImport
       parentRoute: typeof AuthedDashboardRouteRoute
     }
+    '/_authed/_dashboard/admin/services_/new': {
+      id: '/_authed/_dashboard/admin/services_/new'
+      path: '/admin/services/new'
+      fullPath: '/admin/services/new'
+      preLoaderRoute: typeof AuthedDashboardAdminServicesNewRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
+    }
+    '/_authed/_dashboard/admin/services_/groups/$displayGroup': {
+      id: '/_authed/_dashboard/admin/services_/groups/$displayGroup'
+      path: '/admin/services/groups/$displayGroup'
+      fullPath: '/admin/services/groups/$displayGroup'
+      preLoaderRoute: typeof AuthedDashboardAdminServicesGroupsDisplayGroupRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
+    }
+    '/_authed/_dashboard/admin/services_/$serviceCode/edit': {
+      id: '/_authed/_dashboard/admin/services_/$serviceCode/edit'
+      path: '/admin/services/$serviceCode/edit'
+      fullPath: '/admin/services/$serviceCode/edit'
+      preLoaderRoute: typeof AuthedDashboardAdminServicesServiceCodeEditRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
+    }
   }
 }
 
@@ -780,6 +840,9 @@ interface AuthedDashboardRouteRouteChildren {
   AuthedDashboardAdminIndexRoute: typeof AuthedDashboardAdminIndexRoute
   AuthedDashboardMyRequestsIndexRoute: typeof AuthedDashboardMyRequestsIndexRoute
   AuthedDashboardRequestsIndexRoute: typeof AuthedDashboardRequestsIndexRoute
+  AuthedDashboardAdminServicesNewRoute: typeof AuthedDashboardAdminServicesNewRoute
+  AuthedDashboardAdminServicesServiceCodeEditRoute: typeof AuthedDashboardAdminServicesServiceCodeEditRoute
+  AuthedDashboardAdminServicesGroupsDisplayGroupRoute: typeof AuthedDashboardAdminServicesGroupsDisplayGroupRoute
 }
 
 const AuthedDashboardRouteRouteChildren: AuthedDashboardRouteRouteChildren = {
@@ -804,6 +867,11 @@ const AuthedDashboardRouteRouteChildren: AuthedDashboardRouteRouteChildren = {
   AuthedDashboardAdminIndexRoute: AuthedDashboardAdminIndexRoute,
   AuthedDashboardMyRequestsIndexRoute: AuthedDashboardMyRequestsIndexRoute,
   AuthedDashboardRequestsIndexRoute: AuthedDashboardRequestsIndexRoute,
+  AuthedDashboardAdminServicesNewRoute: AuthedDashboardAdminServicesNewRoute,
+  AuthedDashboardAdminServicesServiceCodeEditRoute:
+    AuthedDashboardAdminServicesServiceCodeEditRoute,
+  AuthedDashboardAdminServicesGroupsDisplayGroupRoute:
+    AuthedDashboardAdminServicesGroupsDisplayGroupRoute,
 }
 
 const AuthedDashboardRouteRouteWithChildren =

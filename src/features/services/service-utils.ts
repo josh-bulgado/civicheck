@@ -1,3 +1,9 @@
+import type {
+  ConditionRule,
+  TemplateAnswers,
+} from "~/features/forms/form-template.types";
+import { conditionRuleMatches } from "~/features/forms/form-template.utils";
+
 // ─── Service-layer utilities ──────────────────────────────────────────────
 // Shared by ServiceHero, ServiceDetailSheet, ServiceCard, the apply wizard's
 // documents step, and submitRequestFn (server-side mandatory-document check).
@@ -213,6 +219,7 @@ export function getServiceCategory(
 
 export interface RequirementCaseTag {
   case_tag?: string | null;
+  applies_when?: ConditionRule | null;
 }
 
 /**
@@ -238,4 +245,40 @@ export function isVisible(
     default:
       return true;
   }
+}
+
+/**
+ * Prefer the database-backed applicability rule. `case_tag` remains as a
+ * compatibility fallback for databases and published checklists created
+ * before configurable case flows were introduced.
+ */
+export function isRequirementApplicable(
+  requirement: RequirementCaseTag,
+  selectedCode: string | null | undefined,
+  answers: TemplateAnswers | Record<string, string>,
+): boolean {
+  if (requirement.applies_when) {
+    const hasEveryAnswer = requirement.applies_when.conditions.every(
+      (condition) => {
+        const value = answers[condition.field];
+        return typeof value === "string" && value.length > 0;
+      },
+    );
+    if (
+      requirement.applies_when.match === "any" &&
+      conditionRuleMatches(requirement.applies_when, answers)
+    ) {
+      return true;
+    }
+    // Older published form versions do not contain the newly-configured
+    // source fields. Fall back conservatively so a caller cannot bypass a
+    // mandatory document by submitting an old version with missing answers.
+    if (!hasEveryAnswer) {
+      return requirement.case_tag
+        ? isVisible(requirement, selectedCode)
+        : true;
+    }
+    return conditionRuleMatches(requirement.applies_when, answers);
+  }
+  return isVisible(requirement, selectedCode);
 }

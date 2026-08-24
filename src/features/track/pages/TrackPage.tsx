@@ -6,9 +6,12 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { Search, FileText, Upload } from "lucide-react";
 import { enterDelay, staggerStyle } from "~/components/motion/stagger";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Badge } from "~/components/ui/badge";
 import { Field, FieldError, FieldGroup, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
+import { Spinner } from "~/components/ui/spinner";
 import SiteHeader from "~/features/landing/components/SiteHeader";
 import SiteFooter from "~/features/landing/components/SiteFooter";
 import { trackRequestFn, resubmitAttachmentFn } from "~/features/track/track.queries";
@@ -18,14 +21,16 @@ import { formatFee } from "~/features/services/service-utils";
 const ACCEPT = "image/jpeg,image/png,application/pdf";
 const MAX_SIZE = 10 * 1024 * 1024;
 
-function getAttachmentStatusStyles(status: string) {
+function getAttachmentStatusVariant(
+  status: string,
+): "success" | "destructive" | "warning" {
   switch (status) {
     case "approved":
-      return "status-success";
+      return "success";
     case "rejected":
-      return "status-error";
+      return "destructive";
     default:
-      return "status-warning";
+      return "warning";
   }
 }
 
@@ -39,6 +44,7 @@ type TrackValues = z.infer<typeof trackSchema>;
 type TrackAttachment = {
   id: string;
   requirementName: string;
+  subjectRole: string | null;
   verificationStatus: string;
   rejectionReason: string | null;
 };
@@ -174,17 +180,19 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
             disabled={submitting}
             className="civic-press mt-5 w-full sm:w-auto"
           >
-            <Search
-              className={`size-4 ${submitting ? "animate-spin" : ""}`}
-              aria-hidden="true"
-            />
+            {submitting ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <Search data-icon="inline-start" aria-hidden="true" />
+            )}
             {submitting ? "Searching..." : "Track request"}
           </Button>
 
           {notFound && (
-            <p className="civic-enter-scale mt-4 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
-              {notFound}
-            </p>
+            <Alert variant="destructive" className="civic-enter-scale mt-4">
+              <AlertTitle>Request not found</AlertTitle>
+              <AlertDescription>{notFound}</AlertDescription>
+            </Alert>
           )}
         </div>
 
@@ -210,19 +218,11 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
             <div className="civic-stagger-auto flex flex-col gap-3 divide-y divide-border-lighter text-sm">
               <div className="flex items-center justify-between pb-3">
                 <span className="text-muted-foreground">Status</span>
-                <span
-                  className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${status.styles}`}
-                >
-                  {status.label}
-                </span>
+                <Badge variant={status.variant}>{status.label}</Badge>
               </div>
               <div className="flex items-center justify-between py-3">
                 <span className="text-muted-foreground">Payment</span>
-                <span
-                  className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${payment.styles}`}
-                >
-                  {payment.label}
-                </span>
+                <Badge variant={payment.variant}>{payment.label}</Badge>
               </div>
               {Number(result.feesDue) > 0 && (
                 <div className="flex items-center justify-between py-3">
@@ -316,12 +316,16 @@ function AttachmentTrackRow({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-light p-4 text-sm">
       <div className="min-w-0">
-        <p className="truncate font-semibold text-foreground">{doc.requirementName}</p>
-        <span
-          className={`mt-1 inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium capitalize ${getAttachmentStatusStyles(doc.verificationStatus)}`}
+        <p className="truncate font-semibold text-foreground">
+          {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
+          {doc.requirementName}
+        </p>
+        <Badge
+          variant={getAttachmentStatusVariant(doc.verificationStatus)}
+          className="mt-1 capitalize"
         >
           {doc.verificationStatus}
-        </span>
+        </Badge>
         {doc.verificationStatus === "rejected" && doc.rejectionReason && (
           <p className="mt-1 text-xs text-destructive">{doc.rejectionReason}</p>
         )}
@@ -329,7 +333,7 @@ function AttachmentTrackRow({
 
       {doc.verificationStatus === "rejected" && (
         <>
-          <input
+          <Input
             ref={fileInput}
             type="file"
             accept={ACCEPT}
@@ -346,7 +350,7 @@ function AttachmentTrackRow({
             disabled={submitting}
             onClick={() => fileInput.current?.click()}
           >
-            <Upload className="size-3.5" />
+            <Upload data-icon="inline-start" />
             {submitting ? "Uploading..." : "Resubmit"}
           </Button>
         </>

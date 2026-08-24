@@ -2,8 +2,27 @@ import { Link } from "@tanstack/react-router";
 import { FileText, ChevronRight, Eye } from "lucide-react";
 import { CountUp } from "~/components/motion/count-up";
 import { staggerStyle } from "~/components/motion/stagger";
+import { Badge } from "~/components/ui/badge";
+import { buttonVariants } from "~/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "~/components/ui/empty";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
 import { getStatusDetails, getPaymentDetails } from "~/features/services/request-status";
 import type { getMyRequestsFn } from "~/features/requests/applicant-requests.queries";
+import { cn } from "~/lib/utils";
 
 interface MyRequestsPageProps {
   requests: Awaited<ReturnType<typeof getMyRequestsFn>>;
@@ -38,7 +57,10 @@ export default function MyRequestsPage({ requests }: MyRequestsPageProps) {
         </div>
         <Link
           to="/services"
-          className="civic-press inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-white px-4 py-2 text-sm font-bold text-primary shadow-sm hover:bg-primary-soft"
+          className={cn(
+            buttonVariants({ size: "lg" }),
+            "civic-press shrink-0 bg-white text-primary shadow-sm hover:bg-primary-soft",
+          )}
         >
           Submit a new request
         </Link>
@@ -46,23 +68,25 @@ export default function MyRequestsPage({ requests }: MyRequestsPageProps) {
       </header>
 
       {requests.length === 0 ? (
-        <div className="dashboard-panel civic-enter-scale mx-auto mt-8 max-w-lg space-y-4 px-6 py-16 text-center">
-          <div className="mx-auto flex size-14 items-center justify-center rounded-xl bg-primary text-white shadow-md">
-            <FileText className="w-6 h-6" />
-          </div>
-          <div className="space-y-1.5">
-            <h3 className="font-semibold text-foreground">No requests found</h3>
-            <p className="text-sm text-muted-foreground">
+        <Empty className="dashboard-panel civic-enter-scale mx-auto mt-8 max-w-lg border-0 px-6 py-16">
+          <EmptyHeader>
+            <EmptyMedia variant="icon" className="bg-primary text-white shadow-md">
+              <FileText />
+            </EmptyMedia>
+            <EmptyTitle>No requests found</EmptyTitle>
+            <EmptyDescription>
               You haven't submitted any civil registry requests yet.
-            </p>
-          </div>
-          <Link
-            to="/services"
-            className="inline-flex min-h-10 items-center rounded-lg border border-border bg-white px-3.5 py-1.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
-          >
-            Browse services
-          </Link>
-        </div>
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Link
+              to="/services"
+              className={buttonVariants({ variant: "outline" })}
+            >
+              Browse services
+            </Link>
+          </EmptyContent>
+        </Empty>
       ) : (
         <div className="dashboard-panel overflow-hidden">
           <div className="flex flex-col gap-4 border-b border-border px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
@@ -81,65 +105,61 @@ export default function MyRequestsPage({ requests }: MyRequestsPageProps) {
           </div>
           {/* Desktop Table View */}
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-border bg-surface-subtle font-medium text-muted-foreground">
-                  <th className="p-4">Tracking Number</th>
-                  <th className="p-4">Document Type</th>
-                  <th className="p-4">Date Submitted</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4">Payment</th>
-                  <th className="p-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="civic-stagger divide-y divide-border">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-surface-subtle">
+                  <TableHead className="p-4">Tracking Number</TableHead>
+                  <TableHead className="p-4">Document Type</TableHead>
+                  <TableHead className="p-4">Date Submitted</TableHead>
+                  <TableHead className="p-4">Status</TableHead>
+                  <TableHead className="p-4">Payment</TableHead>
+                  <TableHead className="p-4 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="civic-stagger">
                 {requests.map((req: any, index: number) => {
                   const status = getStatusDetails(req.status);
                   const payment = getPaymentDetails(req.payment_status);
                   return (
-                    <tr
+                    <TableRow
                       key={req.id}
                       style={staggerStyle(index)}
                       className="transition-colors duration-200 hover:bg-surface-subtle"
                     >
-                      <td className="p-4 font-mono font-semibold text-foreground">
+                      <TableCell className="p-4 font-mono font-semibold text-foreground">
                         {req.tracking_number}
-                      </td>
-                      <td className="p-4 font-medium text-foreground">
+                      </TableCell>
+                      <TableCell className="p-4 font-medium text-foreground">
                         {req.services_registry?.name || req.request_type}
-                      </td>
-                      <td className="p-4 text-muted-foreground">
+                      </TableCell>
+                      <TableCell className="p-4 text-muted-foreground">
                         {new Date(req.created_at).toLocaleDateString("en-US", {
                           year: "numeric",
                           month: "long",
                           day: "numeric",
                         })}
-                      </td>
-                      <td className="p-4">
-                        <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${status.styles}`}>
-                          {status.label}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${payment.styles}`}>
-                          {payment.label}
-                        </span>
-                      </td>
-                      <td className="p-4 text-right">
+                      </TableCell>
+                      <TableCell className="p-4">
+                        <Badge variant={status.variant}>{status.label}</Badge>
+                      </TableCell>
+                      <TableCell className="p-4">
+                        <Badge variant={payment.variant}>{payment.label}</Badge>
+                      </TableCell>
+                      <TableCell className="p-4 text-right">
                         <Link
                           to="/my-requests/$requestId"
                           params={{ requestId: req.id }}
-                          className="civic-press inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
+                          className={buttonVariants({ variant: "outline", size: "sm" })}
                         >
-                          <Eye className="w-3.5 h-3.5" />
+                          <Eye data-icon="inline-start" aria-hidden="true" />
                           Details
                         </Link>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
 
           {/* Mobile Card List View */}
@@ -157,9 +177,9 @@ export default function MyRequestsPage({ requests }: MyRequestsPageProps) {
                     <span className="font-mono font-bold text-foreground">
                       {req.tracking_number}
                     </span>
-                    <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-2xs font-medium ${status.styles}`}>
+                    <Badge variant={status.variant}>
                       {status.label}
-                    </span>
+                    </Badge>
                   </div>
 
                   <div className="space-y-1">
@@ -174,18 +194,21 @@ export default function MyRequestsPage({ requests }: MyRequestsPageProps) {
                   <div className="flex items-center justify-between border-t border-border pt-2 text-xs">
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground">Payment:</span>
-                      <span className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-2xs font-medium ${payment.styles}`}>
+                      <Badge variant={payment.variant}>
                         {payment.label}
-                      </span>
+                      </Badge>
                     </div>
 
                     <Link
                       to="/my-requests/$requestId"
                       params={{ requestId: req.id }}
-                      className="civic-nudge inline-flex items-center gap-1 font-medium text-primary"
+                      className={cn(
+                        buttonVariants({ variant: "link", size: "sm" }),
+                        "civic-nudge px-0",
+                      )}
                     >
                       View details
-                      <ChevronRight className="w-3.5 h-3.5" />
+                      <ChevronRight data-icon="inline-end" />
                     </Link>
                   </div>
                 </div>
