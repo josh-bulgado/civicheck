@@ -47,32 +47,6 @@ export function formatDateKey(key: string | null | undefined): string {
   });
 }
 
-export function isSameDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
-export function addDays(date: Date, days: number): Date {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
-/** Adds months while keeping the day in range (31 Jan + 1 month -> 28/29 Feb). */
-export function addMonths(date: Date, months: number): Date {
-  const next = new Date(date.getFullYear(), date.getMonth() + months, 1);
-  const lastDay = new Date(
-    next.getFullYear(),
-    next.getMonth() + 1,
-    0,
-  ).getDate();
-  next.setDate(Math.min(date.getDate(), lastDay));
-  return next;
-}
-
 /** Whole days from `fromKey` to `toKey` (positive when `toKey` is later). Falls back to 0 for an unparsable key. */
 export function diffInDays(fromKey: string, toKey: string): number {
   const from = fromDateKey(fromKey);
