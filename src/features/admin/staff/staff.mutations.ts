@@ -107,10 +107,14 @@ async function sendStaffInvitationEmail({
     );
   }
 
-  const invitationUrl = new URL(
-    "/auth/callback",
-    process.env.APP_URL || "http://localhost:3000",
-  );
+  const appUrl =
+    process.env.APP_URL ||
+    (process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "http://localhost:3000");
+
+  const invitationUrl = new URL("/auth/callback", appUrl);
+
   invitationUrl.searchParams.set("token_hash", hashedToken);
   invitationUrl.searchParams.set("type", "invite");
   invitationUrl.searchParams.set("next", "/accept-invitation");
