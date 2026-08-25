@@ -127,9 +127,13 @@ export const loginWithOAuthFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient();
 
-    const devFallback =
-      process.env.NODE_ENV === "development" ? "http://localhost:3000" : "";
-    const redirectTo = `${process.env.APP_URL || devFallback}/auth/callback`;
+    const appUrl =
+      process.env.APP_URL ||
+      (process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : "http://localhost:3000");
+
+    const redirectTo = `${appUrl}/auth/callback`;
 
     const { error, data: authData } = await supabase.auth.signInWithOAuth({
       provider: data.provider,
