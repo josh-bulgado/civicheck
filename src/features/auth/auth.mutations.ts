@@ -178,21 +178,27 @@ export const signupFn = createServerFn({ method: "POST" })
     });
 
     if (signUpResult.error) {
-      const isAlreadyRegistered = signUpResult.error.message.includes("already been registered") || 
-                                  signUpResult.error.message.includes("already exists");
-      
+      const isAlreadyRegistered =
+        signUpResult.error.message.includes("already been registered") ||
+        signUpResult.error.message.includes("already exists");
+
       if (isAlreadyRegistered) {
         // Fetch users to check if this existing user is unconfirmed
-        const { data: { users }, error: listError } = await adminSupabase.auth.admin.listUsers({
-          perPage: 1000
+        const {
+          data: { users },
+          error: listError,
+        } = await adminSupabase.auth.admin.listUsers({
+          perPage: 1000,
         });
 
-        const existingUser = users?.find(u => u.email?.toLowerCase() === data.email.toLowerCase());
-        
+        const existingUser = users?.find(
+          (u) => u.email?.toLowerCase() === data.email.toLowerCase(),
+        );
+
         // If the user exists but has not confirmed their email, delete it so they can retry registration
         if (existingUser && !existingUser.email_confirmed_at) {
           await adminSupabase.auth.admin.deleteUser(existingUser.id);
-          
+
           signUpResult = await adminSupabase.auth.admin.createUser({
             email: data.email,
             password: data.password,
@@ -208,7 +214,8 @@ export const signupFn = createServerFn({ method: "POST" })
     }
 
     if (signUpResult.error) {
-      const isJsonEmpty = signUpResult.error.message === "{}" || !signUpResult.error.message;
+      const isJsonEmpty =
+        signUpResult.error.message === "{}" || !signUpResult.error.message;
       const cleanMessage = isJsonEmpty
         ? "An unexpected registration error occurred. Please check your SMTP configuration in the Supabase Dashboard."
         : signUpResult.error.message;
@@ -269,7 +276,10 @@ export const resendSignupOtpFn = createServerFn({ method: "POST" })
         password: data.password,
       });
 
-    if (!signInError || !/email not confirmed/i.test(signInError.message ?? "")) {
+    if (
+      !signInError ||
+      !/email not confirmed/i.test(signInError.message ?? "")
+    ) {
       return { error: true, message: INVALID_CREDENTIALS };
     }
 
@@ -286,7 +296,8 @@ export const resendSignupOtpFn = createServerFn({ method: "POST" })
     }
 
     const userMetadata = existingUser.user_metadata ?? {};
-    const firstName = (userMetadata.first_name as string | undefined) || "there";
+    const firstName =
+      (userMetadata.first_name as string | undefined) || "there";
     const middleName = userMetadata.middle_name as string | undefined;
 
     // Recreate rather than update: Supabase Auth has no admin call to mint a
@@ -390,10 +401,11 @@ export const forgotPasswordFn = createServerFn({ method: "POST" })
     const adminSupabase = getSupabaseAdminClient();
 
     // Generate a recovery OTP code
-    const { data: linkData, error } = await adminSupabase.auth.admin.generateLink({
-      type: "recovery",
-      email: data.email,
-    });
+    const { data: linkData, error } =
+      await adminSupabase.auth.admin.generateLink({
+        type: "recovery",
+        email: data.email,
+      });
 
     if (error) {
       // Unregistered address: answer exactly as we do for a real one so this
