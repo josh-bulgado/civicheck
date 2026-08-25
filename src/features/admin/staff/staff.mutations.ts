@@ -77,7 +77,8 @@ async function appendStaffAudit(
     masked_ip_address: maskedIpAddress,
     user_agent: userAgent,
   });
-  if (error) throw new Error(`Audit event could not be recorded: ${error.message}`);
+  if (error)
+    throw new Error(`Audit event could not be recorded: ${error.message}`);
 }
 
 async function sendStaffInvitationEmail({
@@ -206,7 +207,13 @@ export const inviteStaff = createServerFn({ method: "POST" })
         role: data.role,
         adminSupabase,
       });
-      await appendStaffAudit(adminSupabase, actorId, "staff_invited", invited.user.id, { role: data.role });
+      await appendStaffAudit(
+        adminSupabase,
+        actorId,
+        "staff_invited",
+        invited.user.id,
+        { role: data.role },
+      );
     } catch (emailError) {
       await adminSupabase.auth.admin.deleteUser(invited.user.id);
       return {
@@ -255,7 +262,11 @@ export const resendStaffInvitation = createServerFn({ method: "POST" })
       .eq("id", user.id)
       .single();
 
-    if (profileError || !profile || !INVITABLE_ROLES.includes(profile.role as Role)) {
+    if (
+      profileError ||
+      !profile ||
+      !INVITABLE_ROLES.includes(profile.role as Role)
+    ) {
       return {
         error: true,
         message: readableSupabaseError(
@@ -272,7 +283,12 @@ export const resendStaffInvitation = createServerFn({ method: "POST" })
         role: profile.role as Role,
         adminSupabase,
       });
-      await appendStaffAudit(adminSupabase, actorId, "invitation_resent", user.id);
+      await appendStaffAudit(
+        adminSupabase,
+        actorId,
+        "invitation_resent",
+        user.id,
+      );
     } catch (error) {
       return {
         error: true,
@@ -334,7 +350,12 @@ export const cancelStaffInvitation = createServerFn({ method: "POST" })
       };
     }
 
-    await appendStaffAudit(adminSupabase, actorId, "invitation_cancelled", user.id);
+    await appendStaffAudit(
+      adminSupabase,
+      actorId,
+      "invitation_cancelled",
+      user.id,
+    );
     const { error } = await adminSupabase.auth.admin.deleteUser(user.id);
     if (error) {
       return {
@@ -352,7 +373,9 @@ export const cancelStaffInvitation = createServerFn({ method: "POST" })
 export const updateStaffAccess = createServerFn({ method: "POST" })
   .validator(updateStaffAccessSchema)
   .handler(async ({ data }): Promise<StaffActionResult> => {
-    const authorization = await authorizeStaffManager("users:update_operational_roles");
+    const authorization = await authorizeStaffManager(
+      "users:update_operational_roles",
+    );
     if (authorization.error) return authorization;
 
     const { adminSupabase, actorId } = authorization;
@@ -423,10 +446,16 @@ export const updateStaffAccess = createServerFn({ method: "POST" })
       };
     }
 
-    await appendStaffAudit(adminSupabase, actorId, "role_changed", data.staffId, {
-      from: currentProfile.role,
-      to: data.role,
-    });
+    await appendStaffAudit(
+      adminSupabase,
+      actorId,
+      "role_changed",
+      data.staffId,
+      {
+        from: currentProfile.role,
+        to: data.role,
+      },
+    );
 
     return { error: false, message: "Staff access updated." };
   });
@@ -484,12 +513,15 @@ export const deactivateStaffMember = createServerFn({ method: "POST" })
       return { error: true, message: "This staff member is already inactive." };
     }
     const reason = "Deactivated by the CCRO Administrator.";
-    const { error: profileUpdateError } = await adminSupabase.from("profiles").update({
-      access_status: "deactivated",
-      suspended_at: new Date().toISOString(),
-      suspended_by: actorId,
-      suspension_reason: reason,
-    }).eq("id", user.id);
+    const { error: profileUpdateError } = await adminSupabase
+      .from("profiles")
+      .update({
+        access_status: "deactivated",
+        suspended_at: new Date().toISOString(),
+        suspended_by: actorId,
+        suspension_reason: reason,
+      })
+      .eq("id", user.id);
     if (profileUpdateError) {
       return {
         error: true,
@@ -500,12 +532,34 @@ export const deactivateStaffMember = createServerFn({ method: "POST" })
       };
     }
 
-    const { error: banError } = await adminSupabase.auth.admin.updateUserById(user.id, { ban_duration: "876000h" });
+    const { error: banError } = await adminSupabase.auth.admin.updateUserById(
+      user.id,
+      { ban_duration: "876000h" },
+    );
     if (banError) {
-      await adminSupabase.from("profiles").update({ access_status: "active", suspended_at: null, suspended_by: null, suspension_reason: null }).eq("id", user.id);
-      return { error: true, message: readableSupabaseError(banError, "The staff member could not be deactivated.") };
+      await adminSupabase
+        .from("profiles")
+        .update({
+          access_status: "active",
+          suspended_at: null,
+          suspended_by: null,
+          suspension_reason: null,
+        })
+        .eq("id", user.id);
+      return {
+        error: true,
+        message: readableSupabaseError(
+          banError,
+          "The staff member could not be deactivated.",
+        ),
+      };
     }
-    await appendStaffAudit(adminSupabase, actorId, "staff_deactivated", user.id);
+    await appendStaffAudit(
+      adminSupabase,
+      actorId,
+      "staff_deactivated",
+      user.id,
+    );
 
     return { error: false, message: "Staff member deactivated." };
   });
@@ -516,19 +570,56 @@ export const reactivateStaffMember = createServerFn({ method: "POST" })
     const authorization = await authorizeStaffManager("users:deactivate_staff");
     if (authorization.error) return authorization;
     const { adminSupabase, actorId } = authorization;
-    const { data: profile } = await adminSupabase.from("profiles").select("role, access_status").eq("id", data.staffId).single();
+    const { data: profile } = await adminSupabase
+      .from("profiles")
+      .select("role, access_status")
+      .eq("id", data.staffId)
+      .single();
     if (
       !profile ||
       !INVITABLE_ROLES.includes(profile.role as Role) ||
       profile.access_status !== "deactivated"
     ) {
-      return { error: true, message: "This account cannot be reactivated from staff management." };
+      return {
+        error: true,
+        message: "This account cannot be reactivated from staff management.",
+      };
     }
-    const { error: banError } = await adminSupabase.auth.admin.updateUserById(data.staffId, { ban_duration: "none" });
-    if (banError) return { error: true, message: readableSupabaseError(banError, "The staff member could not be reactivated.") };
-    const { error } = await adminSupabase.from("profiles").update({ access_status: "active", suspended_at: null, suspended_by: null, suspension_reason: null }).eq("id", data.staffId);
-    if (error) return { error: true, message: readableSupabaseError(error, "The staff member could not be reactivated.") };
-    await appendStaffAudit(adminSupabase, actorId, "staff_reactivated", data.staffId);
+    const { error: banError } = await adminSupabase.auth.admin.updateUserById(
+      data.staffId,
+      { ban_duration: "none" },
+    );
+    if (banError)
+      return {
+        error: true,
+        message: readableSupabaseError(
+          banError,
+          "The staff member could not be reactivated.",
+        ),
+      };
+    const { error } = await adminSupabase
+      .from("profiles")
+      .update({
+        access_status: "active",
+        suspended_at: null,
+        suspended_by: null,
+        suspension_reason: null,
+      })
+      .eq("id", data.staffId);
+    if (error)
+      return {
+        error: true,
+        message: readableSupabaseError(
+          error,
+          "The staff member could not be reactivated.",
+        ),
+      };
+    await appendStaffAudit(
+      adminSupabase,
+      actorId,
+      "staff_reactivated",
+      data.staffId,
+    );
 
     return { error: false, message: "Staff member reactivated." };
   });
