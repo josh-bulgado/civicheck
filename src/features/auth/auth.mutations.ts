@@ -4,6 +4,7 @@ import {
   getSupabaseAdminClient,
   getSupabaseStatelessClient,
 } from "~/utils/supabase";
+import { getAppUrl } from "~/utils/app-url";
 import { sendEmail } from "~/utils/resend";
 import { renderOtpEmail } from "~/utils/email-template";
 import { requireActiveSession, isOperationalRole } from "~/server/auth";
@@ -127,13 +128,7 @@ export const loginWithOAuthFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient();
 
-    const appUrl =
-      process.env.APP_URL ||
-      (process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : "http://localhost:3000");
-
-    const redirectTo = `${appUrl}/auth/callback`;
+    const redirectTo = `${getAppUrl()}/auth/callback`;
 
     const { error, data: authData } = await supabase.auth.signInWithOAuth({
       provider: data.provider,

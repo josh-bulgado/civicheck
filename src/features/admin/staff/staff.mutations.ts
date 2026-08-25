@@ -10,6 +10,7 @@ import type {
 } from "./staff.types";
 import { sendEmail } from "~/utils/resend";
 import { getRequestNetworkSignal } from "~/features/system-admin/network-signal.server";
+import { getAppUrl } from "~/utils/app-url";
 
 const INVITABLE_ROLES: Role[] = ["staff", "supervisor", "cashier"];
 const staffInvitationActionSchema = z.object({
@@ -108,13 +109,7 @@ async function sendStaffInvitationEmail({
     );
   }
 
-  const appUrl =
-    process.env.APP_URL ||
-    (process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : "http://localhost:3000");
-
-  const invitationUrl = new URL("/auth/callback", appUrl);
+  const invitationUrl = new URL("/auth/callback", getAppUrl());
 
   invitationUrl.searchParams.set("token_hash", hashedToken);
   invitationUrl.searchParams.set("type", "invite");
