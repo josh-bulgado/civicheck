@@ -21,6 +21,7 @@ import { Route as AuthedRouteRouteImport } from './routes/_authed/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApplyIndexRouteImport } from './routes/apply/index'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
+import { Route as AuthedOnboardingRouteImport } from './routes/_authed/onboarding'
 import { Route as AuthedDashboardRouteRouteImport } from './routes/_authed/_dashboard/route'
 import { Route as AuthedDashboardStaffDashboardRouteImport } from './routes/_authed/_dashboard/staff-dashboard'
 import { Route as AuthedDashboardPaymentHistoryRouteImport } from './routes/_authed/_dashboard/payment-history'
@@ -108,6 +109,11 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/auth/callback',
   path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthedOnboardingRoute = AuthedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedDashboardRouteRoute = AuthedDashboardRouteRouteImport.update({
   id: '/_dashboard',
@@ -285,6 +291,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/track': typeof TrackRoute
+  '/onboarding': typeof AuthedOnboardingRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/apply/': typeof ApplyIndexRoute
   '/apply/$serviceCode': typeof AuthedApplyServiceCodeRouteRouteWithChildren
@@ -325,6 +332,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/track': typeof TrackRoute
+  '/onboarding': typeof AuthedOnboardingRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/apply': typeof ApplyIndexRoute
   '/cashier': typeof AuthedDashboardCashierRoute
@@ -367,6 +375,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/track': typeof TrackRoute
   '/_authed/_dashboard': typeof AuthedDashboardRouteRouteWithChildren
+  '/_authed/onboarding': typeof AuthedOnboardingRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/apply/': typeof ApplyIndexRoute
   '/_authed/apply/$serviceCode': typeof AuthedApplyServiceCodeRouteRouteWithChildren
@@ -409,6 +418,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/track'
+    | '/onboarding'
     | '/auth/callback'
     | '/apply/'
     | '/apply/$serviceCode'
@@ -449,6 +459,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/track'
+    | '/onboarding'
     | '/auth/callback'
     | '/apply'
     | '/cashier'
@@ -490,6 +501,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/track'
     | '/_authed/_dashboard'
+    | '/_authed/onboarding'
     | '/auth/callback'
     | '/apply/'
     | '/_authed/apply/$serviceCode'
@@ -621,6 +633,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth/callback'
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authed/onboarding': {
+      id: '/_authed/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthedOnboardingRouteImport
+      parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/_dashboard': {
       id: '/_authed/_dashboard'
@@ -901,11 +920,13 @@ const AuthedApplyServiceCodeRouteRouteWithChildren =
 
 interface AuthedRouteRouteChildren {
   AuthedDashboardRouteRoute: typeof AuthedDashboardRouteRouteWithChildren
+  AuthedOnboardingRoute: typeof AuthedOnboardingRoute
   AuthedApplyServiceCodeRouteRoute: typeof AuthedApplyServiceCodeRouteRouteWithChildren
 }
 
 const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
   AuthedDashboardRouteRoute: AuthedDashboardRouteRouteWithChildren,
+  AuthedOnboardingRoute: AuthedOnboardingRoute,
   AuthedApplyServiceCodeRouteRoute:
     AuthedApplyServiceCodeRouteRouteWithChildren,
 }

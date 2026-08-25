@@ -48,5 +48,14 @@ export const Route = createFileRoute("/_authed")({
   beforeLoad: ({ context, location }) => {
     if (!context.user || context.user.accountStatus !== "active")
       throw redirect({ to: "/login", search: { redirect: location.href } });
+
+    // OAuth sign-ins (Google) don't always hand us a usable first/last name.
+    // Bounce anyone with a blank name to onboarding before they can reach the
+    // rest of the authed app.
+    const hasName =
+      context.user.firstName.trim() && context.user.lastName.trim();
+    if (!hasName && location.pathname !== "/onboarding") {
+      throw redirect({ to: "/onboarding" });
+    }
   },
 });
