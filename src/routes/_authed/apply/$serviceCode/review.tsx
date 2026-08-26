@@ -106,6 +106,28 @@ function ReviewStepRoute() {
       requirementUploadKey(document.requirementId, document.subjectRole),
     ),
   );
+  const documentTotals = new Map<string, number>();
+  for (const document of activeDocuments) {
+    const key = requirementUploadKey(
+      document.requirementId,
+      document.subjectRole,
+    );
+    documentTotals.set(key, (documentTotals.get(key) ?? 0) + 1);
+  }
+  const documentPositions = new Map<string, number>();
+  const activeDocumentsWithPositions = activeDocuments.map((document) => {
+    const key = requirementUploadKey(
+      document.requirementId,
+      document.subjectRole,
+    );
+    const fileNumber = (documentPositions.get(key) ?? 0) + 1;
+    documentPositions.set(key, fileNumber);
+    return {
+      document,
+      fileNumber,
+      fileTotal: documentTotals.get(key) ?? 1,
+    };
+  });
 
   async function handleSubmit() {
     if (!selectedService) return;
@@ -116,6 +138,7 @@ function ReviewStepRoute() {
         data: {
           serviceCode: selectedService.service_code,
           templateVersionId: selectedService.form_template?.versionId ?? null,
+          uploadDraftId: draft.uploadDraftId,
           answers: answerBag,
           documents: activeDocuments.map((d) => ({
             requirementId: d.requirementId,
@@ -289,20 +312,26 @@ function ReviewStepRoute() {
             <p className="text-sm text-muted-foreground">No documents uploaded yet.</p>
           ) : (
             <div className="flex flex-col gap-2.5">
-              {activeDocuments.map((doc) => (
-                <div
-                  key={`${doc.requirementId}-${doc.subjectRole ?? "request"}`}
-                  className="flex items-center gap-2.5 text-sm"
-                >
-                  <span className="flex size-4.5 shrink-0 items-center justify-center rounded-[5px] bg-success text-[10px] font-bold text-white">
-                    <Check className="size-2.5" aria-hidden="true" />
-                  </span>
-                  <span className="min-w-0 break-words text-foreground">
-                    {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
-                    {doc.requirementName} — {doc.fileName}
-                  </span>
-                </div>
-              ))}
+              {activeDocumentsWithPositions.map(
+                ({ document: doc, fileNumber, fileTotal }) => (
+                  <div
+                    key={doc.storagePath}
+                    className="flex items-center gap-2.5 text-sm"
+                  >
+                    <span className="flex size-4.5 shrink-0 items-center justify-center rounded-[5px] bg-success text-[10px] font-bold text-white">
+                      <Check className="size-2.5" aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0 break-words text-foreground">
+                      {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
+                      {doc.requirementName}
+                      {fileTotal > 1
+                        ? ` · file ${fileNumber} of ${fileTotal}`
+                        : ""}{" "}
+                      — {doc.fileName}
+                    </span>
+                  </div>
+                ),
+              )}
             </div>
           )}
         </EditSection>

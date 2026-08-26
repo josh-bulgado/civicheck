@@ -21,7 +21,7 @@ export function WizardFooterActions({
   note,
 }: WizardFooterActionsProps) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border-light pt-6">
+    <div className="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-border-light pt-6 sm:flex-row sm:items-center sm:gap-4">
       {onBack ? (
         <Button type="button" variant="outline" onClick={onBack}>
           {backLabel}
@@ -29,9 +29,12 @@ export function WizardFooterActions({
       ) : (
         <span />
       )}
-      <div className="flex flex-wrap items-center justify-end gap-4">
+      <div className="flex flex-col items-stretch justify-end gap-3 sm:flex-row sm:items-center sm:gap-4">
         {note && (
-          <p className="text-sm text-muted-foreground" aria-live="polite">
+          <p
+            className="text-center text-sm text-muted-foreground sm:text-right"
+            aria-live="polite"
+          >
             {note}
           </p>
         )}
