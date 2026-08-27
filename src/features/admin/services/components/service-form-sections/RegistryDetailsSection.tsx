@@ -1,5 +1,5 @@
 import { Controller, useFormContext } from "react-hook-form";
-import { Copy, FileText } from "lucide-react";
+import { Copy, FileText, PhilippinePeso } from "lucide-react";
 import type { Department } from "~/features/admin/departments.queries";
 import {
   Card,
@@ -158,7 +158,7 @@ export function RegistryDetailsSection({
                   <FieldLabel htmlFor="service-fee">Total Fee</FieldLabel>
                   <InputGroup>
                     <InputGroupAddon>
-                      <span aria-hidden="true">&#8369;</span>
+                      <PhilippinePeso size={16} />
                     </InputGroupAddon>
                     <InputGroupInput
                       {...field}

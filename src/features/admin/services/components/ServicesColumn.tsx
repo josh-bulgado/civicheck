@@ -3,16 +3,79 @@ import { Link } from "@tanstack/react-router";
 import { ArrowUpDown, Eye, Pencil } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Button, buttonVariants } from "~/components/ui/button";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "~/components/ui/hover-card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
-import { Service } from "../services.types";
+import { Service, ServiceClassification } from "../services.types";
+
+/** Department filter value meaning "services with no department assigned". */
+export const UNASSIGNED_DEPARTMENT_FILTER = "unassigned";
+
+export interface ServiceDossierVariant {
+  service_code: string;
+  fee: number;
+  classification: ServiceClassification | null;
+}
 
 export interface ServiceDossier extends Service {
   dossier_key: string;
   variant_count: number;
   variant_codes: string[];
+  variants: ServiceDossierVariant[];
   minimum_fee: number;
   maximum_fee: number;
   processing_varies: boolean;
+}
+
+export function formatFee(amount: number): string {
+  return amount === 0
+    ? "Free"
+    : `₱${amount.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+}
+
+export function formatFeeRange(minimumFee: number, maximumFee: number): string {
+  return minimumFee === maximumFee
+    ? formatFee(minimumFee)
+    : `${formatFee(minimumFee)}–${formatFee(maximumFee)}`;
+}
+
+export function ClassificationBadge({
+  classification,
+}: {
+  classification: ServiceClassification | null;
+}) {
+  if (!classification) {
+    return (
+      <Badge variant="neutral" className="font-semibold text-[10px]">
+        Unclassified
+      </Badge>
+    );
+  }
+  return (
+    <Badge
+      variant={
+        classification === "simple"
+          ? "simple"
+          : classification === "complex"
+            ? "complex"
+            : "highly_technical"
+      }
+      className="capitalize font-semibold text-[10px]"
+    >
+      {classification.replace("_", " ")}
+    </Badge>
+  );
 }
 
 export function buildServiceDossiers(services: Service[]): ServiceDossier[] {
@@ -36,6 +99,11 @@ export function buildServiceDossiers(services: Service[]): ServiceDossier[] {
       dossier_key: dossierKey,
       variant_count: ordered.length,
       variant_codes: ordered.map((variant) => variant.service_code),
+      variants: ordered.map((variant) => ({
+        service_code: variant.service_code,
+        fee: Number(variant.fee),
+        classification: variant.classification,
+      })),
       minimum_fee: Math.min(...fees),
       maximum_fee: Math.max(...fees),
       processing_varies:
@@ -64,9 +132,40 @@ export const columns: ColumnDef<ServiceDossier>[] = [
           {row.original.dossier_key}
         </span>
         {row.original.variant_count > 1 ? (
-          <Badge variant="secondary" className="w-fit text-[10px]">
-            {row.original.variant_count} internal variants
-          </Badge>
+          <HoverCard>
+            <HoverCardTrigger
+              render={
+                <Badge
+                  variant="secondary"
+                  className="w-fit cursor-default text-[10px]"
+                >
+                  {row.original.variant_count} internal variants
+                </Badge>
+              }
+            />
+            <HoverCardContent className="w-auto min-w-56 p-2">
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Internal variants
+              </p>
+              <ul className="flex flex-col gap-1.5">
+                {row.original.variants.map((variant) => (
+                  <li
+                    key={variant.service_code}
+                    className="flex items-center justify-between gap-3"
+                  >
+                    <span className="font-mono text-xs font-medium text-foreground">
+                      {variant.service_code}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-xs font-semibold text-foreground">
+                        {formatFee(variant.fee)}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </HoverCardContent>
+          </HoverCard>
         ) : null}
       </div>
     ),
@@ -86,33 +185,44 @@ export const columns: ColumnDef<ServiceDossier>[] = [
     ),
     cell: ({ row }) => {
       const service = row.original;
+      const title = service.display_name ?? service.name;
       return (
-        <div>
-          <div
-            className="line-clamp-1 text-sm font-medium text-foreground"
-            title={service.name}
-          >
-            {service.display_name ?? service.name}
-          </div>
-          {service.display_group && (
-            <div className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
-              <span className="inline-block size-1.5 rounded-full bg-border" />
-              Part of group:{" "}
-              <span className="font-semibold uppercase">
-                {service.display_group}
-              </span>
-            </div>
-          )}
-          <div className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
-            <span className="inline-block size-1.5 rounded-full bg-border" />
-            Department:{" "}
-            <span className="font-semibold capitalize">
-              {service.department_id ?? "Unassigned"}
-            </span>
-          </div>
-        </div>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <div className="max-w-[220px] truncate text-sm font-medium text-foreground">
+                {title}
+              </div>
+            }
+          />
+          <TooltipContent>{title}</TooltipContent>
+        </Tooltip>
       );
     },
+  },
+  {
+    id: "department",
+    accessorKey: "department_name",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        size="sm"
+        className="px-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:bg-transparent"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Department
+        <ArrowUpDown aria-hidden="true" data-icon="inline-end" />
+      </Button>
+    ),
+    cell: ({ row }) => (
+      <span className="text-sm text-foreground">
+        {row.original.department_name ?? "Unassigned"}
+      </span>
+    ),
+    filterFn: (row, _columnId, filterValue: string) =>
+      filterValue === UNASSIGNED_DEPARTMENT_FILTER
+        ? row.original.department_id == null
+        : row.original.department_id === filterValue,
   },
   {
     accessorKey: "classification",
@@ -127,31 +237,10 @@ export const columns: ColumnDef<ServiceDossier>[] = [
         <ArrowUpDown aria-hidden="true" data-icon="inline-end" />
       </Button>
     ),
-    cell: ({ row }) => {
+    cell: ({ row }) => (
       // Nullable in the DB — ServicesStatsCards counts these as "unclassified".
-      const classification = row.getValue<string | null>("classification");
-      if (!classification) {
-        return (
-          <Badge variant="neutral" className="font-semibold text-[10px]">
-            Unclassified
-          </Badge>
-        );
-      }
-      return (
-        <Badge
-          variant={
-            classification === "simple"
-              ? "simple"
-              : classification === "complex"
-                ? "complex"
-                : "highly_technical"
-          }
-          className="capitalize font-semibold text-[10px]"
-        >
-          {classification.replace("_", " ")}
-        </Badge>
-      );
-    },
+      <ClassificationBadge classification={row.original.classification} />
+    ),
   },
   {
     accessorKey: "fee",
@@ -166,24 +255,11 @@ export const columns: ColumnDef<ServiceDossier>[] = [
         <ArrowUpDown className="ml-1 w-3 h-3" />
       </Button>
     ),
-    cell: ({ row }) => {
-      const minimumFee = row.original.minimum_fee;
-      const maximumFee = row.original.maximum_fee;
-      const formatAmount = (amount: number) =>
-        amount === 0
-          ? "Free"
-          : `₱${amount.toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}`;
-      return (
-        <span className="text-sm font-semibold text-foreground">
-          {minimumFee === maximumFee
-            ? formatAmount(minimumFee)
-            : `${formatAmount(minimumFee)}–${formatAmount(maximumFee)}`}
-        </span>
-      );
-    },
+    cell: ({ row }) => (
+      <span className="text-sm font-semibold text-foreground">
+        {formatFeeRange(row.original.minimum_fee, row.original.maximum_fee)}
+      </span>
+    ),
   },
   {
     accessorKey: "processing_time",

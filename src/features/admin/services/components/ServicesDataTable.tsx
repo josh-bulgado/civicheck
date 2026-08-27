@@ -19,23 +19,31 @@ import {
 } from "~/components/ui/table";
 import { SlidersHorizontal } from "lucide-react";
 import { columns, type ServiceDossier } from "./ServicesColumn";
-import { ServicesTableToolbar, type ClassificationFilter } from "./ServicesTableToolbar";
+import {
+  ALL_DEPARTMENTS,
+  ServicesTableToolbar,
+  type ClassificationFilter,
+} from "./ServicesTableToolbar";
 import { Button } from "~/components/ui/button";
 import { DataTablePagination } from "~/components/ui/data-table-pagination";
+import type { Department } from "~/features/admin/departments.queries";
 
 interface ServicesDataTableProps {
   data: ServiceDossier[];
+  departments: Department[];
   onView?: (service: ServiceDossier) => void;
 }
 
 export function ServicesDataTable({
   data,
+  departments,
   onView,
 }: ServicesDataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [classificationFilter, setClassificationFilter] = useState<ClassificationFilter>("all");
+  const [departmentFilter, setDepartmentFilter] = useState(ALL_DEPARTMENTS);
 
   const table = useReactTable({
     data,
@@ -48,7 +56,9 @@ export function ServicesDataTable({
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 20 } },
+    initialState: {
+      pagination: { pageSize: 20 },
+    },
     globalFilterFn: (row, _columnId, filterValue: string) => {
       const search = filterValue.toLowerCase();
       return (
@@ -73,9 +83,17 @@ export function ServicesDataTable({
     }
   };
 
+  const handleDepartmentFilter = (value: string) => {
+    setDepartmentFilter(value);
+    table
+      .getColumn("department")
+      ?.setFilterValue(value === ALL_DEPARTMENTS ? undefined : value);
+  };
+
   const handleClearFilters = () => {
     setGlobalFilter("");
     handleClassificationFilter("all");
+    handleDepartmentFilter(ALL_DEPARTMENTS);
   };
 
   return (
@@ -86,6 +104,9 @@ export function ServicesDataTable({
         onGlobalFilterChange={setGlobalFilter}
         classificationFilter={classificationFilter}
         onClassificationFilterChange={handleClassificationFilter}
+        departments={departments}
+        departmentFilter={departmentFilter}
+        onDepartmentFilterChange={handleDepartmentFilter}
       />
 
       {/* Table */}

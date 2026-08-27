@@ -8,7 +8,6 @@ import {
   SheetDescription,
 } from "~/components/ui/sheet";
 import { Button } from "~/components/ui/button";
-import { Badge } from "~/components/ui/badge";
 import { Separator } from "~/components/ui/separator";
 import {
   Collapsible,
@@ -19,7 +18,11 @@ import {
   getServiceChecklist,
   type ServiceRequirement,
 } from "~/features/admin/services/services.queries";
-import type { Service } from "~/features/admin/services/services.types";
+import {
+  ClassificationBadge,
+  formatFeeRange,
+  type ServiceDossier,
+} from "~/features/admin/services/components/ServicesColumn";
 import {
   Clock,
   CircleDollarSign,
@@ -42,10 +45,10 @@ import {
 } from "~/features/services/services.cache";
 
 interface ServiceDetailSheetProps {
-  service: Service | null;
+  service: ServiceDossier | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onEdit?: (service: Service) => void;
+  onEdit?: (service: ServiceDossier) => void;
   editLabel?: string;
 }
 
@@ -114,11 +117,11 @@ export function ServiceDetailSheet({
         {/* Header Section - clean and neutral */}
         <div className="relative p-6 bg-card border-b border-border">
           <div className="space-y-2 pr-8">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={service.classification === "simple" ? "simple" : "complex"} className="capitalize">
-                {service.classification}
-              </Badge>
-            </div>
+            {service.variant_count <= 1 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <ClassificationBadge classification={service.classification} />
+              </div>
+            )}
             <SheetTitle className="text-lg font-bold font-heading text-foreground leading-tight">
               {service.name}
             </SheetTitle>
@@ -126,7 +129,8 @@ export function ServiceDetailSheet({
               Service Code: {service.service_code}
             </p>
             <SheetDescription className="text-muted-foreground text-xs">
-              Registry and requirements metadata for administrative review.
+              Review the requirement checklist and registry details before
+              editing this service.
             </SheetDescription>
           </div>
         </div>
@@ -137,12 +141,18 @@ export function ServiceDetailSheet({
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg border border-border">
             <span className="flex items-center gap-1.5">
               <CircleDollarSign className="size-3.5 text-muted-foreground" />
-              <span className="font-semibold text-foreground">{formatFee(service.fee)}</span>
+              <span className="font-semibold text-foreground">
+                {formatFeeRange(service.minimum_fee, service.maximum_fee)}
+              </span>
             </span>
-            <span aria-hidden className="text-border">·</span>
+            <span aria-hidden className="text-border">
+              ·
+            </span>
             <span className="flex items-center gap-1.5">
               <Clock className="size-3.5 text-muted-foreground" />
-              <span className="font-semibold text-foreground">{service.processing_time || "N/A"}</span>
+              <span className="font-semibold text-foreground">
+                {service.processing_time || "N/A"}
+              </span>
             </span>
           </div>
 
@@ -153,35 +163,77 @@ export function ServiceDetailSheet({
             </h4>
             <div className="grid grid-cols-1 gap-2 text-xs">
               <div className="flex justify-between py-1 border-b border-dashed border-border">
-                <span className="text-muted-foreground">Display Group:</span>
-                <span className="font-medium text-foreground">{service.display_group || "None (Standalone)"}</span>
+                <span className="text-muted-foreground">Bundled under:</span>
+                <span className="font-medium text-foreground uppercase">
+                  {service.display_group || "None (Standalone)"}
+                </span>
               </div>
               <div className="flex justify-between py-1 border-b border-dashed border-border">
-                <span className="text-muted-foreground">Display Name:</span>
-                <span className="font-medium text-foreground">{service.display_name || "None"}</span>
+                <span className="text-muted-foreground">Public label:</span>
+                <span className="font-medium text-foreground">
+                  {service.display_name || "None"}
+                </span>
               </div>
               <div className="flex justify-between py-1">
-                <span className="text-muted-foreground">Requirement Group:</span>
-                <span className="font-mono text-foreground font-medium">{service.requirement_group || service.service_code}</span>
+                <span className="text-muted-foreground">
+                  Checklist shared with:
+                </span>
+                <span className="font-mono text-foreground font-medium uppercase">
+                  {service.requirement_group || service.service_code}
+                </span>
               </div>
             </div>
           </div>
 
+          {/* ── Internal Variants ───────────────────────────────────── */}
+          {service.variant_count > 1 && (
+            <div className="bg-muted/50 rounded-lg p-4 border border-border space-y-3">
+              <h4 className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wider">
+                <Layers className="w-3.5 h-3.5" /> Internal Variants (
+                {service.variant_count})
+              </h4>
+              <ul className="divide-y divide-border">
+                {service.variants.map((variant) => (
+                  <li
+                    key={variant.service_code}
+                    className="flex items-center justify-between gap-2 py-2 first:pt-0 last:pb-0"
+                  >
+                    <span className="font-mono text-xs font-medium text-foreground">
+                      {variant.service_code}
+                    </span>
+                    <span className="text-xs font-semibold text-foreground">
+                      {formatFee(variant.fee)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* ── Steps Description ───────────────────────────────────── */}
           {cleanedSteps.length > 0 && (
-            <Collapsible open={stepsOpen} onOpenChange={setStepsOpen} className="space-y-3">
+            <Collapsible
+              open={stepsOpen}
+              onOpenChange={setStepsOpen}
+              className="space-y-3"
+            >
               <CollapsibleTrigger className="flex items-center justify-between w-full cursor-pointer group/trigger select-none">
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                   <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
                   How It Works
                 </h3>
-                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${stepsOpen ? "rotate-180" : ""}`} />
+                <ChevronDown
+                  className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${stepsOpen ? "rotate-180" : ""}`}
+                />
               </CollapsibleTrigger>
-              
+
               <CollapsibleContent className="pt-1">
                 <div className="relative ml-1.5 space-y-0">
                   {cleanedSteps.map((step, idx) => (
-                    <div key={idx} className="relative flex gap-3 pb-3 last:pb-0">
+                    <div
+                      key={idx}
+                      className="relative flex gap-3 pb-3 last:pb-0"
+                    >
                       {/* Timeline connector */}
                       {idx < cleanedSteps.length - 1 && (
                         <div className="absolute left-[9px] top-5 bottom-0 w-[1px] bg-border" />
@@ -209,8 +261,16 @@ export function ServiceDetailSheet({
 
             {loading ? (
               <div className="flex flex-col items-center justify-center py-8 space-y-2">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" style={{ borderColor: "var(--primary)", borderTopColor: "transparent" }} />
-                <span className="text-xs text-muted-foreground">Loading requirements...</span>
+                <div
+                  className="h-6 w-6 animate-spin rounded-full border-2 border-t-transparent"
+                  style={{
+                    borderColor: "var(--primary)",
+                    borderTopColor: "transparent",
+                  }}
+                />
+                <span className="text-xs text-muted-foreground">
+                  Loading requirements...
+                </span>
               </div>
             ) : error ? (
               <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-lg">
@@ -218,7 +278,9 @@ export function ServiceDetailSheet({
               </div>
             ) : requirements.length === 0 ? (
               <div className="p-4 border border-dashed border-border text-center rounded-lg">
-                <p className="text-xs text-muted-foreground">No specific requirements defined for this service.</p>
+                <p className="text-xs text-muted-foreground">
+                  No specific requirements defined for this service.
+                </p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -230,13 +292,12 @@ export function ServiceDetailSheet({
                     </div>
                     <ul className="space-y-0 divide-y divide-border">
                       {mandatoryReqs.map((req) => {
-                        const { primary, secondary } = parseRequirementName(req.requirement_name);
+                        const { primary, secondary } = parseRequirementName(
+                          req.requirement_name,
+                        );
                         const source = req.where_to_secure ?? secondary;
                         return (
-                          <li
-                            key={req.id}
-                            className="py-2.5 list-none"
-                          >
+                          <li key={req.id} className="py-2.5 list-none">
                             <p className="text-xs font-semibold leading-snug text-foreground">
                               {primary}
                             </p>
@@ -254,7 +315,10 @@ export function ServiceDetailSheet({
 
                 {/* Conditional List — collapsed */}
                 {conditionalReqs.length > 0 && (
-                  <Collapsible open={conditionalOpen} onOpenChange={setConditionalOpen}>
+                  <Collapsible
+                    open={conditionalOpen}
+                    onOpenChange={setConditionalOpen}
+                  >
                     <CollapsibleTrigger className="flex items-center justify-between w-full py-2 text-xs font-semibold text-muted-foreground hover:text-foreground border-t border-border mt-2 cursor-pointer select-none group/trigger">
                       <span className="flex items-center gap-1.5">
                         <AlertTriangle className="w-3.5 h-3.5 text-muted-foreground" />
@@ -266,13 +330,12 @@ export function ServiceDetailSheet({
                     </CollapsibleTrigger>
                     <CollapsibleContent className="divide-y divide-border pt-1">
                       {conditionalReqs.map((req) => {
-                        const { primary, secondary } = parseRequirementName(req.requirement_name);
+                        const { primary, secondary } = parseRequirementName(
+                          req.requirement_name,
+                        );
                         const source = req.where_to_secure ?? secondary;
                         return (
-                          <li
-                            key={req.id}
-                            className="py-2.5 list-none"
-                          >
+                          <li key={req.id} className="py-2.5 list-none">
                             <p className="text-xs font-medium leading-snug text-foreground">
                               {primary}
                             </p>
@@ -304,9 +367,7 @@ export function ServiceDetailSheet({
               {editLabel}
             </Button>
           )}
-          <SheetClose
-            render={<Button type="button" size="sm" />}
-          >
+          <SheetClose render={<Button type="button" size="sm" />}>
             Close Panel
           </SheetClose>
         </div>
