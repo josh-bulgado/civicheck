@@ -139,7 +139,7 @@ export function StaffDataTable({
     getPaginationRowModel: getPaginationRowModel(),
     initialState: { pagination: { pageSize: 20 } },
     globalFilterFn: (row, _id, value: string) =>
-      `${row.original.firstName} ${row.original.lastName} ${row.original.email} ${row.original.role} ${row.original.departmentName} ${row.original.employmentType}`
+      `${row.original.firstName} ${row.original.lastName} ${row.original.email} ${row.original.role} ${row.original.departmentName ?? ""} ${row.original.employmentType}`
         .toLowerCase()
         .includes(value.trim().toLowerCase()),
   });

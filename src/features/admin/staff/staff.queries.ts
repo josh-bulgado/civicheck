@@ -65,7 +65,7 @@ export const getStaff = createServerFn({ method: "GET" }).handler(async () => {
           ? invitationAccepted
           : Boolean(user.email_confirmed_at),
         departmentId: item?.department_id ?? null,
-        departmentName: department?.name ?? "Unassigned",
+        departmentName: department?.name ?? null,
         employmentType: (item?.employment_type ?? "regular") as EmploymentType,
         status: item.access_status ?? "active",
       };
