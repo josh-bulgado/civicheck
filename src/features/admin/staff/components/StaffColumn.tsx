@@ -1,5 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, RefreshCw } from "lucide-react";
+import { ArrowUpDown, Check, Copy, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -20,6 +22,11 @@ const employmentLabels = {
   contractual: "Contractual",
 } as const;
 
+const departmentFallbackByRole: Partial<Record<Role, string>> = {
+  admin: "All departments",
+  cashier: "Not applicable",
+};
+
 function getInitials(staffMember: StaffMember) {
   const initials = `${staffMember.firstName.charAt(0)}${staffMember.lastName.charAt(0)}`;
   return initials.toUpperCase() || staffMember.email.charAt(0).toUpperCase();
@@ -27,6 +34,37 @@ function getInitials(staffMember: StaffMember) {
 
 const headerClassName =
   "text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground";
+
+function CopyableEmail({ email }: { email: string }) {
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <button
+      type="button"
+      onClick={async (event) => {
+        event.stopPropagation();
+        try {
+          await navigator.clipboard.writeText(email);
+          setCopied(true);
+          toast.success("Email copied");
+          setTimeout(() => setCopied(false), 1500);
+        } catch {
+          toast.error("Couldn't copy email");
+        }
+      }}
+      title="Copy email"
+      aria-label={`Copy ${email}`}
+      className="group/email flex min-w-0 items-center gap-1.5 text-left"
+    >
+      <span className="truncate text-sm text-muted-foreground">{email}</span>
+      {copied ? (
+        <Check className="size-3.5 shrink-0 text-success" />
+      ) : (
+        <Copy className="size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/email:opacity-100" />
+      )}
+    </button>
+  );
+}
 
 export function createStaffColumns({
   checkingStaffId,
@@ -85,9 +123,9 @@ export function createStaffColumns({
                   </Badge>
                 ) : null}
               </div>
-              <p className="mt-0.5 truncate text-sm text-muted-foreground">
-                {staffMember.email}
-              </p>
+              <div className="mt-0.5 min-w-0">
+                <CopyableEmail email={staffMember.email} />
+              </div>
             </div>
           </div>
         );
@@ -96,11 +134,26 @@ export function createStaffColumns({
     {
       accessorKey: "departmentName",
       header: () => <span className={headerClassName}>Department</span>,
-      cell: ({ row }) => (
-        <span className="text-sm text-foreground/80">
-          {row.original.departmentName}
-        </span>
-      ),
+      cell: ({ row }) => {
+        const staffMember = row.original;
+        const fallback = departmentFallbackByRole[staffMember.role];
+
+        if (fallback) {
+          return (
+            <span className="text-sm text-muted-foreground">{fallback}</span>
+          );
+        }
+
+        return staffMember.departmentName ? (
+          <span className="text-sm text-foreground/80">
+            {staffMember.departmentName}
+          </span>
+        ) : (
+          <span className="text-sm text-muted-foreground italic">
+            Unassigned
+          </span>
+        );
+      },
     },
     {
       accessorKey: "employmentType",

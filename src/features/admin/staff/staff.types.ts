@@ -17,7 +17,7 @@ export type StaffMember = {
   emailConfirmed: boolean;
   confirmed: boolean;
   departmentId: string | null;
-  departmentName: string;
+  departmentName: string | null;
   employmentType: EmploymentType;
   status: AccountStatus;
 };
