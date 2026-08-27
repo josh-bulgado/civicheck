@@ -22,6 +22,8 @@ export interface ApplyDraftDocument {
 
 export interface ApplyDraft {
   selectedServiceCode: string | null;
+  /** Server-issued owner/lifecycle record for files staged before submission. */
+  uploadDraftId: string | null;
   /** Answers to the database-backed service-variant questions. */
   caseSelectorAnswers: Record<string, string>;
   /**
@@ -55,6 +57,7 @@ export interface ApplyDraft {
 
 export const DEFAULT_APPLY_DRAFT: ApplyDraft = {
   selectedServiceCode: null,
+  uploadDraftId: null,
   caseSelectorAnswers: {},
   presetAge: null,
   presetMarital: null,

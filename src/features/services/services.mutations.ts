@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { finalizeRequestUploadDraft } from "~/features/apply/apply-upload-drafts.server";
 import { requireActiveSession } from "~/server/auth";
 import { insertRequestWithTrackingNumber } from "~/features/requests/tracking-number";
 import { isRequirementApplicable } from "~/features/services/service-utils";
@@ -9,6 +10,7 @@ import {
   requirementUploadKey,
 } from "~/features/services/requirement-upload.utils";
 import type { SubjectFields } from "~/lib/subject-fields";
+import { getSupabaseAdminClient } from "~/utils/supabase";
 import {
   buildLegacyFormDefinition,
   deriveTemplateAnswers,
@@ -34,6 +36,7 @@ const answersSchema = z
 const submitRequestSchema = z.object({
   serviceCode: z.string().trim().min(1),
   templateVersionId: z.string().uuid().nullable(),
+  uploadDraftId: z.string().uuid().nullable(),
   answers: answersSchema,
   documents: z
     .array(
@@ -160,9 +163,83 @@ export const submitRequestFn = createServerFn({ method: "POST" })
     const submittedKeys = (data.documents ?? []).map((document) =>
       requirementUploadKey(document.requirementId, document.subjectRole),
     );
+    const submittedFileUrls = (data.documents ?? []).map(
+      (document) => document.fileUrl,
+    );
+    const applicantPathPrefix = `${user.id}/`;
     if (
-      new Set(submittedKeys).size !== submittedKeys.length ||
-      submittedKeys.some((key) => !allowedKeys.has(key))
+      submittedFileUrls.some((path) => !path.startsWith(applicantPathPrefix))
+    ) {
+      return {
+        error: true,
+        message: "One or more uploaded documents do not belong to this applicant.",
+      };
+    }
+
+    const stagedPathPrefix = data.uploadDraftId
+      ? `${user.id}/drafts/${data.uploadDraftId}/`
+      : null;
+    const hasStagedPaths = submittedFileUrls.some((path) =>
+      path.startsWith(`${user.id}/drafts/`),
+    );
+    const stagedFilesByPath = new Map<
+      string,
+      { requirement_id: string | null; subject_role: string | null }
+    >();
+    if (data.uploadDraftId) {
+      const { data: uploadDraft, error: uploadDraftError } = await supabase
+        .from("request_upload_drafts")
+        .select("id")
+        .eq("id", data.uploadDraftId)
+        .eq("applicant_id", user.id)
+        .eq("status", "draft")
+        .maybeSingle();
+      if (uploadDraftError || !uploadDraft) {
+        return {
+          error: true,
+          message: "The document upload session has expired. Add the files again.",
+        };
+      }
+
+      const { data: stagedFiles, error: stagedFilesError } = await supabase
+        .from("request_upload_draft_files")
+        .select("storage_path, requirement_id, subject_role")
+        .eq("draft_id", data.uploadDraftId);
+      if (stagedFilesError) {
+        return {
+          error: true,
+          message: "The uploaded documents could not be verified.",
+        };
+      }
+      for (const file of stagedFiles ?? []) {
+        stagedFilesByPath.set(file.storage_path, file);
+      }
+    } else if (hasStagedPaths) {
+      return {
+        error: true,
+        message: "The document upload session is missing. Add the files again.",
+      };
+    }
+
+    const stagedFileMismatch = (data.documents ?? []).some((document) => {
+      if (!document.fileUrl.startsWith(`${user.id}/drafts/`)) return false;
+      if (!stagedPathPrefix || !document.fileUrl.startsWith(stagedPathPrefix)) {
+        return true;
+      }
+      const stagedFile = stagedFilesByPath.get(document.fileUrl);
+      return (
+        !stagedFile ||
+        !stagedFile.requirement_id ||
+        requirementUploadKey(
+          stagedFile.requirement_id,
+          stagedFile.subject_role,
+        ) !== requirementUploadKey(document.requirementId, document.subjectRole)
+      );
+    });
+    if (
+      new Set(submittedFileUrls).size !== submittedFileUrls.length ||
+      submittedKeys.some((key) => !allowedKeys.has(key)) ||
+      stagedFileMismatch
     ) {
       return {
         error: true,
@@ -214,9 +291,30 @@ export const submitRequestFn = createServerFn({ method: "POST" })
         }),
       );
       if (docsError) {
+        const { error: rollbackError } = await getSupabaseAdminClient()
+          .from("requests")
+          .delete()
+          .eq("id", requestId)
+          .eq("applicant_id", user.id);
+        if (!rollbackError) {
+          return {
+            error: true,
+            message:
+              "The request was not submitted because its documents could not be attached. Your uploads are still saved—try again.",
+          };
+        }
         documentWarning =
           "Your request was submitted, but we couldn't attach your uploaded documents. Please bring them with you to the CCRO.";
       }
+    }
+
+    if (data.uploadDraftId && !documentWarning) {
+      await finalizeRequestUploadDraft({
+        draftId: data.uploadDraftId,
+        applicantId: user.id,
+        requestId,
+        submittedPaths: submittedFileUrls,
+      });
     }
 
     const { error: logError } = await supabase.from("application_logs").insert({
