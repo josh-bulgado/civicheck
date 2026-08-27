@@ -46,8 +46,10 @@ function formatKey(key: string) {
  */
 function formDataLabel(key: string, request: RequestDetail) {
   if (request.fieldLabels[key]) return request.fieldLabels[key];
-  if (key === "event_date" && request.eventDateLabel) return request.eventDateLabel;
-  if (key === "event_place" && request.eventPlaceLabel) return request.eventPlaceLabel;
+  if (key === "event_date" && request.eventDateLabel)
+    return request.eventDateLabel;
+  if (key === "event_place" && request.eventPlaceLabel)
+    return request.eventPlaceLabel;
   if (key === "reference_number" && request.referenceNumberLabel) {
     return request.referenceNumberLabel;
   }
@@ -70,7 +72,10 @@ interface RequestDetailPageProps {
   onUpdated: () => void;
 }
 
-export default function RequestDetailPage({ request, onUpdated }: RequestDetailPageProps) {
+export default function RequestDetailPage({
+  request,
+  onUpdated,
+}: RequestDetailPageProps) {
   const { can } = usePermissions();
 
   const [remarks, setRemarks] = useState("");
@@ -197,7 +202,10 @@ export default function RequestDetailPage({ request, onUpdated }: RequestDetailP
       </header>
 
       <div className="civic-stagger mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div style={staggerStyle(0)} className="flex flex-col gap-6 lg:col-span-2">
+        <div
+          style={staggerStyle(0)}
+          className="flex flex-col gap-6 lg:col-span-2"
+        >
           <section className="rounded-xl border border-border bg-white p-6">
             <h2 className="mb-4 text-lg font-bold text-foreground">
               Submitted details
@@ -301,7 +309,9 @@ export default function RequestDetailPage({ request, onUpdated }: RequestDetailP
                     <div className="flex flex-col gap-2">
                       <Label htmlFor="remarks">
                         Remarks
-                        {visibleTransitions.some((s) => REASON_REQUIRED.includes(s))
+                        {visibleTransitions.some((s) =>
+                          REASON_REQUIRED.includes(s),
+                        )
                           ? " (required to reject or mark incomplete)"
                           : " (optional)"}
                       </Label>
@@ -331,8 +341,8 @@ export default function RequestDetailPage({ request, onUpdated }: RequestDetailP
 
                 {needsAttachmentsResolved && (
                   <p className="civic-enter-sm rounded-lg border border-warning/20 bg-warning/5 p-3 text-xs text-warning-strong">
-                    Every uploaded requirement needs to be accepted first —
-                    some are still pending or rejected.
+                    Every uploaded requirement needs to be accepted first — some
+                    are still pending or rejected.
                   </p>
                 )}
 
@@ -495,7 +505,7 @@ function AttachmentRow({
               </Button>
               <Button
                 size="sm"
-                variant="outline"
+                variant="destructive"
                 disabled={busy}
                 onClick={() => setRejecting(true)}
               >
