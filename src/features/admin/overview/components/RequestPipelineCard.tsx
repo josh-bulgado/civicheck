@@ -2,7 +2,6 @@ import { Link } from "@tanstack/react-router";
 import {
   ArrowRight,
   CheckCircle2,
-  FileCheck2,
   FileClock,
   FileSearch,
   ListChecks,
@@ -22,14 +21,14 @@ import {
 } from "~/components/ui/card";
 import { CountUp } from "~/components/motion/count-up";
 import { staggerStyle } from "~/components/motion/stagger";
+import { STAGES } from "~/features/requests/request-queue";
 import type { RequestOverview } from "~/features/admin/overview/overview.types";
 
 const STAGE_DETAILS = {
   1: { description: "Awaiting intake review", icon: FileClock },
   2: { description: "Validation and follow-up", icon: FileSearch },
   3: { description: "Documents in processing", icon: ListChecks },
-  4: { description: "Awaiting final approval", icon: FileCheck2 },
-  5: { description: "Approved for release", icon: TicketCheck },
+  4: { description: "Ready for release", icon: TicketCheck },
 } as const;
 
 export function RequestPipelineCard({
@@ -107,7 +106,9 @@ function WorkflowStageCard({
         <CardTitle>
           <h3 className="text-balance">{stage.label}</h3>
         </CardTitle>
-        <CardDescription>Stage {stage.stage} of 5</CardDescription>
+        <CardDescription>
+          Stage {stage.stage} of {STAGES.length}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-between gap-3">

@@ -23,6 +23,7 @@ import {
   seedDraftForGroup,
   useApplyDraft,
 } from "~/features/apply/hooks/useApplyDraft";
+import { discardRequestUploadDraftFn } from "~/features/apply/apply.mutations";
 import { ageInYears, diffInDays, toDateKey } from "~/lib/date";
 import {
   CaseSelector,
@@ -200,7 +201,11 @@ export function CaseStep({
         : null,
       presetAge: ageInYears(values.event_date ?? "") >= 80 ? "80+" : "0-79",
     });
+    const uploadDraftId = draft.uploadDraftId;
     clear();
+    if (uploadDraftId) {
+      discardRequestUploadDraftFn({ data: { uploadDraftId } }).catch(() => {});
+    }
     setRedirectDirection(null);
     navigate({
       to: "/apply/$serviceCode/case",

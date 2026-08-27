@@ -39,8 +39,6 @@ export function getStatusDetails(status: string | null): StatusDetails {
       return { label: "Rejected", styles: "status-error", dot: "bg-health-error-dot", variant: "destructive" };
     case "processing":
       return { label: "Processing", styles: "status-info", dot: "bg-health-neutral-dot", variant: "info" };
-    case "pending_approval":
-      return { label: "Pending Approval", styles: "status-info", dot: "bg-health-neutral-dot", variant: "info" };
     case "ready_for_release":
       return { label: "Ready for Release", styles: "status-success", dot: "bg-health-neutral-dot", variant: "success" };
     case "released":

@@ -4,6 +4,7 @@ import {
   useMatches,
 } from "@tanstack/react-router";
 import { getServiceDetail } from "~/features/services/services.queries";
+import { discardRequestUploadDraftFn } from "~/features/apply/apply.mutations";
 import { ApplicationDocket } from "~/features/apply/components/ApplicationDocket";
 import { ApplyStepRail } from "~/features/apply/components/ApplyStepRail";
 import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
@@ -44,6 +45,14 @@ function ApplyLayout() {
       : undefined;
   const selectionPending = isGroup && !selectedService;
 
+  function handleDiscard() {
+    const uploadDraftId = draft.uploadDraftId;
+    clear();
+    if (uploadDraftId) {
+      discardRequestUploadDraftFn({ data: { uploadDraftId } }).catch(() => {});
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <ApplyStepRail
@@ -56,7 +65,7 @@ function ApplyLayout() {
         serviceFamily={serviceFamily}
         fee={selectedService?.fee}
         selectionPending={selectionPending}
-        onDiscard={clear}
+        onDiscard={handleDiscard}
       />
 
       <Outlet />
