@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Search, ChevronDown, ArrowRight } from "lucide-react";
+import { Search, ChevronDown, ArrowRight, PhilippinePeso } from "lucide-react";
 import { enterDelay, staggerStyle } from "~/components/motion/stagger";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, buttonVariants } from "~/components/ui/button";
@@ -244,8 +244,8 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
             <EmptyHeader>
               <EmptyTitle>No services found</EmptyTitle>
               <EmptyDescription>
-              Try clearing the search or filters and browse the full list
-              instead.
+                Try clearing the search or filters and browse the full list
+                instead.
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -313,42 +313,99 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                   </CollapsibleTrigger>
 
                   <CollapsibleContent>
-                      <div className="flex flex-col gap-5 px-5 py-5">
-                        <div className="grid grid-cols-2 divide-x divide-border-light rounded-[10px] border border-border-light">
-                          <div className="flex flex-col gap-1 px-4 py-3.5">
-                            <span className="text-xs text-muted-foreground">
-                              Total fees
-                            </span>
-                            <span className="text-lg font-bold text-foreground">
-                              {formatFee(service.fee, service.display_group)}
-                            </span>
-                            <span className="text-xs text-body">
-                              Pay at the CCRO cashier
-                            </span>
-                          </div>
-                          <div className="flex flex-col gap-1 px-4 py-3.5">
-                            <span className="text-xs text-muted-foreground">
-                              Time at the office
-                            </span>
-                            <span className="text-lg font-bold text-foreground">
-                              {service.processing_time || "Varies"}
-                            </span>
-                          </div>
+                    <div className="flex flex-col gap-5 px-5 py-5">
+                      <div className="grid grid-cols-2 divide-x divide-border-light rounded-[10px] border border-border-light">
+                        <div className="flex flex-col gap-1 px-4 py-3.5">
+                          <span className="text-xs text-muted-foreground">
+                            Total fees
+                          </span>
+                          <span className="text-lg font-bold text-foreground">
+                            <PhilippinePeso />
+                            {formatFee(service.fee, service.display_group)}
+                          </span>
+                          <span className="text-xs text-body">
+                            Pay at the CCRO cashier
+                          </span>
                         </div>
+                        <div className="flex flex-col gap-1 px-4 py-3.5">
+                          <span className="text-xs text-muted-foreground">
+                            Time at the office
+                          </span>
+                          <span className="text-lg font-bold text-foreground">
+                            {service.processing_time || "Varies"}
+                          </span>
+                        </div>
+                      </div>
 
-                        <div className="flex flex-col gap-2.5">
-                          <h4 className="text-sm font-bold text-foreground">
-                            Required documents ({mandatoryReqs.length})
-                          </h4>
+                      <div className="flex flex-col gap-2.5">
+                        <h4 className="text-sm font-bold text-foreground">
+                          Required documents ({mandatoryReqs.length})
+                        </h4>
 
-                          {mandatoryReqs.length === 0 ? (
-                            <p className="rounded-[10px] border border-dashed border-dashed-border bg-background p-3.5 text-xs italic text-muted-foreground">
-                              No specific required documents are listed for this
-                              service.
-                            </p>
-                          ) : (
-                            <div className="divide-y divide-border-lighter rounded-[10px] border border-border-light">
-                              {mandatoryReqs.map((req) => {
+                        {mandatoryReqs.length === 0 ? (
+                          <p className="rounded-[10px] border border-dashed border-dashed-border bg-background p-3.5 text-xs italic text-muted-foreground">
+                            No specific required documents are listed for this
+                            service.
+                          </p>
+                        ) : (
+                          <div className="divide-y divide-border-lighter rounded-[10px] border border-border-light">
+                            {mandatoryReqs.map((req) => {
+                              const { primary, secondary } =
+                                parseRequirementName(req.requirement_name);
+                              return (
+                                <div key={req.id} className="px-4 py-3.5">
+                                  <p className="text-sm font-medium leading-snug text-body-strong">
+                                    {primary}
+                                  </p>
+                                  {secondary && (
+                                    <p className="mt-1 text-xs leading-snug text-muted-foreground">
+                                      {secondary}
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {conditionalReqs.length > 0 && (
+                        <Collapsible
+                          open={isConditionalOpen}
+                          onOpenChange={(open) =>
+                            setConditionalOpen((previous) => ({
+                              ...previous,
+                              [service.service_code]: open,
+                            }))
+                          }
+                          className="flex flex-col gap-2.5"
+                        >
+                          <CollapsibleTrigger
+                            render={
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                className="h-auto w-full justify-between px-0 text-left whitespace-normal"
+                              />
+                            }
+                          >
+                            <h4 className="text-sm font-bold text-foreground">
+                              Only if it applies to you (
+                              {conditionalReqs.length})
+                            </h4>
+                            <ChevronDown
+                              data-icon="inline-end"
+                              className={cn(
+                                "transition-transform duration-200",
+                                isConditionalOpen && "rotate-180",
+                              )}
+                              aria-hidden="true"
+                            />
+                          </CollapsibleTrigger>
+
+                          <CollapsibleContent>
+                            <div className="divide-y divide-warning-border/40 rounded-[10px] border border-warning-border bg-warning-soft">
+                              {conditionalReqs.map((req) => {
                                 const { primary, secondary } =
                                   parseRequirementName(req.requirement_name);
                                 return (
@@ -356,131 +413,73 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                                     <p className="text-sm font-medium leading-snug text-body-strong">
                                       {primary}
                                     </p>
-                                    {secondary && (
-                                      <p className="mt-1 text-xs leading-snug text-muted-foreground">
-                                        {secondary}
-                                      </p>
-                                    )}
+                                    <p className="mt-1 text-xs leading-snug text-warning-strong">
+                                      {secondary ||
+                                        "Only needed if this applies to your case."}
+                                    </p>
                                   </div>
                                 );
                               })}
                             </div>
-                          )}
-                        </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      )}
 
-                        {conditionalReqs.length > 0 && (
-                          <Collapsible
-                            open={isConditionalOpen}
-                            onOpenChange={(open) =>
-                              setConditionalOpen((previous) => ({
-                                ...previous,
-                                [service.service_code]: open,
-                              }))
-                            }
-                            className="flex flex-col gap-2.5"
-                          >
-                            <CollapsibleTrigger
-                              render={
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  className="h-auto w-full justify-between px-0 text-left whitespace-normal"
-                                />
-                              }
-                            >
-                              <h4 className="text-sm font-bold text-foreground">
-                                Only if it applies to you (
-                                {conditionalReqs.length})
-                              </h4>
-                              <ChevronDown
-                                data-icon="inline-end"
-                                className={cn(
-                                  "transition-transform duration-200",
-                                  isConditionalOpen && "rotate-180",
-                                )}
-                                aria-hidden="true"
-                              />
-                            </CollapsibleTrigger>
-
-                            <CollapsibleContent>
-                                <div className="divide-y divide-warning-border/40 rounded-[10px] border border-warning-border bg-warning-soft">
-                                  {conditionalReqs.map((req) => {
-                                    const { primary, secondary } =
-                                      parseRequirementName(
-                                        req.requirement_name,
-                                      );
-                                    return (
-                                      <div key={req.id} className="px-4 py-3.5">
-                                        <p className="text-sm font-medium leading-snug text-body-strong">
-                                          {primary}
-                                        </p>
-                                        <p className="mt-1 text-xs leading-snug text-warning-strong">
-                                          {secondary ||
-                                            "Only needed if this applies to your case."}
-                                        </p>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                            </CollapsibleContent>
-                          </Collapsible>
-                        )}
-
-                        {cleanedSteps.length > 0 && (
+                      {cleanedSteps.length > 0 && (
+                        <div className="flex flex-col gap-3">
+                          <h4 className="text-sm font-bold text-foreground">
+                            What happens at the office
+                          </h4>
                           <div className="flex flex-col gap-3">
-                            <h4 className="text-sm font-bold text-foreground">
-                              What happens at the office
-                            </h4>
-                            <div className="flex flex-col gap-3">
-                              {cleanedSteps.map((step, idx) => (
-                                <div key={idx} className="flex gap-3">
-                                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-bold text-primary">
-                                    {idx + 1}
-                                  </span>
-                                  <p className="pt-0.5 text-sm leading-relaxed text-body-strong">
-                                    {step}
-                                  </p>
-                                </div>
-                              ))}
-                            </div>
+                            {cleanedSteps.map((step, idx) => (
+                              <div key={idx} className="flex gap-3">
+                                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-bold text-primary">
+                                  {idx + 1}
+                                </span>
+                                <p className="pt-0.5 text-sm leading-relaxed text-body-strong">
+                                  {step}
+                                </p>
+                              </div>
+                            ))}
                           </div>
-                        )}
+                        </div>
+                      )}
 
-                        <div className="flex flex-wrap items-center justify-between gap-4 rounded-[10px] border border-border-light bg-background px-5 py-4.5">
-                          <div>
-                            <p className="text-sm font-bold text-foreground">
-                              Ready to file this online?
-                            </p>
-                            <p className="text-xs text-body">
-                              Sign in to apply — or create a free account if you
-                              don't have one yet.
-                            </p>
-                          </div>
-                          <div className="flex flex-wrap gap-3">
-                            <Link
-                              to="/login"
-                              search={{ redirect: "/requirements" }}
-                              className={buttonVariants({
-                                variant: "outline",
-                                size: "sm",
-                              })}
-                            >
-                              Save checklist
-                            </Link>
-                            <Link
-                              to="/apply/$serviceCode/case"
-                              params={{
-                                serviceCode:
-                                  service.display_group ?? service.service_code,
-                              }}
-                              className={buttonVariants({ size: "sm" })}
-                            >
-                              Start application
-                              <ArrowRight className="size-3.5" />
-                            </Link>
-                          </div>
+                      <div className="flex flex-wrap items-center justify-between gap-4 rounded-[10px] border border-border-light bg-background px-5 py-4.5">
+                        <div>
+                          <p className="text-sm font-bold text-foreground">
+                            Ready to file this online?
+                          </p>
+                          <p className="text-xs text-body">
+                            Sign in to apply — or create a free account if you
+                            don't have one yet.
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-3">
+                          <Link
+                            to="/login"
+                            search={{ redirect: "/requirements" }}
+                            className={buttonVariants({
+                              variant: "outline",
+                              size: "sm",
+                            })}
+                          >
+                            Save checklist
+                          </Link>
+                          <Link
+                            to="/apply/$serviceCode/case"
+                            params={{
+                              serviceCode:
+                                service.display_group ?? service.service_code,
+                            }}
+                            className={buttonVariants({ size: "sm" })}
+                          >
+                            Start application
+                            <ArrowRight className="size-3.5" />
+                          </Link>
                         </div>
                       </div>
+                    </div>
                   </CollapsibleContent>
                 </Collapsible>
               );

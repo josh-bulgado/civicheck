@@ -12,11 +12,15 @@ export const getAdminServices = createServerFn({ method: "GET" }).handler(
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
       .from("services_registry")
-      .select("*")
+      .select("*, departments(id, name)")
       .order("name", { ascending: true });
 
     if (error) throw new Error(error.message);
-    return (data || []) as Service[];
+    return (data || []).map((row: any) => {
+      const { departments, ...service } = row;
+      const department = Array.isArray(departments) ? departments[0] : departments;
+      return { ...service, department_name: department?.name ?? null } as Service;
+    });
   }
 );
 

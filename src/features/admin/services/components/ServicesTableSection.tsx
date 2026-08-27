@@ -7,13 +7,16 @@ import { cn } from "~/lib/utils";
 import { ServicesDataTable } from "./ServicesDataTable";
 import type { ServiceDossier } from "./ServicesColumn";
 import type { Service } from "../services.types";
+import type { Department } from "~/features/admin/departments.queries";
 
 interface ServicesTableSectionProps {
   services: ServiceDossier[];
+  departments: Department[];
 }
 
 export function ServicesTableSection({
   services,
+  departments,
 }: ServicesTableSectionProps) {
   const navigate = useNavigate();
   const [selectedService, setSelectedService] = useState<ServiceDossier | null>(null);
@@ -42,6 +45,7 @@ export function ServicesTableSection({
       <div className="p-5 sm:p-6">
         <ServicesDataTable
           data={services}
+          departments={departments}
           onView={setSelectedService}
         />
       </div>

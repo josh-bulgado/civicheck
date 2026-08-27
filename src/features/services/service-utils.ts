@@ -119,7 +119,7 @@ export function formatFee(
   if (displayGroup) return "Varies";
   const numFee = Number(fee);
   if (!fee || numFee === 0) return "Free";
-  return `₱${numFee.toLocaleString(undefined, {
+  return `${numFee.toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -169,7 +169,9 @@ export function summarizeWait(processingTime: string): string {
     if (days) return `After ${days[1]} days`;
     const weeks = processingTime.match(/(\d+)[\s-]*weeks?/i);
     if (weeks) return `After ${weeks[1]} weeks`;
-    const months = processingTime.match(/(\d+)(?:[\s-]*(?:to|-)[\s-]*\d+)?[\s-]*months?/i);
+    const months = processingTime.match(
+      /(\d+)(?:[\s-]*(?:to|-)[\s-]*\d+)?[\s-]*months?/i,
+    );
     if (months) return `After ${months[0]}`;
   }
   return processingTime.split(";")[0].split("(")[0].trim();
@@ -274,9 +276,7 @@ export function isRequirementApplicable(
     // source fields. Fall back conservatively so a caller cannot bypass a
     // mandatory document by submitting an old version with missing answers.
     if (!hasEveryAnswer) {
-      return requirement.case_tag
-        ? isVisible(requirement, selectedCode)
-        : true;
+      return requirement.case_tag ? isVisible(requirement, selectedCode) : true;
     }
     return conditionRuleMatches(requirement.applies_when, answers);
   }
