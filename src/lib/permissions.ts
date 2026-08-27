@@ -18,7 +18,6 @@ export type Permission =
   | "requests:view_all"
   | "requests:create"
   | "requests:process"
-  | "requests:approve_release"
   | "requests:reverse_verification"
   | "requests:archive"
   | "requests:legal"
@@ -66,7 +65,6 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "requests:view_all",
     "requests:create",
     "requests:process",
-    "requests:approve_release",
     "requests:reverse_verification",
     "requests:encode_walkin",
     "dashboard:staff",
@@ -77,7 +75,6 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "services:manage",
     "requests:view_all",
     "requests:process",
-    "requests:approve_release",
     "requests:reverse_verification",
     "requests:archive",
     "requests:legal",

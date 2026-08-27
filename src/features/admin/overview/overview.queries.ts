@@ -6,9 +6,8 @@ import {
   isRequestStatus,
   type WorkflowStage,
 } from "~/features/requests/request-workflow";
+import { STAGES } from "~/features/requests/request-queue";
 import { requireActiveSession } from "~/server/auth";
-
-const WORKFLOW_STAGES = [1, 2, 3, 4, 5] as const;
 
 /**
  * Presentation-safe operational totals for the CCRO administrator.
@@ -27,13 +26,9 @@ export const getCcroAdminOverview = createServerFn({ method: "GET" }).handler(
       throw new Error(`Could not load request metrics: ${requestsResult.error.message}`);
     }
 
-    const stageCounts: Record<WorkflowStage, number> = {
-      1: 0,
-      2: 0,
-      3: 0,
-      4: 0,
-      5: 0,
-    };
+    const stageCounts = Object.fromEntries(
+      STAGES.map((stage) => [stage, 0]),
+    ) as Record<WorkflowStage, number>;
     let incompleteRequests = 0;
     let readyForReleaseUnpaid = 0;
 
@@ -54,7 +49,7 @@ export const getCcroAdminOverview = createServerFn({ method: "GET" }).handler(
       stageCounts[STAGE_OF[request.status]] += 1;
     }
 
-    const stages = WORKFLOW_STAGES.map((stage) => ({
+    const stages = STAGES.map((stage) => ({
       stage,
       label: STAGE_LABELS[stage],
       count: stageCounts[stage],

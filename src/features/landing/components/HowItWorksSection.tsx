@@ -27,8 +27,7 @@ const stages = [
   { step: "01", label: "Submission" },
   { step: "02", label: "Validation" },
   { step: "03", label: "Processing" },
-  { step: "04", label: "Approval" },
-  { step: "05", label: "Release" },
+  { step: "04", label: "Release" },
 ];
 
 const HowItWorksSection = () => {
@@ -68,7 +67,7 @@ const HowItWorksSection = () => {
         </div>
 
         {/*
-          The five tracked stages are the spine of the request record, and the
+          The four tracked stages are the spine of the request record, and the
           four steps above are only what the applicant does. Stating them here
           — rather than in a section of their own — keeps the promise attached
           to the process it qualifies.
@@ -76,7 +75,7 @@ const HowItWorksSection = () => {
         <Reveal delay={100}>
           <div className="civic-card mt-6 flex flex-wrap items-center gap-x-6 gap-y-3.5 px-5.5 py-4.5">
             <p className="text-[12.5px] font-bold text-foreground">
-              Every request follows five tracked stages
+              Every request follows four tracked stages
             </p>
 
             <ol className="flex min-w-70 flex-1 flex-wrap items-center gap-x-4 gap-y-2.5">

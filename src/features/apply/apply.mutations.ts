@@ -1,6 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { cleanupAbandonedRequestUploads } from "~/features/apply/apply-upload-drafts.server";
+import {
+  cleanupAbandonedRequestUploads,
+  discardRequestUploadDraft,
+} from "~/features/apply/apply-upload-drafts.server";
 import {
   loadServiceCatalogue,
   resolveServices,
@@ -245,5 +248,19 @@ export const deleteRequestDocumentFn = createServerFn({ method: "POST" })
         .eq("applicant_id", user.id)
         .eq("status", "draft");
     }
+    return { error: false };
+  });
+
+export const discardRequestUploadDraftFn = createServerFn({ method: "POST" })
+  .validator((d: { uploadDraftId: string | null }) => d)
+  .handler(async ({ data }) => {
+    if (!data.uploadDraftId || !uuidSchema.safeParse(data.uploadDraftId).success) {
+      return { error: false };
+    }
+    const { user } = await requireActiveSession("requests:create");
+    await discardRequestUploadDraft({
+      draftId: data.uploadDraftId,
+      applicantId: user.id,
+    });
     return { error: false };
   });

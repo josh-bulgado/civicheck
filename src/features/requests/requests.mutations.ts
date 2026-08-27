@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireActiveSession } from "~/server/auth";
-import { hasPermission, isDepartmentScopedRole } from "~/lib/permissions";
+import { isDepartmentScopedRole } from "~/lib/permissions";
 import {
   ALLOWED_TRANSITIONS,
   REASON_REQUIRED,
@@ -100,15 +100,6 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
             "Every uploaded requirement needs to be accepted first — some are still pending or rejected.",
         };
       }
-    }
-
-    // The final sign-off before release needs a supervisor/admin, not just
-    // anyone who can push a request through the earlier stages.
-    if (toStatus === "ready_for_release" && !hasPermission(role, "requests:approve_release")) {
-      return {
-        error: true,
-        message: "Only a supervisor or admin can approve this request for release.",
-      };
     }
 
     // The cashier verifies payment before the document leaves the counter.

@@ -25,7 +25,7 @@ system exists — don't let any feature work undermine it.
   document.
 - **CCRO Staff** — logs in to a dashboard of submitted requests, reviews pre-validation
   uploads before the applicant's visit, validates walk-in documents (accepted / incomplete /
-  rejected), processes and approves, marks ready for release, and encodes walk-in requests
+  rejected), processes the record, marks it ready for release, and encodes walk-in requests
   for visitors with no account.
 - **Admin** — manages staff/admin accounts and roles, configures document types and their
   requirement checklists (including inter-office dependency notes, e.g. barangay/court/PSA
@@ -45,16 +45,20 @@ system exists — don't let any feature work undermine it.
 
 ## 4. Workflow stages (the backbone of the whole system)
 
-Every request moves through exactly these five stages — model this as an explicit status
+Every request moves through exactly these four stages — model this as an explicit status
 field, not an implicit one:
 
 1. **Submission** — request intent captured, tracking number generated
 2. **Validation** — staff check completeness against the requirement checklist →
    accepted / incomplete / rejected
 3. **Processing** — staff prepare the civil registry record
-4. **Approval** — request signed off
-5. **Release** — payment confirmed via QR (cashier handles the actual transaction), document
+4. **Release** — payment confirmed via QR (cashier handles the actual transaction), document
    handed over, release recorded
+
+There is deliberately **no separate Approval stage**. The CCRO does not want a registrar
+sign-off step between processing and release: whoever prepares the record marks it ready
+for release, and once the cashier verifies payment the document is handed over. Don't
+reintroduce an approval hop or an approver-only permission.
 
 The `requests.status` field stores the exact state of the request using this vocabulary:
 
@@ -65,9 +69,8 @@ The `requests.status` field stores the exact state of the request using this voc
 | `incomplete` | Incomplete | **2. Validation** | Requirements check failed; applicant needs to upload or bring missing files. |
 | `rejected` | Rejected | **2. Validation** | Request denied (e.g. incorrect details, invalid eligibility). |
 | `processing` | Processing | **3. Processing** | Requirements validated; staff are actively preparing/locating the record. |
-| `pending_approval` | Pending Approval | **4. Approval** | Document prepared; awaiting registrar's final signature/approval. |
-| `ready_for_release` | Ready for Release | **5. Release** | Signed and approved. Awaiting cashier payment/verification. |
-| `released` | Released | **5. Release** | Payment verified and document handed over to the applicant. |
+| `ready_for_release` | Ready for Release | **4. Release** | Record prepared. Awaiting cashier payment/verification. |
+| `released` | Released | **4. Release** | Payment verified and document handed over to the applicant. |
 
 *Note: Payment Status is tracked separately in `payment_status` (either `'unpaid'` or `'verified'`).*
 
@@ -110,7 +113,7 @@ than quietly building it.
   dependency tag
 - **Document Requests** — applicant, document type, submission date, unique tracking
   number
-- **Workflow Stages / Status** — submission / validation / processing / approval / release,
+- **Workflow Stages / Status** — submission / validation / processing / release,
   tied to a request
 - **Notifications** — system-generated updates linked to a request + user
 - **Audit Logs** — logins, submissions, admin actions
@@ -169,8 +172,8 @@ making repeat trips to the CCRO just to find out you forgot a document.
    from another office first.
 3. **Submit & Get a Tracking Number** — Submit online or at the CCRO window, and get a
    tracking number to follow your request.
-4. **Track, Get Notified, Claim** — Watch your request move through validation,
-   processing, and approval, get notified when it's ready, then claim it at the CCRO.
+4. **Track, Get Notified, Claim** — Watch your request move through validation and
+   processing, get notified when it's ready, then claim it at the CCRO.
 
 **Services offered (cards):**
 - Birth Certificate

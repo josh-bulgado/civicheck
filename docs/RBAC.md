@@ -32,5 +32,7 @@ never to every request.
 ## Request workflow
 
 New online and walk-in requests begin at `submitted`. Department staff may move
-them to `under_validation`, then through processing, approval, and release.
-Cashier payment verification remains a separate permission and workflow.
+them to `under_validation`, then through processing to `ready_for_release`.
+There is no separate approval stage and no approver-only permission — staff who
+process a request mark it ready themselves. Cashier payment verification remains
+a separate permission and workflow, and is the only gate before `released`.

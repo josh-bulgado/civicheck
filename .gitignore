@@ -48,6 +48,19 @@ pids
 .agents/
 .gemini/
 skills-lock.json
+.agents/
+.claude/
+.opencode/
+opencode.json
+
+
+# AI assistant local state/config (not shared project config)
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+.codex/
+.cursor/
+.windsurf/
+.aider*
 tmp/
 temp/
 *.tsbuildinfo

@@ -14,6 +14,7 @@ import {
   requirementUploadKey,
 } from "~/features/services/requirement-upload.utils";
 import { submitRequestFn } from "~/features/services/services.mutations";
+import { discardRequestUploadDraftFn } from "~/features/apply/apply.mutations";
 import type { ServiceDetail } from "~/features/services/services.queries";
 import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
@@ -73,6 +74,14 @@ export function ReviewStep({
   const [result, setResult] = useState<{ trackingNumber: string; documentWarning?: string } | null>(
     null,
   );
+
+  function handleDiscard() {
+    const uploadDraftId = draft.uploadDraftId;
+    clear();
+    if (uploadDraftId) {
+      discardRequestUploadDraftFn({ data: { uploadDraftId } }).catch(() => {});
+    }
+  }
 
   const selectedService = useMemo(
     () => services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0],
@@ -221,7 +230,7 @@ export function ReviewStep({
             selectedService ? (
               <ChangeServiceButton
                 serviceName={selectedService.name}
-                onDiscard={clear}
+                onDiscard={handleDiscard}
                 label="Change"
               />
             ) : null

@@ -84,6 +84,63 @@ export async function cleanupAbandonedRequestUploads() {
   }
 }
 
+/**
+ * Called when the applicant explicitly discards an in-progress draft
+ * (changing service, switching birth-registration track, or abandoning the
+ * application). Unlike the abandoned-draft sweep, this runs immediately
+ * rather than waiting out `ABANDONED_DRAFT_HOURS`.
+ */
+export async function discardRequestUploadDraft({
+  draftId,
+  applicantId,
+}: {
+  draftId: string;
+  applicantId: string;
+}) {
+  const admin = getSupabaseAdminClient();
+  const { data: files, error: filesError } = await admin
+    .from("request_upload_draft_files")
+    .select("storage_path")
+    .eq("draft_id", draftId);
+  if (filesError) {
+    console.error("Discard-draft file query failed", filesError);
+    return;
+  }
+
+  const paths = (files ?? []).map((file) => file.storage_path);
+  if (paths.length > 0) {
+    const { data: attachments, error: attachmentsError } = await admin
+      .from("requirements_attachments")
+      .select("file_url")
+      .in("file_url", paths);
+    if (attachmentsError) {
+      console.error("Discard-draft attachment check failed", attachmentsError);
+      return;
+    }
+    const referencedPaths = new Set(
+      (attachments ?? []).map((attachment) => attachment.file_url),
+    );
+    const removablePaths = paths.filter((path) => !referencedPaths.has(path));
+    if (removablePaths.length > 0) {
+      const { error: storageError } = await admin.storage
+        .from("request-documents")
+        .remove(removablePaths);
+      if (storageError) {
+        console.error("Discard-draft storage removal failed", storageError);
+        return;
+      }
+    }
+  }
+
+  const { error: deleteError } = await admin
+    .from("request_upload_drafts")
+    .delete()
+    .eq("id", draftId)
+    .eq("applicant_id", applicantId)
+    .eq("status", "draft");
+  if (deleteError) console.error("Discard-draft cleanup failed", deleteError);
+}
+
 export async function finalizeRequestUploadDraft({
   draftId,
   applicantId,
