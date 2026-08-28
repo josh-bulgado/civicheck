@@ -12,7 +12,10 @@ import {
   type TemplateAnswers,
 } from "./form-template.types";
 
-const PURPOSE_OPTIONS = [
+// Exported so the admin service report can bucket anything outside this list
+// as "Other" — `flattenTemplateAnswers` below overwrites "Other" with the
+// applicant's free text, so the stored vocabulary is open-ended.
+export const PURPOSE_OPTIONS = [
   "Local Use (ID, Barangay, etc.)",
   "Employment",
   "Passport / Travel",
