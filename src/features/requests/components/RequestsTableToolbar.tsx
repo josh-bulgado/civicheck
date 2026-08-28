@@ -114,9 +114,12 @@ export function RequestsTableToolbar({
             value === "all" ? undefined : parseWorkflowStage(Number(value)),
           )
         }
-        className="min-w-0"
+        className="min-w-0 "
       >
-        <TabsList variant="accent" className="max-w-full overflow-x-auto">
+        <TabsList
+          variant="accent"
+          className="max-w-full overflow-x-auto overflow-hidden"
+        >
           <TabsTrigger value="all">
             All
             <Badge
