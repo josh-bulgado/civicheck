@@ -12,7 +12,10 @@ import {
 } from "~/features/services/components/ServicesToolbar";
 import { useServiceView } from "~/features/services/hooks/useServiceView";
 import type { ServiceSummary } from "~/features/services/services.queries";
-import { getServiceCategory, getVisitBadge } from "~/features/services/service-utils";
+import {
+  getServiceCategory,
+  getVisitBadge,
+} from "~/features/services/service-utils";
 import type { getMyDepartmentScopeFn } from "~/features/requests/requests.queries";
 import { usePermissions } from "~/hooks/usePermissions";
 
@@ -55,8 +58,9 @@ export default function ServiceCatalogPage({
 
   const oneVisitCount = useMemo(
     () =>
-      services.filter((s) => getVisitBadge(s.processing_time).label === "One visit")
-        .length,
+      services.filter(
+        (s) => getVisitBadge(s.processing_time).label === "One visit",
+      ).length,
     [services],
   );
 
@@ -154,7 +158,9 @@ export default function ServiceCatalogPage({
               className="civic-enter-sm max-w-3xl text-3xl font-extrabold tracking-[-0.035em] text-white sm:text-4xl"
               style={enterDelay(140)}
             >
-              {canApply ? "Browse Document Services" : "Service & Requirements Reference"}
+              {canApply
+                ? "Browse Document Services"
+                : "Service & Requirements Reference"}
             </h1>
             <p
               className="civic-enter-sm mt-3 max-w-2xl text-sm leading-6 text-white/75 sm:text-base"
@@ -171,7 +177,10 @@ export default function ServiceCatalogPage({
               className="rounded-xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm"
               style={staggerStyle(0, 240)}
             >
-              <Files className="mb-3 size-5 text-brand-gold" aria-hidden="true" />
+              <Files
+                className="mb-3 size-5 text-brand-gold"
+                aria-hidden="true"
+              />
               <CountUp
                 value={services.length}
                 className="block text-2xl font-extrabold text-white"
@@ -182,12 +191,17 @@ export default function ServiceCatalogPage({
               className="rounded-xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm"
               style={staggerStyle(1, 240)}
             >
-              <CalendarClock className="mb-3 size-5 text-brand-gold" aria-hidden="true" />
+              <CalendarClock
+                className="mb-3 size-5 text-brand-gold"
+                aria-hidden="true"
+              />
               <CountUp
                 value={oneVisitCount}
                 className="block text-2xl font-extrabold text-white"
               />
-              <p className="mt-0.5 text-xs text-white/65">Finished in one visit</p>
+              <p className="mt-0.5 text-xs text-white/65">
+                Finished in one visit
+              </p>
             </div>
           </div>
         </div>
@@ -203,7 +217,10 @@ export default function ServiceCatalogPage({
             <p className="text-xs font-bold uppercase tracking-[0.13em] text-primary">
               Service directory
             </p>
-            <h2 id="services-list-heading" className="mt-1 text-xl font-bold tracking-tight text-foreground">
+            <h2
+              id="services-list-heading"
+              className="mt-1 text-xl font-bold tracking-tight text-foreground"
+            >
               Select a document service
             </h2>
           </div>
@@ -223,13 +240,18 @@ export default function ServiceCatalogPage({
 
             {visibleServices.length === 0 ? (
               <div className="civic-enter-scale rounded-xl border border-dashed border-border-strong bg-background px-6 py-12 text-center">
-                <p className="text-base font-bold text-foreground">No services match your search</p>
+                <p className="text-base font-bold text-foreground">
+                  No services match your search
+                </p>
                 <p className="mt-1.5 text-sm text-muted-foreground">
                   Try a different keyword, or clear the filters above.
                 </p>
               </div>
             ) : view === "rows" ? (
-              <ServiceDirectory services={visibleServices} canApply={canApply} />
+              <ServiceDirectory
+                services={visibleServices}
+                canApply={canApply}
+              />
             ) : (
               // Cards keep their `service_code` key across filter changes, so React
               // reuses the existing nodes and only genuinely new cards animate in —
@@ -254,7 +276,8 @@ export default function ServiceCatalogPage({
                   size="lg"
                   onClick={() => setShowAll(true)}
                 >
-                  Show the remaining {remainingCount} service{remainingCount === 1 ? "" : "s"}
+                  Show the remaining {remainingCount} service
+                  {remainingCount === 1 ? "" : "s"}
                 </Button>
               </div>
             )}
