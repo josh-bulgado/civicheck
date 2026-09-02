@@ -1,5 +1,5 @@
 /**
- * The five-stage CCRO workflow (CLAUDE.md §4) expressed as data.
+ * The four-stage CCRO workflow (CLAUDE.md §4) expressed as data.
  *
  * `requests.status` is the single source of truth for where a request sits.
  * Everything that moves a request must go through ALLOWED_TRANSITIONS so the
@@ -12,21 +12,19 @@ export const REQUEST_STATUSES = [
   "incomplete",
   "rejected",
   "processing",
-  "pending_approval",
   "ready_for_release",
   "released",
 ] as const;
 
 export type RequestStatus = (typeof REQUEST_STATUSES)[number];
 
-export type WorkflowStage = 1 | 2 | 3 | 4 | 5;
+export type WorkflowStage = 1 | 2 | 3 | 4;
 
 export const STAGE_LABELS: Record<WorkflowStage, string> = {
   1: "Submission",
   2: "Validation",
   3: "Processing",
-  4: "Approval",
-  5: "Release",
+  4: "Release",
 };
 
 export const STAGE_OF: Record<RequestStatus, WorkflowStage> = {
@@ -35,17 +33,17 @@ export const STAGE_OF: Record<RequestStatus, WorkflowStage> = {
   incomplete: 2,
   rejected: 2,
   processing: 3,
-  pending_approval: 4,
-  ready_for_release: 5,
-  released: 5,
+  ready_for_release: 4,
+  released: 4,
 };
 
 export const ALLOWED_TRANSITIONS: Record<RequestStatus, RequestStatus[]> = {
   submitted: ["under_validation", "rejected"],
   under_validation: ["incomplete", "processing", "rejected"],
   incomplete: ["under_validation", "rejected"],
-  processing: ["pending_approval"],
-  pending_approval: ["processing", "ready_for_release", "rejected"],
+  // No registrar sign-off step: whoever prepares the record marks it ready.
+  // Rejection stays reachable here so an in-processing request isn't trapped.
+  processing: ["ready_for_release", "rejected"],
   // Payment is verified by the cashier before the document is handed over;
   // the released hop is guarded on payment_status in advanceRequestStatusFn.
   ready_for_release: ["released"],
@@ -83,8 +81,7 @@ export const TRANSITION_LABELS: Record<RequestStatus, string> = {
   incomplete: "Mark incomplete",
   rejected: "Reject request",
   processing: "Mark requirements complete",
-  pending_approval: "Send for approval",
-  ready_for_release: "Approve for release",
+  ready_for_release: "Mark ready for release",
   released: "Mark released",
 };
 

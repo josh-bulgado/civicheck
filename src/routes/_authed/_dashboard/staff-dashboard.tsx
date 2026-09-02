@@ -71,7 +71,9 @@ export const Route = createFileRoute("/_authed/_dashboard/staff-dashboard")({
       canEncodeWalkIn,
       awaitingIntake: inStage(1),
       inValidation: inStage(2),
-      inProgress: inStage(3) + inStage(4),
+      // Stage 4 is Release, which the readyForRelease tile already counts —
+      // rolling it in here would double-count it (and pull in released ones).
+      inProgress: inStage(3),
       readyForRelease: requests.filter((r) => r.status === "ready_for_release").length,
       unpaid: requests.filter(
         (r) => r.status === "ready_for_release" && r.paymentStatus !== "verified",

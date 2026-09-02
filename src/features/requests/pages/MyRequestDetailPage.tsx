@@ -1,7 +1,14 @@
 import { Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, ExternalLink, Upload } from "lucide-react";
+import {
+  ArrowLeft,
+  ExternalLink,
+  File,
+  FileText,
+  Image as ImageIcon,
+  Upload,
+} from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -11,6 +18,24 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "~/components/ui/item";
+import {
+  Timeline,
+  TimelineContent,
+  TimelineDate,
+  TimelineHeader,
+  TimelineIndicator,
+  TimelineItem,
+  TimelineSeparator,
+  TimelineTitle,
+} from "~/components/reui/timeline";
 import type { MyRequestDetail } from "~/features/requests/applicant-requests.queries";
 import {
   getMyAttachmentSignedUrlFn,
@@ -58,6 +83,13 @@ function formatDateTime(value: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function getFileKind(url: string): "image" | "pdf" | "other" {
+  const clean = url.split("?")[0].toLowerCase();
+  if (/\.(png|jpe?g|gif|webp|svg)$/.test(clean)) return "image";
+  if (/\.pdf$/.test(clean)) return "pdf";
+  return "other";
 }
 
 function getAttachmentStatusVariant(
@@ -166,17 +198,17 @@ export default function MyRequestDetailPage({ request, onUpdated }: MyRequestDet
                 Nothing was pre-uploaded for this request.
               </p>
             ) : (
-              <div className="civic-stagger-auto flex flex-col gap-3">
+              <ItemGroup className="civic-stagger-auto gap-3">
                 {request.attachments.map((doc) => (
                   <AttachmentRow key={doc.id} doc={doc} onChanged={onUpdated} />
                 ))}
-              </div>
+              </ItemGroup>
             )}
           </section>
 
           <section className="dashboard-panel p-6">
             <h2 className="mb-4 text-lg font-bold text-foreground">Status history</h2>
-            <ol className="civic-stagger-auto flex flex-col gap-4">
+            <Timeline className="civic-stagger-auto">
               {/* Document approvals and reversals are staff-side plumbing —
                   they don't move the request forward or ask the applicant to
                   do anything, so they'd just be noise here. A rejection
@@ -194,27 +226,26 @@ export default function MyRequestDetailPage({ request, onUpdated }: MyRequestDet
                   // landing on first in an otherwise-quiet gray timeline.
                   const isCurrent = index === visibleLogs.length - 1;
                   return (
-                    <li key={log.id} className="flex gap-4">
-                      <div
-                        className={`shrink-0 rounded-full ${logStatus.dot} ${
-                          isCurrent
-                            ? "mt-1 size-3 ring-4 ring-primary/15"
-                            : "mt-1.5 size-2"
-                        }`}
-                      />
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">
-                          {logStatus.label}
-                        </p>
-                        {log.remarks && (
-                          <p className="text-sm text-muted-foreground">{log.remarks}</p>
-                        )}
-                        <p className="text-xs text-muted-foreground">{formatDateTime(log.createdAt)}</p>
-                      </div>
-                    </li>
+                    <TimelineItem key={log.id} step={index + 1}>
+                      <TimelineHeader>
+                        <TimelineSeparator />
+                        <TimelineIndicator
+                          className={`border-0 ${logStatus.dot} ${
+                            isCurrent ? "size-4 ring-4 ring-primary/15" : "size-3"
+                          }`}
+                        />
+                        <TimelineTitle>{logStatus.label}</TimelineTitle>
+                        <TimelineDate dateTime={log.createdAt}>
+                          {formatDateTime(log.createdAt)}
+                        </TimelineDate>
+                      </TimelineHeader>
+                      {log.remarks && (
+                        <TimelineContent>{log.remarks}</TimelineContent>
+                      )}
+                    </TimelineItem>
                   );
                 })}
-            </ol>
+            </Timeline>
           </section>
         </div>
 
@@ -304,25 +335,30 @@ function AttachmentRow({
     }
   }
 
+  const fileKind = viewerUrl ? getFileKind(viewerUrl) : null;
+
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-border-light p-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-foreground">
+    <div className="flex flex-col gap-3">
+      <Item variant="outline" className="rounded-lg border-border-light p-4">
+        <ItemMedia variant="icon">
+          <FileText className="size-4" />
+        </ItemMedia>
+        <ItemContent>
+          <ItemTitle className="font-semibold text-foreground">
             {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
             {doc.requirementName}
-          </p>
+          </ItemTitle>
           <Badge
             variant={getAttachmentStatusVariant(doc.verificationStatus)}
-            className="mt-1 capitalize"
+            className="w-fit capitalize"
           >
             {doc.verificationStatus}
           </Badge>
           {doc.verificationStatus === "rejected" && doc.rejectionReason && (
-            <p className="mt-1 text-xs text-destructive">{doc.rejectionReason}</p>
+            <p className="text-xs text-destructive">{doc.rejectionReason}</p>
           )}
-        </div>
-        <div className="flex flex-wrap gap-2">
+        </ItemContent>
+        <ItemActions className="flex-wrap">
           <Button size="sm" variant="ghost" disabled={viewing} onClick={handleViewFile}>
             <ExternalLink data-icon="inline-start" />
             View file
@@ -350,11 +386,11 @@ function AttachmentRow({
               </Button>
             </>
           )}
-        </div>
-      </div>
+        </ItemActions>
+      </Item>
 
       <Dialog open={viewerUrl != null} onOpenChange={(open) => !open && setViewerUrl(null)}>
-        <DialogContent className="sm:max-w-3xl">
+        <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>
               {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
@@ -362,12 +398,34 @@ function AttachmentRow({
             </DialogTitle>
           </DialogHeader>
           {viewerUrl && (
-            <div className="flex max-h-[75vh] flex-col items-center overflow-auto">
-              <iframe
-                src={viewerUrl}
-                title={doc.requirementName}
-                className="h-[70vh] w-full rounded-md border border-border-light"
-              />
+            <div className="flex h-[75vh] items-center justify-center overflow-hidden">
+              {fileKind === "image" ? (
+                <img
+                  src={viewerUrl}
+                  alt={doc.requirementName}
+                  className="h-full w-full rounded-md object-contain"
+                />
+              ) : fileKind === "pdf" ? (
+                <iframe
+                  src={viewerUrl}
+                  title={doc.requirementName}
+                  className="h-full w-full rounded-md border border-border-light"
+                />
+              ) : (
+                <div className="flex flex-col items-center gap-3 py-8 text-sm text-muted-foreground">
+                  <p>This file type can't be previewed here.</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    render={
+                      <a href={viewerUrl} target="_blank" rel="noopener noreferrer" />
+                    }
+                  >
+                    <ExternalLink className="size-4" />
+                    Open in a new tab
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

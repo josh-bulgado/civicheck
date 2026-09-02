@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireActiveSession } from "~/server/auth";
+import { getSupabaseAdminClient } from "~/utils/supabase";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
 const MAX_SIZE = 10 * 1024 * 1024;
@@ -44,10 +45,11 @@ export const resubmitOwnAttachmentFn = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const { supabase, user } = await requireActiveSession("requests:view_own");
+    const admin = getSupabaseAdminClient();
 
     const { data: attachment, error: fetchError } = await supabase
       .from("requirements_attachments")
-      .select("id, request_id, requirement_name, verification_status, requests!inner(applicant_id)")
+      .select("id, request_id, requirement_name, verification_status, file_url, requests!inner(applicant_id)")
       .eq("id", data.attachmentId)
       .eq("requests.applicant_id", user.id)
       .maybeSingle();
@@ -88,7 +90,17 @@ export const resubmitOwnAttachmentFn = createServerFn({ method: "POST" })
       })
       .eq("id", attachment.id);
     if (updateError) {
+      await admin.storage.from("request-documents").remove([path]);
       return { error: true, message: updateError.message };
+    }
+
+    if (attachment.file_url !== path) {
+      const { error: oldFileError } = await admin.storage
+        .from("request-documents")
+        .remove([attachment.file_url]);
+      if (oldFileError) {
+        console.error("Failed to remove superseded attachment", oldFileError);
+      }
     }
 
     const { error: logError } = await supabase.from("application_logs").insert({

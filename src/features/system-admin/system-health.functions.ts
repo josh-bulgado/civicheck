@@ -46,12 +46,7 @@ const serviceDetails: Record<
   },
 };
 
-const activeRequestStatuses = [
-  "submitted",
-  "under_validation",
-  "processing",
-  "pending_approval",
-];
+const activeRequestStatuses = ["submitted", "under_validation", "processing"];
 
 function normalizeStatus(value: unknown): HealthStatus {
   return value === "operational" ||

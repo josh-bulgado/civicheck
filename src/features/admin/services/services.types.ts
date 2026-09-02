@@ -26,6 +26,8 @@ export interface Service {
   requirement_group: string | null;
   /** Owning CCRO department — what the request queue's Department column reads. */
   department_id: string | null;
+  /** Resolved from `department_id` via join — only populated by `getAdminServices`. */
+  department_name?: string | null;
   /** Who the intake form asks about, e.g. ["Subject"] or ["Bride", "Groom"]. */
   party_roles: string[];
   /** Falls back to "Date of event" / "Place of event" in the apply wizard when null. */

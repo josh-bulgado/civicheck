@@ -14,9 +14,9 @@ import {
   type WorkflowStage,
 } from "./request-workflow";
 
-export const STAGES: WorkflowStage[] = [1, 2, 3, 4, 5];
+export const STAGES: WorkflowStage[] = [1, 2, 3, 4];
 
-/** The statuses that roll up into each of the five stages. */
+/** The statuses that roll up into each of the four stages. */
 export const STAGE_STATUSES = STAGES.reduce<Record<WorkflowStage, string[]>>(
   (acc, stage) => {
     acc[stage] = REQUEST_STATUSES.filter((status) => STAGE_OF[status] === stage);
@@ -55,7 +55,6 @@ export function parseWorkflowStage(value: unknown): WorkflowStage | undefined {
     case 2:
     case 3:
     case 4:
-    case 5:
       return value;
     default:
       return undefined;
@@ -88,7 +87,6 @@ export function getStatusBadgeVariant(status: string | null) {
   switch (status) {
     case "submitted":
     case "incomplete":
-    case "pending_approval":
       return "warning" as const;
     case "under_validation":
     case "processing":

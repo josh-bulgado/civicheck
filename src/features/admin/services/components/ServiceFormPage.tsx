@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useBlocker } from "@tanstack/react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormProvider, useForm } from "react-hook-form";
@@ -218,9 +218,14 @@ export function ServiceFormPage({
   }
 
   const isDirty = form.formState.isDirty || templateDirty || presetCode !== "";
+  // Set synchronously right before a post-save navigate() so the blocker
+  // sees it immediately. `isDirty` above is only refreshed via `setState`,
+  // which hasn't committed yet when navigate() fires right after a save.
+  const skipNextBlockRef = useRef(false);
   const blocker = useBlocker({
     enableBeforeUnload: isDirty,
     shouldBlockFn: ({ current, next }) => {
+      if (skipNextBlockRef.current) return false;
       return current.pathname !== next.pathname && isDirty;
     },
     withResolver: true,
@@ -468,6 +473,7 @@ export function ServiceFormPage({
         ? "Service and application form published."
         : "Service created and application form published.",
     );
+    skipNextBlockRef.current = true;
     resetEditor();
     onSaved();
   }

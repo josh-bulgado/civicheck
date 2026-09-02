@@ -13,6 +13,7 @@ import type {
   StaffRequestRow,
   getMyDepartmentScopeFn,
 } from "~/features/requests/requests.queries";
+import type { WorkflowStage } from "~/features/requests/request-workflow";
 import type { EncodableService } from "~/features/requests/walk-in-intake.queries";
 import { getStatusDetails } from "~/features/services/request-status";
 import { WalkInIntakeDialog } from "~/features/requests/components/WalkInIntakeDialog";
@@ -271,7 +272,7 @@ function StageRow({
   label: string;
   count: number;
   note?: string;
-  search?: { stage: 1 | 2 | 3 | 4 | 5 };
+  search?: { stage: WorkflowStage };
 }) {
   return (
     <Link

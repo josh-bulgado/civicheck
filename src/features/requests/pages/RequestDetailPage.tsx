@@ -1,7 +1,15 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { ArrowLeft, CheckCircle2, ExternalLink, XCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ExternalLink,
+  File,
+  FileText,
+  Image as ImageIcon,
+  XCircle,
+} from "lucide-react";
 import { usePermissions } from "~/hooks/usePermissions";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
@@ -12,6 +20,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "~/components/ui/item";
+import {
+  Timeline,
+  TimelineContent,
+  TimelineDate,
+  TimelineHeader,
+  TimelineIndicator,
+  TimelineItem,
+  TimelineSeparator,
+  TimelineTitle,
+} from "~/components/reui/timeline";
 import type { RequestDetail } from "~/features/requests/requests.queries";
 import {
   advanceRequestStatusFn,
@@ -46,8 +73,10 @@ function formatKey(key: string) {
  */
 function formDataLabel(key: string, request: RequestDetail) {
   if (request.fieldLabels[key]) return request.fieldLabels[key];
-  if (key === "event_date" && request.eventDateLabel) return request.eventDateLabel;
-  if (key === "event_place" && request.eventPlaceLabel) return request.eventPlaceLabel;
+  if (key === "event_date" && request.eventDateLabel)
+    return request.eventDateLabel;
+  if (key === "event_place" && request.eventPlaceLabel)
+    return request.eventPlaceLabel;
   if (key === "reference_number" && request.referenceNumberLabel) {
     return request.referenceNumberLabel;
   }
@@ -70,7 +99,10 @@ interface RequestDetailPageProps {
   onUpdated: () => void;
 }
 
-export default function RequestDetailPage({ request, onUpdated }: RequestDetailPageProps) {
+export default function RequestDetailPage({
+  request,
+  onUpdated,
+}: RequestDetailPageProps) {
   const { can } = usePermissions();
 
   const [remarks, setRemarks] = useState("");
@@ -82,18 +114,14 @@ export default function RequestDetailPage({ request, onUpdated }: RequestDetailP
   const available = nextStatuses(request.status);
 
   const canProcess = can("requests:process");
-  const canApproveRelease = can("requests:approve_release");
   const canReverseVerification = can("requests:reverse_verification");
   const hasUnresolvedAttachments = request.attachments.some(
     (doc) => doc.verificationStatus !== "approved",
   );
   const visibleTransitions = available.filter((s) => {
-    if (s === "ready_for_release" && !canApproveRelease) return false;
     if (s === "processing" && hasUnresolvedAttachments) return false;
     return true;
   });
-  const needsApprovalPermission =
-    available.includes("ready_for_release") && !canApproveRelease;
   const needsAttachmentsResolved =
     available.includes("processing") && hasUnresolvedAttachments;
 
@@ -197,7 +225,10 @@ export default function RequestDetailPage({ request, onUpdated }: RequestDetailP
       </header>
 
       <div className="civic-stagger mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div style={staggerStyle(0)} className="flex flex-col gap-6 lg:col-span-2">
+        <div
+          style={staggerStyle(0)}
+          className="flex flex-col gap-6 lg:col-span-2"
+        >
           <section className="rounded-xl border border-border bg-white p-6">
             <h2 className="mb-4 text-lg font-bold text-foreground">
               Submitted details
@@ -226,7 +257,7 @@ export default function RequestDetailPage({ request, onUpdated }: RequestDetailP
                 counter.
               </p>
             ) : (
-              <div className="civic-stagger-auto flex flex-col gap-3">
+              <ItemGroup className="civic-stagger-auto gap-3">
                 {request.attachments.map((doc) => (
                   <AttachmentRow
                     key={doc.id}
@@ -237,13 +268,13 @@ export default function RequestDetailPage({ request, onUpdated }: RequestDetailP
                     onRevert={handleAttachmentRevert}
                   />
                 ))}
-              </div>
+              </ItemGroup>
             )}
           </section>
 
           <section className="rounded-xl border border-border bg-white p-6">
             <h2 className="mb-4 text-lg font-bold text-foreground">History</h2>
-            <ol className="civic-stagger-auto flex flex-col gap-4">
+            <Timeline className="civic-stagger-auto">
               {request.logs.map((log, index) => {
                 const logStatus = getStatusDetails(log.actionStatus);
                 // Logs come back oldest-first, so the last entry is the
@@ -251,31 +282,26 @@ export default function RequestDetailPage({ request, onUpdated }: RequestDetailP
                 // landing on first in an otherwise-quiet gray timeline.
                 const isCurrent = index === request.logs.length - 1;
                 return (
-                  <li key={log.id} className="flex gap-4">
-                    <div
-                      className={`shrink-0 rounded-full ${logStatus.dot} ${
-                        isCurrent
-                          ? "mt-1 size-3 ring-4 ring-primary/15"
-                          : "mt-1.5 size-2"
-                      }`}
-                    />
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        {logStatus.label}
-                      </p>
-                      {log.remarks && (
-                        <p className="text-sm text-muted-foreground">
-                          {log.remarks}
-                        </p>
-                      )}
-                      <p className="text-xs text-muted-foreground">
+                  <TimelineItem key={log.id} step={index + 1}>
+                    <TimelineHeader>
+                      <TimelineSeparator />
+                      <TimelineIndicator
+                        className={`border-0 ${logStatus.dot} ${
+                          isCurrent ? "size-4 ring-4 ring-primary/15" : "size-3"
+                        }`}
+                      />
+                      <TimelineTitle>{logStatus.label}</TimelineTitle>
+                      <TimelineDate dateTime={log.createdAt}>
                         {formatDateTime(log.createdAt)} · {log.actorName}
-                      </p>
-                    </div>
-                  </li>
+                      </TimelineDate>
+                    </TimelineHeader>
+                    {log.remarks && (
+                      <TimelineContent>{log.remarks}</TimelineContent>
+                    )}
+                  </TimelineItem>
                 );
               })}
-            </ol>
+            </Timeline>
           </section>
         </div>
 
@@ -301,7 +327,9 @@ export default function RequestDetailPage({ request, onUpdated }: RequestDetailP
                     <div className="flex flex-col gap-2">
                       <Label htmlFor="remarks">
                         Remarks
-                        {visibleTransitions.some((s) => REASON_REQUIRED.includes(s))
+                        {visibleTransitions.some((s) =>
+                          REASON_REQUIRED.includes(s),
+                        )
                           ? " (required to reject or mark incomplete)"
                           : " (optional)"}
                       </Label>
@@ -331,18 +359,8 @@ export default function RequestDetailPage({ request, onUpdated }: RequestDetailP
 
                 {needsAttachmentsResolved && (
                   <p className="civic-enter-sm rounded-lg border border-warning/20 bg-warning/5 p-3 text-xs text-warning-strong">
-                    Every uploaded requirement needs to be accepted first —
-                    some are still pending or rejected.
-                  </p>
-                )}
-
-                {needsApprovalPermission && (
-                  <p className="civic-enter-sm rounded-lg border border-warning/20 bg-warning/5 p-3 text-xs text-warning-strong">
-                    This request is ready for final sign-off, but approving it
-                    for release requires a supervisor or admin.{" "}
-                    {visibleTransitions.length > 0
-                      ? "You can still send it back to processing or reject it below."
-                      : "Ask a supervisor or admin to approve it."}
+                    Every uploaded requirement needs to be accepted first — some
+                    are still pending or rejected.
                   </p>
                 )}
 
@@ -460,19 +478,28 @@ function AttachmentRow({
   const fileKind = getFileKind(doc.fileUrl);
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-border-light p-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-foreground">
+    <div className="flex flex-col gap-3">
+      <Item variant="outline" className="rounded-lg border-border-light p-4">
+        <ItemMedia variant="icon">
+          {fileKind === "image" ? (
+            <ImageIcon className="size-4" />
+          ) : fileKind === "pdf" ? (
+            <FileText className="size-4" />
+          ) : (
+            <File className="size-4" />
+          )}
+        </ItemMedia>
+        <ItemContent>
+          <ItemTitle className="font-semibold text-foreground">
             {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
             {doc.requirementName}
-          </p>
-          <p className="text-xs capitalize text-muted-foreground">
+          </ItemTitle>
+          <ItemDescription className="text-xs capitalize">
             {doc.verificationStatus}
             {doc.rejectionReason ? ` — ${doc.rejectionReason}` : ""}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+          </ItemDescription>
+        </ItemContent>
+        <ItemActions className="flex-wrap">
           <Button
             size="sm"
             variant="ghost"
@@ -486,7 +513,7 @@ function AttachmentRow({
             <>
               <Button
                 size="sm"
-                variant="outline"
+                variant="success"
                 disabled={busy}
                 onClick={handleAccept}
               >
@@ -495,7 +522,7 @@ function AttachmentRow({
               </Button>
               <Button
                 size="sm"
-                variant="outline"
+                variant="destructive"
                 disabled={busy}
                 onClick={() => setRejecting(true)}
               >
@@ -514,8 +541,8 @@ function AttachmentRow({
               Undo decision
             </Button>
           )}
-        </div>
-      </div>
+        </ItemActions>
+      </Item>
 
       {reverting && (
         <div className="civic-enter-sm flex flex-col gap-2 rounded-lg border border-border-light bg-muted/30 p-3">
@@ -593,7 +620,7 @@ function AttachmentRow({
         open={viewerUrl != null}
         onOpenChange={(open) => !open && setViewerUrl(null)}
       >
-        <DialogContent className="sm:max-w-3xl">
+        <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>
               {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
@@ -601,18 +628,18 @@ function AttachmentRow({
             </DialogTitle>
           </DialogHeader>
           {viewerUrl && (
-            <div className="flex max-h-[75vh] flex-col items-center overflow-auto">
+            <div className="flex h-[75vh] items-center justify-center overflow-hidden">
               {fileKind === "image" ? (
                 <img
                   src={viewerUrl}
                   alt={doc.requirementName}
-                  className="max-h-[70vh] w-full rounded-md object-contain"
+                  className="h-full w-full rounded-md object-contain"
                 />
               ) : fileKind === "pdf" ? (
                 <iframe
                   src={viewerUrl}
                   title={doc.requirementName}
-                  className="h-[70vh] w-full rounded-md border border-border-light"
+                  className="h-full w-full rounded-md border border-border-light"
                 />
               ) : (
                 <div className="flex flex-col items-center gap-3 py-8 text-sm text-muted-foreground">

@@ -23,7 +23,7 @@ async function verifyTrackingAccess(trackingNumberRaw: string, lastNameRaw: stri
   const { data: request, error } = await supabase
     .from("requests")
     .select(
-      "id, tracking_number, request_type, status, payment_status, created_at, fees_due, form_data, services_registry(name)",
+      "id, applicant_id, tracking_number, request_type, status, payment_status, created_at, fees_due, form_data, services_registry(name)",
     )
     .eq("tracking_number", trackingNumber)
     .maybeSingle();
@@ -99,7 +99,7 @@ export const resubmitAttachmentFn = createServerFn({ method: "POST" })
 
     const { data: attachment, error: attachmentError } = await supabase
       .from("requirements_attachments")
-      .select("id, request_id, requirement_name, verification_status")
+      .select("id, request_id, requirement_name, verification_status, file_url")
       .eq("id", data.attachmentId)
       .eq("request_id", request.id)
       .maybeSingle();
@@ -119,7 +119,8 @@ export const resubmitAttachmentFn = createServerFn({ method: "POST" })
     }
 
     const safeName = data.file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const path = `resubmissions/${request.id}/${attachment.id}/${Date.now()}-${safeName}`;
+    const ownerFolder = request.applicant_id ?? "tracked";
+    const path = `${ownerFolder}/resubmissions/${request.id}/${attachment.id}/${Date.now()}-${safeName}`;
 
     const { error: uploadError } = await supabase.storage
       .from("request-documents")
@@ -138,7 +139,17 @@ export const resubmitAttachmentFn = createServerFn({ method: "POST" })
       })
       .eq("id", attachment.id);
     if (updateError) {
+      await supabase.storage.from("request-documents").remove([path]);
       return { error: true, message: updateError.message };
+    }
+
+    if (attachment.file_url !== path) {
+      const { error: oldFileError } = await supabase.storage
+        .from("request-documents")
+        .remove([attachment.file_url]);
+      if (oldFileError) {
+        console.error("Failed to remove superseded attachment", oldFileError);
+      }
     }
 
     const { error: logError } = await supabase.from("application_logs").insert({

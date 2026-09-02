@@ -3,6 +3,7 @@ import { defineConfig } from "vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { nitro } from "nitro/vite";
+import { devtools } from "@tanstack/devtools-vite";
 
 export default defineConfig({
   server: {
@@ -11,5 +12,5 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
-  plugins: [tailwindcss(), tanstackStart(), viteReact(), nitro()],
+  plugins: [devtools(), tailwindcss(), tanstackStart(), viteReact(), nitro()],
 });
