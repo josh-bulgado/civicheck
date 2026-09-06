@@ -316,6 +316,10 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   }
 
   function onSubmit(values: DetailsValues) {
+    // Hidden suffix/sex controls are unregistered by React Hook Form. Convert
+    // the submitted rows back to complete SubjectFields objects before saving
+    // them in either `subjects` location in the draft.
+    const subjects = reconcileSubjects(values.subjects, roles);
     const dynamicValues = Object.fromEntries(
       detailsFields
         .filter((field) => field.type !== "person_group")
@@ -328,7 +332,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       const answers = {
         ...previous.answers,
         ...dynamicValues,
-        ...(personGroupField ? { [personGroupField.key]: values.subjects } : {}),
+        ...(personGroupField ? { [personGroupField.key]: subjects } : {}),
       };
       const answerBag = deriveTemplateAnswers(definition, {
         ...answers,
@@ -346,7 +350,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
           .map((requirement) => requirement.id),
       );
       return {
-        subjects: values.subjects,
+        subjects,
         contactNumber:
           typeof values.contact_number === "string"
             ? values.contact_number

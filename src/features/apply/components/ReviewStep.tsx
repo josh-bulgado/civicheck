@@ -31,7 +31,11 @@ import type {
   FormFieldDefinition,
   TemplateAnswers,
 } from "~/features/forms/form-template.types";
-import { impliedSex, subjectFullName } from "~/lib/subject-fields";
+import {
+  impliedSex,
+  reconcileSubjects,
+  subjectFullName,
+} from "~/lib/subject-fields";
 
 const REVIEW_DATE_FORMATTER = new Intl.DateTimeFormat("en-PH", {
   year: "numeric",
@@ -93,8 +97,14 @@ export function ReviewStep({
     () => services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0],
     [services, draft.selectedServiceCode],
   );
+  const roles = selectedService?.party_roles?.length
+    ? selectedService.party_roles
+    : ["Subject"];
+  // Also normalize here so drafts saved before this fix can be submitted
+  // directly from the review page without making the applicant re-enter data.
+  const subjects = reconcileSubjects(draft.subjects, roles);
 
-  const showRoleLabels = draft.subjects.length > 1;
+  const showRoleLabels = subjects.length > 1;
   const sexLabel = (sex: string) =>
     sex === "male" ? "Male" : sex === "female" ? "Female" : "—";
 
@@ -103,7 +113,7 @@ export function ReviewStep({
     definition.sections
       .flatMap((section) => section.fields)
       .filter((field) => field.type === "person_group")
-      .map((field) => [field.key, draft.subjects]),
+      .map((field) => [field.key, subjects]),
   );
   const answerBag: TemplateAnswers = deriveTemplateAnswers(definition, {
     ...draft.answers,
@@ -119,7 +129,7 @@ export function ReviewStep({
           answerBag,
         ),
       ),
-      draft.subjects,
+      subjects,
     ).map((slot) => slot.key),
   );
   const activeDocuments = draft.documents.filter((document) =>
@@ -303,14 +313,14 @@ export function ReviewStep({
               .flatMap((field) => {
                 if (field.type === "person_group") {
                   return [
-                    ...draft.subjects.map((subject, index) => (
+                    ...subjects.map((subject, index) => (
                       <ReviewRow
                         key={`${field.key}-name-${index}`}
                         label={showRoleLabels ? subject.role : field.label}
                         value={subjectFullName(subject) || "—"}
                       />
                     )),
-                    ...draft.subjects
+                    ...subjects
                       .filter((subject) => impliedSex(subject.role) === null)
                       .map((subject, index) => (
                         <ReviewRow
