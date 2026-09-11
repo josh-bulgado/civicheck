@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   ArrowLeft,
+  Download,
   ExternalLink,
   File,
   FileText,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { useAcknowledgmentPdfDownload } from "~/features/requests/pdf/useAcknowledgmentPdfDownload";
 import { Input } from "~/components/ui/input";
 import {
   Dialog,
@@ -115,6 +117,20 @@ export default function MyRequestDetailPage({ request, onUpdated }: MyRequestDet
   const status = getStatusDetails(request.status);
   const payment = getPaymentDetails(request.paymentStatus);
   const stage = stageOf(request.status);
+  const { download: downloadAcknowledgmentPdf, downloading: downloadingPdf } =
+    useAcknowledgmentPdfDownload();
+
+  function handleDownloadPdf() {
+    downloadAcknowledgmentPdf({
+      trackingNumber: request.trackingNumber,
+      serviceName: request.serviceName,
+      status: request.status,
+      submittedAt: request.createdAt,
+      feesDue: request.feesDue,
+      processingTime: request.processingTime,
+      documents: request.attachments,
+    });
+  }
 
   return (
     <div className="dashboard-page">
@@ -137,7 +153,7 @@ export default function MyRequestDetailPage({ request, onUpdated }: MyRequestDet
             </h1>
             <p className="mt-2 text-sm text-white/75">{request.serviceName}</p>
           </div>
-          <div className="civic-stagger flex flex-wrap gap-2">
+          <div className="civic-stagger flex flex-wrap items-center gap-2">
             <Badge
               variant={status.variant}
               style={staggerStyle(0)}
@@ -150,6 +166,15 @@ export default function MyRequestDetailPage({ request, onUpdated }: MyRequestDet
             >
               {payment.label}
             </Badge>
+            <Button
+              size="sm"
+              disabled={downloadingPdf}
+              onClick={handleDownloadPdf}
+              style={staggerStyle(2)}
+            >
+              <Download data-icon="inline-start" />
+              {downloadingPdf ? "Preparing..." : "Download PDF"}
+            </Button>
           </div>
         </div>
       </header>

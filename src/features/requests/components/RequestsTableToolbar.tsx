@@ -1,6 +1,9 @@
-import { Building2, Search } from "lucide-react";
+import { useState } from "react";
+import { Building2, QrCode, Search } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { QrScannerDialog } from "~/features/requests/components/QrScannerDialog";
 import { cn } from "~/lib/utils";
 import {
   Select,
@@ -45,16 +48,35 @@ export function RequestsTableToolbar({
   onDepartmentFilterChange,
   scopedDepartmentName,
 }: RequestsTableToolbarProps) {
+  const [scannerOpen, setScannerOpen] = useState(false);
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-center">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search by tracking number, applicant, or service..."
-            value={globalFilter}
-            onChange={(e) => onGlobalFilterChange(e.target.value)}
-            className="h-10 rounded-lg border-border pl-10 text-sm focus-visible:border-primary focus-visible:ring-primary"
+        <div className="flex flex-1 items-center gap-2">
+          <div className="relative max-w-md flex-1">
+            <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search by tracking number, applicant, or service..."
+              value={globalFilter}
+              onChange={(e) => onGlobalFilterChange(e.target.value)}
+              className="h-10 rounded-lg border-border pl-10 text-sm focus-visible:border-primary focus-visible:ring-primary"
+            />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-10 w-10 shrink-0"
+            aria-label="Scan tracking QR"
+            onClick={() => setScannerOpen(true)}
+          >
+            <QrCode className="size-4" />
+          </Button>
+          <QrScannerDialog
+            open={scannerOpen}
+            onOpenChange={setScannerOpen}
+            onDecode={onGlobalFilterChange}
           />
         </div>
 

@@ -4,12 +4,16 @@ import { finalizeRequestUploadDraft } from "~/features/apply/apply-upload-drafts
 import { requireActiveSession } from "~/server/auth";
 import { insertRequestWithTrackingNumber } from "~/features/requests/tracking-number";
 import { isRequirementApplicable } from "~/features/services/service-utils";
-import { loadServiceCatalogue, resolveServices } from "~/features/services/services.catalogue";
+import {
+  loadServiceCatalogue,
+  resolveServices,
+} from "~/features/services/services.catalogue";
 import {
   expandRequirementUploadSlots,
   requirementUploadKey,
 } from "~/features/services/requirement-upload.utils";
 import type { SubjectFields } from "~/lib/subject-fields";
+import type { AcknowledgmentPdfData } from "~/features/requests/pdf/types";
 import { getSupabaseAdminClient } from "~/utils/supabase";
 import {
   buildLegacyFormDefinition,
@@ -276,8 +280,9 @@ export const submitRequestFn = createServerFn({ method: "POST" })
     const { requestId, trackingNumber } = created;
 
     let documentWarning: string | undefined;
+    let submittedDocuments: AcknowledgmentPdfData["documents"] = [];
     if (data.documents && data.documents.length > 0) {
-      const { error: docsError } = await supabase.from("requirements_attachments").insert(
+      const { data: savedDocuments, error: docsError } = await supabase.from("requirements_attachments").insert(
         data.documents.map((doc) => {
           const key = requirementUploadKey(doc.requirementId, doc.subjectRole);
           const slot = allowedSlotByKey.get(key)!;
@@ -289,7 +294,7 @@ export const submitRequestFn = createServerFn({ method: "POST" })
             file_url: doc.fileUrl,
           };
         }),
-      );
+      ).select("id, requirement_name, subject_role, verification_status, rejection_reason");
       if (docsError) {
         const { error: rollbackError } = await getSupabaseAdminClient()
           .from("requests")
@@ -305,6 +310,14 @@ export const submitRequestFn = createServerFn({ method: "POST" })
         }
         documentWarning =
           "Your request was submitted, but we couldn't attach your uploaded documents. Please bring them with you to the CCRO.";
+      } else {
+        submittedDocuments = (savedDocuments ?? []).map((document) => ({
+          id: document.id,
+          requirementName: document.requirement_name,
+          subjectRole: document.subject_role,
+          verificationStatus: document.verification_status,
+          rejectionReason: document.rejection_reason,
+        }));
       }
     }
 
@@ -327,5 +340,19 @@ export const submitRequestFn = createServerFn({ method: "POST" })
       console.error("Failed to write submission audit log", logError);
     }
 
-    return { error: false, trackingNumber, documentWarning };
+    return {
+      error: false,
+      trackingNumber,
+      documentWarning,
+      pdfData: {
+        trackingNumber,
+        serviceName: selectedService.display_name || selectedService.name,
+        status: "submitted",
+        submittedAt: new Date().toISOString(),
+        feesDue: Number(selectedService.fee),
+        processingTime: selectedService.processing_time,
+        documents: submittedDocuments,
+        documentWarning,
+      } satisfies AcknowledgmentPdfData,
+    };
   });

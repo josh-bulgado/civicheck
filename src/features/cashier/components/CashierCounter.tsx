@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Search } from "lucide-react";
+import { QrCode, Search } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -8,6 +8,7 @@ import { CountUp } from "~/components/motion/count-up";
 import { staggerStyle } from "~/components/motion/stagger";
 import { getPaymentDetails, getStatusDetails } from "~/features/requests/request-workflow";
 import { PaymentVerificationPanel } from "~/features/requests/components/PaymentVerificationPanel";
+import { QrScannerDialog } from "~/features/requests/components/QrScannerDialog";
 import {
   lookupRequestByTrackingFn,
   type CashierLookupResult,
@@ -18,9 +19,9 @@ export function CashierCounter() {
   const [busy, setBusy] = useState(false);
   const [searched, setSearched] = useState(false);
   const [result, setResult] = useState<CashierLookupResult | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
-  async function handleLookup() {
-    const value = trackingNumber.trim();
+  async function handleLookup(value = trackingNumber.trim()) {
     if (!value) return;
 
     setBusy(true);
@@ -35,6 +36,11 @@ export function CashierCounter() {
     } finally {
       setBusy(false);
     }
+  }
+
+  function handleScanned(value: string) {
+    setTrackingNumber(value);
+    handleLookup(value);
   }
 
   const status = result ? getStatusDetails(result.status) : null;
@@ -65,8 +71,19 @@ export function CashierCounter() {
             <Search className="size-4" />
             Look up
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy}
+            onClick={() => setScannerOpen(true)}
+          >
+            <QrCode className="size-4" />
+            Scan QR
+          </Button>
         </form>
       </section>
+
+      <QrScannerDialog open={scannerOpen} onOpenChange={setScannerOpen} onDecode={handleScanned} />
 
       {searched && !result && (
         <p className="civic-enter-sm text-sm italic text-muted-foreground">
@@ -116,7 +133,7 @@ export function CashierCounter() {
               feesDue={result.feesDue}
               paymentStatus={result.paymentStatus}
               orNumber={result.orNumber}
-              onVerified={handleLookup}
+              onVerified={() => handleLookup(result.trackingNumber)}
             />
           </div>
         </div>

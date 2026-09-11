@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Check, CheckCircle2 } from "lucide-react";
+import { Check, CheckCircle2, Download } from "lucide-react";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, buttonVariants } from "~/components/ui/button";
@@ -14,6 +14,8 @@ import {
   requirementUploadKey,
 } from "~/features/services/requirement-upload.utils";
 import { submitRequestFn } from "~/features/services/services.mutations";
+import { useAcknowledgmentPdfDownload } from "~/features/requests/pdf/useAcknowledgmentPdfDownload";
+import type { AcknowledgmentPdfData } from "~/features/requests/pdf/types";
 import { discardRequestUploadDraftFn } from "~/features/apply/apply.mutations";
 import type { ServiceDetail } from "~/features/services/services.queries";
 import { WizardShell } from "~/features/apply/components/WizardShell";
@@ -71,9 +73,13 @@ export function ReviewStep({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
-  const [result, setResult] = useState<{ trackingNumber: string; documentWarning?: string } | null>(
-    null,
-  );
+  const [result, setResult] = useState<{
+    trackingNumber: string;
+    documentWarning?: string;
+    pdfData: AcknowledgmentPdfData;
+  } | null>(null);
+  const { download: downloadAcknowledgmentPdf, downloading: downloadingPdf } =
+    useAcknowledgmentPdfDownload();
 
   function handleDiscard() {
     const uploadDraftId = draft.uploadDraftId;
@@ -172,7 +178,11 @@ export function ReviewStep({
         return;
       }
 
-      setResult({ trackingNumber: res.trackingNumber!, documentWarning: res.documentWarning });
+      setResult({
+        trackingNumber: res.trackingNumber!,
+        documentWarning: res.documentWarning,
+        pdfData: res.pdfData!,
+      });
       clear();
     } catch (err) {
       setSubmitError(
@@ -204,6 +214,15 @@ export function ReviewStep({
             <p className="text-sm text-warning-strong">{result.documentWarning}</p>
           )}
           <div className="flex flex-wrap gap-3">
+            <Button
+              size="lg"
+              variant="outline"
+              disabled={downloadingPdf}
+              onClick={() => downloadAcknowledgmentPdf(result.pdfData)}
+            >
+              <Download data-icon="inline-start" />
+              {downloadingPdf ? "Preparing PDF..." : "Download Acknowledgment PDF"}
+            </Button>
             <Link
               to="/my-requests"
               className={buttonVariants({ size: "lg" })}
