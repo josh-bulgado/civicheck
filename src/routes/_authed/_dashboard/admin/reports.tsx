@@ -1,6 +1,7 @@
 import {
   createFileRoute,
   redirect,
+  useNavigate,
   useRouter,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
@@ -9,11 +10,24 @@ import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { AdminReportsSkeleton } from "~/features/admin/reports/components/AdminReportsSkeleton";
 import { getCcroAdminReports } from "~/features/admin/reports/reports.queries";
+import { getCcroServiceReport } from "~/features/admin/reports/service-report.queries";
+import {
+  DEFAULT_REPORT_MONTHS,
+  isReportPeriodMonths,
+} from "~/features/admin/reports/service-report";
 import { AdminReportsPage } from "~/features/admin/reports/pages/AdminReportsPage";
 import { hasPermission, type Role } from "~/lib/permissions";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 
 export const Route = createFileRoute("/_authed/_dashboard/admin/reports")({
+  // Filter state lives in the URL so a report view is a shareable link and the
+  // back button restores the previous one.
+  validateSearch: (search: Record<string, unknown>) => ({
+    months: isReportPeriodMonths(search.months)
+      ? Number(search.months)
+      : DEFAULT_REPORT_MONTHS,
+    service: typeof search.service === "string" ? search.service : undefined,
+  }),
   beforeLoad: ({ context }) => {
     if (
       !context.user ||
@@ -22,7 +36,15 @@ export const Route = createFileRoute("/_authed/_dashboard/admin/reports")({
       throw redirect({ to: "/dashboard" });
     }
   },
-  loader: () => getCcroAdminReports(),
+  loaderDeps: ({ search }) => search,
+  loader: async ({ deps }) => {
+    // The office-wide cards and the service report are independent reads.
+    const [reports, serviceReport] = await Promise.all([
+      getCcroAdminReports(),
+      getCcroServiceReport({ data: deps }),
+    ]);
+    return { reports, serviceReport };
+  },
   staleTime: 30_000,
   pendingMs: 250,
   pendingMinMs: 250,
@@ -32,9 +54,19 @@ export const Route = createFileRoute("/_authed/_dashboard/admin/reports")({
 });
 
 function AdminReportsRoute() {
-  const data = Route.useLoaderData();
+  const { reports, serviceReport } = Route.useLoaderData();
+  const navigate = useNavigate({ from: Route.fullPath });
   useRealtimeRefresh({ tables: ["requests", "application_logs"] });
-  return <AdminReportsPage data={data} />;
+
+  return (
+    <AdminReportsPage
+      data={reports}
+      serviceReport={serviceReport}
+      onFilterChange={(next) =>
+        navigate({ search: (current) => ({ ...current, ...next }) })
+      }
+    />
+  );
 }
 
 function AdminReportsError({ error }: ErrorComponentProps) {
