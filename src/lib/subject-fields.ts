@@ -48,7 +48,19 @@ export function reconcileSubjects(
   current: SubjectFields[],
   roles: string[],
 ): SubjectFields[] {
-  return roles.map((role, i) => ({ ...(current[i] ?? emptySubject(role)), role }));
+  return roles.map((role, i) => {
+    const subject = current[i];
+    return {
+      ...emptySubject(role),
+      ...subject,
+      role,
+      // React Hook Form unregisters inputs that are intentionally hidden for
+      // sex-specific roles. Restore their canonical values before the draft
+      // reaches the server-function validator.
+      suffix: impliedSex(role) === "female" ? "" : (subject?.suffix ?? ""),
+      sex: impliedSex(role) ?? subject?.sex ?? "",
+    };
+  });
 }
 
 export function subjectFullName(subject: SubjectFields | undefined): string {
