@@ -93,13 +93,23 @@ export function ServicesToolbar({
         </InputGroupAddon>
       </InputGroup>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Tabs
           value={category}
           onValueChange={(value) => onCategoryChange(value as CategoryFilter)}
           className="min-w-0"
         >
-          <TabsList variant="accent" className="max-w-full overflow-x-auto">
+          {/* The scroll itself is the established pattern for this control
+              (see RequestsTableToolbar's stage tabs), but nothing signaled
+              there was more to scroll to on narrow screens — the fade edge
+              below is the fix, not the scrolling. It's scoped to mobile
+              widths only: at this row's fixed desktop width the tabs render
+              at their natural size with no overflow, so a permanent fade
+              would just clip the last badge for no reason. */}
+          <TabsList
+            variant="accent"
+            className="max-w-full overflow-x-auto overflow-hidden max-sm:[-webkit-mask-image:linear-gradient(to_right,black_calc(100%_-_28px),transparent)] max-sm:[mask-image:linear-gradient(to_right,black_calc(100%_-_28px),transparent)]"
+          >
             <TabsTrigger value="all">
               All
               <Badge
@@ -132,7 +142,7 @@ export function ServicesToolbar({
           </TabsList>
         </Tabs>
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        <div className="flex items-center justify-between gap-4 sm:justify-start">
           <ToggleGroup
             aria-label="Service layout"
             value={[view]}

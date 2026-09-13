@@ -1,3 +1,4 @@
+import { Clock, FileText } from "lucide-react";
 import {
   badgeToneClasses,
   ServiceEntryDialogs,
@@ -5,13 +6,14 @@ import {
   type ServiceEntryProps,
 } from "~/features/services/components/useServiceEntry";
 import { Button } from "~/components/ui/button";
-import { cn } from "~/lib/utils";
 
 /**
- * Compact density: roughly half the height of the old tile. The title leads,
- * the meta reads as one inline line instead of a definition list, and the
- * decorative document icon is gone — at this size it cost a whole row of
- * height and said nothing the title didn't.
+ * Two-zone density: the descriptive info (title, badge, meta) sits above a
+ * tinted strip carrying the fee and both actions, so "what this costs and
+ * what I click" reads as one decision unit instead of two loose rows. Meta
+ * icons are pre-attentive scan aids only — the text already carries the
+ * full meaning, so the icons stay aria-hidden and the wait term (dropped
+ * visually to save width) is restored via aria-label.
  */
 const ServiceCard = (service: ServiceEntryProps & { canApply?: boolean }) => {
   const { canApply = true, ...serviceProps } = service;
@@ -20,59 +22,64 @@ const ServiceCard = (service: ServiceEntryProps & { canApply?: boolean }) => {
   return (
     <article
       style={service.style}
-      className="civic-interactive civic-lift flex flex-col gap-2.5 rounded-xl border border-border bg-white p-4 text-card-foreground shadow-[0_1px_2px_rgba(23,33,43,0.04)] hover:border-primary/30 hover:shadow-[0_8px_20px_-8px_rgba(11,77,162,0.28)]"
+      className="civic-interactive civic-lift flex flex-col overflow-hidden rounded-xl border border-border bg-white text-card-foreground shadow-[0_1px_2px_rgba(23,33,43,0.04)] hover:border-primary/30 hover:shadow-[0_8px_20px_-8px_rgba(11,77,162,0.28)]"
     >
-      <div className="flex items-start gap-2">
-        <h2 className="flex-1 text-[15px] font-bold leading-[1.3] tracking-[-0.01em] text-foreground text-pretty">
-          {entry.title}
-        </h2>
-        <span
-          className={`mt-px shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${badgeToneClasses[entry.badge.tone]}`}
-        >
-          {entry.badge.label}
-        </span>
+      <div className="flex flex-col gap-2.5 p-4 flex-1">
+        <div className="flex items-start gap-2 ">
+          <h2 className="flex-1 text-[15px] font-bold leading-[1.3] tracking-[-0.01em] text-foreground text-pretty">
+            {entry.title}
+          </h2>
+          <span
+            className={`mt-px shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${badgeToneClasses[entry.badge.tone]}`}
+          >
+            {entry.badge.label}
+          </span>
+        </div>
+
+        <p className="flex flex-wrap items-center gap-x-3 text-[13px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <FileText
+              aria-hidden="true"
+              className="size-3.5 text-border-strong"
+            />
+            {entry.requirementLabel}
+          </span>
+          <span
+            className="inline-flex items-center gap-1"
+            aria-label={`${entry.waitTerm} ${entry.waitLabel}`}
+          >
+            <Clock aria-hidden="true" className="size-3.5 text-border-strong" />
+            {entry.waitLabel}
+          </span>
+        </p>
       </div>
 
-      <p className="flex flex-wrap items-center gap-x-2 text-[13px] text-muted-foreground">
-        <span>{entry.requirementLabel}</span>
-        <span aria-hidden="true" className="text-border-strong">
-          ·
-        </span>
-        {/* The column header carries the "Released" framing in the directory
-            view; here the layout is the only cue, so name it for screen
-            readers rather than spending a line of the tile on it. */}
-        <span aria-label={`${entry.waitTerm} ${entry.waitLabel}`}>
-          {entry.waitLabel}
-        </span>
-      </p>
-
-      <dl className="mt-auto flex items-baseline justify-between gap-3 border-t border-border-lighter pt-2.5">
-        <dt className="text-[13px] text-muted-foreground">Fee at cashier</dt>
-        <dd
-          className={`text-[15px] font-bold tabular-nums ${entry.isFree ? "text-success" : "text-foreground"}`}
-        >
-          {entry.feeLabel}
-        </dd>
-      </dl>
-
-      <div className="flex gap-2">
-        {canApply && (
+      <div className="flex items-center justify-between gap-3 border-t border-border-lighter bg-primary-tint px-4 py-3">
+        <div>
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.05em] text-muted-foreground">
+            Fee at cashier
+          </p>
+          <p
+            className={`text-[16px] font-extrabold tabular-nums ${entry.isFree ? "text-success" : "text-foreground"}`}
+          >
+            {entry.feeLabel}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          {canApply && (
+            <Button type="button" size="lg" onClick={entry.startApply}>
+              Apply
+            </Button>
+          )}
           <Button
             type="button"
-            onClick={entry.startApply}
-            className="flex-1"
+            size="lg"
+            variant="outline"
+            onClick={entry.openRequirements}
           >
-            Apply
+            Requirements
           </Button>
-        )}
-        <Button
-          type="button"
-          variant="outline"
-          onClick={entry.openRequirements}
-          className={cn(!canApply && "flex-1")}
-        >
-          Requirements
-        </Button>
+        </div>
       </div>
 
       <ServiceEntryDialogs entry={entry} />
