@@ -559,6 +559,10 @@ export function ServiceFormPage({
                   isLoading={checklistLoading}
                   sharedWith={sharedWith}
                   formDefinition={formDefinition}
+                  currentServiceCode={service?.service_code ?? null}
+                  variantCodes={caseVariants.map(
+                    (variant) => variant.service_code,
+                  )}
                 />
                 <RelationshipsSection />
               </FieldGroup>
