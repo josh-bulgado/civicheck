@@ -52,6 +52,8 @@ skills-lock.json
 .claude/
 .opencode/
 opencode.json
+.codex/
+.agents/
 
 
 # AI assistant local state/config (not shared project config)
