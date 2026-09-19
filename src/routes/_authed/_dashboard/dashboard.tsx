@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { hasPermission } from "~/lib/permissions";
 import type { Role } from "~/lib/permissions";
 import { getMyRequestsFn } from "~/features/requests/applicant-requests.queries";
-import { CitizenDashboard } from "~/features/dashboard/CitizenDashboard";
+import CitizenDashboard from "~/features/dashboard/pages/CitizenDashboard";
 import { CitizenDashboardSkeleton } from "~/features/dashboard/CitizenDashboardSkeleton";
 
 export const Route = createFileRoute("/_authed/_dashboard/dashboard")({
