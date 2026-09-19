@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { Building2, CalendarClock, Files, ShieldCheck } from "lucide-react";
 import { CountUp } from "~/components/motion/count-up";
 import { enterDelay, staggerStyle } from "~/components/motion/stagger";
 import { Button } from "~/components/ui/button";
 import ServiceCard from "~/features/services/components/ServiceCard";
 import { ServiceDirectory } from "~/features/services/components/ServiceDirectory";
+import { ServiceRequirementsDialog } from "~/features/services/components/ServiceRequirementsDialog";
 import {
   ServicesToolbar,
   type CategoryFilter,
@@ -27,14 +29,20 @@ const INITIAL_VISIBLE_COUNT = { cards: 9, rows: 30 } as const;
 interface ServiceCatalogPageProps {
   services: ServiceSummary[];
   scope: Awaited<ReturnType<typeof getMyDepartmentScopeFn>>;
+  /** `display_group ?? service_code` deep-linked from the command palette. */
+  selectedService?: string;
+  onDismissSelectedService?: () => void;
 }
 
 export default function ServiceCatalogPage({
   services: allServices,
   scope,
+  selectedService,
+  onDismissSelectedService,
 }: ServiceCatalogPageProps) {
   const { view, chooseView } = useServiceView();
   const { role } = usePermissions();
+  const navigate = useNavigate();
   const canApply = role === "applicant";
 
   // Department-scoped staff (staff/supervisor) only handle their own
@@ -46,6 +54,19 @@ export default function ServiceCatalogPage({
         ? allServices.filter((s) => s.department_id === scope.departmentId)
         : allServices,
     [allServices, scope],
+  );
+
+  // The service the command palette deep-linked, if it's in this scoped
+  // catalogue. Used to open its checklist sheet straight away.
+  const focusedService = useMemo(
+    () =>
+      selectedService
+        ? services.find(
+            (service) =>
+              (service.display_group ?? service.service_code) === selectedService,
+          )
+        : undefined,
+    [services, selectedService],
   );
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -261,6 +282,32 @@ export default function ServiceCatalogPage({
           </div>
         </div>
       </section>
+
+      {focusedService && (
+        <ServiceRequirementsDialog
+          serviceCode={focusedService.display_group ?? focusedService.service_code}
+          title={focusedService.display_name ?? focusedService.name}
+          fee={focusedService.fee}
+          displayGroup={focusedService.display_group}
+          processingTime={focusedService.processing_time}
+          open
+          onOpenChange={(open) => {
+            if (!open) onDismissSelectedService?.();
+          }}
+          onApply={
+            canApply
+              ? () =>
+                  navigate({
+                    to: "/apply/$serviceCode/case",
+                    params: {
+                      serviceCode:
+                        focusedService.display_group ?? focusedService.service_code,
+                    },
+                  })
+              : undefined
+          }
+        />
+      )}
     </div>
   );
 }
