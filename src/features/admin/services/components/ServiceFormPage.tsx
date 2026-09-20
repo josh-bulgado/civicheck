@@ -205,6 +205,18 @@ export function ServiceFormPage({
     );
   }, [service, services]);
 
+  // Every service card an admin can route a timing mismatch to: one entry per
+  // display group, plus each standalone service keyed by its own code.
+  const timingTargetOptions = useMemo(() => {
+    const options = new Map<string, string>();
+    for (const entry of services) {
+      const key = entry.display_group ?? entry.service_code;
+      if (options.has(key)) continue;
+      options.set(key, entry.display_name ?? entry.name);
+    }
+    return [...options].map(([value, label]) => ({ value, label }));
+  }, [services]);
+
   function resetEditor() {
     reset(emptyServiceFormDefaults());
     setPresetCode("");
@@ -330,6 +342,19 @@ export function ServiceFormPage({
         [...expectedCodes].some((code) => !mappedCodes.has(code))
       ) {
         toast.error("Map every internal variant before publishing.");
+        return;
+      }
+    }
+
+    const eventTiming = parsedDefinition.data.eventTiming;
+    if (eventTiming && !variantOnly) {
+      const targetExists = timingTargetOptions.some(
+        (option) => option.value === eventTiming.targetServiceCode,
+      );
+      if (!targetExists) {
+        toast.error(
+          "Choose a valid service to switch mismatched applicants to.",
+        );
         return;
       }
     }
@@ -532,6 +557,7 @@ export function ServiceFormPage({
                       variants={caseVariants}
                       formDefinition={formDefinition}
                       publishedFieldKeys={publishedFieldKeys}
+                      targetOptions={timingTargetOptions}
                       onFormDefinitionChange={(definition) => {
                         setFormDefinition(definition);
                         setTemplateDirty(true);

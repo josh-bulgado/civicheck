@@ -28,17 +28,20 @@ import {
 } from "../service-form.config";
 import { CaseFlowBuilder } from "~/features/forms/components/CaseFlowBuilder";
 import type { FormTemplateDefinition } from "~/features/forms/form-template.types";
+import { EventTimingSection } from "./EventTimingSection";
 import type { Service } from "../../services.types";
 
 export function CaseQuestionsSection({
   variants,
   formDefinition,
   publishedFieldKeys,
+  targetOptions,
   onFormDefinitionChange,
 }: {
   variants: Service[];
   formDefinition: FormTemplateDefinition;
   publishedFieldKeys: string[];
+  targetOptions: { value: string; label: string }[];
   onFormDefinitionChange: (definition: FormTemplateDefinition) => void;
 }) {
   const form = useFormContext<ServiceFormValues>();
@@ -270,6 +273,13 @@ export function CaseQuestionsSection({
               Edit dynamic questions
             </a>
           </FieldSet>
+
+          <EventTimingSection
+            id="timing-routing"
+            formDefinition={formDefinition}
+            targetOptions={targetOptions}
+            onFormDefinitionChange={onFormDefinitionChange}
+          />
 
           {variants.length > 1 ? (
             <FieldSet className="gap-4">

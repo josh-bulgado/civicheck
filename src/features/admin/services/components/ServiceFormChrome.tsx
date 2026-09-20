@@ -17,7 +17,9 @@ type EditorMode = "full" | "variant";
 
 const VARIANT_EDITOR_SECTIONS = SERVICE_EDITOR_SECTIONS.filter(
   (section) =>
-    section.id !== "case-questions" && section.id !== "application-form",
+    section.id !== "case-questions" &&
+    section.id !== "timing-routing" &&
+    section.id !== "application-form",
 );
 
 export function ServiceDossierNavigation({

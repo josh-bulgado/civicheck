@@ -88,6 +88,48 @@ export const derivedAnswerSchema = z.object({
   bands: z.array(ageBandSchema).min(1).max(20),
 });
 
+export const eventTimingBehaviorSchema = z.enum([
+  "block",
+  "warn_allow",
+  "redirect_confirm",
+  "auto_route",
+]);
+
+export const eventTimingMismatchSchema = z.enum([
+  "outside_window",
+  "inside_window",
+]);
+
+/**
+ * A declarative on-time window for a registry event. The evaluator is generic
+ * application code; the trigger field, window length, routing target, and the
+ * applicant-facing copy are versioned database data. Any service — grouped or
+ * standalone — can therefore declare its own window without a code change.
+ *
+ * On-time is `event_date + windowDays`, inclusive, measured in whole days so
+ * there is no month-length or leap-year ambiguity.
+ */
+export const eventTimingRuleSchema = z.object({
+  /** Key of the date field in this template that starts the clock. */
+  triggerField: z.string().min(1).max(64),
+  windowDays: z.number().int().min(0).max(3660),
+  /**
+   * Which side of the window means the applicant is on the wrong service.
+   * An on-time service routes when `outside_window`; its delayed counterpart
+   * routes when `inside_window`.
+   */
+  mismatch: eventTimingMismatchSchema.default("outside_window"),
+  /** Group key (`birth_delayed`) or service code (`DEATH_DELAYED`). */
+  targetServiceCode: z.string().min(1).max(80),
+  behavior: eventTimingBehaviorSchema.default("redirect_confirm"),
+  /** Defer the check until the supporting document is uploaded (later step). */
+  requireDocumentFirst: z.boolean().default(false),
+  timezone: z.string().min(1).max(64).default("Asia/Manila"),
+  title: z.string().min(1).max(160),
+  description: z.string().min(1).max(500),
+  ctaLabel: z.string().min(1).max(80).default("Switch registration track"),
+});
+
 export const formFieldDefinitionSchema = z.object({
   key: z
     .string()
@@ -117,6 +159,7 @@ export const formTemplateDefinitionSchema = z
     schemaVersion: z.literal(1),
     caseSelector: caseSelectorDefinitionSchema.optional(),
     derivedAnswers: z.array(derivedAnswerSchema).max(20).optional(),
+    eventTiming: eventTimingRuleSchema.optional(),
     sections: z.array(formSectionDefinitionSchema).min(1).max(10),
   })
   .superRefine((definition, context) => {
@@ -170,6 +213,20 @@ export const formTemplateDefinitionSchema = z
     const allFields = definition.sections.flatMap((section) => section.fields);
     const derivedKeys = new Set<string>();
     const derivedOptions = new Map<string, z.infer<typeof formOptionSchema>[]>();
+
+    if (definition.eventTiming) {
+      const trigger = allFields.find(
+        (field) => field.key === definition.eventTiming!.triggerField,
+      );
+      if (trigger?.type !== "date") {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Registration window needs a valid date field as its trigger`,
+          path: ["eventTiming", "triggerField"],
+        });
+      }
+    }
+
     for (const [derivedIndex, derived] of (definition.derivedAnswers ?? []).entries()) {
       if (keys.has(derived.key) || derivedKeys.has(derived.key)) {
         context.addIssue({
@@ -356,6 +413,9 @@ export type CaseSelectorOutcome = z.infer<typeof caseSelectorOutcomeSchema>;
 export type CaseSelectorDefinition = z.infer<typeof caseSelectorDefinitionSchema>;
 export type AgeBand = z.infer<typeof ageBandSchema>;
 export type DerivedAnswer = z.infer<typeof derivedAnswerSchema>;
+export type EventTimingBehavior = z.infer<typeof eventTimingBehaviorSchema>;
+export type EventTimingMismatch = z.infer<typeof eventTimingMismatchSchema>;
+export type EventTimingRule = z.infer<typeof eventTimingRuleSchema>;
 export type FormFieldDefinition = z.infer<typeof formFieldDefinitionSchema>;
 export type FormSectionDefinition = z.infer<typeof formSectionDefinitionSchema>;
 export type FormTemplateDefinition = z.infer<typeof formTemplateDefinitionSchema>;

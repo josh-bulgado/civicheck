@@ -23,17 +23,36 @@ export const Route = createFileRoute(
       (service) => service.display_group === displayGroup,
     );
     if (variants.length < 2) throw notFound();
-    return { variants };
+
+    // Every service card a timing mismatch can route to: one entry per display
+    // group, plus each standalone service keyed by its own code.
+    const targetOptions = new Map<string, string>();
+    for (const service of services) {
+      const key = service.display_group ?? service.service_code;
+      if (targetOptions.has(key)) continue;
+      targetOptions.set(key, service.display_name ?? service.name);
+    }
+
+    return {
+      variants,
+      targetOptions: [...targetOptions].map(([value, label]) => ({
+        value,
+        label,
+      })),
+    };
   },
   component: ServiceGroupRoute,
 });
 
 function ServiceGroupRoute() {
-  const { variants } = Route.useLoaderData();
+  const { variants, targetOptions } = Route.useLoaderData();
   const { scope } = Route.useSearch();
 
   return scope === "application" ? (
-    <ServiceGroupApplicationPage variants={variants} />
+    <ServiceGroupApplicationPage
+      variants={variants}
+      targetOptions={targetOptions}
+    />
   ) : (
     <ServiceGroupPage variants={variants} />
   );
