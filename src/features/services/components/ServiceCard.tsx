@@ -68,11 +68,6 @@ const ServiceCard = (service: ServiceEntryProps & { canApply?: boolean }) => {
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          {canApply && (
-            <Button type="button" onClick={entry.startApply}>
-              Apply
-            </Button>
-          )}
           <Button
             type="button"
             variant={canApply ? "ghost" : "default"}
@@ -81,6 +76,11 @@ const ServiceCard = (service: ServiceEntryProps & { canApply?: boolean }) => {
           >
             Requirements
           </Button>
+          {canApply && (
+            <Button type="button" onClick={entry.startApply}>
+              Apply
+            </Button>
+          )}
         </div>
       </div>
 
