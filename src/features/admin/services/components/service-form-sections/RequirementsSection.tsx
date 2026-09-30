@@ -1,56 +1,212 @@
-import { Controller, useFieldArray, useFormContext } from "react-hook-form";
-import { AlertTriangle, ClipboardCheck, Plus, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useFieldArray, useFormContext } from "react-hook-form";
+import {
+  AlertTriangle,
+  ChevronDown,
+  ClipboardCheck,
+  GitBranch,
+  Lock,
+  Plus,
+  Search,
+  Unlock,
+} from "lucide-react";
 import { Alert, AlertDescription } from "~/components/ui/alert";
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { Checkbox } from "~/components/ui/checkbox";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "~/components/ui/collapsible";
 import {
   Empty,
   EmptyDescription,
   EmptyHeader,
   EmptyTitle,
 } from "~/components/ui/empty";
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-  FieldLegend,
-  FieldSet,
-} from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
 import { Spinner } from "~/components/ui/spinner";
 import {
-  ConditionRuleBuilder,
   type ConditionSource,
 } from "~/features/forms/components/ConditionRuleBuilder";
 import type { FormTemplateDefinition } from "~/features/forms/form-template.types";
 import type { Service } from "../../services.types";
 import {
+  classifyRequirementScope,
+  variantScopeCondition,
+  type RequirementScope,
+  type RequirementScopeKind,
+} from "../requirement-scope";
+import {
   EMPTY_REQUIREMENT,
   type ServiceFormValues,
 } from "../service-form.config";
+import { RequirementRow, type RequirementValue } from "./RequirementRow";
 
 interface RequirementsSectionProps {
   isLoading: boolean;
   sharedWith: Service[];
   formDefinition: FormTemplateDefinition;
+  currentServiceCode: string | null;
+  variantCodes: string[];
+}
+
+interface RequirementEntry {
+  id: string;
+  index: number;
+  value: RequirementValue;
+  scope: RequirementScope;
+}
+
+const GROUP_ORDER: RequirementScopeKind[] = [
+  "variant",
+  "conditional",
+  "inherited",
+  "other",
+];
+
+const GROUP_COPY: Record<
+  RequirementScopeKind,
+  { title: string; description: string }
+> = {
+  variant: {
+    title: "Variant-specific",
+    description:
+      "Requirements that apply only to this variant, scoped by the routing answers.",
+  },
+  conditional: {
+    title: "Conditional",
+    description:
+      "Requirements revealed by a condition that can apply to more than one variant.",
+  },
+  inherited: {
+    title: "Inherited from group",
+    description: "Shared by every variant that uses this checklist.",
+  },
+  other: {
+    title: "Applies to other variants",
+    description:
+      "Scoped by a condition that excludes this variant. Edit it from the variant it applies to.",
+  },
+};
+
+function RequirementGroup({
+  title,
+  description,
+  entries,
+  open,
+  onOpenChange,
+  locked,
+  showLock,
+  onToggleLock,
+  conditionSources,
+  partyRoles,
+  onRemove,
+  onOverride,
+  initiallyOpenIndex,
+}: {
+  title: string;
+  description: string;
+  entries: RequirementEntry[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  locked: boolean;
+  showLock: boolean;
+  onToggleLock: () => void;
+  conditionSources: ConditionSource[];
+  partyRoles: string[];
+  onRemove: (index: number) => void;
+  onOverride: ((index: number) => void) | undefined;
+  initiallyOpenIndex: number | null;
+}) {
+  return (
+    <Collapsible open={open} onOpenChange={onOpenChange}>
+      <div className="rounded-lg border border-border bg-surface-subtle">
+        <div className="flex items-center justify-between gap-3 p-3">
+          <CollapsibleTrigger className="group flex min-w-0 flex-1 items-start gap-2 text-left">
+            <span className="flex min-w-0 flex-col gap-0.5">
+              <span className="flex items-center gap-2">
+                <span className="truncate text-sm font-semibold text-foreground">
+                  {title}
+                </span>
+                <Badge variant="neutral">{entries.length}</Badge>
+              </span>
+              <span className="text-xs font-normal text-muted-foreground">
+                {description}
+              </span>
+            </span>
+            <ChevronDown
+              aria-hidden="true"
+              className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
+            />
+          </CollapsibleTrigger>
+          {showLock ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onToggleLock}
+            >
+              {locked ? (
+                <>
+                  <Unlock aria-hidden="true" data-icon="inline-start" />
+                  Unlock to edit
+                </>
+              ) : (
+                <>
+                  <Lock aria-hidden="true" data-icon="inline-start" />
+                  Lock
+                </>
+              )}
+            </Button>
+          ) : null}
+        </div>
+        <CollapsibleContent>
+          <div className="flex flex-col gap-2 px-3 pb-3">
+            {locked ? (
+              <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Lock aria-hidden="true" className="size-3.5" />
+                Locked to protect every variant. Unlock, or override a row for
+                this variant only.
+              </p>
+            ) : null}
+            {entries.map((entry) => (
+              <RequirementRow
+                key={entry.id}
+                index={entry.index}
+                value={entry.value}
+                scope={entry.scope}
+                conditionSources={conditionSources}
+                partyRoles={partyRoles}
+                locked={locked}
+                canRemove={entries.length > 0}
+                initiallyOpen={entry.index === initiallyOpenIndex}
+                onRemove={() => onRemove(entry.index)}
+                onOverride={
+                  onOverride ? () => onOverride(entry.index) : undefined
+                }
+              />
+            ))}
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  );
 }
 
 export function RequirementsSection({
   isLoading,
   sharedWith,
   formDefinition,
+  currentServiceCode,
+  variantCodes,
 }: RequirementsSectionProps) {
   const form = useFormContext<ServiceFormValues>();
   const requirementFields = useFieldArray({
@@ -62,61 +218,194 @@ export function RequirementsSection({
     .watch("party_roles")
     .map((entry) => entry.value.trim())
     .filter(Boolean);
-  const conditionSources: ConditionSource[] = [
-    ...(formDefinition.caseSelector?.questions ?? []).map((question) => ({
-      key: question.key,
-      label: question.label,
-      options: question.options,
-    })),
-    ...(formDefinition.derivedAnswers ?? []).map((derived) => ({
-      key: derived.key,
-      label: derived.label,
-      options: derived.bands.map((band) => ({
-        value: band.value,
-        label: band.label,
+
+  const [query, setQuery] = useState("");
+  const [inheritedUnlocked, setInheritedUnlocked] = useState(false);
+  const [initiallyOpenIndex, setInitiallyOpenIndex] = useState<number | null>(
+    null,
+  );
+  const [openGroups, setOpenGroups] = useState<
+    Record<RequirementScopeKind, boolean>
+  >({
+    variant: true,
+    conditional: true,
+    inherited: false,
+    other: false,
+  });
+
+  const conditionSources: ConditionSource[] = useMemo(
+    () => [
+      ...(formDefinition.caseSelector?.questions ?? []).map((question) => ({
+        key: question.key,
+        label: question.label,
+        options: question.options,
       })),
-    })),
-    ...formDefinition.sections.flatMap((section) =>
-      section.fields.flatMap((field) =>
-        field.type === "select"
-          ? [{ key: field.key, label: field.label, options: field.options }]
-          : [],
+      ...(formDefinition.derivedAnswers ?? []).map((derived) => ({
+        key: derived.key,
+        label: derived.label,
+        options: derived.bands.map((band) => ({
+          value: band.value,
+          label: band.label,
+        })),
+      })),
+      ...formDefinition.sections.flatMap((section) =>
+        section.fields.flatMap((field) =>
+          field.type === "select"
+            ? [{ key: field.key, label: field.label, options: field.options }]
+            : [],
+        ),
       ),
-    ),
-  ];
+    ],
+    [formDefinition],
+  );
+
+  const entries: RequirementEntry[] = useMemo(
+    () =>
+      requirementValues.map((value, index) => ({
+        id: requirementFields.fields[index]?.id ?? `requirement-${index}`,
+        index,
+        value,
+        scope: classifyRequirementScope(value, {
+          variantCodes,
+          currentCode: currentServiceCode,
+          caseSelector: formDefinition.caseSelector,
+          sources: conditionSources,
+        }),
+      })),
+    [
+      requirementValues,
+      requirementFields.fields,
+      variantCodes,
+      currentServiceCode,
+      formDefinition.caseSelector,
+      conditionSources,
+    ],
+  );
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleEntries = normalizedQuery
+    ? entries.filter((entry) =>
+        [
+          entry.value.requirement_name,
+          entry.value.where_to_secure,
+          entry.scope.conditionSummary,
+          entry.scope.label,
+        ]
+          .filter(Boolean)
+          .some((text) => (text as string).toLowerCase().includes(normalizedQuery)),
+      )
+    : entries;
+
+  const grouped = useMemo(() => {
+    const buckets: Record<RequirementScopeKind, RequirementEntry[]> = {
+      variant: [],
+      conditional: [],
+      inherited: [],
+      other: [],
+    };
+    for (const entry of visibleEntries) buckets[entry.scope.kind].push(entry);
+    return buckets;
+  }, [visibleEntries]);
+
+  const isShared = sharedWith.length > 0;
+  const canOverride = Boolean(formDefinition.caseSelector);
+  const variantCount =
+    entries.filter((entry) => entry.scope.kind === "variant").length;
+  const inheritedCount = entries.filter(
+    (entry) => entry.scope.kind === "inherited",
+  ).length;
+
+  function groupLocked(kind: RequirementScopeKind) {
+    if (!isShared) return false;
+    if (!(kind === "inherited" || kind === "other")) return false;
+    return !inheritedUnlocked;
+  }
+
+  function groupTitle(kind: RequirementScopeKind) {
+    if (kind === "variant") {
+      return `${GROUP_COPY.variant.title} · ${currentServiceCode ?? "this variant"}`;
+    }
+    return GROUP_COPY[kind].title;
+  }
+
+  function groupDescription(kind: RequirementScopeKind) {
+    return GROUP_COPY[kind].description;
+  }
+
+  function addBlank() {
+    const nextIndex = requirementFields.fields.length;
+    requirementFields.append({ ...EMPTY_REQUIREMENT });
+    setInitiallyOpenIndex(nextIndex);
+    // An unscoped requirement is inherited, so reveal and unlock the group it
+    // lands in — otherwise the new row appears to vanish into a closed section.
+    setInheritedUnlocked(true);
+    setOpenGroups((current) => ({ ...current, inherited: true }));
+  }
+
+  function addVariantSpecific() {
+    const nextIndex = requirementFields.fields.length;
+    requirementFields.append({
+      ...EMPTY_REQUIREMENT,
+      applies_when: variantScopeCondition(
+        currentServiceCode,
+        formDefinition.caseSelector,
+      ),
+    });
+    setInitiallyOpenIndex(nextIndex);
+    setOpenGroups((current) => ({ ...current, variant: true }));
+  }
+
+  function overrideRequirement(index: number) {
+    const source = requirementValues[index];
+    if (!source) return;
+    const condition = variantScopeCondition(
+      currentServiceCode,
+      formDefinition.caseSelector,
+    );
+    const nextIndex = requirementFields.fields.length;
+    requirementFields.insert(nextIndex, {
+      ...source,
+      applies_when: condition,
+    });
+    setInitiallyOpenIndex(nextIndex);
+    setOpenGroups((current) => ({ ...current, variant: true }));
+  }
 
   return (
-    <Card id="requirements" className="scroll-mt-6">
+    <Card id="requirements" className="scroll-mt-6 overflow-visible">
       <CardHeader className="border-b">
         <div className="flex items-start gap-3">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
             <ClipboardCheck aria-hidden="true" className="size-4" />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <CardTitle>
               <h2>Requirements</h2>
             </CardTitle>
             <CardDescription>
-              What applicants must bring, where to secure it, and when each
-              item applies.
+              What applicants must bring, where to secure it, and when each item
+              applies. Variant-specific rows are listed first; inherited rows
+              are grouped and locked.
             </CardDescription>
+            {entries.length > 0 ? (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Badge variant="neutral">{entries.length} total</Badge>
+                <Badge variant="default">{variantCount} this variant</Badge>
+                <Badge variant="outline">{inheritedCount} shared</Badge>
+              </div>
+            ) : null}
           </div>
         </div>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+      <CardContent className="flex flex-col gap-4 pt-4">
         {sharedWith.length > 0 ? (
           <Alert variant="warning">
             <AlertTriangle aria-hidden="true" />
-            <AlertDescription className="flex flex-col gap-1">
-              <p className="font-semibold">
-                This checklist is shared by {sharedWith.length + 1} services.
-              </p>
-              <p>
-                Saving changes it for all of them:{" "}
-                {sharedWith.map((entry) => entry.name).join(", ")}. Use the case
-                tag on a row to limit it to one variant, or give this service
-                its own requirement group below.
-              </p>
+            <AlertDescription>
+              This checklist is shared by {sharedWith.length + 1} services.
+              Inherited requirements are locked to prevent group-wide edits — use{" "}
+              <span className="font-medium">Override for this variant</span> to
+              change one without touching the others.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -132,274 +421,50 @@ export function RequirementsSection({
           </div>
         ) : (
           <>
-            {requirementFields.fields.map((requirementField, index) => {
-              const requiresUpload =
-                requirementValues[index]?.requires_upload ?? true;
-              const uploadScope =
-                requirementValues[index]?.upload_scope ?? "request";
-
-              return (
-              <FieldGroup
-                key={requirementField.id}
-                className="gap-3 rounded-lg border border-border bg-surface-subtle p-3"
-              >
-                <div className="flex items-start gap-2">
-                  <Controller
-                    control={form.control}
-                    name={`requirements.${index}.requirement_name`}
-                    render={({ field, fieldState }) => (
-                      <Field
-                        data-invalid={fieldState.invalid}
-                        className="flex-1"
-                      >
-                        <FieldLabel htmlFor={`requirement-name-${index}`}>
-                          Requirement {index + 1}
-                        </FieldLabel>
-                        <Input
-                          {...field}
-                          id={`requirement-name-${index}`}
-                          placeholder="Valid ID, 1 photocopy with signature…"
-                          autoComplete="off"
-                          aria-invalid={fieldState.invalid}
-                        />
-                        {fieldState.invalid ? (
-                          <FieldError errors={[fieldState.error]} />
-                        ) : null}
-                      </Field>
-                    )}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="mt-6 shrink-0 text-muted-foreground hover:text-destructive"
-                    onClick={() => requirementFields.remove(index)}
-                    aria-label={`Remove requirement ${index + 1}`}
-                  >
-                    <Trash2 aria-hidden="true" />
-                  </Button>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Controller
-                    control={form.control}
-                    name={`requirements.${index}.where_to_secure`}
-                    render={({ field }) => (
-                      <Field>
-                        <FieldLabel htmlFor={`requirement-source-${index}`}>
-                          Where to Secure
-                        </FieldLabel>
-                        <Input
-                          {...field}
-                          id={`requirement-source-${index}`}
-                          placeholder="Government / private sector…"
-                          autoComplete="off"
-                        />
-                      </Field>
-                    )}
-                  />
-
-                  <Controller
-                    control={form.control}
-                    name={`requirements.${index}.is_mandatory`}
-                    render={({ field }) => (
-                      <FieldSet>
-                        <FieldLegend variant="label" className="mb-0">
-                          Applies To
-                        </FieldLegend>
-                        <RadioGroup
-                          name={field.name}
-                          value={field.value ? "required" : "conditional"}
-                          onValueChange={(value) =>
-                            field.onChange(value === "required")
-                          }
-                          className="mt-3 grid-cols-2 gap-2"
-                        >
-                          <FieldLabel
-                            htmlFor={`requirement-required-${index}`}
-                          >
-                            <Field
-                              orientation="horizontal"
-                              className="h-9 py-0!"
-                            >
-                              <RadioGroupItem
-                                value="required"
-                                id={`requirement-required-${index}`}
-                              />
-                              Required
-                            </Field>
-                          </FieldLabel>
-                          <FieldLabel
-                            htmlFor={`requirement-conditional-${index}`}
-                          >
-                            <Field
-                              orientation="horizontal"
-                              className="h-9 py-0!"
-                            >
-                              <RadioGroupItem
-                                value="conditional"
-                                id={`requirement-conditional-${index}`}
-                              />
-                              If applicable
-                            </Field>
-                          </FieldLabel>
-                        </RadioGroup>
-                      </FieldSet>
-                    )}
-                  />
-                </div>
-
-                <div className="grid gap-3 rounded-md border border-border bg-background p-3 sm:grid-cols-2">
-                  <Controller
-                    control={form.control}
-                    name={`requirements.${index}.requires_upload`}
-                    render={({ field }) => (
-                      <Field>
-                        <FieldLabel
-                          htmlFor={`requirement-upload-${index}`}
-                          className="cursor-pointer"
-                        >
-                          <Field orientation="horizontal" className="gap-3">
-                            <Checkbox
-                              id={`requirement-upload-${index}`}
-                              name={field.name}
-                              checked={field.value}
-                              onCheckedChange={(checked) =>
-                                field.onChange(checked === true)
-                              }
-                            />
-                            Applicant must upload a file
-                          </Field>
-                        </FieldLabel>
-                        <FieldDescription>
-                          Turn this off for an in-person action or reminder.
-                        </FieldDescription>
-                      </Field>
-                    )}
-                  />
-
-                  {requiresUpload ? (
-                    <Controller
-                      control={form.control}
-                      name={`requirements.${index}.upload_scope`}
-                      render={({ field }) => (
-                        <Field>
-                          <FieldLabel htmlFor={`requirement-upload-scope-${index}`}>
-                            File needed from
-                          </FieldLabel>
-                          <Select
-                            name={field.name}
-                            value={field.value}
-                            onValueChange={field.onChange}
-                          >
-                            <SelectTrigger
-                              id={`requirement-upload-scope-${index}`}
-                              className="w-full"
-                            >
-                              <SelectValue>
-                                {(value) =>
-                                  value === "each_subject"
-                                    ? "Every person"
-                                    : value === "specific_subject"
-                                      ? "One specific person"
-                                      : "Once per request"
-                                }
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectGroup>
-                                <SelectItem value="request">
-                                  Once per request
-                                </SelectItem>
-                                <SelectItem value="each_subject">
-                                  Every person
-                                </SelectItem>
-                                <SelectItem value="specific_subject">
-                                  One specific person
-                                </SelectItem>
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
-                          <FieldDescription>
-                            For example, CENOMAR can require one file from every
-                            applicant.
-                          </FieldDescription>
-                        </Field>
-                      )}
-                    />
-                  ) : null}
-
-                  {requiresUpload && uploadScope === "specific_subject" ? (
-                    <Controller
-                      control={form.control}
-                      name={`requirements.${index}.subject_role`}
-                      render={({ field, fieldState }) => (
-                        <Field
-                          className="sm:col-start-2"
-                          data-invalid={fieldState.invalid}
-                        >
-                          <FieldLabel htmlFor={`requirement-subject-role-${index}`}>
-                            Person
-                          </FieldLabel>
-                          <Select
-                            name={field.name}
-                            value={field.value || null}
-                            onValueChange={field.onChange}
-                          >
-                            <SelectTrigger
-                              id={`requirement-subject-role-${index}`}
-                              className="w-full"
-                              aria-invalid={fieldState.invalid}
-                            >
-                              <SelectValue placeholder="Select a role…" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectGroup>
-                                {partyRoles.map((role) => (
-                                  <SelectItem key={role} value={role}>
-                                    {role}
-                                  </SelectItem>
-                                ))}
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
-                          {fieldState.invalid ? (
-                            <FieldError errors={[fieldState.error]} />
-                          ) : null}
-                        </Field>
-                      )}
-                    />
-                  ) : null}
-                </div>
-
-                <Controller
-                  control={form.control}
-                  name={`requirements.${index}.applies_when`}
-                  render={({ field }) => (
-                    <Field>
-                      <FieldLabel>When does this requirement apply?</FieldLabel>
-                      <ConditionRuleBuilder
-                        idPrefix={`requirement-${index}-condition`}
-                        rule={field.value}
-                        sources={conditionSources}
-                        emptyLabel="Applies to every applicant for the selected service."
-                        onChange={field.onChange}
-                      />
-                      {form.getValues(`requirements.${index}.case_tag`) &&
-                      !field.value ? (
-                        <FieldDescription>
-                          This row still has a legacy case tag. Add a condition
-                          to replace its hardcoded behavior.
-                        </FieldDescription>
-                      ) : null}
-                    </Field>
-                  )}
+            <div className="sticky top-2 z-10 flex flex-col gap-3 rounded-lg border border-border bg-card/95 p-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative sm:max-w-xs sm:flex-1">
+                <Search
+                  aria-hidden="true"
+                  className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
                 />
-              </FieldGroup>
-              );
-            })}
+                <Input
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search requirements…"
+                  aria-label="Search requirements"
+                  className="pl-8"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!canOverride}
+                  title={
+                    canOverride
+                      ? undefined
+                      : "Bind this checklist to a shared application with routing to scope a requirement to one variant."
+                  }
+                  onClick={addVariantSpecific}
+                >
+                  <GitBranch aria-hidden="true" data-icon="inline-start" />
+                  Add variant-specific
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addBlank}
+                >
+                  <Plus aria-hidden="true" data-icon="inline-start" />
+                  Add requirement
+                </Button>
+              </div>
+            </div>
 
-            {requirementFields.fields.length === 0 ? (
+            {entries.length === 0 ? (
               <Empty className="border border-border px-4 py-8">
                 <EmptyHeader>
                   <EmptyTitle className="text-sm">
@@ -410,17 +475,55 @@ export function RequirementsSection({
                   </EmptyDescription>
                 </EmptyHeader>
               </Empty>
-            ) : null}
+            ) : visibleEntries.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+                No requirements match “{query}”.
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {GROUP_ORDER.map((kind) => {
+                  const bucket = grouped[kind];
+                  if (bucket.length === 0) return null;
+                  const locked = groupLocked(kind);
+                  return (
+                    <RequirementGroup
+                      key={kind}
+                      title={groupTitle(kind)}
+                      description={groupDescription(kind)}
+                      entries={bucket}
+                      open={normalizedQuery ? true : openGroups[kind]}
+                      onOpenChange={(open) =>
+                        setOpenGroups((current) => ({
+                          ...current,
+                          [kind]: open,
+                        }))
+                      }
+                      locked={locked}
+                      showLock={
+                        isShared && (kind === "inherited" || kind === "other")
+                      }
+                      onToggleLock={() =>
+                        setInheritedUnlocked((current) => !current)
+                      }
+                      conditionSources={conditionSources}
+                      partyRoles={partyRoles}
+                      onRemove={(index) => requirementFields.remove(index)}
+                      onOverride={
+                        canOverride ? overrideRequirement : undefined
+                      }
+                      initiallyOpenIndex={initiallyOpenIndex}
+                    />
+                  );
+                })}
+              </div>
+            )}
 
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => requirementFields.append({ ...EMPTY_REQUIREMENT })}
-            >
-              <Plus aria-hidden="true" data-icon="inline-start" />
-              Add Requirement
-            </Button>
+            {normalizedQuery ? (
+              <p className="text-xs text-muted-foreground">
+                Showing {visibleEntries.length} of {entries.length}{" "}
+                requirements.
+              </p>
+            ) : null}
           </>
         )}
       </CardContent>

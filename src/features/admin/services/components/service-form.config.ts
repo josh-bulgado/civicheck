@@ -110,6 +110,7 @@ export const SERVICE_EDITOR_SECTIONS = [
   { id: "registry-details", label: "Registry Details" },
   { id: "citizen-journey", label: "Citizen Journey" },
   { id: "case-questions", label: "Case Questions" },
+  { id: "timing-routing", label: "Timing & Routing" },
   { id: "application-form", label: "Application Form" },
   { id: "requirements", label: "Requirements" },
   { id: "relationships", label: "Relationships" },

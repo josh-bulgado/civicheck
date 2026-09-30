@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { CalendarClock } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
-import { BirthTrackRedirectDialog } from "~/features/apply/components/BirthTrackRedirectDialog";
+import { TrackRedirectDialog } from "~/features/apply/components/TrackRedirectDialog";
 import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
 import {
@@ -14,8 +14,11 @@ import {
 import { DerivedAnswerAlerts } from "~/features/forms/components/DerivedAnswerAlerts";
 import {
   deriveTemplateAnswers,
+  evaluateEventTiming,
+  evaluateTemplateEventTiming,
   fieldsForStep,
   getDerivedAnswerFeedback,
+  todayKeyInTimeZone,
 } from "~/features/forms/form-template.utils";
 import { isRequirementApplicable } from "~/features/services/service-utils";
 import type { ServiceDetail } from "~/features/services/services.queries";
@@ -30,35 +33,9 @@ import {
   inferMaritalStatus,
 } from "~/features/services/components/CaseSelector";
 
-const ON_TIME_WINDOW_DAYS = 30;
 const MARRIAGE_LICENSE_CODE = "MARRIAGE_LICENSE";
 const MARRIAGE_NOTICE_DAYS = 10;
 const RECOMMENDED_MARRIAGE_LEAD_DAYS = 21;
-const OPPOSITE_BIRTH_GROUP: Record<string, string> = {
-  birth_ontime: "birth_delayed",
-  birth_delayed: "birth_ontime",
-};
-
-type RedirectDirection = "toDelayed" | "toOnTime";
-
-function mismatchDirection(
-  dateKey: string,
-  birthGroup: string | null,
-): RedirectDirection | null {
-  if (!dateKey || !birthGroup) return null;
-  const daysAgo = diffInDays(dateKey, toDateKey());
-  if (birthGroup === "birth_ontime" && daysAgo > ON_TIME_WINDOW_DAYS) {
-    return "toDelayed";
-  }
-  if (
-    birthGroup === "birth_delayed" &&
-    daysAgo >= 0 &&
-    daysAgo <= ON_TIME_WINDOW_DAYS
-  ) {
-    return "toOnTime";
-  }
-  return null;
-}
 
 function formatLeadTime(days: number) {
   if (days === 0) return "today";
@@ -122,11 +99,6 @@ export function CaseStep({
     }
   }, [hydrated, isGroup, draft.selectedServiceCode, services, update]);
 
-  const birthGroup = services[0]?.display_group ?? null;
-  const targetBirthGroup = selectedService.asks_birth_details
-    ? (OPPOSITE_BIRTH_GROUP[birthGroup ?? ""] ?? null)
-    : null;
-
   const formValues = Object.fromEntries(
     caseFields.map((field) => {
       const value = draft.answers[field.key];
@@ -165,25 +137,52 @@ export function CaseStep({
     selectedService.service_code,
     watchedEventDate,
   );
-  const currentMismatch = targetBirthGroup
-    ? mismatchDirection(watchedEventDate, birthGroup)
-    : null;
 
-  const [redirectDirection, setRedirectDirection] =
-    useState<RedirectDirection | null>(null);
+  // Data-driven on-time window. The rule and its routing target live in the
+  // published form template, so any current or future service can declare one.
+  const timing = evaluateTemplateEventTiming(definition, derivedCaseAnswers);
+  const timingRule = timing?.rule ?? null;
+  const timingDeferred = timingRule?.requireDocumentFirst === true;
+  const timingMismatch =
+    timing && timing.evaluation.mismatched && !timingDeferred
+      ? timing.evaluation
+      : null;
+  const timingDeferredNotice =
+    timing && timing.evaluation.mismatched && timingDeferred
+      ? timing
+      : null;
+  const timingBlocks =
+    timingMismatch !== null &&
+    (timingMismatch.behavior === "block" ||
+      timingMismatch.behavior === "redirect_confirm");
+
+  const [redirectOpen, setRedirectOpen] = useState(false);
   const lastCheckedDate = useRef<string | null>(null);
 
-  function checkBirthTrack(fieldKey: string, dateKey: string) {
-    if (fieldKey !== "event_date" || lastCheckedDate.current === dateKey) return;
+  function handleEventDateChange(fieldKey: string, dateKey: string) {
+    if (!timingRule || fieldKey !== timingRule.triggerField) return;
+    if (timingRule.requireDocumentFirst) return;
+    if (lastCheckedDate.current === dateKey) return;
     lastCheckedDate.current = dateKey;
-    const direction = mismatchDirection(dateKey, birthGroup);
-    if (direction) setRedirectDirection(direction);
+
+    const evaluation = evaluateEventTiming(
+      timingRule,
+      { [fieldKey]: dateKey },
+      todayKeyInTimeZone(timingRule.timezone),
+    );
+    if (!evaluation.mismatched) return;
+    if (evaluation.behavior === "auto_route") {
+      handleSwitchTrack();
+    } else if (evaluation.behavior === "redirect_confirm") {
+      setRedirectOpen(true);
+    }
   }
 
   function handleSwitchTrack() {
-    if (!targetBirthGroup) return;
+    if (!timingRule) return;
+    const target = timingRule.targetServiceCode;
     const values = form.getValues();
-    seedDraftForGroup(targetBirthGroup, {
+    seedDraftForGroup(target, {
       answers: { ...draft.answers, ...values },
       eventDate: values.event_date ?? "",
       eventPlace: values.event_place ?? "",
@@ -206,10 +205,10 @@ export function CaseStep({
     if (uploadDraftId) {
       discardRequestUploadDraftFn({ data: { uploadDraftId } }).catch(() => {});
     }
-    setRedirectDirection(null);
+    setRedirectOpen(false);
     navigate({
       to: "/apply/$serviceCode/case",
-      params: { serviceCode: targetBirthGroup },
+      params: { serviceCode: target },
     });
   }
 
@@ -314,7 +313,7 @@ export function CaseStep({
           step="case"
           control={form.control}
           values={watchedValues}
-          onDateChange={checkBirthTrack}
+          onDateChange={handleEventDateChange}
         />
 
         <DerivedAnswerAlerts
@@ -330,18 +329,34 @@ export function CaseStep({
           </Alert>
         ) : null}
 
-        {currentMismatch ? (
-          <Alert variant="warning">
-            <AlertTitle>
-              {currentMismatch === "toDelayed"
-                ? "This date is more than 30 days ago"
-                : "This date is within the last 30 days"}
-            </AlertTitle>
+        {timingMismatch && timingRule ? (
+          <Alert variant="warning" role="status" aria-live="polite">
+            <CalendarClock aria-hidden="true" />
+            <AlertTitle>{timingRule.title}</AlertTitle>
             <AlertDescription className="flex flex-wrap items-center gap-3">
-              Use the registration track that matches the birth date.
-              <Button type="button" variant="outline" size="sm" onClick={handleSwitchTrack}>
-                Switch to {currentMismatch === "toDelayed" ? "Delayed" : "On-Time"} Registration
-              </Button>
+              {timingRule.description}
+              {timingMismatch.behavior === "redirect_confirm" ||
+              timingMismatch.behavior === "warn_allow" ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRedirectOpen(true)}
+                >
+                  {timingRule.ctaLabel}
+                </Button>
+              ) : null}
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {timingDeferredNotice ? (
+          <Alert role="status" aria-live="polite">
+            <CalendarClock aria-hidden="true" />
+            <AlertTitle>{timingDeferredNotice.rule.title}</AlertTitle>
+            <AlertDescription>
+              {timingDeferredNotice.rule.description} We&rsquo;ll confirm this
+              against your supporting document before processing.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -351,24 +366,26 @@ export function CaseStep({
           continueLabel="Continue to your details"
           continueDisabled={
             (isGroup && !draft.selectedServiceCode) ||
-            currentMismatch !== null ||
+            timingBlocks ||
             Boolean(blockingAgeFeedback)
           }
           note={
             blockingAgeFeedback
               ? blockingAgeFeedback.notice.description
-              : currentMismatch
+              : timingBlocks
                 ? "Resolve the date above before continuing."
                 : undefined
           }
         />
       </div>
 
-      <BirthTrackRedirectDialog
-        open={redirectDirection !== null}
-        onOpenChange={(open) => !open && setRedirectDirection(null)}
-        direction={redirectDirection}
-        onKeepEditing={() => setRedirectDirection(null)}
+      <TrackRedirectDialog
+        open={redirectOpen}
+        onOpenChange={setRedirectOpen}
+        title={timingRule?.title ?? ""}
+        description={timingRule?.description ?? ""}
+        ctaLabel={timingRule?.ctaLabel ?? "Switch registration track"}
+        onKeepEditing={() => setRedirectOpen(false)}
         onSwitch={handleSwitchTrack}
       />
     </WizardShell>

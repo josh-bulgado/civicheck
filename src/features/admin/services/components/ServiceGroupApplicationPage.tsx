@@ -17,6 +17,7 @@ import { Button, buttonVariants } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Spinner } from "~/components/ui/spinner";
 import { ApplicationFormSection } from "./service-form-sections/ApplicationFormSection";
+import { EventTimingSection } from "./service-form-sections/EventTimingSection";
 import { CaseFlowBuilder } from "~/features/forms/components/CaseFlowBuilder";
 import {
   getServiceFormTemplateFn,
@@ -41,8 +42,10 @@ function publishedKeys(definition: FormTemplateDefinition) {
 
 export function ServiceGroupApplicationPage({
   variants,
+  targetOptions,
 }: {
   variants: Service[];
+  targetOptions: { value: string; label: string }[];
 }) {
   const router = useRouter();
   const orderedVariants = useMemo(
@@ -134,6 +137,19 @@ export function ServiceGroupApplicationPage({
       [...expectedCodes].some((code) => !mappedCodes.has(code))
     ) {
       toast.error("Map every internal variant before publishing.");
+      return;
+    }
+
+    const eventTiming = parsed.data.eventTiming;
+    if (
+      eventTiming &&
+      !targetOptions.some(
+        (option) => option.value === eventTiming.targetServiceCode,
+      )
+    ) {
+      toast.error(
+        "Choose a valid service to switch mismatched applicants to.",
+      );
       return;
     }
 
@@ -249,6 +265,33 @@ export function ServiceGroupApplicationPage({
                   onChange={(caseSelector) =>
                     updateDefinition({ ...definition, caseSelector })
                   }
+                />
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="border-b">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                  Step 2 · Match the registration track
+                </p>
+                <CardTitle className="mt-1">
+                  Registration window &amp; routing
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                  <Spinner /> Loading window configuration&hellip;
+                </div>
+              ) : (
+                <EventTimingSection
+                  id="timing-routing"
+                  formDefinition={definition}
+                  targetOptions={targetOptions}
+                  onFormDefinitionChange={updateDefinition}
                 />
               )}
             </CardContent>

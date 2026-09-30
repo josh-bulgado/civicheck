@@ -1,10 +1,12 @@
-import { ageInYears, fromDateKey, toDateKey } from "~/lib/date";
+import { ageInYears, diffInDays, fromDateKey, toDateKey } from "~/lib/date";
 import { flattenSubjects, type SubjectFields } from "~/lib/subject-fields";
 import {
   conditionRuleSchema,
   formTemplateDefinitionSchema,
   type CaseSelectorQuestion,
   type ConditionRule,
+  type EventTimingBehavior,
+  type EventTimingRule,
   type FormCondition,
   type FormFieldDefinition,
   type FormStep,
@@ -251,6 +253,114 @@ export function getDerivedAnswerFeedback(
       },
     ];
   });
+}
+
+/**
+ * Local calendar date (YYYY-MM-DD) in a specific timezone. The on-time window
+ * is a registry-local decision, so "today" is always evaluated in the
+ * registry's timezone (Asia/Manila by default) rather than the browser's.
+ */
+export function todayKeyInTimeZone(
+  timeZone: string = "Asia/Manila",
+  now: Date = new Date(),
+): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(now);
+    const pick = (type: string) =>
+      parts.find((part) => part.type === type)?.value ?? "";
+    const year = pick("year");
+    const month = pick("month");
+    const day = pick("day");
+    if (year && month && day) return `${year}-${month}-${day}`;
+  } catch {
+    // Unknown timezone identifier — fall back to the runtime's local date.
+  }
+  return toDateKey(now);
+}
+
+export type EventTimingStatus =
+  | "missing"
+  | "invalid"
+  | "future"
+  | "on_time"
+  | "out_of_window";
+
+export interface EventTimingEvaluation {
+  status: EventTimingStatus;
+  /** Whole days since the event; negative for a future date, null if unusable. */
+  daysElapsed: number | null;
+  windowDays: number;
+  insideWindow: boolean | null;
+  /** True when this service is the wrong track for the entered date. */
+  mismatched: boolean;
+  behavior: EventTimingBehavior | null;
+  targetServiceCode: string | null;
+}
+
+/**
+ * Evaluate one service's on-time window against the applicant-entered trigger
+ * date. Pure and side-effect free so it can run identically on the client and
+ * during server-side validation. `todayKey` must already be in the rule's
+ * timezone (see `todayKeyInTimeZone`).
+ */
+export function evaluateEventTiming(
+  rule: EventTimingRule,
+  answers: TemplateAnswers | Record<string, string>,
+  todayKey: string,
+): EventTimingEvaluation {
+  const base = {
+    daysElapsed: null as number | null,
+    windowDays: rule.windowDays,
+    insideWindow: null as boolean | null,
+    mismatched: false,
+    behavior: null as EventTimingBehavior | null,
+    targetServiceCode: null as string | null,
+  };
+
+  const dateKey = answerString(answers, rule.triggerField);
+  if (!dateKey) return { status: "missing", ...base };
+  if (!fromDateKey(dateKey)) return { status: "invalid", ...base };
+
+  const daysElapsed = diffInDays(dateKey, todayKey);
+  if (daysElapsed < 0) return { status: "future", ...base, daysElapsed };
+
+  // Inclusive of day N: a date exactly `windowDays` ago is still on-time.
+  const insideWindow = daysElapsed <= rule.windowDays;
+  const mismatched =
+    rule.mismatch === "outside_window" ? !insideWindow : insideWindow;
+
+  return {
+    status: mismatched ? "out_of_window" : "on_time",
+    daysElapsed,
+    windowDays: rule.windowDays,
+    insideWindow,
+    mismatched,
+    behavior: mismatched ? rule.behavior : null,
+    targetServiceCode: mismatched ? rule.targetServiceCode : null,
+  };
+}
+
+/** Convenience wrapper that reads the rule off a published form definition. */
+export function evaluateTemplateEventTiming(
+  definition: FormTemplateDefinition,
+  answers: TemplateAnswers | Record<string, string>,
+  todayKey?: string,
+): { rule: EventTimingRule; evaluation: EventTimingEvaluation } | null {
+  const rule = definition.eventTiming;
+  if (!rule) return null;
+  return {
+    rule,
+    evaluation: evaluateEventTiming(
+      rule,
+      answers,
+      todayKey ?? todayKeyInTimeZone(rule.timezone),
+    ),
+  };
 }
 
 function validateDerivedAnswers(
