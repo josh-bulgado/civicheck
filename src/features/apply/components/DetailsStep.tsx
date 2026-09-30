@@ -376,9 +376,18 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     >
       <div className="flex flex-col gap-6">
         {hasPersonGroup && showRoleLabels ? (
-          <Accordion multiple value={openIds} onValueChange={setOpenIds}>
+          <Accordion
+            multiple
+            value={openIds}
+            onValueChange={setOpenIds}
+            className="flex flex-col gap-6"
+          >
             {subjectFields.fields.map((subjectField, index) => (
-              <AccordionItem key={subjectField.id} value={subjectField.id}>
+              <AccordionItem
+                key={subjectField.id}
+                value={subjectField.id}
+                className="rounded-lg border px-4 last:border-b"
+              >
                 <AccordionTrigger>
                   {subjectField.role}&rsquo;s information
                 </AccordionTrigger>
