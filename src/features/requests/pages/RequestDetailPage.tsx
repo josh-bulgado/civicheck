@@ -15,6 +15,16 @@ import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "~/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -58,6 +68,9 @@ import {
   type RequestStatus,
 } from "~/features/requests/request-workflow";
 import { staggerStyle } from "~/components/motion/stagger";
+
+// On-time birth registration is split by parents' marital status.
+const CONFIRM_DECISION_SERVICE_CODES = ["OTCOLB-MARITAL", "OTCOLB-NONMARITAL"];
 
 function formatKey(key: string) {
   return key
@@ -115,6 +128,10 @@ export default function RequestDetailPage({
 
   const canProcess = can("requests:process");
   const canReverseVerification = can("requests:reverse_verification");
+  // Accept/reject confirmation is rolling out service by service — on-time
+  // birth registration first.
+  const confirmAttachmentDecisions =
+    CONFIRM_DECISION_SERVICE_CODES.includes(request.serviceCode.toUpperCase());
   const hasUnresolvedAttachments = request.attachments.some(
     (doc) => doc.verificationStatus !== "approved",
   );
@@ -264,6 +281,7 @@ export default function RequestDetailPage({
                     doc={doc}
                     canProcess={canProcess}
                     canReverse={canReverseVerification}
+                    confirmDecision={confirmAttachmentDecisions}
                     onDecide={handleAttachmentDecision}
                     onRevert={handleAttachmentRevert}
                   />
@@ -401,12 +419,15 @@ function AttachmentRow({
   doc,
   canProcess,
   canReverse,
+  confirmDecision,
   onDecide,
   onRevert,
 }: {
   doc: AttachmentDoc;
   canProcess: boolean;
   canReverse: boolean;
+  /** Ask "are you sure?" before an accept/reject is actually saved. */
+  confirmDecision: boolean;
   onDecide: (
     attachmentId: string,
     status: "approved" | "rejected",
@@ -416,6 +437,9 @@ function AttachmentRow({
 }) {
   const [busy, setBusy] = useState(false);
   const [rejecting, setRejecting] = useState(false);
+  const [pendingDecision, setPendingDecision] = useState<
+    "approved" | "rejected" | null
+  >(null);
   const [reason, setReason] = useState("");
   const [reverting, setReverting] = useState(false);
   const [revertReason, setRevertReason] = useState("");
@@ -444,6 +468,7 @@ function AttachmentRow({
       await onDecide(doc.id, "approved");
     } finally {
       setBusy(false);
+      setPendingDecision(null);
     }
   }
 
@@ -458,6 +483,7 @@ function AttachmentRow({
       }
     } finally {
       setBusy(false);
+      setPendingDecision(null);
     }
   }
 
@@ -515,7 +541,11 @@ function AttachmentRow({
                 size="sm"
                 variant="success"
                 disabled={busy}
-                onClick={handleAccept}
+                onClick={
+                  confirmDecision
+                    ? () => setPendingDecision("approved")
+                    : handleAccept
+                }
               >
                 <CheckCircle2 className="size-4" />
                 Accept
@@ -597,7 +627,11 @@ function AttachmentRow({
               size="sm"
               variant="destructive"
               disabled={busy || !reason.trim()}
-              onClick={handleConfirmReject}
+              onClick={
+                confirmDecision
+                  ? () => setPendingDecision("rejected")
+                  : handleConfirmReject
+              }
             >
               Confirm reject
             </Button>
@@ -615,6 +649,40 @@ function AttachmentRow({
           </div>
         </div>
       )}
+
+      <AlertDialog
+        open={pendingDecision != null}
+        onOpenChange={(open) => !open && !busy && setPendingDecision(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingDecision === "approved"
+                ? "Accept this document?"
+                : "Reject this document?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDecision === "approved"
+                ? `"${doc.requirementName}" will be marked as accepted.`
+                : `"${doc.requirementName}" will be marked as rejected and the applicant will see your reason.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant={pendingDecision === "approved" ? "success" : "destructive"}
+              disabled={busy}
+              onClick={
+                pendingDecision === "approved"
+                  ? handleAccept
+                  : handleConfirmReject
+              }
+            >
+              {pendingDecision === "approved" ? "Yes, accept" : "Yes, reject"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog
         open={viewerUrl != null}

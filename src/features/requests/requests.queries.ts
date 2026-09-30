@@ -354,6 +354,7 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       // `unknown` values as potentially non-serializable.
       formData: (row.form_data ?? {}) as Record<string, string | number | boolean | null>,
       isWalkIn: row.applicant_id == null,
+      serviceCode: row.request_type as string,
       serviceName: service?.display_name || service?.name || row.request_type,
       ...departmentOf(service),
       processingTime: service?.processing_time ?? null,
