@@ -72,6 +72,7 @@ export default function MyRequestDetailPage({
       submittedAt: request.createdAt,
       feesDue: request.feesDue,
       processingTime: request.processingTime,
+      departmentName: request.departmentName,
       documents: request.attachments,
     });
   }
@@ -92,17 +93,7 @@ export default function MyRequestDetailPage({
         paymentStatus={request.paymentStatus}
         feesDue={request.feesDue}
         subtitle={request.serviceName}
-      >
-        <Button
-          size="sm"
-          disabled={downloadingPdf}
-          onClick={handleDownloadPdf}
-          style={staggerStyle(2)}
-        >
-          <Download data-icon="inline-start" />
-          {downloadingPdf ? "Preparing..." : "Download PDF"}
-        </Button>
-      </RequestDetailHero>
+      ></RequestDetailHero>
 
       <div className="civic-stagger mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div
@@ -112,7 +103,9 @@ export default function MyRequestDetailPage({
           <SubmittedDetailsCard request={request}>
             {request.feesDue > 0 && (
               <div className="mt-4 flex items-center justify-between border-t border-border pt-4 text-sm">
-                <span className="font-medium text-muted-foreground">Fees due</span>
+                <span className="font-medium text-muted-foreground">
+                  Fees due
+                </span>
                 <span className="font-bold text-primary">
                   {formatFee(request.feesDue)} · pay at the CCRO cashier
                 </span>
@@ -153,6 +146,25 @@ export default function MyRequestDetailPage({
         </div>
 
         <div style={staggerStyle(1)} className="flex flex-col gap-6">
+          <section className="dashboard-panel p-6">
+            <h2 className="mb-2 text-lg font-bold text-foreground">
+              Acknowledgment slip
+            </h2>
+            <p className="mb-4 text-sm text-muted-foreground">
+              A PDF with your tracking number, fees and document list. Save it
+              or print it to bring along.
+            </p>
+            <Button
+              variant="outline"
+              className="w-full"
+              disabled={downloadingPdf}
+              onClick={handleDownloadPdf}
+            >
+              <Download data-icon="inline-start" aria-hidden="true" />
+              {downloadingPdf ? "Preparing..." : "Download PDF"}
+            </Button>
+          </section>
+
           <section className="dashboard-panel p-6">
             <h2 className="mb-3 text-lg font-bold text-foreground">
               Processing time

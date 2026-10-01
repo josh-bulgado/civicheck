@@ -23,8 +23,8 @@ export function useAcknowledgmentPdfDownload() {
         import("~/features/requests/pdf/RequestAcknowledgmentPdf"),
       ]);
 
-      // Rendered at 96pt (~34mm), with a four-module quiet zone for scanning.
-      const qrDataUrl = await QRCode.toDataURL(data.trackingNumber, { margin: 4, width: 480 });
+      // Rendered at 168pt (~59mm), with a four-module quiet zone for scanning.
+      const qrDataUrl = await QRCode.toDataURL(data.trackingNumber, { margin: 4, width: 720 });
       const blob = await pdf(
         RequestAcknowledgmentPdf({ data, qrDataUrl, generatedAt: new Date() }),
       ).toBlob();

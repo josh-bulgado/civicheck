@@ -1,7 +1,10 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { hasPermission, type Role } from "~/lib/permissions";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
-import { getMyNotificationsFn } from "~/features/notifications/notifications.queries";
+import {
+  getMyNotificationsFn,
+  NOTIFICATIONS_PAGE_SIZE,
+} from "~/features/notifications/notifications.queries";
 import NotificationsPage from "~/features/notifications/pages/NotificationsPage";
 
 export const Route = createFileRoute("/_authed/_dashboard/notifications")({
@@ -9,15 +12,36 @@ export const Route = createFileRoute("/_authed/_dashboard/notifications")({
     if (!context.user || !hasPermission(context.user.role as Role, "requests:view_own"))
       throw new Error("Forbidden");
   },
-  loader: () => getMyNotificationsFn(),
+  // "Load more" raises `limit` in the URL rather than appending to local state,
+  // so realtime refreshes and back/forward navigation stay consistent.
+  validateSearch: (search: Record<string, unknown>): { limit?: number } => {
+    const limit = Number(search.limit);
+    return Number.isFinite(limit) && limit > NOTIFICATIONS_PAGE_SIZE ? { limit } : {};
+  },
+  loaderDeps: ({ search }) => ({ limit: search.limit ?? NOTIFICATIONS_PAGE_SIZE }),
+  loader: ({ deps }) => getMyNotificationsFn({ data: { limit: deps.limit } }),
   staleTime: 30_000,
   component: NotificationsRoute,
 });
 
 function NotificationsRoute() {
-  const notifications = Route.useLoaderData();
+  const { items, hasMore } = Route.useLoaderData();
+  const { limit = NOTIFICATIONS_PAGE_SIZE } = Route.useSearch();
   const router = useRouter();
+  const navigate = useNavigate({ from: Route.fullPath });
   useRealtimeRefresh({ tables: ["notifications"] });
 
-  return <NotificationsPage notifications={notifications} onUpdated={() => router.invalidate()} />;
+  return (
+    <NotificationsPage
+      notifications={items}
+      hasMore={hasMore}
+      onLoadMore={() =>
+        navigate({
+          search: { limit: limit + NOTIFICATIONS_PAGE_SIZE },
+          resetScroll: false,
+        })
+      }
+      onUpdated={() => router.invalidate()}
+    />
+  );
 }
