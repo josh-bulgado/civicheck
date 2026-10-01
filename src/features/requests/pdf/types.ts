@@ -16,6 +16,8 @@ export interface AcknowledgmentPdfData {
   submittedAt: string;
   feesDue: number;
   processingTime: string | null;
+  /** Department that handles the service, so the slip can say where to go first. */
+  departmentName?: string | null;
   /** Only files successfully attached to this request. One entry per upload. */
   documents: AcknowledgmentDocument[];
   documentWarning?: string;

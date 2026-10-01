@@ -1,14 +1,10 @@
-import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
-import { STAGE_LABELS, stageOf } from "~/features/requests/request-workflow";
+import { Document, Font, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import { getStatusDetails } from "~/features/services/request-status";
 import type { AcknowledgmentPdfData } from "~/features/requests/pdf/types";
 
-const WORKFLOW_STEPS = [
-  { stage: STAGE_LABELS[1], detail: "Request recorded" },
-  { stage: STAGE_LABELS[2], detail: "Documents checked" },
-  { stage: STAGE_LABELS[3], detail: "Record prepared" },
-  { stage: STAGE_LABELS[4], detail: "Payment checked; document claimed" },
-];
+// Wrap whole words instead of splitting them mid-word ("han-dles"). This module
+// only builds the acknowledgment, so the global setting is contained to it.
+Font.registerHyphenationCallback((word) => [word]);
 
 // Keep the app's blue, with dark text and mostly white surfaces for printing.
 const BRAND = {
@@ -83,6 +79,32 @@ function nextAction(status: string) {
   }
 }
 
+/** What to do on arrival, in the order the office actually works. */
+function visitSteps(departmentName: string | null | undefined, feesDue: number) {
+  const where = departmentName?.trim()
+    ? `the ${departmentName.trim()} department`
+    : "the CCRO department that handles your request";
+  return [
+    {
+      title: "Present your QR or number",
+      detail: `Go to ${where} and show the QR code or tracking number on this slip. Bring your original documents.`,
+    },
+    feesDue > 0
+      ? {
+          title: "Pay at the cashier",
+          detail: `Then proceed to the CCRO cashier to pay ${feeFormatter.format(feesDue)}. The cashier confirms your payment in the system.`,
+        }
+      : {
+          title: "No payment needed",
+          detail: "No fee is recorded for this request. Ask staff to confirm if you are unsure.",
+        },
+    {
+      title: "Wait for your release",
+      detail: "Staff hand over your document once it is cleared for release. Keep this slip until you have it.",
+    },
+  ];
+}
+
 function documentStatusLabel(status: string) {
   switch (status) {
     case "pending": return "Awaiting review";
@@ -114,47 +136,61 @@ const styles = StyleSheet.create({
   },
   wordmark: { fontSize: 15, fontWeight: 700, color: BRAND.primary },
   office: { fontSize: 8, textAlign: "right", color: BRAND.muted, lineHeight: 1.4 },
+  label: { fontSize: 8, color: BRAND.muted, marginBottom: 3 },
   eyebrow: { fontSize: 8, fontWeight: 700, color: BRAND.muted, letterSpacing: 1 },
   title: { fontSize: 23, fontWeight: 700, lineHeight: 1.2, marginTop: 3 },
   intro: { fontSize: 9, color: BRAND.muted, marginTop: 5 },
+  // The counter pass: QR + tracking number stacked on the left are what staff
+  // actually need, so they get the most room; supporting facts sit beside them.
   ticket: {
     flexDirection: "row",
-    alignItems: "center",
     borderWidth: 1,
     borderColor: BRAND.border,
     borderRadius: 6,
-    marginTop: 15,
-    padding: 12,
+    marginTop: 14,
+    padding: 14,
   },
-  ticketDetails: { flex: 1, paddingRight: 18, minWidth: 0 },
-  label: { fontSize: 8, color: BRAND.muted, marginBottom: 3 },
-  trackingNumber: { fontSize: 19, fontWeight: 700, color: BRAND.primary, lineHeight: 1.25 },
-  service: { fontSize: 11, fontWeight: 700, marginTop: 9 },
-  ticketHint: { fontSize: 8, color: BRAND.muted, marginTop: 6 },
-  qrBlock: {
-    width: 112,
+  pass: {
+    width: 204,
     alignItems: "center",
-    borderLeftWidth: 1,
-    borderLeftColor: BRAND.border,
-    paddingLeft: 14,
+    paddingRight: 16,
+    borderRightWidth: 1,
+    borderRightColor: BRAND.border,
   },
-  qrImage: { width: 96, height: 96 },
-  qrCaption: { fontSize: 8, fontWeight: 700, textAlign: "center", marginTop: 3 },
+  qrImage: { width: 168, height: 168 },
+  passLabel: { fontSize: 7.5, fontWeight: 700, color: BRAND.muted, letterSpacing: 1, marginTop: 6 },
+  trackingNumber: {
+    fontSize: 18,
+    fontWeight: 700,
+    color: BRAND.primary,
+    lineHeight: 1.25,
+    marginTop: 2,
+    textAlign: "center",
+  },
+  passHint: { fontSize: 8, color: BRAND.muted, marginTop: 5, textAlign: "center" },
+  details: { flex: 1, minWidth: 0, paddingLeft: 16 },
+  service: { fontSize: 12, fontWeight: 700, lineHeight: 1.3 },
   action: {
-    marginTop: 12,
-    padding: 11,
+    marginTop: 8,
+    padding: 10,
     borderLeftWidth: 3,
     borderLeftColor: BRAND.primary,
     backgroundColor: BRAND.primarySoft,
   },
-  actionStatus: { fontSize: 8, color: BRAND.primary, fontWeight: 700, marginBottom: 3 },
-  actionTitle: { fontSize: 12, fontWeight: 700, marginBottom: 3 },
-  actionDetail: { fontSize: 9, lineHeight: 1.5 },
-  summary: { flexDirection: "row", marginTop: 13 },
-  summaryItem: { flex: 1, minWidth: 0, paddingRight: 12 },
-  summaryLast: { flex: 1, minWidth: 0 },
-  summaryValue: { fontSize: 9, fontWeight: 700 },
-  summaryNote: { fontSize: 8, color: BRAND.muted, marginTop: 3 },
+  actionStatus: { fontSize: 7.5, color: BRAND.primary, fontWeight: 700, marginBottom: 3 },
+  actionTitle: { fontSize: 11, fontWeight: 700, marginBottom: 3 },
+  actionDetail: { fontSize: 8.5, lineHeight: 1.45 },
+  facts: { marginTop: 8 },
+  fact: {
+    flexDirection: "row",
+    paddingVertical: 4,
+    borderBottomWidth: 0.5,
+    borderBottomColor: BRAND.border,
+  },
+  factLabel: { width: 92, fontSize: 8, color: BRAND.muted, paddingTop: 1 },
+  factBody: { flex: 1, minWidth: 0 },
+  factValue: { fontSize: 9, fontWeight: 700 },
+  factNote: { fontSize: 7.5, color: BRAND.muted, marginTop: 1 },
   sectionTitleRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -177,24 +213,24 @@ const styles = StyleSheet.create({
   documentNote: { fontSize: 8, color: BRAND.muted, marginTop: 3, lineHeight: 1.45 },
   documentStatus: { width: 105, fontSize: 8, textAlign: "right", color: BRAND.muted, marginTop: 2, lineHeight: 1.4 },
   correctionText: { color: BRAND.attention },
-  workflow: { flexDirection: "row", marginTop: 4 },
-  step: { flex: 1, paddingRight: 10 },
+  visit: { flexDirection: "row", marginTop: 4 },
+  step: { flex: 1, paddingRight: 12 },
   stepHeading: { flexDirection: "row", alignItems: "center", marginBottom: 5 },
   stepIndex: {
-    width: 17,
-    height: 17,
-    borderRadius: 9,
-    borderWidth: 0.8,
-    borderColor: BRAND.border,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: BRAND.primary,
+    color: BRAND.white,
     textAlign: "center",
-    paddingTop: 2,
-    fontSize: 8,
-    marginRight: 5,
+    paddingTop: 4,
+    fontSize: 9,
+    fontWeight: 700,
+    marginRight: 6,
   },
-  activeStep: { backgroundColor: BRAND.primary, color: BRAND.white, borderColor: BRAND.primary },
-  stepName: { fontSize: 9, fontWeight: 700 },
-  stepDetail: { fontSize: 8, color: BRAND.muted, lineHeight: 1.4 },
-  visitNote: { fontSize: 9, lineHeight: 1.5, marginTop: 12, padding: 10, backgroundColor: BRAND.subtle },
+  stepName: { flex: 1, fontSize: 9.5, fontWeight: 700, lineHeight: 1.3 },
+  stepDetail: { fontSize: 8.5, color: BRAND.muted, lineHeight: 1.45 },
+  visitNote: { fontSize: 9, lineHeight: 1.5, marginTop: 10, padding: 9, backgroundColor: BRAND.subtle },
   footer: {
     position: "absolute",
     bottom: 24,
@@ -232,7 +268,6 @@ function SectionTitle({ children }: { children: string }) {
 export function RequestAcknowledgmentPdf({ data, qrDataUrl, generatedAt }: RequestAcknowledgmentPdfProps) {
   const status = getStatusDetails(data.status);
   const action = nextAction(data.status);
-  const currentStage = stageOf(data.status);
   const hasFee = data.feesDue > 0;
   const isClosed = data.status === "released" || data.status === "rejected";
 
@@ -249,40 +284,42 @@ export function RequestAcknowledgmentPdf({ data, qrDataUrl, generatedAt }: Reque
           <Text style={styles.title}>Request Acknowledgment</Text>
           <Text style={styles.intro}>Keep this copy for tracking and presenting at the CCRO counter.</Text>
           <View style={styles.ticket}>
-            <View style={styles.ticketDetails}>
-              <Text style={styles.label}>Tracking number</Text>
-              <Text style={styles.trackingNumber}>{data.trackingNumber}</Text>
-              <Text style={styles.service}>{data.serviceName}</Text>
-              <Text style={styles.ticketHint}>Show the QR to staff, or give them your tracking number.</Text>
-            </View>
-            <View style={styles.qrBlock}>
+            <View style={styles.pass}>
               <Image src={qrDataUrl} style={styles.qrImage} />
-              <Text style={styles.qrCaption}>For staff to scan</Text>
+              <Text style={styles.passLabel}>TRACKING NUMBER</Text>
+              <Text style={styles.trackingNumber}>{data.trackingNumber}</Text>
+              <Text style={styles.passHint}>Show the QR to staff, or give them this number.</Text>
             </View>
-          </View>
-        </View>
-
-        <View style={styles.action} wrap={false}>
-          <Text style={styles.actionStatus}>STATUS AT DOWNLOAD: {status.label}</Text>
-          <Text style={styles.actionTitle}>{action.title}</Text>
-          <Text style={styles.actionDetail}>{action.detail}</Text>
-        </View>
-
-        <View style={styles.summary} wrap={false}>
-          <View style={styles.summaryItem}>
-            <Text style={styles.label}>Submitted</Text>
-            <Text style={styles.summaryValue}>{formatDate(new Date(data.submittedAt))}</Text>
-            <Text style={styles.summaryNote}>Philippine time (UTC+8)</Text>
-          </View>
-          <View style={styles.summaryItem}>
-            <Text style={styles.label}>Recorded request fee</Text>
-            <Text style={styles.summaryValue}>{hasFee ? feeFormatter.format(data.feesDue) : "No fee recorded"}</Text>
-            <Text style={styles.summaryNote}>{hasFee ? "This copy does not confirm payment." : "Confirm any applicable charges with staff."}</Text>
-          </View>
-          <View style={styles.summaryLast}>
-            <Text style={styles.label}>Estimated processing time</Text>
-            <Text style={styles.summaryValue}>{data.processingTime?.trim() || "Confirm with CCRO staff"}</Text>
-            <Text style={styles.summaryNote}>{isClosed ? "Service estimate, for reference." : "Check your request for the release update."}</Text>
+            <View style={styles.details}>
+              <Text style={styles.service}>{data.serviceName}</Text>
+              <View style={styles.action}>
+                <Text style={styles.actionStatus}>STATUS AT DOWNLOAD: {status.label.toUpperCase()}</Text>
+                <Text style={styles.actionTitle}>{action.title}</Text>
+                <Text style={styles.actionDetail}>{action.detail}</Text>
+              </View>
+              <View style={styles.facts}>
+                <View style={styles.fact}>
+                  <Text style={styles.factLabel}>Submitted</Text>
+                  <View style={styles.factBody}>
+                    <Text style={styles.factValue}>{formatDate(new Date(data.submittedAt))}</Text>
+                    <Text style={styles.factNote}>Philippine time (UTC+8)</Text>
+                  </View>
+                </View>
+                <View style={styles.fact}>
+                  <Text style={styles.factLabel}>Recorded request fee</Text>
+                  <View style={styles.factBody}>
+                    <Text style={styles.factValue}>{hasFee ? feeFormatter.format(data.feesDue) : "No fee recorded"}</Text>
+                    <Text style={styles.factNote}>{hasFee ? "This copy does not confirm payment." : "Confirm any applicable charges with staff."}</Text>
+                  </View>
+                </View>
+                <View style={styles.fact}>
+                  <Text style={styles.factLabel}>Estimated processing</Text>
+                  <View style={styles.factBody}>
+                    <Text style={styles.factValue}>{data.processingTime?.trim() || "Confirm with CCRO staff"}</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
           </View>
         </View>
 
@@ -317,25 +354,26 @@ export function RequestAcknowledgmentPdf({ data, qrDataUrl, generatedAt }: Reque
           </View>
         ))}
 
-        <View wrap={false}>
-          <SectionTitle>Request Process</SectionTitle>
-          <View style={styles.workflow}>
-            {WORKFLOW_STEPS.map((step, index) => (
-              <View key={step.stage} style={styles.step}>
-                <View style={styles.stepHeading}>
-                  <Text style={[styles.stepIndex, ...(currentStage === index + 1 ? [styles.activeStep] : [])]}>{index + 1}</Text>
-                  <Text style={styles.stepName}>{step.stage}</Text>
-                </View>
-                <Text style={styles.stepDetail}>{step.detail}</Text>
-              </View>
-            ))}
-          </View>
-          <Text style={styles.visitNote}>
-            {isClosed
-              ? "Keep this copy for your records. For any follow-up, review the staff notes in My Requests and give the CCRO your tracking number. The QR identifies this request."
-              : "Keep your originals available; bring the documents or copies requested by CCRO staff. The QR identifies your request. Any payment is handled at the CCRO cashier when ready for release."}
+        {isClosed ? (
+          <Text style={styles.visitNote} wrap={false}>
+            Keep this copy for your records. For any follow-up, review the staff notes in My Requests and give the CCRO your tracking number. The QR identifies this request.
           </Text>
-        </View>
+        ) : (
+          <View wrap={false}>
+            <SectionTitle>When You Visit the CCRO</SectionTitle>
+            <View style={styles.visit}>
+              {visitSteps(data.departmentName, data.feesDue).map((step, index) => (
+                <View key={step.title} style={styles.step}>
+                  <View style={styles.stepHeading}>
+                    <Text style={styles.stepIndex}>{index + 1}</Text>
+                    <Text style={styles.stepName}>{step.title}</Text>
+                  </View>
+                  <Text style={styles.stepDetail}>{step.detail}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         <View style={styles.footer} fixed wrap={false}>
           <Text style={styles.footerText}>This acknowledgment is a request record, not an official receipt or civil registry document.</Text>

@@ -53,7 +53,7 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
       .select(
         `id, tracking_number, request_type, status, payment_status,
          fees_due, form_data, created_at, updated_at,
-         services_registry(name, display_name, processing_time,
+         services_registry(name, display_name, processing_time, departments(name),
            event_date_label, event_place_label, reference_number_label),
          form_template_versions(definition)`,
       )
@@ -67,6 +67,7 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
       name?: string;
       display_name?: string;
       processing_time?: string;
+      departments?: { name: string } | { name: string }[] | null;
       event_date_label?: string | null;
       event_place_label?: string | null;
       reference_number_label?: string | null;
@@ -97,6 +98,7 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
       formData: (row.form_data ?? {}) as Record<string, string | number | boolean | null>,
       serviceName: service?.display_name || service?.name || row.request_type,
       processingTime: service?.processing_time ?? null,
+      departmentName: one<{ name: string }>(service?.departments)?.name ?? null,
       eventDateLabel: service?.event_date_label ?? null,
       eventPlaceLabel: service?.event_place_label ?? null,
       referenceNumberLabel: service?.reference_number_label ?? null,
