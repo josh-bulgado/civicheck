@@ -1,8 +1,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "@tanstack/react-router";
-import { ArrowUpDown } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
+import { SortableHeader } from "~/components/ui/data-table-column-header";
 import {
   formatRequestDate,
   getPaymentBadgeVariant,
@@ -11,26 +10,6 @@ import {
 } from "../request-queue";
 import { getPaymentDetails, getStatusDetails } from "../request-workflow";
 import type { StaffRequestRow } from "../requests.queries";
-
-function SortableHeader({
-  column,
-  label,
-}: {
-  column: { toggleSorting: (desc: boolean) => void; getIsSorted: () => false | string };
-  label: string;
-}) {
-  return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="px-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:bg-transparent"
-      onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-    >
-      {label}
-      <ArrowUpDown className="ml-1 w-3 h-3" />
-    </Button>
-  );
-}
 
 export const columns: ColumnDef<StaffRequestRow>[] = [
   {

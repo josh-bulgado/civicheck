@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireActiveSession } from "~/server/auth";
 import { isDepartmentScopedRole } from "~/lib/permissions";
+import { normalizePaymentRange, paymentRangeBounds } from "~/features/requests/payment-history";
 import {
   parseFormTemplateDefinition,
   templateFieldLabels,
@@ -9,6 +10,10 @@ import {
 
 const trackingLookupSchema = z.object({ trackingNumber: z.string().min(1) });
 const requestIdSchema = z.object({ requestId: z.string().uuid() });
+const paymentHistorySchema = z.object({
+  from: z.string().optional(),
+  to: z.string().optional(),
+});
 
 function one<T>(value: T | T[] | null | undefined): T | undefined {
   return Array.isArray(value) ? value[0] : (value ?? undefined);
@@ -206,32 +211,48 @@ export interface PaymentHistoryRow {
   verifiedBy: string;
 }
 
-/** Today's verified payments, for the cashier's end-of-day reconciliation. */
-export const getPaymentHistoryFn = createServerFn({ method: "GET" }).handler(
-  async (): Promise<PaymentHistoryRow[]> => {
-    const { supabase } = await requireActiveSession("requests:collect_payment");
+// PostgREST caps a response at 1,000 rows, so a long range is read in pages.
+const PAYMENT_PAGE_SIZE = 1000;
+const MAX_PAYMENT_PAGES = 20;
 
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
+/**
+ * Verified payments in a date range (default: today), newest first. Open to
+ * the cashier, who verifies them, and to the admin, read-only. The range is
+ * re-normalized here — the client's dates are never trusted as-is.
+ */
+export const getPaymentHistoryFn = createServerFn({ method: "GET" })
+  .validator(paymentHistorySchema)
+  .handler(async ({ data: range }): Promise<PaymentHistoryRow[]> => {
+    const { supabase } = await requireActiveSession("requests:view_payments");
 
-    const { data, error } = await supabase
-      .from("application_logs")
-      .select(
-        `id, created_at,
+    const { start, end } = paymentRangeBounds(normalizePaymentRange(range.from, range.to));
+
+    const logs: any[] = [];
+    for (let page = 0; page < MAX_PAYMENT_PAGES; page++) {
+      const { data, error } = await supabase
+        .from("application_logs")
+        .select(
+          `id, created_at,
          profiles(first_name, last_name),
          requests(tracking_number, fees_due, or_number,
            services_registry(name, display_name),
            profiles(first_name, last_name),
            subject_first_name:form_data->>subject_first_name,
            subject_last_name:form_data->>subject_last_name)`,
-      )
-      .eq("action_status", "payment_verified")
-      .gte("created_at", startOfToday.toISOString())
-      .order("created_at", { ascending: false });
+        )
+        .eq("action_status", "payment_verified")
+        .gte("created_at", start)
+        .lte("created_at", end)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(page * PAYMENT_PAGE_SIZE, (page + 1) * PAYMENT_PAGE_SIZE - 1);
 
-    if (error) throw new Error(error.message);
+      if (error) throw new Error(error.message);
+      logs.push(...(data ?? []));
+      if ((data?.length ?? 0) < PAYMENT_PAGE_SIZE) break;
+    }
 
-    return (data ?? []).flatMap((log: any): PaymentHistoryRow[] => {
+    return logs.flatMap((log): PaymentHistoryRow[] => {
       const request = one<any>(log.requests);
       if (!request) return [];
 
@@ -264,8 +285,7 @@ export const getPaymentHistoryFn = createServerFn({ method: "GET" }).handler(
         },
       ];
     });
-  },
-);
+  });
 
 /** How many payments the cashier has verified today, for the dashboard. */
 export const getPaymentsVerifiedTodayCountFn = createServerFn({ method: "GET" }).handler(

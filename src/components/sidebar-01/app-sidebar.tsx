@@ -39,7 +39,11 @@ const ROLE_GROUP_LAYOUTS: Partial<Record<Role, GroupLayout[]>> = {
       label: "Management",
       itemIds: ["admin-services", "admin-staff"],
     },
-    { id: "insights", label: "Insights", itemIds: ["admin-reports"] },
+    {
+      id: "insights",
+      label: "Insights",
+      itemIds: ["admin-reports", "payment-history"],
+    },
   ],
   system_admin: [
     {
@@ -213,6 +217,9 @@ export function AppSidebar({
       url: "/cashier",
       icon: ClipboardCheck,
     });
+  }
+
+  if (can("requests:view_payments")) {
     navMain.push({
       id: "payment-history",
       title: "Payment History",
