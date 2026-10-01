@@ -46,11 +46,14 @@ import {
 import {
   STAGE_LABELS,
   getPaymentDetails,
+  getCurrentDotClass,
   getStatusDetails,
+  getLogNote,
   stageOf,
 } from "~/features/requests/request-workflow";
 import { formatFee } from "~/features/services/service-utils";
 import { staggerStyle } from "~/components/motion/stagger";
+import { AttachmentGroups } from "~/features/requests/components/AttachmentGroups";
 
 const ACCEPT = "image/jpeg,image/png,application/pdf";
 const MAX_SIZE = 10 * 1024 * 1024;
@@ -224,9 +227,17 @@ export default function MyRequestDetailPage({ request, onUpdated }: MyRequestDet
               </p>
             ) : (
               <ItemGroup className="civic-stagger-auto gap-3">
-                {request.attachments.map((doc) => (
-                  <AttachmentRow key={doc.id} doc={doc} onChanged={onUpdated} />
-                ))}
+                <AttachmentGroups
+                  docs={request.attachments}
+                  renderRow={(doc, title) => (
+                    <AttachmentRow
+                      key={doc.id}
+                      doc={doc}
+                      title={title}
+                      onChanged={onUpdated}
+                    />
+                  )}
+                />
               </ItemGroup>
             )}
           </section>
@@ -250,23 +261,37 @@ export default function MyRequestDetailPage({ request, onUpdated }: MyRequestDet
                   // request's current status — the one thing worth the eye
                   // landing on first in an otherwise-quiet gray timeline.
                   const isCurrent = index === visibleLogs.length - 1;
+                  // Older entries were saved with a generic "Advanced from…"
+                  // remark; show the descriptive note for those instead.
+                  const note = getLogNote(log.actionStatus, log.remarks, "applicant", request.feesDue);
                   return (
                     <TimelineItem key={log.id} step={index + 1}>
                       <TimelineHeader>
                         <TimelineSeparator />
                         <TimelineIndicator
-                          className={`border-0 ${logStatus.dot} ${
-                            isCurrent ? "size-4 ring-4 ring-primary/15" : "size-3"
+                          className={`border-0 ${
+                            isCurrent
+                              ? `${getCurrentDotClass(logStatus.variant)} size-4 ring-4 ring-primary/15`
+                              : `${logStatus.dot} size-3`
                           }`}
                         />
-                        <TimelineTitle>{logStatus.label}</TimelineTitle>
+                        <TimelineTitle
+                          className={isCurrent ? "font-semibold" : undefined}
+                        >
+                          {logStatus.label}
+                          {isCurrent && (
+                            <span
+                              className={`ml-2 align-middle ${logStatus.styles} rounded-full px-2 py-0.5 text-xs font-medium`}
+                            >
+                              Current
+                            </span>
+                          )}
+                        </TimelineTitle>
                         <TimelineDate dateTime={log.createdAt}>
                           {formatDateTime(log.createdAt)}
                         </TimelineDate>
                       </TimelineHeader>
-                      {log.remarks && (
-                        <TimelineContent>{log.remarks}</TimelineContent>
-                      )}
+                      {note && <TimelineContent>{note}</TimelineContent>}
                     </TimelineItem>
                   );
                 })}
@@ -308,9 +333,12 @@ type AttachmentDoc = {
 
 function AttachmentRow({
   doc,
+  title,
   onChanged,
 }: {
   doc: AttachmentDoc;
+  /** Overrides the requirement name, e.g. "File 2 of 3" inside a group. */
+  title?: string;
   onChanged: () => void;
 }) {
   const fileInput = useRef<HTMLInputElement | null>(null);
@@ -370,8 +398,7 @@ function AttachmentRow({
         </ItemMedia>
         <ItemContent>
           <ItemTitle className="font-semibold text-foreground">
-            {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
-            {doc.requirementName}
+            {title ?? `${doc.subjectRole ? `${doc.subjectRole}: ` : ""}${doc.requirementName}`}
           </ItemTitle>
           <Badge
             variant={getAttachmentStatusVariant(doc.verificationStatus)}

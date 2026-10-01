@@ -15,6 +15,16 @@ import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "~/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -53,11 +63,16 @@ import {
   TRANSITION_LABELS,
   getPaymentDetails,
   getStatusDetails,
+  getLogNote,
   nextStatuses,
   stageOf,
   type RequestStatus,
 } from "~/features/requests/request-workflow";
 import { staggerStyle } from "~/components/motion/stagger";
+import { AttachmentGroups } from "~/features/requests/components/AttachmentGroups";
+
+// On-time birth registration is split by parents' marital status.
+const CONFIRM_DECISION_SERVICE_CODES = ["OTCOLB-MARITAL", "OTCOLB-NONMARITAL"];
 
 function formatKey(key: string) {
   return key
@@ -103,7 +118,7 @@ export default function RequestDetailPage({
   request,
   onUpdated,
 }: RequestDetailPageProps) {
-  const { can } = usePermissions();
+  const { can, isAdmin } = usePermissions();
 
   const [remarks, setRemarks] = useState("");
   const [busy, setBusy] = useState(false);
@@ -115,11 +130,17 @@ export default function RequestDetailPage({
 
   const canProcess = can("requests:process");
   const canReverseVerification = can("requests:reverse_verification");
+  // Accept/reject confirmation is rolling out service by service — on-time
+  // birth registration first.
+  const confirmAttachmentDecisions =
+    CONFIRM_DECISION_SERVICE_CODES.includes(request.serviceCode.toUpperCase());
   const hasUnresolvedAttachments = request.attachments.some(
     (doc) => doc.verificationStatus !== "approved",
   );
   const visibleTransitions = available.filter((s) => {
     if (s === "processing" && hasUnresolvedAttachments) return false;
+    // Releasing the document is the final step — CCRO admin only.
+    if (s === "released" && !isAdmin) return false;
     return true;
   });
   const needsAttachmentsResolved =
@@ -258,16 +279,21 @@ export default function RequestDetailPage({
               </p>
             ) : (
               <ItemGroup className="civic-stagger-auto gap-3">
-                {request.attachments.map((doc) => (
-                  <AttachmentRow
-                    key={doc.id}
-                    doc={doc}
-                    canProcess={canProcess}
-                    canReverse={canReverseVerification}
-                    onDecide={handleAttachmentDecision}
-                    onRevert={handleAttachmentRevert}
-                  />
-                ))}
+                <AttachmentGroups
+                  docs={request.attachments}
+                  renderRow={(doc, title) => (
+                    <AttachmentRow
+                      key={doc.id}
+                      doc={doc}
+                      title={title}
+                      canProcess={canProcess}
+                      canReverse={canReverseVerification}
+                      confirmDecision={confirmAttachmentDecisions}
+                      onDecide={handleAttachmentDecision}
+                      onRevert={handleAttachmentRevert}
+                    />
+                  )}
+                />
               </ItemGroup>
             )}
           </section>
@@ -281,6 +307,7 @@ export default function RequestDetailPage({
                 // request's current status — the one thing worth the eye
                 // landing on first in an otherwise-quiet gray timeline.
                 const isCurrent = index === request.logs.length - 1;
+                const note = getLogNote(log.actionStatus, log.remarks, "staff", request.feesDue);
                 return (
                   <TimelineItem key={log.id} step={index + 1}>
                     <TimelineHeader>
@@ -295,9 +322,7 @@ export default function RequestDetailPage({
                         {formatDateTime(log.createdAt)} · {log.actorName}
                       </TimelineDate>
                     </TimelineHeader>
-                    {log.remarks && (
-                      <TimelineContent>{log.remarks}</TimelineContent>
-                    )}
+                    {note && <TimelineContent>{note}</TimelineContent>}
                   </TimelineItem>
                 );
               })}
@@ -364,6 +389,13 @@ export default function RequestDetailPage({
                   </p>
                 )}
 
+                {request.status === "ready_for_release" && !isAdmin && (
+                  <p className="civic-enter-sm rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+                    Only the CCRO admin can release the document once payment
+                    is verified.
+                  </p>
+                )}
+
                 {request.status === "ready_for_release" &&
                   request.paymentStatus !== "verified" && (
                     <p className="civic-enter-sm rounded-lg border border-warning/20 bg-warning/5 p-3 text-xs text-warning-strong">
@@ -399,14 +431,20 @@ function getFileKind(url: string): "image" | "pdf" | "other" {
 
 function AttachmentRow({
   doc,
+  title,
   canProcess,
   canReverse,
+  confirmDecision,
   onDecide,
   onRevert,
 }: {
   doc: AttachmentDoc;
+  /** Overrides the requirement name, e.g. "File 2 of 3" inside a group. */
+  title?: string;
   canProcess: boolean;
   canReverse: boolean;
+  /** Ask "are you sure?" before an accept/reject is actually saved. */
+  confirmDecision: boolean;
   onDecide: (
     attachmentId: string,
     status: "approved" | "rejected",
@@ -416,6 +454,9 @@ function AttachmentRow({
 }) {
   const [busy, setBusy] = useState(false);
   const [rejecting, setRejecting] = useState(false);
+  const [pendingDecision, setPendingDecision] = useState<
+    "approved" | "rejected" | null
+  >(null);
   const [reason, setReason] = useState("");
   const [reverting, setReverting] = useState(false);
   const [revertReason, setRevertReason] = useState("");
@@ -444,6 +485,7 @@ function AttachmentRow({
       await onDecide(doc.id, "approved");
     } finally {
       setBusy(false);
+      setPendingDecision(null);
     }
   }
 
@@ -458,6 +500,7 @@ function AttachmentRow({
       }
     } finally {
       setBusy(false);
+      setPendingDecision(null);
     }
   }
 
@@ -491,8 +534,7 @@ function AttachmentRow({
         </ItemMedia>
         <ItemContent>
           <ItemTitle className="font-semibold text-foreground">
-            {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
-            {doc.requirementName}
+            {title ?? `${doc.subjectRole ? `${doc.subjectRole}: ` : ""}${doc.requirementName}`}
           </ItemTitle>
           <ItemDescription className="text-xs capitalize">
             {doc.verificationStatus}
@@ -515,7 +557,11 @@ function AttachmentRow({
                 size="sm"
                 variant="success"
                 disabled={busy}
-                onClick={handleAccept}
+                onClick={
+                  confirmDecision
+                    ? () => setPendingDecision("approved")
+                    : handleAccept
+                }
               >
                 <CheckCircle2 className="size-4" />
                 Accept
@@ -597,7 +643,11 @@ function AttachmentRow({
               size="sm"
               variant="destructive"
               disabled={busy || !reason.trim()}
-              onClick={handleConfirmReject}
+              onClick={
+                confirmDecision
+                  ? () => setPendingDecision("rejected")
+                  : handleConfirmReject
+              }
             >
               Confirm reject
             </Button>
@@ -615,6 +665,40 @@ function AttachmentRow({
           </div>
         </div>
       )}
+
+      <AlertDialog
+        open={pendingDecision != null}
+        onOpenChange={(open) => !open && !busy && setPendingDecision(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingDecision === "approved"
+                ? "Accept this document?"
+                : "Reject this document?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDecision === "approved"
+                ? `"${doc.requirementName}" will be marked as accepted.`
+                : `"${doc.requirementName}" will be marked as rejected and the applicant will see your reason.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant={pendingDecision === "approved" ? "success" : "destructive"}
+              disabled={busy}
+              onClick={
+                pendingDecision === "approved"
+                  ? handleAccept
+                  : handleConfirmReject
+              }
+            >
+              {pendingDecision === "approved" ? "Yes, accept" : "Yes, reject"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog
         open={viewerUrl != null}

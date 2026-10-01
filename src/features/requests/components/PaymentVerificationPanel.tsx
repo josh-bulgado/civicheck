@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { usePermissions } from "~/hooks/usePermissions";
@@ -27,18 +28,22 @@ export function PaymentVerificationPanel({
   const isReadyForRelease = status === "ready_for_release";
 
   const [value, setValue] = useState("");
+  const [confirmedFree, setConfirmedFree] = useState(false);
   const [busy, setBusy] = useState(false);
+  const isFree = feesDue <= 0;
 
   async function handleVerifyPayment() {
     setBusy(true);
     try {
-      const res = await verifyPaymentFn({ data: { requestId, orNumber: value } });
+      const res = await verifyPaymentFn({ data: isFree ? { requestId, confirmFree: confirmedFree } : { requestId, orNumber: value },
+      });
       if (res.error) {
         toast.error("Could not verify payment", { description: res.message });
         return;
       }
-      toast.success("Payment verified");
+      toast.success(isFree ? "Marked as free" : "Payment verified");
       setValue("");
+      setConfirmedFree(false);
       onVerified();
     } finally {
       setBusy(false);
@@ -52,7 +57,13 @@ export function PaymentVerificationPanel({
 
       {paymentStatus === "verified" ? (
         <p className="text-sm text-foreground">
-          Verified against OR <span className="font-bold">{orNumber ?? "—"}</span>.
+          {isFree ? (
+            "Confirmed free — no fee was due."
+          ) : (
+            <>
+              Verified against OR <span className="font-bold">{orNumber ?? "—"}</span>.
+            </>
+          )}
         </p>
       ) : !isReadyForRelease ? (
         <p className="text-sm italic text-muted-foreground">
@@ -62,17 +73,31 @@ export function PaymentVerificationPanel({
         </p>
       ) : canCollect ? (
         <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="or-number">Official receipt number</Label>
-            <Input
-              id="or-number"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder="OR-000123"
-            />
-          </div>
-          <Button disabled={busy || !value.trim()} onClick={handleVerifyPayment}>
-            Verify payment
+          {isFree ? (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="confirm-free"
+                checked={confirmedFree}
+                onCheckedChange={(checked) => setConfirmedFree(checked === true)}
+              />
+              <Label htmlFor="confirm-free">This request is free — no payment due</Label>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="or-number">Official receipt number</Label>
+              <Input
+                id="or-number"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                placeholder="OR-000123"
+              />
+            </div>
+          )}
+          <Button
+            disabled={busy || (isFree ? !confirmedFree : !value.trim())}
+            onClick={handleVerifyPayment}
+          >
+            {isFree ? "Confirm free" : "Verify payment"}
           </Button>
         </div>
       ) : (

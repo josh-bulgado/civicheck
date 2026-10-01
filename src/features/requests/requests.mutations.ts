@@ -23,7 +23,9 @@ const advanceRequestStatusSchema = z.object({
 });
 const verifyPaymentSchema = z.object({
   requestId: z.string().uuid(),
-  orNumber: z.string(),
+  // Fee-bearing requests need the OR number; free ones are confirmed instead.
+  orNumber: z.string().optional(),
+  confirmFree: z.boolean().optional(),
 });
 const attachmentVerificationSchema = z.object({
   attachmentId: z.string().uuid(),
@@ -102,6 +104,14 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
       }
     }
 
+    // Handing the document over is the final step, reserved for the CCRO admin.
+    if (toStatus === "released" && role !== "admin") {
+      return {
+        error: true,
+        message: "Only the CCRO admin can release a document.",
+      };
+    }
+
     // The cashier verifies payment before the document leaves the counter.
     if (toStatus === "released" && request.payment_status !== "verified") {
       return {
@@ -136,12 +146,12 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
       };
     }
 
-    // The destination status is already shown as this log entry's heading in
-    // the UI, so the fallback remark only needs to name where it came from.
     const { error: logError } = await supabase.from("application_logs").insert({
       request_id: data.requestId,
       performed_by_profile_id: user.id,
       action_status: toStatus,
+      // Kept audience-neutral on purpose; the applicant and staff views each
+      // swap in their own descriptive note when displaying this fallback.
       remarks: remarks || `Advanced from "${getStatusDetails(from).label}".`,
     });
     if (logError) {
@@ -155,20 +165,16 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
   });
 
 // No department check needed here: "requests:collect_payment" is only ever
-// granted to cashier/admin, neither of which is department-scoped.
+// granted to the cashier, who isn't department-scoped. Admin deliberately
+// lacks it — the admin releases, the cashier verifies, never the same person.
 export const verifyPaymentFn = createServerFn({ method: "POST" })
   .validator(verifyPaymentSchema)
   .handler(async ({ data }) => {
     const { supabase, user } = await requireActiveSession("requests:collect_payment");
 
-    const orNumber = data.orNumber.trim();
-    if (!orNumber) {
-      return { error: true, message: "Enter the official receipt number." };
-    }
-
     const { data: request, error: fetchError } = await supabase
       .from("requests")
-      .select("id, status")
+      .select("id, status, fees_due")
       .eq("id", data.requestId)
       .single();
 
@@ -183,11 +189,23 @@ export const verifyPaymentFn = createServerFn({ method: "POST" })
       };
     }
 
+    // Decided from the stored fee, never from the client, so a fee-bearing
+    // request can't be released by ticking the "free" box.
+    const isFree = Number(request.fees_due ?? 0) <= 0;
+    const orNumber = data.orNumber?.trim() ?? "";
+    if (isFree) {
+      if (!data.confirmFree) {
+        return { error: true, message: "Confirm that no fee is due for this request." };
+      }
+    } else if (!orNumber) {
+      return { error: true, message: "Enter the official receipt number." };
+    }
+
     const { data: updated, error } = await supabase
       .from("requests")
       .update({
         payment_status: "verified",
-        or_number: orNumber,
+        or_number: isFree ? null : orNumber,
         updated_at: new Date().toISOString(),
       })
       .eq("id", data.requestId)
@@ -213,7 +231,9 @@ export const verifyPaymentFn = createServerFn({ method: "POST" })
       request_id: data.requestId,
       performed_by_profile_id: user.id,
       action_status: "payment_verified",
-      remarks: `Payment verified against OR ${orNumber}.`,
+      remarks: isFree
+        ? "Cashier confirmed no fee is due."
+        : `Payment verified against OR ${orNumber}.`,
     });
 
     return { error: false };

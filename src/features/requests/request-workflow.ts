@@ -89,4 +89,9 @@ export const TRANSITION_LABELS: Record<RequestStatus, string> = {
 export const REASON_REQUIRED: RequestStatus[] = ["incomplete", "rejected"];
 
 // Re-exported so existing badge call sites keep one import path for status UI.
-export { getStatusDetails, getPaymentDetails } from "~/features/services/request-status";
+export {
+  getStatusDetails,
+  getPaymentDetails,
+  getCurrentDotClass,
+  getLogNote,
+} from "~/features/services/request-status";
