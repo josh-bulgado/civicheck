@@ -63,11 +63,13 @@ import {
   TRANSITION_LABELS,
   getPaymentDetails,
   getStatusDetails,
+  getLogNote,
   nextStatuses,
   stageOf,
   type RequestStatus,
 } from "~/features/requests/request-workflow";
 import { staggerStyle } from "~/components/motion/stagger";
+import { AttachmentGroups } from "~/features/requests/components/AttachmentGroups";
 
 // On-time birth registration is split by parents' marital status.
 const CONFIRM_DECISION_SERVICE_CODES = ["OTCOLB-MARITAL", "OTCOLB-NONMARITAL"];
@@ -116,7 +118,7 @@ export default function RequestDetailPage({
   request,
   onUpdated,
 }: RequestDetailPageProps) {
-  const { can } = usePermissions();
+  const { can, isAdmin } = usePermissions();
 
   const [remarks, setRemarks] = useState("");
   const [busy, setBusy] = useState(false);
@@ -137,6 +139,8 @@ export default function RequestDetailPage({
   );
   const visibleTransitions = available.filter((s) => {
     if (s === "processing" && hasUnresolvedAttachments) return false;
+    // Releasing the document is the final step — CCRO admin only.
+    if (s === "released" && !isAdmin) return false;
     return true;
   });
   const needsAttachmentsResolved =
@@ -275,17 +279,21 @@ export default function RequestDetailPage({
               </p>
             ) : (
               <ItemGroup className="civic-stagger-auto gap-3">
-                {request.attachments.map((doc) => (
-                  <AttachmentRow
-                    key={doc.id}
-                    doc={doc}
-                    canProcess={canProcess}
-                    canReverse={canReverseVerification}
-                    confirmDecision={confirmAttachmentDecisions}
-                    onDecide={handleAttachmentDecision}
-                    onRevert={handleAttachmentRevert}
-                  />
-                ))}
+                <AttachmentGroups
+                  docs={request.attachments}
+                  renderRow={(doc, title) => (
+                    <AttachmentRow
+                      key={doc.id}
+                      doc={doc}
+                      title={title}
+                      canProcess={canProcess}
+                      canReverse={canReverseVerification}
+                      confirmDecision={confirmAttachmentDecisions}
+                      onDecide={handleAttachmentDecision}
+                      onRevert={handleAttachmentRevert}
+                    />
+                  )}
+                />
               </ItemGroup>
             )}
           </section>
@@ -299,6 +307,7 @@ export default function RequestDetailPage({
                 // request's current status — the one thing worth the eye
                 // landing on first in an otherwise-quiet gray timeline.
                 const isCurrent = index === request.logs.length - 1;
+                const note = getLogNote(log.actionStatus, log.remarks, "staff", request.feesDue);
                 return (
                   <TimelineItem key={log.id} step={index + 1}>
                     <TimelineHeader>
@@ -313,9 +322,7 @@ export default function RequestDetailPage({
                         {formatDateTime(log.createdAt)} · {log.actorName}
                       </TimelineDate>
                     </TimelineHeader>
-                    {log.remarks && (
-                      <TimelineContent>{log.remarks}</TimelineContent>
-                    )}
+                    {note && <TimelineContent>{note}</TimelineContent>}
                   </TimelineItem>
                 );
               })}
@@ -382,6 +389,13 @@ export default function RequestDetailPage({
                   </p>
                 )}
 
+                {request.status === "ready_for_release" && !isAdmin && (
+                  <p className="civic-enter-sm rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+                    Only the CCRO admin can release the document once payment
+                    is verified.
+                  </p>
+                )}
+
                 {request.status === "ready_for_release" &&
                   request.paymentStatus !== "verified" && (
                     <p className="civic-enter-sm rounded-lg border border-warning/20 bg-warning/5 p-3 text-xs text-warning-strong">
@@ -417,6 +431,7 @@ function getFileKind(url: string): "image" | "pdf" | "other" {
 
 function AttachmentRow({
   doc,
+  title,
   canProcess,
   canReverse,
   confirmDecision,
@@ -424,6 +439,8 @@ function AttachmentRow({
   onRevert,
 }: {
   doc: AttachmentDoc;
+  /** Overrides the requirement name, e.g. "File 2 of 3" inside a group. */
+  title?: string;
   canProcess: boolean;
   canReverse: boolean;
   /** Ask "are you sure?" before an accept/reject is actually saved. */
@@ -517,8 +534,7 @@ function AttachmentRow({
         </ItemMedia>
         <ItemContent>
           <ItemTitle className="font-semibold text-foreground">
-            {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
-            {doc.requirementName}
+            {title ?? `${doc.subjectRole ? `${doc.subjectRole}: ` : ""}${doc.requirementName}`}
           </ItemTitle>
           <ItemDescription className="text-xs capitalize">
             {doc.verificationStatus}

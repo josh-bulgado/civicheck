@@ -78,7 +78,6 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "requests:reverse_verification",
     "requests:archive",
     "requests:legal",
-    "requests:collect_payment",
     "requests:encode_walkin",
     "users:invite_staff",
     "users:update_operational_roles",
