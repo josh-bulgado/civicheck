@@ -22,6 +22,7 @@ export type Permission =
   | "requests:archive"
   | "requests:legal"
   | "requests:collect_payment"
+  | "requests:view_payments"
   | "requests:encode_walkin"
 
   // CCRO personnel administration
@@ -69,7 +70,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "requests:encode_walkin",
     "dashboard:staff",
   ],
-  cashier: ["requests:collect_payment", "dashboard:staff"],
+  cashier: ["requests:collect_payment", "requests:view_payments", "dashboard:staff"],
   admin: [
     "services:view",
     "services:manage",
@@ -79,6 +80,9 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "requests:archive",
     "requests:legal",
     "requests:encode_walkin",
+    // Read-only: the admin releases documents, so seeing what the cashier
+    // verified is the other half of the check — but admin can't verify itself.
+    "requests:view_payments",
     "users:invite_staff",
     "users:update_operational_roles",
     "users:deactivate_staff",
