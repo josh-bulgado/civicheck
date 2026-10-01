@@ -6,6 +6,7 @@ import {
   ALLOWED_TRANSITIONS,
   REASON_REQUIRED,
   getStatusDetails,
+  isPaymentSettled,
   isRequestStatus,
   type RequestStatus,
 } from "~/features/requests/request-workflow";
@@ -23,9 +24,7 @@ const advanceRequestStatusSchema = z.object({
 });
 const verifyPaymentSchema = z.object({
   requestId: z.string().uuid(),
-  // Fee-bearing requests need the OR number; free ones are confirmed instead.
   orNumber: z.string().optional(),
-  confirmFree: z.boolean().optional(),
 });
 const attachmentVerificationSchema = z.object({
   attachmentId: z.string().uuid(),
@@ -53,7 +52,7 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
     const { data: request, error: fetchError } = await supabase
       .from("requests")
       .select(
-        "id, status, payment_status, tracking_number, services_registry(department_id)",
+        "id, status, payment_status, fees_due, tracking_number, services_registry(department_id)",
       )
       .eq("id", data.requestId)
       .single();
@@ -112,8 +111,10 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
       };
     }
 
-    // The cashier verifies payment before the document leaves the counter.
-    if (toStatus === "released" && request.payment_status !== "verified") {
+    // The cashier verifies payment before the document leaves the counter —
+    // unless no fee is due, in which case there's nothing to collect.
+    const paymentSettled = isPaymentSettled(Number(request.fees_due ?? 0), request.payment_status);
+    if (toStatus === "released" && !paymentSettled) {
       return {
         error: true,
         message: "Payment must be verified before this request can be released.",
@@ -130,7 +131,15 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
 
     const { data: updated, error: updateError } = await supabase
       .from("requests")
-      .update({ status: toStatus, updated_at: new Date().toISOString() })
+      .update({
+        status: toStatus,
+        // A free request never visits the cashier, so settle it on release —
+        // otherwise it would read "Unpaid" forever.
+        ...(toStatus === "released" && request.payment_status !== "verified"
+          ? { payment_status: "verified" }
+          : {}),
+        updated_at: new Date().toISOString(),
+      })
       // Re-assert the status we read, so two staff acting at once can't both win.
       .eq("id", data.requestId)
       .eq("status", from)
@@ -189,15 +198,16 @@ export const verifyPaymentFn = createServerFn({ method: "POST" })
       };
     }
 
-    // Decided from the stored fee, never from the client, so a fee-bearing
-    // request can't be released by ticking the "free" box.
-    const isFree = Number(request.fees_due ?? 0) <= 0;
+    // Decided from the stored fee, never from the client. A free request has
+    // nothing to verify — the admin can release it directly.
+    if (Number(request.fees_due ?? 0) <= 0) {
+      return {
+        error: true,
+        message: "No fee is due for this request, so there's no payment to verify.",
+      };
+    }
     const orNumber = data.orNumber?.trim() ?? "";
-    if (isFree) {
-      if (!data.confirmFree) {
-        return { error: true, message: "Confirm that no fee is due for this request." };
-      }
-    } else if (!orNumber) {
+    if (!orNumber) {
       return { error: true, message: "Enter the official receipt number." };
     }
 
@@ -205,7 +215,7 @@ export const verifyPaymentFn = createServerFn({ method: "POST" })
       .from("requests")
       .update({
         payment_status: "verified",
-        or_number: isFree ? null : orNumber,
+        or_number: orNumber,
         updated_at: new Date().toISOString(),
       })
       .eq("id", data.requestId)
@@ -231,9 +241,7 @@ export const verifyPaymentFn = createServerFn({ method: "POST" })
       request_id: data.requestId,
       performed_by_profile_id: user.id,
       action_status: "payment_verified",
-      remarks: isFree
-        ? "Cashier confirmed no fee is due."
-        : `Payment verified against OR ${orNumber}.`,
+      remarks: `Payment verified against OR ${orNumber}.`,
     });
 
     return { error: false };

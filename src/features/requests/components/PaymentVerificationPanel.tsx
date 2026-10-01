@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
-import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { usePermissions } from "~/hooks/usePermissions";
@@ -28,22 +27,21 @@ export function PaymentVerificationPanel({
   const isReadyForRelease = status === "ready_for_release";
 
   const [value, setValue] = useState("");
-  const [confirmedFree, setConfirmedFree] = useState(false);
   const [busy, setBusy] = useState(false);
   const isFree = feesDue <= 0;
 
   async function handleVerifyPayment() {
     setBusy(true);
     try {
-      const res = await verifyPaymentFn({ data: isFree ? { requestId, confirmFree: confirmedFree } : { requestId, orNumber: value },
+      const res = await verifyPaymentFn({
+        data: { requestId, orNumber: value },
       });
       if (res.error) {
         toast.error("Could not verify payment", { description: res.message });
         return;
       }
-      toast.success(isFree ? "Marked as free" : "Payment verified");
+      toast.success("Payment verified");
       setValue("");
-      setConfirmedFree(false);
       onVerified();
     } finally {
       setBusy(false);
@@ -53,17 +51,19 @@ export function PaymentVerificationPanel({
   return (
     <section className="rounded-xl border border-border bg-white p-6">
       <h2 className="mb-1 text-lg font-bold text-foreground">Payment</h2>
-      <p className="mb-4 text-sm text-muted-foreground">Fee due: ₱{feesDue.toFixed(2)}</p>
+      <p className="mb-4 text-sm text-muted-foreground">
+        Fee due: ₱{feesDue.toFixed(2)}
+      </p>
 
-      {paymentStatus === "verified" ? (
+      {paymentStatus === "verified" && !isFree ? (
         <p className="text-sm text-foreground">
-          {isFree ? (
-            "Confirmed free — no fee was due."
-          ) : (
-            <>
-              Verified against OR <span className="font-bold">{orNumber ?? "—"}</span>.
-            </>
-          )}
+          Verified against OR{" "}
+          <span className="font-bold">{orNumber ?? "—"}</span>.
+        </p>
+      ) : isFree ? (
+        <p className="text-sm text-foreground">
+          No fee is due, so there's nothing for the cashier to verify — the CCRO
+          admin can release this request directly.
         </p>
       ) : !isReadyForRelease ? (
         <p className="text-sm italic text-muted-foreground">
@@ -73,31 +73,20 @@ export function PaymentVerificationPanel({
         </p>
       ) : canCollect ? (
         <div className="flex flex-col gap-3">
-          {isFree ? (
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="confirm-free"
-                checked={confirmedFree}
-                onCheckedChange={(checked) => setConfirmedFree(checked === true)}
-              />
-              <Label htmlFor="confirm-free">This request is free — no payment due</Label>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="or-number">Official receipt number</Label>
-              <Input
-                id="or-number"
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                placeholder="OR-000123"
-              />
-            </div>
-          )}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="or-number">Official receipt number</Label>
+            <Input
+              id="or-number"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder="000123"
+            />
+          </div>
           <Button
-            disabled={busy || (isFree ? !confirmedFree : !value.trim())}
+            disabled={busy || !value.trim()}
             onClick={handleVerifyPayment}
           >
-            {isFree ? "Confirm free" : "Verify payment"}
+            Verify payment
           </Button>
         </div>
       ) : (
