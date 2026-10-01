@@ -19,35 +19,53 @@ import { NavHeader } from "~/components/sidebar-01/nav-header";
 import { NavMain } from "~/components/sidebar-01/nav-main";
 import { usePermissions } from "~/hooks/usePermissions";
 import type { AccountProfile } from "~/features/account/account.types";
+import type { Role } from "~/lib/permissions";
 import type { NavGroup, NavItem } from "./types";
 import { getWorkspaceDetails } from "./workspace";
 
-function createCcroAdminGroups(items: NavItem[]): NavGroup[] {
-  const itemsById = new Map(items.map((item) => [item.id, item]));
-  const selectItems = (ids: string[]) =>
-    ids.flatMap((id) => {
-      const item = itemsById.get(id);
-      return item ? [item] : [];
-    });
+type GroupLayout = { id: string; label?: string; itemIds: string[] };
 
-  return [
-    { id: "overview", items: selectItems(["admin-overview"]) },
-    {
-      id: "operations",
-      label: "Operations",
-      items: selectItems(["request-queue"]),
-    },
+/**
+ * Roles with enough items to deserve labelled sections. Any role not listed
+ * here gets a single flat "Navigation" group. To regroup or add a section, edit
+ * this table; item ids come from the `navMain` entries built in `AppSidebar`.
+ */
+const ROLE_GROUP_LAYOUTS: Partial<Record<Role, GroupLayout[]>> = {
+  admin: [
+    { id: "overview", itemIds: ["admin-overview"] },
+    { id: "operations", label: "Operations", itemIds: ["request-queue"] },
     {
       id: "management",
       label: "Management",
-      items: selectItems(["admin-services", "admin-staff"]),
+      itemIds: ["admin-services", "admin-staff"],
+    },
+    { id: "insights", label: "Insights", itemIds: ["admin-reports"] },
+  ],
+  system_admin: [
+    {
+      id: "monitoring",
+      label: "Monitoring",
+      itemIds: ["system-health", "system-security"],
     },
     {
-      id: "insights",
-      label: "Insights",
-      items: selectItems(["admin-reports"]),
+      id: "access-audit",
+      label: "Access & Audit",
+      itemIds: ["system-accounts", "system-audit"],
     },
-  ].filter((group) => group.items.length > 0);
+  ],
+};
+
+function groupNavItems(role: Role, items: NavItem[]): NavGroup[] {
+  const layout = ROLE_GROUP_LAYOUTS[role];
+  if (!layout) return [{ id: "navigation", label: "Navigation", items }];
+
+  const itemsById = new Map(items.map((item) => [item.id, item]));
+  return layout
+    .map(({ itemIds, ...group }) => ({
+      ...group,
+      items: itemIds.flatMap((id) => itemsById.get(id) ?? []),
+    }))
+    .filter((group) => group.items.length > 0);
 }
 
 export function AppSidebar({
@@ -155,11 +173,9 @@ export function AppSidebar({
     navMain.push({
       id: "services",
       title:
-        role === "admin"
-          ? "Preview Citizen Services"
-          : role === "staff" || role === "supervisor"
-            ? "Service Reference"
-            : "Browse Services",
+        role === "staff" || role === "supervisor"
+          ? "Service Reference"
+          : "Browse Services",
       url: "/services",
       icon: ListChecks,
     });
@@ -205,10 +221,7 @@ export function AppSidebar({
     });
   }
 
-  const navGroups =
-    role === "admin"
-      ? createCcroAdminGroups(navMain)
-      : [{ id: "navigation", label: "Navigation", items: navMain }];
+  const navGroups = groupNavItems(role, navMain);
   const searchableItems = navGroups.flatMap((group) => group.items);
 
   return (

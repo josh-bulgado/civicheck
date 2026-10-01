@@ -85,8 +85,6 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "dashboard:admin",
   ],
   system_admin: [
-    "services:view",
-    "services:manage",
     "accounts:view_all",
     "accounts:suspend",
     "accounts:edit_details",
