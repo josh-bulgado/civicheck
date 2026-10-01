@@ -16,6 +16,8 @@ export type ActiveSession = {
 export type VerifiedSessionUser = {
   id: string;
   email?: string;
+  /** When the access token was issued (seconds since epoch), if present. */
+  issuedAt: number | null;
   user_metadata: {
     avatar_url?: string;
   };
@@ -46,8 +48,24 @@ export async function getVerifiedSessionUser(
   return {
     id: claims.sub,
     email: typeof claims.email === "string" ? claims.email : undefined,
+    issuedAt: typeof claims.iat === "number" ? claims.iat : null,
     user_metadata: avatarUrl ? { avatar_url: avatarUrl } : {},
   };
+}
+
+/**
+ * True when an administrator signed this account out after the access token was
+ * issued. The token itself is still cryptographically valid until it expires,
+ * so the profile's `sessions_revoked_at` is the only thing that ends it early.
+ * A token without an issued-at time is treated as revoked once a marker exists.
+ */
+export function isSessionRevoked(
+  user: Pick<VerifiedSessionUser, "issuedAt">,
+  sessionsRevokedAt: string | null | undefined,
+): boolean {
+  if (!sessionsRevokedAt) return false;
+  if (user.issuedAt === null) return true;
+  return user.issuedAt * 1000 < new Date(sessionsRevokedAt).getTime();
 }
 
 /** Server-side security boundary for every identity-dependent operation. */
@@ -61,11 +79,16 @@ export async function requireActiveSession(
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("role, access_status, department_id, departments(name)")
+    .select(
+      "role, access_status, sessions_revoked_at, department_id, departments(name)",
+    )
     .eq("id", user.id)
     .single();
 
   if (profileError || !profile) throw new Error("Unauthorized: profile missing");
+  if (isSessionRevoked(user, profile.sessions_revoked_at)) {
+    throw new Error("Unauthorized: session was signed out");
+  }
 
   const role = profile.role as Role;
   const accountStatus = (profile.access_status ?? "active") as AccountStatus;

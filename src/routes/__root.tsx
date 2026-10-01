@@ -18,7 +18,7 @@ import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import type { AccountProfile } from "~/features/account/account.types";
 import type { AccountStatus, Role } from "~/lib/permissions";
-import { getVerifiedSessionUser } from "~/server/auth";
+import { getVerifiedSessionUser, isSessionRevoked } from "~/server/auth";
 import { loadCurrentUser } from "~/features/auth/current-user";
 
 const PUBLIC_ROUTES = new Set([
@@ -47,10 +47,17 @@ const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "role, first_name, middle_name, last_name, suffix, date_of_birth, sex, phone_number, access_status, created_at, last_login_at",
+      "role, first_name, middle_name, last_name, suffix, date_of_birth, sex, phone_number, access_status, sessions_revoked_at, created_at, last_login_at",
     )
     .eq("id", user.id)
     .single();
+
+  // An administrator signed this account out: treat it as signed out here and
+  // drop the cookies so the next page load lands on the login screen.
+  if (isSessionRevoked(user, profile?.sessions_revoked_at)) {
+    await supabase.auth.signOut({ scope: "local" });
+    return null;
+  }
 
   return {
     id: user.id,

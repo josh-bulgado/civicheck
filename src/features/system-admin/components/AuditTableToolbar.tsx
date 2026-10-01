@@ -16,7 +16,7 @@ import {
 export type AuditFilterValues = {
   actor: string;
   event: string;
-  source: "all" | "system" | "request";
+  source: "all" | "system" | "request" | "sign-in";
   from: string;
   to: string;
 };
@@ -28,6 +28,7 @@ const sourceOptions: {
   { value: "all", label: "All Sources" },
   { value: "system", label: "System" },
   { value: "request", label: "Request" },
+  { value: "sign-in", label: "Sign-in" },
 ];
 
 export function AuditTableToolbar({

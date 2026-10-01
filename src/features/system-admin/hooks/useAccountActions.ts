@@ -4,6 +4,9 @@ import { toast } from "sonner";
 import {
   reactivateAccount,
   replaceCcroAdmin,
+  resendAccountVerification,
+  revokeAccountSessions,
+  sendAccountPasswordReset,
   suspendAccount,
   updateAccountDetails,
 } from "../system-admin.functions";
@@ -20,6 +23,9 @@ export type AccountPendingAction =
   | { type: "suspend"; accountId: string }
   | { type: "reactivate"; accountId: string }
   | { type: "edit-details"; accountId: string }
+  | { type: "password-reset"; accountId: string }
+  | { type: "revoke-sessions"; accountId: string }
+  | { type: "resend-verification"; accountId: string }
   | { type: "replace-admin" }
   | null;
 
@@ -84,6 +90,36 @@ export function useAccountActions() {
     [run],
   );
 
+  const sendPasswordReset = useCallback(
+    (accountId: string) =>
+      run(
+        () => sendAccountPasswordReset({ data: { targetId: accountId } }),
+        { type: "password-reset", accountId },
+        "Password reset link sent.",
+      ),
+    [run],
+  );
+
+  const revokeSessions = useCallback(
+    (accountId: string) =>
+      run(
+        () => revokeAccountSessions({ data: { targetId: accountId } }),
+        { type: "revoke-sessions", accountId },
+        "Signed out of all sessions.",
+      ),
+    [run],
+  );
+
+  const resendVerification = useCallback(
+    (accountId: string, email: string) =>
+      run(
+        () => resendAccountVerification({ data: { targetId: accountId, email } }),
+        { type: "resend-verification", accountId },
+        "Verification email sent.",
+      ),
+    [run],
+  );
+
   const replaceAdministrator = useCallback(
     ({ candidateId, outgoingRole, outgoingDepartmentId }: ReplaceAdministratorInput) =>
       run(
@@ -104,6 +140,9 @@ export function useAccountActions() {
     suspend,
     reactivate,
     updateDetails,
+    sendPasswordReset,
+    revokeSessions,
+    resendVerification,
     replaceAdministrator,
   };
 }

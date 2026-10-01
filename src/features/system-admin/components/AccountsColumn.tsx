@@ -10,14 +10,12 @@ import { AccountRowActions } from "./AccountRowActions";
 const headerClassName =
   "text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground";
 
-const ONLINE_THRESHOLD_MS = 15 * 60 * 1000;
-
 function getInitials(account: AccountSummary) {
   const initials = `${account.firstName.charAt(0)}${account.lastName.charAt(0)}`;
   return initials.toUpperCase() || account.email.charAt(0).toUpperCase();
 }
 
-function formatLastSeen(lastSignInAt: string) {
+function formatRelative(lastSignInAt: string) {
   const diffMinutes = Math.round(
     (Date.now() - new Date(lastSignInAt).getTime()) / 60_000,
   );
@@ -28,42 +26,35 @@ function formatLastSeen(lastSignInAt: string) {
   return `${Math.round(diffHours / 24)}d ago`;
 }
 
-function PresenceBadge({ lastSignInAt }: { lastSignInAt: string | null }) {
-  if (!lastSignInAt) {
+/**
+ * Sign-in recency, not live presence: Supabase only records when a session was
+ * created, so this cannot tell whether someone is using the system right now.
+ */
+function LastSignInCell({ account }: { account: AccountSummary }) {
+  const { lastSignInAt } = account;
+
+  // Invited personnel who have not accepted yet. Sending and cancelling the
+  // invitation is the CCRO Administrator's job, so this is visibility only.
+  if (account.invitePending && account.invitedAt) {
     return (
-      <Badge variant="neutral" className="gap-1.5">
-        <span
-          className="size-1.5 rounded-full bg-muted-foreground/50"
-          aria-hidden="true"
-        />
-        Never signed in
+      <Badge variant="warning" className="gap-1.5">
+        <span className="size-1.5 rounded-full bg-warning" aria-hidden="true" />
+        Invite pending · sent {formatRelative(account.invitedAt)}
       </Badge>
     );
   }
 
-  const isOnline =
-    Date.now() - new Date(lastSignInAt).getTime() < ONLINE_THRESHOLD_MS;
-
-  if (isOnline) {
-    return (
-      <Badge variant="success" className="gap-1.5">
-        <span
-          className="size-1.5 rounded-full bg-success-dot ring-2 ring-success/20"
-          aria-hidden="true"
-        />
-        Active now
-      </Badge>
-    );
+  if (!lastSignInAt) {
+    return <Badge variant="neutral">Never signed in</Badge>;
   }
 
   return (
-    <Badge variant="neutral" className="gap-1.5">
-      <span
-        className="size-1.5 rounded-full bg-muted-foreground/50"
-        aria-hidden="true"
-      />
-      Last seen {formatLastSeen(lastSignInAt)}
-    </Badge>
+    <span
+      className="whitespace-nowrap text-sm text-muted-foreground"
+      title={new Date(lastSignInAt).toLocaleString()}
+    >
+      {formatRelative(lastSignInAt)}
+    </span>
   );
 }
 
@@ -73,12 +64,20 @@ export function createAccountColumns({
   onEdit,
   onSuspend,
   onReactivate,
+  onViewHistory,
+  onSendPasswordReset,
+  onResendVerification,
+  onRevokeSessions,
 }: {
   category: AccountCategory;
   pendingAccountId: string | null;
   onEdit: (account: AccountSummary) => void;
   onSuspend: (account: AccountSummary) => void;
   onReactivate: (account: AccountSummary) => void;
+  onViewHistory: (account: AccountSummary) => void;
+  onSendPasswordReset: (account: AccountSummary) => void;
+  onResendVerification: (account: AccountSummary) => void;
+  onRevokeSessions: (account: AccountSummary) => void;
 }): ColumnDef<AccountSummary>[] {
   return [
     {
@@ -101,7 +100,7 @@ export function createAccountColumns({
           "Unnamed account";
 
         return (
-          <div className="flex min-w-72 items-center gap-3.5">
+          <div className="flex min-w-56 items-center gap-3">
             <Avatar size="lg" className="bg-primary">
               <AvatarFallback className="bg-primary font-semibold text-white">
                 {getInitials(account)}
@@ -132,7 +131,7 @@ export function createAccountColumns({
       accessorKey: "status",
       header: () => <span className={headerClassName}>Status</span>,
       cell: ({ row }) => (
-        <div className="max-w-64">
+        <div className="max-w-48">
           <Badge
             variant={
               row.original.status === "active" ? "secondary" : "destructive"
@@ -152,10 +151,10 @@ export function createAccountColumns({
     ...(category === "personnel"
       ? [
           {
-            id: "presence",
-            header: () => <span className={headerClassName}>Presence</span>,
+            id: "lastSignIn",
+            header: () => <span className={headerClassName}>Last sign-in</span>,
             cell: ({ row }) => (
-              <PresenceBadge lastSignInAt={row.original.lastSignInAt} />
+              <LastSignInCell account={row.original} />
             ),
           } satisfies ColumnDef<AccountSummary>,
         ]
@@ -191,6 +190,10 @@ export function createAccountColumns({
             onEdit={onEdit}
             onSuspend={onSuspend}
             onReactivate={onReactivate}
+            onViewHistory={onViewHistory}
+            onSendPasswordReset={onSendPasswordReset}
+            onResendVerification={onResendVerification}
+            onRevokeSessions={onRevokeSessions}
           />
         </div>
       ),

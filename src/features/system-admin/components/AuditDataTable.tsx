@@ -8,7 +8,8 @@ import {
   type PaginationState,
   type SortingState,
 } from "@tanstack/react-table";
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal, X } from "lucide-react";
+import { Button } from "~/components/ui/button";
 import { DataTablePagination } from "~/components/ui/data-table-pagination";
 import {
   Table,
@@ -75,6 +76,7 @@ export function AuditDataTable({
         source: values.source,
         from: values.from || undefined,
         to: values.to || undefined,
+        account: filters.account,
       },
     });
   }
@@ -85,8 +87,36 @@ export function AuditDataTable({
     void navigate(1, cleared);
   }
 
+  function clearAccountFilter() {
+    void router.navigate({
+      to: "/system-admin/audit",
+      search: {
+        page: 1,
+        actor: filterValues.actor || undefined,
+        event: filterValues.event || undefined,
+        source: filterValues.source,
+        from: filterValues.from || undefined,
+        to: filterValues.to || undefined,
+      },
+    });
+  }
+
   return (
     <div className="space-y-4">
+      {filters.account ? (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-subtle px-4 py-2.5 text-sm">
+          <p className="text-foreground/80">
+            Showing activity by or about one account
+            <span className="ml-2 font-mono text-xs text-muted-foreground">
+              {filters.account}
+            </span>
+          </p>
+          <Button variant="ghost" size="sm" onClick={clearAccountFilter}>
+            <X />
+            Show all
+          </Button>
+        </div>
+      ) : null}
       <AuditTableToolbar
         values={filterValues}
         onChange={setFilterValues}

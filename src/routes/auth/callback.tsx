@@ -1,6 +1,10 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
+import {
+  recordSessionForCurrentUser,
+  type SessionMethod,
+} from "~/features/system-admin/security-center.server";
 import { getSupabaseServerClient } from "~/utils/supabase";
 
 const OTP_TYPES = ["invite", "signup", "recovery", "email", "email_change"] as const;
@@ -11,6 +15,14 @@ const FALLBACK_MESSAGES: Record<(typeof OTP_TYPES)[number], string> = {
   recovery: "This password reset link is invalid or has expired.",
   email: "This authentication link is invalid or has expired.",
   email_change: "This email change link is invalid or has expired.",
+};
+
+const SESSION_METHODS: Record<(typeof OTP_TYPES)[number], SessionMethod> = {
+  invite: "invitation",
+  signup: "email link",
+  recovery: "password reset",
+  email: "email link",
+  email_change: "email link",
 };
 
 function parseOtpType(value: string | null) {
@@ -25,6 +37,7 @@ const handleCallback = createServerFn({ method: "GET" }).handler(async () => {
   const otpType = parseOtpType(url.searchParams.get("type"));
   const next = url.searchParams.get("next");
   const supabase = getSupabaseServerClient();
+  let method: SessionMethod = "email link";
 
   if (tokenHash && otpType) {
     const { error } = await supabase.auth.verifyOtp({
@@ -41,6 +54,7 @@ const handleCallback = createServerFn({ method: "GET" }).handler(async () => {
             : FALLBACK_MESSAGES[otpType],
       };
     }
+    method = SESSION_METHODS[otpType];
   } else if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
@@ -59,6 +73,13 @@ const handleCallback = createServerFn({ method: "GET" }).handler(async () => {
       message: "This authentication link is invalid or has expired.",
     };
   }
+
+  // Every successful callback opens a session without a password check:
+  // invitations, reset and verification links, and OAuth.
+  await recordSessionForCurrentUser(
+    supabase,
+    code && !tokenHash ? "social sign-in" : method,
+  );
 
   return {
     error: false,

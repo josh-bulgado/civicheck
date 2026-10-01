@@ -4,6 +4,7 @@ import { AccountsDataTable } from "../components/AccountsDataTable";
 import { SystemAdminPageHeader } from "../components/SystemAdminPageHeader";
 import type {
   AccountCategory,
+  AccountFilters,
   AccountSummary,
   AdminCandidate,
   SystemAdminDepartment,
@@ -14,13 +15,13 @@ const pageContent = {
     eyebrow: "CCRO directory",
     title: "CCRO personnel accounts",
     description:
-      "Review personnel access, suspend or reactivate accounts, and manage the CCRO Administrator assignment.",
+      "Search and filter personnel, send password reset links, sign accounts out, suspend or reactivate them, and manage the CCRO Administrator assignment. Invitations are managed by the CCRO Administrator.",
   },
   citizens: {
     eyebrow: "Citizen directory",
     title: "Citizen accounts",
     description:
-      "Review citizen access and suspend or reactivate accounts without opening submissions or documents.",
+      "Help residents with sign-in problems — resend verification, send reset links, sign out, suspend or reactivate — without opening submissions or documents.",
   },
   "platform-admins": {
     eyebrow: "Protected directory",
@@ -39,6 +40,7 @@ export function AccountsPage({
   departments,
   hasActiveAdmin,
   category,
+  filters,
   page,
   pageSize,
   total,
@@ -49,6 +51,7 @@ export function AccountsPage({
   departments: SystemAdminDepartment[];
   hasActiveAdmin: boolean;
   category: AccountCategory;
+  filters: AccountFilters;
   page: number;
   pageSize: number;
   total: number;
@@ -84,6 +87,7 @@ export function AccountsPage({
             departments={departments}
             hasActiveAdmin={hasActiveAdmin}
             category={category}
+            filters={filters}
             page={page}
             pageSize={pageSize}
             total={total}

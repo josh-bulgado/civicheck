@@ -30,6 +30,37 @@ export type AccountSummary = {
   suspensionReason: string | null;
   departmentId: string | null;
   employmentType: AccountEmploymentType;
+  /** False until the owner has confirmed their email (or accepted an invite). */
+  emailConfirmed: boolean;
+  /**
+   * Personnel invited by the CCRO Administrator who have not accepted yet.
+   * Read-only here: sending and cancelling invitations stays with the CCRO
+   * Administrator.
+   */
+  invitePending: boolean;
+  /** When the pending invitation was created; null if not a pending invite. */
+  invitedAt: string | null;
+};
+
+/** Server-side directory filters, mirrored in the accounts route's search. */
+export type AccountFilters = {
+  q?: string;
+  role?: Role;
+  status?: AccountStatus;
+  departmentId?: string;
+  /** "never" narrows to accounts that have not signed in yet. */
+  signIn?: "never";
+};
+
+/** One audit event that targeted an account, shaped for the history dialog. */
+export type AccountHistoryEvent = {
+  id: string;
+  eventType: string;
+  actor: string;
+  timestamp: string;
+  reason: string | null;
+  /** Secondary line, e.g. the device and network of a sign-in. */
+  detail: string | null;
 };
 
 /** Payload of the system administrator's account edit dialog. */
@@ -43,8 +74,6 @@ export type AccountDetailsInput = {
   sex: AccountSex;
   phoneNumber: string;
   email: string;
-  /** Blank keeps the current password. */
-  newPassword: string;
 };
 
 export type AdminCandidate = Pick<
@@ -59,7 +88,7 @@ export type SystemAdminDepartment = {
 
 export type NormalizedAuditEvent = {
   id: string;
-  source: "system" | "request";
+  source: "system" | "request" | "sign-in";
   eventType: string;
   actorId: string | null;
   actor: string;
@@ -75,9 +104,11 @@ export type AuditFilters = {
   pageSize?: number;
   actor?: string;
   event?: string;
-  source?: "all" | "system" | "request";
+  source?: "all" | "system" | "request" | "sign-in";
   from?: string;
   to?: string;
+  /** Narrows to events performed by, or targeting, this profile id. */
+  account?: string;
 };
 
 export type HealthStatus =

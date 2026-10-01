@@ -7,8 +7,12 @@ import {
 import { getAppUrl } from "~/utils/app-url";
 import { sendEmail } from "~/utils/resend";
 import { renderOtpEmail } from "~/utils/email-template";
-import { requireActiveSession, isOperationalRole } from "~/server/auth";
-import { recordAuthenticationSecurityEvent } from "~/features/system-admin/security-center.server";
+import { requireActiveSession } from "~/server/auth";
+import {
+  recordAuthenticationSecurityEvent,
+  recordSessionForCurrentUser,
+  recordSessionStarted,
+} from "~/features/system-admin/security-center.server";
 import type { Role } from "~/lib/permissions";
 
 /**
@@ -109,15 +113,11 @@ export const loginWithEmailFn = createServerFn({ method: "POST" })
       await supabase.auth.signOut();
       return { error: true, message: "This account is not active." };
     }
-    if (profile?.role === "admin" || profile?.role === "system_admin") {
-      await recordAuthenticationSecurityEvent({
-        type: "admin_session_started",
+    if (profile?.role) {
+      await recordSessionStarted({
         actorProfileId: loginData.user.id,
-      });
-    } else if (profile?.role && isOperationalRole(profile.role as Role)) {
-      await recordAuthenticationSecurityEvent({
-        type: "staff_session_started",
-        actorProfileId: loginData.user.id,
+        role: profile.role as Role,
+        method: "password",
       });
     }
     return { error: false };
@@ -483,5 +483,7 @@ export const verifyRecoveryOtpFn = createServerFn({ method: "POST" })
       };
     }
 
+    // A verified recovery code opens a session without a password check.
+    await recordSessionForCurrentUser(supabase, "password reset");
     return { error: false };
   });

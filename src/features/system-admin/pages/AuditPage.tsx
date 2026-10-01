@@ -24,7 +24,7 @@ export function AuditPage({
       <SystemAdminPageHeader
         icon={ScrollText}
         title="Audit Center"
-        description="Review metadata-only account and request activity. Citizen form data and documents are never included."
+        description="Review metadata-only account, sign-in and request activity. Citizen form data and documents are never included."
       />
       <section aria-labelledby="audit-events-title">
         <Card>
@@ -35,7 +35,7 @@ export function AuditPage({
               </h2>
             </CardTitle>
             <CardDescription>
-              Filter activity by actor, event, source, or date range.
+              Filter activity by actor, event, source (system, request, or CCRO personnel sign-in), or date range.
             </CardDescription>
           </CardHeader>
           <CardContent>
