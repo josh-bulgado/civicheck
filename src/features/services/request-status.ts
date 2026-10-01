@@ -138,7 +138,14 @@ export function getStatusDetails(status: string | null): StatusDetails {
   }
 }
 
-export function getPaymentDetails(paymentStatus: string | null): PaymentDetails {
+export function getPaymentDetails(
+  paymentStatus: string | null,
+  feesDue?: number,
+): PaymentDetails {
+  // A free request never gets cashier-verified, so "Unpaid" would be wrong.
+  if (feesDue !== undefined && feesDue <= 0) {
+    return { label: "No fee", styles: "status-neutral", variant: "neutral" };
+  }
   switch (paymentStatus) {
     case "unpaid":
       return { label: "Unpaid", styles: "status-warning", variant: "warning" };

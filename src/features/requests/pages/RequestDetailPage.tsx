@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -25,12 +25,6 @@ import {
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "~/components/ui/dialog";
-import {
   Item,
   ItemActions,
   ItemContent,
@@ -39,16 +33,6 @@ import {
   ItemMedia,
   ItemTitle,
 } from "~/components/ui/item";
-import {
-  Timeline,
-  TimelineContent,
-  TimelineDate,
-  TimelineHeader,
-  TimelineIndicator,
-  TimelineItem,
-  TimelineSeparator,
-  TimelineTitle,
-} from "~/components/reui/timeline";
 import type { RequestDetail } from "~/features/requests/requests.queries";
 import {
   advanceRequestStatusFn,
@@ -59,54 +43,24 @@ import {
 import { PaymentVerificationPanel } from "~/features/requests/components/PaymentVerificationPanel";
 import {
   REASON_REQUIRED,
-  STAGE_LABELS,
   TRANSITION_LABELS,
-  getPaymentDetails,
   getStatusDetails,
-  getLogNote,
+  isPaymentSettled,
   nextStatuses,
-  stageOf,
   type RequestStatus,
 } from "~/features/requests/request-workflow";
 import { staggerStyle } from "~/components/motion/stagger";
 import { AttachmentGroups } from "~/features/requests/components/AttachmentGroups";
+import {
+  AttachmentViewerDialog,
+  getFileKind,
+} from "~/features/requests/components/AttachmentViewerDialog";
+import { RequestDetailHero } from "~/features/requests/components/RequestDetailHero";
+import { RequestHistoryTimeline } from "~/features/requests/components/RequestHistoryTimeline";
+import { SubmittedDetailsCard } from "~/features/requests/components/SubmittedDetailsCard";
 
 // On-time birth registration is split by parents' marital status.
 const CONFIRM_DECISION_SERVICE_CODES = ["OTCOLB-MARITAL", "OTCOLB-NONMARITAL"];
-
-function formatKey(key: string) {
-  return key
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
-/**
- * `event_date`/`event_place`/`reference_number` carry a per-service label
- * (e.g. "Date of birth" for a birth service) configured in Admin → Services —
- * show that instead of the generic humanized key when the service set one.
- */
-function formDataLabel(key: string, request: RequestDetail) {
-  if (request.fieldLabels[key]) return request.fieldLabels[key];
-  if (key === "event_date" && request.eventDateLabel)
-    return request.eventDateLabel;
-  if (key === "event_place" && request.eventPlaceLabel)
-    return request.eventPlaceLabel;
-  if (key === "reference_number" && request.referenceNumberLabel) {
-    return request.referenceNumberLabel;
-  }
-  return formatKey(key);
-}
-
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 interface RequestDetailPageProps {
   request: RequestDetail;
@@ -124,8 +78,6 @@ export default function RequestDetailPage({
   const [busy, setBusy] = useState(false);
 
   const status = getStatusDetails(request.status);
-  const payment = getPaymentDetails(request.paymentStatus);
-  const stage = stageOf(request.status);
   const available = nextStatuses(request.status);
 
   const canProcess = can("requests:process");
@@ -143,6 +95,8 @@ export default function RequestDetailPage({
     if (s === "released" && !isAdmin) return false;
     return true;
   });
+  // Release waits on the cashier's payment check, unless no fee is due.
+  const paymentSettled = isPaymentSettled(request.feesDue, request.paymentStatus);
   const needsAttachmentsResolved =
     available.includes("processing") && hasUnresolvedAttachments;
 
@@ -212,63 +166,27 @@ export default function RequestDetailPage({
         Back to the queue
       </Link>
 
-      <header className="dashboard-hero">
-        <div className="relative z-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="mb-3 text-xs font-bold uppercase tracking-[0.13em] text-brand-gold">
-              {stage
-                ? `Stage ${stage} · ${STAGE_LABELS[stage]}`
-                : "Unknown stage"}
-            </p>
-            <h1 className="text-3xl font-extrabold tracking-[-0.03em] text-white">
-              {request.trackingNumber}
-            </h1>
-            <p className="mt-2 text-sm text-white/75">
-              {request.applicantName} · {request.serviceName}
-              {request.isWalkIn ? " · Walk-in" : ""}
-            </p>
-          </div>
-          <div className="civic-stagger flex flex-wrap gap-2">
-            <span
-              style={staggerStyle(0)}
-              className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium ${status.styles}`}
-            >
-              {status.label}
-            </span>
-            <span
-              style={staggerStyle(1)}
-              className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium ${payment.styles}`}
-            >
-              {payment.label}
-            </span>
-          </div>
-        </div>
-      </header>
+      <RequestDetailHero
+        trackingNumber={request.trackingNumber}
+        status={request.status}
+        paymentStatus={request.paymentStatus}
+        feesDue={request.feesDue}
+        subtitle={
+          <>
+            {request.applicantName} · {request.serviceName}
+            {request.isWalkIn ? " · Walk-in" : ""}
+          </>
+        }
+      />
 
       <div className="civic-stagger mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div
           style={staggerStyle(0)}
           className="flex flex-col gap-6 lg:col-span-2"
         >
-          <section className="rounded-xl border border-border bg-white p-6">
-            <h2 className="mb-4 text-lg font-bold text-foreground">
-              Submitted details
-            </h2>
-            <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-              {Object.entries(request.formData).map(([key, value]) => (
-                <div key={key}>
-                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                    {formDataLabel(key, request)}
-                  </dt>
-                  <dd className="text-sm text-foreground">
-                    {value == null || value === "" ? "—" : String(value)}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </section>
+          <SubmittedDetailsCard request={request} showEmpty />
 
-          <section className="rounded-xl border border-border bg-white p-6">
+          <section className="dashboard-panel p-6">
             <h2 className="mb-4 text-lg font-bold text-foreground">
               Uploaded requirements ({request.attachments.length})
             </h2>
@@ -298,40 +216,15 @@ export default function RequestDetailPage({
             )}
           </section>
 
-          <section className="rounded-xl border border-border bg-white p-6">
-            <h2 className="mb-4 text-lg font-bold text-foreground">History</h2>
-            <Timeline className="civic-stagger-auto">
-              {request.logs.map((log, index) => {
-                const logStatus = getStatusDetails(log.actionStatus);
-                // Logs come back oldest-first, so the last entry is the
-                // request's current status — the one thing worth the eye
-                // landing on first in an otherwise-quiet gray timeline.
-                const isCurrent = index === request.logs.length - 1;
-                const note = getLogNote(log.actionStatus, log.remarks, "staff", request.feesDue);
-                return (
-                  <TimelineItem key={log.id} step={index + 1}>
-                    <TimelineHeader>
-                      <TimelineSeparator />
-                      <TimelineIndicator
-                        className={`border-0 ${logStatus.dot} ${
-                          isCurrent ? "size-4 ring-4 ring-primary/15" : "size-3"
-                        }`}
-                      />
-                      <TimelineTitle>{logStatus.label}</TimelineTitle>
-                      <TimelineDate dateTime={log.createdAt}>
-                        {formatDateTime(log.createdAt)} · {log.actorName}
-                      </TimelineDate>
-                    </TimelineHeader>
-                    {note && <TimelineContent>{note}</TimelineContent>}
-                  </TimelineItem>
-                );
-              })}
-            </Timeline>
-          </section>
+          <RequestHistoryTimeline
+            logs={request.logs}
+            audience="staff"
+            feesDue={request.feesDue}
+          />
         </div>
 
         <div style={staggerStyle(1)} className="flex flex-col gap-6">
-          <section className="rounded-xl border border-border bg-white p-6">
+          <section className="dashboard-panel p-6">
             <h2 className="mb-4 text-lg font-bold text-foreground">
               Move this request
             </h2>
@@ -368,16 +261,26 @@ export default function RequestDetailPage({
                     </div>
 
                     <div className="civic-stagger-auto flex flex-col gap-3">
-                      {visibleTransitions.map((next) => (
+                      {visibleTransitions.map((next) => {
+                        const awaitingPayment = next === "released" && !paymentSettled;
+                        return (
                         <Button
                           key={next}
                           variant={next === "rejected" ? "outline" : "default"}
-                          disabled={busy}
+                          disabled={busy || awaitingPayment}
+                          // Gray, not just faded blue, so a payment-locked
+                          // release reads as unavailable at a glance.
+                          className={
+                            awaitingPayment
+                              ? "disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
+                              : undefined
+                          }
                           onClick={() => handleTransition(next)}
                         >
                           {TRANSITION_LABELS[next]}
                         </Button>
-                      ))}
+                        );
+                      })}
                     </div>
                   </>
                 )}
@@ -396,8 +299,7 @@ export default function RequestDetailPage({
                   </p>
                 )}
 
-                {request.status === "ready_for_release" &&
-                  request.paymentStatus !== "verified" && (
+                {request.status === "ready_for_release" && !paymentSettled && (
                     <p className="civic-enter-sm rounded-lg border border-warning/20 bg-warning/5 p-3 text-xs text-warning-strong">
                       Payment must be verified before this can be released.
                     </p>
@@ -421,13 +323,6 @@ export default function RequestDetailPage({
 }
 
 type AttachmentDoc = RequestDetail["attachments"][number];
-
-function getFileKind(url: string): "image" | "pdf" | "other" {
-  const clean = url.split("?")[0].toLowerCase();
-  if (/\.(png|jpe?g|gif|webp|svg)$/.test(clean)) return "image";
-  if (/\.pdf$/.test(clean)) return "pdf";
-  return "other";
-}
 
 function AttachmentRow({
   doc,
@@ -462,6 +357,7 @@ function AttachmentRow({
   const [revertReason, setRevertReason] = useState("");
   const [viewing, setViewing] = useState(false);
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
+  const confirmButton = useRef<HTMLButtonElement | null>(null);
 
   async function handleViewFile() {
     setViewing(true);
@@ -670,7 +566,12 @@ function AttachmentRow({
         open={pendingDecision != null}
         onOpenChange={(open) => !open && !busy && setPendingDecision(null)}
       >
-        <AlertDialogContent>
+        {/* Accepting is routine and reversible ("Undo decision"), so "Yes"
+            takes focus and Enter confirms. Rejecting keeps the default
+            (first focusable = Cancel) so it can't be fired by a stray Enter. */}
+        <AlertDialogContent
+          initialFocus={pendingDecision === "approved" ? confirmButton : true}
+        >
           <AlertDialogHeader>
             <AlertDialogTitle>
               {pendingDecision === "approved"
@@ -686,6 +587,7 @@ function AttachmentRow({
           <AlertDialogFooter>
             <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
             <AlertDialogAction
+              ref={confirmButton}
               variant={pendingDecision === "approved" ? "success" : "destructive"}
               disabled={busy}
               onClick={
@@ -700,54 +602,12 @@ function AttachmentRow({
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog
-        open={viewerUrl != null}
-        onOpenChange={(open) => !open && setViewerUrl(null)}
-      >
-        <DialogContent className="sm:max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>
-              {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
-              {doc.requirementName}
-            </DialogTitle>
-          </DialogHeader>
-          {viewerUrl && (
-            <div className="flex h-[75vh] items-center justify-center overflow-hidden">
-              {fileKind === "image" ? (
-                <img
-                  src={viewerUrl}
-                  alt={doc.requirementName}
-                  className="h-full w-full rounded-md object-contain"
-                />
-              ) : fileKind === "pdf" ? (
-                <iframe
-                  src={viewerUrl}
-                  title={doc.requirementName}
-                  className="h-full w-full rounded-md border border-border-light"
-                />
-              ) : (
-                <div className="flex flex-col items-center gap-3 py-8 text-sm text-muted-foreground">
-                  <p>This file type can't be previewed here.</p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    render={
-                      <a
-                        href={viewerUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      />
-                    }
-                  >
-                    <ExternalLink className="size-4" />
-                    Open in a new tab
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <AttachmentViewerDialog
+        url={viewerUrl}
+        subjectRole={doc.subjectRole}
+        requirementName={doc.requirementName}
+        onClose={() => setViewerUrl(null)}
+      />
     </div>
   );
 }

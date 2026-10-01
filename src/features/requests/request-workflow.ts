@@ -88,6 +88,15 @@ export const TRANSITION_LABELS: Record<RequestStatus, string> = {
 /** Transitions that shouldn't be one click away — they need a reason. */
 export const REASON_REQUIRED: RequestStatus[] = ["incomplete", "rejected"];
 
+/**
+ * A request can be released once the cashier has verified payment — or
+ * straight away when no fee is due, since there's nothing for the cashier to
+ * collect. Shared by the release button and the server-side release check.
+ */
+export function isPaymentSettled(feesDue: number, paymentStatus: string | null): boolean {
+  return feesDue <= 0 || paymentStatus === "verified";
+}
+
 // Re-exported so existing badge call sites keep one import path for status UI.
 export {
   getStatusDetails,
