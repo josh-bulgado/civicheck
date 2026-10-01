@@ -1,8 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import z from "zod";
-import { Eye, EyeClosed, Lock, Mail, Phone, User } from "lucide-react";
+import { Mail, Phone, User } from "lucide-react";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -25,7 +24,6 @@ import {
 import {
   InputGroup,
   InputGroupAddon,
-  InputGroupButton,
   InputGroupInput,
   InputGroupText,
 } from "~/components/ui/input-group";
@@ -47,42 +45,30 @@ import type {
   SystemAdminDepartment,
 } from "../system-admin.types";
 
-const formSchema = z
-  .object({
-    firstName: z.string().trim().min(1, "First name is required"),
-    middleName: z.string(),
-    lastName: z.string().trim().min(1, "Last name is required"),
-    suffix: z.string(),
-    dateOfBirth: z
-      .string()
-      .refine(
-        (value) => value === "" || new Date(`${value}T00:00:00`) <= new Date(),
-        "Date of birth cannot be in the future",
-      ),
-    sex: z.enum(["", "male", "female"]),
-    phoneNumber: z
-      .string()
-      .refine(
-        (value) => value === "" || /^9\d{9}$/.test(value),
-        "Enter a valid 10-digit mobile number, e.g. 9171234567",
-      ),
-    email: z.string().trim().min(1, "Email is required").email("Enter a valid email address"),
-    newPassword: z
-      .string()
-      .refine(
-        (value) => value === "" || value.length >= 8,
-        "Password must be at least 8 characters",
-      )
-      .refine(
-        (value) => value === "" || /\d/.test(value),
-        "Password must include at least one number",
-      ),
-    confirmPassword: z.string(),
-  })
-  .refine((values) => values.newPassword === values.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  });
+const formSchema = z.object({
+  firstName: z.string().trim().min(1, "First name is required"),
+  middleName: z.string(),
+  lastName: z.string().trim().min(1, "Last name is required"),
+  suffix: z.string(),
+  dateOfBirth: z
+    .string()
+    .refine(
+      (value) => value === "" || new Date(`${value}T00:00:00`) <= new Date(),
+      "Date of birth cannot be in the future",
+    ),
+  sex: z.enum(["", "male", "female"]),
+  phoneNumber: z
+    .string()
+    .refine(
+      (value) => value === "" || /^9\d{9}$/.test(value),
+      "Enter a valid 10-digit mobile number, e.g. 9171234567",
+    ),
+  email: z
+    .string()
+    .trim()
+    .min(1, "Email is required")
+    .email("Enter a valid email address"),
+});
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -97,19 +83,6 @@ const sexOptions: { value: FormValues["sex"]; label: string }[] = [
   { value: "male", label: "Male" },
   { value: "female", label: "Female" },
 ];
-
-const passwordFields = [
-  {
-    name: "newPassword",
-    label: "New password",
-    placeholder: "Leave blank to keep the current password",
-  },
-  {
-    name: "confirmPassword",
-    label: "Confirm new password",
-    placeholder: "Re-enter the new password",
-  },
-] as const;
 
 function SectionHeading({
   title,
@@ -139,7 +112,6 @@ function EditAccountForm({
   onClose: () => void;
   onConfirm: (values: AccountDetailsInput) => Promise<boolean>;
 }) {
-  const [showPasswords, setShowPasswords] = useState(false);
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     mode: "onBlur",
@@ -152,8 +124,6 @@ function EditAccountForm({
       sex: account.sex,
       phoneNumber: account.phoneNumber,
       email: account.email,
-      newPassword: "",
-      confirmPassword: "",
     },
   });
 
@@ -176,7 +146,6 @@ function EditAccountForm({
       sex: values.sex,
       phoneNumber: values.phoneNumber.trim(),
       email: values.email.trim().toLowerCase(),
-      newPassword: values.newPassword,
     });
 
     if (succeeded) onClose();
@@ -432,63 +401,14 @@ function EditAccountForm({
                   ) : (
                     <FieldDescription>
                       The new address is confirmed immediately — tell the account
-                      holder before you change it.
+                      holder before you change it. To change a password, close
+                      this dialog and use &quot;Send password reset link&quot; so
+                      only the account holder ever knows it.
                     </FieldDescription>
                   )}
                 </Field>
               )}
             />
-
-            {passwordFields.map((passwordField) => (
-              <Controller
-                key={passwordField.name}
-                control={form.control}
-                name={passwordField.name}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor={`edit-account-${passwordField.name}`}>
-                      {passwordField.label}
-                    </FieldLabel>
-                    <InputGroup>
-                      <InputGroupAddon>
-                        <Lock size={16} aria-hidden="true" />
-                      </InputGroupAddon>
-                      <InputGroupInput
-                        {...field}
-                        id={`edit-account-${passwordField.name}`}
-                        type={showPasswords ? "text" : "password"}
-                        autoComplete="new-password"
-                        placeholder={passwordField.placeholder}
-                        aria-invalid={fieldState.invalid}
-                      />
-                      <InputGroupAddon align="inline-end">
-                        <InputGroupButton
-                          size="icon-xs"
-                          onClick={() => setShowPasswords((shown) => !shown)}
-                          aria-label={
-                            showPasswords ? "Hide passwords" : "Show passwords"
-                          }
-                        >
-                          {showPasswords ? (
-                            <EyeClosed size={16} aria-hidden="true" />
-                          ) : (
-                            <Eye size={16} aria-hidden="true" />
-                          )}
-                        </InputGroupButton>
-                      </InputGroupAddon>
-                    </InputGroup>
-                    {fieldState.invalid ? (
-                      <FieldError errors={[fieldState.error]} />
-                    ) : passwordField.name === "newPassword" ? (
-                      <FieldDescription>
-                        Leave both password fields blank to keep the current
-                        password.
-                      </FieldDescription>
-                    ) : null}
-                  </Field>
-                )}
-              />
-            ))}
 
             <SectionHeading
               title="Role and access"

@@ -33,59 +33,44 @@ export function escapeHtml(value: string) {
   );
 }
 
-type OtpEmailOptions = {
+type EmailShellOptions = {
   /** Preview line shown next to the subject in the inbox. */
   preheader: string;
-  /**
-   * Short kicker above the heading, e.g. "Password reset". Every automated
-   * email shares this layout, so this is what tells them apart at a glance.
-   */
-  label?: string;
+  /** Used for the document <title>. */
   heading: string;
-  /** Rendered above the heading, e.g. "Hello Juan," */
-  greeting?: string;
-  paragraphs: string[];
-  /** The one-time numeric code the recipient types into the app. */
-  code: string;
-  /** Highlighted box under the code — one line per entry. */
-  noteLines?: string[];
+  /** Pre-escaped HTML for the card body. */
+  contentHtml: string;
   /** Closing line in the footer, e.g. what to do if this wasn't you. */
   footerNote?: string;
 };
 
-/**
- * Renders a transactional email built around a one-time code the recipient
- * types back into the app, rather than a link they click.
- *
- * Table-based layout with inline styles throughout — Outlook's Word rendering
- * engine ignores most modern CSS, so nothing here should depend on it.
- */
-export function renderOtpEmail({
-  preheader,
-  label,
-  heading,
-  greeting,
-  paragraphs,
-  code,
-  noteLines = [],
-  footerNote,
-}: OtpEmailOptions) {
-  const labelHtml = label
+function renderLabel(label?: string) {
+  return label
     ? `<p style="margin:0 0 12px;font-family:${FONT_STACK};font-size:12px;font-weight:700;line-height:1.4;letter-spacing:0.12em;text-transform:uppercase;color:${COLORS.primary};">${escapeHtml(label)}</p>`
     : "";
+}
 
-  const greetingHtml = greeting
+function renderGreeting(greeting?: string) {
+  return greeting
     ? `<p style="margin:0 0 10px;font-family:${FONT_STACK};font-size:16px;line-height:1.6;color:${COLORS.body};">${escapeHtml(greeting)}</p>`
     : "";
+}
 
-  const paragraphsHtml = paragraphs
+function renderHeading(heading: string) {
+  return `<h1 style="margin:0 0 14px;font-family:${FONT_STACK};font-size:22px;font-weight:700;line-height:1.3;letter-spacing:-0.01em;color:${COLORS.heading};">${escapeHtml(heading)}</h1>`;
+}
+
+function renderParagraphs(paragraphs: string[]) {
+  return paragraphs
     .map(
       (paragraph) =>
         `<p style="margin:0 0 16px;font-family:${FONT_STACK};font-size:16px;line-height:1.6;color:${COLORS.body};">${escapeHtml(paragraph)}</p>`,
     )
     .join("");
+}
 
-  const noteHtml = noteLines.length
+function renderNote(noteLines: string[]) {
+  return noteLines.length
     ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;border-collapse:separate;background-color:${COLORS.noteBg};border:1px solid ${COLORS.noteBorder};border-radius:10px;">
             <tr>
               <td style="padding:14px 18px;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${COLORS.noteText};">
@@ -94,7 +79,19 @@ export function renderOtpEmail({
             </tr>
           </table>`
     : "";
+}
 
+/**
+ * The branded frame shared by every automated email. Table-based layout with
+ * inline styles throughout — Outlook's Word rendering engine ignores most
+ * modern CSS, so nothing here should depend on it.
+ */
+function renderEmailShell({
+  preheader,
+  heading,
+  contentHtml,
+  footerNote,
+}: EmailShellOptions) {
   const footerNoteHtml = footerNote
     ? `${escapeHtml(footerNote)}<br /><br />`
     : "";
@@ -132,20 +129,7 @@ export function renderOtpEmail({
             </tr>
             <tr>
               <td class="civic-pad" style="padding:32px;">
-                ${labelHtml}
-                ${greetingHtml}
-                <h1 style="margin:0 0 14px;font-family:${FONT_STACK};font-size:22px;font-weight:700;line-height:1.3;letter-spacing:-0.01em;color:${COLORS.heading};">${escapeHtml(heading)}</h1>
-                ${paragraphsHtml}
-
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:4px 0 24px;">
-                  <tr>
-                    <td align="center" bgcolor="${COLORS.noteBg}" style="border:1px solid ${COLORS.noteBorder};border-radius:10px;padding:22px;">
-                      <span style="font-family:${CODE_FONT_STACK};font-size:34px;font-weight:700;letter-spacing:10px;color:${COLORS.heading};">${escapeHtml(code)}</span>
-                    </td>
-                  </tr>
-                </table>
-
-                ${noteHtml}
+                ${contentHtml}
               </td>
             </tr>
           </table>
@@ -163,4 +147,103 @@ export function renderOtpEmail({
     </table>
   </body>
 </html>`;
+}
+
+type OtpEmailOptions = {
+  /** Preview line shown next to the subject in the inbox. */
+  preheader: string;
+  /**
+   * Short kicker above the heading, e.g. "Password reset". Every automated
+   * email shares this layout, so this is what tells them apart at a glance.
+   */
+  label?: string;
+  heading: string;
+  /** Rendered above the heading, e.g. "Hello Juan," */
+  greeting?: string;
+  paragraphs: string[];
+  /** The one-time numeric code the recipient types into the app. */
+  code: string;
+  /** Highlighted box under the code — one line per entry. */
+  noteLines?: string[];
+  /** Closing line in the footer, e.g. what to do if this wasn't you. */
+  footerNote?: string;
+};
+
+/**
+ * Renders a transactional email built around a one-time code the recipient
+ * types back into the app, rather than a link they click.
+ */
+export function renderOtpEmail({
+  preheader,
+  label,
+  heading,
+  greeting,
+  paragraphs,
+  code,
+  noteLines = [],
+  footerNote,
+}: OtpEmailOptions) {
+  return renderEmailShell({
+    preheader,
+    heading,
+    footerNote,
+    contentHtml: `${renderLabel(label)}
+                ${renderGreeting(greeting)}
+                ${renderHeading(heading)}
+                ${renderParagraphs(paragraphs)}
+
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:4px 0 24px;">
+                  <tr>
+                    <td align="center" bgcolor="${COLORS.noteBg}" style="border:1px solid ${COLORS.noteBorder};border-radius:10px;padding:22px;">
+                      <span style="font-family:${CODE_FONT_STACK};font-size:34px;font-weight:700;letter-spacing:10px;color:${COLORS.heading};">${escapeHtml(code)}</span>
+                    </td>
+                  </tr>
+                </table>
+
+                ${renderNote(noteLines)}`,
+  });
+}
+
+type LinkEmailOptions = Omit<OtpEmailOptions, "code"> & {
+  /** Text on the call-to-action button. */
+  actionLabel: string;
+  /** Single-use URL the button opens. */
+  actionUrl: string;
+};
+
+/**
+ * Renders a transactional email built around one button the recipient clicks,
+ * for flows that begin outside the app (e.g. a system administrator sending a
+ * password reset or verification link on someone's behalf).
+ */
+export function renderLinkEmail({
+  preheader,
+  label,
+  heading,
+  greeting,
+  paragraphs,
+  actionLabel,
+  actionUrl,
+  noteLines = [],
+  footerNote,
+}: LinkEmailOptions) {
+  return renderEmailShell({
+    preheader,
+    heading,
+    footerNote,
+    contentHtml: `${renderLabel(label)}
+                ${renderGreeting(greeting)}
+                ${renderHeading(heading)}
+                ${renderParagraphs(paragraphs)}
+
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 24px;">
+                  <tr>
+                    <td bgcolor="${COLORS.primary}" style="border-radius:8px;">
+                      <a href="${escapeHtml(actionUrl)}" style="display:inline-block;padding:13px 26px;font-family:${FONT_STACK};font-size:16px;font-weight:600;line-height:1.2;color:#ffffff;text-decoration:none;">${escapeHtml(actionLabel)}</a>
+                    </td>
+                  </tr>
+                </table>
+
+                ${renderNote(noteLines)}`,
+  });
 }

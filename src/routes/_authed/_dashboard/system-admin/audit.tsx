@@ -4,16 +4,37 @@ import { getAuditEvents } from "~/features/system-admin/system-admin.functions";
 import { hasPermission, type Role } from "~/lib/permissions";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 
+type AuditSearch = {
+  page: number;
+  actor?: string;
+  event?: string;
+  source: "all" | "system" | "request" | "sign-in";
+  from?: string;
+  to?: string;
+  /** Profile id; narrows to events performed by or targeting that account. */
+  account?: string;
+};
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const Route = createFileRoute("/_authed/_dashboard/system-admin/audit")({
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): AuditSearch => ({
     page: Math.max(1, Number(s.page) || 1),
     actor: typeof s.actor === "string" ? s.actor : undefined,
     event: typeof s.event === "string" ? s.event : undefined,
-    source: (s.source === "system" || s.source === "request"
-      ? s.source
-      : "all") as "all" | "system" | "request",
+    source:
+      s.source === "system" ||
+      s.source === "request" ||
+      s.source === "sign-in"
+        ? s.source
+        : "all",
     from: typeof s.from === "string" ? s.from : undefined,
     to: typeof s.to === "string" ? s.to : undefined,
+    account:
+      typeof s.account === "string" && UUID_PATTERN.test(s.account)
+        ? s.account
+        : undefined,
   }),
   beforeLoad: ({ context }) => {
     if (

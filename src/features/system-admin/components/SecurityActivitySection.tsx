@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { Fingerprint, History, LogIn, Shield } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import {
@@ -51,7 +52,14 @@ export function SecurityActivitySection({
               </CardTitle>
               <CardDescription className="text-pretty">
                 Redacted authentication signals, administrator sessions, and
-                sensitive actions.
+                sensitive actions from the last 24 hours.{" "}
+                <Link
+                  to="/system-admin/audit"
+                  search={{ page: 1, source: "sign-in" }}
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  View full sign-in history
+                </Link>
               </CardDescription>
             </div>
           </div>
