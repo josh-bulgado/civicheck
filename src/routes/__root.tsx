@@ -47,7 +47,7 @@ const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "role, first_name, middle_name, last_name, suffix, date_of_birth, sex, phone_number, access_status, sessions_revoked_at, created_at, last_login_at",
+      "role, first_name, middle_name, last_name, suffix, date_of_birth, sex, phone_number, access_status, sessions_revoked_at, created_at, last_login_at, welcome_tutorial_seen",
     )
     .eq("id", user.id)
     .single();
@@ -73,6 +73,7 @@ const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
     accountStatus: (profile?.access_status ?? "active") as AccountStatus,
     createdAt: profile?.created_at ?? "",
     lastLoginAt: profile?.last_login_at ?? null,
+    welcomeTutorialSeen: profile?.welcome_tutorial_seen ?? false,
   } satisfies AccountProfile;
 });
 

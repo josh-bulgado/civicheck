@@ -32,5 +32,11 @@ function RouteComponent() {
   const requests = Route.useLoaderData();
   const { user } = Route.useRouteContext();
 
-  return <CitizenDashboard requests={requests} firstName={user?.firstName ?? ""} />;
+  return (
+    <CitizenDashboard
+      requests={requests}
+      firstName={user?.firstName ?? ""}
+      welcomeTutorialSeen={user?.welcomeTutorialSeen ?? false}
+    />
+  );
 }

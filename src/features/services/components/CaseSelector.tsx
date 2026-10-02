@@ -15,7 +15,12 @@ const choiceGroupClass =
   "grid grid-cols-1 gap-0 overflow-hidden rounded-lg border border-border bg-white divide-y divide-border-light sm:grid-cols-2 sm:divide-x sm:divide-y-0";
 
 const choiceLabelClass =
-  "cursor-pointer has-[>[data-slot=field]]:rounded-none has-[>[data-slot=field]]:border-0 transition-colors hover:bg-primary-tint focus-within:bg-primary-tint has-data-checked:bg-primary-soft/70";
+  "h-full cursor-pointer has-[>[data-slot=field]]:rounded-none has-[>[data-slot=field]]:border-0 *:data-[slot=field]:px-4 transition-colors hover:bg-primary-tint focus-within:bg-primary-tint has-data-checked:bg-primary-soft/70";
+
+// Field top-aligns rows that contain FieldContent (and nudges the radio 1px);
+// choice tiles are taller than their content, so center the radio and text.
+const choiceFieldClass =
+  "h-full min-h-14 has-[>[data-slot=field-content]]:items-center has-[>[data-slot=field-content]]:[&>[role=checkbox],[role=radio]]:mt-0";
 
 interface Service {
   service_code: string;
@@ -199,7 +204,7 @@ function LegacyCaseSelector({
                   htmlFor={`age-${a}`}
                   className={choiceLabelClass}
                 >
-                  <Field orientation="horizontal" className="min-h-14">
+                  <Field orientation="horizontal" className={choiceFieldClass}>
                     <RadioGroupItem value={a} id={`age-${a}`} />
                     <FieldContent>
                       {a === "0-79" ? "0 – 79 years old" : "80 years old and above"}
@@ -228,7 +233,7 @@ function LegacyCaseSelector({
                   htmlFor={`prog-${p}`}
                   className={choiceLabelClass}
                 >
-                  <Field orientation="horizontal" className="min-h-16">
+                  <Field orientation="horizontal" className={choiceFieldClass}>
                     <RadioGroupItem value={p} id={`prog-${p}`} />
                     <FieldContent>
                       <span className="font-medium">
@@ -266,7 +271,7 @@ function LegacyCaseSelector({
                   htmlFor={`marital-${m}`}
                   className={choiceLabelClass}
                 >
-                  <Field orientation="horizontal" className="min-h-14">
+                  <Field orientation="horizontal" className={choiceFieldClass}>
                     <RadioGroupItem value={m} id={`marital-${m}`} />
                     <FieldContent>
                       <span className="font-medium">
@@ -416,7 +421,7 @@ function ConfiguredCaseSelector({
                   htmlFor={`case-${question.key}-${option.value}`}
                   className={choiceLabelClass}
                 >
-                  <Field orientation="horizontal" className="min-h-14">
+                  <Field orientation="horizontal" className={choiceFieldClass}>
                     <RadioGroupItem
                       value={option.value}
                       id={`case-${question.key}-${option.value}`}

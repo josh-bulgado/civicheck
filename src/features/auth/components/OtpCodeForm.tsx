@@ -4,7 +4,7 @@ import { Button } from "~/components/ui/button";
 import { Field, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Alert, AlertTitle } from "~/components/ui/alert";
 import { authButtonClass, authLabelClass } from "./AuthSplitLayout";
 
 // Supabase's OTP length is a project-level setting (Authentication → Sign In /
@@ -71,8 +71,7 @@ export function OtpCodeForm({
       {errorMessage && (
         <Alert variant="destructive" className="civic-enter-sm">
           <AlertCircleIcon />
-          <AlertTitle>Verification failed</AlertTitle>
-          <AlertDescription>{errorMessage}</AlertDescription>
+          <AlertTitle>{errorMessage}</AlertTitle>
         </Alert>
       )}
 

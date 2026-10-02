@@ -260,7 +260,10 @@ export function LoginForm({
                 <FieldLabel htmlFor="keep-signed-in">Keep me signed in</FieldLabel>
               </Field>
 
-              <Link to="/forgot-password" className={authLinkClass}>
+              <Link
+                to="/forgot-password"
+                className={`${authLinkClass} text-sm`}
+              >
                 Forgot password
               </Link>
             </div>

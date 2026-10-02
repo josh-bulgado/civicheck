@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { CircleHelp } from "lucide-react";
 import {
   SidebarInset,
   SidebarProvider,
@@ -9,6 +10,7 @@ import { CityGovernmentIdentity } from "~/components/brand/civic-identity";
 import { getWorkspaceDetails } from "~/components/sidebar-01/workspace";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { getUnreadNotificationCountFn } from "~/features/notifications/notifications.queries";
+import { openWelcomeTutorial, WelcomeTutorial } from "~/features/onboarding/components/WelcomeTutorial";
 import type { Role } from "~/lib/permissions";
 
 // Dashboard-shell layer: sidebar + top bar, for the browse/manage pages that
@@ -54,7 +56,19 @@ function DashboardLayout() {
               </p>
             </div>
           </div>
-          <CityGovernmentIdentity compact className="[&>span:first-child]:size-8" />
+          <div className="flex items-center gap-5">
+            {user?.role === "applicant" && (
+              <button
+                type="button"
+                onClick={openWelcomeTutorial}
+                className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full border border-border-strong px-3 text-[13px] font-semibold text-primary hover:bg-primary-soft"
+              >
+                <CircleHelp className="size-4" aria-hidden="true" />
+                How it works
+              </button>
+            )}
+            <CityGovernmentIdentity compact className="[&>span:first-child]:size-8" />
+          </div>
         </header>
         <main
           id="main-content"
@@ -64,6 +78,9 @@ function DashboardLayout() {
           <Outlet />
         </main>
       </SidebarInset>
+      {/* Lives here rather than on the dashboard page so the header's "How it
+          works" button can open it from any page in this layout. */}
+      {user?.role === "applicant" && <WelcomeTutorial />}
     </SidebarProvider>
   );
 }

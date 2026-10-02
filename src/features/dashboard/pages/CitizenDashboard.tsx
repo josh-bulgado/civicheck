@@ -1,5 +1,6 @@
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { TERMINAL_STATUSES } from "~/features/requests/request-workflow";
+import { useWelcomeTutorialAutoOpen } from "~/features/onboarding/components/WelcomeTutorial";
 import { ActiveRequestsPanel } from "../components/ActiveRequestsPanel";
 import { AttentionPanel } from "../components/AttentionPanel";
 import { DashboardHero } from "../components/DashboardHero";
@@ -10,10 +11,12 @@ import type { AttentionItem, CitizenDashboardRequest } from "../types";
 interface CitizenDashboardProps {
   requests: CitizenDashboardRequest[];
   firstName: string;
+  welcomeTutorialSeen: boolean;
 }
 
-const CitizenDashboard = ({ requests, firstName }: CitizenDashboardProps) => {
+const CitizenDashboard = ({ requests, firstName, welcomeTutorialSeen }: CitizenDashboardProps) => {
   const realtimeStatus = useRealtimeRefresh({ tables: ["requests"] });
+  useWelcomeTutorialAutoOpen({ hasRequests: requests.length > 0, seen: welcomeTutorialSeen });
 
   const activeRequests = requests.filter(
     (request) => !(TERMINAL_STATUSES as string[]).includes(request.status),

@@ -14,6 +14,19 @@ import {
   recordSessionStarted,
 } from "~/features/system-admin/security-center.server";
 import type { Role } from "~/lib/permissions";
+import {
+  clearIssuedOtps,
+  describeRejectedOtp,
+  recordIssuedOtp,
+} from "./otp-codes.server";
+
+/** Supabase's single error for a code that is wrong, replaced, used or expired. */
+function isRejectedOtpError(error: { code?: string; message?: string }) {
+  return (
+    error.code === "otp_expired" ||
+    /expired or is invalid/i.test(error.message ?? "")
+  );
+}
 
 /**
  * Generates a fresh signup OTP for a user that was just created (or
@@ -77,6 +90,7 @@ async function sendSignupOtpEmail(
     };
   }
 
+  await recordIssuedOtp(params.email, "signup", otp);
   return { error: false };
 }
 
@@ -343,6 +357,13 @@ export const verifySignupOtpFn = createServerFn({ method: "POST" })
     });
 
     if (error) {
+      if (isRejectedOtpError(error)) {
+        return {
+          error: true,
+          message: await describeRejectedOtp(data.email, "signup", data.token),
+        };
+      }
+
       const isJsonEmpty = error.message === "{}" || !error.message;
       const cleanMessage = isJsonEmpty
         ? "An unexpected verification error occurred."
@@ -353,6 +374,7 @@ export const verifySignupOtpFn = createServerFn({ method: "POST" })
       };
     }
 
+    await clearIssuedOtps(data.email, "signup");
     return { error: false };
   });
 
@@ -456,6 +478,8 @@ export const forgotPasswordFn = createServerFn({ method: "POST" })
       };
     }
 
+    await recordIssuedOtp(data.email, "recovery", otp);
+
     return {
       error: false,
       message: "Password reset code sent.",
@@ -473,6 +497,13 @@ export const verifyRecoveryOtpFn = createServerFn({ method: "POST" })
     });
 
     if (error) {
+      if (isRejectedOtpError(error)) {
+        return {
+          error: true,
+          message: await describeRejectedOtp(data.email, "recovery", data.token),
+        };
+      }
+
       const isJsonEmpty = error.message === "{}" || !error.message;
       const cleanMessage = isJsonEmpty
         ? "An unexpected verification error occurred."
@@ -483,6 +514,7 @@ export const verifyRecoveryOtpFn = createServerFn({ method: "POST" })
       };
     }
 
+    await clearIssuedOtps(data.email, "recovery");
     // A verified recovery code opens a session without a password check.
     await recordSessionForCurrentUser(supabase, "password reset");
     return { error: false };

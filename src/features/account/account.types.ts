@@ -18,6 +18,7 @@ export type AccountProfile = {
   accountStatus: AccountStatus;
   createdAt: string;
   lastLoginAt: string | null;
+  welcomeTutorialSeen: boolean;
 };
 
 /** Sections of the account settings dialog, in tab order. */

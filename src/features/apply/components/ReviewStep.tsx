@@ -353,25 +353,32 @@ export function ReviewStep({
           }
         >
           {activeDocuments.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No documents uploaded yet.</p>
+            <p className="text-sm text-muted-foreground sm:col-span-2">No documents uploaded yet.</p>
           ) : (
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-2.5 sm:col-span-2">
               {activeDocumentsWithPositions.map(
                 ({ document: doc, fileNumber, fileTotal }) => (
                   <div
                     key={doc.storagePath}
-                    className="flex items-center gap-2.5 text-sm"
+                    className="flex items-start gap-2.5 text-sm"
                   >
-                    <span className="flex size-4.5 shrink-0 items-center justify-center rounded-[5px] bg-success text-[10px] font-bold text-white">
+                    <span className="mt-0.5 flex size-4.5 shrink-0 items-center justify-center rounded-[5px] bg-success text-[10px] font-bold text-white">
                       <Check className="size-2.5" aria-hidden="true" />
                     </span>
-                    <span className="min-w-0 break-words text-foreground">
-                      {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
-                      {doc.requirementName}
-                      {fileTotal > 1
-                        ? ` · file ${fileNumber} of ${fileTotal}`
-                        : ""}{" "}
-                      — {doc.fileName}
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="wrap-break-word text-foreground">
+                        {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
+                        {doc.requirementName.replace(/\s*[—–]\s*/g, " - ")}
+                        {fileTotal > 1
+                          ? ` · file ${fileNumber} of ${fileTotal}`
+                          : ""}
+                      </span>
+                      <span
+                        className="truncate text-xs text-muted-foreground"
+                        title={doc.fileName}
+                      >
+                        {doc.fileName}
+                      </span>
                     </span>
                   </div>
                 ),

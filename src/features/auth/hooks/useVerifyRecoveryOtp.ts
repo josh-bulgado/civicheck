@@ -11,7 +11,7 @@ export function useVerifyRecoveryOtp() {
     fn: verifyRecoveryOtpFn,
     onSuccess: async (ctx) => {
       if (ctx.data?.error) {
-        toast.error("Verification failed", { description: ctx.data.message });
+        toast.error(ctx.data.message);
         return;
       }
 
