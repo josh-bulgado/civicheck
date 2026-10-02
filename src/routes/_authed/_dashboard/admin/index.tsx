@@ -48,7 +48,8 @@ function AdminOverviewError({ error }: ErrorComponentProps) {
         <AlertCircle aria-hidden="true" />
         <AlertTitle>Could Not Load the Operations Overview</AlertTitle>
         <AlertDescription>
-          {error.message || "The latest office metrics are temporarily unavailable."}
+          {(error instanceof Error && error.message) ||
+            "The latest office metrics are temporarily unavailable."}
         </AlertDescription>
       </Alert>
       <Button onClick={() => router.invalidate()}>

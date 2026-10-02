@@ -78,7 +78,8 @@ function AdminReportsError({ error }: ErrorComponentProps) {
         <AlertCircle aria-hidden="true" />
         <AlertTitle>Could Not Load Operational Reports</AlertTitle>
         <AlertDescription>
-          {error.message || "The latest report metrics are temporarily unavailable."}
+          {(error instanceof Error && error.message) ||
+            "The latest report metrics are temporarily unavailable."}
         </AlertDescription>
       </Alert>
       <Button onClick={() => router.invalidate()}>
