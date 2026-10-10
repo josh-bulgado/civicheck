@@ -219,9 +219,13 @@ export const verifyPaymentFn = createServerFn({ method: "POST" })
         updated_at: new Date().toISOString(),
       })
       .eq("id", data.requestId)
-      // Re-assert the status we read, so a concurrent status change can't
-      // slip payment through after this check passed.
+      // Re-assert everything the decision above was based on, so a concurrent
+      // change can't slip payment through after this check passed: the status,
+      // the stored fee (fee vs. fee-free decides whether an OR is required),
+      // and that it is still unpaid (a second click must not overwrite the OR).
       .eq("status", "ready_for_release")
+      .eq("fees_due", request.fees_due)
+      .eq("payment_status", "unpaid")
       .select("id");
 
     if (error) {
@@ -233,7 +237,7 @@ export const verifyPaymentFn = createServerFn({ method: "POST" })
     if (!updated || updated.length === 0) {
       return {
         error: true,
-        message: "This request is no longer ready for release. Refresh and try again.",
+        message: "This request changed while you were working on it. Refresh and try again.",
       };
     }
 
