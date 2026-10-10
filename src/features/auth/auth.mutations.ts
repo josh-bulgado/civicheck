@@ -15,6 +15,14 @@ import {
 } from "~/features/system-admin/security-center.server";
 import type { Role } from "~/lib/permissions";
 import {
+  credentialsSchema,
+  emailOnlySchema,
+  newPasswordInputSchema,
+  oauthProviderSchema,
+  otpVerificationSchema,
+  signupInputSchema,
+} from "./auth.schema";
+import {
   clearIssuedOtps,
   describeRejectedOtp,
   recordIssuedOtp,
@@ -95,7 +103,7 @@ async function sendSignupOtpEmail(
 }
 
 export const loginWithEmailFn = createServerFn({ method: "POST" })
-  .validator((d: { email: string; password: string }) => d)
+  .validator(credentialsSchema)
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient();
     const { data: loginData, error } = await supabase.auth.signInWithPassword({
@@ -138,7 +146,7 @@ export const loginWithEmailFn = createServerFn({ method: "POST" })
   });
 
 export const loginWithOAuthFn = createServerFn({ method: "POST" })
-  .validator((d: { provider: "google" | "apple" }) => d)
+  .validator(oauthProviderSchema)
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient();
 
@@ -163,20 +171,12 @@ export const loginWithOAuthFn = createServerFn({ method: "POST" })
   });
 
 export const signupFn = createServerFn({ method: "POST" })
-  .validator(
-    (d: {
-      email: string;
-      password: string;
-      firstName: string;
-      lastName: string;
-      middleName?: string;
-      suffix?: string;
-    }) => d,
-  )
+  .validator(signupInputSchema)
   .handler(async ({ data }) => {
     const adminSupabase = getSupabaseAdminClient();
-    const middleName = data.middleName?.trim() || undefined;
-    const suffix = data.suffix?.trim() || undefined;
+    // Already trimmed and checked by the validator; blank means "none".
+    const middleName = data.middleName || undefined;
+    const suffix = data.suffix || undefined;
     let signUpResult = await adminSupabase.auth.admin.createUser({
       email: data.email,
       password: data.password,
@@ -281,7 +281,7 @@ export const signupFn = createServerFn({ method: "POST" })
  * choosing and take the account over before its real owner ever confirms it.
  */
 export const resendSignupOtpFn = createServerFn({ method: "POST" })
-  .validator((d: { email: string; password: string }) => d)
+  .validator(credentialsSchema)
   .handler(async ({ data }) => {
     const INVALID_CREDENTIALS = "Invalid email or password.";
     const statelessSupabase = getSupabaseStatelessClient();
@@ -354,7 +354,7 @@ export const resendSignupOtpFn = createServerFn({ method: "POST" })
   });
 
 export const verifySignupOtpFn = createServerFn({ method: "POST" })
-  .validator((d: { email: string; token: string }) => d)
+  .validator(otpVerificationSchema)
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient();
     const { error } = await supabase.auth.verifyOtp({
@@ -386,7 +386,7 @@ export const verifySignupOtpFn = createServerFn({ method: "POST" })
   });
 
 export const resetPasswordFn = createServerFn({ method: "POST" })
-  .validator((d: { password: string }) => d)
+  .validator(newPasswordInputSchema)
   .handler(async ({ data }) => {
     const { supabase } = await requireActiveSession();
     const { error } = await supabase.auth.updateUser({
@@ -420,7 +420,7 @@ export const resetPasswordFn = createServerFn({ method: "POST" })
   });
 
 export const forgotPasswordFn = createServerFn({ method: "POST" })
-  .validator((d: { email: string }) => d)
+  .validator(emailOnlySchema)
   .handler(async ({ data }) => {
     const adminSupabase = getSupabaseAdminClient();
 
@@ -494,7 +494,7 @@ export const forgotPasswordFn = createServerFn({ method: "POST" })
   });
 
 export const verifyRecoveryOtpFn = createServerFn({ method: "POST" })
-  .validator((d: { email: string; token: string }) => d)
+  .validator(otpVerificationSchema)
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient();
     const { error } = await supabase.auth.verifyOtp({

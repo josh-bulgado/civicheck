@@ -28,6 +28,7 @@ import {
 } from "~/components/ui/select";
 import { NO_SUFFIX, SUFFIXES } from "~/lib/subject-fields";
 import { LegalDialogLink } from "~/features/legal/components/LegalDialogLink";
+import { signupInputSchema } from "../auth.schema";
 import { useSignUp } from "../hooks/useSignUp";
 import { useVerifySignupOtp } from "../hooks/useVerifySignupOtp";
 import { useOAuthLogin } from "../hooks/useOAuthLogin";
@@ -50,18 +51,9 @@ import { RequiredLegend, RequiredMark } from "~/components/ui/required-mark";
 import { PasswordToggle } from "./PasswordToggle";
 import { VerifyEmailNotice } from "./VerifyEmailNotice";
 
-const formSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  // Optional: this names the account holder, not the registry record. The
-  // names that must match a record are entered per request in the apply flow.
-  middleName: z.string(),
-  suffix: z.string(),
-  email: z.string().email("Please enter a valid email address"),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(/\d/, "Password must include at least one number"),
+// The field rules live in auth.schema.ts so the server enforces exactly what
+// this form shows; only the consent checkbox belongs to the form alone.
+const formSchema = signupInputSchema.extend({
   agreeToTerms: z.boolean().refine((value) => value === true, {
     message: "You must agree to continue",
   }),
