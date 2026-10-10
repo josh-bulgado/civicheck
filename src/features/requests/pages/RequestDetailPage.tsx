@@ -366,14 +366,15 @@ export default function RequestDetailPage({
 
                 {request.status === "ready_for_release" && !isAdmin && (
                   <p className="civic-enter-sm rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-                    Only the CCRO admin can release the document once payment is
-                    verified.
+                    Only the CCRO admin can release the document once the
+                    cashier has cleared it.
                   </p>
                 )}
 
                 {request.status === "ready_for_release" && !paymentSettled && (
                   <p className="civic-enter-sm rounded-lg border border-warning/20 bg-warning/5 p-3 text-xs text-warning-strong">
-                    Payment must be verified before this can be released.
+                    The cashier must clear this request (payment verified, or
+                    fee-free confirmed) before it can be released.
                   </p>
                 )}
               </div>
