@@ -66,9 +66,14 @@ const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
 
   // Every way into the app lands here, so this is where a session that belongs
   // to an internal role is held to the browser's lifetime — including sessions
-  // issued before the rule existed.
+  // issued before the rule existed. If that can't be done the session is ended
+  // rather than left long-lived.
   if (profile?.role && isInternalRole(profile.role as Role)) {
-    await limitSessionToBrowser(supabase);
+    const restricted = await limitSessionToBrowser(
+      supabase,
+      user.sessionId ?? user.id,
+    );
+    if (!restricted) return null;
   }
 
   return {

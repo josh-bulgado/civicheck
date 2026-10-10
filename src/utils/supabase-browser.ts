@@ -3,7 +3,10 @@ import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   applyCookiePolicy,
-  BROWSER_SESSION_VALUE,
+  isPersistentScope,
+  isRemoval,
+  PERSISTENT_SESSION_VALUE,
+  persistentMarkerOptions,
   SESSION_SCOPE_COOKIE,
 } from "~/features/auth/session-scope";
 
@@ -76,10 +79,13 @@ export function getSupabaseBrowserClient(): Promise<SupabaseClient> {
         getAll: readDocumentCookies,
         setAll(cookies) {
           if (typeof document === "undefined") return;
-          const sessionOnly =
+          // Fails closed like the server client: only an explicit persistent
+          // marker lengthens the session.
+          const sessionOnly = !isPersistentScope(
             readDocumentCookies().find(
               (cookie) => cookie.name === SESSION_SCOPE_COOKIE,
-            )?.value === BROWSER_SESSION_VALUE;
+            )?.value,
+          );
           const secure = window.location.protocol === "https:";
           cookies.forEach(({ name, value, options }) =>
             writeDocumentCookie(
@@ -88,6 +94,14 @@ export function getSupabaseBrowserClient(): Promise<SupabaseClient> {
               applyCookiePolicy(options, { sessionOnly, secure }),
             ),
           );
+          // Renewed with the cookies it governs, as on the server.
+          if (!sessionOnly && cookies.some(({ options }) => !isRemoval(options))) {
+            writeDocumentCookie(
+              SESSION_SCOPE_COOKIE,
+              PERSISTENT_SESSION_VALUE,
+              persistentMarkerOptions(secure),
+            );
+          }
         },
       },
     });
