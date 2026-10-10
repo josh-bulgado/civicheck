@@ -294,10 +294,19 @@ export function LoginForm({
                 onClick={() =>
                   oauthLoginMutation.mutate({ provider: "google", keepSignedIn })
                 }
-                disabled={oauthLoginMutation.status === "pending"}
+                disabled={oauthLoginMutation.redirecting}
               >
-                <GoogleIcon className="size-4.5" />
-                Sign in with Google
+                {oauthLoginMutation.redirecting ? (
+                  <>
+                    <Spinner />
+                    Redirecting to Google…
+                  </>
+                ) : (
+                  <>
+                    <GoogleIcon className="size-4.5" />
+                    Sign in with Google
+                  </>
+                )}
               </Button>
             </div>
           </FieldGroup>
