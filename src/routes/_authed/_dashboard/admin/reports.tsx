@@ -1,6 +1,5 @@
 import {
   createFileRoute,
-  redirect,
   useNavigate,
   useRouter,
   type ErrorComponentProps,
@@ -18,6 +17,7 @@ import {
 import { AdminReportsPage } from "~/features/admin/reports/pages/AdminReportsPage";
 import { hasPermission, type Role } from "~/lib/permissions";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
+import { denyAccess } from "~/lib/access";
 
 export const Route = createFileRoute("/_authed/_dashboard/admin/reports")({
   // Filter state lives in the URL so a report view is a shareable link and the
@@ -28,12 +28,12 @@ export const Route = createFileRoute("/_authed/_dashboard/admin/reports")({
       : DEFAULT_REPORT_MONTHS,
     service: typeof search.service === "string" ? search.service : undefined,
   }),
-  beforeLoad: ({ context }) => {
+  beforeLoad: ({ context, location }) => {
     if (
       !context.user ||
       !hasPermission(context.user.role as Role, "dashboard:admin")
     ) {
-      throw redirect({ to: "/dashboard" });
+      denyAccess(location);
     }
   },
   loaderDeps: ({ search }) => search,

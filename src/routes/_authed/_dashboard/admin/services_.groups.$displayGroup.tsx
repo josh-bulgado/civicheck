@@ -1,9 +1,10 @@
-import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
+import { createFileRoute, notFound } from "@tanstack/react-router";
 import { ServiceGroupApplicationPage } from "~/features/admin/services/components/ServiceGroupApplicationPage";
 import { ServiceGroupPage } from "~/features/admin/services/components/ServiceGroupPage";
 import { getAdminServices } from "~/features/admin/services/services.queries";
 import { hasPermission } from "~/lib/permissions";
 import type { Role } from "~/lib/permissions";
+import { denyAccess } from "~/lib/access";
 
 export const Route = createFileRoute(
   "/_authed/_dashboard/admin/services_/groups/$displayGroup",
@@ -11,10 +12,10 @@ export const Route = createFileRoute(
   validateSearch: (search: Record<string, unknown>) => ({
     scope: search.scope === "application" ? search.scope : undefined,
   }),
-  beforeLoad: ({ context }) => {
+  beforeLoad: ({ context, location }) => {
     const role = (context.user?.role ?? "applicant") as Role;
     if (!hasPermission(role, "services:manage")) {
-      throw redirect({ to: "/dashboard" });
+      denyAccess(location);
     }
   },
   loader: async ({ params: { displayGroup } }) => {
