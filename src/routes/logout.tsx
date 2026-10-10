@@ -1,6 +1,6 @@
 import { redirect, createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { getSupabaseServerClient } from "../utils/supabase";
+import { clearSessionScope, getSupabaseServerClient } from "../utils/supabase";
 import { clearCurrentUser } from "~/features/auth/current-user";
 
 const logoutFn = createServerFn({ method: "POST" }).handler(async () => {
@@ -12,6 +12,9 @@ const logoutFn = createServerFn({ method: "POST" }).handler(async () => {
     // user to sign-in either way instead of stranding them on a blank route.
     console.error("Sign out error:", error);
   }
+
+  // The next session, from an invitation or email link, starts from the default.
+  clearSessionScope();
 
   throw redirect({
     to: "/login",

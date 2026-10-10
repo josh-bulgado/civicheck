@@ -84,8 +84,17 @@ export const credentialsSchema = z.object({
   password: loginPasswordSchema,
 });
 
+// Persistence is opt-in: only an explicit `true` asks for a session that
+// outlives the browser, and absent means it ends when the browser closes.
+const keepSignedInSchema = z.boolean().optional();
+
+export const loginInputSchema = credentialsSchema.extend({
+  keepSignedIn: keepSignedInSchema,
+});
+
 export const oauthProviderSchema = z.object({
   provider: z.enum(["google", "apple"]),
+  keepSignedIn: keepSignedInSchema,
 });
 
 export const otpVerificationSchema = z.object({

@@ -13,11 +13,15 @@ import { DefaultCatchBoundary } from "../components/DefaultCatchBoundary";
 import { NotFound } from "../components/NotFound";
 import appCss from "../styles/app.css?url";
 import { seo } from "../utils/seo";
-import { getSupabaseServerClient } from "../utils/supabase";
+import {
+  clearSessionScope,
+  getSupabaseServerClient,
+  limitSessionToBrowser,
+} from "../utils/supabase";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import type { AccountProfile } from "~/features/account/account.types";
-import type { AccountStatus, Role } from "~/lib/permissions";
+import { isInternalRole, type AccountStatus, type Role } from "~/lib/permissions";
 import { getVerifiedSessionUser, isSessionRevoked } from "~/server/auth";
 import { loadCurrentUser } from "~/features/auth/current-user";
 
@@ -56,7 +60,15 @@ const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
   // drop the cookies so the next page load lands on the login screen.
   if (isSessionRevoked(user, profile?.sessions_revoked_at)) {
     await supabase.auth.signOut({ scope: "local" });
+    clearSessionScope();
     return null;
+  }
+
+  // Every way into the app lands here, so this is where a session that belongs
+  // to an internal role is held to the browser's lifetime — including sessions
+  // issued before the rule existed.
+  if (profile?.role && isInternalRole(profile.role as Role)) {
+    await limitSessionToBrowser(supabase);
   }
 
   return {
