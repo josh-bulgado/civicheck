@@ -10,6 +10,7 @@ import { CityGovernmentIdentity } from "~/components/brand/civic-identity";
 import { getWorkspaceDetails } from "~/components/sidebar-01/workspace";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { getUnreadNotificationCountFn } from "~/features/notifications/notifications.queries";
+import { getNotificationAudience } from "~/features/notifications/notification-audience";
 import { openWelcomeTutorial, WelcomeTutorial } from "~/features/onboarding/components/WelcomeTutorial";
 import type { Role } from "~/lib/permissions";
 
@@ -21,7 +22,9 @@ export const Route = createFileRoute("/_authed/_dashboard")({
   component: DashboardLayout,
   loader: async ({ context }) => ({
     unreadNotifications:
-      context.user?.role === "applicant" ? await getUnreadNotificationCountFn() : 0,
+      context.user && getNotificationAudience(context.user.role as Role)
+        ? await getUnreadNotificationCountFn()
+        : 0,
   }),
   staleTime: 30_000,
 });
@@ -30,9 +33,13 @@ function DashboardLayout() {
   const { user } = Route.useRouteContext();
   const { unreadNotifications } = Route.useLoaderData();
   const workspace = getWorkspaceDetails((user?.role ?? "applicant") as Role);
-  // Sidebar badge tracks new notifications live, from wherever the applicant
+  // Sidebar badge tracks new notifications live, from wherever the reader
   // happens to be — not just while they're on the notifications page itself.
-  useRealtimeRefresh({ tables: ["notifications"], enabled: user?.role === "applicant" });
+  const audience = user ? getNotificationAudience(user.role as Role) : null;
+  useRealtimeRefresh({
+    tables: [audience === "staff" ? "staff_notifications" : "notifications"],
+    enabled: audience !== null,
+  });
 
   return (
     <SidebarProvider>
