@@ -22,6 +22,7 @@ import {
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import type { AccountProfile } from "~/features/account/account.types";
+import { ApplyTransitionLoader } from "~/features/services/components/ApplyTransitionLoader";
 import { isInternalRole, type AccountStatus, type Role } from "~/lib/permissions";
 import { getVerifiedSessionUser, isSessionRevoked } from "~/server/auth";
 import { loadCurrentUser } from "~/features/auth/current-user";
@@ -168,6 +169,7 @@ function RootComponent() {
   return (
     <RootDocument>
       <Outlet />
+      <ApplyTransitionLoader />
       <Toaster />
       {mounted && import.meta.env.DEV && (
         <TanStackDevtools
