@@ -161,8 +161,17 @@ Rules that apply to all of them:
   through the API. Each trigger therefore re-checks the actor: status changes
   need `staff`/`supervisor`/`admin`, `payment_status → verified` needs
   `cashier`, and a document "resubmission" must come from the request's own
-  applicant. An actor with no end-user identity (service role, migrations) is
-  trusted.
+  applicant. An actor with no end-user identity (service role, migrations, SQL
+  editor) is trusted; an `anon` token, which also has no `sub`, is not.
+- **Only legal transitions are announced.** The server function enforces
+  `ALLOWED_TRANSITIONS`, but RLS lets staff write `status` directly, so
+  `ready_for_release` is announced only out of `processing`, `incomplete` only
+  out of `under_validation`, and `rejected` only out of an open stage
+  (`submitted`, `under_validation`, `incomplete`, `processing`). This mirrors
+  `request-workflow.ts` and must be kept in step with it.
+- **A claim must be backed by its field.** "Payment verified" for a request
+  with a fee is only announced when `or_number` is present; a fee-free
+  confirmation (no OR by design) is announced without one.
 - **Client-supplied text never reaches a feed unvalidated.** Applicants can
   insert and edit their own rows through the API, so the tracking number must
   match `CCRO-YYYY-NNNNNN` or nothing is fanned out, and a requirement name is

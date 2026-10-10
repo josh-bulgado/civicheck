@@ -123,6 +123,7 @@ begin
   where role = 'cashier' and access_status = 'active';
   assert cashiers > 0, 'fixture: need an active cashier';
 
+  update public.requests set status = 'processing' where id = v;
   update public.requests set status = 'ready_for_release' where id = v;
 
   assert pg_temp.n(v, 'awaiting_cashier') = cashiers,
@@ -142,6 +143,7 @@ do $$
 declare v uuid;
 begin
   v := pg_temp.new_request(current_setting('t.service'), 0);
+  update public.requests set status = 'processing' where id = v;
   update public.requests set status = 'ready_for_release' where id = v;
   assert exists (
     select 1 from public.staff_notifications
@@ -185,6 +187,7 @@ declare v uuid; admins int;
 begin
   select count(*) into admins from public.profiles where role = 'admin' and access_status = 'active';
   v := pg_temp.new_request(current_setting('t.service'), 0);
+  update public.requests set status = 'under_validation' where id = v;
   update public.requests set status = 'incomplete' where id = v;
   assert pg_temp.n(v, 'request_incomplete') = admins, 'T8 incomplete should notify each admin';
   update public.requests set status = 'rejected' where id = v;
@@ -196,6 +199,7 @@ do $$
 declare v uuid;
 begin
   v := pg_temp.new_request(current_setting('t.service'), 0);
+  update public.requests set status = 'processing' where id = v;
   update public.requests set status = 'ready_for_release' where id = v;
   update public.requests set status = 'released', payment_status = 'verified' where id = v;
   assert pg_temp.n(v, 'ready_to_release') = 0, 'T9 released+verified must not create ready_to_release';
@@ -359,6 +363,7 @@ begin
     and department_id = current_setting('t.dept');
 
   v := pg_temp.new_request(current_setting('t.service'), 100);
+  update public.requests set status = 'processing' where id = v;
 
   -- A cashier cannot announce "ready for release".
   perform set_config('request.jwt.claims', jwt_cashier, true);
@@ -398,6 +403,84 @@ begin
   assert pg_temp.n(v, 'document_resubmitted') = expected, 'T18 the applicant resubmitting should notify';
 
   perform set_config('request.jwt.claims', '', true);
+end $$;
+
+-- T21: the app enforces ALLOWED_TRANSITIONS in a server function, but RLS lets
+-- staff write status directly, so the trigger only announces a transition from
+-- the state the workflow actually allows it from.
+do $$
+declare v uuid; cashiers int; admins int;
+begin
+  select count(*) into cashiers from public.profiles where role = 'cashier' and access_status = 'active';
+  select count(*) into admins from public.profiles where role = 'admin' and access_status = 'active';
+
+  -- submitted -> ready_for_release skips validation and processing.
+  v := pg_temp.new_request(current_setting('t.service'), 100);
+  update public.requests set status = 'ready_for_release' where id = v;
+  assert pg_temp.n(v, 'awaiting_cashier') = 0, 'T21 a request that skipped processing must not alert the cashier';
+
+  -- processing -> ready_for_release is the one legal way in.
+  v := pg_temp.new_request(current_setting('t.service'), 100);
+  update public.requests set status = 'processing' where id = v;
+  update public.requests set status = 'ready_for_release' where id = v;
+  assert pg_temp.n(v, 'awaiting_cashier') = cashiers, 'T21 legal processing -> ready_for_release should alert';
+
+  -- submitted -> incomplete is not a legal hop (validation has not started).
+  v := pg_temp.new_request(current_setting('t.service'), 0);
+  update public.requests set status = 'incomplete' where id = v;
+  assert pg_temp.n(v, 'request_incomplete') = 0, 'T21 incomplete without validation must not alert';
+
+  -- released -> rejected is not legal (terminal).
+  v := pg_temp.new_request(current_setting('t.service'), 0);
+  update public.requests set status = 'released' where id = v;
+  update public.requests set status = 'rejected' where id = v;
+  assert pg_temp.n(v, 'request_rejected') = 0, 'T21 rejecting a released request must not alert';
+
+  -- submitted -> rejected is legal.
+  v := pg_temp.new_request(current_setting('t.service'), 0);
+  update public.requests set status = 'rejected' where id = v;
+  assert pg_temp.n(v, 'request_rejected') = admins, 'T21 legal rejection should alert admins';
+end $$;
+
+-- T19: "payment verified" must be backed by the field that proves it. A fee
+-- request marked verified with no OR number is not announced; a fee-free
+-- request (no OR by design) is.
+do $$
+declare
+  v uuid; w uuid; admins int;
+  jwt_cashier text := json_build_object('sub', current_setting('t.cashier'), 'role', 'authenticated')::text;
+begin
+  select count(*) into admins from public.profiles where role = 'admin' and access_status = 'active';
+
+  v := pg_temp.new_request(current_setting('t.service'), 100);
+  update public.requests set status = 'processing' where id = v;
+  update public.requests set status = 'ready_for_release' where id = v;
+  perform set_config('request.jwt.claims', jwt_cashier, true);
+  update public.requests set payment_status = 'verified' where id = v;  -- no or_number
+  assert pg_temp.n(v, 'ready_to_release') = 0, 'T19 fee request verified without an OR must not be announced';
+
+  perform set_config('request.jwt.claims', '', true);
+  w := pg_temp.new_request(current_setting('t.service'), 0);
+  update public.requests set status = 'processing' where id = w;
+  update public.requests set status = 'ready_for_release' where id = w;
+  perform set_config('request.jwt.claims', jwt_cashier, true);
+  update public.requests set payment_status = 'verified' where id = w;  -- fee-free: no OR
+  assert pg_temp.n(w, 'ready_to_release') = admins, 'T19 fee-free confirmation should be announced without an OR';
+
+  perform set_config('request.jwt.claims', '', true);
+end $$;
+
+-- T20: no end-user identity is only trusted for the service role / direct SQL.
+-- An anon-role token carries no sub and must not announce anything.
+do $$
+declare v uuid;
+begin
+  v := pg_temp.new_request(current_setting('t.service'), 0);
+  update public.requests set status = 'processing' where id = v;
+  perform set_config('request.jwt.claims', json_build_object('role', 'anon')::text, true);
+  update public.requests set status = 'ready_for_release' where id = v;
+  perform set_config('request.jwt.claims', '', true);
+  assert pg_temp.n(v, 'awaiting_cashier') = 0, 'T20 an anon-role token must not announce a status change';
 end $$;
 
 -- T14: client roles cannot call the fan-out function directly.

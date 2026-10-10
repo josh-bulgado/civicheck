@@ -25,8 +25,10 @@ $$;
 -- but the RLS UPDATE policies on `requests` and `requirements_attachments`
 -- let any department staff write those columns straight through the API. A
 -- notification is a trusted statement ("the cashier verified payment"), so the
--- trigger re-checks the actor itself. No end-user identity (service role,
--- migrations, SQL editor) is trusted; an end-user JWT must carry a listed role.
+-- trigger re-checks the actor itself. An end-user JWT must carry a listed
+-- role. A caller with no end-user identity (service role, migrations, SQL
+-- editor) is trusted, but an `anon` token is not: it also has no sub, and
+-- must fail closed.
 create or replace function public.notification_actor_is(p_roles text[])
 returns boolean
 language sql
@@ -34,13 +36,15 @@ stable
 security definer
 set search_path = public
 as $$
-  select auth.uid() is null
-    or exists (
+  select case
+    when auth.uid() is not null then exists (
       select 1 from public.profiles p
       where p.id = auth.uid()
         and p.access_status = 'active'
         and p.role = any (p_roles)
-    );
+    )
+    else coalesce(auth.role(), '') <> 'anon'
+  end;
 $$;
 
 create or replace function public.notify_internal_recipients(
@@ -148,7 +152,13 @@ begin
       return null;
     end if;
 
+    -- The server function enforces ALLOWED_TRANSITIONS, but RLS lets staff write
+    -- `status` directly, so only announce a hop the workflow actually allows
+    -- (mirrors request-workflow.ts; keep the two in step).
     if new.status = 'ready_for_release' then
+      if old.status is distinct from 'processing' then
+        return null;
+      end if;
       perform public.notify_internal_recipients(
         new.id,
         'awaiting_cashier',
@@ -164,6 +174,9 @@ begin
         false
       );
     elsif new.status = 'incomplete' then
+      if old.status is distinct from 'under_validation' then
+        return null;
+      end if;
       perform public.notify_internal_recipients(
         new.id,
         'request_incomplete',
@@ -173,6 +186,9 @@ begin
         false
       );
     elsif new.status = 'rejected' then
+      if old.status not in ('submitted', 'under_validation', 'incomplete', 'processing') then
+        return null;
+      end if;
       perform public.notify_internal_recipients(
         new.id,
         'request_rejected',
@@ -204,6 +220,11 @@ begin
     -- Only the cashier verifies payment. A staff member (or admin) writing
     -- payment_status directly must not produce a "payment verified" alert.
     if not public.notification_actor_is(array['cashier']) then
+      return null;
+    end if;
+    -- verifyPaymentFn always writes the OR number with a paid verification.
+    -- A fee request marked verified without one is not a verified payment.
+    if not v_free and nullif(btrim(coalesce(new.or_number, '')), '') is null then
       return null;
     end if;
 
