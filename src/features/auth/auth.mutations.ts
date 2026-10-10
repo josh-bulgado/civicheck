@@ -170,11 +170,13 @@ export const signupFn = createServerFn({ method: "POST" })
       firstName: string;
       lastName: string;
       middleName?: string;
+      suffix?: string;
     }) => d,
   )
   .handler(async ({ data }) => {
     const adminSupabase = getSupabaseAdminClient();
     const middleName = data.middleName?.trim() || undefined;
+    const suffix = data.suffix?.trim() || undefined;
     let signUpResult = await adminSupabase.auth.admin.createUser({
       email: data.email,
       password: data.password,
@@ -183,6 +185,7 @@ export const signupFn = createServerFn({ method: "POST" })
         first_name: data.firstName,
         last_name: data.lastName,
         middle_name: middleName,
+        suffix,
       },
     });
 
@@ -216,6 +219,7 @@ export const signupFn = createServerFn({ method: "POST" })
               first_name: data.firstName,
               last_name: data.lastName,
               middle_name: middleName,
+              suffix,
             },
           });
         }
@@ -235,12 +239,13 @@ export const signupFn = createServerFn({ method: "POST" })
     }
 
     // The profile row is created by a trigger that only reads the first and last
-    // name out of the metadata, so the middle name has to be written onto it.
+    // name out of the metadata, so the middle name and suffix have to be
+    // written onto it.
     const newProfileId = signUpResult.data?.user?.id;
-    if (newProfileId && middleName) {
+    if (newProfileId && (middleName || suffix)) {
       await adminSupabase
         .from("profiles")
-        .update({ middle_name: middleName })
+        .update({ middle_name: middleName ?? null, suffix: suffix ?? null })
         .eq("id", newProfileId);
     }
 
@@ -252,6 +257,7 @@ export const signupFn = createServerFn({ method: "POST" })
         first_name: data.firstName,
         last_name: data.lastName,
         middle_name: middleName,
+        suffix,
       },
     });
 
@@ -308,6 +314,7 @@ export const resendSignupOtpFn = createServerFn({ method: "POST" })
     const firstName =
       (userMetadata.first_name as string | undefined) || "there";
     const middleName = userMetadata.middle_name as string | undefined;
+    const suffix = userMetadata.suffix as string | undefined;
 
     // Recreate rather than update: Supabase Auth has no admin call to mint a
     // fresh unconfirmed state for an existing user, so this mirrors the same
@@ -331,10 +338,10 @@ export const resendSignupOtpFn = createServerFn({ method: "POST" })
       };
     }
 
-    if (middleName) {
+    if (middleName || suffix) {
       await adminSupabase
         .from("profiles")
-        .update({ middle_name: middleName })
+        .update({ middle_name: middleName ?? null, suffix: suffix ?? null })
         .eq("id", created.user.id);
     }
 
