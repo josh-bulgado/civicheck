@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { RequiredMark } from "~/components/ui/required-mark";
 import { Textarea } from "~/components/ui/textarea";
 import { toDateKey } from "~/lib/date";
 import type {
@@ -52,12 +53,15 @@ export function DynamicFormFields({
   control,
   values,
   onDateChange,
+  showRequiredMarks = false,
 }: {
   definition: FormTemplateDefinition;
   step: FormStep;
   control: Control<any>;
   values: DynamicFieldValues;
   onDateChange?: (fieldKey: string, value: string) => void;
+  /** Adds an asterisk to required labels; the caller owns the legend. */
+  showRequiredMarks?: boolean;
 }) {
   const sections = definition.sections.filter((section) => section.step === step);
 
@@ -122,6 +126,9 @@ export function DynamicFormFields({
                     <FieldLabel htmlFor={`dynamic-${definitionField.key}`}>
                       {definitionField.label}
                       {!definitionField.required ? " (optional)" : ""}
+                      {showRequiredMarks && definitionField.required ? (
+                        <RequiredMark />
+                      ) : null}
                     </FieldLabel>
 
                     {definitionField.type === "textarea" ? (

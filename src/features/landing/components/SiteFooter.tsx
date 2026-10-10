@@ -46,6 +46,13 @@ const SiteFooter = () => (
         <p className="text-center text-xs text-muted-foreground">
           CiviCheck · City Civil Registrar Office · Legazpi City
         </p>
+        <nav
+          aria-label="Legal"
+          className="flex gap-4 text-xs text-muted-foreground"
+        >
+          <Link to="/terms" className="hover:text-primary">Terms of Use</Link>
+          <Link to="/privacy" className="hover:text-primary">Privacy Notice</Link>
+        </nav>
       </div>
     </div>
   </footer>

@@ -37,6 +37,7 @@ import {
   type AccountProfile,
 } from "../account.types";
 import { useUpdateProfile } from "../hooks/useUpdateProfile";
+import { RequiredLegend, RequiredMark } from "~/components/ui/required-mark";
 import { SettingsPanelBody } from "./SettingsPanelBody";
 
 const formSchema = z.object({
@@ -127,6 +128,7 @@ export function SettingsProfilePanel({
         </div>
 
         <FieldGroup className="mt-5 gap-5">
+          <RequiredLegend />
           <div className="grid gap-4 sm:grid-cols-2">
             <Controller
               control={form.control}
@@ -134,7 +136,7 @@ export function SettingsProfilePanel({
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel htmlFor="profile-first-name">
-                    First name
+                    First name <RequiredMark />
                   </FieldLabel>
                   <InputGroup>
                     <InputGroupAddon>
@@ -159,7 +161,7 @@ export function SettingsProfilePanel({
               name="lastName"
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="profile-last-name">Last name</FieldLabel>
+                  <FieldLabel htmlFor="profile-last-name">Last name <RequiredMark /></FieldLabel>
                   <InputGroup>
                     <InputGroupInput
                       {...field}

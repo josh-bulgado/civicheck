@@ -21,6 +21,7 @@ import {
   FieldLabel,
 } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
+import { RequiredLegend, RequiredMark } from "~/components/ui/required-mark";
 import {
   Select,
   SelectContent,
@@ -44,8 +45,10 @@ import { isRequirementApplicable } from "~/features/services/service-utils";
 import type { ServiceDetail } from "~/features/services/services.queries";
 import {
   impliedSex,
+  NO_SUFFIX,
   reconcileSubjects,
   subjectsMatchRoles,
+  SUFFIXES,
 } from "~/lib/subject-fields";
 
 type DetailsSubject = {
@@ -61,25 +64,9 @@ type DetailsValues = Record<string, string | DetailsSubject[]> & {
   subjects: DetailsSubject[];
 };
 
-// The draft stores "no suffix" as an empty string, but Base UI reads an empty
-// value as "nothing selected" and renders no label for it, so the option needs
-// a real value that is mapped back to "" on the way in and out.
-const NO_SUFFIX = "none";
-
-// Generational suffixes as they appear on PSA civil registry records.
-const SUFFIXES = [
-  { value: NO_SUFFIX, label: "None" },
-  { value: "Jr.", label: "Jr." },
-  { value: "Sr.", label: "Sr." },
-  { value: "II", label: "II" },
-  { value: "III", label: "III" },
-  { value: "IV", label: "IV" },
-  { value: "V", label: "V" },
-];
-
 // No "unspecified" value is accepted by the schema — this sentinel only
 // gives the Select a real item to resolve while nothing has been chosen yet,
-// the same trick used for suffix above.
+// the same trick used for NO_SUFFIX.
 const NO_SEX = "unspecified";
 
 const SEXES = [
@@ -118,7 +105,7 @@ function SubjectFieldGrid({
         rules={{ required: "First name is required" }}
         render={({ field, fieldState }) => (
           <Field data-invalid={fieldState.invalid}>
-            <FieldLabel htmlFor={`subject-${index}-firstName`}>First name</FieldLabel>
+            <FieldLabel htmlFor={`subject-${index}-firstName`}>First name <RequiredMark /></FieldLabel>
             <Input
               id={`subject-${index}-firstName`}
               placeholder="Juan"
@@ -152,7 +139,7 @@ function SubjectFieldGrid({
         rules={{ required: "Last name is required" }}
         render={({ field, fieldState }) => (
           <Field data-invalid={fieldState.invalid}>
-            <FieldLabel htmlFor={`subject-${index}-lastName`}>Last name</FieldLabel>
+            <FieldLabel htmlFor={`subject-${index}-lastName`}>Last name <RequiredMark /></FieldLabel>
             <Input
               id={`subject-${index}-lastName`}
               placeholder="Dela Cruz"
@@ -205,7 +192,7 @@ function SubjectFieldGrid({
           rules={{ required: "Select the sex on record" }}
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor={`subject-${index}-sex`}>Sex</FieldLabel>
+              <FieldLabel htmlFor={`subject-${index}-sex`}>Sex <RequiredMark /></FieldLabel>
               <Select<"male" | "female" | typeof NO_SEX>
                 items={SEX_ITEMS}
                 value={(field.value as "male" | "female" | "") || NO_SEX}
@@ -375,6 +362,8 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       }
     >
       <div className="flex flex-col gap-6">
+        <RequiredLegend />
+
         {hasPersonGroup && showRoleLabels ? (
           <Accordion
             multiple
@@ -418,6 +407,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
         <DynamicFormFields
           definition={definition}
           step="details"
+          showRequiredMarks
           control={form.control}
           values={form.watch() as unknown as DynamicFieldValues}
         />

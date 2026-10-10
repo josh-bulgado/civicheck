@@ -3,6 +3,22 @@
 // online wizard and the staff walk-in dialog so both intake paths write the
 // same `form_data` shape.
 
+// The draft stores "no suffix" as an empty string, but Base UI reads an empty
+// value as "nothing selected" and renders no label for it, so the option needs
+// a real value that is mapped back to "" on the way in and out.
+export const NO_SUFFIX = "none";
+
+// Generational suffixes as they appear on PSA civil registry records.
+export const SUFFIXES = [
+  { value: NO_SUFFIX, label: "None" },
+  { value: "Jr.", label: "Jr." },
+  { value: "Sr.", label: "Sr." },
+  { value: "II", label: "II" },
+  { value: "III", label: "III" },
+  { value: "IV", label: "IV" },
+  { value: "V", label: "V" },
+];
+
 export interface SubjectFields {
   role: string;
   firstName: string;

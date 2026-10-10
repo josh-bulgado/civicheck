@@ -15,6 +15,14 @@ import {
 } from "~/features/system-admin/security-center.server";
 import type { Role } from "~/lib/permissions";
 import {
+  credentialsSchema,
+  emailOnlySchema,
+  newPasswordInputSchema,
+  oauthProviderSchema,
+  otpVerificationSchema,
+  signupInputSchema,
+} from "./auth.schema";
+import {
   clearIssuedOtps,
   describeRejectedOtp,
   recordIssuedOtp,
@@ -95,7 +103,7 @@ async function sendSignupOtpEmail(
 }
 
 export const loginWithEmailFn = createServerFn({ method: "POST" })
-  .validator((d: { email: string; password: string }) => d)
+  .validator(credentialsSchema)
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient();
     const { data: loginData, error } = await supabase.auth.signInWithPassword({
@@ -138,7 +146,7 @@ export const loginWithEmailFn = createServerFn({ method: "POST" })
   });
 
 export const loginWithOAuthFn = createServerFn({ method: "POST" })
-  .validator((d: { provider: "google" | "apple" }) => d)
+  .validator(oauthProviderSchema)
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient();
 
@@ -163,18 +171,12 @@ export const loginWithOAuthFn = createServerFn({ method: "POST" })
   });
 
 export const signupFn = createServerFn({ method: "POST" })
-  .validator(
-    (d: {
-      email: string;
-      password: string;
-      firstName: string;
-      lastName: string;
-      middleName?: string;
-    }) => d,
-  )
+  .validator(signupInputSchema)
   .handler(async ({ data }) => {
     const adminSupabase = getSupabaseAdminClient();
-    const middleName = data.middleName?.trim() || undefined;
+    // Already trimmed and checked by the validator; blank means "none".
+    const middleName = data.middleName || undefined;
+    const suffix = data.suffix || undefined;
     let signUpResult = await adminSupabase.auth.admin.createUser({
       email: data.email,
       password: data.password,
@@ -183,6 +185,7 @@ export const signupFn = createServerFn({ method: "POST" })
         first_name: data.firstName,
         last_name: data.lastName,
         middle_name: middleName,
+        suffix,
       },
     });
 
@@ -216,6 +219,7 @@ export const signupFn = createServerFn({ method: "POST" })
               first_name: data.firstName,
               last_name: data.lastName,
               middle_name: middleName,
+              suffix,
             },
           });
         }
@@ -235,12 +239,13 @@ export const signupFn = createServerFn({ method: "POST" })
     }
 
     // The profile row is created by a trigger that only reads the first and last
-    // name out of the metadata, so the middle name has to be written onto it.
+    // name out of the metadata, so the middle name and suffix have to be
+    // written onto it.
     const newProfileId = signUpResult.data?.user?.id;
-    if (newProfileId && middleName) {
+    if (newProfileId && (middleName || suffix)) {
       await adminSupabase
         .from("profiles")
-        .update({ middle_name: middleName })
+        .update({ middle_name: middleName ?? null, suffix: suffix ?? null })
         .eq("id", newProfileId);
     }
 
@@ -252,6 +257,7 @@ export const signupFn = createServerFn({ method: "POST" })
         first_name: data.firstName,
         last_name: data.lastName,
         middle_name: middleName,
+        suffix,
       },
     });
 
@@ -275,7 +281,7 @@ export const signupFn = createServerFn({ method: "POST" })
  * choosing and take the account over before its real owner ever confirms it.
  */
 export const resendSignupOtpFn = createServerFn({ method: "POST" })
-  .validator((d: { email: string; password: string }) => d)
+  .validator(credentialsSchema)
   .handler(async ({ data }) => {
     const INVALID_CREDENTIALS = "Invalid email or password.";
     const statelessSupabase = getSupabaseStatelessClient();
@@ -308,6 +314,7 @@ export const resendSignupOtpFn = createServerFn({ method: "POST" })
     const firstName =
       (userMetadata.first_name as string | undefined) || "there";
     const middleName = userMetadata.middle_name as string | undefined;
+    const suffix = userMetadata.suffix as string | undefined;
 
     // Recreate rather than update: Supabase Auth has no admin call to mint a
     // fresh unconfirmed state for an existing user, so this mirrors the same
@@ -331,10 +338,10 @@ export const resendSignupOtpFn = createServerFn({ method: "POST" })
       };
     }
 
-    if (middleName) {
+    if (middleName || suffix) {
       await adminSupabase
         .from("profiles")
-        .update({ middle_name: middleName })
+        .update({ middle_name: middleName ?? null, suffix: suffix ?? null })
         .eq("id", created.user.id);
     }
 
@@ -347,7 +354,7 @@ export const resendSignupOtpFn = createServerFn({ method: "POST" })
   });
 
 export const verifySignupOtpFn = createServerFn({ method: "POST" })
-  .validator((d: { email: string; token: string }) => d)
+  .validator(otpVerificationSchema)
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient();
     const { error } = await supabase.auth.verifyOtp({
@@ -379,7 +386,7 @@ export const verifySignupOtpFn = createServerFn({ method: "POST" })
   });
 
 export const resetPasswordFn = createServerFn({ method: "POST" })
-  .validator((d: { password: string }) => d)
+  .validator(newPasswordInputSchema)
   .handler(async ({ data }) => {
     const { supabase } = await requireActiveSession();
     const { error } = await supabase.auth.updateUser({
@@ -413,7 +420,7 @@ export const resetPasswordFn = createServerFn({ method: "POST" })
   });
 
 export const forgotPasswordFn = createServerFn({ method: "POST" })
-  .validator((d: { email: string }) => d)
+  .validator(emailOnlySchema)
   .handler(async ({ data }) => {
     const adminSupabase = getSupabaseAdminClient();
 
@@ -487,7 +494,7 @@ export const forgotPasswordFn = createServerFn({ method: "POST" })
   });
 
 export const verifyRecoveryOtpFn = createServerFn({ method: "POST" })
-  .validator((d: { email: string; token: string }) => d)
+  .validator(otpVerificationSchema)
   .handler(async ({ data }) => {
     const supabase = getSupabaseServerClient();
     const { error } = await supabase.auth.verifyOtp({

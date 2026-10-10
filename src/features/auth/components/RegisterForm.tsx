@@ -4,7 +4,12 @@ import { AlertCircleIcon, Lock, Mail } from "lucide-react";
 import { JSX, SVGProps, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import z from "zod";
-import { Field, FieldError, FieldLabel } from "~/components/ui/field";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from "~/components/ui/field";
 import { staggerStyle } from "~/components/motion/stagger";
 import {
   InputGroup,
@@ -13,6 +18,17 @@ import {
 } from "~/components/ui/input-group";
 import { Input } from "~/components/ui/input";
 import { Checkbox } from "~/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { NO_SUFFIX, SUFFIXES } from "~/lib/subject-fields";
+import { LegalDialogLink } from "~/features/legal/components/LegalDialogLink";
+import { signupInputSchema } from "../auth.schema";
 import { useSignUp } from "../hooks/useSignUp";
 import { useVerifySignupOtp } from "../hooks/useVerifySignupOtp";
 import { useOAuthLogin } from "../hooks/useOAuthLogin";
@@ -31,31 +47,17 @@ import {
   AuthFormHeading,
   AuthSplitLayout,
 } from "./AuthSplitLayout";
+import { RequiredLegend, RequiredMark } from "~/components/ui/required-mark";
 import { PasswordToggle } from "./PasswordToggle";
 import { VerifyEmailNotice } from "./VerifyEmailNotice";
 
-const formSchema = z
-  .object({
-    firstName: z.string().min(1, "First name is required"),
-    lastName: z.string().min(1, "Last name is required"),
-    middleName: z.string(),
-    noMiddleName: z.boolean(),
-    email: z.string().email("Please enter a valid email address"),
-    password: z
-      .string()
-      .min(8, "Password must be at least 8 characters")
-      .regex(/\d/, "Password must include at least one number"),
-    agreeToTerms: z.boolean().refine((value) => value === true, {
-      message: "You must agree to continue",
-    }),
-  })
-  // Civil registry records carry the middle name, so a blank one has to be a
-  // declaration rather than an omission — otherwise the office cannot tell a
-  // resident who has none from one who skipped the field.
-  .refine((data) => data.noMiddleName || data.middleName.trim().length > 0, {
-    message: 'Enter your middle name, or tick "I have no middle name"',
-    path: ["middleName"],
-  });
+// The field rules live in auth.schema.ts so the server enforces exactly what
+// this form shows; only the consent checkbox belongs to the form alone.
+const formSchema = signupInputSchema.extend({
+  agreeToTerms: z.boolean().refine((value) => value === true, {
+    message: "You must agree to continue",
+  }),
+});
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -73,6 +75,7 @@ type PendingSignup = {
   firstName: string;
   lastName: string;
   middleName: string;
+  suffix: string;
 };
 
 const RegisterForm = () => {
@@ -94,14 +97,19 @@ const RegisterForm = () => {
       firstName: "",
       lastName: "",
       middleName: "",
-      noMiddleName: false,
+      suffix: "",
       email: "",
       password: "",
       agreeToTerms: false,
     },
   });
 
-  const noMiddleName = form.watch("noMiddleName");
+  // Sign up stays disabled until every rule in the schema passes, including the
+  // terms checkbox. This reads the schema against the live values rather than
+  // `formState.isValid`: with `mode: "onBlur"` that flag only refreshes on
+  // blur, so ticking a checkbox would leave the button stale until focus moved
+  // away.
+  const isComplete = formSchema.safeParse(form.watch()).success;
 
   async function onSubmit(data: FormValues) {
     const signup: PendingSignup = {
@@ -109,7 +117,8 @@ const RegisterForm = () => {
       password: data.password,
       firstName: data.firstName,
       lastName: data.lastName,
-      middleName: data.noMiddleName ? "" : data.middleName.trim(),
+      middleName: data.middleName.trim(),
+      suffix: data.suffix.trim(),
     };
     const result = await signupMutation.mutate({ data: signup });
 
@@ -161,33 +170,55 @@ const RegisterForm = () => {
           onSubmit={form.handleSubmit(onSubmit)}
           className="civic-stagger flex flex-col gap-3.5"
         >
-          <div style={staggerStyle(0)} className="flex gap-2.5">
-            <Controller
-              control={form.control}
-              name="firstName"
-              render={({ field, fieldState }) => (
-                <Field
-                  data-invalid={fieldState.invalid}
-                  className="min-w-0 flex-1 gap-1.5"
-                >
-                  <FieldLabel htmlFor="firstName" className={authLabelClass}>
-                    First name
-                  </FieldLabel>
-                  <Input
-                    {...field}
-                    id="firstName"
-                    className={authFilledFieldClass}
-                    placeholder="Juan"
-                    aria-invalid={fieldState.invalid}
-                    autoComplete="given-name"
-                  />
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
-                  )}
-                </Field>
-              )}
-            />
+          <Controller
+            control={form.control}
+            name="firstName"
+            render={({ field, fieldState }) => (
+              <Field
+                data-invalid={fieldState.invalid}
+                style={staggerStyle(0)}
+                className="gap-1.5"
+              >
+                <FieldLabel htmlFor="firstName" className={authLabelClass}>
+                  First name
+                  <RequiredMark />
+                </FieldLabel>
+                <Input
+                  {...field}
+                  id="firstName"
+                  className={authFilledFieldClass}
+                  placeholder="Juan"
+                  aria-invalid={fieldState.invalid}
+                  autoComplete="given-name"
+                />
+                {fieldState.invalid && (
+                  <FieldError errors={[fieldState.error]} />
+                )}
+              </Field>
+            )}
+          />
 
+          <Controller
+            control={form.control}
+            name="middleName"
+            render={({ field }) => (
+              <Field style={staggerStyle(1)} className="gap-1.5">
+                <FieldLabel htmlFor="middleName" className={authLabelClass}>
+                  Middle name
+                </FieldLabel>
+                <Input
+                  {...field}
+                  id="middleName"
+                  className={authFilledFieldClass}
+                  placeholder="Santos (Optional)"
+                  autoComplete="additional-name"
+                />
+              </Field>
+            )}
+          />
+
+          {/* Suffix modifies the surname, so it shares a row with it. */}
+          <div style={staggerStyle(2)} className="flex items-start gap-2.5">
             <Controller
               control={form.control}
               name="lastName"
@@ -197,7 +228,7 @@ const RegisterForm = () => {
                   className="min-w-0 flex-1 gap-1.5"
                 >
                   <FieldLabel htmlFor="lastName" className={authLabelClass}>
-                    Last name
+                    Last name <RequiredMark />
                   </FieldLabel>
                   <Input
                     {...field}
@@ -213,55 +244,38 @@ const RegisterForm = () => {
                 </Field>
               )}
             />
-          </div>
-
-          <div style={staggerStyle(1)} className="flex flex-col gap-2">
-            <Controller
-              control={form.control}
-              name="middleName"
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                  <FieldLabel htmlFor="middleName" className={authLabelClass}>
-                    Middle name
-                  </FieldLabel>
-                  <Input
-                    {...field}
-                    id="middleName"
-                    className={authFilledFieldClass}
-                    placeholder={noMiddleName ? "Not applicable" : "Santos"}
-                    disabled={noMiddleName}
-                    aria-invalid={fieldState.invalid}
-                    autoComplete="additional-name"
-                  />
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
-                  )}
-                </Field>
-              )}
-            />
 
             <Controller
               control={form.control}
-              name="noMiddleName"
+              name="suffix"
               render={({ field }) => (
-                <Field orientation="horizontal" className="w-fit">
-                  <Checkbox
-                    id="noMiddleName"
-                    checked={field.value === true}
-                    onCheckedChange={(checked) => {
-                      const declared = checked === true;
-                      field.onChange(declared);
-                      if (declared) {
-                        // Anything already typed would be submitted behind a
-                        // disabled field the applicant can no longer see.
-                        form.setValue("middleName", "");
-                        form.clearErrors("middleName");
-                      }
-                    }}
-                  />
-                  <FieldLabel htmlFor="noMiddleName">
-                    I have no middle name
+                <Field className="w-24 shrink-0 gap-1.5">
+                  <FieldLabel htmlFor="suffix" className={authLabelClass}>
+                    Suffix
                   </FieldLabel>
+                  <Select
+                    items={SUFFIXES}
+                    value={field.value || NO_SUFFIX}
+                    onValueChange={(value) =>
+                      field.onChange(value === NO_SUFFIX ? "" : value)
+                    }
+                  >
+                    <SelectTrigger
+                      id="suffix"
+                      className={`${authFilledFieldClass} w-full data-[size=default]:h-11`}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {SUFFIXES.map((suffix) => (
+                          <SelectItem key={suffix.value} value={suffix.value}>
+                            {suffix.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
                 </Field>
               )}
             />
@@ -273,11 +287,11 @@ const RegisterForm = () => {
             render={({ field, fieldState }) => (
               <Field
                 data-invalid={fieldState.invalid}
-                style={staggerStyle(2)}
+                style={staggerStyle(3)}
                 className="gap-1.5"
               >
                 <FieldLabel htmlFor="email" className={authLabelClass}>
-                  Email
+                  Email <RequiredMark />
                 </FieldLabel>
                 <InputGroup className={`${authFilledGroupClass} px-0`}>
                   <InputGroupAddon>
@@ -305,11 +319,11 @@ const RegisterForm = () => {
             render={({ field, fieldState }) => (
               <Field
                 data-invalid={fieldState.invalid}
-                style={staggerStyle(3)}
+                style={staggerStyle(4)}
                 className="gap-1.5"
               >
                 <FieldLabel htmlFor="password" className={authLabelClass}>
-                  Password
+                  Password <RequiredMark />
                 </FieldLabel>
                 <InputGroup className={`${authFilledGroupClass} px-0`}>
                   <InputGroupAddon>
@@ -319,8 +333,9 @@ const RegisterForm = () => {
                     {...field}
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="8+ characters, one number"
+                    placeholder="Create a password"
                     aria-invalid={fieldState.invalid}
+                    aria-describedby="password-help"
                     autoComplete="new-password"
                   />
                   <PasswordToggle
@@ -328,6 +343,9 @@ const RegisterForm = () => {
                     onToggle={() => setShowPassword(!showPassword)}
                   />
                 </InputGroup>
+                <FieldDescription id="password-help" className="text-[13px]">
+                  At least 8 characters, including one number.
+                </FieldDescription>
                 {fieldState.invalid && (
                   <FieldError errors={[fieldState.error]} />
                 )}
@@ -341,7 +359,7 @@ const RegisterForm = () => {
             render={({ field, fieldState }) => (
               <Field
                 data-invalid={fieldState.invalid}
-                style={staggerStyle(4)}
+                style={staggerStyle(5)}
                 className="gap-1.5 pt-1 pb-1.5"
               >
                 <Field orientation="horizontal">
@@ -358,13 +376,16 @@ const RegisterForm = () => {
                     className="text-[13px] leading-snug text-body"
                   >
                     I agree to the{" "}
-                    <Link to="/" className={authLinkClass}>
+                    <LegalDialogLink document="terms" className={authLinkClass}>
                       Terms of Use
-                    </Link>{" "}
+                    </LegalDialogLink>{" "}
                     and{" "}
-                    <Link to="/" className={authLinkClass}>
+                    <LegalDialogLink
+                      document="privacy"
+                      className={authLinkClass}
+                    >
                       Privacy Notice
-                    </Link>
+                    </LegalDialogLink>
                     .
                   </FieldLabel>
                 </Field>
@@ -375,11 +396,11 @@ const RegisterForm = () => {
             )}
           />
 
-          <div style={staggerStyle(5)} className="flex flex-col gap-3.5">
+          <div style={staggerStyle(6)} className="flex flex-col gap-3.5">
             <Button
               type="submit"
               className={authButtonClass}
-              disabled={signupMutation.status === "pending"}
+              disabled={signupMutation.status === "pending" || !isComplete}
             >
               {signupMutation.status === "pending" ? (
                 <>
