@@ -320,7 +320,7 @@ end $$;
 -- T17: flipping a document back and forth while the alert is unread does not
 -- multiply notifications; once read, a new resubmission alerts again.
 do $$
-declare v uuid; a uuid; one_round int; after_flips int; reads_before int;
+declare v uuid; a uuid; one_round int; after_flips int; first_at timestamptz; last_at timestamptz; reads_before int;
 begin
   v := pg_temp.new_request(current_setting('t.service'), 0);
   insert into public.requirements_attachments (request_id, requirement_name, file_url, verification_status)
@@ -330,6 +330,8 @@ begin
   update public.requirements_attachments set verification_status = 'pending' where id = a;
   one_round := pg_temp.n(v, 'document_resubmitted');
   assert one_round > 0, 'T17 first resubmission should notify';
+  select max(created_at) into first_at from public.staff_notifications
+  where request_id = v and type = 'document_resubmitted';
 
   for i in 1..5 loop
     update public.requirements_attachments set verification_status = 'rejected' where id = a;
@@ -337,6 +339,11 @@ begin
   end loop;
   after_flips := pg_temp.n(v, 'document_resubmitted');
   assert after_flips = one_round, format('T17 flips amplified rows: %s -> %s', one_round, after_flips);
+  -- Collapsed, not dropped: the surviving unread row must resurface (fresh
+  -- timestamp) so a staff member who never opened the feed still sees it move.
+  select max(created_at) into last_at from public.staff_notifications
+  where request_id = v and type = 'document_resubmitted';
+  assert last_at > first_at, 'T17 a repeat resubmission must refresh the unread alert, not be swallowed';
 
   update public.staff_notifications set is_read = true where request_id = v and type = 'document_resubmitted';
   update public.requirements_attachments set verification_status = 'rejected' where id = a;
@@ -481,6 +488,57 @@ begin
   update public.requests set status = 'ready_for_release' where id = v;
   perform set_config('request.jwt.claims', '', true);
   assert pg_temp.n(v, 'awaiting_cashier') = 0, 'T20 an anon-role token must not announce a status change';
+end $$;
+
+-- T22: the fee decision must come from the stored fee, not from a value the
+-- same UPDATE rewrites. Zeroing fees_due while marking verified, with no OR,
+-- must not read as a fee-free confirmation.
+do $$
+declare
+  v uuid;
+  jwt_cashier text := json_build_object('sub', current_setting('t.cashier'), 'role', 'authenticated')::text;
+begin
+  v := pg_temp.new_request(current_setting('t.service'), 100);
+  update public.requests set status = 'processing' where id = v;
+  update public.requests set status = 'ready_for_release' where id = v;
+  perform set_config('request.jwt.claims', jwt_cashier, true);
+  update public.requests set fees_due = 0, payment_status = 'verified' where id = v;
+  perform set_config('request.jwt.claims', '', true);
+  assert pg_temp.n(v, 'ready_to_release') = 0,
+    'T22 rewriting fees_due in the same update must not turn a fee request fee-free';
+end $$;
+
+-- T23: an anon-role token must not announce a document resubmission either.
+do $$
+declare v uuid; a uuid;
+begin
+  v := pg_temp.new_request(current_setting('t.service'), 0);
+  insert into public.requirements_attachments (request_id, requirement_name, file_url, verification_status)
+  values (v, 'TEST requirement', 'test/anon.pdf', 'rejected')
+  returning id into a;
+  perform set_config('request.jwt.claims', json_build_object('role', 'anon')::text, true);
+  update public.requirements_attachments set verification_status = 'pending' where id = a;
+  perform set_config('request.jwt.claims', '', true);
+  assert pg_temp.n(v, 'document_resubmitted') = 0, 'T23 an anon-role token must not announce a resubmission';
+end $$;
+
+-- T24: a failure anywhere in the notification path, including the service label
+-- lookup, must not fail the status change that caused it. Runs last: it
+-- replaces the label function with one that raises.
+create or replace function public.notification_service_label(p_service_code text)
+returns text language plpgsql as $$
+begin
+  raise exception 'label lookup exploded';
+end $$;
+
+do $$
+declare v uuid;
+begin
+  v := pg_temp.new_request(current_setting('t.service'), 100);
+  update public.requests set status = 'processing' where id = v;
+  update public.requests set status = 'ready_for_release' where id = v;  -- must not raise
+  assert (select status from public.requests where id = v) = 'ready_for_release',
+    'T24 the status change must commit even when the notification path fails';
 end $$;
 
 -- T14: client roles cannot call the fan-out function directly.

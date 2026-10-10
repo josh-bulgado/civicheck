@@ -22,8 +22,9 @@ export const Route = createFileRoute("/_authed/_dashboard")({
   component: DashboardLayout,
   loader: async ({ context }) => ({
     unreadNotifications:
+      // The badge must never take the whole dashboard down with it.
       context.user && getNotificationAudience(context.user.role as Role)
-        ? await getUnreadNotificationCountFn()
+        ? await getUnreadNotificationCountFn().catch(() => 0)
         : 0,
   }),
   staleTime: 30_000,

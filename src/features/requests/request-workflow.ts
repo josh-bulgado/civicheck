@@ -37,6 +37,11 @@ export const STAGE_OF: Record<RequestStatus, WorkflowStage> = {
   released: 4,
 };
 
+// NOTE: the staff-notification trigger `trg_notify_request_status_changed`
+// (supabase/migrations/20261010121000_add_staff_notification_triggers.sql)
+// mirrors these hops in SQL: ready_for_release only out of processing,
+// incomplete only out of under_validation, rejected only out of an open stage.
+// Change one side without the other and the alerts silently stop.
 export const ALLOWED_TRANSITIONS: Record<RequestStatus, RequestStatus[]> = {
   submitted: ["under_validation", "rejected"],
   under_validation: ["incomplete", "processing", "rejected"],

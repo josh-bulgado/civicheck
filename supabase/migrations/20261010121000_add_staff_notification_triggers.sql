@@ -63,6 +63,7 @@ as $$
 declare
   v_tracking text;
   v_department text;
+  v_recipients uuid[];
 begin
   select r.tracking_number, s.department_id
     into v_tracking, v_department
@@ -85,27 +86,46 @@ begin
     return;
   end if;
 
-  insert into public.staff_notifications
-    (recipient_id, request_id, tracking_number, type, title, body)
-  select p.id, p_request_id, v_tracking, p_type, p_title, p_body
+  select coalesce(array_agg(p.id), '{}')
+    into v_recipients
   from public.profiles p
   where p.role = any (p_roles)
     and p.access_status = 'active'
     and p.id is distinct from auth.uid()
-    and (not p_department_scoped or p.department_id = v_department)
-    -- Applicant-triggered alerts collapse while one is still unread, so
-    -- toggling a document or spamming the API cannot multiply rows.
-    and not (
-      p_type in ('new_request', 'document_resubmitted')
-      and exists (
-        select 1 from public.staff_notifications n
-        where n.recipient_id = p.id
-          and n.request_id = p_request_id
-          and n.type = p_type
-          and not n.is_read
-          and n.archived_at is null
-      )
-    );
+    and (not p_department_scoped or p.department_id = v_department);
+
+  -- Applicant-triggered alerts collapse while one is still unread, so toggling
+  -- a document or spamming the API cannot multiply rows. Collapse means
+  -- *refresh*, not drop: the unread row moves to the top with the latest
+  -- title and body (and emits a Realtime UPDATE), so a staff member who works
+  -- from the queue and never opens the feed still sees each new event.
+  if p_type in ('new_request', 'document_resubmitted') then
+    update public.staff_notifications n
+    set created_at = clock_timestamp(),
+        title = p_title,
+        body = p_body
+    where n.recipient_id = any (v_recipients)
+      and n.request_id = p_request_id
+      and n.type = p_type
+      and not n.is_read
+      and n.archived_at is null;
+  end if;
+
+  insert into public.staff_notifications
+    (recipient_id, request_id, tracking_number, type, title, body)
+  select r, p_request_id, v_tracking, p_type, p_title, p_body
+  from unnest(v_recipients) as r
+  where not (
+    p_type in ('new_request', 'document_resubmitted')
+    and exists (
+      select 1 from public.staff_notifications n
+      where n.recipient_id = r
+        and n.request_id = p_request_id
+        and n.type = p_type
+        and not n.is_read
+        and n.archived_at is null
+    )
+  );
 end;
 $$;
 
@@ -143,10 +163,15 @@ security definer
 set search_path = public
 as $$
 declare
-  v_label text := public.notification_service_label(new.request_type);
-  v_free boolean := coalesce(new.fees_due, 0) <= 0;
+  v_label text;
+  -- The stored fee, before this write: the same UPDATE may rewrite fees_due.
+  v_free boolean := coalesce(old.fees_due, 0) <= 0;
 begin
   begin
+    -- Looked up inside the guard: nothing on this path may fail the status
+    -- change that caused it.
+    v_label := public.notification_service_label(new.request_type);
+
     -- Only the roles that may move a request on can announce a status change.
     if not public.notification_actor_is(array['staff', 'supervisor', 'admin']) then
       return null;
@@ -168,7 +193,7 @@ begin
         end,
         case when v_free
           then format('%s — no fee is due. Confirm it at the counter.', v_label)
-          else format('%s — fee due ₱%s.', v_label, to_char(new.fees_due, 'FM999,999,990.00'))
+          else format('%s — fee due ₱%s.', v_label, to_char(old.fees_due, 'FM999,999,990.00'))
         end,
         array['cashier'],
         false
@@ -214,7 +239,9 @@ security definer
 set search_path = public
 as $$
 declare
-  v_free boolean := coalesce(new.fees_due, 0) <= 0;
+  -- The stored fee, before this write: an UPDATE that zeroes fees_due while
+  -- marking the request verified must not read as a fee-free confirmation.
+  v_free boolean := coalesce(old.fees_due, 0) <= 0;
 begin
   begin
     -- Only the cashier verifies payment. A staff member (or admin) writing
@@ -265,11 +292,16 @@ begin
 
     -- "Resubmitted" is a statement about the applicant. Staff reverting a
     -- verification (rejected -> pending) is not a resubmission.
-    if auth.uid() is not null
-       and not exists (
-         select 1 from public.requests r
-         where r.id = new.request_id and r.applicant_id = auth.uid()
-       ) then
+    if auth.uid() is null then
+      -- No end-user identity: trusted for the service role and direct SQL,
+      -- never for an anon token.
+      if coalesce(auth.role(), '') = 'anon' then
+        return null;
+      end if;
+    elsif not exists (
+      select 1 from public.requests r
+      where r.id = new.request_id and r.applicant_id = auth.uid()
+    ) then
       return null;
     end if;
 

@@ -166,7 +166,8 @@ export const getUnreadNotificationCountFn = createServerFn({ method: "GET" }).ha
         .from("staff_notifications")
         .select("id", { count: "exact", head: true })
         .eq("recipient_id", user.id)
-        .eq("is_read", false);
+        .eq("is_read", false)
+        .is("archived_at", null);
 
       if (error) throw new Error(error.message);
       return count ?? 0;

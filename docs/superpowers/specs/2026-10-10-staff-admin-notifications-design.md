@@ -177,10 +177,15 @@ Rules that apply to all of them:
   match `CCRO-YYYY-NNNNNN` or nothing is fanned out, and a requirement name is
   shown only if it exists in the service's requirement catalog (otherwise the
   alert is generic).
-- **Applicant-triggered alerts collapse while unread.** A `new_request` or
-  `document_resubmitted` row is not repeated for the same recipient and request
-  while an unread, unarchived one exists, so toggling a document cannot multiply
-  rows.
+- **Applicant-triggered alerts collapse while unread, by refreshing.** A
+  `new_request` or `document_resubmitted` row is not repeated for the same
+  recipient and request while an unread, unarchived one exists. The existing row
+  is refreshed in place (new `created_at`, latest title and body), which emits a
+  Realtime UPDATE, so toggling a document cannot multiply rows yet a staff
+  member who works from the queue and never opens the feed still sees each new
+  event.
+- **The fee decision uses the stored fee.** Fee-free vs. fee is read from
+  `OLD.fees_due`, because the same UPDATE can rewrite `fees_due`.
 - **Fan-out never blocks the originating write.** Each trigger function wraps its
   call in an exception handler that logs a warning and returns. A failed
   notification must never roll back an applicant's submission or a cashier's
