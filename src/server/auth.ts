@@ -18,6 +18,8 @@ export type VerifiedSessionUser = {
   email?: string;
   /** When the access token was issued (seconds since epoch), if present. */
   issuedAt: number | null;
+  /** The auth session this token belongs to; constant across token refreshes. */
+  sessionId: string | null;
   user_metadata: {
     avatar_url?: string;
   };
@@ -49,6 +51,8 @@ export async function getVerifiedSessionUser(
     id: claims.sub,
     email: typeof claims.email === "string" ? claims.email : undefined,
     issuedAt: typeof claims.iat === "number" ? claims.iat : null,
+    sessionId:
+      typeof claims.session_id === "string" ? claims.session_id : null,
     user_metadata: avatarUrl ? { avatar_url: avatarUrl } : {},
   };
 }

@@ -87,7 +87,9 @@ export function LoginForm({
   error?: string;
 }) {
   const [showPassword, setShowPassword] = useState(false);
-  const [keepSignedIn, setKeepSignedIn] = useState(true);
+  // Opt-in: a session that outlives the browser should be a deliberate choice,
+  // since the next person on a shared computer would land in this account.
+  const [keepSignedIn, setKeepSignedIn] = useState(false);
   const loginMutation = useLogin(redirectTo);
   const oauthLoginMutation = useOAuthLogin();
   const verifyOtpMutation = useVerifySignupOtp();
@@ -111,7 +113,9 @@ export function LoginForm({
   });
 
   async function onSubmit(data: FormValues) {
-    const result = await loginMutation.mutate({ data });
+    const result = await loginMutation.mutate({
+      data: { ...data, keepSignedIn },
+    });
     if (result?.error && /email not confirmed/i.test(result.message ?? "")) {
       setUnconfirmed({ email: data.email, password: data.password });
       resendOtpMutation.mutate({ data });
@@ -288,7 +292,7 @@ export function LoginForm({
                 variant="outline"
                 className={`${authButtonClass} justify-center gap-2.5 text-sm font-medium`}
                 onClick={() =>
-                  oauthLoginMutation.mutate({ provider: "google" })
+                  oauthLoginMutation.mutate({ provider: "google", keepSignedIn })
                 }
                 disabled={oauthLoginMutation.status === "pending"}
               >

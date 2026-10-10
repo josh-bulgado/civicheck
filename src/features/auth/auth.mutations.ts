@@ -1,8 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import {
+  clearSessionScope,
   getSupabaseServerClient,
   getSupabaseAdminClient,
   getSupabaseStatelessClient,
+  setSessionScope,
 } from "~/utils/supabase";
 import { getAppUrl } from "~/utils/app-url";
 import { sendEmail } from "~/utils/resend";
@@ -17,6 +19,7 @@ import type { Role } from "~/lib/permissions";
 import {
   credentialsSchema,
   emailOnlySchema,
+  loginInputSchema,
   newPasswordInputSchema,
   oauthProviderSchema,
   otpVerificationSchema,
@@ -103,13 +106,20 @@ async function sendSignupOtpEmail(
 }
 
 export const loginWithEmailFn = createServerFn({ method: "POST" })
-  .validator(credentialsSchema)
+  .validator(loginInputSchema)
   .handler(async ({ data }) => {
-    const supabase = getSupabaseServerClient();
+    const sessionOnly = data.keepSignedIn !== true;
+    const supabase = getSupabaseServerClient({ sessionOnly });
     const { data: loginData, error } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
     });
+
+    // An unconfirmed account goes on to verify its email from the login form,
+    // and that verification opens the session — so it needs the choice too.
+    if (!error || /email not confirmed/i.test(error.message ?? "")) {
+      setSessionScope(sessionOnly);
+    }
 
     if (error) {
       await recordAuthenticationSecurityEvent({
@@ -133,6 +143,7 @@ export const loginWithEmailFn = createServerFn({ method: "POST" })
       .single();
     if ((profile?.access_status ?? "active") !== "active") {
       await supabase.auth.signOut();
+      clearSessionScope();
       return { error: true, message: "This account is not active." };
     }
     if (profile?.role) {
@@ -148,7 +159,11 @@ export const loginWithEmailFn = createServerFn({ method: "POST" })
 export const loginWithOAuthFn = createServerFn({ method: "POST" })
   .validator(oauthProviderSchema)
   .handler(async ({ data }) => {
-    const supabase = getSupabaseServerClient();
+    // The session is opened later, by /auth/callback, so the choice rides
+    // along as the marker cookie that request will read.
+    const sessionOnly = data.keepSignedIn !== true;
+    setSessionScope(sessionOnly);
+    const supabase = getSupabaseServerClient({ sessionOnly });
 
     const redirectTo = `${getAppUrl()}/auth/callback`;
 

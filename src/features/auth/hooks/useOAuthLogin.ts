@@ -5,8 +5,9 @@ import { loginWithOAuthFn } from "../auth.mutations";
 type OAuthProvider = "google" | "apple";
 
 export function useOAuthLogin() {
-  return useMutation<{ provider: OAuthProvider }, any>({
-    fn: async ({ provider }) => loginWithOAuthFn({ data: { provider } }),
+  return useMutation<{ provider: OAuthProvider; keepSignedIn?: boolean }, any>({
+    fn: async ({ provider, keepSignedIn }) =>
+      loginWithOAuthFn({ data: { provider, keepSignedIn } }),
     onSuccess: async (ctx) => {
       if (ctx.data?.error) {
         toast.error("Unable to sign in", {
