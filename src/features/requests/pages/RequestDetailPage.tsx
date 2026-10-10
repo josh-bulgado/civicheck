@@ -15,6 +15,11 @@ import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -58,6 +63,14 @@ import {
 import { RequestDetailHero } from "~/features/requests/components/RequestDetailHero";
 import { RequestHistoryTimeline } from "~/features/requests/components/RequestHistoryTimeline";
 import { SubmittedDetailsCard } from "~/features/requests/components/SubmittedDetailsCard";
+import {
+  RejectionReasonPicker,
+  useRejectionReason,
+} from "~/features/requests/components/RejectionReasonPicker";
+import {
+  DOCUMENT_REJECTION_REASONS,
+  REQUEST_REJECTION_REASONS,
+} from "~/features/requests/rejection-reasons";
 
 // On-time birth registration is split by parents' marital status.
 const CONFIRM_DECISION_SERVICE_CODES = ["OTCOLB-MARITAL", "OTCOLB-NONMARITAL"];
@@ -76,6 +89,8 @@ export default function RequestDetailPage({
 
   const [remarks, setRemarks] = useState("");
   const [busy, setBusy] = useState(false);
+  const [rejectingRequest, setRejectingRequest] = useState(false);
+  const requestRejection = useRejectionReason();
 
   const status = getStatusDetails(request.status);
   const available = nextStatuses(request.status);
@@ -84,8 +99,9 @@ export default function RequestDetailPage({
   const canReverseVerification = can("requests:reverse_verification");
   // Accept/reject confirmation is rolling out service by service — on-time
   // birth registration first.
-  const confirmAttachmentDecisions =
-    CONFIRM_DECISION_SERVICE_CODES.includes(request.serviceCode.toUpperCase());
+  const confirmAttachmentDecisions = CONFIRM_DECISION_SERVICE_CODES.includes(
+    request.serviceCode.toUpperCase(),
+  );
   const hasUnresolvedAttachments = request.attachments.some(
     (doc) => doc.verificationStatus !== "approved",
   );
@@ -96,14 +112,21 @@ export default function RequestDetailPage({
     return true;
   });
   // Release waits on the cashier's payment check, unless no fee is due.
-  const paymentSettled = isPaymentSettled(request.feesDue, request.paymentStatus);
+  const paymentSettled = isPaymentSettled(
+    request.feesDue,
+    request.paymentStatus,
+  );
   const needsAttachmentsResolved =
     available.includes("processing") && hasUnresolvedAttachments;
 
-  async function handleTransition(to: RequestStatus) {
-    if (REASON_REQUIRED.includes(to) && !remarks.trim()) {
+  /** `note` defaults to the remarks box; rejecting passes its picked reason. */
+  async function handleTransition(to: RequestStatus, note = remarks) {
+    if (REASON_REQUIRED.includes(to) && !note.trim()) {
       toast.error("Give the applicant a reason first.", {
-        description: "Fill in the remarks box below before this decision.",
+        description:
+          to === "rejected"
+            ? "Pick a reason for rejecting this request."
+            : "Fill in the remarks box below before this decision.",
       });
       return;
     }
@@ -111,7 +134,7 @@ export default function RequestDetailPage({
     setBusy(true);
     try {
       const res = await advanceRequestStatusFn({
-        data: { requestId: request.id, toStatus: to, remarks },
+        data: { requestId: request.id, toStatus: to, remarks: note },
       });
       if (res.error) {
         toast.error("Could not update this request", {
@@ -121,6 +144,8 @@ export default function RequestDetailPage({
       }
       toast.success(`Moved to ${getStatusDetails(to).label}`);
       setRemarks("");
+      setRejectingRequest(false);
+      requestRejection.reset();
       onUpdated();
     } finally {
       setBusy(false);
@@ -245,10 +270,12 @@ export default function RequestDetailPage({
                     <div className="flex flex-col gap-2">
                       <Label htmlFor="remarks">
                         Remarks
-                        {visibleTransitions.some((s) =>
-                          REASON_REQUIRED.includes(s),
+                        {/* Rejecting has its own reason picker below. */}
+                        {visibleTransitions.some(
+                          (s) =>
+                            s !== "rejected" && REASON_REQUIRED.includes(s),
                         )
-                          ? " (required to reject or mark incomplete)"
+                          ? " (required to mark incomplete)"
                           : " (optional)"}
                       </Label>
                       <Textarea
@@ -262,26 +289,74 @@ export default function RequestDetailPage({
 
                     <div className="civic-stagger-auto flex flex-col gap-3">
                       {visibleTransitions.map((next) => {
-                        const awaitingPayment = next === "released" && !paymentSettled;
+                        // The reason panel below replaces the button while open.
+                        if (next === "rejected" && rejectingRequest)
+                          return null;
+                        const awaitingPayment =
+                          next === "released" && !paymentSettled;
                         return (
-                        <Button
-                          key={next}
-                          variant={next === "rejected" ? "outline" : "default"}
-                          disabled={busy || awaitingPayment}
-                          // Gray, not just faded blue, so a payment-locked
-                          // release reads as unavailable at a glance.
-                          className={
-                            awaitingPayment
-                              ? "disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
-                              : undefined
-                          }
-                          onClick={() => handleTransition(next)}
-                        >
-                          {TRANSITION_LABELS[next]}
-                        </Button>
+                          <Button
+                            key={next}
+                            variant={
+                              next === "rejected" ? "outline" : "default"
+                            }
+                            disabled={busy || awaitingPayment}
+                            // Gray, not just faded blue, so a payment-locked
+                            // release reads as unavailable at a glance.
+                            className={
+                              awaitingPayment
+                                ? "disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
+                                : undefined
+                            }
+                            onClick={
+                              next === "rejected"
+                                ? () => setRejectingRequest(true)
+                                : () => handleTransition(next)
+                            }
+                          >
+                            {TRANSITION_LABELS[next]}
+                          </Button>
                         );
                       })}
                     </div>
+
+                    {rejectingRequest && (
+                      <div className="civic-enter-sm flex flex-col gap-3 rounded-lg border border-border-light bg-muted/30 p-3">
+                        <RejectionReasonPicker
+                          idPrefix="request-reject"
+                          legend="Why is this request being rejected?"
+                          reasons={REQUEST_REJECTION_REASONS}
+                          state={requestRejection}
+                          disabled={busy}
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={busy || !requestRejection.reason}
+                            onClick={() =>
+                              handleTransition(
+                                "rejected",
+                                requestRejection.reason,
+                              )
+                            }
+                          >
+                            Confirm reject
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={busy}
+                            onClick={() => {
+                              setRejectingRequest(false);
+                              requestRejection.reset();
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
 
@@ -294,16 +369,16 @@ export default function RequestDetailPage({
 
                 {request.status === "ready_for_release" && !isAdmin && (
                   <p className="civic-enter-sm rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-                    Only the CCRO admin can release the document once payment
-                    is verified.
+                    Only the CCRO admin can release the document once payment is
+                    verified.
                   </p>
                 )}
 
                 {request.status === "ready_for_release" && !paymentSettled && (
-                    <p className="civic-enter-sm rounded-lg border border-warning/20 bg-warning/5 p-3 text-xs text-warning-strong">
-                      Payment must be verified before this can be released.
-                    </p>
-                  )}
+                  <p className="civic-enter-sm rounded-lg border border-warning/20 bg-warning/5 p-3 text-xs text-warning-strong">
+                    Payment must be verified before this can be released.
+                  </p>
+                )}
               </div>
             )}
           </section>
@@ -352,7 +427,7 @@ function AttachmentRow({
   const [pendingDecision, setPendingDecision] = useState<
     "approved" | "rejected" | null
   >(null);
-  const [reason, setReason] = useState("");
+  const rejection = useRejectionReason();
   const [reverting, setReverting] = useState(false);
   const [revertReason, setRevertReason] = useState("");
   const [viewing, setViewing] = useState(false);
@@ -386,13 +461,13 @@ function AttachmentRow({
   }
 
   async function handleConfirmReject() {
-    if (!reason.trim()) return;
+    if (!rejection.reason) return;
     setBusy(true);
     try {
-      const ok = await onDecide(doc.id, "rejected", reason.trim());
+      const ok = await onDecide(doc.id, "rejected", rejection.reason);
       if (ok) {
         setRejecting(false);
-        setReason("");
+        rejection.reset();
       }
     } finally {
       setBusy(false);
@@ -430,7 +505,8 @@ function AttachmentRow({
         </ItemMedia>
         <ItemContent>
           <ItemTitle className="font-semibold text-foreground">
-            {title ?? `${doc.subjectRole ? `${doc.subjectRole}: ` : ""}${doc.requirementName}`}
+            {title ??
+              `${doc.subjectRole ? `${doc.subjectRole}: ` : ""}${doc.requirementName}`}
           </ItemTitle>
           <ItemDescription className="text-xs capitalize">
             {doc.verificationStatus}
@@ -438,15 +514,22 @@ function AttachmentRow({
           </ItemDescription>
         </ItemContent>
         <ItemActions className="flex-wrap">
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={viewing}
-            onClick={handleViewFile}
-          >
-            <ExternalLink className="size-4" />
-            View file
-          </Button>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  disabled={viewing}
+                  onClick={handleViewFile}
+                  aria-label="View file"
+                />
+              }
+            >
+              <ExternalLink className="size-4" />
+            </TooltipTrigger>
+            <TooltipContent>View file</TooltipContent>
+          </Tooltip>
           {canProcess && doc.verificationStatus === "pending" && !rejecting && (
             <>
               <Button
@@ -523,22 +606,19 @@ function AttachmentRow({
       )}
 
       {rejecting && (
-        <div className="civic-enter-sm flex flex-col gap-2 rounded-lg border border-border-light bg-muted/30 p-3">
-          <Label htmlFor={`reject-reason-${doc.id}`}>
-            Reason for rejecting this document
-          </Label>
-          <Textarea
-            id={`reject-reason-${doc.id}`}
-            rows={2}
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="What's wrong with this document, so the applicant can fix it?"
+        <div className="civic-enter-sm flex flex-col gap-3 rounded-lg border border-border-light bg-muted/30 p-3">
+          <RejectionReasonPicker
+            idPrefix={`reject-reason-${doc.id}`}
+            legend="Reason for rejecting this document"
+            reasons={DOCUMENT_REJECTION_REASONS}
+            state={rejection}
+            disabled={busy}
           />
           <div className="flex gap-2">
             <Button
               size="sm"
               variant="destructive"
-              disabled={busy || !reason.trim()}
+              disabled={busy || !rejection.reason}
               onClick={
                 confirmDecision
                   ? () => setPendingDecision("rejected")
@@ -553,7 +633,7 @@ function AttachmentRow({
               disabled={busy}
               onClick={() => {
                 setRejecting(false);
-                setReason("");
+                rejection.reset();
               }}
             >
               Cancel
@@ -588,7 +668,9 @@ function AttachmentRow({
             <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               ref={confirmButton}
-              variant={pendingDecision === "approved" ? "success" : "destructive"}
+              variant={
+                pendingDecision === "approved" ? "success" : "destructive"
+              }
               disabled={busy}
               onClick={
                 pendingDecision === "approved"
