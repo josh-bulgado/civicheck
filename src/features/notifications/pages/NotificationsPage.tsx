@@ -3,9 +3,13 @@ import { Link } from "@tanstack/react-router";
 import {
   Archive,
   ArchiveRestore,
+  Banknote,
   Bell,
   Check,
   CircleCheckBig,
+  CircleX,
+  FilePlus2,
+  FileUp,
   FileWarning,
   MailWarning,
   MoreHorizontal,
@@ -48,8 +52,11 @@ import {
 } from "~/features/notifications/notifications.mutations";
 import type {
   NotificationRow,
+  NotificationTarget,
   NotificationType,
 } from "~/features/notifications/notifications.queries";
+import type { NotificationAudience } from "~/features/notifications/notification-audience";
+import { usePermissions } from "~/hooks/usePermissions";
 
 // CCRO Legazpi is a single-office deployment, so day boundaries are pinned to
 // Philippine time. This also keeps the server-rendered and client-rendered
@@ -89,7 +96,33 @@ const TYPE_STYLE: Record<NotificationType, { icon: LucideIcon; unreadClass: stri
   status_change: { icon: RefreshCw, unreadClass: "bg-primary text-white" },
   pre_validation_complete: { icon: CircleCheckBig, unreadClass: "bg-primary text-white" },
   document_rejected: { icon: FileWarning, unreadClass: "bg-destructive text-white" },
+  new_request: { icon: FilePlus2, unreadClass: "bg-primary text-white" },
+  document_resubmitted: { icon: FileUp, unreadClass: "bg-primary text-white" },
+  awaiting_cashier: { icon: Banknote, unreadClass: "bg-primary text-white" },
+  ready_to_release: { icon: CircleCheckBig, unreadClass: "bg-primary text-white" },
+  request_incomplete: { icon: FileWarning, unreadClass: "bg-destructive text-white" },
+  request_rejected: { icon: CircleX, unreadClass: "bg-destructive text-white" },
 };
+
+/** One typed `Link` per destination, so each keeps its own params/search checking. */
+function linkFor(target: NotificationTarget, onClick: () => void) {
+  switch (target.to) {
+    case "/requests/$requestId":
+      return (
+        <Link to="/requests/$requestId" params={{ requestId: target.requestId }} onClick={onClick} />
+      );
+    case "/cashier":
+      return <Link to="/cashier" search={{ tracking: target.tracking }} onClick={onClick} />;
+    default:
+      return (
+        <Link
+          to="/my-requests/$requestId"
+          params={{ requestId: target.requestId }}
+          onClick={onClick}
+        />
+      );
+  }
+}
 
 interface DayGroup {
   key: string;
@@ -120,6 +153,8 @@ function groupByDay(items: NotificationRow[], now: number): DayGroup[] {
 }
 
 interface NotificationsPageProps {
+  /** Which feed this is: applicants get email-backed updates, CCRO staff in-system alerts. */
+  audience: NotificationAudience;
   notifications: NotificationRow[];
   /** True when older notifications exist beyond what was loaded. */
   hasMore: boolean;
@@ -145,13 +180,7 @@ function NotificationItem({
   return (
     <div className={cn("flex items-stretch", !notification.isRead && "bg-primary-soft/40")}>
       <Item
-        render={
-          <Link
-            to="/my-requests/$requestId"
-            params={{ requestId: notification.requestId }}
-            onClick={() => onOpen(notification)}
-          />
-        }
+        render={linkFor(notification.target, () => onOpen(notification))}
         className="min-w-0 flex-1 flex-nowrap items-start gap-4 rounded-none p-5"
       >
         <ItemMedia
@@ -288,11 +317,14 @@ function NotificationList({
 }
 
 export default function NotificationsPage({
+  audience,
   notifications,
   hasMore,
   onLoadMore,
   onUpdated,
 }: NotificationsPageProps) {
+  const isApplicant = audience === "applicant";
+  const { can } = usePermissions();
   const [filter, setFilter] = useState<Filter>("all");
   const [isMarkingAll, startMarkAll] = useTransition();
   const [isLoadingMore, startLoadMore] = useTransition();
@@ -367,15 +399,19 @@ export default function NotificationsPage({
         <div className="relative z-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="mb-3 text-xs font-bold uppercase tracking-[0.13em] text-brand-gold">
-              Applicant workspace
+              {isApplicant ? "Applicant workspace" : "CCRO workspace"}
             </p>
             <h1 className="text-3xl font-extrabold tracking-[-0.03em] text-white sm:text-4xl">
               Notifications
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/75">
-              {unreadCount > 0
-                ? `You have ${unreadCount} unread ${unreadCount === 1 ? "update" : "updates"} on your requests. We also email you each one.`
-                : "You're all caught up. We'll post here, and email you, whenever a request changes."}
+              {isApplicant
+                ? unreadCount > 0
+                  ? `You have ${unreadCount} unread ${unreadCount === 1 ? "update" : "updates"} on your requests. We also email you each one.`
+                  : "You're all caught up. We'll post here, and email you, whenever a request changes."
+                : unreadCount > 0
+                  ? `You have ${unreadCount} unread ${unreadCount === 1 ? "alert" : "alerts"} that need your attention.`
+                  : "You're all caught up. Requests that need your action will show up here."}
             </p>
           </div>
           {unreadCount > 0 ? (
@@ -400,17 +436,34 @@ export default function NotificationsPage({
             </EmptyMedia>
             <EmptyTitle>No notifications yet</EmptyTitle>
             <EmptyDescription>
-              Once you submit a request, we'll post an update here whenever staff review your
-              documents or move it to the next step.
+              {isApplicant
+                ? "Once you submit a request, we'll post an update here whenever staff review your documents or move it to the next step."
+                : "When a request needs your action, it will be posted here."}
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
-            <Link
-              to="/my-requests"
-              className={buttonVariants({ variant: "outline", size: "lg" })}
-            >
-              Go to my requests
-            </Link>
+            {isApplicant ? (
+              <Link
+                to="/my-requests"
+                className={buttonVariants({ variant: "outline", size: "lg" })}
+              >
+                Go to my requests
+              </Link>
+            ) : can("requests:view_all") ? (
+              <Link
+                to="/requests"
+                className={buttonVariants({ variant: "outline", size: "lg" })}
+              >
+                Open the request queue
+              </Link>
+            ) : (
+              <Link
+                to="/cashier"
+                className={buttonVariants({ variant: "outline", size: "lg" })}
+              >
+                Open the cashier counter
+              </Link>
+            )}
           </EmptyContent>
         </Empty>
       ) : (

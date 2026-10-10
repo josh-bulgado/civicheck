@@ -1,16 +1,17 @@
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
-import { hasPermission, type Role } from "~/lib/permissions";
+import type { Role } from "~/lib/permissions";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import {
   getMyNotificationsFn,
   NOTIFICATIONS_PAGE_SIZE,
 } from "~/features/notifications/notifications.queries";
+import { getNotificationAudience } from "~/features/notifications/notification-audience";
 import NotificationsPage from "~/features/notifications/pages/NotificationsPage";
 import { denyAccess } from "~/lib/access";
 
 export const Route = createFileRoute("/_authed/_dashboard/notifications")({
   beforeLoad: ({ context, location }) => {
-    if (!context.user || !hasPermission(context.user.role as Role, "requests:view_own"))
+    if (!context.user || !getNotificationAudience(context.user.role as Role))
       denyAccess(location);
   },
   // "Load more" raises `limit` in the URL rather than appending to local state,
@@ -27,13 +28,19 @@ export const Route = createFileRoute("/_authed/_dashboard/notifications")({
 
 function NotificationsRoute() {
   const { items, hasMore } = Route.useLoaderData();
+  const { user } = Route.useRouteContext();
   const { limit = NOTIFICATIONS_PAGE_SIZE } = Route.useSearch();
   const router = useRouter();
   const navigate = useNavigate({ from: Route.fullPath });
-  useRealtimeRefresh({ tables: ["notifications"] });
+  // beforeLoad has already denied roles without a feed.
+  const audience = getNotificationAudience(user!.role as Role) ?? "applicant";
+  useRealtimeRefresh({
+    tables: [audience === "staff" ? "staff_notifications" : "notifications"],
+  });
 
   return (
     <NotificationsPage
+      audience={audience}
       notifications={items}
       hasMore={hasMore}
       onLoadMore={() =>

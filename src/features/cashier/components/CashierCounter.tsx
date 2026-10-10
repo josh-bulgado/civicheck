@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { QrCode, Search } from "lucide-react";
 import { Button } from "~/components/ui/button";
@@ -14,8 +14,8 @@ import {
   type CashierLookupResult,
 } from "~/features/requests/requests.queries";
 
-export function CashierCounter() {
-  const [trackingNumber, setTrackingNumber] = useState("");
+export function CashierCounter({ initialTracking }: { initialTracking?: string }) {
+  const [trackingNumber, setTrackingNumber] = useState(initialTracking ?? "");
   const [busy, setBusy] = useState(false);
   const [searched, setSearched] = useState(false);
   const [result, setResult] = useState<CashierLookupResult | null>(null);
@@ -42,6 +42,16 @@ export function CashierCounter() {
     setTrackingNumber(value);
     handleLookup(value);
   }
+
+  // Arriving from a notification: look the request up straight away.
+  useEffect(() => {
+    if (initialTracking) {
+      setTrackingNumber(initialTracking);
+      void handleLookup(initialTracking);
+    }
+    // handleLookup only closes over state setters; re-run when the param changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialTracking]);
 
   const status = result ? getStatusDetails(result.status) : null;
   const payment = result ? getPaymentDetails(result.paymentStatus) : null;
