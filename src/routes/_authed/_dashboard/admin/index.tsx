@@ -1,6 +1,5 @@
 import {
   createFileRoute,
-  redirect,
   useRouter,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
@@ -12,14 +11,15 @@ import { getCcroAdminOverview } from "~/features/admin/overview/overview.queries
 import { AdminOverviewPage } from "~/features/admin/overview/pages/AdminOverviewPage";
 import { hasPermission, type Role } from "~/lib/permissions";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
+import { denyAccess } from "~/lib/access";
 
 export const Route = createFileRoute("/_authed/_dashboard/admin/")({
-  beforeLoad: ({ context }) => {
+  beforeLoad: ({ context, location }) => {
     if (
       !context.user ||
       !hasPermission(context.user.role as Role, "dashboard:admin")
     ) {
-      throw redirect({ to: "/dashboard" });
+      denyAccess(location);
     }
   },
   loader: () => getCcroAdminOverview(),

@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { AccountsPage } from "~/features/system-admin/pages/AccountsPage";
 import { getAccounts } from "~/features/system-admin/system-admin.functions";
 import { hasPermission, type AccountStatus, type Role } from "~/lib/permissions";
@@ -6,6 +6,7 @@ import type {
   AccountCategory,
   AccountFilters,
 } from "~/features/system-admin/system-admin.types";
+import { denyAccess } from "~/lib/access";
 
 type AccountsSearch = AccountFilters & {
   category: AccountCategory;
@@ -44,12 +45,12 @@ export const Route = createFileRoute("/_authed/_dashboard/system-admin/accounts"
     departmentId: optionalText(search.departmentId, 100),
     signIn: search.signIn === "never" ? "never" : undefined,
   }),
-  beforeLoad: ({ context }) => {
+  beforeLoad: ({ context, location }) => {
     if (
       !context.user ||
       !hasPermission(context.user.role as Role, "accounts:view_all")
     )
-      throw redirect({ to: "/dashboard" });
+      denyAccess(location);
   },
   loaderDeps: ({ search }) => search,
   loader: ({ deps }) => getAccounts({ data: { ...deps, pageSize: 20 } }),

@@ -1,17 +1,18 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { getActiveDepartments } from "~/features/admin/departments.queries";
 import { ServiceFormPage } from "~/features/admin/services/components/ServiceFormPage";
 import { getAdminServices } from "~/features/admin/services/services.queries";
 import { hasPermission } from "~/lib/permissions";
 import type { Role } from "~/lib/permissions";
+import { denyAccess } from "~/lib/access";
 
 export const Route = createFileRoute(
   "/_authed/_dashboard/admin/services_/new",
 )({
-  beforeLoad: ({ context }) => {
+  beforeLoad: ({ context, location }) => {
     const role = (context.user?.role ?? "applicant") as Role;
     if (!hasPermission(role, "services:manage")) {
-      throw redirect({ to: "/dashboard" });
+      denyAccess(location);
     }
   },
   loader: async () => {

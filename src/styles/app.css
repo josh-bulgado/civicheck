@@ -354,6 +354,109 @@
   }
 }
 
+/* ─── Apply hand-off loader ──────────────────────────────────────────────────
+   Shown while the router moves into the apply flow. The sheet's checklist
+   lines draw in on a loop for as long as the navigation is pending. The CCRO
+   stamp is the completion mark: it is only mounted once the navigation has
+   resolved, lands a single time, and the loader then leaves. No stamp means
+   still working. The loop's timings are mirrored in ApplyTransitionLoader so
+   the stamp waits for a fully drawn sheet. Resting styles are the finished
+   state, so with reduced motion the sheet simply sits there. */
+
+@keyframes civic-apply-line {
+  0%,
+  6% {
+    transform: scaleX(0);
+    opacity: 1;
+  }
+  40%,
+  88% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 0;
+  }
+}
+
+@keyframes civic-apply-stamp {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -10px, 0) scale(1.7) rotate(-14deg);
+  }
+  55% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(0.92) rotate(-14deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1) rotate(-14deg);
+  }
+}
+
+/* The sheet gives a little under the stamp, in time with the impact above. */
+@keyframes civic-apply-bump {
+  0%,
+  48%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  56% {
+    transform: translate3d(0, 3px, 0);
+  }
+}
+
+@keyframes civic-apply-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.civic-apply-overlay {
+  animation: civic-fade-in var(--duration-base) var(--ease-civic) both;
+}
+
+.civic-apply-overlay[data-leaving] {
+  animation: civic-apply-fade-out var(--duration-base) var(--ease-civic) forwards;
+}
+
+.civic-apply-sheet[data-stamped] {
+  animation: civic-apply-bump var(--duration-slow) ease-out both;
+}
+
+.civic-apply-line {
+  transform-origin: left center;
+  /* Duration and stagger are set inline from the component. */
+  animation: civic-apply-line 1600ms var(--ease-civic) infinite both;
+}
+
+/* Once stamped the lines hold their drawn state instead of looping on. */
+.civic-apply-sheet[data-stamped] .civic-apply-line {
+  animation: none;
+}
+
+.civic-apply-stamp {
+  transform: rotate(-14deg);
+  animation: civic-apply-stamp var(--duration-slow) var(--ease-civic-emphasized) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .civic-apply-overlay,
+  .civic-apply-overlay[data-leaving] {
+    animation-duration: 1ms;
+  }
+
+  .civic-apply-sheet,
+  .civic-apply-line,
+  .civic-apply-stamp {
+    animation: none;
+  }
+}
+
 /* Shared civic layout primitives. */
 @layer components {
   .civic-container {

@@ -6,11 +6,12 @@ import {
   NOTIFICATIONS_PAGE_SIZE,
 } from "~/features/notifications/notifications.queries";
 import NotificationsPage from "~/features/notifications/pages/NotificationsPage";
+import { denyAccess } from "~/lib/access";
 
 export const Route = createFileRoute("/_authed/_dashboard/notifications")({
-  beforeLoad: ({ context }) => {
+  beforeLoad: ({ context, location }) => {
     if (!context.user || !hasPermission(context.user.role as Role, "requests:view_own"))
-      throw new Error("Forbidden");
+      denyAccess(location);
   },
   // "Load more" raises `limit` in the URL rather than appending to local state,
   // so realtime refreshes and back/forward navigation stay consistent.

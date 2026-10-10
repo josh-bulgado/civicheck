@@ -4,11 +4,12 @@ import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { getMyRequestDetailFn } from "~/features/requests/applicant-requests.queries";
 import MyRequestDetailPage from "~/features/requests/pages/MyRequestDetailPage";
 import { MyRequestDetailPageSkeleton } from "~/features/requests/pages/MyRequestDetailPageSkeleton";
+import { denyAccess } from "~/lib/access";
 
 export const Route = createFileRoute("/_authed/_dashboard/my-requests/$requestId")({
-  beforeLoad: ({ context }) => {
+  beforeLoad: ({ context, location }) => {
     if (!context.user || !hasPermission(context.user.role as Role, "requests:view_own"))
-      throw new Error("Forbidden");
+      denyAccess(location);
   },
   loader: ({ params }) => getMyRequestDetailFn({ data: { requestId: params.requestId } }),
   staleTime: 30_000,

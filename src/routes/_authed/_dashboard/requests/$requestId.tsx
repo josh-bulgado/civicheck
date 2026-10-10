@@ -3,14 +3,15 @@ import { hasPermission, type Role } from "~/lib/permissions";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { getRequestDetailFn } from "~/features/requests/requests.queries";
 import RequestDetailPage from "~/features/requests/pages/RequestDetailPage";
+import { denyAccess } from "~/lib/access";
 
 export const Route = createFileRoute("/_authed/_dashboard/requests/$requestId")({
-  beforeLoad: ({ context }) => {
+  beforeLoad: ({ context, location }) => {
     if (
       !context.user ||
       !hasPermission(context.user.role as Role, "requests:view_all")
     )
-      throw new Error("Forbidden");
+      denyAccess(location);
   },
   loader: ({ params }) =>
     getRequestDetailFn({ data: { requestId: params.requestId } }),

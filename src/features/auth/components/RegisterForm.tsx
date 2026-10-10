@@ -418,10 +418,19 @@ const RegisterForm = () => {
               variant="outline"
               className={`${authButtonClass} justify-center gap-2.5 text-sm font-medium`}
               onClick={() => oauthLoginMutation.mutate({ provider: "google" })}
-              disabled={oauthLoginMutation.status === "pending"}
+              disabled={oauthLoginMutation.redirecting}
             >
-              <GoogleIcon className="size-4.5" />
-              Sign up with Google
+              {oauthLoginMutation.redirecting ? (
+                <>
+                  <Spinner />
+                  Redirecting to Google…
+                </>
+              ) : (
+                <>
+                  <GoogleIcon className="size-4.5" />
+                  Sign up with Google
+                </>
+              )}
             </Button>
           </div>
         </form>

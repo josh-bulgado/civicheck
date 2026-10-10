@@ -11,6 +11,7 @@ import { createServerFn } from "@tanstack/react-start";
 import * as React from "react";
 import { DefaultCatchBoundary } from "../components/DefaultCatchBoundary";
 import { NotFound } from "../components/NotFound";
+import { OfflineBanner } from "~/components/errors/OfflineBanner";
 import appCss from "../styles/app.css?url";
 import { seo } from "../utils/seo";
 import {
@@ -21,6 +22,7 @@ import {
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import type { AccountProfile } from "~/features/account/account.types";
+import { ApplyTransitionLoader } from "~/features/services/components/ApplyTransitionLoader";
 import { isInternalRole, type AccountStatus, type Role } from "~/lib/permissions";
 import { getVerifiedSessionUser, isSessionRevoked } from "~/server/auth";
 import { loadCurrentUser } from "~/features/auth/current-user";
@@ -167,6 +169,7 @@ function RootComponent() {
   return (
     <RootDocument>
       <Outlet />
+      <ApplyTransitionLoader />
       <Toaster />
       {mounted && import.meta.env.DEV && (
         <TanStackDevtools
@@ -217,6 +220,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body suppressHydrationWarning>
         <TooltipProvider>{children}</TooltipProvider>
+        <OfflineBanner />
         <Scripts />
       </body>
     </html>

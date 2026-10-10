@@ -1,16 +1,17 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { SystemHealthPage } from "~/features/system-admin/pages/SystemHealthPage";
 import { SystemHealthSkeleton } from "~/features/system-admin/components/SystemHealthSkeleton";
 import { getSystemHealth } from "~/features/system-admin/system-health.functions";
 import { hasPermission, type Role } from "~/lib/permissions";
+import { denyAccess } from "~/lib/access";
 
 export const Route = createFileRoute("/_authed/_dashboard/system-admin/health")({
-  beforeLoad: ({ context }) => {
+  beforeLoad: ({ context, location }) => {
     if (
       !context.user ||
       !hasPermission(context.user.role as Role, "health:view")
     ) {
-      throw redirect({ to: "/dashboard" });
+      denyAccess(location);
     }
   },
   loader: () => getSystemHealth(),

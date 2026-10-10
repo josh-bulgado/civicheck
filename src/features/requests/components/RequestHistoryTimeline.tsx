@@ -8,7 +8,6 @@ import {
   TimelineSeparator,
   TimelineTitle,
 } from "~/components/reui/timeline";
-import { Badge } from "~/components/ui/badge";
 import {
   getCurrentDotClass,
   getLogNote,
@@ -58,17 +57,19 @@ export function RequestHistoryTimeline({
             log.actionStatus !== "document_reverted",
         )
       : logs;
+  // Logs come back oldest-first; show the newest on top so the current status
+  // is the first thing read instead of sitting at the bottom of the page.
+  const entries = [...visibleLogs].reverse();
 
   return (
     <section className="dashboard-panel p-6">
       <h2 className="mb-4 text-lg font-bold text-foreground">Status history</h2>
       <Timeline className="civic-stagger-auto">
-        {visibleLogs.map((log, index) => {
+        {entries.map((log, index) => {
           const logStatus = getStatusDetails(log.actionStatus);
-          // Logs come back oldest-first, so the last entry is the request's
-          // current status — the one thing worth the eye landing on first in
-          // an otherwise-quiet gray timeline.
-          const isCurrent = index === visibleLogs.length - 1;
+          // The newest entry is the request's current status — the one thing
+          // worth the eye landing on first in an otherwise-quiet gray timeline.
+          const isCurrent = index === 0;
           // Older entries were saved with a generic "Advanced from…" remark;
           // show the descriptive note for those instead.
           const note = getLogNote(
@@ -85,18 +86,13 @@ export function RequestHistoryTimeline({
                   className={`border-0 ${
                     isCurrent
                       ? `${getCurrentDotClass(logStatus.variant)} size-4 ring-4 ring-primary/15`
-                      : `${logStatus.dot} size-3`
+                      : "bg-health-neutral-dot size-3"
                   }`}
                 />
                 <TimelineTitle
                   className={isCurrent ? "font-semibold" : undefined}
                 >
                   {logStatus.label}
-                  {isCurrent && (
-                    <Badge variant={logStatus.variant} className="ml-2 align-middle">
-                      Current
-                    </Badge>
-                  )}
                 </TimelineTitle>
                 <TimelineDate dateTime={log.createdAt}>
                   {formatDateTime(log.createdAt)}

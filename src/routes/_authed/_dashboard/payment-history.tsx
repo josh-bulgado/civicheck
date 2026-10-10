@@ -1,9 +1,10 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { hasPermission, type Role } from "~/lib/permissions";
 import { getPaymentHistoryFn } from "~/features/requests/requests.queries";
 import { normalizePaymentRange } from "~/features/requests/payment-history";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import PaymentHistoryPage from "~/features/requests/pages/PaymentHistoryPage";
+import { denyAccess } from "~/lib/access";
 
 export const Route = createFileRoute("/_authed/_dashboard/payment-history")({
   // The range lives in the URL so a report view is a shareable link and the
@@ -12,9 +13,9 @@ export const Route = createFileRoute("/_authed/_dashboard/payment-history")({
     from: typeof search.from === "string" ? search.from : undefined,
     to: typeof search.to === "string" ? search.to : undefined,
   }),
-  beforeLoad: ({ context }) => {
+  beforeLoad: ({ context, location }) => {
     if (!context.user || !hasPermission(context.user.role as Role, "requests:view_payments"))
-      throw redirect({ to: "/dashboard" });
+      denyAccess(location);
   },
   loaderDeps: ({ search }) => normalizePaymentRange(search.from, search.to),
   loader: async ({ deps }) => ({

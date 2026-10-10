@@ -1,4 +1,4 @@
-import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { hasPermission, type Role } from "~/lib/permissions";
 import {
   getAllRequestsFn,
@@ -12,11 +12,12 @@ import { getEncodableServicesFn } from "~/features/requests/walk-in-intake.queri
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { StaffDashboard } from "~/features/dashboard/StaffDashboard";
 import { StaffDashboardSkeleton } from "~/features/dashboard/StaffDashboardSkeleton";
+import { denyAccess } from "~/lib/access";
 
 export const Route = createFileRoute("/_authed/_dashboard/staff-dashboard")({
-  beforeLoad: ({ context }) => {
+  beforeLoad: ({ context, location }) => {
     if (!context.user || !hasPermission(context.user.role as Role, "dashboard:staff"))
-      throw redirect({ to: "/dashboard" });
+      denyAccess(location);
   },
   loader: async ({ context }) => {
     const isCashier = context.user?.role === "cashier";

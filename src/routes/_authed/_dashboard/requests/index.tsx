@@ -20,6 +20,7 @@ import {
 import RequestsPage from "~/features/requests/pages/RequestsPage";
 import { RequestsPageSkeleton } from "~/features/requests/pages/RequestsPageSkeleton";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
+import { denyAccess } from "~/lib/access";
 
 export const Route = createFileRoute("/_authed/_dashboard/requests/")({
   validateSearch: (search: Record<string, unknown>): RequestQueueFilters => ({
@@ -28,12 +29,12 @@ export const Route = createFileRoute("/_authed/_dashboard/requests/")({
     payment: parsePaymentFilter(search.payment),
     department: parseDepartmentFilter(search.department),
   }),
-  beforeLoad: ({ context }) => {
+  beforeLoad: ({ context, location }) => {
     if (
       !context.user ||
       !hasPermission(context.user.role as Role, "requests:view_all")
     )
-      throw new Error("Forbidden");
+      denyAccess(location);
   },
   loader: async ({ context }) => {
     const role = context.user!.role as Role;

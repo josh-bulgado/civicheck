@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { hasPermission, type Role } from "~/lib/permissions";
 import { CashierCounter } from "~/features/cashier/components/CashierCounter";
+import { denyAccess } from "~/lib/access";
 
 export const Route = createFileRoute("/_authed/_dashboard/cashier")({
-  beforeLoad: ({ context }) => {
+  beforeLoad: ({ context, location }) => {
     if (!context.user || !hasPermission(context.user.role as Role, "requests:collect_payment"))
-      throw new Error("Forbidden");
+      denyAccess(location);
   },
   component: CashierPage,
 });

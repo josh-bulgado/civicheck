@@ -1,8 +1,9 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { AuditPage } from "~/features/system-admin/pages/AuditPage";
 import { getAuditEvents } from "~/features/system-admin/system-admin.functions";
 import { hasPermission, type Role } from "~/lib/permissions";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
+import { denyAccess } from "~/lib/access";
 
 type AuditSearch = {
   page: number;
@@ -36,12 +37,12 @@ export const Route = createFileRoute("/_authed/_dashboard/system-admin/audit")({
         ? s.account
         : undefined,
   }),
-  beforeLoad: ({ context }) => {
+  beforeLoad: ({ context, location }) => {
     if (
       !context.user ||
       !hasPermission(context.user.role as Role, "audit:view")
     )
-      throw redirect({ to: "/dashboard" });
+      denyAccess(location);
   },
   loaderDeps: ({ search }) => search,
   loader: ({ deps }) => getAuditEvents({ data: { ...deps, pageSize: 20 } }),
