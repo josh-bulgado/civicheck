@@ -111,11 +111,8 @@ export default function RequestDetailPage({
     if (s === "released" && !isAdmin) return false;
     return true;
   });
-  // Release waits on the cashier's payment check, unless no fee is due.
-  const paymentSettled = isPaymentSettled(
-    request.feesDue,
-    request.paymentStatus,
-  );
+  // Release waits on the cashier — a payment check, or a fee-free confirmation.
+  const paymentSettled = isPaymentSettled(request.paymentStatus);
   const needsAttachmentsResolved =
     available.includes("processing") && hasUnresolvedAttachments;
 
