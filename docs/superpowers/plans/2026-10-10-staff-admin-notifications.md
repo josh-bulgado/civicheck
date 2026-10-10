@@ -327,6 +327,8 @@ git commit -m "feat(notifications): add staff_notifications table with RLS"
 
 ### Task 2: Fan-out function and triggers
 
+> **Execution addendum (2026-10-10):** two automated security reviews of this task's commit found that applicants and department staff can write `requests` / `requirements_attachments` columns directly through the API. The migration and tests were hardened during execution: tracking-number format guard, catalog-only requirement names, unread de-duplication, and actor-role gates (spec §5, tests T15–T18). The SQL blocks below are the original design; the files under `supabase/` are authoritative.
+
 **Files:**
 - Create: `supabase/migrations/20261010121000_add_staff_notification_triggers.sql`
 - Create: `supabase/tests/staff_notification_triggers.test.sql`

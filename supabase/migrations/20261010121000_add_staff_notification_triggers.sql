@@ -20,6 +20,29 @@ as $$
   );
 $$;
 
+-- Who may announce an event. The role gates (only the cashier verifies payment,
+-- only process roles move a request on) are enforced by the server functions,
+-- but the RLS UPDATE policies on `requests` and `requirements_attachments`
+-- let any department staff write those columns straight through the API. A
+-- notification is a trusted statement ("the cashier verified payment"), so the
+-- trigger re-checks the actor itself. No end-user identity (service role,
+-- migrations, SQL editor) is trusted; an end-user JWT must carry a listed role.
+create or replace function public.notification_actor_is(p_roles text[])
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select auth.uid() is null
+    or exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid()
+        and p.access_status = 'active'
+        and p.role = any (p_roles)
+    );
+$$;
+
 create or replace function public.notify_internal_recipients(
   p_request_id uuid,
   p_type text,
@@ -46,6 +69,13 @@ begin
   if v_tracking is null then
     return;
   end if;
+  -- Applicants can insert request rows straight through the API, so the
+  -- tracking number is client-controlled text. Only the format the app itself
+  -- mints may reach a staff feed; anything else is a forgery and is dropped
+  -- (the request itself is untouched).
+  if v_tracking !~ '^CCRO-[0-9]{4}-[0-9]{6}$' then
+    return;
+  end if;
   -- A service with no department matches nobody, never everybody.
   if p_department_scoped and v_department is null then
     return;
@@ -58,7 +88,20 @@ begin
   where p.role = any (p_roles)
     and p.access_status = 'active'
     and p.id is distinct from auth.uid()
-    and (not p_department_scoped or p.department_id = v_department);
+    and (not p_department_scoped or p.department_id = v_department)
+    -- Applicant-triggered alerts collapse while one is still unread, so
+    -- toggling a document or spamming the API cannot multiply rows.
+    and not (
+      p_type in ('new_request', 'document_resubmitted')
+      and exists (
+        select 1 from public.staff_notifications n
+        where n.recipient_id = p.id
+          and n.request_id = p_request_id
+          and n.type = p_type
+          and not n.is_read
+          and n.archived_at is null
+      )
+    );
 end;
 $$;
 
@@ -100,6 +143,11 @@ declare
   v_free boolean := coalesce(new.fees_due, 0) <= 0;
 begin
   begin
+    -- Only the roles that may move a request on can announce a status change.
+    if not public.notification_actor_is(array['staff', 'supervisor', 'admin']) then
+      return null;
+    end if;
+
     if new.status = 'ready_for_release' then
       perform public.notify_internal_recipients(
         new.id,
@@ -153,6 +201,12 @@ declare
   v_free boolean := coalesce(new.fees_due, 0) <= 0;
 begin
   begin
+    -- Only the cashier verifies payment. A staff member (or admin) writing
+    -- payment_status directly must not produce a "payment verified" alert.
+    if not public.notification_actor_is(array['cashier']) then
+      return null;
+    end if;
+
     perform public.notify_internal_recipients(
       new.id,
       'ready_to_release',
@@ -181,14 +235,40 @@ set search_path = public
 as $$
 declare
   v_tracking text;
+  v_service text;
+  v_name text;
 begin
   begin
-    select tracking_number into v_tracking from public.requests where id = new.request_id;
+    select r.tracking_number, r.request_type into v_tracking, v_service
+    from public.requests r where r.id = new.request_id;
+
+    -- "Resubmitted" is a statement about the applicant. Staff reverting a
+    -- verification (rejected -> pending) is not a resubmission.
+    if auth.uid() is not null
+       and not exists (
+         select 1 from public.requests r
+         where r.id = new.request_id and r.applicant_id = auth.uid()
+       ) then
+      return null;
+    end if;
+
+    -- Applicants may edit requirement_name on their own rows through the API,
+    -- so it is shown verbatim only when it names a real requirement of the
+    -- request's service; otherwise the alert stays generic.
+    select m.requirement_name into v_name
+    from public.service_requirements_metadata m
+    where m.service_code = v_service
+      and m.requirement_name = new.requirement_name
+    limit 1;
+
     perform public.notify_internal_recipients(
       new.request_id,
       'document_resubmitted',
       format('Request %s: document resubmitted', v_tracking),
-      format('"%s" was resubmitted after rejection and needs review.', new.requirement_name),
+      case when v_name is not null
+        then format('"%s" was resubmitted after rejection and needs review.', v_name)
+        else 'A rejected document was resubmitted and needs review.'
+      end,
       array['staff', 'supervisor'],
       true
     );
@@ -240,6 +320,7 @@ create trigger notify_document_resubmitted
 -- Triggers fire regardless of EXECUTE rights; nobody should call these directly.
 
 revoke execute on function public.notification_service_label(text) from public, anon, authenticated;
+revoke execute on function public.notification_actor_is(text[]) from public, anon, authenticated;
 revoke execute on function public.notify_internal_recipients(uuid, text, text, text, text[], boolean)
   from public, anon, authenticated;
 revoke execute on function public.trg_notify_request_submitted() from public, anon, authenticated;

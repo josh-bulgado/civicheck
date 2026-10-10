@@ -154,6 +154,24 @@ Rules that apply to all of them:
   exclude nobody, which is correct (no human actor).
 - **Snapshot recipients.** Recipients are resolved at write time. Reassigning or
   deactivating someone later does not rewrite history.
+- **Only the right actor can announce an event.** The role gates (only the
+  cashier verifies payment, only process roles move a request on) live in the
+  server functions, but the RLS UPDATE policies on `requests` and
+  `requirements_attachments` let any department staff write those columns
+  through the API. Each trigger therefore re-checks the actor: status changes
+  need `staff`/`supervisor`/`admin`, `payment_status → verified` needs
+  `cashier`, and a document "resubmission" must come from the request's own
+  applicant. An actor with no end-user identity (service role, migrations) is
+  trusted.
+- **Client-supplied text never reaches a feed unvalidated.** Applicants can
+  insert and edit their own rows through the API, so the tracking number must
+  match `CCRO-YYYY-NNNNNN` or nothing is fanned out, and a requirement name is
+  shown only if it exists in the service's requirement catalog (otherwise the
+  alert is generic).
+- **Applicant-triggered alerts collapse while unread.** A `new_request` or
+  `document_resubmitted` row is not repeated for the same recipient and request
+  while an unread, unarchived one exists, so toggling a document cannot multiply
+  rows.
 - **Fan-out never blocks the originating write.** Each trigger function wraps its
   call in an exception handler that logs a warning and returns. A failed
   notification must never roll back an applicant's submission or a cashier's
