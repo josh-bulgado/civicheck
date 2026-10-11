@@ -35,7 +35,6 @@ function RouteComponent() {
   return (
     <CitizenDashboard
       requests={requests}
-      firstName={user?.firstName ?? ""}
       welcomeTutorialSeen={user?.welcomeTutorialSeen ?? false}
     />
   );

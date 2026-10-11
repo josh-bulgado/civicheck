@@ -3,6 +3,8 @@ import { useNavigate } from "@tanstack/react-router";
 import { Building2, CalendarClock, Files, ShieldCheck } from "lucide-react";
 import { CountUp } from "~/components/motion/count-up";
 import { enterDelay, staggerStyle } from "~/components/motion/stagger";
+import { StatFigure, StatFigures } from "~/components/portal/stat-figure";
+import { pillButton } from "~/components/portal/styles";
 import { Button } from "~/components/ui/button";
 import ServiceCard from "~/features/services/components/ServiceCard";
 import { ServiceDirectory } from "~/features/services/components/ServiceDirectory";
@@ -17,6 +19,7 @@ import type { ServiceSummary } from "~/features/services/services.queries";
 import { getServiceCategory, getVisitBadge } from "~/features/services/service-utils";
 import type { getMyDepartmentScopeFn } from "~/features/requests/requests.queries";
 import { usePermissions } from "~/hooks/usePermissions";
+import { cn } from "~/lib/utils";
 
 /**
  * How many services each density shows before the applicant asks for the rest.
@@ -148,140 +151,178 @@ export default function ServiceCatalogPage({
     setShowAll(false);
   }
 
+  // Toolbar, results and "show the rest": the same in both shells, only the
+  // card around it differs.
+  const directory = (
+    <>
+      <ServicesToolbar
+        searchTerm={searchTerm}
+        onSearchTermChange={updateSearchTerm}
+        category={category}
+        onCategoryChange={updateCategory}
+        sort={sort}
+        onSortChange={updateSort}
+        view={view}
+        onViewChange={chooseView}
+        categoryCounts={categoryCounts}
+      />
+
+      {visibleServices.length === 0 ? (
+        <div className="civic-enter-scale rounded-[14px] border border-dashed border-border-strong px-6 py-12 text-center">
+          <p className="text-base font-bold text-foreground">No services match your search</p>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Try a different keyword, or clear the filters above.
+          </p>
+        </div>
+      ) : view === "rows" ? (
+        <ServiceDirectory services={visibleServices} canApply={canApply} />
+      ) : (
+        // Cards keep their `service_code` key across filter changes, so React
+        // reuses the existing nodes and only genuinely new cards animate in —
+        // the cascade doesn't replay on every keystroke in the search box.
+        <div className="civic-stagger grid grid-cols-[repeat(auto-fill,minmax(min(300px,100%),1fr))] gap-3">
+          {visibleServices.map((service, index) => (
+            <ServiceCard
+              key={service.service_code}
+              style={staggerStyle(index)}
+              canApply={canApply}
+              {...service}
+            />
+          ))}
+        </div>
+      )}
+
+      {remainingCount > 0 && (
+        <Button
+          type="button"
+          variant="outline"
+          className={cn(pillButton.outline, "self-start")}
+          onClick={() => setShowAll(true)}
+        >
+          Show the remaining {remainingCount} service{remainingCount === 1 ? "" : "s"}
+        </Button>
+      )}
+    </>
+  );
+
   return (
-    <div className="dashboard-page">
-      <header className="dashboard-hero civic-enter">
-        <div className="relative z-10 grid gap-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-          <div>
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-              <div
-                className="civic-enter-sm inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-white/90"
-                style={enterDelay(80)}
-              >
+    <div className={canApply ? "portal-page" : "dashboard-page"}>
+      {canApply ? (
+        <>
+          <header className="portal-card civic-enter flex flex-wrap items-end gap-6 px-5 py-6 sm:px-8 sm:py-7">
+            <div className="mr-auto flex max-w-160 flex-col gap-1.5">
+              <p className="portal-eyebrow flex items-center gap-1.5">
                 <ShieldCheck className="size-3.5" aria-hidden="true" />
                 Official CCRO services
-              </div>
-              {scope.isScoped && scope.departmentName && (
-                <div
-                  className="civic-enter-sm inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold text-white/90"
-                  style={enterDelay(80)}
-                >
-                  <Building2 className="size-3.5" aria-hidden="true" />
-                  {scope.departmentName} department
-                </div>
-              )}
+              </p>
+              <h1 className="portal-title">Browse document services</h1>
+              <p className="text-sm leading-normal text-muted-foreground text-pretty">
+                Review the official checklist, prepare your documents, and send your
+                request intent to the City Civil Registrar Office.
+              </p>
             </div>
-            <h1
-              className="civic-enter-sm max-w-3xl text-3xl font-extrabold tracking-[-0.035em] text-white sm:text-4xl"
-              style={enterDelay(140)}
-            >
-              {canApply ? "Browse Document Services" : "Service & Requirements Reference"}
-            </h1>
-            <p
-              className="civic-enter-sm mt-3 max-w-2xl text-sm leading-6 text-white/75 sm:text-base"
-              style={enterDelay(200)}
-            >
-              {canApply
-                ? "Review the official checklist, prepare your documents, and send your request intent to the City Civil Registrar Office."
-                : "Look up requirements and processing details to guide applicants and validate walk-ins at the counter."}
-            </p>
-          </div>
+            <StatFigures>
+              <StatFigure index={0} label="Services available" value={services.length} />
+              <StatFigure index={1} label="Finished in one visit" value={oneVisitCount} />
+            </StatFigures>
+          </header>
 
-          <div className="civic-stagger grid grid-cols-2 gap-3 sm:min-w-84">
-            <div
-              className="rounded-xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm"
-              style={staggerStyle(0, 240)}
-            >
-              <Files className="mb-3 size-5 text-brand-gold" aria-hidden="true" />
-              <CountUp
-                value={services.length}
-                className="block text-2xl font-extrabold text-white"
-              />
-              <p className="mt-0.5 text-xs text-white/65">Services available</p>
-            </div>
-            <div
-              className="rounded-xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm"
-              style={staggerStyle(1, 240)}
-            >
-              <CalendarClock className="mb-3 size-5 text-brand-gold" aria-hidden="true" />
-              <CountUp
-                value={oneVisitCount}
-                className="block text-2xl font-extrabold text-white"
-              />
-              <p className="mt-0.5 text-xs text-white/65">Finished in one visit</p>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <section
-        aria-labelledby="services-list-heading"
-        className="civic-enter"
-        style={enterDelay(120)}
-      >
-        <div className="dashboard-panel overflow-hidden">
-          <div className="border-b border-border px-5 py-5 sm:px-6">
-            <p className="text-xs font-bold uppercase tracking-[0.13em] text-primary">
-              Service directory
-            </p>
-            <h2 id="services-list-heading" className="mt-1 text-xl font-bold tracking-tight text-foreground">
+          <section
+            aria-labelledby="services-list-heading"
+            className="portal-card civic-enter flex flex-col gap-5 px-5 pt-6 pb-8 sm:px-8"
+            style={enterDelay(120)}
+          >
+            <h2 id="services-list-heading" className="sr-only">
               Select a document service
             </h2>
-          </div>
-
-          <div className="flex flex-col gap-5 p-5 sm:p-6">
-            <ServicesToolbar
-              searchTerm={searchTerm}
-              onSearchTermChange={updateSearchTerm}
-              category={category}
-              onCategoryChange={updateCategory}
-              sort={sort}
-              onSortChange={updateSort}
-              view={view}
-              onViewChange={chooseView}
-              categoryCounts={categoryCounts}
-            />
-
-            {visibleServices.length === 0 ? (
-              <div className="civic-enter-scale rounded-xl border border-dashed border-border-strong bg-background px-6 py-12 text-center">
-                <p className="text-base font-bold text-foreground">No services match your search</p>
-                <p className="mt-1.5 text-sm text-muted-foreground">
-                  Try a different keyword, or clear the filters above.
+            {directory}
+          </section>
+        </>
+      ) : (
+        <>
+          <header className="dashboard-hero civic-enter">
+            <div className="relative z-10 grid gap-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+              <div>
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <div
+                    className="civic-enter-sm inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-white/90"
+                    style={enterDelay(80)}
+                  >
+                    <ShieldCheck className="size-3.5" aria-hidden="true" />
+                    Official CCRO services
+                  </div>
+                  {scope.isScoped && scope.departmentName && (
+                    <div
+                      className="civic-enter-sm inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold text-white/90"
+                      style={enterDelay(80)}
+                    >
+                      <Building2 className="size-3.5" aria-hidden="true" />
+                      {scope.departmentName} department
+                    </div>
+                  )}
+                </div>
+                <h1
+                  className="civic-enter-sm max-w-3xl text-3xl font-extrabold tracking-[-0.035em] text-white sm:text-4xl"
+                  style={enterDelay(140)}
+                >
+                  Service & Requirements Reference
+                </h1>
+                <p
+                  className="civic-enter-sm mt-3 max-w-2xl text-sm leading-6 text-white/75 sm:text-base"
+                  style={enterDelay(200)}
+                >
+                  Look up requirements and processing details to guide applicants and
+                  validate walk-ins at the counter.
                 </p>
               </div>
-            ) : view === "rows" ? (
-              <ServiceDirectory services={visibleServices} canApply={canApply} />
-            ) : (
-              // Cards keep their `service_code` key across filter changes, so React
-              // reuses the existing nodes and only genuinely new cards animate in —
-              // the cascade doesn't replay on every keystroke in the search box.
-              <div className="civic-stagger grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {visibleServices.map((service, index) => (
-                  <ServiceCard
-                    key={service.service_code}
-                    style={staggerStyle(index)}
-                    canApply={canApply}
-                    {...service}
-                  />
-                ))}
-              </div>
-            )}
 
-            {remainingCount > 0 && (
-              <div className="flex justify-center pt-1">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="lg"
-                  onClick={() => setShowAll(true)}
+              <div className="civic-stagger grid grid-cols-2 gap-3 sm:min-w-84">
+                <div
+                  className="rounded-xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm"
+                  style={staggerStyle(0, 240)}
                 >
-                  Show the remaining {remainingCount} service{remainingCount === 1 ? "" : "s"}
-                </Button>
+                  <Files className="mb-3 size-5 text-brand-gold" aria-hidden="true" />
+                  <CountUp
+                    value={services.length}
+                    className="block text-2xl font-extrabold text-white"
+                  />
+                  <p className="mt-0.5 text-xs text-white/65">Services available</p>
+                </div>
+                <div
+                  className="rounded-xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm"
+                  style={staggerStyle(1, 240)}
+                >
+                  <CalendarClock className="mb-3 size-5 text-brand-gold" aria-hidden="true" />
+                  <CountUp
+                    value={oneVisitCount}
+                    className="block text-2xl font-extrabold text-white"
+                  />
+                  <p className="mt-0.5 text-xs text-white/65">Finished in one visit</p>
+                </div>
               </div>
-            )}
-          </div>
-        </div>
-      </section>
+            </div>
+          </header>
+
+          <section
+            aria-labelledby="services-list-heading"
+            className="civic-enter"
+            style={enterDelay(120)}
+          >
+            <div className="dashboard-panel overflow-hidden">
+              <div className="border-b border-border px-5 py-5 sm:px-6">
+                <p className="text-xs font-bold uppercase tracking-[0.13em] text-primary">
+                  Service directory
+                </p>
+                <h2 id="services-list-heading" className="mt-1 text-xl font-bold tracking-tight text-foreground">
+                  Select a document service
+                </h2>
+              </div>
+
+              <div className="flex flex-col gap-5 p-5 sm:p-6">{directory}</div>
+            </div>
+          </section>
+        </>
+      )}
 
       {focusedService && (
         <ServiceRequirementsDialog

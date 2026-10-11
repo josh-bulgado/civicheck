@@ -13,18 +13,19 @@ const badgeVariants = cva(
         secondary:
           "bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80",
         destructive:
-          "bg-destructive/10 text-destructive focus-visible:ring-destructive/20 [a]:hover:bg-destructive/20",
+          "bg-tone-danger-soft text-tone-danger focus-visible:ring-destructive/20 [a]:hover:bg-destructive/20",
         outline:
           "border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground",
         ghost:
           "hover:bg-muted hover:text-muted-foreground",
         link: "text-primary underline-offset-4 hover:underline",
 
-        // Status
-        info: "bg-primary-soft text-primary ring-1 ring-inset ring-primary/15",
-        success: "bg-success-soft text-success ring-1 ring-inset ring-success/15",
-        warning: "bg-warning-soft text-warning ring-1 ring-inset ring-warning/20",
-        neutral: "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
+        // Status — ink on its own tint, from the `--tone-*` pairs in app.css
+        info: "bg-tone-review-soft text-tone-review",
+        progress: "bg-tone-progress-soft text-tone-progress",
+        success: "bg-tone-success-soft text-tone-success",
+        warning: "bg-tone-warning-soft text-tone-warning",
+        neutral: "bg-tone-neutral-soft text-tone-neutral",
 
         // Case Complexity
         simple: "bg-success-soft text-success ring-1 ring-inset ring-success/15",

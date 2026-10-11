@@ -12,6 +12,9 @@ import { getWorkspaceDetails } from "./workspace";
 /**
  * What goes in the sidebar, and how it's grouped, lives in `nav-config.ts`.
  * To add a link or move one between sections, edit that file.
+ *
+ * Applicants get the citizen portal's inset card (always open on desktop, a
+ * sheet below `md`); everyone else keeps the icon-collapsible workspace rail.
  */
 export function AppSidebar({
   user,
@@ -23,17 +26,22 @@ export function AppSidebar({
 }) {
   const { can, role } = usePermissions();
   const workspace = getWorkspaceDetails(role);
+  const citizen = role === "applicant";
 
   const navGroups = buildNavGroups(role, can, unreadNotifications);
-  const searchableItems = navGroups.flatMap((group) => group.items);
 
   return (
-    <Sidebar collapsible="icon" variant="sidebar" {...props}>
-      <NavHeader items={searchableItems} workspace={workspace} />
-      <SidebarContent>
-        <NavMain groups={navGroups} />
+    <Sidebar
+      collapsible={citizen ? "offcanvas" : "icon"}
+      variant={citizen ? "floating" : "sidebar"}
+      className={citizen ? "p-4 pr-0" : undefined}
+      {...props}
+    >
+      <NavHeader workspace={workspace} citizen={citizen} />
+      <SidebarContent className={citizen ? "px-3" : undefined}>
+        <NavMain groups={navGroups} citizen={citizen} />
       </SidebarContent>
-      <NavFooter account={user ?? null} />
+      <NavFooter account={user ?? null} citizen={citizen} />
     </Sidebar>
   );
 }

@@ -37,6 +37,22 @@ export const getMyRequestsFn = createServerFn({ method: "GET" }).handler(async (
 });
 
 /**
+ * How many requests the applicant has ever submitted. The portal's top bar
+ * greets a first-timer differently from someone coming back to check on one.
+ */
+export const getMyRequestCountFn = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabase, user } = await requireActiveSession("requests:view_own");
+
+  const { count, error } = await supabase
+    .from("requests")
+    .select("id", { count: "exact", head: true })
+    .eq("applicant_id", user.id);
+
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+});
+
+/**
  * The applicant's own single-request detail — feeds `/my-requests/$requestId`.
  * Mirrors `getRequestDetailFn` (the staff version) but scoped to the caller's
  * own request instead of department, and without the staff-only remarks UI.

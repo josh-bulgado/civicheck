@@ -6,56 +6,58 @@ interface AttentionPanelProps {
   items: AttentionItem[];
 }
 
+const TILE_TONE: Record<AttentionItem["tone"], string> = {
+  warning: "bg-tone-warning-soft text-tone-warning",
+  success: "bg-tone-success-soft text-tone-success",
+};
+
 export function AttentionPanel({ items }: AttentionPanelProps) {
   return (
-    <div className="dashboard-panel overflow-hidden">
-      <div className="border-b border-border px-5 py-5 sm:px-6">
-        <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
-          Needs your attention
-        </p>
-        <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground">
-          {items.length > 0
-            ? `${items.length} request${items.length === 1 ? "" : "s"} need action`
-            : "You're all caught up"}
-        </h2>
-      </div>
+    <section className="portal-card flex flex-col gap-5 px-5 py-6 sm:px-8 sm:py-7">
+      <h2 className="portal-heading">Needs your attention</h2>
       {items.length === 0 ? (
-        <p className="px-5 py-10 text-center text-sm text-muted-foreground sm:px-6">
-          Nothing needs your input right now — we'll notify you when something changes.
-        </p>
+        <div className="border-t border-border-lighter pt-4">
+          <p className="text-sm font-bold text-foreground">You're all caught up</p>
+          <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
+            Nothing needs your input right now — we'll notify you when something changes.
+          </p>
+        </div>
       ) : (
-        <ul className="divide-y divide-border">
+        <ul className="flex flex-col">
           {items.map(({ request, tone, message, action }) => (
-            <li key={request.id} className="flex items-start gap-3.5 px-5 py-4 sm:px-6">
+            <li
+              key={request.id}
+              className="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-start gap-3.5 border-t border-border-lighter py-4"
+            >
               <span
-                className={`flex size-9 shrink-0 items-center justify-center rounded-lg border ${tone === "warning" ? "status-warning" : "status-success"}`}
+                className={`flex size-10 items-center justify-center rounded-xl ${TILE_TONE[tone]}`}
               >
                 {tone === "warning" ? (
-                  <AlertTriangle className="size-4.5" aria-hidden="true" />
+                  <AlertTriangle className="size-5" aria-hidden="true" />
                 ) : (
-                  <CheckCircle className="size-4.5" aria-hidden="true" />
+                  <CheckCircle className="size-5" aria-hidden="true" />
                 )}
               </span>
-              <div className="min-w-0 flex-1">
+              <div className="flex flex-col gap-1">
                 <p className="text-sm font-bold text-foreground">
                   {request.tracking_number} ·{" "}
                   {request.services_registry?.name || request.request_type}
                 </p>
-                <p className="mt-0.5 text-[13px] leading-snug text-muted-foreground">
+                <p className="text-[13px] leading-[1.45] text-muted-foreground text-pretty">
                   {message}
                 </p>
               </div>
               <Link
                 to="/my-requests/$requestId"
                 params={{ requestId: request.id }}
-                className="civic-nudge shrink-0 whitespace-nowrap pt-0.5 text-[13px] font-bold text-primary"
+                className="civic-press inline-flex h-9 items-center rounded-full bg-primary px-4 text-[13px] font-semibold whitespace-nowrap text-white hover:bg-primary-hover"
               >
-                {action} →
+                {action}
               </Link>
             </li>
           ))}
         </ul>
       )}
-    </div>
+    </section>
   );
 }

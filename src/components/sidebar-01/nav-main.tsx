@@ -13,7 +13,45 @@ import { Link } from "@tanstack/react-router";
 import { staggerStyle } from "~/components/motion/stagger";
 import type { NavGroup } from "./types";
 
-export function NavMain({ groups }: { groups: NavGroup[] }) {
+interface NavMainProps {
+  groups: NavGroup[];
+  /** The applicant shell: one flat list of pills, no group labels. */
+  citizen?: boolean;
+}
+
+export function NavMain({ groups, citizen = false }: NavMainProps) {
+  if (citizen) {
+    return (
+      <SidebarMenu className="civic-stagger">
+        {groups
+          .flatMap((group) => group.items)
+          .map((item, index) => {
+            const Icon = item.icon;
+
+            return (
+              <SidebarMenuItem key={item.id} style={staggerStyle(index)}>
+                <Link
+                  to={item.url}
+                  className="civic-press flex h-11 items-center gap-2.5 rounded-xl pr-2.5 pl-3 text-sm font-medium text-body-2 hover:bg-muted data-[status=active]:bg-primary data-[status=active]:font-semibold data-[status=active]:text-white data-[status=active]:hover:bg-primary"
+                >
+                  <Icon className="size-4.5 shrink-0" aria-hidden="true" />
+                  <span className="flex-1 truncate">{item.title}</span>
+                  {!!item.badge && (
+                    <span
+                      key={item.badge}
+                      className="civic-enter-scale flex h-5.5 min-w-5.5 items-center justify-center rounded-full bg-brand-gold px-1.5 text-xs font-bold text-foreground"
+                    >
+                      {item.badge > 99 ? "99+" : item.badge}
+                    </span>
+                  )}
+                </Link>
+              </SidebarMenuItem>
+            );
+          })}
+      </SidebarMenu>
+    );
+  }
+
   return (
     <div className="flex flex-col py-2">
       {groups.map((group) => (

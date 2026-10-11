@@ -72,6 +72,7 @@
   --color-muted-2: var(--muted-2);
   --color-body: var(--body);
   --color-body-strong: var(--body-strong);
+  --color-body-2: var(--body-2);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
@@ -83,6 +84,7 @@
   --color-foreground: var(--foreground);
   --color-background: var(--background);
   --color-workspace: var(--workspace);
+  --color-ground: var(--ground);
   --color-border-strong: var(--border-strong);
   --color-primary-soft: var(--primary-soft);
   --color-primary-hover: var(--primary-hover);
@@ -119,6 +121,19 @@
   --color-surface-subtle: var(--surface-subtle);
   --color-sidebar-muted: var(--sidebar-muted);
 
+  --color-tone-review: var(--tone-review);
+  --color-tone-review-soft: var(--tone-review-soft);
+  --color-tone-progress: var(--tone-progress);
+  --color-tone-progress-soft: var(--tone-progress-soft);
+  --color-tone-warning: var(--tone-warning);
+  --color-tone-warning-soft: var(--tone-warning-soft);
+  --color-tone-success: var(--tone-success);
+  --color-tone-success-soft: var(--tone-success-soft);
+  --color-tone-neutral: var(--tone-neutral);
+  --color-tone-neutral-soft: var(--tone-neutral-soft);
+  --color-tone-danger: var(--tone-danger);
+  --color-tone-danger-soft: var(--tone-danger-soft);
+
   --color-primary-tint: var(--primary-tint);
   --color-control-border: var(--control-border);
   --color-dashed-border: var(--dashed-border);
@@ -149,6 +164,8 @@
 :root {
   --background: #f5f7fb;
   --workspace: #eef1f6;
+  /* Page ground behind the citizen portal's floating cards. */
+  --ground: #e9edf3;
   --foreground: #0f1b2d;
   --card: #ffffff;
   --card-foreground: #0f1b2d;
@@ -167,6 +184,8 @@
   --muted-2: #5d6a7c;
   --body: #475363;
   --body-strong: #2c3a4d;
+  /* Secondary ink for the citizen portal: inactive nav and tabs, long-form body. */
+  --body-2: #3d4a5c;
   --accent: #e7eefa;
   --accent-foreground: #093a7a;
   --surface-subtle: #f5f7fb;
@@ -202,6 +221,22 @@
   --health-neutral-border: #cbd4e0;
   --health-neutral-fg: #4f5d70;
   --health-neutral-dot: #68778b;
+
+  /* Status pill tones: an ink and the tint it sits on, each pair AA on its own
+     tint. Request status, payment and visit badges all draw from this one set. */
+  --tone-review: var(--primary-hover);
+  --tone-review-soft: var(--primary-soft);
+  --tone-progress: #4a3b8f;
+  --tone-progress-soft: #efecfa;
+  --tone-warning: #7a4b00;
+  --tone-warning-soft: #fdf1cf;
+  --tone-success: #1a6a3c;
+  --tone-success-soft: #e2f2e7;
+  --tone-neutral: var(--body-2);
+  --tone-neutral-soft: var(--muted);
+  --tone-danger: #b42318;
+  --tone-danger-soft: #fde8e8;
+
   --disabled: #8794a5;
   --auth-panel: #0b3f86;
   /* Quiet counterpart to the solid panel, for the screens that don't sell. */
@@ -457,6 +492,14 @@
   }
 }
 
+/* The citizen sidebar is shadcn's floating variant reshaped into the design's
+   inset card. Unlayered on purpose: the variant sets its radius and shadow with
+   utilities, which a rule inside `@layer components` cannot override. */
+.citizen-portal [data-slot="sidebar-inner"] {
+  border-radius: 1rem;
+  box-shadow: 0 0 0 1px var(--sidebar-border);
+}
+
 /* Shared civic layout primitives. */
 @layer components {
   .civic-container {
@@ -592,8 +635,45 @@
     @apply rounded-xl border border-border-strong bg-white shadow-[0_1px_3px_rgba(23,33,43,0.08),0_10px_28px_rgba(23,33,43,0.035)];
   }
 
-  .dashboard-stat {
-    @apply relative overflow-hidden rounded-xl border border-border-strong bg-white p-5 shadow-[0_1px_3px_rgba(23,33,43,0.07)];
+  /* ─── Citizen portal ───────────────────────────────────────────────────────
+     The applicant shell puts `.citizen-portal` on its wrapper. Staff and admin
+     never get it, so the overrides and primitives below leave their shell
+     exactly as it was. Dialogs and menus render in a portal outside the
+     wrapper and keep the default tokens too. */
+  .citizen-portal {
+    /* Secondary text sits on tinted rows and bands here; the default gray dips
+       under AA on those. */
+    --muted-foreground: #5f6b7c;
+    --sidebar: #f7f9fc;
+    /* The ground runs under the sidebar card too, not just the main column. */
+    background-color: var(--ground);
+  }
+
+  .citizen-portal :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+
+  .portal-page {
+    @apply flex w-full flex-col gap-4;
+    animation: civic-fade-in var(--duration-base) var(--ease-civic) both;
+  }
+
+  /* No border and no shadow: the ground color is what separates the cards. */
+  .portal-card {
+    @apply rounded-2xl bg-card;
+  }
+
+  .portal-title {
+    @apply text-[1.75rem] leading-tight font-bold tracking-[-0.025em] text-foreground sm:text-[2.125rem];
+  }
+
+  .portal-heading {
+    @apply text-xl font-bold tracking-[-0.01em] text-foreground;
+  }
+
+  .portal-eyebrow {
+    @apply text-xs font-bold uppercase tracking-[0.12em] text-primary;
   }
 
   .status-success {
@@ -814,6 +894,7 @@
   .civic-enter-scale,
   .civic-enter-left,
   .dashboard-page,
+  .portal-page,
   .civic-stagger > *,
   .civic-stagger-auto > * {
     animation-duration: 1ms;

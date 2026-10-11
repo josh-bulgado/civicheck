@@ -85,7 +85,7 @@ export function RequestHistoryTimeline({
                 <TimelineIndicator
                   className={`border-0 ${
                     isCurrent
-                      ? `${getCurrentDotClass(logStatus.variant)} size-4 ring-4 ring-primary/15`
+                      ? `${getCurrentDotClass(log.actionStatus)} size-4 ring-4 ring-primary/15`
                       : "bg-health-neutral-dot size-3"
                   }`}
                 />

@@ -31,6 +31,7 @@ const tabsListVariants = cva(
         default: "bg-muted",
         line: "gap-1 bg-transparent",
         accent: "bg-muted",
+        pill: "gap-1 rounded-full bg-muted p-1 group-data-horizontal/tabs:h-auto",
       },
     },
     defaultVariants: {
@@ -63,6 +64,7 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
         "group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-active:bg-transparent dark:group-data-[variant=line]/tabs-list:data-active:border-transparent dark:group-data-[variant=line]/tabs-list:data-active:bg-transparent",
         "data-active:bg-background data-active:text-foreground dark:data-active:border-input dark:data-active:bg-input/30 dark:data-active:text-foreground",
         "group-data-[variant=accent]/tabs-list:data-active:bg-primary group-data-[variant=accent]/tabs-list:data-active:text-primary-foreground group-data-[variant=accent]/tabs-list:data-active:shadow-sm group-data-[variant=accent]/tabs-list:not-data-active:hover:text-foreground group-data-[variant=accent]/tabs-list:data-active:hover:bg-primary group-data-[variant=accent]/tabs-list:data-active:hover:text-primary-foreground",
+        "group-data-[variant=pill]/tabs-list:rounded-full group-data-[variant=pill]/tabs-list:font-semibold group-data-[variant=pill]/tabs-list:text-body-2 group-data-[variant=pill]/tabs-list:hover:text-foreground group-data-[variant=pill]/tabs-list:data-active:bg-foreground group-data-[variant=pill]/tabs-list:data-active:text-white group-data-[variant=pill]/tabs-list:data-active:hover:text-white",
         "after:absolute after:bg-foreground after:opacity-0 after:transition-opacity group-data-horizontal/tabs:after:inset-x-0 group-data-horizontal/tabs:after:bottom-[-5px] group-data-horizontal/tabs:after:h-0.5 group-data-vertical/tabs:after:inset-y-0 group-data-vertical/tabs:after:-right-1 group-data-vertical/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100",
         className
       )}

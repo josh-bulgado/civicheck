@@ -16,6 +16,7 @@ const HERO_DOT: Record<string, string> = {
   warning: "bg-brand-gold",
   destructive: "bg-red-300",
   info: "bg-sky-300",
+  progress: "bg-violet-300",
   neutral: "bg-white/60",
 };
 

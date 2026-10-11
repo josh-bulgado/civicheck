@@ -3,19 +3,17 @@ import { TERMINAL_STATUSES } from "~/features/requests/request-workflow";
 import { useWelcomeTutorialAutoOpen } from "~/features/onboarding/components/WelcomeTutorial";
 import { ActiveRequestsPanel } from "../components/ActiveRequestsPanel";
 import { AttentionPanel } from "../components/AttentionPanel";
-import { DashboardHero } from "../components/DashboardHero";
 import { QuickStartPanel } from "../components/QuickStartPanel";
-import { StatGrid } from "../components/StatGrid";
 import type { AttentionItem, CitizenDashboardRequest } from "../types";
 
 interface CitizenDashboardProps {
   requests: CitizenDashboardRequest[];
-  firstName: string;
   welcomeTutorialSeen: boolean;
 }
 
-const CitizenDashboard = ({ requests, firstName, welcomeTutorialSeen }: CitizenDashboardProps) => {
-  const realtimeStatus = useRealtimeRefresh({ tables: ["requests"] });
+const CitizenDashboard = ({ requests, welcomeTutorialSeen }: CitizenDashboardProps) => {
+  // Keeps the page moving with the request; nothing on screen announces it.
+  useRealtimeRefresh({ tables: ["requests"] });
   useWelcomeTutorialAutoOpen({ hasRequests: requests.length > 0, seen: welcomeTutorialSeen });
 
   const activeRequests = requests.filter(
@@ -31,69 +29,39 @@ const CitizenDashboard = ({ requests, firstName, welcomeTutorialSeen }: CitizenD
     ...incomplete.map((request) => ({
       request,
       tone: "warning" as const,
-      message: "Missing requirements — resubmit so validation can continue.",
+      message: "Missing requirements. Resubmit so validation can continue.",
       action: "Upload docs",
     })),
     ...paymentDue.map((request) => ({
       request,
       tone: "success" as const,
-      message: `₱${Number(request.fees_due ?? 0).toFixed(2)} due — pay and claim at the CCRO cashier.`,
+      message: `₱${Number(request.fees_due ?? 0).toFixed(2)} due. Pay and claim at the CCRO cashier.`,
       action: "View details",
     })),
   ];
 
   if (requests.length === 0) {
     return (
-      <div className="dashboard-page max-w-7xl">
-        <DashboardHero
-          firstName={firstName}
-          greeting="Welcome"
-          subhead="Let's find out what you need. Pick a document below to see its checklist, then submit your request when you're ready."
-        />
+      <div className="portal-page">
         <QuickStartPanel prominent />
       </div>
     );
   }
 
   return (
-    <div className="dashboard-page max-w-7xl">
-      <DashboardHero
-        firstName={firstName}
-        greeting="Welcome back"
-        subhead={attentionSubhead(readyForRelease.length, incomplete.length)}
-      />
-
-      <StatGrid
-        total={requests.length}
-        inProgress={activeRequests.length}
+    <div className="portal-page">
+      <ActiveRequestsPanel
+        requests={activeRequests}
         readyForRelease={readyForRelease.length}
         paymentDue={paymentDue.length}
       />
 
-      <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr] lg:items-start">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(380px,100%),1fr))] gap-4">
         <AttentionPanel items={attentionItems} />
         <QuickStartPanel />
       </div>
-
-      <ActiveRequestsPanel
-        requests={activeRequests}
-        realtimeStatus={realtimeStatus}
-      />
     </div>
   );
 };
 
 export default CitizenDashboard;
-
-function attentionSubhead(readyCount: number, incompleteCount: number) {
-  if (readyCount > 0 && incompleteCount > 0) {
-    return `You have ${readyCount} request${readyCount === 1 ? "" : "s"} ready for release and ${incompleteCount} that need${incompleteCount === 1 ? "s" : ""} your attention before ${incompleteCount === 1 ? "it" : "they"} can move forward.`;
-  }
-  if (readyCount > 0) {
-    return `You have ${readyCount} request${readyCount === 1 ? "" : "s"} ready for release — pay and claim ${readyCount === 1 ? "it" : "them"} at the CCRO cashier.`;
-  }
-  if (incompleteCount > 0) {
-    return `${incompleteCount} request${incompleteCount === 1 ? "" : "s"} need${incompleteCount === 1 ? "s" : ""} your attention before ${incompleteCount === 1 ? "it can" : "they can"} move forward.`;
-  }
-  return "Track the status of your submitted civil registry requests in real time.";
-}

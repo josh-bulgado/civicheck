@@ -6,6 +6,7 @@ import {
   Gauge,
   History,
   LayoutDashboard,
+  LayoutGrid,
   ListChecks,
   Shield,
   ShieldAlert,
@@ -54,7 +55,7 @@ const NAV_ENTRIES = {
   "applicant-dashboard": {
     title: "Dashboard",
     url: "/dashboard",
-    icon: LayoutDashboard,
+    icon: LayoutGrid,
     anyOf: ["dashboard:applicant"],
   },
   // Applicants read their own request-scoped feed; personnel read their own

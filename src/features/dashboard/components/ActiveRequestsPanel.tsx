@@ -1,6 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import { Badge } from "~/components/ui/badge";
-import { buttonVariants } from "~/components/ui/button";
 import {
   Table,
   TableBody,
@@ -10,149 +8,160 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { staggerStyle } from "~/components/motion/stagger";
-import { getStatusDetails } from "~/features/requests/request-workflow";
-import type { RealtimeStatus } from "~/hooks/useRealtimeRefresh";
+import { StatFigure, StatFigures } from "~/components/portal/stat-figure";
+import { portalTable } from "~/components/portal/styles";
+import { StatusPill } from "~/features/requests/components/StatusPill";
+import { formatPesoFee } from "~/features/services/service-utils";
+import { cn } from "~/lib/utils";
 import type { CitizenDashboardRequest } from "../types";
 
 const ACTIVE_PREVIEW_COUNT = 5;
 
 interface ActiveRequestsPanelProps {
+  /** Every request that hasn't reached a terminal status. */
   requests: CitizenDashboardRequest[];
-  realtimeStatus: RealtimeStatus;
+  readyForRelease: number;
+  paymentDue: number;
 }
 
+/**
+ * The dashboard's lead card: the three headline counts, then the first few
+ * requests still in progress.
+ */
 export function ActiveRequestsPanel({
   requests,
-  realtimeStatus,
+  readyForRelease,
+  paymentDue,
 }: ActiveRequestsPanelProps) {
+  const preview = requests.slice(0, ACTIVE_PREVIEW_COUNT);
+
   return (
-    <div className="dashboard-panel overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-5 sm:px-6">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
-            Active requests
-          </p>
-          <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground">
-            In progress right now
-          </h2>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-            <span
-              className={
-                realtimeStatus === "live"
-                  ? "civic-live-dot"
-                  : "inline-flex size-2 rounded-full bg-muted-foreground/40"
-              }
-            />
-            {realtimeStatus === "live"
-              ? "Live"
-              : realtimeStatus === "connecting"
-                ? "Connecting"
-                : "Offline"}
-          </span>
-          <Link to="/my-requests" className="text-[13px] font-bold text-primary">
-            View all →
-          </Link>
-        </div>
+    <section className="portal-card px-5 pt-6 pb-5 sm:px-8 sm:pt-7">
+      <div className="flex flex-wrap items-end gap-x-6 gap-y-5">
+        <h1 className="portal-title mr-auto">Your requests</h1>
+        <StatFigures>
+          <StatFigure
+            index={0}
+            label="In progress"
+            value={requests.length}
+            dotClassName="bg-primary"
+          />
+          <StatFigure
+            index={1}
+            label="Ready for release"
+            value={readyForRelease}
+            dotClassName="bg-success"
+          />
+          <StatFigure
+            index={2}
+            label="Payment due"
+            value={paymentDue}
+            dotClassName="bg-brand-gold"
+          />
+        </StatFigures>
       </div>
 
       {requests.length === 0 ? (
-        <p className="px-5 py-10 text-center text-sm text-muted-foreground sm:px-6">
+        <p className="mt-6 border-y border-border-light py-10 text-center text-sm text-muted-foreground">
           Nothing in progress — everything you've submitted has been released or resolved.
         </p>
       ) : (
         <>
-          <div className="hidden overflow-x-auto md:block">
-            <Table>
+          <div className="mt-6 hidden md:block">
+            <Table className="min-w-190">
               <TableHeader>
-                <TableRow className="bg-surface-subtle">
-                  <TableHead className="p-4">Tracking Number</TableHead>
-                  <TableHead className="p-4">Document Type</TableHead>
-                  <TableHead className="p-4">Status</TableHead>
-                  <TableHead className="p-4">Submitted</TableHead>
-                  <TableHead className="p-4 text-right">Actions</TableHead>
+                <TableRow className={portalTable.headRow}>
+                  <TableHead className={portalTable.head}>Tracking no.</TableHead>
+                  <TableHead className={portalTable.head}>Document</TableHead>
+                  <TableHead className={portalTable.head}>Status</TableHead>
+                  <TableHead className={portalTable.head}>Submitted</TableHead>
+                  <TableHead className={portalTable.head}>Fees</TableHead>
+                  <TableHead className={cn(portalTable.head, "text-right")}>
+                    Details
+                  </TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody className="civic-stagger">
-                {requests.slice(0, ACTIVE_PREVIEW_COUNT).map((request, index) => {
-                  const status = getStatusDetails(request.status);
-                  return (
-                    <TableRow
-                      key={request.id}
-                      style={staggerStyle(index)}
-                      className="transition-colors duration-200 hover:bg-surface-subtle"
+              <TableBody className={cn("civic-stagger", portalTable.body)}>
+                {preview.map((request, index) => (
+                  <TableRow
+                    key={request.id}
+                    style={staggerStyle(index)}
+                    className={portalTable.row}
+                  >
+                    <TableCell
+                      className={cn(
+                        portalTable.cell,
+                        "font-mono text-[13px] font-semibold text-foreground",
+                      )}
                     >
-                      <TableCell className="p-4 font-mono font-semibold text-foreground">
-                        {request.tracking_number}
-                      </TableCell>
-                      <TableCell className="p-4 font-medium text-foreground">
-                        {request.services_registry?.name || request.request_type}
-                      </TableCell>
-                      <TableCell className="p-4">
-                        <Badge variant={status.variant}>{status.label}</Badge>
-                      </TableCell>
-                      <TableCell className="p-4 text-muted-foreground">
-                        {new Date(request.created_at).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </TableCell>
-                      <TableCell className="p-4 text-right">
-                        <Link
-                          to="/my-requests/$requestId"
-                          params={{ requestId: request.id }}
-                          className={buttonVariants({ variant: "outline", size: "sm" })}
-                        >
-                          Details
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                      {request.tracking_number}
+                    </TableCell>
+                    <TableCell className={cn(portalTable.cell, "font-medium text-foreground")}>
+                      {request.services_registry?.name || request.request_type}
+                    </TableCell>
+                    <TableCell className={portalTable.cell}>
+                      <StatusPill status={request.status} />
+                    </TableCell>
+                    <TableCell className={cn(portalTable.cell, "text-muted-foreground")}>
+                      {new Date(request.created_at).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </TableCell>
+                    <TableCell
+                      className={cn(portalTable.cell, "text-muted-foreground tabular-nums")}
+                    >
+                      {formatPesoFee(request.fees_due)}
+                    </TableCell>
+                    <TableCell className={cn(portalTable.cell, "text-right")}>
+                      <Link
+                        to="/my-requests/$requestId"
+                        params={{ requestId: request.id }}
+                        className={portalTable.action}
+                        aria-label={`View request ${request.tracking_number ?? ""}`}
+                      >
+                        View
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>
 
-          <div className="civic-stagger divide-y divide-border md:hidden">
-            {requests.slice(0, ACTIVE_PREVIEW_COUNT).map((request, index) => {
-              const status = getStatusDetails(request.status);
-              return (
-                <Link
-                  key={request.id}
-                  to="/my-requests/$requestId"
-                  params={{ requestId: request.id }}
-                  style={staggerStyle(index)}
-                  className="flex items-center justify-between gap-3 p-4 transition-colors duration-200 hover:bg-surface-subtle"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate font-mono text-sm font-bold text-foreground">
-                      {request.tracking_number}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {request.services_registry?.name || request.request_type}
-                    </p>
-                  </div>
-                  <span
-                    className={`inline-flex shrink-0 items-center rounded-md border px-2 py-0.5 text-2xs font-medium ${status.styles}`}
-                  >
-                    {status.label}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-
-          {requests.length > ACTIVE_PREVIEW_COUNT && (
-            <div className="border-t border-border px-5 py-3.5 text-center sm:px-6">
-              <Link to="/my-requests" className="text-[13px] font-bold text-primary">
-                View all {requests.length} active requests →
+          <div className="civic-stagger mt-6 divide-y divide-border-lighter border-y border-border-light md:hidden">
+            {preview.map((request, index) => (
+              <Link
+                key={request.id}
+                to="/my-requests/$requestId"
+                params={{ requestId: request.id }}
+                style={staggerStyle(index)}
+                className="flex items-center justify-between gap-3 py-3.5 transition-colors duration-200 hover:bg-surface-subtle"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-mono text-[13px] font-semibold text-foreground">
+                    {request.tracking_number}
+                  </p>
+                  <p className="truncate text-[13px] text-muted-foreground">
+                    {request.services_registry?.name || request.request_type}
+                  </p>
+                </div>
+                <StatusPill status={request.status} />
               </Link>
-            </div>
-          )}
+            ))}
+          </div>
         </>
       )}
-    </div>
+
+      <div className="flex justify-end pt-4">
+        <Link
+          to="/my-requests"
+          className="text-sm font-bold text-primary hover:text-primary-hover"
+        >
+          View all requests →
+        </Link>
+      </div>
+    </section>
   );
 }

@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { ConfirmApplyDialog } from "~/features/services/components/ConfirmApplyDialog";
 import { ServiceRequirementsDialog } from "~/features/services/components/ServiceRequirementsDialog";
 import {
-  formatFee,
+  formatPesoFee,
   getVisitBadge,
   isFullyOnline,
   summarizeWait,
@@ -36,9 +36,9 @@ export interface ServiceEntryBadge {
 }
 
 export const badgeToneClasses = {
-  success: "bg-success-soft text-success",
-  warning: "bg-warning-soft text-warning",
-  info: "bg-primary-soft text-primary",
+  success: "bg-tone-success-soft text-tone-success",
+  warning: "bg-tone-warning-soft text-tone-warning",
+  info: "bg-tone-review-soft text-tone-review",
 } as const;
 
 /**
@@ -62,7 +62,10 @@ export function useServiceEntry(service: ServiceEntryProps, canApply = true) {
   const title = service.display_name ?? service.name;
   const fullyOnline = isFullyOnline(service.steps_description);
   const visitBadge = getVisitBadge(service.processing_time);
-  const isFree = Number(service.fee) === 0;
+  const feeLabel = formatPesoFee(service.fee, service.display_group);
+  // Off the label, not the number: a grouped service reads "Varies" whatever
+  // its representative fee is, and only a real "Free" earns the success tone.
+  const isFree = feeLabel === "Free";
 
   // Both densities have room for exactly one status chip beside the title.
   // "Fully online" is the more useful of the two when it applies, since a
@@ -109,7 +112,7 @@ export function useServiceEntry(service: ServiceEntryProps, canApply = true) {
     /** "Answered in" for the email service, "Released" for counter services. */
     waitTerm: fullyOnline ? "Answered in" : "Released",
     waitLabel: summarizeWait(service.processing_time),
-    feeLabel: formatFee(service.fee, service.display_group),
+    feeLabel,
     canApply,
     openRequirements: () => setRequirementsOpen(true),
     startApply: () => askToApply(false),

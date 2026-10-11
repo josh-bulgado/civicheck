@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { staggerStyle } from "~/components/motion/stagger";
+import { pillButton } from "~/components/portal/styles";
 import { Button, buttonVariants } from "~/components/ui/button";
 import {
   DropdownMenu,
@@ -88,6 +89,9 @@ type Filter = "all" | "unread" | "archived";
 
 const UPDATE_FAILED = "We couldn't update your notifications. Please try again.";
 
+/** Sizing for a trigger inside the applicant header's `pill` tab track. */
+const PILL_TAB = "h-9.5 flex-none px-3.5";
+
 function failureMessage(result: { error: boolean; message?: string }) {
   return result.message ?? UPDATE_FAILED;
 }
@@ -95,13 +99,13 @@ function failureMessage(result: { error: boolean; message?: string }) {
 const TYPE_STYLE: Record<NotificationType, { icon: LucideIcon; unreadClass: string }> = {
   status_change: { icon: RefreshCw, unreadClass: "bg-primary text-white" },
   pre_validation_complete: { icon: CircleCheckBig, unreadClass: "bg-primary text-white" },
-  document_rejected: { icon: FileWarning, unreadClass: "bg-destructive text-white" },
+  document_rejected: { icon: FileWarning, unreadClass: "bg-tone-danger text-white" },
   new_request: { icon: FilePlus2, unreadClass: "bg-primary text-white" },
   document_resubmitted: { icon: FileUp, unreadClass: "bg-primary text-white" },
   awaiting_cashier: { icon: Banknote, unreadClass: "bg-primary text-white" },
   ready_to_release: { icon: CircleCheckBig, unreadClass: "bg-primary text-white" },
-  request_incomplete: { icon: FileWarning, unreadClass: "bg-destructive text-white" },
-  request_rejected: { icon: CircleX, unreadClass: "bg-destructive text-white" },
+  request_incomplete: { icon: FileWarning, unreadClass: "bg-tone-danger text-white" },
+  request_rejected: { icon: CircleX, unreadClass: "bg-tone-danger text-white" },
 };
 
 /** One typed `Link` per destination, so each keeps its own params/search checking. */
@@ -181,21 +185,21 @@ function NotificationItem({
     <div className={cn("flex items-stretch", !notification.isRead && "bg-primary-soft/40")}>
       <Item
         render={linkFor(notification.target, () => onOpen(notification))}
-        className="min-w-0 flex-1 flex-nowrap items-start gap-4 rounded-none p-5"
+        className="min-w-0 flex-1 flex-nowrap items-start gap-4 rounded-none px-5 py-5 sm:px-6"
       >
         <ItemMedia
           variant="icon"
           className={cn(
-            "mt-1 size-9 rounded-lg",
-            notification.isRead ? "bg-surface-subtle text-muted-foreground" : unreadClass,
+            "size-10 rounded-xl",
+            notification.isRead ? "bg-muted text-muted-foreground" : unreadClass,
           )}
         >
-          <TypeIcon aria-hidden="true" />
+          <TypeIcon className="size-4.5" aria-hidden="true" />
         </ItemMedia>
         <ItemContent className="min-w-0">
           <ItemTitle
             className={cn(
-              "line-clamp-none text-foreground",
+              "line-clamp-none text-[15px] text-foreground",
               notification.isRead ? "font-medium" : "font-bold",
             )}
           >
@@ -207,7 +211,7 @@ function NotificationItem({
               </>
             )}
           </ItemTitle>
-          <ItemDescription className="line-clamp-none whitespace-pre-line">
+          <ItemDescription className="line-clamp-none whitespace-pre-line text-body-2 text-pretty">
             {notification.body}
           </ItemDescription>
           {notification.status === "failed" ? (
@@ -227,7 +231,7 @@ function NotificationItem({
             type="button"
             variant="ghost"
             size="icon"
-            className="size-11 text-muted-foreground"
+            className="size-11 rounded-full text-muted-foreground hover:text-primary"
             aria-label={`Mark "${notification.subject}" as read`}
             onClick={() => onAction(notification, "read")}
           >
@@ -241,7 +245,7 @@ function NotificationItem({
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-11 text-muted-foreground data-open:bg-muted"
+                className="size-11 rounded-full text-muted-foreground data-open:bg-muted"
               />
             }
           >
@@ -283,11 +287,20 @@ function NotificationList({
   items,
   now,
   emptyMessage,
+  citizen,
   ...handlers
-}: { items: NotificationRow[]; now: number; emptyMessage: string } & RowHandlers) {
+}: {
+  items: NotificationRow[];
+  now: number;
+  emptyMessage: string;
+  /** Applicant portal: flat cards on the ground instead of bordered panels. */
+  citizen: boolean;
+} & RowHandlers) {
+  const panel = citizen ? "portal-card" : "dashboard-panel";
+
   if (items.length === 0) {
     return (
-      <div className="dashboard-panel">
+      <div className={panel}>
         <p className="px-6 py-12 text-center text-sm text-muted-foreground">{emptyMessage}</p>
       </div>
     );
@@ -295,14 +308,14 @@ function NotificationList({
 
   let index = 0;
   return (
-    <div className="flex flex-col gap-6">
+    <div className={cn("flex flex-col", citizen ? "gap-4" : "gap-6")}>
       {groupByDay(items, now).map((group) => (
         <section key={group.key} aria-label={group.label}>
-          <h2 className="mb-2 px-1 text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
+          <h2 className="mb-2 px-2 pt-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">
             {group.label}
           </h2>
-          <div className="dashboard-panel overflow-hidden">
-            <div className="civic-stagger divide-y divide-border">
+          <div className={cn(panel, "overflow-hidden")}>
+            <div className="civic-stagger divide-y divide-border-lighter">
               {group.items.map((notification) => (
                 <div key={notification.id} style={staggerStyle(index++)}>
                   <NotificationItem notification={notification} {...handlers} />
@@ -393,25 +406,148 @@ export default function NotificationsPage({
 
   const handlers: RowHandlers = { onOpen: handleOpen, onAction: handleAction };
 
+  const tabPanels = (
+    <>
+      <TabsContent value="all">
+        <NotificationList
+          items={inbox}
+          now={now}
+          emptyMessage="Your inbox is empty. Archived notifications are in the Archived tab."
+          citizen={isApplicant}
+          {...handlers}
+        />
+      </TabsContent>
+      <TabsContent value="unread">
+        <NotificationList
+          items={unread}
+          now={now}
+          emptyMessage="You're all caught up. New updates will show up here."
+          citizen={isApplicant}
+          {...handlers}
+        />
+      </TabsContent>
+      <TabsContent value="archived">
+        <NotificationList
+          items={archived}
+          now={now}
+          emptyMessage="Nothing archived. Use the ⋯ menu on a notification to tuck it away."
+          citizen={isApplicant}
+          {...handlers}
+        />
+      </TabsContent>
+    </>
+  );
+
+  // The applicant portal: a header card with the filter pills in it, then the
+  // day groups as their own cards. `Tabs` wraps the page so the pills can sit
+  // in the header while the panels sit below it.
+  if (isApplicant) {
+    return (
+      <Tabs
+        value={filter}
+        onValueChange={(value) => setFilter(value as Filter)}
+        className="portal-page gap-4"
+      >
+        <header className="portal-card flex flex-col gap-6 px-5 py-6 sm:px-8 sm:py-7">
+          <div className="flex flex-wrap items-end gap-6">
+            <div className="mr-auto flex max-w-160 flex-col gap-1.5">
+              <h1 className="portal-title">Notifications</h1>
+              <p className="text-sm leading-normal text-muted-foreground text-pretty">
+                {unreadCount > 0
+                  ? `You have ${unreadCount} unread ${unreadCount === 1 ? "update" : "updates"} on your requests. We also email you each one.`
+                  : "You're all caught up. We'll post here, and email you, whenever a request changes."}
+              </p>
+            </div>
+            {unreadCount > 0 ? (
+              <Button
+                variant="outline"
+                className={cn(pillButton.outline, "text-primary")}
+                onClick={markAllRead}
+                disabled={isMarkingAll}
+              >
+                <Check data-icon="inline-start" aria-hidden="true" />
+                {isMarkingAll ? "Marking as read…" : "Mark all as read"}
+              </Button>
+            ) : null}
+          </div>
+          {notifications.length > 0 ? (
+            <TabsList
+              variant="pill"
+              aria-label="Filter notifications"
+              className="no-scrollbar max-w-full justify-start self-start overflow-x-auto"
+            >
+              <TabsTrigger value="all" className={PILL_TAB}>
+                All ({inbox.length})
+              </TabsTrigger>
+              <TabsTrigger value="unread" className={PILL_TAB}>
+                Unread ({unreadCount})
+              </TabsTrigger>
+              <TabsTrigger value="archived" className={PILL_TAB}>
+                Archived ({archived.length})
+              </TabsTrigger>
+            </TabsList>
+          ) : null}
+        </header>
+
+        {notifications.length === 0 ? (
+          <Empty className="portal-card civic-enter-scale gap-5 rounded-2xl px-8 py-16">
+            <EmptyHeader className="max-w-110 gap-3">
+              <EmptyMedia
+                variant="icon"
+                className="size-13 rounded-[14px] bg-primary-soft text-primary"
+              >
+                <Bell />
+              </EmptyMedia>
+              <EmptyTitle className="text-xl font-bold">No notifications yet</EmptyTitle>
+              <EmptyDescription className="leading-[1.55] text-pretty">
+                Once you submit a request, we'll post an update here whenever staff review
+                your documents or move it to the next step.
+              </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Link
+                to="/my-requests"
+                className={cn(buttonVariants({ variant: "outline" }), pillButton.outline)}
+              >
+                Go to my requests
+              </Link>
+            </EmptyContent>
+          </Empty>
+        ) : (
+          tabPanels
+        )}
+
+        {hasMore ? (
+          <div className="flex justify-center pt-2">
+            <Button
+              variant="outline"
+              className={pillButton.outline}
+              onClick={loadMore}
+              disabled={isLoadingMore}
+            >
+              {isLoadingMore ? "Loading…" : "Load older notifications"}
+            </Button>
+          </div>
+        ) : null}
+      </Tabs>
+    );
+  }
+
   return (
     <div className="dashboard-page max-w-4xl">
       <header className="dashboard-hero">
         <div className="relative z-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="mb-3 text-xs font-bold uppercase tracking-[0.13em] text-brand-gold">
-              {isApplicant ? "Applicant workspace" : "CCRO workspace"}
+              CCRO workspace
             </p>
             <h1 className="text-3xl font-extrabold tracking-[-0.03em] text-white sm:text-4xl">
               Notifications
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/75">
-              {isApplicant
-                ? unreadCount > 0
-                  ? `You have ${unreadCount} unread ${unreadCount === 1 ? "update" : "updates"} on your requests. We also email you each one.`
-                  : "You're all caught up. We'll post here, and email you, whenever a request changes."
-                : unreadCount > 0
-                  ? `You have ${unreadCount} unread ${unreadCount === 1 ? "alert" : "alerts"} that need your attention.`
-                  : "You're all caught up. Requests that need your action will show up here."}
+              {unreadCount > 0
+                ? `You have ${unreadCount} unread ${unreadCount === 1 ? "alert" : "alerts"} that need your attention.`
+                : "You're all caught up. Requests that need your action will show up here."}
             </p>
           </div>
           {unreadCount > 0 ? (
@@ -436,20 +572,11 @@ export default function NotificationsPage({
             </EmptyMedia>
             <EmptyTitle>No notifications yet</EmptyTitle>
             <EmptyDescription>
-              {isApplicant
-                ? "Once you submit a request, we'll post an update here whenever staff review your documents or move it to the next step."
-                : "When a request needs your action, it will be posted here."}
+              When a request needs your action, it will be posted here.
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
-            {isApplicant ? (
-              <Link
-                to="/my-requests"
-                className={buttonVariants({ variant: "outline", size: "lg" })}
-              >
-                Go to my requests
-              </Link>
-            ) : can("requests:view_all") ? (
+            {can("requests:view_all") ? (
               <Link
                 to="/requests"
                 className={buttonVariants({ variant: "outline", size: "lg" })}
@@ -477,30 +604,7 @@ export default function NotificationsPage({
             <TabsTrigger value="unread">Unread ({unreadCount})</TabsTrigger>
             <TabsTrigger value="archived">Archived ({archived.length})</TabsTrigger>
           </TabsList>
-          <TabsContent value="all">
-            <NotificationList
-              items={inbox}
-              now={now}
-              emptyMessage="Your inbox is empty. Archived notifications are in the Archived tab."
-              {...handlers}
-            />
-          </TabsContent>
-          <TabsContent value="unread">
-            <NotificationList
-              items={unread}
-              now={now}
-              emptyMessage="You're all caught up. New updates will show up here."
-              {...handlers}
-            />
-          </TabsContent>
-          <TabsContent value="archived">
-            <NotificationList
-              items={archived}
-              now={now}
-              emptyMessage="Nothing archived. Use the ⋯ menu on a notification to tuck it away."
-              {...handlers}
-            />
-          </TabsContent>
+          {tabPanels}
         </Tabs>
       )}
 

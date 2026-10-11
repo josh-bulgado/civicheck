@@ -2,15 +2,12 @@ import { Skeleton } from "~/components/ui/skeleton";
 
 export function CitizenDashboardSkeleton() {
   return (
-    <div className="dashboard-page" aria-label="Loading your dashboard…">
-      <Skeleton className="h-56 rounded-2xl" />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Skeleton className="h-24 rounded-xl" />
-        <Skeleton className="h-24 rounded-xl" />
-        <Skeleton className="h-24 rounded-xl" />
-        <Skeleton className="h-24 rounded-xl" />
+    <div className="portal-page" aria-label="Loading your dashboard…">
+      <Skeleton className="h-96 rounded-2xl" />
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(380px,100%),1fr))] gap-4">
+        <Skeleton className="h-64 rounded-2xl" />
+        <Skeleton className="h-64 rounded-2xl" />
       </div>
-      <Skeleton className="h-64 rounded-xl" />
     </div>
   );
 }

@@ -8,7 +8,24 @@ function titleCaseStatus(value: string) {
     .join(" ");
 }
 
-type StatusBadgeVariant = "info" | "success" | "warning" | "neutral" | "destructive";
+type StatusBadgeVariant =
+  | "info"
+  | "progress"
+  | "success"
+  | "warning"
+  | "neutral"
+  | "destructive";
+
+// Chip classes for the surfaces that don't render a `Badge`. Same ink-on-tint
+// pairs as the Badge variant of the same name, so the two always agree.
+const TONE_STYLES: Record<StatusBadgeVariant, string> = {
+  info: "border-transparent bg-tone-review-soft text-tone-review",
+  progress: "border-transparent bg-tone-progress-soft text-tone-progress",
+  success: "border-transparent bg-tone-success-soft text-tone-success",
+  warning: "border-transparent bg-tone-warning-soft text-tone-warning",
+  neutral: "border-transparent bg-tone-neutral-soft text-tone-neutral",
+  destructive: "border-transparent bg-tone-danger-soft text-tone-danger",
+};
 
 interface StatusDetails {
   label: string;
@@ -19,9 +36,15 @@ interface StatusDetails {
 
 // The timeline keeps past steps gray; only the step the request is in right
 // now is tinted, so the color itself answers "where is my request?".
-export function getCurrentDotClass(variant: StatusBadgeVariant) {
-  switch (variant) {
+// Keyed by status, not by pill variant: a released request wears a quiet gray
+// pill, but on the timeline it is still the finish line, and a request that was
+// only just submitted hasn't earned a color yet.
+export function getCurrentDotClass(status: string | null) {
+  if (status === "released") return "bg-health-success-dot";
+  if (status === "submitted") return "bg-health-neutral-dot";
+  switch (getStatusDetails(status).variant) {
     case "info":
+    case "progress":
       return "bg-health-info-dot";
     case "success":
       return "bg-health-success-dot";
@@ -105,33 +128,33 @@ interface PaymentDetails {
 export function getStatusDetails(status: string | null): StatusDetails {
   switch (status) {
     case "submitted":
-      return { label: "Submitted", styles: "status-neutral", dot: "bg-health-neutral-dot", variant: "neutral" };
+      return { label: "Submitted", styles: TONE_STYLES.info, dot: "bg-health-neutral-dot", variant: "info" };
     case "under_validation":
-      return { label: "Under Validation", styles: "status-info", dot: "bg-health-neutral-dot", variant: "info" };
+      return { label: "Under Validation", styles: TONE_STYLES.info, dot: "bg-health-neutral-dot", variant: "info" };
     case "incomplete":
-      return { label: "Incomplete", styles: "status-warning", dot: "bg-health-neutral-dot", variant: "warning" };
+      return { label: "Incomplete", styles: TONE_STYLES.warning, dot: "bg-health-neutral-dot", variant: "warning" };
     case "rejected":
-      return { label: "Rejected", styles: "status-error", dot: "bg-health-error-dot", variant: "destructive" };
+      return { label: "Rejected", styles: TONE_STYLES.destructive, dot: "bg-health-error-dot", variant: "destructive" };
     case "processing":
-      return { label: "Processing", styles: "status-info", dot: "bg-health-neutral-dot", variant: "info" };
+      return { label: "Processing", styles: TONE_STYLES.progress, dot: "bg-health-neutral-dot", variant: "progress" };
     case "ready_for_release":
-      return { label: "Ready for Release", styles: "status-success", dot: "bg-health-neutral-dot", variant: "success" };
+      return { label: "Ready for Release", styles: TONE_STYLES.success, dot: "bg-health-neutral-dot", variant: "success" };
     case "released":
-      return { label: "Released", styles: "status-success", dot: "bg-health-success-dot", variant: "success" };
+      return { label: "Released", styles: TONE_STYLES.neutral, dot: "bg-health-success-dot", variant: "neutral" };
     case "document_approved":
-      return { label: "Document Approved", styles: "status-success", dot: "bg-health-neutral-dot", variant: "success" };
+      return { label: "Document Approved", styles: TONE_STYLES.success, dot: "bg-health-neutral-dot", variant: "success" };
     case "document_rejected":
-      return { label: "Document Rejected", styles: "status-error", dot: "bg-health-error-dot", variant: "destructive" };
+      return { label: "Document Rejected", styles: TONE_STYLES.destructive, dot: "bg-health-error-dot", variant: "destructive" };
     case "document_resubmitted":
-      return { label: "Document Resubmitted", styles: "status-warning", dot: "bg-health-neutral-dot", variant: "warning" };
+      return { label: "Document Resubmitted", styles: TONE_STYLES.warning, dot: "bg-health-neutral-dot", variant: "warning" };
     case "payment_verified":
-      return { label: "Payment Verified", styles: "status-success", dot: "bg-health-neutral-dot", variant: "success" };
+      return { label: "Payment Verified", styles: TONE_STYLES.success, dot: "bg-health-neutral-dot", variant: "success" };
     case "document_reverted":
-      return { label: "Document Reopened", styles: "status-warning", dot: "bg-health-neutral-dot", variant: "warning" };
+      return { label: "Document Reopened", styles: TONE_STYLES.warning, dot: "bg-health-neutral-dot", variant: "warning" };
     default:
       return {
         label: status ? titleCaseStatus(status) : "Unknown",
-        styles: "status-neutral",
+        styles: TONE_STYLES.neutral,
         dot: "bg-health-neutral-dot",
         variant: "neutral",
       };
@@ -144,14 +167,14 @@ export function getPaymentDetails(
 ): PaymentDetails {
   // A free request never gets cashier-verified, so "Unpaid" would be wrong.
   if (feesDue !== undefined && feesDue <= 0) {
-    return { label: "No fee", styles: "status-neutral", variant: "neutral" };
+    return { label: "No fee", styles: TONE_STYLES.neutral, variant: "neutral" };
   }
   switch (paymentStatus) {
     case "unpaid":
-      return { label: "Unpaid", styles: "status-warning", variant: "warning" };
+      return { label: "Unpaid", styles: TONE_STYLES.warning, variant: "warning" };
     case "verified":
-      return { label: "Paid", styles: "status-success", variant: "success" };
+      return { label: "Paid", styles: TONE_STYLES.success, variant: "success" };
     default:
-      return { label: paymentStatus || "Unpaid", styles: "status-neutral", variant: "neutral" };
+      return { label: paymentStatus || "Unpaid", styles: TONE_STYLES.neutral, variant: "neutral" };
   }
 }

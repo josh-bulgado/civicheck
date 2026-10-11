@@ -125,6 +125,15 @@ export function formatFee(
   })}`;
 }
 
+/** `formatFee` with the peso sign on an actual amount: "₱1,100.00", "Free", "Varies". */
+export function formatPesoFee(
+  fee: number | string | null,
+  displayGroup?: string | null,
+): string {
+  const label = formatFee(fee, displayGroup);
+  return /^\d/.test(label) ? `₱${label}` : label;
+}
+
 // ─── Browse Services card helpers ────────────────────────────────────────────
 // `processing_time` and `steps_description` are free-text charter language, not
 // structured fields, so the signals below (visit count, fully-online, category)
