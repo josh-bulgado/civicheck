@@ -4,6 +4,7 @@ import { FieldLegend, FieldSet } from "~/components/ui/field";
 import { ChoiceGroup } from "~/features/forms/components/ChoiceGroup";
 import type { CaseSelectorDefinition } from "~/features/forms/form-template.types";
 import { conditionRuleMatches } from "~/features/forms/form-template.utils";
+import { formatPesoFee } from "~/features/services/service-utils";
 
 interface Service {
   service_code: string;
@@ -77,6 +78,36 @@ function matches(name: string, age: string | null, program: string | null, marit
   return true;
 }
 
+/** Compares two sentences ignoring case, spacing, and trailing punctuation. */
+function sameSentence(a: string, b: string) {
+  const normalize = (value: string) =>
+    value.trim().replace(/[\s]+/g, " ").replace(/[?.!:]+$/, "").toLowerCase();
+  return normalize(a) === normalize(b);
+}
+
+/**
+ * Quiet confirmation of the service the answers resolved to. The docket above
+ * the form already carries the name and fee, so this stays a single muted line
+ * (and the live region still announces the result to screen readers).
+ */
+function SelectedServiceNote({ name }: { name: string }) {
+  return (
+    <p
+      role="status"
+      aria-live="polite"
+      className="civic-enter-sm flex items-start gap-2 text-sm text-muted-foreground"
+    >
+      <CheckCircle2
+        className="mt-0.5 size-4 shrink-0 text-success"
+        aria-hidden="true"
+      />
+      <span>
+        Selected: <span className="font-medium text-foreground">{name}</span>
+      </span>
+    </p>
+  );
+}
+
 function LegacyCaseSelector({
   services,
   selectedCode,
@@ -134,10 +165,17 @@ function LegacyCaseSelector({
     }
   };
 
+  // Names that carry none of the age/program/marital tokens give this selector
+  // nothing to ask. Falling through to `matches` would then accept every
+  // service and silently pick whichever sorts first, so such a group is picked
+  // from directly below instead.
+  const hasDimensions = steps.hasAge || steps.hasProgram || steps.hasMarital;
+
   // Edge case (not hit by today's groups, all of which also have a Program
   // dimension): both age and marital arrived preset and nothing else needs
   // asking — resolve immediately instead of leaving the selector blank.
   useEffect(() => {
+    if (!hasDimensions) return;
     if (selectedCode || showAge || steps.hasProgram || showMarital) return;
     const match = services.find((s) => matches(s.name, age, program, marital));
     if (match) onSelect(match.service_code);
@@ -170,6 +208,24 @@ function LegacyCaseSelector({
       </div>
 
       <div className="mt-6 flex flex-col gap-6">
+        {/* No question can tell these variants apart, so let the applicant pick one. */}
+        {!hasDimensions && (
+          <FieldSet className="civic-enter-sm gap-3">
+            <FieldLegend variant="label">Which service do you need?</FieldLegend>
+            <ChoiceGroup
+              wide
+              idPrefix="service"
+              value={selectedCode ?? ""}
+              onValueChange={onSelect}
+              options={services.map((service) => ({
+                value: service.service_code,
+                label: service.name,
+                description: `Fee at cashier: ${formatPesoFee(service.fee)}`,
+              }))}
+            />
+          </FieldSet>
+        )}
+
         {/* Step 1: Age */}
         {showAge && (
           <FieldSet className="civic-enter-sm gap-3">
@@ -230,18 +286,7 @@ function LegacyCaseSelector({
           </FieldSet>
         )}
 
-        {/* The exact service and fee are shown in the selected-service strip above. */}
-        {selectedService && (
-          <div
-            role="status"
-            aria-live="polite"
-            className="civic-enter-sm flex items-center gap-2 border-t border-success/20 pt-4 text-sm font-semibold text-success"
-          >
-            <CheckCircle2 className="size-4.5 shrink-0" aria-hidden="true" />
-            Service selected. Complete the case details below before continuing.
-            <span className="sr-only">{selectedService.name}</span>
-          </div>
-        )}
+        {selectedService && <SelectedServiceNote name={selectedService.name} />}
       </div>
     </section>
   );
@@ -342,39 +387,41 @@ function ConfiguredCaseSelector({
       </div>
 
       <div className="mt-6 flex flex-col gap-6">
-        {visibleQuestions.map((question, index) => (
-          <FieldSet key={question.key} className="civic-enter-sm gap-3">
-            <FieldLegend variant="label">
-              {visibleQuestions.length > 1 ? `${index + 1}. ` : ""}
-              {question.label}
-            </FieldLegend>
-            {question.description ? (
-              <p className="text-xs text-muted-foreground">
-                {question.description}
-              </p>
-            ) : null}
-            <ChoiceGroup
-              wide
-              idPrefix={`case-${question.key}`}
-              value={answers[question.key] ?? ""}
-              onValueChange={(value) =>
-                publishAnswers({ ...answers, [question.key]: value })
-              }
-              options={question.options}
-            />
-          </FieldSet>
-        ))}
+        {visibleQuestions.map((question, index) => {
+          // A lone question that just restates the section title would show the
+          // same sentence twice in a row, so the title names the group instead.
+          const repeatsTitle =
+            visibleQuestions.length === 1 &&
+            sameSentence(question.label, definition.title);
+          return (
+            <FieldSet key={question.key} className="civic-enter-sm gap-3">
+              {repeatsTitle ? null : (
+                <FieldLegend variant="label">
+                  {visibleQuestions.length > 1 ? `${index + 1}. ` : ""}
+                  {question.label}
+                </FieldLegend>
+              )}
+              {question.description ? (
+                <p className="text-xs text-muted-foreground">
+                  {question.description}
+                </p>
+              ) : null}
+              <ChoiceGroup
+                wide
+                idPrefix={`case-${question.key}`}
+                value={answers[question.key] ?? ""}
+                onValueChange={(value) =>
+                  publishAnswers({ ...answers, [question.key]: value })
+                }
+                options={question.options}
+                labelledBy={repeatsTitle ? "case-selector-title" : undefined}
+              />
+            </FieldSet>
+          );
+        })}
 
         {selectedService ? (
-          <div
-            role="status"
-            aria-live="polite"
-            className="civic-enter-sm flex items-center gap-2 border-t border-success/20 pt-4 text-sm font-semibold text-success"
-          >
-            <CheckCircle2 className="size-4.5 shrink-0" aria-hidden="true" />
-            Service selected. Complete the case details below before continuing.
-            <span className="sr-only">{selectedService.name}</span>
-          </div>
+          <SelectedServiceNote name={selectedService.name} />
         ) : null}
       </div>
     </section>

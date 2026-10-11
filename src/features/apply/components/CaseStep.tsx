@@ -22,6 +22,7 @@ import {
   todayKeyInTimeZone,
 } from "~/features/forms/form-template.utils";
 import { isRequirementApplicable } from "~/features/services/service-utils";
+import { CopiesStepper } from "~/features/services/components/CopiesStepper";
 import type { ServiceDetail } from "~/features/services/services.queries";
 import {
   seedDraftForGroup,
@@ -321,7 +322,17 @@ export function CaseStep({
           control={form.control}
           values={watchedValues}
           onDateChange={handleEventDateChange}
+          // With the service questions above, head the fields as their own block.
+          showSectionTitles={isGroup}
         />
+
+        {draft.selectedServiceCode && selectedService.fee_per_copy ? (
+          <CopiesStepper
+            value={draft.copies}
+            onChange={(copies) => update({ copies })}
+            unitFee={selectedService.fee}
+          />
+        ) : null}
 
         <DerivedAnswerAlerts
           definition={definition}

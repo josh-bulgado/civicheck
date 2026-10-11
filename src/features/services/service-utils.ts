@@ -137,6 +137,29 @@ export function formatPesoFee(
   return /^\d/.test(label) ? `₱${label}` : label;
 }
 
+/** Most copies one request may ask for. Mirrors the `requests.copies` check constraint. */
+export const MAX_COPIES = 10;
+
+/** Coerces any input to a whole number of copies within 1..MAX_COPIES. */
+export function clampCopies(value: unknown): number {
+  const n = Math.trunc(Number(value));
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return Math.min(n, MAX_COPIES);
+}
+
+/**
+ * Fee due for a request. Per-copy services (certified true copies) scale with
+ * the quantity; every other service charges its flat fee once.
+ */
+export function totalFee(
+  fee: number | string | null,
+  copies: number,
+  feePerCopy: boolean | undefined,
+): number {
+  const unit = Number(fee) || 0;
+  return feePerCopy ? unit * clampCopies(copies) : unit;
+}
+
 // ─── Browse Services card helpers ────────────────────────────────────────────
 // `processing_time` and `steps_description` are free-text charter language, not
 // structured fields, so the signals below (visit count, fully-online, category)

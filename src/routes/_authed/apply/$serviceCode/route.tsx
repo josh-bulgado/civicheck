@@ -64,6 +64,8 @@ function ApplyLayout() {
         serviceName={serviceName}
         serviceFamily={serviceFamily}
         fee={selectedService?.fee}
+        copies={draft.copies}
+        feePerCopy={selectedService?.fee_per_copy === true}
         selectionPending={selectionPending}
         onDiscard={handleDiscard}
       />

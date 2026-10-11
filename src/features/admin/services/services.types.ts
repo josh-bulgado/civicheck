@@ -19,6 +19,8 @@ export interface Service {
   name: string;
   classification: ServiceClassification | null;
   fee: number;
+  /** When true the fee is charged per copy, so the applicant picks a quantity. */
+  fee_per_copy?: boolean;
   processing_time: string;
   steps_description: string[] | null;
   display_group: string | null;

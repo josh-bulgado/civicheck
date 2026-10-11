@@ -16,7 +16,10 @@ import {
 } from "~/features/services/components/ServicesToolbar";
 import { useServiceView } from "~/features/services/hooks/useServiceView";
 import type { ServiceSummary } from "~/features/services/services.queries";
-import { getServiceCategory, getVisitBadge } from "~/features/services/service-utils";
+import {
+  getServiceCategory,
+  getVisitBadge,
+} from "~/features/services/service-utils";
 import type { getMyDepartmentScopeFn } from "~/features/requests/requests.queries";
 import { usePermissions } from "~/hooks/usePermissions";
 import { cn } from "~/lib/utils";
@@ -66,7 +69,8 @@ export default function ServiceCatalogPage({
       selectedService
         ? services.find(
             (service) =>
-              (service.display_group ?? service.service_code) === selectedService,
+              (service.display_group ?? service.service_code) ===
+              selectedService,
           )
         : undefined,
     [services, selectedService],
@@ -79,8 +83,9 @@ export default function ServiceCatalogPage({
 
   const oneVisitCount = useMemo(
     () =>
-      services.filter((s) => getVisitBadge(s.processing_time).label === "One visit")
-        .length,
+      services.filter(
+        (s) => getVisitBadge(s.processing_time).label === "One visit",
+      ).length,
     [services],
   );
 
@@ -169,7 +174,9 @@ export default function ServiceCatalogPage({
 
       {visibleServices.length === 0 ? (
         <div className="civic-enter-scale rounded-[14px] border border-dashed border-border-strong px-6 py-12 text-center">
-          <p className="text-base font-bold text-foreground">No services match your search</p>
+          <p className="text-base font-bold text-foreground">
+            No services match your search
+          </p>
           <p className="mt-1.5 text-sm text-muted-foreground">
             Try a different keyword, or clear the filters above.
           </p>
@@ -180,7 +187,7 @@ export default function ServiceCatalogPage({
         // Cards keep their `service_code` key across filter changes, so React
         // reuses the existing nodes and only genuinely new cards animate in —
         // the cascade doesn't replay on every keystroke in the search box.
-        <div className="civic-stagger grid grid-cols-[repeat(auto-fill,minmax(min(300px,100%),1fr))] gap-3">
+        <div className="civic-stagger grid grid-cols-[repeat(auto-fill,minmax(min(325px,100%),1fr))] gap-3">
           {visibleServices.map((service, index) => (
             <ServiceCard
               key={service.service_code}
@@ -199,7 +206,8 @@ export default function ServiceCatalogPage({
           className={cn(pillButton.outline, "self-start")}
           onClick={() => setShowAll(true)}
         >
-          Show the remaining {remainingCount} service{remainingCount === 1 ? "" : "s"}
+          Show the remaining {remainingCount} service
+          {remainingCount === 1 ? "" : "s"}
         </Button>
       )}
     </>
@@ -217,13 +225,21 @@ export default function ServiceCatalogPage({
               </p>
               <h1 className="portal-title">Browse document services</h1>
               <p className="text-sm leading-normal text-muted-foreground text-pretty">
-                Review the official checklist, prepare your documents, and send your
-                request intent to the City Civil Registrar Office.
+                Review the official checklist, prepare your documents, and send
+                your request intent to the City Civil Registrar Office.
               </p>
             </div>
             <StatFigures>
-              <StatFigure index={0} label="Services available" value={services.length} />
-              <StatFigure index={1} label="Finished in one visit" value={oneVisitCount} />
+              <StatFigure
+                index={0}
+                label="Services available"
+                value={services.length}
+              />
+              <StatFigure
+                index={1}
+                label="Finished in one visit"
+                value={oneVisitCount}
+              />
             </StatFigures>
           </header>
 
@@ -271,8 +287,8 @@ export default function ServiceCatalogPage({
                   className="civic-enter-sm mt-3 max-w-2xl text-sm leading-6 text-white/75 sm:text-base"
                   style={enterDelay(200)}
                 >
-                  Look up requirements and processing details to guide applicants and
-                  validate walk-ins at the counter.
+                  Look up requirements and processing details to guide
+                  applicants and validate walk-ins at the counter.
                 </p>
               </div>
 
@@ -281,23 +297,33 @@ export default function ServiceCatalogPage({
                   className="rounded-xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm"
                   style={staggerStyle(0, 240)}
                 >
-                  <Files className="mb-3 size-5 text-brand-gold" aria-hidden="true" />
+                  <Files
+                    className="mb-3 size-5 text-brand-gold"
+                    aria-hidden="true"
+                  />
                   <CountUp
                     value={services.length}
                     className="block text-2xl font-extrabold text-white"
                   />
-                  <p className="mt-0.5 text-xs text-white/65">Services available</p>
+                  <p className="mt-0.5 text-xs text-white/65">
+                    Services available
+                  </p>
                 </div>
                 <div
                   className="rounded-xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm"
                   style={staggerStyle(1, 240)}
                 >
-                  <CalendarClock className="mb-3 size-5 text-brand-gold" aria-hidden="true" />
+                  <CalendarClock
+                    className="mb-3 size-5 text-brand-gold"
+                    aria-hidden="true"
+                  />
                   <CountUp
                     value={oneVisitCount}
                     className="block text-2xl font-extrabold text-white"
                   />
-                  <p className="mt-0.5 text-xs text-white/65">Finished in one visit</p>
+                  <p className="mt-0.5 text-xs text-white/65">
+                    Finished in one visit
+                  </p>
                 </div>
               </div>
             </div>
@@ -313,7 +339,10 @@ export default function ServiceCatalogPage({
                 <p className="text-xs font-bold uppercase tracking-[0.13em] text-primary">
                   Service directory
                 </p>
-                <h2 id="services-list-heading" className="mt-1 text-xl font-bold tracking-tight text-foreground">
+                <h2
+                  id="services-list-heading"
+                  className="mt-1 text-xl font-bold tracking-tight text-foreground"
+                >
                   Select a document service
                 </h2>
               </div>
@@ -326,7 +355,9 @@ export default function ServiceCatalogPage({
 
       {focusedService && (
         <ServiceRequirementsDialog
-          serviceCode={focusedService.display_group ?? focusedService.service_code}
+          serviceCode={
+            focusedService.display_group ?? focusedService.service_code
+          }
           title={focusedService.display_name ?? focusedService.name}
           fee={focusedService.fee}
           displayGroup={focusedService.display_group}
@@ -342,7 +373,8 @@ export default function ServiceCatalogPage({
                     to: "/apply/$serviceCode/case",
                     params: {
                       serviceCode:
-                        focusedService.display_group ?? focusedService.service_code,
+                        focusedService.display_group ??
+                        focusedService.service_code,
                     },
                   })
               : undefined

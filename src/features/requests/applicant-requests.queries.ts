@@ -68,7 +68,7 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
       .from("requests")
       .select(
         `id, tracking_number, request_type, status, payment_status,
-         fees_due, form_data, created_at, updated_at,
+         fees_due, copies, form_data, created_at, updated_at,
          services_registry(name, display_name, processing_time, departments(name),
            event_date_label, event_place_label, reference_number_label),
          form_template_versions(definition)`,
@@ -111,6 +111,7 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
       status: row.status,
       paymentStatus: row.payment_status,
       feesDue: Number(row.fees_due ?? 0),
+      copies: Number(row.copies ?? 1),
       formData: (row.form_data ?? {}) as Record<string, string | number | boolean | null>,
       serviceName: service?.display_name || service?.name || row.request_type,
       processingTime: service?.processing_time ?? null,

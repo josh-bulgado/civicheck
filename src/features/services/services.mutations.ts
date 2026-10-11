@@ -3,7 +3,11 @@ import { z } from "zod";
 import { finalizeRequestUploadDraft } from "~/features/apply/apply-upload-drafts.server";
 import { requireActiveSession } from "~/server/auth";
 import { insertRequestWithTrackingNumber } from "~/features/requests/tracking-number";
-import { isRequirementApplicable } from "~/features/services/service-utils";
+import {
+  isRequirementApplicable,
+  MAX_COPIES,
+  totalFee,
+} from "~/features/services/service-utils";
 import {
   loadServiceCatalogue,
   resolveServices,
@@ -42,6 +46,8 @@ const submitRequestSchema = z.object({
   templateVersionId: z.string().uuid().nullable(),
   uploadDraftId: z.string().uuid().nullable(),
   answers: answersSchema,
+  // Only honoured for per-copy services; every other service charges once.
+  copies: z.number().int().min(1).max(MAX_COPIES).optional(),
   documents: z
     .array(
       z.object({
@@ -72,7 +78,17 @@ export const submitRequestFn = createServerFn({ method: "POST" })
     if (resolvedServices.length === 0) {
       return { error: true, message: "Unknown service." };
     }
+    // A group code is not a service: with several variants the first one in
+    // code order would be charged, whatever the applicant meant. The wizard
+    // always submits the variant it resolved.
+    if (isGroup && resolvedServices.length > 1) {
+      return { error: true, message: "Select the specific service you are applying for." };
+    }
     const selectedService = resolvedServices[0];
+    // The server owns the quantity: it is ignored unless the service is
+    // charged per copy, and the total is never taken from the client.
+    const copies = selectedService.fee_per_copy ? (data.copies ?? 1) : 1;
+    const feesDue = totalFee(selectedService.fee, copies, selectedService.fee_per_copy);
     const requirementKey = isGroup
       ? resolvedServices[0].display_group!
       : (resolvedServices[0].requirement_group ?? data.serviceCode);
@@ -299,7 +315,8 @@ export const submitRequestFn = createServerFn({ method: "POST" })
       applicant_id: user.id,
       request_type: data.serviceCode,
       form_data: formData,
-      fees_due: Number(selectedService.fee),
+      fees_due: feesDue,
+      copies,
       form_template_version_id: templateVersionId,
     });
     if (created.error) {
@@ -377,7 +394,8 @@ export const submitRequestFn = createServerFn({ method: "POST" })
         serviceName: selectedService.display_name || selectedService.name,
         status: "submitted",
         submittedAt: new Date().toISOString(),
-        feesDue: Number(selectedService.fee),
+        feesDue,
+        copies,
         processingTime: selectedService.processing_time,
         documents: submittedDocuments,
         documentWarning,

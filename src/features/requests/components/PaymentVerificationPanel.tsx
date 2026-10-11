@@ -12,6 +12,7 @@ export function PaymentVerificationPanel({
   requestId,
   status,
   feesDue,
+  copies = 1,
   paymentStatus,
   orNumber,
   onVerified,
@@ -19,6 +20,8 @@ export function PaymentVerificationPanel({
   requestId: string;
   status: string;
   feesDue: number;
+  /** Shown beside the fee so the cashier can see what the total covers. */
+  copies?: number;
   paymentStatus: string;
   orNumber: string | null;
   onVerified: () => void;
@@ -60,6 +63,7 @@ export function PaymentVerificationPanel({
       <h2 className="mb-1 text-lg font-bold text-foreground">Payment</h2>
       <p className="mb-4 text-sm text-muted-foreground">
         Fee due: ₱{feesDue.toFixed(2)}
+        {copies > 1 ? ` · ${copies} copies` : ""}
       </p>
 
       {paymentStatus === "verified" ? (

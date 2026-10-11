@@ -105,6 +105,7 @@ export default function MyRequestDetailPage({
               <div className="mt-4 flex items-center justify-between border-t border-border pt-4 text-sm">
                 <span className="font-medium text-muted-foreground">
                   Fees due
+                  {request.copies > 1 ? ` (${request.copies} copies)` : ""}
                 </span>
                 <span className="font-bold text-primary">
                   {formatFee(request.feesDue)} · pay at the CCRO cashier

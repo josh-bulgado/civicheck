@@ -309,7 +309,7 @@ export function RequestAcknowledgmentPdf({ data, qrDataUrl, generatedAt }: Reque
                   <Text style={styles.factLabel}>Recorded request fee</Text>
                   <View style={styles.factBody}>
                     <Text style={styles.factValue}>{hasFee ? feeFormatter.format(data.feesDue) : "No fee recorded"}</Text>
-                    <Text style={styles.factNote}>{hasFee ? "This copy does not confirm payment." : "Confirm any applicable charges with staff."}</Text>
+                    <Text style={styles.factNote}>{hasFee ? `${(data.copies ?? 1) > 1 ? `Covers ${data.copies} copies. ` : ""}This copy does not confirm payment.` : "Confirm any applicable charges with staff."}</Text>
                   </View>
                 </View>
                 <View style={styles.fact}>
