@@ -1,81 +1,18 @@
 "use client";
 
 import { Sidebar, SidebarContent } from "~/components/ui/sidebar";
-import {
-  Activity,
-  BarChart3,
-  Bell,
-  ClipboardCheck,
-  Gauge,
-  History,
-  LayoutDashboard,
-  ListChecks,
-  Shield,
-  ShieldAlert,
-  UserPlus,
-} from "lucide-react";
 import { NavFooter } from "~/components/sidebar-01/nav-footer";
 import { NavHeader } from "~/components/sidebar-01/nav-header";
 import { NavMain } from "~/components/sidebar-01/nav-main";
 import { usePermissions } from "~/hooks/usePermissions";
 import type { AccountProfile } from "~/features/account/account.types";
-import type { Role } from "~/lib/permissions";
-import type { NavGroup, NavItem } from "./types";
+import { buildNavGroups } from "./nav-config";
 import { getWorkspaceDetails } from "./workspace";
 
-type GroupLayout = { id: string; label?: string; itemIds: string[] };
-
 /**
- * Roles with enough items to deserve labelled sections. Any role not listed
- * here gets a single flat "Navigation" group. To regroup or add a section, edit
- * this table; item ids come from the `navMain` entries built in `AppSidebar`.
+ * What goes in the sidebar, and how it's grouped, lives in `nav-config.ts`.
+ * To add a link or move one between sections, edit that file.
  */
-const ROLE_GROUP_LAYOUTS: Partial<Record<Role, GroupLayout[]>> = {
-  admin: [
-    { id: "overview", itemIds: ["admin-overview"] },
-    {
-      id: "operations",
-      label: "Operations",
-      itemIds: ["request-queue", "notifications"],
-    },
-    {
-      id: "management",
-      label: "Management",
-      itemIds: ["admin-services", "admin-staff"],
-    },
-    {
-      id: "insights",
-      label: "Insights",
-      itemIds: ["admin-reports", "payment-history"],
-    },
-  ],
-  system_admin: [
-    {
-      id: "monitoring",
-      label: "Monitoring",
-      itemIds: ["system-health", "system-security"],
-    },
-    {
-      id: "access-audit",
-      label: "Access & Audit",
-      itemIds: ["system-accounts", "system-audit"],
-    },
-  ],
-};
-
-function groupNavItems(role: Role, items: NavItem[]): NavGroup[] {
-  const layout = ROLE_GROUP_LAYOUTS[role];
-  if (!layout) return [{ id: "navigation", label: "Navigation", items }];
-
-  const itemsById = new Map(items.map((item) => [item.id, item]));
-  return layout
-    .map(({ itemIds, ...group }) => ({
-      ...group,
-      items: itemIds.flatMap((id) => itemsById.get(id) ?? []),
-    }))
-    .filter((group) => group.items.length > 0);
-}
-
 export function AppSidebar({
   user,
   unreadNotifications = 0,
@@ -87,159 +24,7 @@ export function AppSidebar({
   const { can, role } = usePermissions();
   const workspace = getWorkspaceDetails(role);
 
-  const notificationsItem: NavItem = {
-    id: "notifications",
-    title: "Notifications",
-    url: "/notifications",
-    icon: Bell,
-    badge: unreadNotifications,
-  };
-
-  // Build navMain dynamically based on permissions
-  const navMain: NavItem[] = [];
-
-  if (can("health:view")) {
-    navMain.push({
-      id: "system-health",
-      title: "System Health",
-      url: "/system-admin/health",
-      icon: Activity,
-    });
-  }
-
-  if (can("security:view")) {
-    navMain.push({
-      id: "system-security",
-      title: "Security Center",
-      url: "/system-admin/security",
-      icon: ShieldAlert,
-    });
-  }
-
-  if (can("dashboard:admin")) {
-    navMain.push({
-      id: "admin-overview",
-      title: "Overview",
-      url: "/admin",
-      icon: Gauge,
-    });
-    navMain.push({
-      id: "admin-reports",
-      title: "Reports",
-      url: "/admin/reports",
-      icon: BarChart3,
-    });
-  }
-
-  if (can("services:manage")) {
-    navMain.push({
-      id: "admin-services",
-      title: "Services Registry",
-      url: "/admin/services",
-      icon: LayoutDashboard,
-    });
-  }
-
-  if (can("users:invite_staff")) {
-    navMain.push({
-      id: "admin-staff",
-      title: "Staff Management",
-      url: "/admin/staff",
-      icon: UserPlus,
-    });
-  }
-
-  if (can("accounts:view_all")) {
-    navMain.push({
-      id: "system-accounts",
-      title: "Accounts Center",
-      url: "/system-admin/accounts",
-      icon: Shield,
-    });
-  }
-
-  if (can("audit:view")) {
-    navMain.push({
-      id: "system-audit",
-      title: "Audit Center",
-      url: "/system-admin/audit",
-      icon: History,
-    });
-  }
-
-  if (can("dashboard:staff")) {
-    navMain.push({
-      id: "staff-dashboard",
-      title: role === "cashier" ? "Cashier Dashboard" : "Staff Dashboard",
-      url: "/staff-dashboard",
-      icon: LayoutDashboard,
-    });
-  }
-
-  if (can("dashboard:applicant")) {
-    navMain.push({
-      id: "applicant-dashboard",
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: LayoutDashboard,
-    });
-  }
-
-  if (can("services:view")) {
-    navMain.push({
-      id: "services",
-      title:
-        role === "staff" || role === "supervisor"
-          ? "Service Reference"
-          : "Browse Services",
-      url: "/services",
-      icon: ListChecks,
-    });
-  }
-
-  if (can("requests:view_own")) {
-    navMain.push({
-      id: "my-requests",
-      title: "My Requests",
-      url: "/my-requests",
-      icon: ClipboardCheck,
-    });
-    navMain.push(notificationsItem);
-  }
-
-  // Personnel read their own in-system feed; applicants get theirs above.
-  if (!can("requests:view_own") && can("notifications:view_staff")) {
-    navMain.push(notificationsItem);
-  }
-
-  if (can("requests:view_all")) {
-    navMain.push({
-      id: "request-queue",
-      title: "Request Queue",
-      url: "/requests",
-      icon: ListChecks,
-    });
-  }
-
-  if (can("requests:collect_payment")) {
-    navMain.push({
-      id: "cashier-counter",
-      title: "Cashier Counter",
-      url: "/cashier",
-      icon: ClipboardCheck,
-    });
-  }
-
-  if (can("requests:view_payments")) {
-    navMain.push({
-      id: "payment-history",
-      title: "Payment History",
-      url: "/payment-history",
-      icon: History,
-    });
-  }
-
-  const navGroups = groupNavItems(role, navMain);
+  const navGroups = buildNavGroups(role, can, unreadNotifications);
   const searchableItems = navGroups.flatMap((group) => group.items);
 
   return (
