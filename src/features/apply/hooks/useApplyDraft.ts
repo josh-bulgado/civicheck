@@ -1,6 +1,7 @@
 import { useCallback, useSyncExternalStore } from "react";
 import type { SubjectFields } from "~/lib/subject-fields";
 import type { TemplateAnswers } from "~/features/forms/form-template.types";
+import { clampCopies } from "~/features/services/service-utils";
 
 const APPLY_DRAFT_EVENT = "civicheck:apply-draft";
 
@@ -37,6 +38,8 @@ export interface ApplyDraft {
   subjects: SubjectFields[];
   /** Answers keyed by the immutable field keys in the published form template. */
   answers: TemplateAnswers;
+  /** How many copies to issue. Only used when the service is charged per copy. */
+  copies: number;
   contactNumber: string;
   eventDate: string;
   eventPlace: string;
@@ -65,6 +68,7 @@ export const DEFAULT_APPLY_DRAFT: ApplyDraft = {
   answers: {
     purpose: "Local Use (ID, Barangay, etc.)",
   },
+  copies: 1,
   contactNumber: "",
   eventDate: "",
   eventPlace: "",
@@ -106,6 +110,8 @@ function withMigratedAnswers(value: Partial<ApplyDraft>): ApplyDraft {
     ...DEFAULT_APPLY_DRAFT,
     ...value,
     caseSelectorAnswers: value.caseSelectorAnswers ?? {},
+    // Drafts saved before copies existed have no value; storage is untrusted too.
+    copies: clampCopies(value.copies ?? 1),
     answers: {
       event_date: value.eventDate ?? "",
       event_place: value.eventPlace ?? "",

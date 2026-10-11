@@ -385,6 +385,7 @@ export default function RequestDetailPage({
             requestId={request.id}
             status={request.status}
             feesDue={request.feesDue}
+            copies={request.copies}
             paymentStatus={request.paymentStatus}
             orNumber={request.orNumber}
             onVerified={onUpdated}

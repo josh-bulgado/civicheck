@@ -6,8 +6,11 @@ import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { Field, FieldLabel } from "~/components/ui/field";
 import {
+  clampCopies,
   formatFee,
+  formatPesoFee,
   isRequirementApplicable,
+  totalFee,
 } from "~/features/services/service-utils";
 import {
   expandRequirementUploadSlots,
@@ -104,6 +107,14 @@ export function ReviewStep({
   // directly from the review page without making the applicant re-enter data.
   const subjects = reconcileSubjects(draft.subjects, roles);
 
+  // Mirrors the server: quantity only counts for a per-copy service, and the
+  // server recomputes the same total on submit.
+  const feePerCopy = selectedService?.fee_per_copy === true;
+  const copies = feePerCopy ? clampCopies(draft.copies) : 1;
+  const feeDueLabel = selectedService
+    ? formatFee(totalFee(selectedService.fee, copies, feePerCopy))
+    : "—";
+
   const showRoleLabels = subjects.length > 1;
   const sexLabel = (sex: string) =>
     sex === "male" ? "Male" : sex === "female" ? "Female" : "—";
@@ -171,6 +182,7 @@ export function ReviewStep({
           templateVersionId: selectedService.form_template?.versionId ?? null,
           uploadDraftId: draft.uploadDraftId,
           answers: answerBag,
+          copies: feePerCopy ? copies : undefined,
           documents: activeDocuments.map((d) => ({
             requirementId: d.requirementId,
             requirementName: d.requirementName,
@@ -272,10 +284,13 @@ export function ReviewStep({
           {selectedService && selectedService.name !== displayName ? (
             <ReviewRow label="Service family" value={displayName} />
           ) : null}
-          <ReviewRow
-            label="Fee at cashier"
-            value={selectedService ? formatFee(selectedService.fee) : "—"}
-          />
+          {feePerCopy && selectedService ? (
+            <ReviewRow
+              label="Number of copies"
+              value={`${copies} × ${formatPesoFee(selectedService.fee)} per copy`}
+            />
+          ) : null}
+          <ReviewRow label="Fee at cashier" value={feeDueLabel} />
           {visibleCaseSelectorQuestions(definition, answerBag).map(
             (question) => {
               const answer = answerBag[question.key];
@@ -391,12 +406,12 @@ export function ReviewStep({
           <div>
             <p className="text-base font-bold text-foreground">Nothing is paid online</p>
             <p className="text-sm leading-relaxed text-body">
-              Bring {selectedService ? formatFee(selectedService.fee) : "the fee"} in cash to the
+              Bring {selectedService ? feeDueLabel : "the fee"} in cash to the
               CCRO cashier when you visit.
             </p>
           </div>
           <p className="whitespace-nowrap text-2xl font-bold text-foreground">
-            {selectedService ? formatFee(selectedService.fee) : "—"}
+            {feeDueLabel}
           </p>
         </div>
 

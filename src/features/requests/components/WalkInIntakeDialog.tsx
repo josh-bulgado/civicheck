@@ -21,6 +21,7 @@ import {
 } from "~/components/ui/select";
 import { encodeWalkInFn } from "~/features/requests/walk-in-intake.mutations";
 import type { EncodableService } from "~/features/requests/walk-in-intake.queries";
+import { CopiesStepper } from "~/features/services/components/CopiesStepper";
 import { ServiceRequirementsDialog } from "~/features/services/components/ServiceRequirementsDialog";
 import {
   emptySubject,
@@ -42,6 +43,7 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
   const [subjects, setSubjects] = useState<SubjectFields[]>([emptySubject("Subject")]);
   const [purpose, setPurpose] = useState("");
   const [contactNumber, setContactNumber] = useState("");
+  const [copies, setCopies] = useState(1);
   const [encodedRequest, setEncodedRequest] = useState<{
     trackingNumber: string;
   } | null>(null);
@@ -68,6 +70,7 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
     setSubjects([emptySubject("Subject")]);
     setPurpose("");
     setContactNumber("");
+    setCopies(1);
     setEncodedRequest(null);
     setRequirementsOpen(false);
   }
@@ -82,6 +85,7 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
           subjects,
           purpose,
           contactNumber,
+          copies: selectedService?.feePerCopy ? copies : undefined,
         },
       });
 
@@ -135,7 +139,7 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
                         <SelectGroup>
                           {services.map((service) => (
                             <SelectItem key={service.serviceCode} value={service.serviceCode}>
-                              {service.name} — ₱{service.fee.toFixed(2)}
+                              {service.name} — ₱{service.fee.toFixed(2)}{service.feePerCopy ? " per copy" : ""}
                             </SelectItem>
                           ))}
                         </SelectGroup>
@@ -151,6 +155,14 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
                     </Button>
                   </div>
                 </Field>
+
+                {selectedService?.feePerCopy ? (
+                  <CopiesStepper
+                    value={copies}
+                    onChange={setCopies}
+                    unitFee={selectedService.fee}
+                  />
+                ) : null}
 
                 {subjects.map((subject, index) => (
                   <div key={index} className="space-y-3">

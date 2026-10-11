@@ -3,6 +3,7 @@ import { isDepartmentScopedRole } from "~/lib/permissions";
 import { insertRequestWithTrackingNumber } from "~/features/requests/tracking-number";
 import { flattenSubjects, type SubjectFields } from "~/lib/subject-fields";
 import { requireActiveSession } from "~/server/auth";
+import { clampCopies, totalFee } from "~/features/services/service-utils";
 
 export const encodeWalkInFn = createServerFn({ method: "POST" })
   .validator(
@@ -11,6 +12,8 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       subjects: SubjectFields[];
       purpose?: string;
       contactNumber?: string;
+      /** Only honoured for per-copy services; ignored for everything else. */
+      copies?: number;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -29,7 +32,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
 
     const { data: service, error: serviceError } = await supabase
       .from("services_registry")
-      .select("service_code, fee, department_id")
+      .select("service_code, fee, fee_per_copy, department_id")
       .eq("service_code", data.serviceCode)
       .maybeSingle();
 
@@ -42,10 +45,13 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       return { error: true, message: "Pick a service assigned to your department." };
     }
 
+    const copies = service.fee_per_copy ? clampCopies(data.copies ?? 1) : 1;
+
     const created = await insertRequestWithTrackingNumber(supabase, {
       applicant_id: null,
       request_type: service.service_code,
-      fees_due: Number(service.fee ?? 0),
+      fees_due: totalFee(service.fee, copies, service.fee_per_copy),
+      copies,
       form_data: {
         ...flattenSubjects(subjects),
         purpose: data.purpose?.trim() || null,

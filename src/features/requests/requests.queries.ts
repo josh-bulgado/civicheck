@@ -327,7 +327,7 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       .from("requests")
       .select(
         `id, tracking_number, request_type, status, payment_status, or_number,
-         fees_due, form_data, applicant_id, created_at, updated_at,
+         fees_due, copies, form_data, applicant_id, created_at, updated_at,
          services_registry(name, display_name, processing_time, department_id, departments(id, name),
            event_date_label, event_place_label, reference_number_label),
          profiles(first_name, last_name),
@@ -370,6 +370,7 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       paymentStatus: row.payment_status,
       orNumber: row.or_number,
       feesDue: Number(row.fees_due ?? 0),
+      copies: Number(row.copies ?? 1),
       // Narrowed to primitives: TanStack's server-fn return validator rejects
       // `unknown` values as potentially non-serializable.
       formData: (row.form_data ?? {}) as Record<string, string | number | boolean | null>,

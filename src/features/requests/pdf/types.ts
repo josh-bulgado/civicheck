@@ -15,6 +15,8 @@ export interface AcknowledgmentPdfData {
   status: string;
   submittedAt: string;
   feesDue: number;
+  /** Quantity the fee covers; omitted (or 1) for single-copy requests. */
+  copies?: number;
   processingTime: string | null;
   /** Department that handles the service, so the slip can say where to go first. */
   departmentName?: string | null;

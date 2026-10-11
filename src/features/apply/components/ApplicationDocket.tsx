@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { formatFee } from "~/features/services/service-utils";
+import { formatFee, formatPesoFee, totalFee } from "~/features/services/service-utils";
 
 interface ChangeServiceButtonProps {
   serviceName: string;
@@ -82,6 +82,9 @@ interface ApplicationDocketProps {
   serviceName: string;
   serviceFamily?: string;
   fee?: number | string;
+  /** Quantity and whether `fee` is per copy — together they set the total shown. */
+  copies?: number;
+  feePerCopy?: boolean;
   selectionPending: boolean;
   onDiscard: () => void;
 }
@@ -90,9 +93,12 @@ export function ApplicationDocket({
   serviceName,
   serviceFamily,
   fee,
+  copies = 1,
+  feePerCopy = false,
   selectionPending,
   onDiscard,
 }: ApplicationDocketProps) {
+  const showBreakdown = feePerCopy && fee !== undefined && copies > 1;
   return (
     <section
       role="region"
@@ -143,8 +149,13 @@ export function ApplicationDocket({
                 Fee at cashier
               </dt>
               <dd className="mt-0.5 font-bold text-foreground tabular-nums">
-                {formatFee(fee)}
+                {formatFee(totalFee(fee, copies, feePerCopy))}
               </dd>
+              {showBreakdown ? (
+                <dd className="text-xs text-muted-foreground tabular-nums">
+                  {formatPesoFee(fee)} × {copies} copies
+                </dd>
+              ) : null}
             </dl>
           ) : null}
 
