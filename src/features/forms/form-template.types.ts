@@ -379,9 +379,26 @@ export const formTemplateDefinitionSchema = z
         derived.bands.map((band) => ({ value: band.value, label: band.label })),
       );
     }
+    // A case field may also be shown by a case-selector answer. The selector
+    // sits on the case step, so such a condition is only valid there. A field
+    // key always wins over a question key of the same name.
+    const caseQuestionsByKey = new Map(
+      (definition.caseSelector?.questions ?? [])
+        .filter((question) => !keys.has(question.key))
+        .map((question) => [question.key, question] as const),
+    );
+    for (const key of caseQuestionsByKey.keys()) stepsByKey.set(key, "case");
+
     for (const section of definition.sections) {
       for (const field of section.fields) {
-        if (field.visibleWhen && !keys.has(field.visibleWhen.field)) {
+        const caseQuestion = field.visibleWhen
+          ? caseQuestionsByKey.get(field.visibleWhen.field)
+          : undefined;
+        if (
+          field.visibleWhen &&
+          !keys.has(field.visibleWhen.field) &&
+          !caseQuestion
+        ) {
           context.addIssue({
             code: z.ZodIssueCode.custom,
             message: `Visibility condition for "${field.label}" references a missing field`,
@@ -394,6 +411,18 @@ export const formTemplateDefinitionSchema = z
           context.addIssue({
             code: z.ZodIssueCode.custom,
             message: `Visibility condition for "${field.label}" must reference a field on the same step`,
+            path: ["sections"],
+          });
+        } else if (
+          field.visibleWhen &&
+          caseQuestion &&
+          !caseQuestion.options.some(
+            (option) => option.value === field.visibleWhen?.value,
+          )
+        ) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Visibility condition for "${field.label}" uses an invalid answer value`,
             path: ["sections"],
           });
         } else if (field.visibleWhen) {

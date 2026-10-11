@@ -320,7 +320,9 @@ export function CaseStep({
           definition={definition}
           step="case"
           control={form.control}
-          values={watchedValues}
+          // Case-selector answers can show or hide fields, so they take part in
+          // visibility alongside the form's own values.
+          values={{ ...draft.caseSelectorAnswers, ...watchedValues }}
           onDateChange={handleEventDateChange}
           // With the service questions above, head the fields as their own block.
           showSectionTitles={isGroup}
