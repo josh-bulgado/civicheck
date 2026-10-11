@@ -9,99 +9,59 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TrackRouteImport } from './routes/track'
-import { Route as TermsRouteImport } from './routes/terms'
-import { Route as SignupRouteImport } from './routes/signup'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as RequirementsRouteImport } from './routes/requirements'
-import { Route as PrivacyRouteImport } from './routes/privacy'
-import { Route as LogoutRouteImport } from './routes/logout'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
-import { Route as ForbiddenRouteImport } from './routes/forbidden'
-import { Route as AcceptInvitationRouteImport } from './routes/accept-invitation'
-import { Route as AuthedRouteRouteImport } from './routes/_authed/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthedRouteRouteImport } from './routes/_authed/route'
+import { Route as AcceptInvitationRouteImport } from './routes/accept-invitation'
+import { Route as ForbiddenRouteImport } from './routes/forbidden'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as LogoutRouteImport } from './routes/logout'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as RequirementsRouteImport } from './routes/requirements'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as TrackRouteImport } from './routes/track'
+import { Route as AuthedDashboardRouteRouteImport } from './routes/_authed/_dashboard/route'
+import { Route as AuthedOnboardingRouteImport } from './routes/_authed/onboarding'
 import { Route as ApplyIndexRouteImport } from './routes/apply/index'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
-import { Route as AuthedOnboardingRouteImport } from './routes/_authed/onboarding'
-import { Route as AuthedDashboardRouteRouteImport } from './routes/_authed/_dashboard/route'
-import { Route as AuthedDashboardStaffDashboardRouteImport } from './routes/_authed/_dashboard/staff-dashboard'
-import { Route as AuthedDashboardPaymentHistoryRouteImport } from './routes/_authed/_dashboard/payment-history'
-import { Route as AuthedDashboardNotificationsRouteImport } from './routes/_authed/_dashboard/notifications'
-import { Route as AuthedDashboardDashboardRouteImport } from './routes/_authed/_dashboard/dashboard'
 import { Route as AuthedDashboardCashierRouteImport } from './routes/_authed/_dashboard/cashier'
+import { Route as AuthedDashboardDashboardRouteImport } from './routes/_authed/_dashboard/dashboard'
+import { Route as AuthedDashboardNotificationsRouteImport } from './routes/_authed/_dashboard/notifications'
+import { Route as AuthedDashboardPaymentHistoryRouteImport } from './routes/_authed/_dashboard/payment-history'
+import { Route as AuthedDashboardStaffDashboardRouteImport } from './routes/_authed/_dashboard/staff-dashboard'
 import { Route as AuthedApplyServiceCodeRouteRouteImport } from './routes/_authed/apply/$serviceCode/route'
-import { Route as AuthedApplyServiceCodeIndexRouteImport } from './routes/_authed/apply/$serviceCode/index'
-import { Route as AuthedDashboardRequestsIndexRouteImport } from './routes/_authed/_dashboard/requests/index'
-import { Route as AuthedDashboardMyRequestsIndexRouteImport } from './routes/_authed/_dashboard/my-requests/index'
-import { Route as AuthedDashboardAdminIndexRouteImport } from './routes/_authed/_dashboard/admin/index'
-import { Route as AuthedApplyServiceCodeReviewRouteImport } from './routes/_authed/apply/$serviceCode/review'
-import { Route as AuthedApplyServiceCodeDocumentsRouteImport } from './routes/_authed/apply/$serviceCode/documents'
-import { Route as AuthedApplyServiceCodeDetailsRouteImport } from './routes/_authed/apply/$serviceCode/details'
-import { Route as AuthedApplyServiceCodeCaseRouteImport } from './routes/_authed/apply/$serviceCode/case'
-import { Route as AuthedDashboardSystemAdminSecurityRouteImport } from './routes/_authed/_dashboard/system-admin/security'
-import { Route as AuthedDashboardSystemAdminHealthRouteImport } from './routes/_authed/_dashboard/system-admin/health'
-import { Route as AuthedDashboardSystemAdminAuditRouteImport } from './routes/_authed/_dashboard/system-admin/audit'
-import { Route as AuthedDashboardSystemAdminAccountsRouteImport } from './routes/_authed/_dashboard/system-admin/accounts'
-import { Route as AuthedDashboardRequestsRequestIdRouteImport } from './routes/_authed/_dashboard/requests/$requestId'
-import { Route as AuthedDashboardMyRequestsRequestIdRouteImport } from './routes/_authed/_dashboard/my-requests/$requestId'
-import { Route as AuthedDashboardAdminStaffRouteImport } from './routes/_authed/_dashboard/admin/staff'
-import { Route as AuthedDashboardAdminServicesRouteImport } from './routes/_authed/_dashboard/admin/services'
-import { Route as AuthedDashboardAdminReportsRouteImport } from './routes/_authed/_dashboard/admin/reports'
 import { Route as AuthedDashboardserviceServicesRouteImport } from './routes/_authed/_dashboard/(service)/services'
+import { Route as AuthedDashboardAdminIndexRouteImport } from './routes/_authed/_dashboard/admin/index'
+import { Route as AuthedDashboardAdminReportsRouteImport } from './routes/_authed/_dashboard/admin/reports'
+import { Route as AuthedDashboardAdminServicesRouteImport } from './routes/_authed/_dashboard/admin/services'
+import { Route as AuthedDashboardAdminStaffRouteImport } from './routes/_authed/_dashboard/admin/staff'
+import { Route as AuthedDashboardMyRequestsIndexRouteImport } from './routes/_authed/_dashboard/my-requests/index'
+import { Route as AuthedDashboardMyRequestsRequestIdRouteImport } from './routes/_authed/_dashboard/my-requests/$requestId'
+import { Route as AuthedDashboardRequestsIndexRouteImport } from './routes/_authed/_dashboard/requests/index'
+import { Route as AuthedDashboardRequestsRequestIdRouteImport } from './routes/_authed/_dashboard/requests/$requestId'
+import { Route as AuthedDashboardSystemAdminAccountsRouteImport } from './routes/_authed/_dashboard/system-admin/accounts'
+import { Route as AuthedDashboardSystemAdminAuditRouteImport } from './routes/_authed/_dashboard/system-admin/audit'
+import { Route as AuthedDashboardSystemAdminHealthRouteImport } from './routes/_authed/_dashboard/system-admin/health'
+import { Route as AuthedDashboardSystemAdminSecurityRouteImport } from './routes/_authed/_dashboard/system-admin/security'
+import { Route as AuthedApplyServiceCodeIndexRouteImport } from './routes/_authed/apply/$serviceCode/index'
+import { Route as AuthedApplyServiceCodeCaseRouteImport } from './routes/_authed/apply/$serviceCode/case'
+import { Route as AuthedApplyServiceCodeDetailsRouteImport } from './routes/_authed/apply/$serviceCode/details'
+import { Route as AuthedApplyServiceCodeDocumentsRouteImport } from './routes/_authed/apply/$serviceCode/documents'
+import { Route as AuthedApplyServiceCodeReviewRouteImport } from './routes/_authed/apply/$serviceCode/review'
+import { Route as AuthedDashboardAdminServicesBlocksRouteImport } from './routes/_authed/_dashboard/admin/services_.blocks'
 import { Route as AuthedDashboardAdminServicesNewRouteImport } from './routes/_authed/_dashboard/admin/services_.new'
-import { Route as AuthedDashboardAdminServicesGroupsDisplayGroupRouteImport } from './routes/_authed/_dashboard/admin/services_.groups.$displayGroup'
 import { Route as AuthedDashboardAdminServicesServiceCodeEditRouteImport } from './routes/_authed/_dashboard/admin/services_.$serviceCode.edit'
+import { Route as AuthedDashboardAdminServicesGroupsDisplayGroupRouteImport } from './routes/_authed/_dashboard/admin/services_.groups.$displayGroup'
 
-const TrackRoute = TrackRouteImport.update({
-  id: '/track',
-  path: '/track',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TermsRoute = TermsRouteImport.update({
-  id: '/terms',
-  path: '/terms',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SignupRoute = SignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RequirementsRoute = RequirementsRouteImport.update({
-  id: '/requirements',
-  path: '/requirements',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrivacyRoute = PrivacyRouteImport.update({
-  id: '/privacy',
-  path: '/privacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LogoutRoute = LogoutRouteImport.update({
-  id: '/logout',
-  path: '/logout',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
-  id: '/forgot-password',
-  path: '/forgot-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ForbiddenRoute = ForbiddenRouteImport.update({
-  id: '/forbidden',
-  path: '/forbidden',
+const AuthedRouteRoute = AuthedRouteRouteImport.update({
+  id: '/_authed',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AcceptInvitationRoute = AcceptInvitationRouteImport.update({
@@ -109,14 +69,64 @@ const AcceptInvitationRoute = AcceptInvitationRouteImport.update({
   path: '/accept-invitation',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthedRouteRoute = AuthedRouteRouteImport.update({
-  id: '/_authed',
+const ForbiddenRoute = ForbiddenRouteImport.update({
+  id: '/forbidden',
+  path: '/forbidden',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LogoutRoute = LogoutRouteImport.update({
+  id: '/logout',
+  path: '/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RequirementsRoute = RequirementsRouteImport.update({
+  id: '/requirements',
+  path: '/requirements',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrackRoute = TrackRouteImport.update({
+  id: '/track',
+  path: '/track',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthedDashboardRouteRoute = AuthedDashboardRouteRouteImport.update({
+  id: '/_dashboard',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
+const AuthedOnboardingRoute = AuthedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AuthedRouteRoute,
 } as any)
 const ApplyIndexRoute = ApplyIndexRouteImport.update({
   id: '/apply/',
@@ -128,25 +138,15 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthedOnboardingRoute = AuthedOnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
-  getParentRoute: () => AuthedRouteRoute,
+const AuthedDashboardCashierRoute = AuthedDashboardCashierRouteImport.update({
+  id: '/cashier',
+  path: '/cashier',
+  getParentRoute: () => AuthedDashboardRouteRoute,
 } as any)
-const AuthedDashboardRouteRoute = AuthedDashboardRouteRouteImport.update({
-  id: '/_dashboard',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
-const AuthedDashboardStaffDashboardRoute =
-  AuthedDashboardStaffDashboardRouteImport.update({
-    id: '/staff-dashboard',
-    path: '/staff-dashboard',
-    getParentRoute: () => AuthedDashboardRouteRoute,
-  } as any)
-const AuthedDashboardPaymentHistoryRoute =
-  AuthedDashboardPaymentHistoryRouteImport.update({
-    id: '/payment-history',
-    path: '/payment-history',
+const AuthedDashboardDashboardRoute =
+  AuthedDashboardDashboardRouteImport.update({
+    id: '/dashboard',
+    path: '/dashboard',
     getParentRoute: () => AuthedDashboardRouteRoute,
   } as any)
 const AuthedDashboardNotificationsRoute =
@@ -155,39 +155,28 @@ const AuthedDashboardNotificationsRoute =
     path: '/notifications',
     getParentRoute: () => AuthedDashboardRouteRoute,
   } as any)
-const AuthedDashboardDashboardRoute =
-  AuthedDashboardDashboardRouteImport.update({
-    id: '/dashboard',
-    path: '/dashboard',
+const AuthedDashboardPaymentHistoryRoute =
+  AuthedDashboardPaymentHistoryRouteImport.update({
+    id: '/payment-history',
+    path: '/payment-history',
     getParentRoute: () => AuthedDashboardRouteRoute,
   } as any)
-const AuthedDashboardCashierRoute = AuthedDashboardCashierRouteImport.update({
-  id: '/cashier',
-  path: '/cashier',
-  getParentRoute: () => AuthedDashboardRouteRoute,
-} as any)
+const AuthedDashboardStaffDashboardRoute =
+  AuthedDashboardStaffDashboardRouteImport.update({
+    id: '/staff-dashboard',
+    path: '/staff-dashboard',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
 const AuthedApplyServiceCodeRouteRoute =
   AuthedApplyServiceCodeRouteRouteImport.update({
     id: '/apply/$serviceCode',
     path: '/apply/$serviceCode',
     getParentRoute: () => AuthedRouteRoute,
   } as any)
-const AuthedApplyServiceCodeIndexRoute =
-  AuthedApplyServiceCodeIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AuthedApplyServiceCodeRouteRoute,
-  } as any)
-const AuthedDashboardRequestsIndexRoute =
-  AuthedDashboardRequestsIndexRouteImport.update({
-    id: '/requests/',
-    path: '/requests/',
-    getParentRoute: () => AuthedDashboardRouteRoute,
-  } as any)
-const AuthedDashboardMyRequestsIndexRoute =
-  AuthedDashboardMyRequestsIndexRouteImport.update({
-    id: '/my-requests/',
-    path: '/my-requests/',
+const AuthedDashboardserviceServicesRoute =
+  AuthedDashboardserviceServicesRouteImport.update({
+    id: '/(service)/services',
+    path: '/services',
     getParentRoute: () => AuthedDashboardRouteRoute,
   } as any)
 const AuthedDashboardAdminIndexRoute =
@@ -196,70 +185,10 @@ const AuthedDashboardAdminIndexRoute =
     path: '/admin/',
     getParentRoute: () => AuthedDashboardRouteRoute,
   } as any)
-const AuthedApplyServiceCodeReviewRoute =
-  AuthedApplyServiceCodeReviewRouteImport.update({
-    id: '/review',
-    path: '/review',
-    getParentRoute: () => AuthedApplyServiceCodeRouteRoute,
-  } as any)
-const AuthedApplyServiceCodeDocumentsRoute =
-  AuthedApplyServiceCodeDocumentsRouteImport.update({
-    id: '/documents',
-    path: '/documents',
-    getParentRoute: () => AuthedApplyServiceCodeRouteRoute,
-  } as any)
-const AuthedApplyServiceCodeDetailsRoute =
-  AuthedApplyServiceCodeDetailsRouteImport.update({
-    id: '/details',
-    path: '/details',
-    getParentRoute: () => AuthedApplyServiceCodeRouteRoute,
-  } as any)
-const AuthedApplyServiceCodeCaseRoute =
-  AuthedApplyServiceCodeCaseRouteImport.update({
-    id: '/case',
-    path: '/case',
-    getParentRoute: () => AuthedApplyServiceCodeRouteRoute,
-  } as any)
-const AuthedDashboardSystemAdminSecurityRoute =
-  AuthedDashboardSystemAdminSecurityRouteImport.update({
-    id: '/system-admin/security',
-    path: '/system-admin/security',
-    getParentRoute: () => AuthedDashboardRouteRoute,
-  } as any)
-const AuthedDashboardSystemAdminHealthRoute =
-  AuthedDashboardSystemAdminHealthRouteImport.update({
-    id: '/system-admin/health',
-    path: '/system-admin/health',
-    getParentRoute: () => AuthedDashboardRouteRoute,
-  } as any)
-const AuthedDashboardSystemAdminAuditRoute =
-  AuthedDashboardSystemAdminAuditRouteImport.update({
-    id: '/system-admin/audit',
-    path: '/system-admin/audit',
-    getParentRoute: () => AuthedDashboardRouteRoute,
-  } as any)
-const AuthedDashboardSystemAdminAccountsRoute =
-  AuthedDashboardSystemAdminAccountsRouteImport.update({
-    id: '/system-admin/accounts',
-    path: '/system-admin/accounts',
-    getParentRoute: () => AuthedDashboardRouteRoute,
-  } as any)
-const AuthedDashboardRequestsRequestIdRoute =
-  AuthedDashboardRequestsRequestIdRouteImport.update({
-    id: '/requests/$requestId',
-    path: '/requests/$requestId',
-    getParentRoute: () => AuthedDashboardRouteRoute,
-  } as any)
-const AuthedDashboardMyRequestsRequestIdRoute =
-  AuthedDashboardMyRequestsRequestIdRouteImport.update({
-    id: '/my-requests/$requestId',
-    path: '/my-requests/$requestId',
-    getParentRoute: () => AuthedDashboardRouteRoute,
-  } as any)
-const AuthedDashboardAdminStaffRoute =
-  AuthedDashboardAdminStaffRouteImport.update({
-    id: '/admin/staff',
-    path: '/admin/staff',
+const AuthedDashboardAdminReportsRoute =
+  AuthedDashboardAdminReportsRouteImport.update({
+    id: '/admin/reports',
+    path: '/admin/reports',
     getParentRoute: () => AuthedDashboardRouteRoute,
   } as any)
 const AuthedDashboardAdminServicesRoute =
@@ -268,16 +197,94 @@ const AuthedDashboardAdminServicesRoute =
     path: '/admin/services',
     getParentRoute: () => AuthedDashboardRouteRoute,
   } as any)
-const AuthedDashboardAdminReportsRoute =
-  AuthedDashboardAdminReportsRouteImport.update({
-    id: '/admin/reports',
-    path: '/admin/reports',
+const AuthedDashboardAdminStaffRoute =
+  AuthedDashboardAdminStaffRouteImport.update({
+    id: '/admin/staff',
+    path: '/admin/staff',
     getParentRoute: () => AuthedDashboardRouteRoute,
   } as any)
-const AuthedDashboardserviceServicesRoute =
-  AuthedDashboardserviceServicesRouteImport.update({
-    id: '/(service)/services',
-    path: '/services',
+const AuthedDashboardMyRequestsIndexRoute =
+  AuthedDashboardMyRequestsIndexRouteImport.update({
+    id: '/my-requests/',
+    path: '/my-requests/',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedDashboardMyRequestsRequestIdRoute =
+  AuthedDashboardMyRequestsRequestIdRouteImport.update({
+    id: '/my-requests/$requestId',
+    path: '/my-requests/$requestId',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedDashboardRequestsIndexRoute =
+  AuthedDashboardRequestsIndexRouteImport.update({
+    id: '/requests/',
+    path: '/requests/',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedDashboardRequestsRequestIdRoute =
+  AuthedDashboardRequestsRequestIdRouteImport.update({
+    id: '/requests/$requestId',
+    path: '/requests/$requestId',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedDashboardSystemAdminAccountsRoute =
+  AuthedDashboardSystemAdminAccountsRouteImport.update({
+    id: '/system-admin/accounts',
+    path: '/system-admin/accounts',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedDashboardSystemAdminAuditRoute =
+  AuthedDashboardSystemAdminAuditRouteImport.update({
+    id: '/system-admin/audit',
+    path: '/system-admin/audit',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedDashboardSystemAdminHealthRoute =
+  AuthedDashboardSystemAdminHealthRouteImport.update({
+    id: '/system-admin/health',
+    path: '/system-admin/health',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedDashboardSystemAdminSecurityRoute =
+  AuthedDashboardSystemAdminSecurityRouteImport.update({
+    id: '/system-admin/security',
+    path: '/system-admin/security',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedApplyServiceCodeIndexRoute =
+  AuthedApplyServiceCodeIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthedApplyServiceCodeRouteRoute,
+  } as any)
+const AuthedApplyServiceCodeCaseRoute =
+  AuthedApplyServiceCodeCaseRouteImport.update({
+    id: '/case',
+    path: '/case',
+    getParentRoute: () => AuthedApplyServiceCodeRouteRoute,
+  } as any)
+const AuthedApplyServiceCodeDetailsRoute =
+  AuthedApplyServiceCodeDetailsRouteImport.update({
+    id: '/details',
+    path: '/details',
+    getParentRoute: () => AuthedApplyServiceCodeRouteRoute,
+  } as any)
+const AuthedApplyServiceCodeDocumentsRoute =
+  AuthedApplyServiceCodeDocumentsRouteImport.update({
+    id: '/documents',
+    path: '/documents',
+    getParentRoute: () => AuthedApplyServiceCodeRouteRoute,
+  } as any)
+const AuthedApplyServiceCodeReviewRoute =
+  AuthedApplyServiceCodeReviewRouteImport.update({
+    id: '/review',
+    path: '/review',
+    getParentRoute: () => AuthedApplyServiceCodeRouteRoute,
+  } as any)
+const AuthedDashboardAdminServicesBlocksRoute =
+  AuthedDashboardAdminServicesBlocksRouteImport.update({
+    id: '/admin/services_/blocks',
+    path: '/admin/services/blocks',
     getParentRoute: () => AuthedDashboardRouteRoute,
   } as any)
 const AuthedDashboardAdminServicesNewRoute =
@@ -286,16 +293,16 @@ const AuthedDashboardAdminServicesNewRoute =
     path: '/admin/services/new',
     getParentRoute: () => AuthedDashboardRouteRoute,
   } as any)
-const AuthedDashboardAdminServicesGroupsDisplayGroupRoute =
-  AuthedDashboardAdminServicesGroupsDisplayGroupRouteImport.update({
-    id: '/admin/services_/groups/$displayGroup',
-    path: '/admin/services/groups/$displayGroup',
-    getParentRoute: () => AuthedDashboardRouteRoute,
-  } as any)
 const AuthedDashboardAdminServicesServiceCodeEditRoute =
   AuthedDashboardAdminServicesServiceCodeEditRouteImport.update({
     id: '/admin/services_/$serviceCode/edit',
     path: '/admin/services/$serviceCode/edit',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
+const AuthedDashboardAdminServicesGroupsDisplayGroupRoute =
+  AuthedDashboardAdminServicesGroupsDisplayGroupRouteImport.update({
+    id: '/admin/services_/groups/$displayGroup',
+    path: '/admin/services/groups/$displayGroup',
     getParentRoute: () => AuthedDashboardRouteRoute,
   } as any)
 
@@ -339,6 +346,7 @@ export interface FileRoutesByFullPath {
   '/my-requests/': typeof AuthedDashboardMyRequestsIndexRoute
   '/requests/': typeof AuthedDashboardRequestsIndexRoute
   '/apply/$serviceCode/': typeof AuthedApplyServiceCodeIndexRoute
+  '/admin/services/blocks': typeof AuthedDashboardAdminServicesBlocksRoute
   '/admin/services/new': typeof AuthedDashboardAdminServicesNewRoute
   '/admin/services/$serviceCode/edit': typeof AuthedDashboardAdminServicesServiceCodeEditRoute
   '/admin/services/groups/$displayGroup': typeof AuthedDashboardAdminServicesGroupsDisplayGroupRoute
@@ -382,6 +390,7 @@ export interface FileRoutesByTo {
   '/my-requests': typeof AuthedDashboardMyRequestsIndexRoute
   '/requests': typeof AuthedDashboardRequestsIndexRoute
   '/apply/$serviceCode': typeof AuthedApplyServiceCodeIndexRoute
+  '/admin/services/blocks': typeof AuthedDashboardAdminServicesBlocksRoute
   '/admin/services/new': typeof AuthedDashboardAdminServicesNewRoute
   '/admin/services/$serviceCode/edit': typeof AuthedDashboardAdminServicesServiceCodeEditRoute
   '/admin/services/groups/$displayGroup': typeof AuthedDashboardAdminServicesGroupsDisplayGroupRoute
@@ -429,6 +438,7 @@ export interface FileRoutesById {
   '/_authed/_dashboard/my-requests/': typeof AuthedDashboardMyRequestsIndexRoute
   '/_authed/_dashboard/requests/': typeof AuthedDashboardRequestsIndexRoute
   '/_authed/apply/$serviceCode/': typeof AuthedApplyServiceCodeIndexRoute
+  '/_authed/_dashboard/admin/services_/blocks': typeof AuthedDashboardAdminServicesBlocksRoute
   '/_authed/_dashboard/admin/services_/new': typeof AuthedDashboardAdminServicesNewRoute
   '/_authed/_dashboard/admin/services_/$serviceCode/edit': typeof AuthedDashboardAdminServicesServiceCodeEditRoute
   '/_authed/_dashboard/admin/services_/groups/$displayGroup': typeof AuthedDashboardAdminServicesGroupsDisplayGroupRoute
@@ -475,6 +485,7 @@ export interface FileRouteTypes {
     | '/my-requests/'
     | '/requests/'
     | '/apply/$serviceCode/'
+    | '/admin/services/blocks'
     | '/admin/services/new'
     | '/admin/services/$serviceCode/edit'
     | '/admin/services/groups/$displayGroup'
@@ -518,6 +529,7 @@ export interface FileRouteTypes {
     | '/my-requests'
     | '/requests'
     | '/apply/$serviceCode'
+    | '/admin/services/blocks'
     | '/admin/services/new'
     | '/admin/services/$serviceCode/edit'
     | '/admin/services/groups/$displayGroup'
@@ -564,6 +576,7 @@ export interface FileRouteTypes {
     | '/_authed/_dashboard/my-requests/'
     | '/_authed/_dashboard/requests/'
     | '/_authed/apply/$serviceCode/'
+    | '/_authed/_dashboard/admin/services_/blocks'
     | '/_authed/_dashboard/admin/services_/new'
     | '/_authed/_dashboard/admin/services_/$serviceCode/edit'
     | '/_authed/_dashboard/admin/services_/groups/$displayGroup'
@@ -589,81 +602,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/track': {
-      id: '/track'
-      path: '/track'
-      fullPath: '/track'
-      preLoaderRoute: typeof TrackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/terms': {
-      id: '/terms'
-      path: '/terms'
-      fullPath: '/terms'
-      preLoaderRoute: typeof TermsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/signup': {
-      id: '/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof SignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/requirements': {
-      id: '/requirements'
-      path: '/requirements'
-      fullPath: '/requirements'
-      preLoaderRoute: typeof RequirementsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/privacy': {
-      id: '/privacy'
-      path: '/privacy'
-      fullPath: '/privacy'
-      preLoaderRoute: typeof PrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/logout': {
-      id: '/logout'
-      path: '/logout'
-      fullPath: '/logout'
-      preLoaderRoute: typeof LogoutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/forgot-password': {
-      id: '/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/forgot-password'
-      preLoaderRoute: typeof ForgotPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/forbidden': {
-      id: '/forbidden'
-      path: '/forbidden'
-      fullPath: '/forbidden'
-      preLoaderRoute: typeof ForbiddenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/accept-invitation': {
-      id: '/accept-invitation'
-      path: '/accept-invitation'
-      fullPath: '/accept-invitation'
-      preLoaderRoute: typeof AcceptInvitationRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed': {
@@ -673,12 +616,96 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/accept-invitation': {
+      id: '/accept-invitation'
+      path: '/accept-invitation'
+      fullPath: '/accept-invitation'
+      preLoaderRoute: typeof AcceptInvitationRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/forbidden': {
+      id: '/forbidden'
+      path: '/forbidden'
+      fullPath: '/forbidden'
+      preLoaderRoute: typeof ForbiddenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/logout': {
+      id: '/logout'
+      path: '/logout'
+      fullPath: '/logout'
+      preLoaderRoute: typeof LogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/requirements': {
+      id: '/requirements'
+      path: '/requirements'
+      fullPath: '/requirements'
+      preLoaderRoute: typeof RequirementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/track': {
+      id: '/track'
+      path: '/track'
+      fullPath: '/track'
+      preLoaderRoute: typeof TrackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authed/_dashboard': {
+      id: '/_authed/_dashboard'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthedDashboardRouteRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/onboarding': {
+      id: '/_authed/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthedOnboardingRouteImport
+      parentRoute: typeof AuthedRouteRoute
     }
     '/apply/': {
       id: '/apply/'
@@ -694,39 +721,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authed/onboarding': {
-      id: '/_authed/onboarding'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof AuthedOnboardingRouteImport
-      parentRoute: typeof AuthedRouteRoute
-    }
-    '/_authed/_dashboard': {
-      id: '/_authed/_dashboard'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AuthedDashboardRouteRouteImport
-      parentRoute: typeof AuthedRouteRoute
-    }
-    '/_authed/_dashboard/staff-dashboard': {
-      id: '/_authed/_dashboard/staff-dashboard'
-      path: '/staff-dashboard'
-      fullPath: '/staff-dashboard'
-      preLoaderRoute: typeof AuthedDashboardStaffDashboardRouteImport
-      parentRoute: typeof AuthedDashboardRouteRoute
-    }
-    '/_authed/_dashboard/payment-history': {
-      id: '/_authed/_dashboard/payment-history'
-      path: '/payment-history'
-      fullPath: '/payment-history'
-      preLoaderRoute: typeof AuthedDashboardPaymentHistoryRouteImport
-      parentRoute: typeof AuthedDashboardRouteRoute
-    }
-    '/_authed/_dashboard/notifications': {
-      id: '/_authed/_dashboard/notifications'
-      path: '/notifications'
-      fullPath: '/notifications'
-      preLoaderRoute: typeof AuthedDashboardNotificationsRouteImport
+    '/_authed/_dashboard/cashier': {
+      id: '/_authed/_dashboard/cashier'
+      path: '/cashier'
+      fullPath: '/cashier'
+      preLoaderRoute: typeof AuthedDashboardCashierRouteImport
       parentRoute: typeof AuthedDashboardRouteRoute
     }
     '/_authed/_dashboard/dashboard': {
@@ -736,11 +735,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedDashboardDashboardRouteImport
       parentRoute: typeof AuthedDashboardRouteRoute
     }
-    '/_authed/_dashboard/cashier': {
-      id: '/_authed/_dashboard/cashier'
-      path: '/cashier'
-      fullPath: '/cashier'
-      preLoaderRoute: typeof AuthedDashboardCashierRouteImport
+    '/_authed/_dashboard/notifications': {
+      id: '/_authed/_dashboard/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof AuthedDashboardNotificationsRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
+    }
+    '/_authed/_dashboard/payment-history': {
+      id: '/_authed/_dashboard/payment-history'
+      path: '/payment-history'
+      fullPath: '/payment-history'
+      preLoaderRoute: typeof AuthedDashboardPaymentHistoryRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
+    }
+    '/_authed/_dashboard/staff-dashboard': {
+      id: '/_authed/_dashboard/staff-dashboard'
+      path: '/staff-dashboard'
+      fullPath: '/staff-dashboard'
+      preLoaderRoute: typeof AuthedDashboardStaffDashboardRouteImport
       parentRoute: typeof AuthedDashboardRouteRoute
     }
     '/_authed/apply/$serviceCode': {
@@ -750,25 +763,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedApplyServiceCodeRouteRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
-    '/_authed/apply/$serviceCode/': {
-      id: '/_authed/apply/$serviceCode/'
-      path: '/'
-      fullPath: '/apply/$serviceCode/'
-      preLoaderRoute: typeof AuthedApplyServiceCodeIndexRouteImport
-      parentRoute: typeof AuthedApplyServiceCodeRouteRoute
-    }
-    '/_authed/_dashboard/requests/': {
-      id: '/_authed/_dashboard/requests/'
-      path: '/requests'
-      fullPath: '/requests/'
-      preLoaderRoute: typeof AuthedDashboardRequestsIndexRouteImport
-      parentRoute: typeof AuthedDashboardRouteRoute
-    }
-    '/_authed/_dashboard/my-requests/': {
-      id: '/_authed/_dashboard/my-requests/'
-      path: '/my-requests'
-      fullPath: '/my-requests/'
-      preLoaderRoute: typeof AuthedDashboardMyRequestsIndexRouteImport
+    '/_authed/_dashboard/(service)/services': {
+      id: '/_authed/_dashboard/(service)/services'
+      path: '/services'
+      fullPath: '/services'
+      preLoaderRoute: typeof AuthedDashboardserviceServicesRouteImport
       parentRoute: typeof AuthedDashboardRouteRoute
     }
     '/_authed/_dashboard/admin/': {
@@ -778,81 +777,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedDashboardAdminIndexRouteImport
       parentRoute: typeof AuthedDashboardRouteRoute
     }
-    '/_authed/apply/$serviceCode/review': {
-      id: '/_authed/apply/$serviceCode/review'
-      path: '/review'
-      fullPath: '/apply/$serviceCode/review'
-      preLoaderRoute: typeof AuthedApplyServiceCodeReviewRouteImport
-      parentRoute: typeof AuthedApplyServiceCodeRouteRoute
-    }
-    '/_authed/apply/$serviceCode/documents': {
-      id: '/_authed/apply/$serviceCode/documents'
-      path: '/documents'
-      fullPath: '/apply/$serviceCode/documents'
-      preLoaderRoute: typeof AuthedApplyServiceCodeDocumentsRouteImport
-      parentRoute: typeof AuthedApplyServiceCodeRouteRoute
-    }
-    '/_authed/apply/$serviceCode/details': {
-      id: '/_authed/apply/$serviceCode/details'
-      path: '/details'
-      fullPath: '/apply/$serviceCode/details'
-      preLoaderRoute: typeof AuthedApplyServiceCodeDetailsRouteImport
-      parentRoute: typeof AuthedApplyServiceCodeRouteRoute
-    }
-    '/_authed/apply/$serviceCode/case': {
-      id: '/_authed/apply/$serviceCode/case'
-      path: '/case'
-      fullPath: '/apply/$serviceCode/case'
-      preLoaderRoute: typeof AuthedApplyServiceCodeCaseRouteImport
-      parentRoute: typeof AuthedApplyServiceCodeRouteRoute
-    }
-    '/_authed/_dashboard/system-admin/security': {
-      id: '/_authed/_dashboard/system-admin/security'
-      path: '/system-admin/security'
-      fullPath: '/system-admin/security'
-      preLoaderRoute: typeof AuthedDashboardSystemAdminSecurityRouteImport
-      parentRoute: typeof AuthedDashboardRouteRoute
-    }
-    '/_authed/_dashboard/system-admin/health': {
-      id: '/_authed/_dashboard/system-admin/health'
-      path: '/system-admin/health'
-      fullPath: '/system-admin/health'
-      preLoaderRoute: typeof AuthedDashboardSystemAdminHealthRouteImport
-      parentRoute: typeof AuthedDashboardRouteRoute
-    }
-    '/_authed/_dashboard/system-admin/audit': {
-      id: '/_authed/_dashboard/system-admin/audit'
-      path: '/system-admin/audit'
-      fullPath: '/system-admin/audit'
-      preLoaderRoute: typeof AuthedDashboardSystemAdminAuditRouteImport
-      parentRoute: typeof AuthedDashboardRouteRoute
-    }
-    '/_authed/_dashboard/system-admin/accounts': {
-      id: '/_authed/_dashboard/system-admin/accounts'
-      path: '/system-admin/accounts'
-      fullPath: '/system-admin/accounts'
-      preLoaderRoute: typeof AuthedDashboardSystemAdminAccountsRouteImport
-      parentRoute: typeof AuthedDashboardRouteRoute
-    }
-    '/_authed/_dashboard/requests/$requestId': {
-      id: '/_authed/_dashboard/requests/$requestId'
-      path: '/requests/$requestId'
-      fullPath: '/requests/$requestId'
-      preLoaderRoute: typeof AuthedDashboardRequestsRequestIdRouteImport
-      parentRoute: typeof AuthedDashboardRouteRoute
-    }
-    '/_authed/_dashboard/my-requests/$requestId': {
-      id: '/_authed/_dashboard/my-requests/$requestId'
-      path: '/my-requests/$requestId'
-      fullPath: '/my-requests/$requestId'
-      preLoaderRoute: typeof AuthedDashboardMyRequestsRequestIdRouteImport
-      parentRoute: typeof AuthedDashboardRouteRoute
-    }
-    '/_authed/_dashboard/admin/staff': {
-      id: '/_authed/_dashboard/admin/staff'
-      path: '/admin/staff'
-      fullPath: '/admin/staff'
-      preLoaderRoute: typeof AuthedDashboardAdminStaffRouteImport
+    '/_authed/_dashboard/admin/reports': {
+      id: '/_authed/_dashboard/admin/reports'
+      path: '/admin/reports'
+      fullPath: '/admin/reports'
+      preLoaderRoute: typeof AuthedDashboardAdminReportsRouteImport
       parentRoute: typeof AuthedDashboardRouteRoute
     }
     '/_authed/_dashboard/admin/services': {
@@ -862,18 +791,109 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedDashboardAdminServicesRouteImport
       parentRoute: typeof AuthedDashboardRouteRoute
     }
-    '/_authed/_dashboard/admin/reports': {
-      id: '/_authed/_dashboard/admin/reports'
-      path: '/admin/reports'
-      fullPath: '/admin/reports'
-      preLoaderRoute: typeof AuthedDashboardAdminReportsRouteImport
+    '/_authed/_dashboard/admin/staff': {
+      id: '/_authed/_dashboard/admin/staff'
+      path: '/admin/staff'
+      fullPath: '/admin/staff'
+      preLoaderRoute: typeof AuthedDashboardAdminStaffRouteImport
       parentRoute: typeof AuthedDashboardRouteRoute
     }
-    '/_authed/_dashboard/(service)/services': {
-      id: '/_authed/_dashboard/(service)/services'
-      path: '/services'
-      fullPath: '/services'
-      preLoaderRoute: typeof AuthedDashboardserviceServicesRouteImport
+    '/_authed/_dashboard/my-requests/': {
+      id: '/_authed/_dashboard/my-requests/'
+      path: '/my-requests'
+      fullPath: '/my-requests/'
+      preLoaderRoute: typeof AuthedDashboardMyRequestsIndexRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
+    }
+    '/_authed/_dashboard/my-requests/$requestId': {
+      id: '/_authed/_dashboard/my-requests/$requestId'
+      path: '/my-requests/$requestId'
+      fullPath: '/my-requests/$requestId'
+      preLoaderRoute: typeof AuthedDashboardMyRequestsRequestIdRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
+    }
+    '/_authed/_dashboard/requests/': {
+      id: '/_authed/_dashboard/requests/'
+      path: '/requests'
+      fullPath: '/requests/'
+      preLoaderRoute: typeof AuthedDashboardRequestsIndexRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
+    }
+    '/_authed/_dashboard/requests/$requestId': {
+      id: '/_authed/_dashboard/requests/$requestId'
+      path: '/requests/$requestId'
+      fullPath: '/requests/$requestId'
+      preLoaderRoute: typeof AuthedDashboardRequestsRequestIdRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
+    }
+    '/_authed/_dashboard/system-admin/accounts': {
+      id: '/_authed/_dashboard/system-admin/accounts'
+      path: '/system-admin/accounts'
+      fullPath: '/system-admin/accounts'
+      preLoaderRoute: typeof AuthedDashboardSystemAdminAccountsRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
+    }
+    '/_authed/_dashboard/system-admin/audit': {
+      id: '/_authed/_dashboard/system-admin/audit'
+      path: '/system-admin/audit'
+      fullPath: '/system-admin/audit'
+      preLoaderRoute: typeof AuthedDashboardSystemAdminAuditRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
+    }
+    '/_authed/_dashboard/system-admin/health': {
+      id: '/_authed/_dashboard/system-admin/health'
+      path: '/system-admin/health'
+      fullPath: '/system-admin/health'
+      preLoaderRoute: typeof AuthedDashboardSystemAdminHealthRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
+    }
+    '/_authed/_dashboard/system-admin/security': {
+      id: '/_authed/_dashboard/system-admin/security'
+      path: '/system-admin/security'
+      fullPath: '/system-admin/security'
+      preLoaderRoute: typeof AuthedDashboardSystemAdminSecurityRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
+    }
+    '/_authed/apply/$serviceCode/': {
+      id: '/_authed/apply/$serviceCode/'
+      path: '/'
+      fullPath: '/apply/$serviceCode/'
+      preLoaderRoute: typeof AuthedApplyServiceCodeIndexRouteImport
+      parentRoute: typeof AuthedApplyServiceCodeRouteRoute
+    }
+    '/_authed/apply/$serviceCode/case': {
+      id: '/_authed/apply/$serviceCode/case'
+      path: '/case'
+      fullPath: '/apply/$serviceCode/case'
+      preLoaderRoute: typeof AuthedApplyServiceCodeCaseRouteImport
+      parentRoute: typeof AuthedApplyServiceCodeRouteRoute
+    }
+    '/_authed/apply/$serviceCode/details': {
+      id: '/_authed/apply/$serviceCode/details'
+      path: '/details'
+      fullPath: '/apply/$serviceCode/details'
+      preLoaderRoute: typeof AuthedApplyServiceCodeDetailsRouteImport
+      parentRoute: typeof AuthedApplyServiceCodeRouteRoute
+    }
+    '/_authed/apply/$serviceCode/documents': {
+      id: '/_authed/apply/$serviceCode/documents'
+      path: '/documents'
+      fullPath: '/apply/$serviceCode/documents'
+      preLoaderRoute: typeof AuthedApplyServiceCodeDocumentsRouteImport
+      parentRoute: typeof AuthedApplyServiceCodeRouteRoute
+    }
+    '/_authed/apply/$serviceCode/review': {
+      id: '/_authed/apply/$serviceCode/review'
+      path: '/review'
+      fullPath: '/apply/$serviceCode/review'
+      preLoaderRoute: typeof AuthedApplyServiceCodeReviewRouteImport
+      parentRoute: typeof AuthedApplyServiceCodeRouteRoute
+    }
+    '/_authed/_dashboard/admin/services_/blocks': {
+      id: '/_authed/_dashboard/admin/services_/blocks'
+      path: '/admin/services/blocks'
+      fullPath: '/admin/services/blocks'
+      preLoaderRoute: typeof AuthedDashboardAdminServicesBlocksRouteImport
       parentRoute: typeof AuthedDashboardRouteRoute
     }
     '/_authed/_dashboard/admin/services_/new': {
@@ -883,18 +903,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedDashboardAdminServicesNewRouteImport
       parentRoute: typeof AuthedDashboardRouteRoute
     }
-    '/_authed/_dashboard/admin/services_/groups/$displayGroup': {
-      id: '/_authed/_dashboard/admin/services_/groups/$displayGroup'
-      path: '/admin/services/groups/$displayGroup'
-      fullPath: '/admin/services/groups/$displayGroup'
-      preLoaderRoute: typeof AuthedDashboardAdminServicesGroupsDisplayGroupRouteImport
-      parentRoute: typeof AuthedDashboardRouteRoute
-    }
     '/_authed/_dashboard/admin/services_/$serviceCode/edit': {
       id: '/_authed/_dashboard/admin/services_/$serviceCode/edit'
       path: '/admin/services/$serviceCode/edit'
       fullPath: '/admin/services/$serviceCode/edit'
       preLoaderRoute: typeof AuthedDashboardAdminServicesServiceCodeEditRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
+    }
+    '/_authed/_dashboard/admin/services_/groups/$displayGroup': {
+      id: '/_authed/_dashboard/admin/services_/groups/$displayGroup'
+      path: '/admin/services/groups/$displayGroup'
+      fullPath: '/admin/services/groups/$displayGroup'
+      preLoaderRoute: typeof AuthedDashboardAdminServicesGroupsDisplayGroupRouteImport
       parentRoute: typeof AuthedDashboardRouteRoute
     }
   }
@@ -919,6 +939,7 @@ interface AuthedDashboardRouteRouteChildren {
   AuthedDashboardAdminIndexRoute: typeof AuthedDashboardAdminIndexRoute
   AuthedDashboardMyRequestsIndexRoute: typeof AuthedDashboardMyRequestsIndexRoute
   AuthedDashboardRequestsIndexRoute: typeof AuthedDashboardRequestsIndexRoute
+  AuthedDashboardAdminServicesBlocksRoute: typeof AuthedDashboardAdminServicesBlocksRoute
   AuthedDashboardAdminServicesNewRoute: typeof AuthedDashboardAdminServicesNewRoute
   AuthedDashboardAdminServicesServiceCodeEditRoute: typeof AuthedDashboardAdminServicesServiceCodeEditRoute
   AuthedDashboardAdminServicesGroupsDisplayGroupRoute: typeof AuthedDashboardAdminServicesGroupsDisplayGroupRoute
@@ -946,6 +967,8 @@ const AuthedDashboardRouteRouteChildren: AuthedDashboardRouteRouteChildren = {
   AuthedDashboardAdminIndexRoute: AuthedDashboardAdminIndexRoute,
   AuthedDashboardMyRequestsIndexRoute: AuthedDashboardMyRequestsIndexRoute,
   AuthedDashboardRequestsIndexRoute: AuthedDashboardRequestsIndexRoute,
+  AuthedDashboardAdminServicesBlocksRoute:
+    AuthedDashboardAdminServicesBlocksRoute,
   AuthedDashboardAdminServicesNewRoute: AuthedDashboardAdminServicesNewRoute,
   AuthedDashboardAdminServicesServiceCodeEditRoute:
     AuthedDashboardAdminServicesServiceCodeEditRoute,

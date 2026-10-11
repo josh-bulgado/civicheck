@@ -81,9 +81,28 @@ export const DEFAULT_APPLY_DRAFT: ApplyDraft = {
   updatedAt: null,
 };
 
+// The delayed-birth form used to store the informant's relationship as the
+// display text ("Mother"); the shared birth-details block stores the lowercase
+// option value ("mother"), as the on-time form always did. A draft saved before
+// that change would otherwise point at an option that no longer exists.
+const LEGACY_INFORMANT_VALUES: Record<string, string> = {
+  Mother: "mother",
+  Father: "father",
+  Grandparent: "grandparent",
+  Guardian: "guardian",
+  "Physician / Midwife": "physician_midwife",
+  Other: "other",
+};
+
+function normalizeInformantRelationship<T>(value: T): T | string {
+  return typeof value === "string"
+    ? (LEGACY_INFORMANT_VALUES[value] ?? value)
+    : value;
+}
+
 function withMigratedAnswers(value: Partial<ApplyDraft>): ApplyDraft {
   const legacyCase = value.caseAnswers ?? DEFAULT_APPLY_DRAFT.caseAnswers;
-  return {
+  const migrated = {
     ...DEFAULT_APPLY_DRAFT,
     ...value,
     caseSelectorAnswers: value.caseSelectorAnswers ?? {},
@@ -105,6 +124,15 @@ function withMigratedAnswers(value: Partial<ApplyDraft>): ApplyDraft {
       ...document,
       subjectRole: document.subjectRole ?? null,
     })),
+  };
+  return {
+    ...migrated,
+    answers: {
+      ...migrated.answers,
+      informant_relationship: normalizeInformantRelationship(
+        migrated.answers.informant_relationship,
+      ),
+    },
   };
 }
 

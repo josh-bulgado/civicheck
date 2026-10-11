@@ -1,18 +1,36 @@
+import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import {
+  Blocks,
   ChevronDown,
   ChevronUp,
   Eye,
   Plus,
   Trash2,
+  Unlink,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
+import { Button, buttonVariants } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "~/components/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
+import {
+  listInsertableBlocksFn,
+  type FormFieldBlockRecord,
+} from "../form-field-block.functions";
+import { detachBlock, insertBlock } from "../form-field-block.utils";
 import {
   Field,
   FieldDescription,
@@ -94,12 +112,69 @@ export function FormTemplateBuilder({
   definition,
   onChange,
   immutableKeys = [],
+  steps: visibleSteps,
+  allowPersonGroup = true,
+  allowSharedBlocks = true,
 }: {
   definition: FormTemplateDefinition;
   onChange: (definition: FormTemplateDefinition) => void;
   immutableKeys?: string[];
+  /** Restrict the editor to some steps (the block editor edits just one). */
+  steps?: FormStep[];
+  /** A shared block can't contain the person name group. */
+  allowPersonGroup?: boolean;
+  /** Hide shared-block insertion (a block can't include other blocks). */
+  allowSharedBlocks?: boolean;
 }) {
   const immutableKeySet = new Set(immutableKeys);
+  const fieldTypes = FIELD_TYPES.filter(
+    (type) => allowPersonGroup || type.value !== "person_group",
+  );
+  const stepsToShow = STEPS.filter(
+    (step) => !visibleSteps || visibleSteps.includes(step.value),
+  );
+  const [blocks, setBlocks] = useState<FormFieldBlockRecord[]>([]);
+
+  // Shared blocks only power the insert menu and the badge names; the builder
+  // is fully usable without them, so a failed load is not worth an error toast.
+  useEffect(() => {
+    if (!allowSharedBlocks) return;
+    let cancelled = false;
+    listInsertableBlocksFn()
+      .then((loaded) => {
+        if (!cancelled) setBlocks(loaded);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [allowSharedBlocks]);
+
+  const blockNameByKey = new Map(
+    blocks.map((block) => [block.blockKey, block.name]),
+  );
+  const includedBlockKeys = new Set(
+    definition.sections.flatMap((section) =>
+      section.fields.flatMap((field) => (field.blockKey ? [field.blockKey] : [])),
+    ),
+  );
+
+  function addBlock(block: FormFieldBlockRecord) {
+    const result = insertBlock(definition, block);
+    if (!result.ok) {
+      toast.error("Can't add this shared block.", { description: result.reason });
+      return;
+    }
+    onChange(result.definition);
+  }
+
+  function detach(blockKey: string) {
+    onChange(detachBlock(definition, blockKey));
+    toast.success("Detached from the shared block.", {
+      description:
+        "These questions are now local to this form and won't change with the block.",
+    });
+  }
 
   function updateField(
     step: FormStep,
@@ -141,8 +216,11 @@ export function FormTemplateBuilder({
 
   return (
     <div className="flex flex-col gap-5">
-      {STEPS.map((step) => {
+      {stepsToShow.map((step) => {
         const fields = fieldsInStep(definition, step.value);
+        const stepBlocks = allowSharedBlocks
+          ? blocks.filter((block) => block.step === step.value)
+          : [];
         return (
           <section key={step.value} className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-3">
@@ -152,10 +230,46 @@ export function FormTemplateBuilder({
                   {fields.length} {fields.length === 1 ? "field" : "fields"}
                 </p>
               </div>
-              <Button type="button" variant="outline" size="sm" onClick={() => addField(step.value)}>
-                <Plus data-icon="inline-start" />
-                Add field
-              </Button>
+              <div className="flex items-center gap-2">
+                {stepBlocks.length > 0 ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      nativeButton
+                      render={<Button type="button" variant="outline" size="sm" />}
+                    >
+                      <Blocks data-icon="inline-start" />
+                      Insert shared block
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-64">
+                      <DropdownMenuLabel>Shared question blocks</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {stepBlocks.map((block) => {
+                        const included = includedBlockKeys.has(block.blockKey);
+                        return (
+                          <DropdownMenuItem
+                            key={block.blockKey}
+                            disabled={included}
+                            onClick={() => addBlock(block)}
+                          >
+                            <span className="flex flex-col gap-0.5">
+                              <span>{block.name}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {included
+                                  ? "Already in this form"
+                                  : `${block.fields.length} ${block.fields.length === 1 ? "question" : "questions"}`}
+                              </span>
+                            </span>
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
+                <Button type="button" variant="outline" size="sm" onClick={() => addField(step.value)}>
+                  <Plus data-icon="inline-start" />
+                  Add field
+                </Button>
+              </div>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -169,12 +283,18 @@ export function FormTemplateBuilder({
                         <Badge variant="secondary">{FIELD_TYPES.find((item) => item.value === field.type)?.label}</Badge>
                         {field.required ? <Badge>Required</Badge> : null}
                         {field.visibleWhen ? <Badge variant="outline">Conditional</Badge> : null}
+                        {field.blockKey ? (
+                          <Badge variant="outline">
+                            <Blocks data-icon="inline-start" />
+                            Shared · {blockNameByKey.get(field.blockKey) ?? field.blockKey}
+                          </Badge>
+                        ) : null}
                       </CollapsibleTrigger>
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        disabled={index === 0}
+                        disabled={index === 0 || Boolean(field.blockKey)}
                         onClick={() => moveField(step.value, index, -1)}
                         aria-label={`Move ${field.label} up`}
                       >
@@ -184,7 +304,7 @@ export function FormTemplateBuilder({
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        disabled={index === fields.length - 1}
+                        disabled={index === fields.length - 1 || Boolean(field.blockKey)}
                         onClick={() => moveField(step.value, index, 1)}
                         aria-label={`Move ${field.label} down`}
                       >
@@ -194,7 +314,7 @@ export function FormTemplateBuilder({
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        disabled={field.type === "person_group"}
+                        disabled={field.type === "person_group" || Boolean(field.blockKey)}
                         onClick={() => removeField(step.value, index)}
                         aria-label={`Remove ${field.label}`}
                       >
@@ -203,6 +323,38 @@ export function FormTemplateBuilder({
                     </div>
 
                     <CollapsibleContent className="border-t border-border p-4">
+                      {field.blockKey ? (
+                        <div className="flex flex-col gap-3">
+                          <p className="text-sm text-muted-foreground">
+                            This question belongs to the shared block{" "}
+                            <span className="font-medium text-foreground">
+                              {blockNameByKey.get(field.blockKey) ?? field.blockKey}
+                            </span>
+                            . Edit it once there and every form that includes the
+                            block is updated. Detach it to customise it for this
+                            form only.
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            <Link
+                              to="/admin/services/blocks"
+                              search={{ block: field.blockKey }}
+                              className={buttonVariants({ variant: "outline", size: "sm" })}
+                            >
+                              <Blocks data-icon="inline-start" />
+                              Edit shared block
+                            </Link>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => detach(field.blockKey!)}
+                            >
+                              <Unlink data-icon="inline-start" />
+                              Detach from block
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
                       <FieldGroup>
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                           <Field>
@@ -236,7 +388,7 @@ export function FormTemplateBuilder({
                           <Field>
                             <FieldLabel htmlFor={`${step.value}-${index}-type`}>Field type</FieldLabel>
                             <Select
-                              items={FIELD_TYPES.filter(
+                              items={fieldTypes.filter(
                                 (type) =>
                                   type.value !== "person_group" ||
                                   field.type === "person_group" ||
@@ -260,7 +412,7 @@ export function FormTemplateBuilder({
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectGroup>
-                                  {FIELD_TYPES.filter(
+                                  {fieldTypes.filter(
                                     (type) =>
                                       type.value !== "person_group" ||
                                       field.type === "person_group" ||
@@ -490,6 +642,7 @@ export function FormTemplateBuilder({
                           </Button>
                         ) : null}
                       </FieldGroup>
+                      )}
                     </CollapsibleContent>
                   </div>
                 </Collapsible>
@@ -505,7 +658,7 @@ export function FormTemplateBuilder({
         </CollapsibleTrigger>
         <CollapsibleContent className="pt-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {STEPS.map((step) => (
+            {stepsToShow.map((step) => (
               <div key={step.value} className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-4">
                 <p className="text-sm font-semibold">{step.label}</p>
                 {fieldsInStep(definition, step.value).map((field) => (

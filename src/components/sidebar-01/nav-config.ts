@@ -2,6 +2,7 @@ import {
   Activity,
   BarChart3,
   Bell,
+  BookOpen,
   ClipboardCheck,
   Gauge,
   History,
@@ -78,7 +79,7 @@ const NAV_ENTRIES = {
     title: (role) =>
       role === "staff" || role === "supervisor" ? "Service Reference" : "Browse Services",
     url: "/services",
-    icon: ListChecks,
+    icon: BookOpen,
     anyOf: ["services:view"],
   },
   "my-requests": {
