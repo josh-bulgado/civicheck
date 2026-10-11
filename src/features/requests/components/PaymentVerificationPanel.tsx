@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { usePermissions } from "~/hooks/usePermissions";
@@ -27,6 +28,7 @@ export function PaymentVerificationPanel({
   const isReadyForRelease = status === "ready_for_release";
 
   const [value, setValue] = useState("");
+  const [noFeeConfirmed, setNoFeeConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const isFree = feesDue <= 0;
 
@@ -34,14 +36,19 @@ export function PaymentVerificationPanel({
     setBusy(true);
     try {
       const res = await verifyPaymentFn({
-        data: { requestId, orNumber: value },
+        data: isFree
+          ? { requestId, confirmNoFee: noFeeConfirmed }
+          : { requestId, orNumber: value },
       });
       if (res.error) {
-        toast.error("Could not verify payment", { description: res.message });
+        toast.error(isFree ? "Could not confirm this request" : "Could not verify payment", {
+          description: res.message,
+        });
         return;
       }
-      toast.success("Payment verified");
+      toast.success(isFree ? "Fee-free request confirmed" : "Payment verified");
       setValue("");
+      setNoFeeConfirmed(false);
       onVerified();
     } finally {
       setBusy(false);
@@ -55,22 +62,43 @@ export function PaymentVerificationPanel({
         Fee due: ₱{feesDue.toFixed(2)}
       </p>
 
-      {paymentStatus === "verified" && !isFree ? (
-        <p className="text-sm text-foreground">
-          Verified against OR{" "}
-          <span className="font-bold">{orNumber ?? "—"}</span>.
-        </p>
-      ) : isFree ? (
-        <p className="text-sm text-foreground">
-          No fee is due, so there's nothing for the cashier to verify — the CCRO
-          admin can release this request directly.
-        </p>
+      {paymentStatus === "verified" ? (
+        isFree ? (
+          <p className="text-sm text-foreground">
+            No fee was due — this request is cleared for release.
+          </p>
+        ) : (
+          <p className="text-sm text-foreground">
+            Verified against OR{" "}
+            <span className="font-bold">{orNumber ?? "—"}</span>.
+          </p>
+        )
       ) : !isReadyForRelease ? (
         <p className="text-sm italic text-muted-foreground">
           Payment can't be collected yet — this request is still{" "}
-          {getStatusDetails(status).label.toLowerCase()}. It needs to be
-          approved for release first.
+          {getStatusDetails(status).label.toLowerCase()}. It needs to be marked
+          ready for release first.
         </p>
+      ) : canCollect && isFree ? (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="no-fee-confirmed"
+              checked={noFeeConfirmed}
+              onCheckedChange={(checked) => setNoFeeConfirmed(checked === true)}
+              className="mt-0.5"
+            />
+            <Label htmlFor="no-fee-confirmed" className="leading-snug">
+              Confirm that no fee is due for this request
+            </Label>
+          </div>
+          <Button
+            disabled={busy || !noFeeConfirmed}
+            onClick={handleVerifyPayment}
+          >
+            Confirm fee-free request
+          </Button>
+        </div>
       ) : canCollect ? (
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-2">
@@ -91,7 +119,9 @@ export function PaymentVerificationPanel({
         </div>
       ) : (
         <p className="text-sm italic text-muted-foreground">
-          The cashier records payment against the official receipt.
+          {isFree
+            ? "The cashier confirms fee-free requests before release."
+            : "The cashier records payment against the official receipt."}
         </p>
       )}
     </section>

@@ -8,10 +8,16 @@ export const Route = createFileRoute("/_authed/_dashboard/cashier")({
     if (!context.user || !hasPermission(context.user.role as Role, "requests:collect_payment"))
       denyAccess(location);
   },
+  // A notification links here with the request's tracking number pre-filled.
+  validateSearch: (search: Record<string, unknown>): { tracking?: string } => {
+    const tracking = typeof search.tracking === "string" ? search.tracking.trim() : "";
+    return tracking ? { tracking } : {};
+  },
   component: CashierPage,
 });
 
 function CashierPage() {
+  const { tracking } = Route.useSearch();
   return (
     <div className="dashboard-page max-w-3xl">
       <header className="dashboard-hero">
@@ -29,7 +35,7 @@ function CashierPage() {
       </header>
 
       <div className="mt-8">
-        <CashierCounter />
+        <CashierCounter initialTracking={tracking} />
       </div>
     </div>
   );

@@ -111,11 +111,8 @@ export default function RequestDetailPage({
     if (s === "released" && !isAdmin) return false;
     return true;
   });
-  // Release waits on the cashier's payment check, unless no fee is due.
-  const paymentSettled = isPaymentSettled(
-    request.feesDue,
-    request.paymentStatus,
-  );
+  // Release waits on the cashier — a payment check, or a fee-free confirmation.
+  const paymentSettled = isPaymentSettled(request.paymentStatus);
   const needsAttachmentsResolved =
     available.includes("processing") && hasUnresolvedAttachments;
 
@@ -369,14 +366,15 @@ export default function RequestDetailPage({
 
                 {request.status === "ready_for_release" && !isAdmin && (
                   <p className="civic-enter-sm rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-                    Only the CCRO admin can release the document once payment is
-                    verified.
+                    Only the CCRO admin can release the document once the
+                    cashier has cleared it.
                   </p>
                 )}
 
                 {request.status === "ready_for_release" && !paymentSettled && (
                   <p className="civic-enter-sm rounded-lg border border-warning/20 bg-warning/5 p-3 text-xs text-warning-strong">
-                    Payment must be verified before this can be released.
+                    The cashier must clear this request (payment verified, or
+                    fee-free confirmed) before it can be released.
                   </p>
                 )}
               </div>

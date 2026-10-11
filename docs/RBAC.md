@@ -22,6 +22,12 @@ guarded SQL functions provide the final scope boundary.
 | `services:view` | applicant, staff, supervisor, admin | View the public service, requirement, and fee directory |
 | `requests:encode_walkin` | staff, supervisor, admin | Encode an accountless request for a walk-in visitor, for a service owned by the caller's department |
 
+## Notification permissions
+
+| Permission | Assigned to | Purpose |
+|---|---|---|
+| `notifications:view_staff` | staff, supervisor, cashier, admin | Read and manage the caller's own in-system notification feed. Rows are written by database triggers and are scoped to the recipient by RLS; staff and supervisors only receive events for their own department. Not granted to `applicant` (own feed uses `requests:view_own`) or `system_admin` |
+
 ## Department scoping
 
 `staff` and `supervisor` are department-scoped. A request belongs to the

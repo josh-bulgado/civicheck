@@ -25,6 +25,8 @@ const advanceRequestStatusSchema = z.object({
 const verifyPaymentSchema = z.object({
   requestId: z.string().uuid(),
   orNumber: z.string().optional(),
+  /** Deliberate "no fee is due" tick; honoured only when the stored fee is zero. */
+  confirmNoFee: z.boolean().optional(),
 });
 const attachmentVerificationSchema = z.object({
   attachmentId: z.string().uuid(),
@@ -52,7 +54,7 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
     const { data: request, error: fetchError } = await supabase
       .from("requests")
       .select(
-        "id, status, payment_status, fees_due, tracking_number, services_registry(department_id)",
+        "id, status, payment_status, tracking_number, services_registry(department_id)",
       )
       .eq("id", data.requestId)
       .single();
@@ -111,9 +113,9 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
       };
     }
 
-    // The cashier verifies payment before the document leaves the counter —
-    // unless no fee is due, in which case there's nothing to collect.
-    const paymentSettled = isPaymentSettled(Number(request.fees_due ?? 0), request.payment_status);
+    // The cashier verifies payment — or confirms a fee-free request — before
+    // the document leaves the counter.
+    const paymentSettled = isPaymentSettled(request.payment_status);
     if (toStatus === "released" && !paymentSettled) {
       return {
         error: true,
@@ -133,11 +135,6 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
       .from("requests")
       .update({
         status: toStatus,
-        // A free request never visits the cashier, so settle it on release —
-        // otherwise it would read "Unpaid" forever.
-        ...(toStatus === "released" && request.payment_status !== "verified"
-          ? { payment_status: "verified" }
-          : {}),
         updated_at: new Date().toISOString(),
       })
       // Re-assert the status we read, so two staff acting at once can't both win.
@@ -194,21 +191,24 @@ export const verifyPaymentFn = createServerFn({ method: "POST" })
       return {
         error: true,
         message:
-          "This request isn't ready for release yet — payment can only be verified once it's been approved for release.",
+          "This request isn't ready for release yet — payment can only be verified once it has been marked ready for release.",
       };
     }
 
-    // Decided from the stored fee, never from the client. A free request has
-    // nothing to verify — the admin can release it directly.
-    if (Number(request.fees_due ?? 0) <= 0) {
-      return {
-        error: true,
-        message: "No fee is due for this request, so there's no payment to verify.",
-      };
-    }
-    const orNumber = data.orNumber?.trim() ?? "";
-    if (!orNumber) {
-      return { error: true, message: "Enter the official receipt number." };
+    // Decided from the stored fee, never from the client. A fee-free request
+    // still passes through the cashier, who confirms it with a tick instead of
+    // an official receipt number.
+    const isFeeFree = Number(request.fees_due ?? 0) <= 0;
+    let orNumber: string | null = null;
+    if (isFeeFree) {
+      if (data.confirmNoFee !== true) {
+        return { error: true, message: "Confirm that no fee is due before clearing this request." };
+      }
+    } else {
+      orNumber = data.orNumber?.trim() ?? "";
+      if (!orNumber) {
+        return { error: true, message: "Enter the official receipt number." };
+      }
     }
 
     const { data: updated, error } = await supabase
@@ -219,9 +219,13 @@ export const verifyPaymentFn = createServerFn({ method: "POST" })
         updated_at: new Date().toISOString(),
       })
       .eq("id", data.requestId)
-      // Re-assert the status we read, so a concurrent status change can't
-      // slip payment through after this check passed.
+      // Re-assert everything the decision above was based on, so a concurrent
+      // change can't slip payment through after this check passed: the status,
+      // the stored fee (fee vs. fee-free decides whether an OR is required),
+      // and that it is still unpaid (a second click must not overwrite the OR).
       .eq("status", "ready_for_release")
+      .eq("fees_due", request.fees_due)
+      .eq("payment_status", "unpaid")
       .select("id");
 
     if (error) {
@@ -233,7 +237,7 @@ export const verifyPaymentFn = createServerFn({ method: "POST" })
     if (!updated || updated.length === 0) {
       return {
         error: true,
-        message: "This request is no longer ready for release. Refresh and try again.",
+        message: "This request changed while you were working on it. Refresh and try again.",
       };
     }
 
@@ -241,7 +245,9 @@ export const verifyPaymentFn = createServerFn({ method: "POST" })
       request_id: data.requestId,
       performed_by_profile_id: user.id,
       action_status: "payment_verified",
-      remarks: `Payment verified against OR ${orNumber}.`,
+      remarks: isFeeFree
+        ? "Fee-free request confirmed by cashier — no payment due."
+        : `Payment verified against OR ${orNumber}.`,
     });
 
     return { error: false };

@@ -33,7 +33,11 @@ type GroupLayout = { id: string; label?: string; itemIds: string[] };
 const ROLE_GROUP_LAYOUTS: Partial<Record<Role, GroupLayout[]>> = {
   admin: [
     { id: "overview", itemIds: ["admin-overview"] },
-    { id: "operations", label: "Operations", itemIds: ["request-queue"] },
+    {
+      id: "operations",
+      label: "Operations",
+      itemIds: ["request-queue", "notifications"],
+    },
     {
       id: "management",
       label: "Management",
@@ -82,6 +86,14 @@ export function AppSidebar({
 }) {
   const { can, role } = usePermissions();
   const workspace = getWorkspaceDetails(role);
+
+  const notificationsItem: NavItem = {
+    id: "notifications",
+    title: "Notifications",
+    url: "/notifications",
+    icon: Bell,
+    badge: unreadNotifications,
+  };
 
   // Build navMain dynamically based on permissions
   const navMain: NavItem[] = [];
@@ -192,13 +204,12 @@ export function AppSidebar({
       url: "/my-requests",
       icon: ClipboardCheck,
     });
-    navMain.push({
-      id: "notifications",
-      title: "Notifications",
-      url: "/notifications",
-      icon: Bell,
-      badge: unreadNotifications,
-    });
+    navMain.push(notificationsItem);
+  }
+
+  // Personnel read their own in-system feed; applicants get theirs above.
+  if (!can("requests:view_own") && can("notifications:view_staff")) {
+    navMain.push(notificationsItem);
   }
 
   if (can("requests:view_all")) {

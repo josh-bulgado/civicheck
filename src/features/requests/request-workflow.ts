@@ -37,6 +37,11 @@ export const STAGE_OF: Record<RequestStatus, WorkflowStage> = {
   released: 4,
 };
 
+// NOTE: the staff-notification trigger `trg_notify_request_status_changed`
+// (supabase/migrations/20261010121000_add_staff_notification_triggers.sql)
+// mirrors these hops in SQL: ready_for_release only out of processing,
+// incomplete only out of under_validation, rejected only out of an open stage.
+// Change one side without the other and the alerts silently stop.
 export const ALLOWED_TRANSITIONS: Record<RequestStatus, RequestStatus[]> = {
   submitted: ["under_validation", "rejected"],
   under_validation: ["incomplete", "processing", "rejected"],
@@ -89,12 +94,13 @@ export const TRANSITION_LABELS: Record<RequestStatus, string> = {
 export const REASON_REQUIRED: RequestStatus[] = ["incomplete", "rejected"];
 
 /**
- * A request can be released once the cashier has verified payment — or
- * straight away when no fee is due, since there's nothing for the cashier to
- * collect. Shared by the release button and the server-side release check.
+ * A request can be released only once the cashier has verified payment — or,
+ * for a fee-free request, confirmed that no fee is due. Both leave
+ * `payment_status` at "verified". Shared by the release button and the
+ * server-side release check.
  */
-export function isPaymentSettled(feesDue: number, paymentStatus: string | null): boolean {
-  return feesDue <= 0 || paymentStatus === "verified";
+export function isPaymentSettled(paymentStatus: string | null): boolean {
+  return paymentStatus === "verified";
 }
 
 // Re-exported so existing badge call sites keep one import path for status UI.
