@@ -23,7 +23,7 @@ import { WizardFooterActions } from "~/features/apply/components/WizardFooterAct
 import { ChangeServiceButton } from "~/features/apply/components/ApplicationDocket";
 import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
 import {
-  deriveTemplateAnswers,
+  canonicalizeTemplateAnswers,
   isFieldVisible,
   visibleCaseSelectorQuestions,
 } from "~/features/forms/form-template.utils";
@@ -115,7 +115,7 @@ export function ReviewStep({
       .filter((field) => field.type === "person_group")
       .map((field) => [field.key, subjects]),
   );
-  const answerBag: TemplateAnswers = deriveTemplateAnswers(definition, {
+  const answerBag: TemplateAnswers = canonicalizeTemplateAnswers(definition, {
     ...draft.answers,
     ...draft.caseSelectorAnswers,
     ...personGroupAnswers,
