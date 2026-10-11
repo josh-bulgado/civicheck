@@ -111,6 +111,25 @@ export const submitRequestFn = createServerFn({ method: "POST" })
       ) {
         return { error: true, message: "This application form version is not valid." };
       }
+      // Older versions stay published so existing requests keep their pinned
+      // form, but only the active one may be submitted against. Otherwise a
+      // superseded version, which lacks later questions and rules, would let a
+      // request skip the current case checks.
+      const templateResult = await supabase
+        .from("form_templates")
+        .select("active_version_id")
+        .eq("id", bindingResult.data.template_id)
+        .maybeSingle();
+      if (templateResult.error || !templateResult.data) {
+        return { error: true, message: "The application form could not be verified." };
+      }
+      if (templateResult.data.active_version_id !== version.id) {
+        return {
+          error: true,
+          message:
+            "This application form was updated while you were filling it in. Reload the page, review your answers, and submit again.",
+        };
+      }
       try {
         definition = parseFormTemplateDefinition(version.definition);
       } catch {

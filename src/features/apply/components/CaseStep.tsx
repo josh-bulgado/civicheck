@@ -18,6 +18,7 @@ import {
   evaluateTemplateEventTiming,
   fieldsForStep,
   getDerivedAnswerFeedback,
+  getSelectedOptionNotices,
   todayKeyInTimeZone,
 } from "~/features/forms/form-template.utils";
 import { isRequirementApplicable } from "~/features/services/service-utils";
@@ -132,6 +133,10 @@ export function CaseStep({
     definition,
     derivedCaseAnswers,
   ).find((feedback) => feedback.notice.blocksProgress);
+  const blockingOptionNotice = getSelectedOptionNotices(
+    definition,
+    derivedCaseAnswers,
+  ).find((selected) => selected.notice.blocksProgress)?.notice;
   const watchedEventDate = watchedValues.event_date ?? "";
   const marriageTimingNotice = getMarriageTimingNotice(
     selectedService.service_code,
@@ -165,9 +170,11 @@ export function CaseStep({
     if (lastCheckedDate.current === dateKey) return;
     lastCheckedDate.current = dateKey;
 
+    // Include the other answers: the window can depend on one of them (a
+    // marriage with a license has a shorter on-time window).
     const evaluation = evaluateEventTiming(
       timingRule,
-      { [fieldKey]: dateKey },
+      { ...form.getValues(), [fieldKey]: dateKey },
       todayKeyInTimeZone(timingRule.timezone),
     );
     if (!evaluation.mismatched) return;
@@ -367,12 +374,15 @@ export function CaseStep({
           continueDisabled={
             (isGroup && !draft.selectedServiceCode) ||
             timingBlocks ||
-            Boolean(blockingAgeFeedback)
+            Boolean(blockingAgeFeedback) ||
+            Boolean(blockingOptionNotice)
           }
           note={
             blockingAgeFeedback
               ? blockingAgeFeedback.notice.description
-              : timingBlocks
+              : blockingOptionNotice
+                ? blockingOptionNotice.description
+                : timingBlocks
                 ? "Resolve the date above before continuing."
                 : undefined
           }

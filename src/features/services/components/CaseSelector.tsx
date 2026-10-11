@@ -1,29 +1,9 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
-import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
-import {
-  Field,
-  FieldContent,
-  FieldLabel,
-  FieldLegend,
-  FieldSet,
-} from "~/components/ui/field";
+import { FieldLegend, FieldSet } from "~/components/ui/field";
+import { ChoiceGroup } from "~/features/forms/components/ChoiceGroup";
 import type { CaseSelectorDefinition } from "~/features/forms/form-template.types";
 import { conditionRuleMatches } from "~/features/forms/form-template.utils";
-
-const choiceGroupClass =
-  "grid grid-cols-1 gap-0 overflow-hidden rounded-lg border border-border bg-white divide-y divide-border-light sm:grid-cols-2 sm:divide-x sm:divide-y-0";
-
-// No `h-full` on the label or its Field: grid items already stretch to the row,
-// and Safari resolves the percentage against the wrong box, growing the tile far
-// past the clipped group so its content is centered out of view.
-const choiceLabelClass =
-  "cursor-pointer has-[>[data-slot=field]]:rounded-none has-[>[data-slot=field]]:border-0 *:data-[slot=field]:px-4 transition-colors hover:bg-primary-tint focus-within:bg-primary-tint has-data-checked:bg-primary-soft/70";
-
-// Field top-aligns rows that contain FieldContent (and nudges the radio 1px);
-// choice tiles are taller than their content, so center the radio and text.
-const choiceFieldClass =
-  "min-h-14 flex-1 has-[>[data-slot=field-content]]:items-center has-[>[data-slot=field-content]]:[&>[role=checkbox],[role=radio]]:mt-0";
 
 interface Service {
   service_code: string;
@@ -196,26 +176,16 @@ function LegacyCaseSelector({
             <FieldLegend variant="label">
               {stepPrefix(true)}Age of the person to be registered
             </FieldLegend>
-            <RadioGroup
+            <ChoiceGroup
+              wide
+              idPrefix="age"
               value={age ?? ""}
               onValueChange={handleAge}
-              className={choiceGroupClass}
-            >
-              {steps.ages.map((a) => (
-                <FieldLabel
-                  key={a}
-                  htmlFor={`age-${a}`}
-                  className={choiceLabelClass}
-                >
-                  <Field orientation="horizontal" className={choiceFieldClass}>
-                    <RadioGroupItem value={a} id={`age-${a}`} />
-                    <FieldContent>
-                      {a === "0-79" ? "0 – 79 years old" : "80 years old and above"}
-                    </FieldContent>
-                  </Field>
-                </FieldLabel>
-              ))}
-            </RadioGroup>
+              options={steps.ages.map((a) => ({
+                value: a,
+                label: a === "0-79" ? "0 – 79 years old" : "80 years old and above",
+              }))}
+            />
           </FieldSet>
         )}
 
@@ -225,35 +195,19 @@ function LegacyCaseSelector({
             <FieldLegend variant="label">
               {stepPrefix(true)}Registration program
             </FieldLegend>
-            <RadioGroup
+            <ChoiceGroup
+              wide
+              idPrefix="prog"
               value={program ?? ""}
               onValueChange={handleProgram}
-              className={choiceGroupClass}
-            >
-              {steps.programs.map((p) => (
-                <FieldLabel
-                  key={p}
-                  htmlFor={`prog-${p}`}
-                  className={choiceLabelClass}
-                >
-                  <Field orientation="horizontal" className={choiceFieldClass}>
-                    <RadioGroupItem value={p} id={`prog-${p}`} />
-                    <FieldContent>
-                      <span className="font-medium">
-                        {p === "brap"
-                          ? "BRAP-assisted registration"
-                          : "Standard registration"}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {p === "brap"
-                          ? "PSA-assisted program"
-                          : "Regular filing process"}
-                      </span>
-                    </FieldContent>
-                  </Field>
-                </FieldLabel>
-              ))}
-            </RadioGroup>
+              options={steps.programs.map((p) => ({
+                value: p,
+                label:
+                  p === "brap" ? "BRAP-assisted registration" : "Standard registration",
+                description:
+                  p === "brap" ? "PSA-assisted program" : "Regular filing process",
+              }))}
+            />
           </FieldSet>
         )}
 
@@ -263,28 +217,16 @@ function LegacyCaseSelector({
             <FieldLegend variant="label">
               {stepPrefix(true)}Are the child&rsquo;s parents legally married?
             </FieldLegend>
-            <RadioGroup
+            <ChoiceGroup
+              wide
+              idPrefix="marital"
               value={marital ?? ""}
               onValueChange={handleMarital}
-              className={choiceGroupClass}
-            >
-              {steps.maritalStatuses.map((m) => (
-                <FieldLabel
-                  key={m}
-                  htmlFor={`marital-${m}`}
-                  className={choiceLabelClass}
-                >
-                  <Field orientation="horizontal" className={choiceFieldClass}>
-                    <RadioGroupItem value={m} id={`marital-${m}`} />
-                    <FieldContent>
-                      <span className="font-medium">
-                        {m === "marital" ? "Yes" : "No"}
-                      </span>
-                    </FieldContent>
-                  </Field>
-                </FieldLabel>
-              ))}
-            </RadioGroup>
+              options={steps.maritalStatuses.map((m) => ({
+                value: m,
+                label: m === "marital" ? "Yes" : "No",
+              }))}
+            />
           </FieldSet>
         )}
 
@@ -411,29 +353,15 @@ function ConfiguredCaseSelector({
                 {question.description}
               </p>
             ) : null}
-            <RadioGroup
+            <ChoiceGroup
+              wide
+              idPrefix={`case-${question.key}`}
               value={answers[question.key] ?? ""}
               onValueChange={(value) =>
                 publishAnswers({ ...answers, [question.key]: value })
               }
-              className={choiceGroupClass}
-            >
-              {question.options.map((option) => (
-                <FieldLabel
-                  key={option.value}
-                  htmlFor={`case-${question.key}-${option.value}`}
-                  className={choiceLabelClass}
-                >
-                  <Field orientation="horizontal" className={choiceFieldClass}>
-                    <RadioGroupItem
-                      value={option.value}
-                      id={`case-${question.key}-${option.value}`}
-                    />
-                    <FieldContent>{option.label}</FieldContent>
-                  </Field>
-                </FieldLabel>
-              ))}
-            </RadioGroup>
+              options={question.options}
+            />
           </FieldSet>
         ))}
 
