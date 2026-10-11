@@ -304,6 +304,36 @@ export interface EventTimingEvaluation {
   targetServiceCode: string | null;
 }
 
+/** The rule's window for these answers, falling back to `windowDays`. */
+function effectiveWindowDays(
+  rule: EventTimingRule,
+  answers: TemplateAnswers | Record<string, string>,
+): number {
+  const byAnswer = rule.windowDaysByAnswer;
+  if (!byAnswer) return rule.windowDays;
+  return byAnswer.values[answerString(answers, byAnswer.field)] ?? rule.windowDays;
+}
+
+/**
+ * Notices attached to the options an applicant has selected on visible fields.
+ * Used to show the message under the question and to hold the step.
+ */
+export function getSelectedOptionNotices(
+  definition: FormTemplateDefinition,
+  answers: TemplateAnswers | Record<string, string>,
+) {
+  return definition.sections.flatMap((section) =>
+    section.fields.flatMap((field) => {
+      if (field.type !== "select" || !isFieldVisible(field, answers as TemplateAnswers)) {
+        return [];
+      }
+      const value = answerString(answers, field.key);
+      const option = field.options?.find((candidate) => candidate.value === value);
+      return option?.notice ? [{ field, option, notice: option.notice }] : [];
+    }),
+  );
+}
+
 /**
  * Evaluate one service's on-time window against the applicant-entered trigger
  * date. Pure and side-effect free so it can run identically on the client and
@@ -315,9 +345,10 @@ export function evaluateEventTiming(
   answers: TemplateAnswers | Record<string, string>,
   todayKey: string,
 ): EventTimingEvaluation {
+  const windowDays = effectiveWindowDays(rule, answers);
   const base = {
     daysElapsed: null as number | null,
-    windowDays: rule.windowDays,
+    windowDays,
     insideWindow: null as boolean | null,
     mismatched: false,
     behavior: null as EventTimingBehavior | null,
@@ -332,14 +363,14 @@ export function evaluateEventTiming(
   if (daysElapsed < 0) return { status: "future", ...base, daysElapsed };
 
   // Inclusive of day N: a date exactly `windowDays` ago is still on-time.
-  const insideWindow = daysElapsed <= rule.windowDays;
+  const insideWindow = daysElapsed <= windowDays;
   const mismatched =
     rule.mismatch === "outside_window" ? !insideWindow : insideWindow;
 
   return {
     status: mismatched ? "out_of_window" : "on_time",
     daysElapsed,
-    windowDays: rule.windowDays,
+    windowDays,
     insideWindow,
     mismatched,
     behavior: mismatched ? rule.behavior : null,
@@ -602,6 +633,12 @@ export function validateTemplateAnswers(
         !field.options.some((option) => option.value === value)
       ) {
         return { success: false, message: `${field.label} has an invalid selection.` };
+      }
+      const blockingNotice = field.options?.find(
+        (option) => option.value === value,
+      )?.notice;
+      if (field.type === "select" && blockingNotice?.blocksProgress) {
+        return { success: false, message: blockingNotice.description };
       }
       if (field.type === "date") {
         const today = toDateKey();

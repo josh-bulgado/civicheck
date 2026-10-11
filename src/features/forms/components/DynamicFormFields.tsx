@@ -7,6 +7,8 @@ import {
   FieldError,
   FieldGroup,
   FieldLabel,
+  FieldLegend,
+  FieldSet,
 } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import {
@@ -26,6 +28,9 @@ import {
 import { RequiredMark } from "~/components/ui/required-mark";
 import { Textarea } from "~/components/ui/textarea";
 import { toDateKey } from "~/lib/date";
+import { cn } from "~/lib/utils";
+import { ChoiceGroup, isChoiceGroup, planChoiceLayout } from "./ChoiceGroup";
+import { NoticeAlert } from "./NoticeAlert";
 import type {
   FormSectionDefinition,
   FormStep,
@@ -70,6 +75,7 @@ export function DynamicFormFields({
       (field) => field.type !== "person_group",
     );
     if (!fields.length) return null;
+    const choicePlacements = planChoiceLayout(fields);
 
     return (
       <section key={section.key} className="flex flex-col gap-3">
@@ -105,16 +111,76 @@ export function DynamicFormFields({
                 },
               }}
               render={({ field, fieldState }) => {
+                const selectedNotice =
+                  definitionField.type === "select"
+                    ? definitionField.options?.find(
+                        (option) => option.value === field.value,
+                      )?.notice
+                    : undefined;
                 const common = (
                   <>
                     {definitionField.helpText ? (
                       <FieldDescription>{definitionField.helpText}</FieldDescription>
+                    ) : null}
+                    {selectedNotice ? (
+                      <div aria-live="polite">
+                        <NoticeAlert
+                          variant={selectedNotice.variant}
+                          title={selectedNotice.title}
+                        >
+                          {selectedNotice.description}
+                        </NoticeAlert>
+                      </div>
                     ) : null}
                     {fieldState.invalid ? (
                       <FieldError errors={[fieldState.error]} />
                     ) : null}
                   </>
                 );
+
+                const options = definitionField.options ?? [];
+                const legendLabel = (
+                  <>
+                    {definitionField.label}
+                    {!definitionField.required ? " (optional)" : ""}
+                    {showRequiredMarks && definitionField.required ? (
+                      <RequiredMark />
+                    ) : null}
+                  </>
+                );
+
+                // Short pick-one lists show every choice as tiles, matching the
+                // service-routing questions; long lists keep the dropdown.
+                if (definitionField.type === "select" && isChoiceGroup(options)) {
+                  const legendId = `dynamic-${definitionField.key}-legend`;
+                  const placement = choicePlacements.get(definitionField.key) ?? "full";
+                  return (
+                    <FieldSet
+                      data-invalid={fieldState.invalid}
+                      className={cn(
+                        "gap-3",
+                        placement === "full" && "sm:col-span-2",
+                        // A pair always starts its own row, even after an odd
+                        // number of half-width fields.
+                        placement === "pair-start" && "sm:col-start-1",
+                      )}
+                    >
+                      <FieldLegend variant="label" id={legendId} className="mb-0">
+                        {legendLabel}
+                      </FieldLegend>
+                      <ChoiceGroup
+                        options={options}
+                        value={field.value ?? ""}
+                        onValueChange={field.onChange}
+                        idPrefix={`dynamic-${definitionField.key}`}
+                        wide={placement === "full"}
+                        invalid={fieldState.invalid}
+                        labelledBy={legendId}
+                      />
+                      {common}
+                    </FieldSet>
+                  );
+                }
 
                 return (
                   <Field
@@ -124,11 +190,7 @@ export function DynamicFormFields({
                     }
                   >
                     <FieldLabel htmlFor={`dynamic-${definitionField.key}`}>
-                      {definitionField.label}
-                      {!definitionField.required ? " (optional)" : ""}
-                      {showRequiredMarks && definitionField.required ? (
-                        <RequiredMark />
-                      ) : null}
+                      {legendLabel}
                     </FieldLabel>
 
                     {definitionField.type === "textarea" ? (

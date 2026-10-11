@@ -10,9 +10,19 @@ export const formFieldTypeSchema = z.enum([
   "person_group",
 ]);
 
+/** Applicant-facing message that can hold the case step until it is resolved. */
+export const answerNoticeSchema = z.object({
+  variant: z.enum(["default", "warning", "destructive", "success"]),
+  title: z.string().min(1).max(160),
+  description: z.string().min(1).max(500),
+  blocksProgress: z.boolean().default(false),
+});
+
 export const formOptionSchema = z.object({
   value: z.string().min(1).max(120),
   label: z.string().min(1).max(160),
+  /** Shown while this option is selected; may block continuing. */
+  notice: answerNoticeSchema.optional(),
 });
 
 export const formConditionSchema = z.object({
@@ -60,14 +70,7 @@ export const ageBandSchema = z.object({
   label: z.string().min(1).max(160),
   minAge: z.number().int().min(0).max(150),
   maxAge: z.number().int().min(0).max(150).optional(),
-  notice: z
-    .object({
-      variant: z.enum(["default", "warning", "destructive", "success"]),
-      title: z.string().min(1).max(160),
-      description: z.string().min(1).max(500),
-      blocksProgress: z.boolean().default(false),
-    })
-    .optional(),
+  notice: answerNoticeSchema.optional(),
 });
 
 /**
@@ -113,6 +116,20 @@ export const eventTimingRuleSchema = z.object({
   /** Key of the date field in this template that starts the clock. */
   triggerField: z.string().min(1).max(64),
   windowDays: z.number().int().min(0).max(3660),
+  /**
+   * The window can depend on another answer (a marriage with a license is
+   * on-time for 15 days, one without for 30). `windowDays` is the fallback
+   * until that question is answered or when the answer has no entry.
+   */
+  windowDaysByAnswer: z
+    .object({
+      field: z.string().min(1).max(64),
+      values: z.record(
+        z.string().min(1).max(120),
+        z.number().int().min(0).max(3660),
+      ),
+    })
+    .optional(),
   /**
    * Which side of the window means the applicant is on the wrong service.
    * An on-time service routes when `outside_window`; its delayed counterpart
@@ -483,6 +500,7 @@ export type CaseSelectorQuestion = z.infer<typeof caseSelectorQuestionSchema>;
 export type CaseSelectorOutcome = z.infer<typeof caseSelectorOutcomeSchema>;
 export type CaseSelectorDefinition = z.infer<typeof caseSelectorDefinitionSchema>;
 export type AgeBand = z.infer<typeof ageBandSchema>;
+export type AnswerNotice = z.infer<typeof answerNoticeSchema>;
 export type DerivedAnswer = z.infer<typeof derivedAnswerSchema>;
 export type EventTimingBehavior = z.infer<typeof eventTimingBehaviorSchema>;
 export type EventTimingMismatch = z.infer<typeof eventTimingMismatchSchema>;
