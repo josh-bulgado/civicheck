@@ -573,6 +573,23 @@ export function validateTemplateAnswers(
   const selectorValidation = validateCaseSelectorAnswers(definition, effectiveAnswers);
   if (!selectorValidation.success) return selectorValidation;
 
+  // The wizard already holds the applicant on the case step for these two
+  // behaviors; repeat the check so a request cannot be filed on the wrong
+  // track by calling the server directly. `warn_allow` and a deferred
+  // (`requireDocumentFirst`) rule stay advisory, exactly as in the wizard.
+  const timing = evaluateTemplateEventTiming(definition, effectiveAnswers);
+  if (
+    timing &&
+    !timing.rule.requireDocumentFirst &&
+    timing.evaluation.mismatched &&
+    (timing.rule.behavior === "block" || timing.rule.behavior === "redirect_confirm")
+  ) {
+    return {
+      success: false,
+      message: `${timing.rule.title}. ${timing.rule.description}`,
+    };
+  }
+
   for (const section of definition.sections) {
     for (const field of section.fields) {
       if (!isFieldVisible(field, effectiveAnswers)) continue;
