@@ -144,7 +144,78 @@ export const formFieldDefinitionSchema = z.object({
   options: z.array(formOptionSchema).max(100).optional(),
   dateDirection: z.enum(["past", "future", "any"]).optional(),
   visibleWhen: formConditionSchema.optional(),
+  /**
+   * Set when the field was copied in from a shared field block. The published
+   * definition always carries the full field, so the applicant wizard never
+   * resolves blocks; the marker only tells the admin editor which fields to
+   * update when the block changes.
+   */
+  blockKey: z
+    .string()
+    .min(1)
+    .max(64)
+    .regex(/^[a-z][a-z0-9_]*$/, "Use lowercase letters, numbers, and underscores")
+    .optional(),
 });
+
+/**
+ * An admin-maintained group of questions shared by several form templates.
+ * Block fields are plain field definitions without the `blockKey` marker —
+ * the marker is added when the block is copied into a template.
+ */
+export const formFieldBlockFieldSchema = formFieldDefinitionSchema.omit({
+  blockKey: true,
+});
+
+export const formFieldBlockSchema = z
+  .object({
+    blockKey: z
+      .string()
+      .min(1)
+      .max(64)
+      .regex(/^[a-z][a-z0-9_]*$/, "Use lowercase letters, numbers, and underscores"),
+    name: z.string().trim().min(1).max(160),
+    description: z.string().trim().max(500).optional(),
+    step: formStepSchema,
+    fields: z.array(formFieldBlockFieldSchema).min(1).max(20),
+  })
+  .superRefine((block, context) => {
+    const keys = new Set<string>();
+    for (const [index, field] of block.fields.entries()) {
+      if (keys.has(field.key)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Field key "${field.key}" is used more than once`,
+          path: ["fields", index, "key"],
+        });
+      }
+      keys.add(field.key);
+
+      if (field.type === "person_group") {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "A shared block cannot contain the person name group",
+          path: ["fields", index, "type"],
+        });
+      }
+      if (field.type === "select" && !field.options?.length) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Select field "${field.label}" needs at least one option`,
+          path: ["fields", index, "options"],
+        });
+      }
+    }
+    for (const [index, field] of block.fields.entries()) {
+      if (field.visibleWhen && !keys.has(field.visibleWhen.field)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Visibility condition for "${field.label}" must reference a field in this block`,
+          path: ["fields", index, "visibleWhen"],
+        });
+      }
+    }
+  });
 
 export const formSectionDefinitionSchema = z.object({
   key: z.string().min(1).max(64),
@@ -417,6 +488,8 @@ export type EventTimingBehavior = z.infer<typeof eventTimingBehaviorSchema>;
 export type EventTimingMismatch = z.infer<typeof eventTimingMismatchSchema>;
 export type EventTimingRule = z.infer<typeof eventTimingRuleSchema>;
 export type FormFieldDefinition = z.infer<typeof formFieldDefinitionSchema>;
+export type FormFieldBlockField = z.infer<typeof formFieldBlockFieldSchema>;
+export type FormFieldBlock = z.infer<typeof formFieldBlockSchema>;
 export type FormSectionDefinition = z.infer<typeof formSectionDefinitionSchema>;
 export type FormTemplateDefinition = z.infer<typeof formTemplateDefinitionSchema>;
 

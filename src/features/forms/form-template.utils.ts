@@ -33,14 +33,16 @@ const PLACE_TYPE_OPTIONS = [
   { value: "other", label: "Other" },
 ];
 
+// Same values as the shared `birth_details` block, so a service on the legacy
+// fallback stores the informant's relationship the way the published forms do.
 const INFORMANT_OPTIONS = [
-  "Mother",
-  "Father",
-  "Grandparent",
-  "Guardian",
-  "Physician / Midwife",
-  "Other",
-].map((value) => ({ value, label: value }));
+  { value: "mother", label: "Mother" },
+  { value: "father", label: "Father" },
+  { value: "grandparent", label: "Grandparent" },
+  { value: "guardian", label: "Guardian" },
+  { value: "physician_midwife", label: "Physician / Midwife" },
+  { value: "other", label: "Other" },
+];
 
 type LegacyServiceConfig = {
   service_code: string;
