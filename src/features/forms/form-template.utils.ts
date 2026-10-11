@@ -588,8 +588,8 @@ export function isFieldVisible(
  * never shown decides which documents are required.
  *
  * Visibility can chain (a hidden controller hides its dependents), so this
- * repeats until nothing more is dropped. Keys the definition does not know
- * about are left alone.
+ * repeats until nothing more is dropped. Keys the definition does not define
+ * at all are the job of `dropUnknownAnswers`.
  */
 export function pruneHiddenAnswers(
   definition: FormTemplateDefinition,
@@ -634,10 +634,38 @@ export function pruneHiddenAnswers(
 }
 
 /**
- * The answers every rule should be evaluated against: hidden questions
- * removed, derived values recalculated from what remains, then anything that
- * depended on a derived value re-checked. Use this — not the raw bag — to
- * decide which requirements apply, on the client and the server alike.
+ * Keep only answers to questions this template actually defines: its fields,
+ * its case-selector questions and its derived values.
+ *
+ * Neither validation nor storage ever looks at any other key, but requirement
+ * rules read the bag by key name, so an arbitrary extra key would let a caller
+ * decide a rule's outcome with a value no question of this form collects.
+ * Every key the live requirement rules read is defined by the template of
+ * each service they apply to.
+ */
+export function dropUnknownAnswers(
+  definition: FormTemplateDefinition,
+  answers: TemplateAnswers | Record<string, string>,
+): TemplateAnswers {
+  const known = new Set<string>();
+  for (const section of definition.sections) {
+    for (const field of section.fields) known.add(field.key);
+  }
+  for (const question of definition.caseSelector?.questions ?? []) {
+    known.add(question.key);
+  }
+  for (const derived of definition.derivedAnswers ?? []) known.add(derived.key);
+
+  return Object.fromEntries(
+    Object.entries(answers).filter(([key]) => known.has(key)),
+  ) as TemplateAnswers;
+}
+
+/**
+ * The answers every rule should be evaluated against: unknown and hidden
+ * questions removed, derived values recalculated from what remains, then
+ * anything that depended on a derived value re-checked. Use this — not the raw
+ * bag — to decide which requirements apply, on the client and the server alike.
  */
 export function canonicalizeTemplateAnswers(
   definition: FormTemplateDefinition,
@@ -648,7 +676,7 @@ export function canonicalizeTemplateAnswers(
     definition,
     deriveTemplateAnswers(
       definition,
-      pruneHiddenAnswers(definition, answers),
+      pruneHiddenAnswers(definition, dropUnknownAnswers(definition, answers)),
       todayKey,
     ),
   );
