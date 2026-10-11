@@ -26,6 +26,7 @@ import {
   uploadRequestDocumentFn,
   deleteRequestDocumentFn,
 } from "~/features/apply/apply.mutations";
+import { prepareUploadFile } from "~/features/apply/upload-image.utils";
 import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
 import { RequestSummaryCard } from "~/features/apply/components/RequestSummaryCard";
@@ -167,7 +168,17 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
       return;
     }
 
-    const files = selectedFiles.slice(0, remainingCapacity);
+    // Camera photos are resized and re-encoded on the device first; it takes a
+    // moment, so show the card as busy before validating the prepared files.
+    setPendingAction({
+      slotKey: slot.key,
+      type: "upload",
+      completed: 0,
+      total: Math.min(selectedFiles.length, remainingCapacity),
+    });
+    const files = await Promise.all(
+      selectedFiles.slice(0, remainingCapacity).map(prepareUploadFile),
+    );
     const invalidFiles = files.filter(
       (file) => !ACCEPTED_TYPES.has(file.type) || file.size > MAX_FILE_SIZE,
     );
@@ -185,6 +196,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
     }
     if (validFiles.length === 0) {
       setRowError((prev) => ({ ...prev, [slot.key]: errors.join(" ") }));
+      setPendingAction(null);
       return;
     }
 
