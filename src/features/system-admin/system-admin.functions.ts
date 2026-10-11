@@ -449,6 +449,8 @@ export const updateAccountDetails = createServerFn({ method: "POST" })
       .update({
         first_name: data.firstName,
         middle_name: data.middleName || null,
+        // Giving a middle name withdraws any earlier "I don't have one".
+        ...(data.middleName ? { has_no_middle_name: false } : {}),
         last_name: data.lastName,
         suffix: data.suffix || null,
         date_of_birth: data.dateOfBirth || null,

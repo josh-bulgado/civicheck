@@ -28,7 +28,7 @@ import {
 } from "~/components/ui/select";
 import { NO_SUFFIX, SUFFIXES } from "~/lib/subject-fields";
 import { LegalDialogLink } from "~/features/legal/components/LegalDialogLink";
-import { signupInputSchema } from "../auth.schema";
+import { checkMiddleNameAnswer, signupFieldsSchema } from "../auth.schema";
 import { useSignUp } from "../hooks/useSignUp";
 import { useVerifySignupOtp } from "../hooks/useVerifySignupOtp";
 import { useOAuthLogin } from "../hooks/useOAuthLogin";
@@ -53,11 +53,13 @@ import { VerifyEmailNotice } from "./VerifyEmailNotice";
 
 // The field rules live in auth.schema.ts so the server enforces exactly what
 // this form shows; only the consent checkbox belongs to the form alone.
-const formSchema = signupInputSchema.extend({
-  agreeToTerms: z.boolean().refine((value) => value === true, {
-    message: "You must agree to continue",
-  }),
-});
+const formSchema = signupFieldsSchema
+  .extend({
+    agreeToTerms: z.boolean().refine((value) => value === true, {
+      message: "You must agree to continue",
+    }),
+  })
+  .superRefine(checkMiddleNameAnswer);
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -75,6 +77,7 @@ type PendingSignup = {
   firstName: string;
   lastName: string;
   middleName: string;
+  hasNoMiddleName: boolean;
   suffix: string;
 };
 
@@ -97,6 +100,7 @@ const RegisterForm = () => {
       firstName: "",
       lastName: "",
       middleName: "",
+      hasNoMiddleName: false,
       suffix: "",
       email: "",
       password: "",
@@ -110,6 +114,7 @@ const RegisterForm = () => {
   // blur, so ticking a checkbox would leave the button stale until focus moved
   // away.
   const isComplete = formSchema.safeParse(form.watch()).success;
+  const hasNoMiddleName = form.watch("hasNoMiddleName");
 
   async function onSubmit(data: FormValues) {
     const signup: PendingSignup = {
@@ -117,7 +122,8 @@ const RegisterForm = () => {
       password: data.password,
       firstName: data.firstName,
       lastName: data.lastName,
-      middleName: data.middleName.trim(),
+      middleName: data.hasNoMiddleName ? "" : data.middleName.trim(),
+      hasNoMiddleName: data.hasNoMiddleName,
       suffix: data.suffix.trim(),
     };
     const result = await signupMutation.mutate({ data: signup });
@@ -180,7 +186,7 @@ const RegisterForm = () => {
                 className="gap-1.5"
               >
                 <FieldLabel htmlFor="firstName" className={authLabelClass}>
-                  First name
+                  First Name
                   <RequiredMark />
                 </FieldLabel>
                 <Input
@@ -198,27 +204,8 @@ const RegisterForm = () => {
             )}
           />
 
-          <Controller
-            control={form.control}
-            name="middleName"
-            render={({ field }) => (
-              <Field style={staggerStyle(1)} className="gap-1.5">
-                <FieldLabel htmlFor="middleName" className={authLabelClass}>
-                  Middle name
-                </FieldLabel>
-                <Input
-                  {...field}
-                  id="middleName"
-                  className={authFilledFieldClass}
-                  placeholder="Santos (Optional)"
-                  autoComplete="additional-name"
-                />
-              </Field>
-            )}
-          />
-
           {/* Suffix modifies the surname, so it shares a row with it. */}
-          <div style={staggerStyle(2)} className="flex items-start gap-2.5">
+          <div style={staggerStyle(1)} className="flex items-start gap-2.5">
             <Controller
               control={form.control}
               name="lastName"
@@ -228,7 +215,7 @@ const RegisterForm = () => {
                   className="min-w-0 flex-1 gap-1.5"
                 >
                   <FieldLabel htmlFor="lastName" className={authLabelClass}>
-                    Last name <RequiredMark />
+                    Last Name <RequiredMark />
                   </FieldLabel>
                   <Input
                     {...field}
@@ -280,6 +267,64 @@ const RegisterForm = () => {
               )}
             />
           </div>
+
+          {/* A blank middle name is only accepted with the checkbox ticked, so
+              the database can tell "has none" from "left empty". */}
+          <Field
+            data-invalid={!!form.formState.errors.middleName}
+            style={staggerStyle(2)}
+            className="gap-1.5"
+          >
+            <Controller
+              control={form.control}
+              name="middleName"
+              render={({ field, fieldState }) => (
+                <>
+                  <FieldLabel htmlFor="middleName" className={authLabelClass}>
+                    Middle Name
+                    {!hasNoMiddleName && <RequiredMark />}
+                  </FieldLabel>
+                  <Input
+                    {...field}
+                    id="middleName"
+                    className={authFilledFieldClass}
+                    placeholder="Santos"
+                    disabled={hasNoMiddleName}
+                    aria-invalid={fieldState.invalid}
+                    autoComplete="additional-name"
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </>
+              )}
+            />
+            <Controller
+              control={form.control}
+              name="hasNoMiddleName"
+              render={({ field }) => (
+                <Field orientation="horizontal" className="pt-0.5">
+                  <Checkbox
+                    id="hasNoMiddleName"
+                    checked={field.value === true}
+                    onCheckedChange={(checked) => {
+                      field.onChange(checked === true);
+                      if (checked === true) {
+                        form.setValue("middleName", "");
+                      }
+                      void form.trigger("middleName");
+                    }}
+                  />
+                  <FieldLabel
+                    htmlFor="hasNoMiddleName"
+                    className="text-[13px] leading-snug text-body"
+                  >
+                    I don&apos;t have a middle name
+                  </FieldLabel>
+                </Field>
+              )}
+            />
+          </Field>
 
           <Controller
             control={form.control}
