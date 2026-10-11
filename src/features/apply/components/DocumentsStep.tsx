@@ -31,7 +31,7 @@ import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
 import { RequestSummaryCard } from "~/features/apply/components/RequestSummaryCard";
 import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
-import { deriveTemplateAnswers } from "~/features/forms/form-template.utils";
+import { canonicalizeTemplateAnswers } from "~/features/forms/form-template.utils";
 import {
   expandRequirementUploadSlots,
   requirementUploadKey,
@@ -92,7 +92,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
           isRequirementApplicable(
             requirement,
             draft.selectedServiceCode,
-            deriveTemplateAnswers(definition, {
+            canonicalizeTemplateAnswers(definition, {
               ...draft.answers,
               ...draft.caseSelectorAnswers,
             }),

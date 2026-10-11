@@ -17,7 +17,7 @@ import type { AcknowledgmentPdfData } from "~/features/requests/pdf/types";
 import { getSupabaseAdminClient } from "~/utils/supabase";
 import {
   buildLegacyFormDefinition,
-  deriveTemplateAnswers,
+  canonicalizeTemplateAnswers,
   flattenTemplateAnswers,
   parseFormTemplateDefinition,
   validateCaseSelectorAnswers,
@@ -140,7 +140,10 @@ export const submitRequestFn = createServerFn({ method: "POST" })
       return { error: true, message: "This service is not bound to that application form." };
     }
 
-    const answerBag = deriveTemplateAnswers(definition, data.answers);
+    // Hidden questions are dropped before anything reads the bag, so a value
+    // sent for a question the applicant was never shown cannot decide which
+    // documents are required.
+    const answerBag = canonicalizeTemplateAnswers(definition, data.answers);
     const selectorValidation = validateCaseSelectorAnswers(
       definition,
       answerBag,
@@ -286,7 +289,13 @@ export const submitRequestFn = createServerFn({ method: "POST" })
 
     const formData = flattenTemplateAnswers(definition, answerBag);
 
-    const created = await insertRequestWithTrackingNumber(supabase, {
+    // Created with the service-role client on purpose. Everything above is the
+    // only place an online request is validated (active form version, case and
+    // timing gates, required documents), so applicants have no INSERT policy on
+    // `requests`: otherwise they could skip this function and write a row — and
+    // its answers and form version — straight through PostgREST. `applicant_id`
+    // comes from the session, never from the payload.
+    const created = await insertRequestWithTrackingNumber(getSupabaseAdminClient(), {
       applicant_id: user.id,
       request_type: data.serviceCode,
       form_data: formData,

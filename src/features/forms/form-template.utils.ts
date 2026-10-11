@@ -204,7 +204,7 @@ function answerString(
 export function deriveTemplateAnswers(
   definition: FormTemplateDefinition,
   answers: TemplateAnswers | Record<string, string>,
-  todayKey: string = toDateKey(),
+  todayKey: string = todayKeyInTimeZone(),
 ): TemplateAnswers {
   const output: TemplateAnswers = { ...answers };
   for (const derived of definition.derivedAnswers ?? []) {
@@ -231,7 +231,7 @@ export function deriveTemplateAnswers(
 export function getDerivedAnswerFeedback(
   definition: FormTemplateDefinition,
   answers: TemplateAnswers | Record<string, string>,
-  todayKey: string = toDateKey(),
+  todayKey: string = todayKeyInTimeZone(),
 ) {
   const effectiveAnswers = deriveTemplateAnswers(definition, answers, todayKey);
   return (definition.derivedAnswers ?? []).flatMap((derived) => {
@@ -399,8 +399,9 @@ export function evaluateTemplateEventTiming(
 function validateDerivedAnswers(
   definition: FormTemplateDefinition,
   answers: TemplateAnswers,
+  todayKey: string,
 ): { success: true } | { success: false; message: string } {
-  const effectiveAnswers = deriveTemplateAnswers(definition, answers);
+  const effectiveAnswers = deriveTemplateAnswers(definition, answers, todayKey);
   for (const derived of definition.derivedAnswers ?? []) {
     if (!derived.required) continue;
     const sourceDate = answerString(effectiveAnswers, derived.dateField);
@@ -409,7 +410,7 @@ function validateDerivedAnswers(
       .find((field) => field.key === derived.dateField);
     const referenceDate = derived.referenceDateField
       ? answerString(effectiveAnswers, derived.referenceDateField)
-      : toDateKey();
+      : todayKey;
     const referenceField = derived.referenceDateField
       ? definition.sections
           .flatMap((section) => section.fields)
@@ -454,6 +455,7 @@ function validateDerivedAnswers(
     const blockingFeedback = getDerivedAnswerFeedback(
       definition,
       effectiveAnswers,
+      todayKey,
     ).find(
       (feedback) =>
         feedback.key === derived.key && feedback.notice.blocksProgress,
@@ -523,21 +525,28 @@ export function resolveCaseSelectorServiceCode(
 export function validateCaseSelectorAnswers(
   definition: FormTemplateDefinition,
   answers: TemplateAnswers,
+  todayKey: string = todayKeyInTimeZone(definition.eventTiming?.timezone),
 ): { success: true; serviceCode: string | null } | { success: false; message: string } {
   const selector = definition.caseSelector;
   if (!selector) return { success: true, serviceCode: null };
 
-  const derivedValidation = validateDerivedAnswers(definition, answers);
+  const derivedValidation = validateDerivedAnswers(definition, answers, todayKey);
   if (!derivedValidation.success) return derivedValidation;
-  const effectiveAnswers = deriveTemplateAnswers(definition, answers);
+  const effectiveAnswers = deriveTemplateAnswers(definition, answers, todayKey);
 
   for (const question of visibleCaseSelectorQuestions(definition, effectiveAnswers)) {
     const value = answerString(effectiveAnswers, question.key);
     if (!value) {
       return { success: false, message: `${question.label} is required.` };
     }
-    if (!question.options.some((option) => option.value === value)) {
+    const option = question.options.find((candidate) => candidate.value === value);
+    if (!option) {
       return { success: false, message: `${question.label} has an invalid selection.` };
+    }
+    // The wizard holds the step on a blocking notice; repeat it here so the
+    // server does not rely on the client having done so.
+    if (option.notice?.blocksProgress) {
+      return { success: false, message: option.notice.description };
     }
   }
 
@@ -556,38 +565,172 @@ export function isFieldVisible(
   answers: TemplateAnswers,
 ): boolean {
   if (!field.visibleWhen) return true;
-  const current = answers[field.visibleWhen.field];
-  const value = typeof current === "string" ? current : "";
-  return field.visibleWhen.operator === "equals"
-    ? value === field.visibleWhen.value
-    : value !== field.visibleWhen.value;
+  // One meaning of a condition everywhere: a follow-up question stays hidden
+  // until the question that controls it is answered, for `not_equals` as well
+  // as `equals`. Requirement applicability and case-selector visibility
+  // already evaluate conditions this way.
+  return conditionMatches(field.visibleWhen, answers);
+}
+
+/**
+ * `todayKey` is the registry's calendar date (Asia/Manila by default), never
+ * the server runtime's. Derived age bands, the on-time window and past/future
+ * date fields are all judged against this one date so they cannot disagree.
+ */
+/**
+ * Drop the answer of every question that is currently hidden.
+ *
+ * Validation skips hidden fields and storage (`flattenTemplateAnswers`) drops
+ * them, but a draft keeps whatever the applicant typed before a controlling
+ * answer changed, and a direct caller can send a value for any key. Anything
+ * that reads the raw bag — chiefly which requirements apply — must not see
+ * those values, or a stale or injected answer to a question the applicant was
+ * never shown decides which documents are required.
+ *
+ * Visibility can chain (a hidden controller hides its dependents), so this
+ * repeats until nothing more is dropped. Keys the definition does not define
+ * at all are the job of `dropUnknownAnswers`.
+ */
+export function pruneHiddenAnswers(
+  definition: FormTemplateDefinition,
+  answers: TemplateAnswers | Record<string, string>,
+): TemplateAnswers {
+  const output: TemplateAnswers = { ...answers };
+  const conditional: Array<{
+    key: string;
+    visible: (current: TemplateAnswers) => boolean;
+  }> = [];
+
+  for (const section of definition.sections) {
+    for (const field of section.fields) {
+      const condition = field.visibleWhen;
+      if (!condition) continue;
+      conditional.push({
+        key: field.key,
+        visible: (current) => conditionMatches(condition, current),
+      });
+    }
+  }
+  for (const question of definition.caseSelector?.questions ?? []) {
+    const rule = question.visibleWhen;
+    if (!rule) continue;
+    conditional.push({
+      key: question.key,
+      visible: (current) => conditionRuleMatches(rule, current),
+    });
+  }
+
+  for (let pass = 0; pass <= conditional.length; pass++) {
+    let changed = false;
+    for (const { key, visible } of conditional) {
+      if (key in output && !visible(output)) {
+        delete output[key];
+        changed = true;
+      }
+    }
+    if (!changed) break;
+  }
+  return output;
+}
+
+/**
+ * Keep only answers to questions this template actually defines: its fields,
+ * its case-selector questions and its derived values.
+ *
+ * Neither validation nor storage ever looks at any other key, but requirement
+ * rules read the bag by key name, so an arbitrary extra key would let a caller
+ * decide a rule's outcome with a value no question of this form collects.
+ * Every key the live requirement rules read is defined by the template of
+ * each service they apply to.
+ */
+export function dropUnknownAnswers(
+  definition: FormTemplateDefinition,
+  answers: TemplateAnswers | Record<string, string>,
+): TemplateAnswers {
+  const known = new Set<string>();
+  for (const section of definition.sections) {
+    for (const field of section.fields) known.add(field.key);
+  }
+  for (const question of definition.caseSelector?.questions ?? []) {
+    known.add(question.key);
+  }
+  for (const derived of definition.derivedAnswers ?? []) known.add(derived.key);
+
+  return Object.fromEntries(
+    Object.entries(answers).filter(([key]) => known.has(key)),
+  ) as TemplateAnswers;
+}
+
+/**
+ * The answers every rule should be evaluated against: unknown and hidden
+ * questions removed, derived values recalculated from what remains, then
+ * anything that depended on a derived value re-checked. Use this — not the raw
+ * bag — to decide which requirements apply, on the client and the server alike.
+ */
+export function canonicalizeTemplateAnswers(
+  definition: FormTemplateDefinition,
+  answers: TemplateAnswers | Record<string, string>,
+  todayKey: string = todayKeyInTimeZone(definition.eventTiming?.timezone),
+): TemplateAnswers {
+  return pruneHiddenAnswers(
+    definition,
+    deriveTemplateAnswers(
+      definition,
+      pruneHiddenAnswers(definition, dropUnknownAnswers(definition, answers)),
+      todayKey,
+    ),
+  );
 }
 
 export function validateTemplateAnswers(
   definition: FormTemplateDefinition,
   answers: TemplateAnswers,
+  todayKey: string = todayKeyInTimeZone(definition.eventTiming?.timezone),
 ): { success: true } | { success: false; message: string } {
-  const effectiveAnswers = deriveTemplateAnswers(definition, answers);
-  const derivedValidation = validateDerivedAnswers(definition, effectiveAnswers);
+  const effectiveAnswers = deriveTemplateAnswers(definition, answers, todayKey);
+  const derivedValidation = validateDerivedAnswers(definition, effectiveAnswers, todayKey);
   if (!derivedValidation.success) return derivedValidation;
-  const selectorValidation = validateCaseSelectorAnswers(definition, effectiveAnswers);
+  const selectorValidation = validateCaseSelectorAnswers(
+    definition,
+    effectiveAnswers,
+    todayKey,
+  );
   if (!selectorValidation.success) return selectorValidation;
 
   // The wizard already holds the applicant on the case step for these two
   // behaviors; repeat the check so a request cannot be filed on the wrong
   // track by calling the server directly. `warn_allow` and a deferred
   // (`requireDocumentFirst`) rule stay advisory, exactly as in the wizard.
-  const timing = evaluateTemplateEventTiming(definition, effectiveAnswers);
+  //
+  // The check fails closed: a missing, malformed or future trigger date means
+  // the window cannot be evaluated, so it must not be read as "on time".
+  const timing = evaluateTemplateEventTiming(definition, effectiveAnswers, todayKey);
   if (
     timing &&
     !timing.rule.requireDocumentFirst &&
-    timing.evaluation.mismatched &&
     (timing.rule.behavior === "block" || timing.rule.behavior === "redirect_confirm")
   ) {
-    return {
-      success: false,
-      message: `${timing.rule.title}. ${timing.rule.description}`,
-    };
+    const triggerLabel =
+      definition.sections
+        .flatMap((section) => section.fields)
+        .find((field) => field.key === timing.rule.triggerField)?.label ??
+      "The event date";
+    const { status } = timing.evaluation;
+    if (status === "missing") {
+      return { success: false, message: `${triggerLabel} is required.` };
+    }
+    if (status === "invalid") {
+      return { success: false, message: `${triggerLabel} must be a valid date.` };
+    }
+    if (status === "future") {
+      return { success: false, message: `${triggerLabel} cannot be in the future.` };
+    }
+    if (timing.evaluation.mismatched) {
+      return {
+        success: false,
+        message: `${timing.rule.title}. ${timing.rule.description}`,
+      };
+    }
   }
 
   for (const section of definition.sections) {
@@ -615,7 +758,7 @@ export function validateTemplateAnswers(
           }
           if (
             [subject.firstName, subject.middleName, subject.lastName, subject.suffix].some(
-              (part) => part.length > 120,
+              (part) => (part ?? "").length > 120,
             )
           ) {
             return {
@@ -658,14 +801,13 @@ export function validateTemplateAnswers(
         return { success: false, message: blockingNotice.description };
       }
       if (field.type === "date") {
-        const today = toDateKey();
         if (!fromDateKey(value)) {
           return { success: false, message: `${field.label} must be a valid date.` };
         }
-        if (field.dateDirection === "past" && value > today) {
+        if (field.dateDirection === "past" && value > todayKey) {
           return { success: false, message: `${field.label} cannot be in the future.` };
         }
-        if (field.dateDirection === "future" && value < today) {
+        if (field.dateDirection === "future" && value < todayKey) {
           return { success: false, message: `${field.label} cannot be in the past.` };
         }
       }
