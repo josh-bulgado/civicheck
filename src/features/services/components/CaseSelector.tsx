@@ -14,13 +14,16 @@ import { conditionRuleMatches } from "~/features/forms/form-template.utils";
 const choiceGroupClass =
   "grid grid-cols-1 gap-0 overflow-hidden rounded-lg border border-border bg-white divide-y divide-border-light sm:grid-cols-2 sm:divide-x sm:divide-y-0";
 
+// No `h-full` on the label or its Field: grid items already stretch to the row,
+// and Safari resolves the percentage against the wrong box, growing the tile far
+// past the clipped group so its content is centered out of view.
 const choiceLabelClass =
-  "h-full cursor-pointer has-[>[data-slot=field]]:rounded-none has-[>[data-slot=field]]:border-0 *:data-[slot=field]:px-4 transition-colors hover:bg-primary-tint focus-within:bg-primary-tint has-data-checked:bg-primary-soft/70";
+  "cursor-pointer has-[>[data-slot=field]]:rounded-none has-[>[data-slot=field]]:border-0 *:data-[slot=field]:px-4 transition-colors hover:bg-primary-tint focus-within:bg-primary-tint has-data-checked:bg-primary-soft/70";
 
 // Field top-aligns rows that contain FieldContent (and nudges the radio 1px);
 // choice tiles are taller than their content, so center the radio and text.
 const choiceFieldClass =
-  "h-full min-h-14 has-[>[data-slot=field-content]]:items-center has-[>[data-slot=field-content]]:[&>[role=checkbox],[role=radio]]:mt-0";
+  "min-h-14 flex-1 has-[>[data-slot=field-content]]:items-center has-[>[data-slot=field-content]]:[&>[role=checkbox],[role=radio]]:mt-0";
 
 interface Service {
   service_code: string;
