@@ -54,17 +54,19 @@ const personName = (label: string) =>
     .max(NAME_MAX, `${label} is too long`)
     .refine(hasNoControlCharacters, `${label} contains invalid characters`);
 
-/** The account-holder fields collected at signup. */
-export const signupInputSchema = z.object({
+/** The account-holder fields collected at signup, before cross-field rules. */
+export const signupFieldsSchema = z.object({
   firstName: personName("First name"),
   lastName: personName("Last name"),
-  // Optional: this names the account holder, not the registry record. The
-  // names that must match a record are entered per request in the apply flow.
+  // This names the account holder, not the registry record. The names that
+  // must match a record are entered per request in the apply flow. Blank is
+  // only valid together with `hasNoMiddleName` (see checkMiddleNameAnswer).
   middleName: z
     .string()
     .trim()
     .max(NAME_MAX, "Middle name is too long")
     .refine(hasNoControlCharacters, "Middle name contains invalid characters"),
+  hasNoMiddleName: z.boolean(),
   // The form only offers the shared list, so the server accepts nothing else.
   suffix: z
     .string()
@@ -78,6 +80,33 @@ export const signupInputSchema = z.object({
     "Password must include at least one number",
   ),
 });
+
+/**
+ * A middle name is either given or explicitly declared absent — never both and
+ * never neither, so a blank field can't be mistaken for a forgotten one.
+ */
+export function checkMiddleNameAnswer(
+  value: { middleName: string; hasNoMiddleName: boolean },
+  ctx: z.RefinementCtx,
+) {
+  if (value.hasNoMiddleName && value.middleName !== "") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["middleName"],
+      message: "Clear the middle name or untick the box",
+    });
+  } else if (!value.hasNoMiddleName && value.middleName === "") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["middleName"],
+      message: "Middle name is required, or tick the box if you don't have one",
+    });
+  }
+}
+
+export const signupInputSchema = signupFieldsSchema.superRefine(
+  checkMiddleNameAnswer,
+);
 
 export const credentialsSchema = z.object({
   email: emailSchema,

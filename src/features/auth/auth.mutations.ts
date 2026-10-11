@@ -189,8 +189,10 @@ export const signupFn = createServerFn({ method: "POST" })
   .validator(signupInputSchema)
   .handler(async ({ data }) => {
     const adminSupabase = getSupabaseAdminClient();
-    // Already trimmed and checked by the validator; blank means "none".
+    // Already trimmed and checked by the validator; blank means "none". The
+    // validator also guarantees a middle name and "has none" never coexist.
     const middleName = data.middleName || undefined;
+    const hasNoMiddleName = data.hasNoMiddleName;
     const suffix = data.suffix || undefined;
     let signUpResult = await adminSupabase.auth.admin.createUser({
       email: data.email,
@@ -200,6 +202,7 @@ export const signupFn = createServerFn({ method: "POST" })
         first_name: data.firstName,
         last_name: data.lastName,
         middle_name: middleName,
+        has_no_middle_name: hasNoMiddleName,
         suffix,
       },
     });
@@ -234,6 +237,7 @@ export const signupFn = createServerFn({ method: "POST" })
               first_name: data.firstName,
               last_name: data.lastName,
               middle_name: middleName,
+              has_no_middle_name: hasNoMiddleName,
               suffix,
             },
           });
@@ -254,13 +258,17 @@ export const signupFn = createServerFn({ method: "POST" })
     }
 
     // The profile row is created by a trigger that only reads the first and last
-    // name out of the metadata, so the middle name and suffix have to be
-    // written onto it.
+    // name out of the metadata, so the middle name, the "no middle name" answer
+    // and the suffix have to be written onto it.
     const newProfileId = signUpResult.data?.user?.id;
-    if (newProfileId && (middleName || suffix)) {
+    if (newProfileId && (middleName || hasNoMiddleName || suffix)) {
       await adminSupabase
         .from("profiles")
-        .update({ middle_name: middleName ?? null, suffix: suffix ?? null })
+        .update({
+          middle_name: middleName ?? null,
+          has_no_middle_name: hasNoMiddleName,
+          suffix: suffix ?? null,
+        })
         .eq("id", newProfileId);
     }
 
@@ -272,6 +280,7 @@ export const signupFn = createServerFn({ method: "POST" })
         first_name: data.firstName,
         last_name: data.lastName,
         middle_name: middleName,
+        has_no_middle_name: hasNoMiddleName,
         suffix,
       },
     });
@@ -329,6 +338,7 @@ export const resendSignupOtpFn = createServerFn({ method: "POST" })
     const firstName =
       (userMetadata.first_name as string | undefined) || "there";
     const middleName = userMetadata.middle_name as string | undefined;
+    const hasNoMiddleName = userMetadata.has_no_middle_name === true;
     const suffix = userMetadata.suffix as string | undefined;
 
     // Recreate rather than update: Supabase Auth has no admin call to mint a
@@ -353,10 +363,14 @@ export const resendSignupOtpFn = createServerFn({ method: "POST" })
       };
     }
 
-    if (middleName || suffix) {
+    if (middleName || hasNoMiddleName || suffix) {
       await adminSupabase
         .from("profiles")
-        .update({ middle_name: middleName ?? null, suffix: suffix ?? null })
+        .update({
+          middle_name: middleName ?? null,
+          has_no_middle_name: hasNoMiddleName,
+          suffix: suffix ?? null,
+        })
         .eq("id", created.user.id);
     }
 

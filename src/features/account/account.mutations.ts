@@ -62,6 +62,8 @@ export const updateMyProfileFn = createServerFn({ method: "POST" })
       .update({
         first_name: firstName,
         middle_name: nullIfBlank(data.middleName),
+        // Giving a middle name withdraws any earlier "I don't have one".
+        ...(nullIfBlank(data.middleName) ? { has_no_middle_name: false } : {}),
         last_name: lastName,
         suffix: nullIfBlank(data.suffix),
         date_of_birth: nullIfBlank(dateOfBirth),
