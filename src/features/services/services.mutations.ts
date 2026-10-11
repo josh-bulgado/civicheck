@@ -286,7 +286,13 @@ export const submitRequestFn = createServerFn({ method: "POST" })
 
     const formData = flattenTemplateAnswers(definition, answerBag);
 
-    const created = await insertRequestWithTrackingNumber(supabase, {
+    // Created with the service-role client on purpose. Everything above is the
+    // only place an online request is validated (active form version, case and
+    // timing gates, required documents), so applicants have no INSERT policy on
+    // `requests`: otherwise they could skip this function and write a row — and
+    // its answers and form version — straight through PostgREST. `applicant_id`
+    // comes from the session, never from the payload.
+    const created = await insertRequestWithTrackingNumber(getSupabaseAdminClient(), {
       applicant_id: user.id,
       request_type: data.serviceCode,
       form_data: formData,
