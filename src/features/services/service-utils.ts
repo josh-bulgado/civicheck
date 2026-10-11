@@ -2,7 +2,10 @@ import type {
   ConditionRule,
   TemplateAnswers,
 } from "~/features/forms/form-template.types";
-import { conditionRuleMatches } from "~/features/forms/form-template.utils";
+import {
+  conditionMatches,
+  conditionRuleMatches,
+} from "~/features/forms/form-template.utils";
 
 // ─── Service-layer utilities ──────────────────────────────────────────────
 // Shared by ServiceHero, ServiceDetailSheet, ServiceCard, the apply wizard's
@@ -260,17 +263,30 @@ export function isRequirementApplicable(
   answers: TemplateAnswers | Record<string, string>,
 ): boolean {
   if (requirement.applies_when) {
-    const hasEveryAnswer = requirement.applies_when.conditions.every(
-      (condition) => {
-        const value = answers[condition.field];
-        return typeof value === "string" && value.length > 0;
-      },
+    const { match, conditions } = requirement.applies_when;
+    const isAnswered = (field: string) => {
+      const value = answers[field];
+      return typeof value === "string" && value.length > 0;
+    };
+    const hasEveryAnswer = conditions.every((condition) =>
+      isAnswered(condition.field),
     );
-    if (
-      requirement.applies_when.match === "any" &&
-      conditionRuleMatches(requirement.applies_when, answers)
-    ) {
+    if (match === "any" && conditionRuleMatches(requirement.applies_when, answers)) {
       return true;
+    }
+    // An `all` rule that an answered condition already fails can never match,
+    // whatever the unanswered ones turn out to be. This must come before the
+    // conservative fallback below: a condition's question can be absent
+    // because it is hidden (the answer was pruned) rather than because it is
+    // unanswered, and its absence must not make the document required.
+    if (
+      match === "all" &&
+      conditions.some(
+        (condition) =>
+          isAnswered(condition.field) && !conditionMatches(condition, answers),
+      )
+    ) {
+      return false;
     }
     // Older published form versions do not contain the newly-configured
     // source fields. Fall back conservatively so a caller cannot bypass a

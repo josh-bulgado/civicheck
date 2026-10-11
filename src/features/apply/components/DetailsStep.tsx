@@ -38,7 +38,7 @@ import {
   type DynamicFieldValues,
 } from "~/features/forms/components/DynamicFormFields";
 import {
-  deriveTemplateAnswers,
+  canonicalizeTemplateAnswers,
   fieldsForStep,
 } from "~/features/forms/form-template.utils";
 import { isRequirementApplicable } from "~/features/services/service-utils";
@@ -321,7 +321,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
         ...dynamicValues,
         ...(personGroupField ? { [personGroupField.key]: subjects } : {}),
       };
-      const answerBag = deriveTemplateAnswers(definition, {
+      const answerBag = canonicalizeTemplateAnswers(definition, {
         ...answers,
         ...previous.caseSelectorAnswers,
       });

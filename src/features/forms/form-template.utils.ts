@@ -577,6 +577,111 @@ export function isFieldVisible(
  * the server runtime's. Derived age bands, the on-time window and past/future
  * date fields are all judged against this one date so they cannot disagree.
  */
+/**
+ * Drop the answer of every question that is currently hidden.
+ *
+ * Validation skips hidden fields and storage (`flattenTemplateAnswers`) drops
+ * them, but a draft keeps whatever the applicant typed before a controlling
+ * answer changed, and a direct caller can send a value for any key. Anything
+ * that reads the raw bag — chiefly which requirements apply — must not see
+ * those values, or a stale or injected answer to a question the applicant was
+ * never shown decides which documents are required.
+ *
+ * Visibility can chain (a hidden controller hides its dependents), so this
+ * repeats until nothing more is dropped. Keys the definition does not define
+ * at all are the job of `dropUnknownAnswers`.
+ */
+export function pruneHiddenAnswers(
+  definition: FormTemplateDefinition,
+  answers: TemplateAnswers | Record<string, string>,
+): TemplateAnswers {
+  const output: TemplateAnswers = { ...answers };
+  const conditional: Array<{
+    key: string;
+    visible: (current: TemplateAnswers) => boolean;
+  }> = [];
+
+  for (const section of definition.sections) {
+    for (const field of section.fields) {
+      const condition = field.visibleWhen;
+      if (!condition) continue;
+      conditional.push({
+        key: field.key,
+        visible: (current) => conditionMatches(condition, current),
+      });
+    }
+  }
+  for (const question of definition.caseSelector?.questions ?? []) {
+    const rule = question.visibleWhen;
+    if (!rule) continue;
+    conditional.push({
+      key: question.key,
+      visible: (current) => conditionRuleMatches(rule, current),
+    });
+  }
+
+  for (let pass = 0; pass <= conditional.length; pass++) {
+    let changed = false;
+    for (const { key, visible } of conditional) {
+      if (key in output && !visible(output)) {
+        delete output[key];
+        changed = true;
+      }
+    }
+    if (!changed) break;
+  }
+  return output;
+}
+
+/**
+ * Keep only answers to questions this template actually defines: its fields,
+ * its case-selector questions and its derived values.
+ *
+ * Neither validation nor storage ever looks at any other key, but requirement
+ * rules read the bag by key name, so an arbitrary extra key would let a caller
+ * decide a rule's outcome with a value no question of this form collects.
+ * Every key the live requirement rules read is defined by the template of
+ * each service they apply to.
+ */
+export function dropUnknownAnswers(
+  definition: FormTemplateDefinition,
+  answers: TemplateAnswers | Record<string, string>,
+): TemplateAnswers {
+  const known = new Set<string>();
+  for (const section of definition.sections) {
+    for (const field of section.fields) known.add(field.key);
+  }
+  for (const question of definition.caseSelector?.questions ?? []) {
+    known.add(question.key);
+  }
+  for (const derived of definition.derivedAnswers ?? []) known.add(derived.key);
+
+  return Object.fromEntries(
+    Object.entries(answers).filter(([key]) => known.has(key)),
+  ) as TemplateAnswers;
+}
+
+/**
+ * The answers every rule should be evaluated against: unknown and hidden
+ * questions removed, derived values recalculated from what remains, then
+ * anything that depended on a derived value re-checked. Use this — not the raw
+ * bag — to decide which requirements apply, on the client and the server alike.
+ */
+export function canonicalizeTemplateAnswers(
+  definition: FormTemplateDefinition,
+  answers: TemplateAnswers | Record<string, string>,
+  todayKey: string = todayKeyInTimeZone(definition.eventTiming?.timezone),
+): TemplateAnswers {
+  return pruneHiddenAnswers(
+    definition,
+    deriveTemplateAnswers(
+      definition,
+      pruneHiddenAnswers(definition, dropUnknownAnswers(definition, answers)),
+      todayKey,
+    ),
+  );
+}
+
 export function validateTemplateAnswers(
   definition: FormTemplateDefinition,
   answers: TemplateAnswers,

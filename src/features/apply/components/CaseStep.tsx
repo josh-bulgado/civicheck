@@ -13,7 +13,7 @@ import {
 } from "~/features/forms/components/DynamicFormFields";
 import { DerivedAnswerAlerts } from "~/features/forms/components/DerivedAnswerAlerts";
 import {
-  deriveTemplateAnswers,
+  canonicalizeTemplateAnswers,
   evaluateEventTiming,
   evaluateTemplateEventTiming,
   fieldsForStep,
@@ -119,7 +119,7 @@ export function CaseStep({
     shouldUnregister: true,
   });
   const watchedValues = form.watch();
-  const derivedCaseAnswers = deriveTemplateAnswers(definition, {
+  const derivedCaseAnswers = canonicalizeTemplateAnswers(definition, {
     ...draft.answers,
     ...watchedValues,
     ...draft.caseSelectorAnswers,
@@ -222,7 +222,7 @@ export function CaseStep({
   function onSubmit(values: DynamicFieldValues) {
     update((previous) => {
       const answers = { ...previous.answers, ...values };
-      const answerBag = deriveTemplateAnswers(definition, {
+      const answerBag = canonicalizeTemplateAnswers(definition, {
         ...answers,
         ...previous.caseSelectorAnswers,
       });
@@ -267,7 +267,7 @@ export function CaseStep({
           answers: { ...previous.answers, ...currentValues },
         };
       }
-      const answerBag = deriveTemplateAnswers(definition, {
+      const answerBag = canonicalizeTemplateAnswers(definition, {
         ...previous.answers,
         ...watchedValues,
         ...previous.caseSelectorAnswers,

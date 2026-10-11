@@ -17,7 +17,7 @@ import type { AcknowledgmentPdfData } from "~/features/requests/pdf/types";
 import { getSupabaseAdminClient } from "~/utils/supabase";
 import {
   buildLegacyFormDefinition,
-  deriveTemplateAnswers,
+  canonicalizeTemplateAnswers,
   flattenTemplateAnswers,
   parseFormTemplateDefinition,
   validateCaseSelectorAnswers,
@@ -140,7 +140,10 @@ export const submitRequestFn = createServerFn({ method: "POST" })
       return { error: true, message: "This service is not bound to that application form." };
     }
 
-    const answerBag = deriveTemplateAnswers(definition, data.answers);
+    // Hidden questions are dropped before anything reads the bag, so a value
+    // sent for a question the applicant was never shown cannot decide which
+    // documents are required.
+    const answerBag = canonicalizeTemplateAnswers(definition, data.answers);
     const selectorValidation = validateCaseSelectorAnswers(
       definition,
       answerBag,
