@@ -84,8 +84,19 @@ const labelClass =
 const fieldClass =
   "min-h-14 flex-1 has-[>[data-slot=field-content]]:items-center has-[>[data-slot=field-content]]:[&>[role=checkbox],[role=radio]]:mt-0";
 
-function columnsClass(count: number, wide: boolean) {
+// Four short options read as one compact row of tiles on a wide screen instead
+// of a tall 2x2 block; they drop back to two columns below that.
+const COMPACT_ROW_MAX_LABEL = 28;
+
+function columnsClass(options: readonly ChoiceOption[], wide: boolean) {
+  const count = options.length;
   if (wide) {
+    if (
+      count === 4 &&
+      options.every((option) => option.label.length <= COMPACT_ROW_MAX_LABEL)
+    ) {
+      return "sm:grid-cols-2 lg:grid-cols-4";
+    }
     // Three tiles share one row; any other odd count lets the last tile span.
     return count === 3
       ? "md:grid-cols-3"
@@ -125,7 +136,7 @@ export function ChoiceGroup({
       onValueChange={onValueChange}
       aria-labelledby={labelledBy}
       aria-invalid={invalid || undefined}
-      className={cn(groupClass, columnsClass(options.length, isWide), className)}
+      className={cn(groupClass, columnsClass(options, isWide), className)}
     >
       {options.map((option) => {
         const id = `${idPrefix}-${option.value}`;

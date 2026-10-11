@@ -52,6 +52,65 @@ function conditionMatches(
   });
 }
 
+type FieldSpan = "full" | "half" | "third" | "follow-up" | "pair-start" | "pair-end";
+
+// The grid has six columns so a row can hold two fields (3 + 3) or three
+// (2 + 2 + 2). Every field gets a span from the plan below; nothing is left to
+// auto-placement, which is what used to strand a field beside an unrelated one.
+const SPAN_CLASS: Record<FieldSpan, string> = {
+  full: "sm:col-span-6",
+  half: "sm:col-span-3",
+  // Three short inputs share a row once there is room for all three.
+  third: "sm:col-span-3 lg:col-span-2",
+  // A follow-up (a field that only appears for one answer of an earlier
+  // question) takes its own row directly under that question, at half width.
+  "follow-up": "sm:col-span-6 sm:max-w-[calc(50%-0.5rem)]",
+  // A pair always starts its own row, even after an odd number of half fields.
+  "pair-start": "sm:col-start-1 sm:col-span-3",
+  "pair-end": "sm:col-span-3",
+};
+
+function planFieldSpans(
+  fields: readonly FormSectionDefinition["fields"][number][],
+  choicePlacements: ReturnType<typeof planChoiceLayout>,
+) {
+  const keys = new Set(fields.map((field) => field.key));
+  const spans = new Map<string, FieldSpan>();
+  let run: string[] = [];
+
+  // Consecutive plain inputs form a run; a run of exactly three (or six) fills
+  // rows of three, any other length pairs up two by two.
+  const closeRun = () => {
+    const span: FieldSpan = run.length > 0 && run.length % 3 === 0 ? "third" : "half";
+    for (const key of run) spans.set(key, span);
+    run = [];
+  };
+
+  for (const field of fields) {
+    const placement =
+      field.type === "select" && isChoiceGroup(field.options ?? [])
+        ? (choicePlacements.get(field.key) ?? "full")
+        : null;
+    if (placement) {
+      closeRun();
+      spans.set(
+        field.key,
+        placement === "full" ? "full" : placement,
+      );
+    } else if (field.type === "textarea") {
+      closeRun();
+      spans.set(field.key, "full");
+    } else if (field.visibleWhen && keys.has(field.visibleWhen.field)) {
+      closeRun();
+      spans.set(field.key, "follow-up");
+    } else {
+      run.push(field.key);
+    }
+  }
+  closeRun();
+  return spans;
+}
+
 export function DynamicFormFields({
   definition,
   step,
@@ -59,6 +118,7 @@ export function DynamicFormFields({
   values,
   onDateChange,
   showRequiredMarks = false,
+  showSectionTitles = false,
 }: {
   definition: FormTemplateDefinition;
   step: FormStep;
@@ -67,6 +127,12 @@ export function DynamicFormFields({
   onDateChange?: (fieldKey: string, value: string) => void;
   /** Adds an asterisk to required labels; the caller owns the legend. */
   showRequiredMarks?: boolean;
+  /**
+   * Always titles each section. By default a step with a single section is left
+   * untitled; callers that stack other content above it ask for the title so
+   * the page reads as headed blocks.
+   */
+  showSectionTitles?: boolean;
 }) {
   const sections = definition.sections.filter((section) => section.step === step);
 
@@ -76,19 +142,29 @@ export function DynamicFormFields({
     );
     if (!fields.length) return null;
     const choicePlacements = planChoiceLayout(fields);
+    const spans = planFieldSpans(fields, choicePlacements);
+    const titled = showSectionTitles || sections.length > 1;
 
     return (
       <section key={section.key} className="flex flex-col gap-3">
-        {sections.length > 1 ? (
+        {titled ? (
           <div className="flex flex-col gap-1">
-            <h2 className="text-sm font-semibold text-foreground">{section.title}</h2>
+            <h2
+              className={
+                showSectionTitles
+                  ? "text-pretty text-lg font-bold text-foreground"
+                  : "text-sm font-semibold text-foreground"
+              }
+            >
+              {section.title}
+            </h2>
             {section.description ? (
               <p className="text-xs text-muted-foreground">{section.description}</p>
             ) : null}
           </div>
         ) : null}
 
-        <FieldGroup className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FieldGroup className="grid grid-cols-1 gap-4 sm:grid-cols-6">
           {fields.map((definitionField) => (
             <Controller
               key={definitionField.key}
@@ -159,13 +235,10 @@ export function DynamicFormFields({
                       data-invalid={fieldState.invalid}
                       className={cn(
                         "gap-3",
-                        placement === "full" && "sm:col-span-2",
-                        // A pair always starts its own row, even after an odd
-                        // number of half-width fields.
-                        placement === "pair-start" && "sm:col-start-1",
+                        SPAN_CLASS[spans.get(definitionField.key) ?? "full"],
                       )}
                     >
-                      <FieldLegend variant="label" id={legendId} className="mb-0">
+                      <FieldLegend variant="label" id={legendId}>
                         {legendLabel}
                       </FieldLegend>
                       <ChoiceGroup
@@ -185,9 +258,7 @@ export function DynamicFormFields({
                 return (
                   <Field
                     data-invalid={fieldState.invalid}
-                    className={
-                      definitionField.type === "textarea" ? "sm:col-span-2" : undefined
-                    }
+                    className={SPAN_CLASS[spans.get(definitionField.key) ?? "half"]}
                   >
                     <FieldLabel htmlFor={`dynamic-${definitionField.key}`}>
                       {legendLabel}
