@@ -389,6 +389,25 @@
   }
 }
 
+/* Page loader ring. A rotation is the one motion that reads as "working" without
+   implying progress, so the reduced-motion variant swaps it for a slow opacity
+   breathe rather than freezing — a frozen ring would look like a hung page. */
+@keyframes civic-loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes civic-loader-breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 /* ─── Apply hand-off loader ──────────────────────────────────────────────────
    Shown while the router moves into the apply flow. The sheet's checklist
    lines draw in on a loop for as long as the navigation is pending. The CCRO
@@ -856,6 +875,13 @@
     animation: civic-progress-sweep 1.15s var(--ease-civic) infinite;
   }
 
+  /* Ring for a page that is waiting on its data: a quiet track with one arc of
+     brand blue travelling round it. */
+  .civic-loader-ring {
+    @apply size-11 rounded-full border-[3px] border-border-light border-t-primary;
+    animation: civic-loader-spin 0.85s linear infinite;
+  }
+
   /* Sparkline / trend polyline that draws itself in on mount. */
   .civic-draw-line {
     stroke-dasharray: 1;
@@ -927,5 +953,9 @@
 
   .civic-live-dot::before {
     display: none;
+  }
+
+  .civic-loader-ring {
+    animation: civic-loader-breathe 1.8s ease-in-out infinite;
   }
 }

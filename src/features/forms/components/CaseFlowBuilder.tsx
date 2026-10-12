@@ -15,6 +15,7 @@ import {
   FieldLabel,
 } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
+import { formatServiceCode } from "~/features/services/service-utils";
 import { cn } from "~/lib/utils";
 import type {
   CaseSelectorDefinition,
@@ -537,9 +538,9 @@ export function CaseFlowBuilder({
                 <CollapsibleContent className="border-t border-border p-4">
                   <FieldGroup>
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <code className="text-xs text-muted-foreground">
-                        {variant.service_code}
-                      </code>
+                      <span className="text-xs text-muted-foreground">
+                        {formatServiceCode(variant.service_code)}
+                      </span>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold text-foreground">
                           {Number(variant.fee) === 0

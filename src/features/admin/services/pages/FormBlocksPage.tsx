@@ -30,6 +30,7 @@ import {
   type FormStep,
   type FormTemplateDefinition,
 } from "~/features/forms/form-template.types";
+import { formatServiceCode } from "~/features/services/service-utils";
 import { cn } from "~/lib/utils";
 
 const STEP_LABELS: Record<FormStep, string> = {
@@ -371,7 +372,8 @@ export function FormBlocksPage({
                         <span className="font-medium">{template.templateName}</span>
                         <span className="text-muted-foreground">
                           {" "}
-                          · {template.serviceCodes.join(", ")}
+                          ·{" "}
+                          {template.serviceCodes.map(formatServiceCode).join(", ")}
                         </span>
                       </li>
                     ))}

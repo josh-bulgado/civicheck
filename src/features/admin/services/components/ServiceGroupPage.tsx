@@ -12,7 +12,10 @@ import {
 import { Badge } from "~/components/ui/badge";
 import { buttonVariants } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { formatFee } from "~/features/services/service-utils";
+import {
+  formatFee,
+  formatServiceCode,
+} from "~/features/services/service-utils";
 import { cn } from "~/lib/utils";
 import type { Service } from "../services.types";
 
@@ -166,8 +169,8 @@ export function ServiceGroupPage({ variants }: { variants: Service[] }) {
                 >
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-mono text-xs font-bold text-primary">
-                        {variant.service_code}
+                      <p className="text-xs font-bold text-primary">
+                        {formatServiceCode(variant.service_code)}
                       </p>
                       <Badge variant="outline">
                         {requirementScope(variant, orderedVariants)} checklist
@@ -209,7 +212,7 @@ export function ServiceGroupPage({ variants }: { variants: Service[] }) {
                       buttonVariants({ variant: "outline" }),
                       "w-full lg:w-auto",
                     )}
-                    aria-label={`Edit variant ${variant.service_code}`}
+                    aria-label={`Edit variant ${formatServiceCode(variant.service_code)}`}
                   >
                     <Pencil aria-hidden="true" data-icon="inline-start" />
                     Edit variant

@@ -3,6 +3,7 @@ import { useBlocker } from "@tanstack/react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormProvider, useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { formatServiceCode } from "~/features/services/service-utils";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import {
   AlertDialog,
@@ -534,7 +535,11 @@ export function ServiceFormPage({
               {variantOnly ? (
                 <Alert variant="default" className="mb-6">
                   <AlertDescription>
-                    You are editing only <strong>{service?.service_code}</strong>.
+                    You are editing only{" "}
+                    <strong>
+                      {service ? formatServiceCode(service.service_code) : ""}
+                    </strong>
+                    .
                     Registry changes stay on this variant; the Requirements
                     section warns when its checklist is shared. The applicant
                     application and routing rules are managed at the group level.

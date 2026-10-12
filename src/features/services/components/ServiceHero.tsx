@@ -1,4 +1,9 @@
-import { getVisitBadge, summarizeWait, formatFee } from "~/features/services/service-utils";
+import {
+  getVisitBadge,
+  summarizeWait,
+  formatFee,
+  formatServiceCode,
+} from "~/features/services/service-utils";
 
 interface Service {
   name: string;
@@ -32,7 +37,9 @@ export function ServiceHero({ service, displayName }: ServiceHeroProps) {
           >
             {visitBadge.label}
           </span>
-          <span className="text-xs text-white/65">{service.service_code}</span>
+          <span className="text-xs text-white/65">
+            {formatServiceCode(service.service_code)}
+          </span>
         </div>
         <h1 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
           {displayName}

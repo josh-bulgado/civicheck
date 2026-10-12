@@ -37,6 +37,7 @@ import {
   type ConditionSource,
 } from "~/features/forms/components/ConditionRuleBuilder";
 import type { FormTemplateDefinition } from "~/features/forms/form-template.types";
+import { formatServiceCode } from "~/features/services/service-utils";
 import type { Service } from "../../services.types";
 import {
   classifyRequirementScope,
@@ -323,7 +324,11 @@ export function RequirementsSection({
 
   function groupTitle(kind: RequirementScopeKind) {
     if (kind === "variant") {
-      return `${GROUP_COPY.variant.title} · ${currentServiceCode ?? "this variant"}`;
+      return `${GROUP_COPY.variant.title} · ${
+        currentServiceCode
+          ? formatServiceCode(currentServiceCode)
+          : "this variant"
+      }`;
     }
     return GROUP_COPY[kind].title;
   }

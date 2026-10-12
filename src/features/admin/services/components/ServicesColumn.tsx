@@ -13,6 +13,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
+import { formatServiceCode } from "~/features/services/service-utils";
 import { cn } from "~/lib/utils";
 import { Service, ServiceClassification } from "../services.types";
 
@@ -128,8 +129,8 @@ export const columns: ColumnDef<ServiceDossier>[] = [
     ),
     cell: ({ row }) => (
       <div className="flex flex-col gap-1">
-        <span className="font-mono text-xs font-bold uppercase text-foreground">
-          {row.original.dossier_key}
+        <span className="text-xs font-bold text-foreground">
+          {formatServiceCode(row.original.dossier_key)}
         </span>
         {row.original.variant_count > 1 ? (
           <HoverCard>
@@ -153,8 +154,8 @@ export const columns: ColumnDef<ServiceDossier>[] = [
                     key={variant.service_code}
                     className="flex items-center justify-between gap-3"
                   >
-                    <span className="font-mono text-xs font-medium text-foreground">
-                      {variant.service_code}
+                    <span className="text-xs font-medium text-foreground">
+                      {formatServiceCode(variant.service_code)}
                     </span>
                     <span className="flex items-center gap-1.5">
                       <span className="text-xs font-semibold text-foreground">

@@ -28,6 +28,7 @@ import {
   type FormTemplateDefinition,
 } from "~/features/forms/form-template.types";
 import { buildLegacyFormDefinition } from "~/features/forms/form-template.utils";
+import { formatServiceCode } from "~/features/services/service-utils";
 import { cn } from "~/lib/utils";
 import type { Service } from "../services.types";
 
@@ -228,7 +229,9 @@ export function ServiceGroupApplicationPage({
             <AlertTitle>Publishes to the entire service group</AlertTitle>
             <AlertDescription>
               Changes here affect all {orderedVariants.length} bound variants:
-              {" "}{orderedVariants.map((variant) => variant.service_code).join(", ")}.
+              {" "}{orderedVariants
+                .map((variant) => formatServiceCode(variant.service_code))
+                .join(", ")}.
               Fees and other individual registry fields are edited separately.
             </AlertDescription>
           </Alert>

@@ -19,6 +19,7 @@ import {
   getSupabaseServerClient,
   limitSessionToBrowser,
 } from "../utils/supabase";
+import { BackendActivityIndicator } from "~/components/feedback/BackendActivityIndicator";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import type { AccountProfile } from "~/features/account/account.types";
@@ -170,6 +171,7 @@ function RootComponent() {
     <RootDocument>
       <Outlet />
       <ApplyTransitionLoader />
+      <BackendActivityIndicator />
       <Toaster />
       {mounted && import.meta.env.DEV && (
         <TanStackDevtools

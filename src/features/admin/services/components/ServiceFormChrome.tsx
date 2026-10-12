@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { Spinner } from "~/components/ui/spinner";
+import { formatServiceCode } from "~/features/services/service-utils";
 import { cn } from "~/lib/utils";
 import { SERVICE_EDITOR_SECTIONS } from "./service-form.config";
 
@@ -220,8 +221,8 @@ export function ServiceDossierHeader({
           <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
             {isVariant ? "Internal variant" : "Registry record"}
           </p>
-          <p className="mt-1 break-words font-mono text-lg font-semibold leading-tight text-primary sm:text-xl">
-            {serviceCode}
+          <p className="mt-1 break-words text-lg font-semibold leading-tight text-primary sm:text-xl">
+            {formatServiceCode(serviceCode)}
           </p>
         </div>
       </div>

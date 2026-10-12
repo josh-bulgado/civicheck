@@ -1,5 +1,7 @@
 import * as React from 'react'
 
+import { trackBackendRequest } from '~/lib/backend-activity'
+
 export function useMutation<TVariables, TData, TError = Error>(opts: {
   fn: (variables: TVariables) => Promise<TData>
   onSuccess?: (ctx: { data: TData }) => void | Promise<void>
@@ -19,7 +21,7 @@ export function useMutation<TVariables, TData, TError = Error>(opts: {
       setVariables(variables)
       //
       try {
-        const data = await opts.fn(variables)
+        const data = await trackBackendRequest(opts.fn(variables))
         await opts.onSuccess?.({ data })
         setStatus('success')
         setError(undefined)

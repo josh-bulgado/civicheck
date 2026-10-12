@@ -15,6 +15,8 @@
 // Router's own `staleTime` instead — so this map fills up in the browser and
 // stays empty on the server.
 
+import { trackBackendRequest } from "~/lib/backend-activity";
+
 const DEFAULT_TTL_MS = 5 * 60 * 1000;
 
 interface CacheEntry<T> {
@@ -51,7 +53,9 @@ export function cachedServiceRead<T>(
     return hit.promise as Promise<T>;
   }
 
-  const promise = loader()
+  // Only a miss gets here, so only a real round trip to the backend is tracked —
+  // a warm hit stays invisible to the slow-backend indicator.
+  const promise = trackBackendRequest(loader())
     .then((data) => {
       // Only fill in the value if this request still owns the slot — an
       // invalidation may have replaced or dropped it while we were waiting.

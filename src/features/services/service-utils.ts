@@ -137,6 +137,39 @@ export function formatPesoFee(
   return /^\d/.test(label) ? `₱${label}` : label;
 }
 
+// Registry acronyms that must stay upper-case when a code is humanized.
+const CODE_ACRONYMS = new Set([
+  "CTC",
+  "PSA",
+  "CCRO",
+  "BRAP",
+  "CCE",
+  "CFN",
+  "RA",
+  "DCOLB",
+  "OTCOLB",
+]);
+
+/**
+ * Turn a registry identifier into applicant-facing text:
+ *   "MARRIAGE_LICENSE" -> "Marriage License"
+ *   "birth_delayed"    -> "Birth Delayed"
+ *   "RA9048-CCE"       -> "RA9048 CCE"
+ * Words containing digits and known acronyms stay upper-case. Admin screens
+ * keep showing the raw code, since staff need the exact identifier there.
+ */
+export function formatServiceCode(code: string): string {
+  return code
+    .split(/[_\-\s]+/)
+    .filter(Boolean)
+    .map((word) => {
+      const upper = word.toUpperCase();
+      if (CODE_ACRONYMS.has(upper) || /\d/.test(word)) return upper;
+      return upper.charAt(0) + upper.slice(1).toLowerCase();
+    })
+    .join(" ");
+}
+
 /** Most copies one request may ask for. Mirrors the `requests.copies` check constraint. */
 export const MAX_COPIES = 10;
 

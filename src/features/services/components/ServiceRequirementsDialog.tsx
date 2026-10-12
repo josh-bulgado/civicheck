@@ -35,6 +35,7 @@ import type { ServiceRequirement } from "~/features/admin/services/services.type
 import {
   cleanStepText,
   formatFee,
+  formatServiceCode,
   getVisitBadge,
   parseRequirementName,
   splitCaseLabel,
@@ -205,7 +206,9 @@ export function ServiceRequirementsDialog({
             >
               {visitBadge.label}
             </span>
-            <span className="text-xs text-muted-foreground">{serviceCode}</span>
+            <span className="text-xs text-muted-foreground">
+              {formatServiceCode(serviceCode)}
+            </span>
           </div>
           <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
             {title}

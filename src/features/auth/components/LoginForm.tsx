@@ -26,7 +26,7 @@ import {
 } from "~/components/ui/input-group";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Spinner } from "~/components/ui/spinner";
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Alert, AlertDescription } from "~/components/ui/alert";
 import { AuthEmblemPanel } from "./AuthSidePanel";
 import {
   authButtonClass,
@@ -46,8 +46,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-const INVALID_CREDENTIALS =
-  "Invalid email or password. Please check your credentials and try again.";
+const INVALID_CREDENTIALS = "Wrong Email and Password";
 
 /** Keeps the applicant on this page with a readable reason for every failure. */
 function describeSignInError(
@@ -165,7 +164,6 @@ export function LoginForm({
         {signInError && (
           <Alert variant="destructive" className="civic-enter-sm">
             <AlertCircleIcon />
-            <AlertTitle>Sign in failed</AlertTitle>
             <AlertDescription>{signInError}</AlertDescription>
           </Alert>
         )}

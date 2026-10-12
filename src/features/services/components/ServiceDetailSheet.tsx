@@ -37,6 +37,7 @@ import {
 import {
   cleanStepText,
   formatFee,
+  formatServiceCode,
   parseRequirementName,
 } from "~/features/services/service-utils";
 import {
@@ -126,7 +127,7 @@ export function ServiceDetailSheet({
               {service.name}
             </SheetTitle>
             <p className="text-xs text-muted-foreground">
-              Service Code: {service.service_code}
+              Service Code: {formatServiceCode(service.service_code)}
             </p>
             <SheetDescription className="text-muted-foreground text-xs">
               Review the requirement checklist and registry details before
@@ -164,8 +165,10 @@ export function ServiceDetailSheet({
             <div className="grid grid-cols-1 gap-2 text-xs">
               <div className="flex justify-between py-1 border-b border-dashed border-border">
                 <span className="text-muted-foreground">Bundled under:</span>
-                <span className="font-medium text-foreground uppercase">
-                  {service.display_group || "None (Standalone)"}
+                <span className="font-medium text-foreground">
+                  {service.display_group
+                    ? formatServiceCode(service.display_group)
+                    : "None (Standalone)"}
                 </span>
               </div>
               <div className="flex justify-between py-1 border-b border-dashed border-border">
@@ -178,8 +181,10 @@ export function ServiceDetailSheet({
                 <span className="text-muted-foreground">
                   Checklist shared with:
                 </span>
-                <span className="font-mono text-foreground font-medium uppercase">
-                  {service.requirement_group || service.service_code}
+                <span className="font-medium text-foreground">
+                  {formatServiceCode(
+                    service.requirement_group || service.service_code,
+                  )}
                 </span>
               </div>
             </div>
@@ -198,8 +203,8 @@ export function ServiceDetailSheet({
                     key={variant.service_code}
                     className="flex items-center justify-between gap-2 py-2 first:pt-0 last:pb-0"
                   >
-                    <span className="font-mono text-xs font-medium text-foreground">
-                      {variant.service_code}
+                    <span className="text-xs font-medium text-foreground">
+                      {formatServiceCode(variant.service_code)}
                     </span>
                     <span className="text-xs font-semibold text-foreground">
                       {formatFee(variant.fee)}

@@ -24,9 +24,7 @@ export function useLogin(redirectTo?: string) {
         return;
       }
 
-      toast.error("Unable to sign in", {
-        description: "Invalid email or password.",
-      });
+      toast.error("Wrong Email and Password");
     },
   });
 }
