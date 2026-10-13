@@ -33,6 +33,7 @@ import { AttachmentGroups } from "~/features/requests/components/AttachmentGroup
 import { AttachmentViewerDialog } from "~/features/requests/components/AttachmentViewerDialog";
 import { RequestDetailHero } from "~/features/requests/components/RequestDetailHero";
 import { RequestHistoryTimeline } from "~/features/requests/components/RequestHistoryTimeline";
+import { RequestMessagesCard } from "~/features/requests/components/RequestMessagesCard";
 import { SubmittedDetailsCard } from "~/features/requests/components/SubmittedDetailsCard";
 
 const ACCEPT = "image/jpeg,image/png,application/pdf";
@@ -147,6 +148,15 @@ export default function MyRequestDetailPage({
         </div>
 
         <div style={staggerStyle(1)} className="flex flex-col gap-6">
+          {request.allowsMessages && (
+            <RequestMessagesCard
+              requestId={request.id}
+              messages={request.messages}
+              viewer="applicant"
+              onSent={onUpdated}
+            />
+          )}
+
           <section className="dashboard-panel p-6">
             <h2 className="mb-2 text-lg font-bold text-foreground">
               Acknowledgment slip
@@ -182,11 +192,13 @@ export default function MyRequestDetailPage({
                 Ready for release
               </h2>
               <p className="text-sm text-muted-foreground">
-                {request.feesDue <= 0
-                  ? "No fee is due — claim your document at the CCRO."
-                  : request.paymentStatus === "verified"
-                    ? "Payment verified — claim your document at the CCRO."
-                    : "Bring payment to the CCRO cashier to claim your document."}
+                {request.allowsMessages
+                  ? "Your inquiry has been processed. CCRO's reply is in the messages on this page and in your email — no visit to the CCRO is needed."
+                  : request.feesDue <= 0
+                    ? "No fee is due — claim your document at the CCRO."
+                    : request.paymentStatus === "verified"
+                      ? "Payment verified — claim your document at the CCRO."
+                      : "Bring payment to the CCRO cashier to claim your document."}
               </p>
             </section>
           )}

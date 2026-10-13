@@ -12,6 +12,7 @@ import {
   FileUp,
   FileWarning,
   MailWarning,
+  MessageSquare,
   MoreHorizontal,
   RefreshCw,
   Undo2,
@@ -106,6 +107,8 @@ const TYPE_STYLE: Record<NotificationType, { icon: LucideIcon; unreadClass: stri
   ready_to_release: { icon: CircleCheckBig, unreadClass: "bg-primary text-white" },
   request_incomplete: { icon: FileWarning, unreadClass: "bg-tone-danger text-white" },
   request_rejected: { icon: CircleX, unreadClass: "bg-tone-danger text-white" },
+  message: { icon: MessageSquare, unreadClass: "bg-primary text-white" },
+  new_message: { icon: MessageSquare, unreadClass: "bg-primary text-white" },
 };
 
 /** One typed `Link` per destination, so each keeps its own params/search checking. */

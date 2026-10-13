@@ -56,6 +56,20 @@ export function buildStatusChangeEmail(
   return composeContent("status_change", subject, lines, `open "My Requests" for the full details.`);
 }
 
+/**
+ * The applicant is told a message exists, never what it says: replies cannot
+ * be sent by email, so they have to sign in anyway, and this keeps personal
+ * details out of inboxes.
+ */
+export function buildNewMessageEmail(trackingNumber: string): NotificationContent {
+  return composeContent(
+    "message",
+    `Request ${trackingNumber}: new message from CCRO`,
+    [`CCRO sent you a message about request ${trackingNumber}.`],
+    `open "My Requests" to read and reply.`,
+  );
+}
+
 export function buildPreValidationCompleteEmail(trackingNumber: string): NotificationContent {
   const subject = `Request ${trackingNumber}: pre-validation complete`;
   const lines = [
