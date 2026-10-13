@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import type { Service } from "../../services.types";
+import { FeeBreakdownFields } from "./FeeBreakdownFields";
 import {
   SERVICE_CLASSIFICATIONS,
   UNASSIGNED_DEPARTMENT_VALUE,
@@ -181,6 +182,8 @@ export function RegistryDetailsSection({
               )}
             />
           </div>
+
+          <FeeBreakdownFields />
 
           <Controller
             control={form.control}

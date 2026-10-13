@@ -7,6 +7,11 @@ import { Button, buttonVariants } from "~/components/ui/button";
 import { Field, FieldLabel } from "~/components/ui/field";
 import { RequiredMark } from "~/components/ui/required-mark";
 import {
+  parseFeeComponents,
+  splitFeeComponents,
+  type FeeComponent,
+} from "~/features/services/fee-components";
+import {
   clampCopies,
   formatFee,
   formatPesoFee,
@@ -93,6 +98,24 @@ export function ReviewStep({
   const feeDueLabel = selectedService
     ? formatFee(totalFee(selectedService.fee, copies, feePerCopy))
     : "—";
+  // The itemized charges behind the total. A per-copy service already shows
+  // "N × ₱X per copy" above, so it never carries a breakdown of its own.
+  const { included: feeParts, alsoPayable } = splitFeeComponents(
+    feePerCopy ? [] : parseFeeComponents(selectedService?.fee_components),
+  );
+  const feeLines: FeeComponent[] =
+    feeParts.length > 0
+      ? feeParts
+      : selectedService
+        ? [
+            {
+              label: "Service fee",
+              amount: totalFee(selectedService.fee, copies, feePerCopy),
+              included: true,
+            },
+          ]
+        : [];
+  const showFeeBreakdown = feeParts.length > 1 || alsoPayable.length > 0;
 
   const showRoleLabels = subjects.length > 1;
   const sexLabel = (sex: string) =>
@@ -394,17 +417,31 @@ export function ReviewStep({
           )}
         </EditSection>
 
-        <div className="flex items-center justify-between gap-5 rounded-[10px] border border-border-light bg-primary-tint px-4.5 py-4">
-          <div>
-            <p className="text-base font-bold text-foreground">Nothing is paid online</p>
-            <p className="text-sm leading-relaxed text-body">
-              Bring {selectedService ? feeDueLabel : "the fee"} in cash to the
-              CCRO cashier when you visit.
+        <div className="rounded-[10px] border border-border-light bg-primary-tint px-4.5 py-4">
+          <div className="flex items-center justify-between gap-5">
+            <div>
+              <p className="text-base font-bold text-foreground">Nothing is paid online</p>
+              <p className="text-sm leading-relaxed text-body">
+                Bring {selectedService ? feeDueLabel : "the fee"} in cash to the
+                CCRO cashier when you visit.
+              </p>
+            </div>
+            <p className="whitespace-nowrap text-2xl font-bold text-foreground">
+              {feeDueLabel}
             </p>
           </div>
-          <p className="whitespace-nowrap text-2xl font-bold text-foreground">
-            {feeDueLabel}
-          </p>
+          {showFeeBreakdown ? (
+            <div className="mt-3.5 flex flex-col gap-3.5 border-t border-border-light pt-3.5">
+              <FeeLines title="What the fee covers" lines={feeLines} />
+              {alsoPayable.length > 0 ? (
+                <FeeLines
+                  title="Also payable, not in the amount above"
+                  lines={alsoPayable}
+                  muted
+                />
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         <Field orientation="horizontal">
@@ -474,6 +511,44 @@ function EditSection({
           ) : null)}
       </div>
       <div className="grid grid-cols-1 gap-2.5 px-4.5 py-3.5 sm:grid-cols-2">{children}</div>
+    </div>
+  );
+}
+
+function FeeLines({
+  title,
+  lines,
+  muted = false,
+}: {
+  title: string;
+  lines: FeeComponent[];
+  muted?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
+        {title}
+      </p>
+      <dl className="flex flex-col gap-1.5">
+        {lines.map((line, index) => (
+          <div
+            // Labels are admin-authored and may repeat, so the position is part of the key.
+            key={`${line.label}-${index}`}
+            className="flex justify-between gap-3 text-[15px]"
+          >
+            <dt className={muted ? "text-muted-foreground" : "text-body"}>
+              {line.label}
+            </dt>
+            <dd
+              className={`shrink-0 tabular-nums ${
+                muted ? "text-muted-foreground" : "font-semibold text-foreground"
+              }`}
+            >
+              {formatPesoFee(line.amount)}
+            </dd>
+          </div>
+        ))}
+      </dl>
     </div>
   );
 }

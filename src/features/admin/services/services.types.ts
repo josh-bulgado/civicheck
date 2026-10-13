@@ -2,6 +2,7 @@ import type {
   ConditionRule,
   PublishedFormTemplate,
 } from "~/features/forms/form-template.types";
+import type { FeeComponent } from "~/features/services/fee-components";
 
 // ─── Enums (mirroring DB check constraints) ─────────────────────────────────
 
@@ -19,6 +20,11 @@ export interface Service {
   name: string;
   classification: ServiceClassification | null;
   fee: number;
+  /**
+   * Itemized charges behind `fee`. Included ones add up to it; the rest are
+   * payable on top. Empty when the service has no breakdown.
+   */
+  fee_components?: FeeComponent[];
   /** When true the fee is charged per copy, so the applicant picks a quantity. */
   fee_per_copy?: boolean;
   processing_time: string;
@@ -68,6 +74,7 @@ export interface CreateServiceInput {
   asks_purpose?: boolean;
   asks_birth_details?: boolean;
   allows_messages?: boolean;
+  fee_components?: FeeComponent[];
 }
 
 export interface UpdateServiceInput {
@@ -88,6 +95,7 @@ export interface UpdateServiceInput {
   asks_purpose?: boolean;
   asks_birth_details?: boolean;
   allows_messages?: boolean;
+  fee_components?: FeeComponent[];
 }
 
 // ─── service_requirements_metadata ───────────────────────────────────────────

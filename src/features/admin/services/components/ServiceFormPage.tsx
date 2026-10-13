@@ -3,6 +3,7 @@ import { useBlocker } from "@tanstack/react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormProvider, useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { parseFeeComponents } from "~/features/services/fee-components";
 import { formatServiceCode } from "~/features/services/service-utils";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import {
@@ -42,6 +43,7 @@ import {
   emptyServiceFormDefaults,
   genericFormDefinition,
   serviceFormDefaults,
+  toFeeComponentPayload,
   toServiceFormRequirement,
   type ServiceFormValues,
 } from "./service-form.config";
@@ -256,6 +258,14 @@ export function ServiceFormPage({
     form.setValue("name", source.name);
     form.setValue("classification", source.classification ?? "simple");
     form.setValue("fee", String(source.fee ?? 0));
+    form.setValue(
+      "fee_components",
+      parseFeeComponents(source.fee_components).map((component) => ({
+        label: component.label,
+        amount: String(component.amount),
+        included: component.included,
+      })),
+    );
     form.setValue("processing_time", source.processing_time ?? "");
     form.setValue(
       "department_id",
@@ -408,6 +418,7 @@ export function ServiceFormPage({
       name: values.name.trim(),
       classification: values.classification,
       fee: Number(values.fee),
+      fee_components: toFeeComponentPayload(values.fee_components),
       processing_time: values.processing_time.trim(),
       department_id:
         !values.department_id ||
