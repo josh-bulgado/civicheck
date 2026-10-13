@@ -10,7 +10,11 @@ import {
   type ServiceFormValues,
 } from "../service-form.config";
 
-export function CitizenJourneySection() {
+export function CitizenJourneySection({
+  embedded = false,
+}: {
+  embedded?: boolean;
+}) {
   const form = useFormContext<ServiceFormValues>();
   const stepFields = useFieldArray({
     control: form.control,
@@ -22,23 +26,29 @@ export function CitizenJourneySection() {
   });
 
   return (
-    <Card id="citizen-journey" className="scroll-mt-6">
-      <CardHeader className="border-b">
-        <div className="flex items-start gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
-            <RouteIcon aria-hidden="true" className="size-4" />
+    <Card
+      id={embedded ? undefined : "citizen-journey"}
+      variant={embedded ? "embedded" : "default"}
+      className={embedded ? undefined : "scroll-mt-6"}
+    >
+      {!embedded ? (
+        <CardHeader className="border-b">
+          <div className="flex items-start gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+              <RouteIcon aria-hidden="true" className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <CardTitle>
+                <h2>Citizen Journey</h2>
+              </CardTitle>
+              <CardDescription>
+                Describe what the applicant does and whose records the service
+                needs.
+              </CardDescription>
+            </div>
           </div>
-          <div className="min-w-0">
-            <CardTitle>
-              <h2>Citizen Journey</h2>
-            </CardTitle>
-            <CardDescription>
-              Describe what the applicant does and whose records the service
-              needs.
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
+        </CardHeader>
+      ) : null}
       <CardContent className="flex flex-col gap-7">
         <section
           className="flex flex-col gap-3"

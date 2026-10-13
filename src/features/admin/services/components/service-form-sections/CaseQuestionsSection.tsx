@@ -37,33 +37,41 @@ export function CaseQuestionsSection({
   publishedFieldKeys,
   targetOptions,
   onFormDefinitionChange,
+  embedded = false,
 }: {
   variants: Service[];
   formDefinition: FormTemplateDefinition;
   publishedFieldKeys: string[];
   targetOptions: { value: string; label: string }[];
   onFormDefinitionChange: (definition: FormTemplateDefinition) => void;
+  embedded?: boolean;
 }) {
   const form = useFormContext<ServiceFormValues>();
 
   return (
-    <Card id="case-questions" className="scroll-mt-6">
-      <CardHeader className="border-b">
-        <div className="flex items-start gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
-            <Users aria-hidden="true" className="size-4" />
+    <Card
+      id={embedded ? undefined : "case-questions"}
+      variant={embedded ? "embedded" : "default"}
+      className={embedded ? undefined : "scroll-mt-6"}
+    >
+      {!embedded ? (
+        <CardHeader className="border-b">
+          <div className="flex items-start gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+              <Users aria-hidden="true" className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <CardTitle>
+                <h2>Case Questions</h2>
+              </CardTitle>
+              <CardDescription>
+                Keep protected workflow behavior aligned with the type of
+                civil-registry case.
+              </CardDescription>
+            </div>
           </div>
-          <div className="min-w-0">
-            <CardTitle>
-              <h2>Case Questions</h2>
-            </CardTitle>
-            <CardDescription>
-              Keep protected workflow behavior aligned with the type of
-              civil-registry case.
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
+        </CardHeader>
+      ) : null}
       <CardContent>
         <FieldGroup>
           <div className="grid gap-4 sm:grid-cols-2">

@@ -16,6 +16,7 @@ interface ApplicationFormSectionProps {
   isLoading: boolean;
   onTemplateNameChange: (name: string) => void;
   onFormDefinitionChange: (definition: FormTemplateDefinition) => void;
+  embedded?: boolean;
 }
 
 export function ApplicationFormSection({
@@ -27,27 +28,34 @@ export function ApplicationFormSection({
   isLoading,
   onTemplateNameChange,
   onFormDefinitionChange,
+  embedded = false,
 }: ApplicationFormSectionProps) {
   return (
-    <Card id="application-form" className="scroll-mt-6">
-      <CardHeader className="border-b">
-        <div className="flex items-start gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
-            <ClipboardCheck aria-hidden="true" className="size-4" />
+    <Card
+      id={embedded ? undefined : "application-form"}
+      variant={embedded ? "embedded" : "default"}
+      className={embedded ? undefined : "scroll-mt-6"}
+    >
+      {!embedded ? (
+        <CardHeader className="border-b">
+          <div className="flex items-start gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+              <ClipboardCheck aria-hidden="true" className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <CardTitle>
+                <h2>Dynamic Application Questions</h2>
+              </CardTitle>
+              <CardDescription>
+                Add applicant questions and use conditional visibility to reveal
+                follow-up questions from selected answers. Saving publishes an
+                immutable database version
+                {templateVersion > 0 ? ` after version ${templateVersion}` : ""}.
+              </CardDescription>
+            </div>
           </div>
-          <div className="min-w-0">
-            <CardTitle>
-              <h2>Dynamic Application Questions</h2>
-            </CardTitle>
-            <CardDescription>
-              Add applicant questions and use conditional visibility to reveal
-              follow-up questions from selected answers. Saving publishes an
-              immutable database version
-              {templateVersion > 0 ? ` after version ${templateVersion}` : ""}.
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
+        </CardHeader>
+      ) : null}
       <CardContent className="flex flex-col gap-4">
         <Field>
           <FieldLabel htmlFor="service-form-template-name">

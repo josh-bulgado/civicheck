@@ -1,11 +1,29 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useBlocker } from "@tanstack/react-router";
+import { useBlocker, useLocation, useNavigate } from "@tanstack/react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FormProvider, useForm } from "react-hook-form";
+import {
+  FormProvider,
+  useForm,
+  useWatch,
+  type FieldErrors,
+} from "react-hook-form";
+import {
+  ClipboardCheck,
+  ArrowLeft,
+  ArrowRight,
+  CircleAlert,
+  FileText,
+  GitBranch,
+  Link2,
+  Route as RouteIcon,
+  SlidersHorizontal,
+} from "lucide-react";
 import { toast } from "sonner";
 import { parseFeeComponents } from "~/features/services/fee-components";
 import { formatServiceCode } from "~/features/services/service-utils";
-import { Alert, AlertDescription } from "~/components/ui/alert";
+import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { Button } from "~/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,7 +34,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog";
-import { FieldGroup } from "~/components/ui/field";
 import type { Department } from "~/features/admin/departments.queries";
 import { getServiceFormTemplateFn } from "~/features/forms/form-template.functions";
 import { formTemplateDefinitionSchema } from "~/features/forms/form-template.types";
@@ -28,7 +45,8 @@ import { getServiceChecklist } from "../services.queries";
 import type { Service } from "../services.types";
 import {
   ServiceDossierHeader,
-  ServiceFormSidebar,
+  ServiceEditorSection,
+  ServiceFormActionBar,
 } from "./ServiceFormChrome";
 import { ApplicationFormSection } from "./service-form-sections/ApplicationFormSection";
 import { CaseQuestionsSection } from "./service-form-sections/CaseQuestionsSection";
@@ -38,6 +56,7 @@ import { RelationshipsSection } from "./service-form-sections/RelationshipsSecti
 import { RequirementsSection } from "./service-form-sections/RequirementsSection";
 import {
   UNASSIGNED_DEPARTMENT_VALUE,
+  SERVICE_CLASSIFICATIONS,
   buildServiceFormSchema,
   defaultPartyRoles,
   emptyServiceFormDefaults,
@@ -47,6 +66,133 @@ import {
   toServiceFormRequirement,
   type ServiceFormValues,
 } from "./service-form.config";
+
+const EDITOR_SECTION_IDS = [
+  "registry-details",
+  "citizen-journey",
+  "case-questions",
+  "application-form",
+  "requirements",
+  "relationships",
+] as const;
+
+type EditorSectionId = (typeof EDITOR_SECTION_IDS)[number];
+
+const EDITOR_TABS = [
+  { id: "registry-details", label: "Registry & Fees", icon: FileText },
+  { id: "citizen-journey", label: "Citizen Journey", icon: RouteIcon },
+  { id: "case-questions", label: "Case Logic", icon: GitBranch },
+  {
+    id: "application-form",
+    label: "Application Form",
+    icon: SlidersHorizontal,
+  },
+  { id: "requirements", label: "Requirements", icon: ClipboardCheck },
+  { id: "relationships", label: "Relationships", icon: Link2 },
+] as const;
+
+const FIELD_ERROR_DESTINATIONS: Partial<
+  Record<
+    keyof ServiceFormValues,
+    { section: EditorSectionId; anchor: string; label: string }
+  >
+> = {
+  service_code: {
+    section: "registry-details",
+    anchor: "service-code",
+    label: "Service Code",
+  },
+  name: {
+    section: "registry-details",
+    anchor: "service-name",
+    label: "Service Name",
+  },
+  classification: {
+    section: "registry-details",
+    anchor: "service-classification",
+    label: "Classification",
+  },
+  fee: {
+    section: "registry-details",
+    anchor: "service-fee",
+    label: "Total Fee",
+  },
+  fee_components: {
+    section: "registry-details",
+    anchor: "fee-breakdown-heading",
+    label: "Fee Breakdown",
+  },
+  processing_time: {
+    section: "registry-details",
+    anchor: "service-processing-time",
+    label: "Processing Time",
+  },
+  department_id: {
+    section: "registry-details",
+    anchor: "service-department",
+    label: "Handling Department",
+  },
+  steps: {
+    section: "citizen-journey",
+    anchor: "client-steps-heading",
+    label: "Citizen Steps",
+  },
+  party_roles: {
+    section: "citizen-journey",
+    anchor: "person-roles-heading",
+    label: "Person Roles",
+  },
+  requirements: {
+    section: "requirements",
+    anchor: "requirements",
+    label: "Requirements",
+  },
+  display_group: {
+    section: "relationships",
+    anchor: "service-display-group",
+    label: "Display Group",
+  },
+  display_name: {
+    section: "relationships",
+    anchor: "service-display-name",
+    label: "Display Name",
+  },
+  requirement_group: {
+    section: "relationships",
+    anchor: "service-requirement-group",
+    label: "Requirement Group",
+  },
+};
+
+const pesoFormatter = new Intl.NumberFormat("en-PH", {
+  style: "currency",
+  currency: "PHP",
+});
+
+function firstErrorMessage(value: unknown): string | null {
+  if (!value || typeof value !== "object") return null;
+  if (
+    "message" in value &&
+    typeof (value as { message?: unknown }).message === "string"
+  ) {
+    return (value as { message: string }).message;
+  }
+
+  for (const nested of Object.values(value as Record<string, unknown>)) {
+    const message = firstErrorMessage(nested);
+    if (message) return message;
+  }
+  return null;
+}
+
+function sectionsForErrors(errors: FieldErrors<ServiceFormValues>) {
+  const sections = new Set<EditorSectionId>();
+  for (const fieldName of Object.keys(errors) as (keyof ServiceFormValues)[]) {
+    const destination = FIELD_ERROR_DESTINATIONS[fieldName];
+    if (destination) sections.add(destination.section);
+  }
+  return [...sections];
+}
 
 interface ServiceFormPageProps {
   services: Service[];
@@ -68,10 +214,12 @@ export function ServiceFormPage({
 }: ServiceFormPageProps) {
   const isEdit = service !== null;
   const mutation = useSaveServiceConfiguration();
+  const navigate = useNavigate();
+  const hash = useLocation({ select: (location) => location.hash });
 
   const [presetCode, setPresetCode] = useState("");
-  const [checklistLoading, setChecklistLoading] = useState(false);
-  const [templateLoading, setTemplateLoading] = useState(false);
+  const [checklistLoading, setChecklistLoading] = useState(Boolean(service));
+  const [templateLoading, setTemplateLoading] = useState(Boolean(service));
   const [templateName, setTemplateName] = useState("Application form");
   const [templateVersion, setTemplateVersion] = useState(0);
   // The published version this editor loaded. Sent back on save so a newer
@@ -82,8 +230,9 @@ export function ServiceFormPage({
   const [templateSharedCodes, setTemplateSharedCodes] = useState<string[]>([]);
   const [publishedFieldKeys, setPublishedFieldKeys] = useState<string[]>([]);
   const [templateDirty, setTemplateDirty] = useState(false);
-  const [formDefinition, setFormDefinition] =
-    useState<FormTemplateDefinition>(genericFormDefinition);
+  const [formDefinition, setFormDefinition] = useState<FormTemplateDefinition>(
+    genericFormDefinition,
+  );
   const [submitted, setSubmitted] = useState(false);
 
   const takenCodes = useMemo(
@@ -102,9 +251,66 @@ export function ServiceFormPage({
   const form = useForm<ServiceFormValues>({
     resolver: zodResolver(formSchema),
     mode: "onBlur",
-    defaultValues: emptyServiceFormDefaults(),
+    defaultValues: service
+      ? serviceFormDefaults(service)
+      : emptyServiceFormDefaults(),
   });
+  // URL fragments are unavailable during SSR. Apply them after hydration so
+  // direct links render the same initial tab on the server and client.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
   const { reset } = form;
+  const availableTabs = EDITOR_TABS.filter(
+    ({ id }) =>
+      !variantOnly || (id !== "case-questions" && id !== "application-form"),
+  );
+  const requestedSection = !hydrated
+    ? "registry-details"
+    : hash === "timing-routing"
+      ? "case-questions"
+      : hash;
+  const activeSection =
+    availableTabs.find(({ id }) => id === requestedSection)?.id ??
+    "registry-details";
+  const activeTabIndex = availableTabs.findIndex(
+    ({ id }) => id === activeSection,
+  );
+  const previousTab = availableTabs[activeTabIndex - 1];
+  const nextTab = availableTabs[activeTabIndex + 1];
+  const workspaceRef = useRef<HTMLDivElement>(null);
+  const tabListRef = useRef<HTMLDivElement>(null);
+  const errorSummaryRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const keepActiveTabVisible = () => {
+      tabListRef.current?.querySelector("[data-active]")?.scrollIntoView({
+        block: "nearest",
+        inline: "nearest",
+      });
+    };
+    keepActiveTabVisible();
+    window.addEventListener("resize", keepActiveTabVisible);
+    return () => window.removeEventListener("resize", keepActiveTabVisible);
+  }, [activeSection]);
+  const [
+    fee,
+    classification,
+    steps,
+    partyRoles,
+    requirements,
+    displayGroup,
+    requirementGroup,
+  ] = useWatch({
+    control: form.control,
+    name: [
+      "fee",
+      "classification",
+      "steps",
+      "party_roles",
+      "requirements",
+      "display_group",
+      "requirement_group",
+    ],
+  });
 
   useEffect(() => {
     if (!service) {
@@ -133,9 +339,12 @@ export function ServiceFormPage({
     })
       .then((rows) => {
         if (cancelled) return;
-        form.setValue(
-          "requirements",
-          rows.map(toServiceFormRequirement),
+        reset(
+          {
+            ...serviceFormDefaults(service),
+            requirements: rows.map(toServiceFormRequirement),
+          },
+          { keepDirtyValues: true },
         );
       })
       .catch(() => {
@@ -249,6 +458,42 @@ export function ServiceFormPage({
     withResolver: true,
   });
 
+  async function revealSection(sectionId: EditorSectionId) {
+    await navigate({
+      hash: sectionId,
+      replace: true,
+      resetScroll: false,
+      hashScrollIntoView: false,
+    });
+    workspaceRef.current?.scrollTo({ top: 0 });
+  }
+
+  async function focusErrorDestination(
+    sectionId: EditorSectionId,
+    anchor: string,
+  ) {
+    await revealSection(sectionId);
+    window.requestAnimationFrame(() => {
+      const target = document.getElementById(anchor);
+      target?.scrollIntoView({ block: "center" });
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLButtonElement ||
+        target instanceof HTMLSelectElement
+      ) {
+        target.focus({ preventScroll: true });
+      }
+    });
+  }
+
+  async function onInvalid(errors: FieldErrors<ServiceFormValues>) {
+    setSubmitted(true);
+    const invalidSectionIds = sectionsForErrors(errors);
+    if (invalidSectionIds[0]) await revealSection(invalidSectionIds[0]);
+    window.requestAnimationFrame(() => errorSummaryRef.current?.focus());
+  }
+
   async function applyPreset(code: string | null) {
     const source = services.find((entry) => entry.service_code === code);
     if (!source || !code) return;
@@ -344,6 +589,7 @@ export function ServiceFormPage({
     const parsedDefinition =
       formTemplateDefinitionSchema.safeParse(formDefinition);
     if (!parsedDefinition.success) {
+      revealSection("application-form");
       toast.error(
         parsedDefinition.error.issues[0]?.message ??
           "Check the application form fields.",
@@ -363,6 +609,7 @@ export function ServiceFormPage({
         expectedCodes.size !== mappedCodes.size ||
         [...expectedCodes].some((code) => !mappedCodes.has(code))
       ) {
+        revealSection("case-questions");
         toast.error("Map every internal variant before publishing.");
         return;
       }
@@ -374,6 +621,7 @@ export function ServiceFormPage({
         (option) => option.value === eventTiming.targetServiceCode,
       );
       if (!targetExists) {
+        revealSection("case-questions");
         toast.error(
           "Choose a valid service to switch mismatched applicants to.",
         );
@@ -387,6 +635,7 @@ export function ServiceFormPage({
       values.party_roles.map((role) => role.value),
     );
     if (requirementIssue) {
+      revealSection("requirements");
       toast.error(requirementIssue);
       return;
     }
@@ -474,61 +723,237 @@ export function ServiceFormPage({
     onSaved();
   }
 
-  const isSaving =
-    mutation.status === "pending" || form.formState.isSubmitting;
-  const isSubmitDisabled =
-    isSaving || checklistLoading || templateLoading;
+  const isSaving = mutation.status === "pending" || form.formState.isSubmitting;
+  const isSubmitDisabled = isSaving || checklistLoading || templateLoading;
+  const errorSummary = useMemo(() => {
+    if (!submitted) return [];
+
+    return (
+      Object.entries(form.formState.errors) as [
+        keyof ServiceFormValues,
+        unknown,
+      ][]
+    ).flatMap(([fieldName, error]) => {
+      const destination = FIELD_ERROR_DESTINATIONS[fieldName];
+      const message = firstErrorMessage(error);
+      return destination && message
+        ? [{ ...destination, message, fieldName }]
+        : [];
+    });
+  }, [form.formState.errors, submitted]);
+  const invalidSections = new Set(errorSummary.map(({ section }) => section));
+  const classificationLabel =
+    SERVICE_CLASSIFICATIONS.find((option) => option.value === classification)
+      ?.label ?? "Unclassified";
+  const registrySummary = `${pesoFormatter.format(Number(fee) || 0)} · ${classificationLabel}`;
+  const journeySummary = `${steps?.filter((step) => step.value.trim()).length ?? 0} steps · ${partyRoles?.filter((role) => role.value.trim()).length ?? 0} roles`;
+  const caseRuleCount =
+    Number(Boolean(formDefinition.caseSelector)) +
+    Number(Boolean(formDefinition.eventTiming));
+  const applicationFieldCount = formDefinition.sections.reduce(
+    (count, section) => count + section.fields.length,
+    0,
+  );
+  const relationshipCount = [displayGroup, requirementGroup].filter((value) =>
+    value?.trim(),
+  ).length;
+  const requirementCount = requirements?.length ?? 0;
+  const caseSummary =
+    caseRuleCount > 0
+      ? `${caseRuleCount} rule ${caseRuleCount === 1 ? "set" : "sets"}`
+      : "Optional rules";
+  const applicationSummary = `${applicationFieldCount} ${applicationFieldCount === 1 ? "field" : "fields"}`;
+  const requirementsSummary = `${requirementCount} ${requirementCount === 1 ? "requirement" : "requirements"}`;
+  const relationshipsSummary =
+    relationshipCount > 0
+      ? `${relationshipCount} ${relationshipCount === 1 ? "link" : "links"}`
+      : "Standalone service";
+
+  // Short per-tab counts. Optional sections stay blank until they hold
+  // something, so an empty tab is not made to look like missing work.
+  const tabCounts: Record<EditorSectionId, string | null> = {
+    "registry-details": pesoFormatter.format(Number(fee) || 0),
+    "citizen-journey": journeySummary,
+    "case-questions": caseRuleCount > 0 ? caseSummary : null,
+    "application-form": applicationSummary,
+    requirements: String(requirementCount),
+    relationships: relationshipCount > 0 ? relationshipsSummary : null,
+  };
 
   return (
-    <div className="dashboard-page max-w-7xl">
-      <ServiceDossierHeader
-        isEdit={isEdit}
-        serviceCode={service?.service_code ?? "NEW SERVICE"}
-        mode={variantOnly ? "variant" : "full"}
-        displayGroup={service?.display_group}
-      />
-
+    <div
+      className="flex h-dvh min-h-0 w-full flex-col overflow-hidden"
+      data-service-editor
+    >
       <FormProvider {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_17rem]">
-            <main className="min-w-0">
-              {submitted && mutation.error ? (
-                <Alert variant="destructive" className="mb-6" role="alert">
-                  <AlertDescription>
-                    {mutation.error instanceof Error
-                      ? mutation.error.message
-                      : "Unable to save the service. Please try again."}
-                  </AlertDescription>
-                </Alert>
-              ) : null}
+        <form
+          className="flex min-h-0 min-w-0 flex-1 flex-col"
+          onSubmit={form.handleSubmit(onSubmit, onInvalid)}
+        >
+          <ServiceDossierHeader
+            isEdit={isEdit}
+            serviceCode={service?.service_code ?? "NEW SERVICE"}
+            serviceName={service?.name}
+            applicationVersion={templateVersion}
+            applicationLoading={templateLoading}
+            mode={variantOnly ? "variant" : "full"}
+            displayGroup={service?.display_group}
+          >
+            <ServiceFormActionBar
+              isEdit={isEdit}
+              isSaving={isSaving}
+              isDisabled={isSubmitDisabled}
+              isDirty={isDirty}
+              mode={variantOnly ? "variant" : "full"}
+              displayGroup={service?.display_group}
+            />
+          </ServiceDossierHeader>
+          <Tabs
+            value={activeSection}
+            onValueChange={(value) => {
+              const tab = availableTabs.find(({ id }) => id === value);
+              if (tab) void revealSection(tab.id);
+            }}
+            className="min-h-0 min-w-0 flex-1 gap-0"
+          >
+            <div className="shrink-0 overflow-x-auto border-b border-border bg-background px-4 sm:px-8">
+              <TabsList
+                ref={tabListRef}
+                variant="editor"
+                aria-label="Service configuration"
+                className="w-full min-w-max justify-start gap-2 p-0 group-data-horizontal/tabs:h-auto"
+              >
+                {availableTabs.map(({ id, label, icon: Icon }) => (
+                  <TabsTrigger
+                    key={id}
+                    value={id}
+                    className="min-h-14 gap-2 px-3 py-3 after:bottom-0"
+                  >
+                    <Icon aria-hidden="true" />
+                    <span>{label}</span>
+                    {invalidSections.has(id) ? (
+                      <CircleAlert
+                        aria-label="Needs attention"
+                        className="text-destructive"
+                      />
+                    ) : tabCounts[id] ? (
+                      <span className="hidden text-xs font-normal tabular-nums text-muted-foreground sm:inline">
+                        {tabCounts[id]}
+                      </span>
+                    ) : null}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
+            <div
+              ref={workspaceRef}
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-8"
+              data-editor-workspace
+            >
+              {/* One width for every section, so the card does not resize as
+                  you move between steps. */}
+              <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-6">
+                {submitted && mutation.error ? (
+                  <Alert variant="destructive" role="alert">
+                    <AlertTitle>Service Could Not Be Saved</AlertTitle>
+                    <AlertDescription>
+                      {mutation.error instanceof Error
+                        ? mutation.error.message
+                        : "Unable to save the service. Please try again."}
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
 
-              {variantOnly ? (
-                <Alert variant="default" className="mb-6">
-                  <AlertDescription>
-                    You are editing only{" "}
-                    <strong>
-                      {service ? formatServiceCode(service.service_code) : ""}
-                    </strong>
-                    .
-                    Registry changes stay on this variant; the Requirements
-                    section warns when its checklist is shared. The applicant
-                    application and routing rules are managed at the group level.
-                  </AlertDescription>
-                </Alert>
-              ) : null}
+                {errorSummary.length > 0 ? (
+                  <div
+                    ref={errorSummaryRef}
+                    tabIndex={-1}
+                    className="scroll-mt-6 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <Alert variant="destructive" role="alert">
+                      <AlertTitle>
+                        Review {errorSummary.length}{" "}
+                        {errorSummary.length === 1 ? "Field" : "Fields"}
+                      </AlertTitle>
+                      <AlertDescription>
+                        <ul className="flex list-disc flex-col gap-1 pl-4">
+                          {errorSummary.map((error) => (
+                            <li key={String(error.fieldName)}>
+                              <a
+                                href={`#${error.anchor}`}
+                                className="font-medium underline underline-offset-4"
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  focusErrorDestination(
+                                    error.section,
+                                    error.anchor,
+                                  );
+                                }}
+                              >
+                                {error.label}: {error.message}
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+                ) : null}
 
-              <FieldGroup className="gap-6">
-                <RegistryDetailsSection
-                  services={services}
-                  departments={departments}
-                  isEdit={isEdit}
-                  presetCode={presetCode}
-                  onPresetChange={applyPreset}
-                />
-                <CitizenJourneySection />
+                {variantOnly ? (
+                  <Alert variant="default">
+                    <AlertDescription>
+                      You are editing only{" "}
+                      <strong>
+                        {service ? formatServiceCode(service.service_code) : ""}
+                      </strong>
+                      . Registry changes stay on this variant; Requirements
+                      identifies shared checklist items. Applicant questions and
+                      routing remain at the service-group level.
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
+
+                <ServiceEditorSection
+                  id="registry-details"
+                  icon={FileText}
+                  title="Registry Details & Fees"
+                  description="Official identity, routing department, classification, processing time, and fee schedule."
+                  summary={registrySummary}
+                  hasError={invalidSections.has("registry-details")}
+                >
+                  <RegistryDetailsSection
+                    embedded
+                    services={services}
+                    departments={departments}
+                    isEdit={isEdit}
+                    presetCode={presetCode}
+                    onPresetChange={applyPreset}
+                  />
+                </ServiceEditorSection>
+
+                <ServiceEditorSection
+                  id="citizen-journey"
+                  icon={RouteIcon}
+                  title="Citizen Journey"
+                  description="Public steps citizens follow and the people represented in an application."
+                  summary={journeySummary}
+                  hasError={invalidSections.has("citizen-journey")}
+                >
+                  <CitizenJourneySection embedded />
+                </ServiceEditorSection>
+
                 {!variantOnly ? (
-                  <>
+                  <ServiceEditorSection
+                    id="case-questions"
+                    icon={GitBranch}
+                    title="Case Questions & Timing"
+                    description="Case routing questions, protected date rules, and registration-window behavior."
+                    summary={caseSummary}
+                    hasError={invalidSections.has("case-questions")}
+                  >
                     <CaseQuestionsSection
+                      embedded
                       variants={caseVariants}
                       formDefinition={formDefinition}
                       publishedFieldKeys={publishedFieldKeys}
@@ -538,7 +963,20 @@ export function ServiceFormPage({
                         setTemplateDirty(true);
                       }}
                     />
+                  </ServiceEditorSection>
+                ) : null}
+
+                {!variantOnly ? (
+                  <ServiceEditorSection
+                    id="application-form"
+                    icon={SlidersHorizontal}
+                    title="Dynamic Application Form"
+                    description="Build the questions citizens answer when applying, including conditional fields and shared question blocks."
+                    summary={applicationSummary}
+                    hasError={invalidSections.has("application-form")}
+                  >
                     <ApplicationFormSection
+                      embedded
                       templateName={templateName}
                       templateVersion={templateVersion}
                       templateSharedCodes={templateSharedCodes}
@@ -554,29 +992,81 @@ export function ServiceFormPage({
                         setTemplateDirty(true);
                       }}
                     />
-                  </>
+                  </ServiceEditorSection>
                 ) : null}
-                <RequirementsSection
-                  isLoading={checklistLoading}
-                  sharedWith={sharedWith}
-                  formDefinition={formDefinition}
-                  currentServiceCode={service?.service_code ?? null}
-                  variantCodes={caseVariants.map(
-                    (variant) => variant.service_code,
-                  )}
-                />
-                <RelationshipsSection />
-              </FieldGroup>
-            </main>
 
-            <ServiceFormSidebar
-              isEdit={isEdit}
-              isSaving={isSaving}
-              isDisabled={isSubmitDisabled}
-              mode={variantOnly ? "variant" : "full"}
-              displayGroup={service?.display_group}
-            />
-          </div>
+                <ServiceEditorSection
+                  id="requirements"
+                  icon={ClipboardCheck}
+                  title="Requirements Checklist"
+                  description="Physical and digital documents applicants must submit, including conditional rules."
+                  summary={requirementsSummary}
+                  hasError={invalidSections.has("requirements")}
+                >
+                  <RequirementsSection
+                    embedded
+                    isLoading={checklistLoading}
+                    sharedWith={sharedWith}
+                    formDefinition={formDefinition}
+                    currentServiceCode={service?.service_code ?? null}
+                    variantCodes={caseVariants.map(
+                      (variant) => variant.service_code,
+                    )}
+                  />
+                </ServiceEditorSection>
+
+                <ServiceEditorSection
+                  id="relationships"
+                  icon={Link2}
+                  title="Relationships & Linkage"
+                  description="Optional public-card variants and shared checklist groupings."
+                  summary={relationshipsSummary}
+                  hasError={invalidSections.has("relationships")}
+                >
+                  <RelationshipsSection embedded />
+                </ServiceEditorSection>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-xs text-muted-foreground">
+                    Section {activeTabIndex + 1} of {availableTabs.length}
+                    <span className="hidden sm:inline">
+                      {" "}
+                      · Changes are kept while switching sections.
+                    </span>
+                  </p>
+                  <div className="ml-auto flex items-center gap-2">
+                    {previousTab ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="min-h-11"
+                        onClick={() => void revealSection(previousTab.id)}
+                      >
+                        <ArrowLeft
+                          aria-hidden="true"
+                          data-icon="inline-start"
+                        />
+                        Previous
+                      </Button>
+                    ) : null}
+                    {nextTab ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="min-h-11"
+                        onClick={() => void revealSection(nextTab.id)}
+                      >
+                        <span className="sm:hidden">Next section</span>
+                        <span className="hidden sm:inline">
+                          {nextTab.label}
+                        </span>
+                        <ArrowRight aria-hidden="true" data-icon="inline-end" />
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Tabs>
         </form>
       </FormProvider>
 
@@ -590,8 +1080,8 @@ export function ServiceFormPage({
           <AlertDialogHeader>
             <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
             <AlertDialogDescription>
-              If you leave the service editor now, your unsaved changes will
-              be lost.
+              If you leave the service editor now, your unsaved changes will be
+              lost.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

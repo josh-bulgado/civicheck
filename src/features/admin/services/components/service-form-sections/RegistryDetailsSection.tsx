@@ -43,6 +43,7 @@ interface RegistryDetailsSectionProps {
   isEdit: boolean;
   presetCode: string;
   onPresetChange: (code: string | null) => void;
+  embedded?: boolean;
 }
 
 export function RegistryDetailsSection({
@@ -51,27 +52,34 @@ export function RegistryDetailsSection({
   isEdit,
   presetCode,
   onPresetChange,
+  embedded = false,
 }: RegistryDetailsSectionProps) {
   const form = useFormContext<ServiceFormValues>();
 
   return (
-    <Card id="registry-details" className="scroll-mt-6">
-      <CardHeader className="border-b">
-        <div className="flex items-start gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
-            <FileText aria-hidden="true" className="size-4" />
+    <Card
+      id={embedded ? undefined : "registry-details"}
+      variant={embedded ? "embedded" : "default"}
+      className={embedded ? undefined : "scroll-mt-6"}
+    >
+      {!embedded ? (
+        <CardHeader className="border-b">
+          <div className="flex items-start gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+              <FileText aria-hidden="true" className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <CardTitle>
+                <h2 className="text-pretty">Registry Details</h2>
+              </CardTitle>
+              <CardDescription>
+                The official identity, owner, fee, and Citizen&rsquo;s Charter
+                classification.
+              </CardDescription>
+            </div>
           </div>
-          <div className="min-w-0">
-            <CardTitle>
-              <h2 className="text-pretty">Registry Details</h2>
-            </CardTitle>
-            <CardDescription>
-              The official identity, owner, fee, and Citizen&rsquo;s Charter
-              classification.
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
+        </CardHeader>
+      ) : null}
       <CardContent>
         <FieldGroup>
           {!isEdit ? (
@@ -117,6 +125,26 @@ export function RegistryDetailsSection({
               </FieldDescription>
             </Field>
           ) : null}
+
+          <Controller
+            control={form.control}
+            name="name"
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="service-name">Service Name</FieldLabel>
+                <Input
+                  {...field}
+                  id="service-name"
+                  placeholder="Issuance of Certified True Copies of Civil Registry Records…"
+                  autoComplete="off"
+                  aria-invalid={fieldState.invalid}
+                />
+                {fieldState.invalid ? (
+                  <FieldError errors={[fieldState.error]} />
+                ) : null}
+              </Field>
+            )}
+          />
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Controller
@@ -182,28 +210,6 @@ export function RegistryDetailsSection({
               )}
             />
           </div>
-
-          <FeeBreakdownFields />
-
-          <Controller
-            control={form.control}
-            name="name"
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="service-name">Service Name</FieldLabel>
-                <Input
-                  {...field}
-                  id="service-name"
-                  placeholder="Issuance of Certified True Copies of Civil Registry Records…"
-                  autoComplete="off"
-                  aria-invalid={fieldState.invalid}
-                />
-                {fieldState.invalid ? (
-                  <FieldError errors={[fieldState.error]} />
-                ) : null}
-              </Field>
-            )}
-          />
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Controller
@@ -328,6 +334,7 @@ export function RegistryDetailsSection({
               )}
             />
           </div>
+          <FeeBreakdownFields />
         </FieldGroup>
       </CardContent>
     </Card>

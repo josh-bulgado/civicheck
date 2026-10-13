@@ -12,28 +12,38 @@ import { Input } from "~/components/ui/input";
 import { cn } from "~/lib/utils";
 import type { ServiceFormValues } from "../service-form.config";
 
-export function RelationshipsSection() {
+export function RelationshipsSection({
+  embedded = false,
+}: {
+  embedded?: boolean;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const form = useFormContext<ServiceFormValues>();
 
   return (
-    <Card id="relationships" className="scroll-mt-6">
-      <CardHeader className="border-b">
-        <div className="flex items-start gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
-            <Settings2 aria-hidden="true" className="size-4" />
+    <Card
+      id={embedded ? undefined : "relationships"}
+      variant={embedded ? "embedded" : "default"}
+      className={embedded ? undefined : "scroll-mt-6"}
+    >
+      {!embedded ? (
+        <CardHeader className="border-b">
+          <div className="flex items-start gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+              <Settings2 aria-hidden="true" className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <CardTitle>
+                <h2>Relationships</h2>
+              </CardTitle>
+              <CardDescription>
+                Optional grouping for variants that share a public card or
+                checklist.
+              </CardDescription>
+            </div>
           </div>
-          <div className="min-w-0">
-            <CardTitle>
-              <h2>Relationships</h2>
-            </CardTitle>
-            <CardDescription>
-              Optional grouping for variants that share a public card or
-              checklist.
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
+        </CardHeader>
+      ) : null}
       <CardContent>
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
           <CollapsibleTrigger className="flex w-full cursor-pointer select-none items-center justify-between rounded-md border border-border bg-surface-subtle px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted">

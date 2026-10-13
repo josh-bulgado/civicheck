@@ -1,5 +1,9 @@
 import type { CSSProperties } from "react";
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Outlet,
+  useRouterState,
+} from "@tanstack/react-router";
 import {
   SidebarInset,
   SidebarProvider,
@@ -46,6 +50,15 @@ export const Route = createFileRoute("/_authed/_dashboard")({
 });
 
 function DashboardLayout() {
+  const isServiceEditor = useRouterState({
+    select: (state) =>
+      state.matches.some(
+        (match) =>
+          match.routeId ===
+            "/_authed/_dashboard/admin/services_/$serviceCode/edit" ||
+          match.routeId === "/_authed/_dashboard/admin/services_/new",
+      ),
+  });
   const { user } = Route.useRouteContext();
   const { unreadNotifications, requestCount } = Route.useLoaderData();
   const workspace = getWorkspaceDetails((user?.role ?? "applicant") as Role);
@@ -69,8 +82,18 @@ function DashboardLayout() {
       >
         Skip to Main Content
       </a>
-      <AppSidebar user={user} unreadNotifications={unreadNotifications} />
-      {isCitizen ? (
+      {!isServiceEditor && (
+        <AppSidebar user={user} unreadNotifications={unreadNotifications} />
+      )}
+      {isServiceEditor ? (
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="civic-workspace min-w-0 w-full bg-workspace text-foreground"
+        >
+          <Outlet />
+        </main>
+      ) : isCitizen ? (
         <SidebarInset className="min-w-0 bg-ground">
           {/* One full-width column, top bar first, filling the space beside the
               sidebar. No max-width: a cap leaves dead ground on wide screens. */}
@@ -102,7 +125,10 @@ function DashboardLayout() {
                 </p>
               </div>
             </div>
-            <CityGovernmentIdentity compact className="[&>span:first-child]:size-8" />
+            <CityGovernmentIdentity
+              compact
+              className="[&>span:first-child]:size-8"
+            />
           </header>
           <main
             id="main-content"
