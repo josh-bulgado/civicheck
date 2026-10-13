@@ -23,6 +23,12 @@ function one<T>(value: T | T[] | null | undefined): T | undefined {
   return Array.isArray(value) ? value[0] : (value ?? undefined);
 }
 
+/** SQLSTATE `program_limit_exceeded`, raised by enforce_request_message_caps. */
+const RATE_LIMIT_SQLSTATE = "54000";
+
+const FLOOD_MESSAGE =
+  "You've sent a lot of messages in a short time. Please wait a while before sending another.";
+
 // Same wording for a missing request and one the caller may not see, so a
 // wrong-department or wrong-applicant request cannot be told apart from none.
 const NOT_FOUND = { error: true as const, message: "That request no longer exists." };
@@ -107,12 +113,11 @@ export const postRequestMessageFn = createServerFn({ method: "POST" })
         message: "We couldn't send your message. Please try again.",
       };
     }
+    // A fast path only. The database trigger enforce_request_message_caps is
+    // the authority: it holds a per-sender lock, so parallel requests cannot
+    // slip past this count, and it also caps a sender across all requests.
     if (isFlooded(count ?? 0)) {
-      return {
-        error: true as const,
-        message:
-          "You've sent a lot of messages in a short time. Please wait a while before sending another.",
-      };
+      return { error: true as const, message: FLOOD_MESSAGE };
     }
 
     const { data: inserted, error: insertError } = await admin
@@ -125,6 +130,9 @@ export const postRequestMessageFn = createServerFn({ method: "POST" })
       })
       .select("id")
       .single();
+    if (insertError?.code === RATE_LIMIT_SQLSTATE) {
+      return { error: true as const, message: FLOOD_MESSAGE };
+    }
     if (insertError || !inserted) {
       return {
         error: true as const,
