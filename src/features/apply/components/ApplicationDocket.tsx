@@ -137,7 +137,7 @@ export function ApplicationDocket({
 
         <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2">
           {fee !== undefined ? (
-            <dl className="flex flex-col border-l-2 border-control-border pl-3.5 leading-tight">
+            <dl className="flex flex-col border-l border-border pl-3.5 leading-tight">
               <dt className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
                 Fee at cashier
               </dt>

@@ -57,7 +57,7 @@ export function ApplyStepRail({
               >
                 <div className="flex shrink-0 items-center gap-2">
                   <span
-                    className={`flex size-6.5 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold transition-[background-color,color,border-color] duration-300 ease-out motion-reduce:transition-none ${
+                    className={`flex size-6.5 shrink-0 items-center justify-center rounded-full border text-xs font-bold transition-[background-color,color,border-color] duration-300 ease-out motion-reduce:transition-none ${
                       isDone
                         ? "border-success bg-success text-white"
                         : isCurrent

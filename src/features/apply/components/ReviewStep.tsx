@@ -394,7 +394,7 @@ export function ReviewStep({
           )}
         </EditSection>
 
-        <div className="flex items-center justify-between gap-5 rounded-[10px] border border-control-border bg-primary-tint px-4.5 py-4">
+        <div className="flex items-center justify-between gap-5 rounded-[10px] border border-border-light bg-primary-tint px-4.5 py-4">
           <div>
             <p className="text-base font-bold text-foreground">Nothing is paid online</p>
             <p className="text-sm leading-relaxed text-body">
@@ -496,7 +496,7 @@ function WhatHappensNextCard() {
     "Present your tracking number at the counter when you arrive.",
   ];
   return (
-    <div className="civic-card overflow-hidden rounded-2xl">
+    <div className="portal-card overflow-hidden">
       <div className="border-b border-border-light px-4.5 py-3.5 text-base font-bold text-foreground">
         What happens next
       </div>

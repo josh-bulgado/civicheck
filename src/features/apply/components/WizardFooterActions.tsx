@@ -28,7 +28,7 @@ export function WizardFooterActions({
   note,
 }: WizardFooterActionsProps) {
   return (
-    <div className="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:gap-4">
+    <div className="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-border-light pt-6 sm:flex-row sm:items-center sm:gap-4">
       {onBack ? (
         <Button
           type="button"

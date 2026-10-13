@@ -68,7 +68,7 @@ function ApplyLayout() {
   }
 
   return (
-    <div className="apply-wizard min-h-screen bg-background">
+    <div className="apply-wizard min-h-screen bg-ground">
       <ApplyStepRail
         currentStep={currentStep}
         draftUpdatedAt={hydrated ? draft.updatedAt : null}
