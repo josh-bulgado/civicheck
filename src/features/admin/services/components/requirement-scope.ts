@@ -64,6 +64,8 @@ function resolveAffectedCodes(
 export function summarizeCondition(
   rule: ConditionRule,
   sources: ConditionSource[],
+  /** Spell out every condition instead of collapsing long rules to a count. */
+  full = false,
 ): string {
   const parts = rule.conditions.map((condition) => {
     const source = sources.find((item) => item.key === condition.field);
@@ -73,7 +75,7 @@ export function summarizeCondition(
       condition.value;
     return `${fieldLabel} ${condition.operator === "equals" ? "is" : "is not"} ${valueLabel}`;
   });
-  if (parts.length <= 2) {
+  if (full || parts.length <= 2) {
     return parts.join(rule.match === "all" ? " and " : " or ");
   }
   return `${parts.length} conditions`;
