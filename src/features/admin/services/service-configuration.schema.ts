@@ -5,6 +5,10 @@ import {
   type ConditionRule,
   type FormTemplateDefinition,
 } from "~/features/forms/form-template.types";
+import {
+  feeComponentSchema,
+  feeComponentsIssue,
+} from "~/features/services/fee-components";
 
 // ─── Service configuration payload ───────────────────────────────────────────
 // Everything the admin service editor saves in one go: the registry row, the
@@ -48,6 +52,8 @@ export const serviceFieldsSchema = z
     name: z.string().trim().min(1, "Service name is required").max(200),
     classification: z.enum(["simple", "complex", "highly_technical"]),
     fee: z.number().finite().min(0).max(1_000_000),
+    // Optional: a save that does not carry it leaves the stored breakdown be.
+    fee_components: z.array(feeComponentSchema).max(20).optional(),
     processing_time: z
       .string()
       .trim()
@@ -69,6 +75,18 @@ export const serviceFieldsSchema = z
     requirement_group: groupKeySchema,
   })
   .superRefine((service, context) => {
+    const feeIssue = feeComponentsIssue(
+      service.fee_components ?? [],
+      service.fee,
+    );
+    if (feeIssue) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: feeIssue,
+        path: ["fee_components"],
+      });
+    }
+
     // Uploads are slotted per role, so two people can't share one.
     const seen = new Set<string>();
     for (const [index, role] of service.party_roles.entries()) {

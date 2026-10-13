@@ -1,6 +1,10 @@
 import z from "zod";
 import { parseRequirementName } from "~/features/services/service-utils";
 import {
+  feeComponentsIssue,
+  parseFeeComponents,
+} from "~/features/services/fee-components";
+import {
   conditionRuleSchema,
   type FormTemplateDefinition,
 } from "~/features/forms/form-template.types";
@@ -26,48 +30,88 @@ const requirementSchema = z.object({
   subject_role: z.string().optional(),
 });
 
+// Amounts stay strings for the same reason as `fee` below.
+const feeComponentFormSchema = z.object({
+  label: z.string().trim().min(1, "Describe this charge"),
+  amount: z
+    .string()
+    .trim()
+    .min(1, "Enter an amount")
+    .refine(
+      (value) => !Number.isNaN(Number(value)) && Number(value) >= 0,
+      "Enter a valid amount (0 or more)",
+    ),
+  included: z.boolean(),
+});
+
+/** Form rows -> the saved shape. Blank or unreadable amounts count as 0. */
+export function toFeeComponentPayload(
+  rows: ServiceFormValues["fee_components"],
+) {
+  return rows.map((row) => ({
+    label: row.label.trim(),
+    amount: Number(row.amount) || 0,
+    included: row.included,
+  }));
+}
+
 // `fee` stays a string so the resolver's input and output types match the text
 // input; it is converted once, at submit.
 export function buildServiceFormSchema(takenCodes: Set<string>) {
-  return z.object({
-    service_code: z
-      .string()
-      .trim()
-      .min(1, "Service code is required")
-      .regex(
-        /^[A-Z0-9_-]+$/,
-        "Use uppercase letters, numbers, underscores, and hyphens only",
-      )
-      .refine(
-        (code) => !takenCodes.has(code),
-        "A service with this code already exists",
-      ),
-    name: z.string().trim().min(1, "Service name is required"),
-    classification: z.enum(["simple", "complex", "highly_technical"]),
-    fee: z
-      .string()
-      .trim()
-      .min(1, "Fee is required — enter 0 for a free service")
-      .refine(
-        (value) => !Number.isNaN(Number(value)) && Number(value) >= 0,
-        "Enter a valid amount (0 or more)",
-      ),
-    processing_time: z.string().trim().min(1, "Processing time is required"),
-    department_id: z.string().optional(),
-    steps: z.array(z.object({ value: z.string() })),
-    party_roles: z.array(z.object({ value: z.string() })),
-    requirements: z.array(requirementSchema),
-    event_date_label: z.string().optional(),
-    event_place_label: z.string().optional(),
-    event_date_direction: z.enum(["past", "future", "any"]),
-    reference_number_label: z.string().optional(),
-    asks_purpose: z.boolean(),
-    asks_birth_details: z.boolean(),
-    allows_messages: z.boolean(),
-    display_group: z.string().optional(),
-    display_name: z.string().optional(),
-    requirement_group: z.string().optional(),
-  });
+  return z
+    .object({
+      service_code: z
+        .string()
+        .trim()
+        .min(1, "Service code is required")
+        .regex(
+          /^[A-Z0-9_-]+$/,
+          "Use uppercase letters, numbers, underscores, and hyphens only",
+        )
+        .refine(
+          (code) => !takenCodes.has(code),
+          "A service with this code already exists",
+        ),
+      name: z.string().trim().min(1, "Service name is required"),
+      classification: z.enum(["simple", "complex", "highly_technical"]),
+      fee: z
+        .string()
+        .trim()
+        .min(1, "Fee is required — enter 0 for a free service")
+        .refine(
+          (value) => !Number.isNaN(Number(value)) && Number(value) >= 0,
+          "Enter a valid amount (0 or more)",
+        ),
+      processing_time: z.string().trim().min(1, "Processing time is required"),
+      department_id: z.string().optional(),
+      steps: z.array(z.object({ value: z.string() })),
+      party_roles: z.array(z.object({ value: z.string() })),
+      requirements: z.array(requirementSchema),
+      event_date_label: z.string().optional(),
+      event_place_label: z.string().optional(),
+      event_date_direction: z.enum(["past", "future", "any"]),
+      reference_number_label: z.string().optional(),
+      asks_purpose: z.boolean(),
+      asks_birth_details: z.boolean(),
+      allows_messages: z.boolean(),
+      display_group: z.string().optional(),
+      display_name: z.string().optional(),
+      requirement_group: z.string().optional(),
+      fee_components: z.array(feeComponentFormSchema),
+    })
+    .superRefine((values, context) => {
+      const issue = feeComponentsIssue(
+        toFeeComponentPayload(values.fee_components),
+        Number(values.fee) || 0,
+      );
+      if (issue) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: issue,
+          path: ["fee_components"],
+        });
+      }
+    });
 }
 
 export type ServiceFormValues = z.infer<
@@ -162,6 +206,7 @@ export function emptyServiceFormDefaults(): ServiceFormValues {
     display_group: "",
     display_name: "",
     requirement_group: "",
+    fee_components: [],
   };
 }
 
@@ -188,6 +233,13 @@ export function serviceFormDefaults(service: Service): ServiceFormValues {
     display_group: service.display_group ?? "",
     display_name: service.display_name ?? "",
     requirement_group: service.requirement_group ?? "",
+    fee_components: parseFeeComponents(service.fee_components).map(
+      (component) => ({
+        label: component.label,
+        amount: String(component.amount),
+        included: component.included,
+      }),
+    ),
   };
 }
 
