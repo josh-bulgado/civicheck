@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useId, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Controller,
@@ -85,59 +85,51 @@ function subjectFieldVisibility(role: string, sex: string | undefined) {
   };
 }
 
-function subjectFieldCount(role: string, sex: string | undefined) {
-  const { showSuffix, showSex } = subjectFieldVisibility(role, sex);
-  return 3 + Number(showSuffix) + Number(showSex);
+/**
+ * A party's heading names the person once, so the inputs under it can keep
+ * plain labels ("First name") instead of repeating "Mother's …" on every row.
+ * The group is named for assistive tech, which announces the role on entry.
+ */
+function PartySection({ role, children }: { role: string; children: ReactNode }) {
+  const headingId = useId();
+  return (
+    <div role="group" aria-labelledby={headingId} className="flex flex-col gap-3">
+      <h2 id={headingId} className="text-base font-bold text-foreground">
+        {role}
+      </h2>
+      {children}
+    </div>
+  );
 }
 
-// One column per party, the way the case step sets the bride's questions beside
-// the groom's. Three parties wrap to a second row until there is room for all.
-const PARTY_COLUMNS_CLASS: Record<number, string> = {
-  2: "sm:grid-cols-2",
-  3: "sm:grid-cols-2 lg:grid-cols-3",
-};
-
-/** The name/suffix/sex inputs for one subject — a two-across grid for a
- * single subject, or one party's column when there's more than one. */
+/**
+ * The name/suffix/sex inputs for one subject. The three name parts share a row
+ * from `md` up, with suffix and sex wrapping beneath, so every party's inputs
+ * sit on the same columns and an unequal field count leaves nothing stranded.
+ */
 function SubjectFieldGrid({
   control,
   setValue,
   index,
   role,
-  party,
 }: {
   control: Control<any>;
   setValue: UseFormSetValue<any>;
   index: number;
   role: string;
-  /**
-   * Set when this subject is one column among several: labels name the role
-   * ("Bride's first name") and the inputs sit on `rows` shared rows, so the
-   * same input lines up across parties even when one shows an error.
-   */
-  party?: { rows: number };
 }) {
   const watchedSex = useWatch({ control, name: `subjects.${index}.sex` });
   const { showSuffix, showSex } = subjectFieldVisibility(role, watchedSex);
-  const label = (text: string) =>
-    party ? `${role}’s ${text.toLowerCase()}` : text;
 
   return (
-    <div
-      className={
-        party
-          ? "flex flex-col gap-4 sm:grid sm:grid-rows-subgrid"
-          : "grid grid-cols-1 gap-4 sm:grid-cols-2"
-      }
-      style={party ? { gridRow: `span ${party.rows}` } : undefined}
-    >
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-6 sm:*:col-span-3 md:*:col-span-2">
       <Controller
         control={control}
         name={`subjects.${index}.firstName`}
         rules={{ required: "First name is required" }}
         render={({ field, fieldState }) => (
           <Field data-invalid={fieldState.invalid}>
-            <FieldLabel htmlFor={`subject-${index}-firstName`} className={WIZARD_LABEL_CLASS}>{label("First name")} <RequiredMark /></FieldLabel>
+            <FieldLabel htmlFor={`subject-${index}-firstName`} className={WIZARD_LABEL_CLASS}>First name <RequiredMark /></FieldLabel>
             <Input
               id={`subject-${index}-firstName`}
               placeholder="Juan"
@@ -156,7 +148,7 @@ function SubjectFieldGrid({
         name={`subjects.${index}.middleName`}
         render={({ field }) => (
           <Field>
-            <FieldLabel htmlFor={`subject-${index}-middleName`} className={WIZARD_LABEL_CLASS}>{label("Middle name")}</FieldLabel>
+            <FieldLabel htmlFor={`subject-${index}-middleName`} className={WIZARD_LABEL_CLASS}>Middle name</FieldLabel>
             <Input
               id={`subject-${index}-middleName`}
               placeholder="Santos"
@@ -174,7 +166,7 @@ function SubjectFieldGrid({
         rules={{ required: "Last name is required" }}
         render={({ field, fieldState }) => (
           <Field data-invalid={fieldState.invalid}>
-            <FieldLabel htmlFor={`subject-${index}-lastName`} className={WIZARD_LABEL_CLASS}>{label("Last name")} <RequiredMark /></FieldLabel>
+            <FieldLabel htmlFor={`subject-${index}-lastName`} className={WIZARD_LABEL_CLASS}>Last name <RequiredMark /></FieldLabel>
             <Input
               id={`subject-${index}-lastName`}
               placeholder="Dela Cruz"
@@ -194,7 +186,7 @@ function SubjectFieldGrid({
           name={`subjects.${index}.suffix`}
           render={({ field }) => (
             <Field>
-              <FieldLabel htmlFor={`subject-${index}-suffix`} className={WIZARD_LABEL_CLASS}>{label("Suffix")}</FieldLabel>
+              <FieldLabel htmlFor={`subject-${index}-suffix`} className={WIZARD_LABEL_CLASS}>Suffix</FieldLabel>
               <Select
                 items={SUFFIXES}
                 value={field.value || NO_SUFFIX}
@@ -229,7 +221,7 @@ function SubjectFieldGrid({
           rules={{ required: "Select the sex on record" }}
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor={`subject-${index}-sex`} className={WIZARD_LABEL_CLASS}>{label("Sex")} <RequiredMark /></FieldLabel>
+              <FieldLabel htmlFor={`subject-${index}-sex`} className={WIZARD_LABEL_CLASS}>Sex <RequiredMark /></FieldLabel>
               <Select<"male" | "female" | typeof NO_SEX>
                 items={SEX_ITEMS}
                 value={(field.value as "male" | "female" | "") || NO_SEX}
@@ -341,13 +333,6 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
           (impliedSex(field.role) !== null || subject.sex),
       );
     });
-  // The tallest party sets how many rows the party columns share.
-  const partyRows = Math.max(
-    0,
-    ...subjectFields.fields.map((field, index) =>
-      subjectFieldCount(field.role, watchedValues.subjects?.[index]?.sex),
-    ),
-  );
   const hasRequiredAnswers =
     subjectsReady &&
     visibleFieldsForStep(
@@ -420,24 +405,18 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     >
       <div className="flex flex-col gap-6">
         {hasPersonGroup && showRoleLabels ? (
-          // On a phone each party is its own block, set further apart than the
-          // inputs inside it; from `sm` up the parties share the rows instead.
-          <div
-            className={cn(
-              "grid grid-cols-1 gap-x-4 gap-y-8 sm:gap-y-4",
-              PARTY_COLUMNS_CLASS[subjectFields.fields.length] ??
-                PARTY_COLUMNS_CLASS[3],
-            )}
-          >
+          // Each party is its own headed section, stacked, so its name parts
+          // can run across the card instead of sharing narrow columns.
+          <div className="flex flex-col gap-8">
             {subjectFields.fields.map((subjectField, index) => (
-              <SubjectFieldGrid
-                key={subjectField.id}
-                control={form.control}
-                setValue={form.setValue}
-                index={index}
-                role={subjectField.role}
-                party={{ rows: partyRows }}
-              />
+              <PartySection key={subjectField.id} role={subjectField.role}>
+                <SubjectFieldGrid
+                  control={form.control}
+                  setValue={form.setValue}
+                  index={index}
+                  role={subjectField.role}
+                />
+              </PartySection>
             ))}
           </div>
         ) : hasPersonGroup ? (
