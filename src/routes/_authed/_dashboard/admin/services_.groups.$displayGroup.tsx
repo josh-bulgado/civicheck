@@ -2,6 +2,10 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 import { ServiceGroupApplicationPage } from "~/features/admin/services/components/ServiceGroupApplicationPage";
 import { ServiceGroupPage } from "~/features/admin/services/components/ServiceGroupPage";
 import { getAdminServices } from "~/features/admin/services/services.queries";
+import {
+  redirectToServiceSlug,
+  toServiceSlug,
+} from "~/features/services/service-slug";
 import { hasPermission } from "~/lib/permissions";
 import type { Role } from "~/lib/permissions";
 import { denyAccess } from "~/lib/access";
@@ -12,16 +16,32 @@ export const Route = createFileRoute(
   validateSearch: (search: Record<string, unknown>) => ({
     scope: search.scope === "application" ? search.scope : undefined,
   }),
-  beforeLoad: ({ context, location }) => {
+  // Links pass the group key; the address bar shows its slug.
+  params: {
+    stringify: ({ displayGroup }) => ({
+      displayGroup: toServiceSlug(displayGroup),
+    }),
+  },
+  beforeLoad: ({ context, location, params }) => {
     const role = (context.user?.role ?? "applicant") as Role;
     if (!hasPermission(role, "services:manage")) {
       denyAccess(location);
     }
+    redirectToServiceSlug(
+      location,
+      "/admin/services/groups/",
+      params.displayGroup,
+    );
   },
-  loader: async ({ params: { displayGroup } }) => {
+  loader: async ({ params }) => {
     const services = await getAdminServices();
+    const displayGroup = services.find(
+      (service) =>
+        service.display_group &&
+        toServiceSlug(service.display_group) === params.displayGroup,
+    )?.display_group;
     const variants = services.filter(
-      (service) => service.display_group === displayGroup,
+      (service) => displayGroup && service.display_group === displayGroup,
     );
     if (variants.length < 2) throw notFound();
 

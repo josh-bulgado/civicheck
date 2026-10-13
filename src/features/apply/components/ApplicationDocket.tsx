@@ -33,6 +33,7 @@ export function ChangeServiceButton({
         variant="link"
         size="sm"
         aria-label={label}
+        className="text-[15px] font-semibold hover:text-primary-hover"
         onClick={() => setOpen(true)}
       >
         <FilePenLine data-icon="inline-start" aria-hidden="true" />
@@ -103,25 +104,17 @@ export function ApplicationDocket({
     <section
       role="region"
       aria-labelledby="selected-service-title"
-      className="border-b border-border-light bg-primary-tint/70"
+      className="border-b border-primary/25 bg-primary-soft"
     >
       <div className="mx-auto flex w-full max-w-350 flex-col gap-3 px-5 py-4 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <div className="mb-1 flex flex-wrap items-center gap-x-2.5 gap-y-1">
-            <p className="text-[11px] font-bold uppercase tracking-[0.11em] text-primary">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
               Selected service
             </p>
-            <span
-              className={`inline-flex items-center gap-1.5 text-xs font-semibold ${
-                selectionPending ? "text-warning" : "text-success"
-              }`}
-            >
-              <span
-                aria-hidden="true"
-                className={`size-1.5 rounded-full ${
-                  selectionPending ? "bg-warning" : "bg-success"
-                }`}
-              />
+            {/* Whether the service is settled is still tracked and read out by
+                assistive tech; it just isn't drawn on screen. */}
+            <span className="sr-only">
               {selectionPending ? "Not confirmed" : "Confirmed"}
             </span>
           </div>
@@ -144,11 +137,11 @@ export function ApplicationDocket({
 
         <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2">
           {fee !== undefined ? (
-            <dl className="flex flex-col border-l-2 border-primary/20 pl-3 leading-tight">
-              <dt className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+            <dl className="flex flex-col border-l-2 border-control-border pl-3.5 leading-tight">
+              <dt className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
                 Fee at cashier
               </dt>
-              <dd className="mt-0.5 font-bold text-foreground tabular-nums">
+              <dd className="mt-0.5 text-[17px] font-bold text-foreground tabular-nums">
                 {formatFee(totalFee(fee, copies, feePerCopy))}
               </dd>
               {showBreakdown ? (

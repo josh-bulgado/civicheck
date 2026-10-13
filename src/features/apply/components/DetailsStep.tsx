@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Controller,
@@ -8,20 +8,9 @@ import {
   type Control,
   type UseFormSetValue,
 } from "react-hook-form";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "~/components/ui/accordion";
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "~/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import { RequiredLegend, RequiredMark } from "~/components/ui/required-mark";
+import { RequiredMark } from "~/components/ui/required-mark";
 import {
   Select,
   SelectContent,
@@ -35,8 +24,14 @@ import { WizardFooterActions } from "~/features/apply/components/WizardFooterAct
 import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
 import {
   DynamicFormFields,
+  visibleFieldsForStep,
   type DynamicFieldValues,
 } from "~/features/forms/components/DynamicFormFields";
+import {
+  WIZARD_CONTROL_CLASS,
+  WIZARD_LABEL_CLASS,
+  WizardFieldError,
+} from "~/features/forms/components/wizard-field";
 import {
   canonicalizeTemplateAnswers,
   fieldsForStep,
@@ -50,6 +45,7 @@ import {
   subjectsMatchRoles,
   SUFFIXES,
 } from "~/lib/subject-fields";
+import { cn } from "~/lib/utils";
 
 type DetailsSubject = {
   role: string;
@@ -76,44 +72,82 @@ const SEXES = [
 
 const SEX_ITEMS = [{ value: NO_SEX, label: "Select sex" }, ...SEXES];
 
-/** The name/suffix/sex inputs for one subject — reused for both the plain
- * single-subject layout and each accordion item when there's more than one. */
+/** Which of the optional inputs a subject shows, on top of the three names. */
+function subjectFieldVisibility(role: string, sex: string | undefined) {
+  const implied = impliedSex(role);
+  return {
+    // Generational suffixes (Jr., Sr., III...) are a male naming convention —
+    // don't ask for one on a role that's implied to be a woman, or once the
+    // applicant has picked "Female" for a role (like Child) where sex isn't
+    // implied and is chosen instead.
+    showSuffix: (implied ?? sex) !== "female",
+    showSex: implied === null,
+  };
+}
+
+function subjectFieldCount(role: string, sex: string | undefined) {
+  const { showSuffix, showSex } = subjectFieldVisibility(role, sex);
+  return 3 + Number(showSuffix) + Number(showSex);
+}
+
+// One column per party, the way the case step sets the bride's questions beside
+// the groom's. Three parties wrap to a second row until there is room for all.
+const PARTY_COLUMNS_CLASS: Record<number, string> = {
+  2: "sm:grid-cols-2",
+  3: "sm:grid-cols-2 lg:grid-cols-3",
+};
+
+/** The name/suffix/sex inputs for one subject — a two-across grid for a
+ * single subject, or one party's column when there's more than one. */
 function SubjectFieldGrid({
   control,
   setValue,
   index,
   role,
+  party,
 }: {
   control: Control<any>;
   setValue: UseFormSetValue<any>;
   index: number;
   role: string;
+  /**
+   * Set when this subject is one column among several: labels name the role
+   * ("Bride's first name") and the inputs sit on `rows` shared rows, so the
+   * same input lines up across parties even when one shows an error.
+   */
+  party?: { rows: number };
 }) {
-  const skipSex = impliedSex(role) !== null;
-  // Generational suffixes (Jr., Sr., III...) are a male naming convention —
-  // don't ask for one on a role that's implied to be a woman, or once the
-  // applicant has picked "Female" for a role (like Child) where sex isn't
-  // implied and is chosen instead.
   const watchedSex = useWatch({ control, name: `subjects.${index}.sex` });
-  const skipSuffix = (impliedSex(role) ?? watchedSex) === "female";
+  const { showSuffix, showSex } = subjectFieldVisibility(role, watchedSex);
+  const label = (text: string) =>
+    party ? `${role}’s ${text.toLowerCase()}` : text;
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div
+      className={
+        party
+          ? "flex flex-col gap-4 sm:grid sm:grid-rows-subgrid"
+          : "grid grid-cols-1 gap-4 sm:grid-cols-2"
+      }
+      style={party ? { gridRow: `span ${party.rows}` } : undefined}
+    >
       <Controller
         control={control}
         name={`subjects.${index}.firstName`}
         rules={{ required: "First name is required" }}
         render={({ field, fieldState }) => (
           <Field data-invalid={fieldState.invalid}>
-            <FieldLabel htmlFor={`subject-${index}-firstName`}>First name <RequiredMark /></FieldLabel>
+            <FieldLabel htmlFor={`subject-${index}-firstName`} className={WIZARD_LABEL_CLASS}>{label("First name")} <RequiredMark /></FieldLabel>
             <Input
               id={`subject-${index}-firstName`}
               placeholder="Juan"
               maxLength={120}
               autoComplete="off"
+              aria-invalid={fieldState.invalid}
+              className={WIZARD_CONTROL_CLASS}
               {...field}
             />
-            {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            {fieldState.invalid && <WizardFieldError error={fieldState.error} />}
           </Field>
         )}
       />
@@ -122,12 +156,13 @@ function SubjectFieldGrid({
         name={`subjects.${index}.middleName`}
         render={({ field }) => (
           <Field>
-            <FieldLabel htmlFor={`subject-${index}-middleName`}>Middle name</FieldLabel>
+            <FieldLabel htmlFor={`subject-${index}-middleName`} className={WIZARD_LABEL_CLASS}>{label("Middle name")}</FieldLabel>
             <Input
               id={`subject-${index}-middleName`}
               placeholder="Santos"
               maxLength={120}
               autoComplete="off"
+              className={WIZARD_CONTROL_CLASS}
               {...field}
             />
           </Field>
@@ -139,25 +174,27 @@ function SubjectFieldGrid({
         rules={{ required: "Last name is required" }}
         render={({ field, fieldState }) => (
           <Field data-invalid={fieldState.invalid}>
-            <FieldLabel htmlFor={`subject-${index}-lastName`}>Last name <RequiredMark /></FieldLabel>
+            <FieldLabel htmlFor={`subject-${index}-lastName`} className={WIZARD_LABEL_CLASS}>{label("Last name")} <RequiredMark /></FieldLabel>
             <Input
               id={`subject-${index}-lastName`}
               placeholder="Dela Cruz"
               maxLength={120}
               autoComplete="off"
+              aria-invalid={fieldState.invalid}
+              className={WIZARD_CONTROL_CLASS}
               {...field}
             />
-            {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            {fieldState.invalid && <WizardFieldError error={fieldState.error} />}
           </Field>
         )}
       />
-      {!skipSuffix && (
+      {showSuffix && (
         <Controller
           control={control}
           name={`subjects.${index}.suffix`}
           render={({ field }) => (
             <Field>
-              <FieldLabel htmlFor={`subject-${index}-suffix`}>Suffix</FieldLabel>
+              <FieldLabel htmlFor={`subject-${index}-suffix`} className={WIZARD_LABEL_CLASS}>{label("Suffix")}</FieldLabel>
               <Select
                 items={SUFFIXES}
                 value={field.value || NO_SUFFIX}
@@ -167,7 +204,7 @@ function SubjectFieldGrid({
               >
                 <SelectTrigger
                   id={`subject-${index}-suffix`}
-                  className="w-full"
+                  className={cn("w-full", WIZARD_CONTROL_CLASS)}
                 >
                   <SelectValue />
                 </SelectTrigger>
@@ -185,14 +222,14 @@ function SubjectFieldGrid({
           )}
         />
       )}
-      {!skipSex && (
+      {showSex && (
         <Controller
           control={control}
           name={`subjects.${index}.sex`}
           rules={{ required: "Select the sex on record" }}
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor={`subject-${index}-sex`}>Sex <RequiredMark /></FieldLabel>
+              <FieldLabel htmlFor={`subject-${index}-sex`} className={WIZARD_LABEL_CLASS}>{label("Sex")} <RequiredMark /></FieldLabel>
               <Select<"male" | "female" | typeof NO_SEX>
                 items={SEX_ITEMS}
                 value={(field.value as "male" | "female" | "") || NO_SEX}
@@ -209,7 +246,8 @@ function SubjectFieldGrid({
               >
                 <SelectTrigger
                   id={`subject-${index}-sex`}
-                  className="w-full"
+                  className={cn("w-full", WIZARD_CONTROL_CLASS)}
+                  aria-invalid={fieldState.invalid}
                 >
                   <SelectValue placeholder="Select sex" />
                 </SelectTrigger>
@@ -223,7 +261,7 @@ function SubjectFieldGrid({
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+              {fieldState.invalid && <WizardFieldError error={fieldState.error} />}
             </Field>
           )}
         />
@@ -286,21 +324,40 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   const subjectFields = useFieldArray({ control: form.control, name: "subjects" });
   const showRoleLabels = hasPersonGroup && subjectFields.fields.length > 1;
 
-  // Keep sections user-controlled. Automatically collapsing a completed person
-  // can hide a mistake immediately after the applicant leaves a field.
-  const fieldIds = subjectFields.fields.map((f) => f.id).join("|");
-  const [openIds, setOpenIds] = useState<string[]>(() =>
-    subjectFields.fields[0] ? [subjectFields.fields[0].id] : [],
+  // Every starred input is filled in — the same set the form validates on
+  // submit: each person's first name, last name and (where the role doesn't
+  // imply it) sex, plus every visible required template field. The Next button
+  // reads this to show when the step is ready.
+  const watchedValues = form.watch();
+  // The role comes from the field array, not the watched values: `role` has no
+  // input of its own, so `shouldUnregister` drops it from the watched rows.
+  const subjectsReady =
+    !hasPersonGroup ||
+    subjectFields.fields.every((field, index) => {
+      const subject = watchedValues.subjects?.[index];
+      return Boolean(
+        subject?.firstName?.trim() &&
+          subject.lastName?.trim() &&
+          (impliedSex(field.role) !== null || subject.sex),
+      );
+    });
+  // The tallest party sets how many rows the party columns share.
+  const partyRows = Math.max(
+    0,
+    ...subjectFields.fields.map((field, index) =>
+      subjectFieldCount(field.role, watchedValues.subjects?.[index]?.sex),
+    ),
   );
-
-  // Re-derive which section starts open whenever the resolved role set
-  // changes shape — adjusted here during render rather than in an effect,
-  // so it lands in the same commit instead of causing an extra render pass.
-  const [seenFieldIds, setSeenFieldIds] = useState(fieldIds);
-  if (fieldIds !== seenFieldIds) {
-    setSeenFieldIds(fieldIds);
-    setOpenIds(subjectFields.fields[0] ? [subjectFields.fields[0].id] : []);
-  }
+  const hasRequiredAnswers =
+    subjectsReady &&
+    visibleFieldsForStep(
+      definition,
+      "details",
+      watchedValues as unknown as DynamicFieldValues,
+    ).every((field) => {
+      const value = watchedValues[field.key];
+      return !field.required || (typeof value === "string" && value.trim() !== "");
+    });
 
   function onSubmit(values: DetailsValues) {
     // Hidden suffix/sex controls are unregistered by React Hook Form. Convert
@@ -362,35 +419,27 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       }
     >
       <div className="flex flex-col gap-6">
-        <RequiredLegend />
-
         {hasPersonGroup && showRoleLabels ? (
-          <Accordion
-            multiple
-            value={openIds}
-            onValueChange={setOpenIds}
-            className="flex flex-col gap-6"
+          // On a phone each party is its own block, set further apart than the
+          // inputs inside it; from `sm` up the parties share the rows instead.
+          <div
+            className={cn(
+              "grid grid-cols-1 gap-x-4 gap-y-8 sm:gap-y-4",
+              PARTY_COLUMNS_CLASS[subjectFields.fields.length] ??
+                PARTY_COLUMNS_CLASS[3],
+            )}
           >
             {subjectFields.fields.map((subjectField, index) => (
-              <AccordionItem
+              <SubjectFieldGrid
                 key={subjectField.id}
-                value={subjectField.id}
-                className="rounded-lg border px-4 last:border-b"
-              >
-                <AccordionTrigger>
-                  {subjectField.role}&rsquo;s information
-                </AccordionTrigger>
-                <AccordionContent>
-                  <SubjectFieldGrid
-                    control={form.control}
-                    setValue={form.setValue}
-                    index={index}
-                    role={subjectField.role}
-                  />
-                </AccordionContent>
-              </AccordionItem>
+                control={form.control}
+                setValue={form.setValue}
+                index={index}
+                role={subjectField.role}
+                party={{ rows: partyRows }}
+              />
             ))}
-          </Accordion>
+          </div>
         ) : hasPersonGroup ? (
           subjectFields.fields.map((subjectField, index) => (
             <FieldGroup key={subjectField.id}>
@@ -409,7 +458,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
           step="details"
           showRequiredMarks
           control={form.control}
-          values={form.watch() as unknown as DynamicFieldValues}
+          values={watchedValues as unknown as DynamicFieldValues}
         />
 
         <WizardFooterActions
@@ -417,7 +466,8 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
             navigate({ to: "/apply/$serviceCode/case", params: { serviceCode } })
           }
           onContinue={form.handleSubmit(onSubmit)}
-          continueLabel="Continue to documents"
+          continueLabel="Next"
+          continueReady={hasRequiredAnswers}
         />
       </div>
     </WizardShell>

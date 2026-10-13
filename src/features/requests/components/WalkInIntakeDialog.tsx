@@ -23,6 +23,7 @@ import { encodeWalkInFn } from "~/features/requests/walk-in-intake.mutations";
 import type { EncodableService } from "~/features/requests/walk-in-intake.queries";
 import { CopiesStepper } from "~/features/services/components/CopiesStepper";
 import { ServiceRequirementsDialog } from "~/features/services/components/ServiceRequirementsDialog";
+import { digitsOnly } from "~/lib/phone";
 import {
   emptySubject,
   reconcileSubjects,
@@ -203,8 +204,12 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
                     <FieldLabel htmlFor="walkin-contact">Contact number (optional)</FieldLabel>
                     <Input
                       id="walkin-contact"
+                      type="tel"
+                      inputMode="numeric"
                       value={contactNumber}
-                      onChange={(event) => setContactNumber(event.target.value)}
+                      onChange={(event) =>
+                        setContactNumber(digitsOnly(event.target.value))
+                      }
                     />
                   </Field>
                   <Field>

@@ -99,9 +99,17 @@ async function encodeAsJpeg(file: File): Promise<File> {
   }
 }
 
+/**
+ * The file's MIME type, falling back to its extension for the browsers that
+ * report an empty `file.type`. Empty when neither identifies it.
+ */
+export function uploadTypeOf(file: File): string {
+  return file.type || TYPE_BY_EXTENSION[extensionOf(file.name)] || "";
+}
+
 export async function prepareUploadFile(file: File): Promise<File> {
   const extension = extensionOf(file.name);
-  const type = file.type || TYPE_BY_EXTENSION[extension] || "";
+  const type = uploadTypeOf(file);
   const typed =
     type && type !== file.type
       ? new File([file], file.name, { type, lastModified: file.lastModified })

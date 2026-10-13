@@ -17,15 +17,12 @@ import {
 } from "~/components/ui/alert-dialog";
 import { FieldGroup } from "~/components/ui/field";
 import type { Department } from "~/features/admin/departments.queries";
-import {
-  getServiceFormTemplateFn,
-  publishServiceFormTemplateFn,
-} from "~/features/forms/form-template.functions";
+import { getServiceFormTemplateFn } from "~/features/forms/form-template.functions";
 import { formTemplateDefinitionSchema } from "~/features/forms/form-template.types";
 import type { FormTemplateDefinition } from "~/features/forms/form-template.types";
 import { buildLegacyFormDefinition } from "~/features/forms/form-template.utils";
-import { useCreateServiceWithRequirements } from "../hooks/useCreateServiceWithRequirements";
-import { useUpdateServiceWithRequirements } from "../hooks/useUpdateServiceWithRequirements";
+import { useSaveServiceConfiguration } from "../hooks/useSaveServiceConfiguration";
+import { findRequirementIssue } from "../service-configuration.schema";
 import { getServiceChecklist } from "../services.queries";
 import type { Service } from "../services.types";
 import {
@@ -68,15 +65,18 @@ export function ServiceFormPage({
   variantOnly = false,
 }: ServiceFormPageProps) {
   const isEdit = service !== null;
-  const createMutation = useCreateServiceWithRequirements();
-  const updateMutation = useUpdateServiceWithRequirements();
-  const mutation = isEdit ? updateMutation : createMutation;
+  const mutation = useSaveServiceConfiguration();
 
   const [presetCode, setPresetCode] = useState("");
   const [checklistLoading, setChecklistLoading] = useState(false);
   const [templateLoading, setTemplateLoading] = useState(false);
   const [templateName, setTemplateName] = useState("Application form");
   const [templateVersion, setTemplateVersion] = useState(0);
+  // The published version this editor loaded. Sent back on save so a newer
+  // version published by someone else in the meantime is not overwritten.
+  const [templateVersionId, setTemplateVersionId] = useState<string | null>(
+    null,
+  );
   const [templateSharedCodes, setTemplateSharedCodes] = useState<string[]>([]);
   const [publishedFieldKeys, setPublishedFieldKeys] = useState<string[]>([]);
   const [templateDirty, setTemplateDirty] = useState(false);
@@ -110,6 +110,7 @@ export function ServiceFormPage({
       setTemplateDirty(false);
       setTemplateName("Application form");
       setTemplateVersion(0);
+      setTemplateVersionId(null);
       setTemplateSharedCodes([]);
       setPublishedFieldKeys([]);
       setFormDefinition(genericFormDefinition());
@@ -151,6 +152,7 @@ export function ServiceFormPage({
           template?.templateName ?? `${service.name} application`,
         );
         setTemplateVersion(template?.version ?? 0);
+        setTemplateVersionId(template?.versionId ?? null);
         setTemplateSharedCodes(
           template?.sharedServiceCodes ?? [service.service_code],
         );
@@ -224,6 +226,7 @@ export function ServiceFormPage({
     setSubmitted(false);
     setTemplateName("Application form");
     setTemplateVersion(0);
+    setTemplateVersionId(null);
     setTemplateSharedCodes([]);
     setPublishedFieldKeys([]);
     setFormDefinition(genericFormDefinition());
@@ -285,6 +288,7 @@ export function ServiceFormPage({
       });
       setTemplateName(`${source.name} application`);
       setTemplateVersion(0);
+      setTemplateVersionId(null);
       setTemplateSharedCodes([]);
       setPublishedFieldKeys([]);
       const sourceDefinition =
@@ -307,7 +311,14 @@ export function ServiceFormPage({
           requirement_group: source.requirement_group,
         },
       });
-      form.setValue("requirements", rows.map(toServiceFormRequirement));
+      // The copied rows still belong to the source service; here they are new.
+      form.setValue(
+        "requirements",
+        rows.map((row) => ({
+          ...toServiceFormRequirement(row),
+          requirement_id: undefined,
+        })),
+      );
     } catch {
       toast.error(
         "Copied the service details, but its checklist could not be loaded.",
@@ -360,52 +371,14 @@ export function ServiceFormPage({
       }
     }
 
-    const conditionSources = new Map(
-      [
-        ...(parsedDefinition.data.caseSelector?.questions ?? []),
-        ...(parsedDefinition.data.derivedAnswers ?? []).map((derived) => ({
-          key: derived.key,
-          options: derived.bands.map((band) => ({
-            value: band.value,
-            label: band.label,
-          })),
-        })),
-        ...parsedDefinition.data.sections.flatMap((section) =>
-          section.fields.filter((field) => field.type === "select"),
-        ),
-      ].map((source) => [source.key, source] as const),
+    const requirementIssue = findRequirementIssue(
+      parsedDefinition.data,
+      values.requirements,
+      values.party_roles.map((role) => role.value),
     );
-    for (const [requirementIndex, requirement] of values.requirements.entries()) {
-      if (
-        requirement.requires_upload &&
-        requirement.upload_scope === "specific_subject" &&
-        !values.party_roles.some(
-          (role) => role.value.trim() === requirement.subject_role?.trim(),
-        )
-      ) {
-        toast.error(
-          `Choose a valid person for requirement ${requirementIndex + 1}.`,
-        );
-        return;
-      }
-      for (const condition of requirement.applies_when?.conditions ?? []) {
-        const source = conditionSources.get(condition.field);
-        if (!source) {
-          toast.error(
-            `Requirement ${requirementIndex + 1} uses a question that no longer exists.`,
-          );
-          return;
-        }
-        if (
-          source.options?.length &&
-          !source.options.some((option) => option.value === condition.value)
-        ) {
-          toast.error(
-            `Requirement ${requirementIndex + 1} uses an answer that no longer exists.`,
-          );
-          return;
-        }
-      }
+    if (requirementIssue) {
+      toast.error(requirementIssue);
+      return;
     }
 
     const steps = values.steps
@@ -415,6 +388,7 @@ export function ServiceFormPage({
       .map((role) => role.value.trim())
       .filter((role) => role.length > 0);
     const requirements = values.requirements.map((requirement) => ({
+      id: requirement.requirement_id ?? null,
       requirement_name: requirement.requirement_name.trim(),
       where_to_secure: requirement.where_to_secure?.trim() || null,
       case_tag: requirement.case_tag?.trim() || null,
@@ -453,51 +427,35 @@ export function ServiceFormPage({
       requirement_group: values.requirement_group?.trim() || null,
     };
 
-    const saved = isEdit
-      ? await updateMutation.mutate({
-          data: {
-            service_code: service.service_code,
-            updates: fields,
-            requirements,
-          },
-        })
-      : await createMutation.mutate({
-          data: {
-            service_code: values.service_code.trim(),
-            ...fields,
-            requirements,
-          },
-        });
+    // One call, one transaction: the registry row, the checklist, and the form
+    // are saved together or not at all.
+    const saved = await mutation.mutate({
+      data: {
+        mode: isEdit ? "update" : "create",
+        serviceCode: isEdit ? service.service_code : values.service_code.trim(),
+        service: fields,
+        requirements,
+        form: variantOnly
+          ? null
+          : {
+              templateName:
+                templateName.trim() || `${values.name.trim()} application`,
+              definition: parsedDefinition.data,
+              expectedVersionId: templateVersionId,
+            },
+      },
+    });
 
     if (!saved) return;
-
-    if (!variantOnly) {
-      try {
-        await publishServiceFormTemplateFn({
-          data: {
-            serviceCode: isEdit
-              ? service.service_code
-              : values.service_code.trim(),
-            templateName:
-              templateName.trim() || `${values.name.trim()} application`,
-            definition: parsedDefinition.data,
-          },
-        });
-      } catch (error) {
-        toast.error(
-          "The service was saved, but its application form was not published.",
-          { description: error instanceof Error ? error.message : undefined },
-        );
-        return;
-      }
-    }
 
     toast.success(
       variantOnly
         ? "Variant record saved."
-        : isEdit
-        ? "Service and application form published."
-        : "Service created and application form published.",
+        : !isEdit
+          ? "Service created and application form published."
+          : saved.form?.published
+            ? "Service and application form published."
+            : "Service saved. The application form is unchanged.",
     );
     skipNextBlockRef.current = true;
     resetEditor();

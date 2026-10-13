@@ -21,6 +21,7 @@ import {
   getVisitBadge,
 } from "~/features/services/service-utils";
 import type { getMyDepartmentScopeFn } from "~/features/requests/requests.queries";
+import { resetApplyChoices } from "~/features/apply/hooks/useApplyDraft";
 import { usePermissions } from "~/hooks/usePermissions";
 import { cn } from "~/lib/utils";
 
@@ -368,15 +369,15 @@ export default function ServiceCatalogPage({
           }}
           onApply={
             canApply
-              ? () =>
+              ? () => {
+                  const serviceCode =
+                    focusedService.display_group ?? focusedService.service_code;
+                  resetApplyChoices(serviceCode);
                   navigate({
                     to: "/apply/$serviceCode/case",
-                    params: {
-                      serviceCode:
-                        focusedService.display_group ??
-                        focusedService.service_code,
-                    },
-                  })
+                    params: { serviceCode },
+                  });
+                }
               : undefined
           }
         />

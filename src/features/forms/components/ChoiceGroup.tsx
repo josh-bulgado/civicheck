@@ -36,6 +36,13 @@ export function choiceGroupIsWide(options: readonly ChoiceOption[]) {
   );
 }
 
+/**
+ * Legend for a pick-one question. FieldLegend sets its label size through a
+ * `data-[variant=label]` selector, so the override has to use the same one.
+ */
+export const choiceLegendClass =
+  "data-[variant=label]:text-[15px] font-semibold";
+
 export type ChoicePlacement = "full" | "pair-start" | "pair-end";
 
 /**
@@ -70,19 +77,32 @@ export function planChoiceLayout(
 
 // 1px gaps over a tinted container draw the dividers, so they stay correct for
 // any column count (a divide-x/divide-y pair drops the row divider in a grid).
+// The outer edge uses the control border and the dividers the softer border, so
+// the group reads as one control against the card (3:1) without a heavy grid.
 const groupClass =
-  "grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-border bg-border-light";
+  "grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-control-border bg-border";
 
 // No `h-full` on the label or its Field: grid items already stretch to the row,
 // and Safari resolves the percentage against the wrong box, growing the tile far
 // past the clipped group so its content is centered out of view.
+//
+// The selected tile is a light tint with a heavier label and the filled radio,
+// so the state never rests on the tint alone but nothing outlines the tile.
+// Keyboard focus draws a 2px outline inside the tile instead of only shifting
+// the background.
 const labelClass =
-  "cursor-pointer bg-white has-[>[data-slot=field]]:rounded-none has-[>[data-slot=field]]:border-0 *:data-[slot=field]:px-4 transition-colors hover:bg-primary-tint focus-within:bg-primary-tint has-data-checked:bg-primary-soft/70";
+  "cursor-pointer bg-white has-[>[data-slot=field]]:rounded-none has-[>[data-slot=field]]:border-0 *:data-[slot=field]:px-4 text-[15px] text-foreground transition-colors hover:bg-muted has-focus-visible:outline-2 has-focus-visible:-outline-offset-4 has-focus-visible:outline-primary has-data-checked:bg-primary-tint has-data-checked:hover:bg-primary-tint has-data-checked:font-semibold";
 
 // Field top-aligns rows that contain FieldContent (and nudges the radio 1px);
 // choice tiles are taller than their content, so center the radio and text.
 const fieldClass =
-  "min-h-14 flex-1 has-[>[data-slot=field-content]]:items-center has-[>[data-slot=field-content]]:[&>[role=checkbox],[role=radio]]:mt-0";
+  "min-h-14.5 flex-1 has-[>[data-slot=field-content]]:items-center has-[>[data-slot=field-content]]:[&>[role=checkbox],[role=radio]]:mt-0";
+
+// An unchecked radio is a 2px ring in the secondary ink; checked it keeps the
+// white face and shows a primary dot, so the mark survives a high-contrast or
+// forced-colors palette better than a solid fill with a white dot.
+const radioClass =
+  "size-4.5 border-2 border-muted-foreground data-checked:border-primary data-checked:bg-white [&_[data-slot=radio-group-indicator]>span]:bg-primary";
 
 // Four short options read as one compact row of tiles on a wide screen instead
 // of a tall 2x2 block; they drop back to two columns below that.
@@ -147,6 +167,7 @@ export function ChoiceGroup({
                 value={option.value}
                 id={id}
                 aria-invalid={invalid || undefined}
+                className={radioClass}
               />
               <FieldContent>
                 {option.description ? (

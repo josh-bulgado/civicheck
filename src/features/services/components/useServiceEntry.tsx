@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { resetApplyChoices } from "~/features/apply/hooks/useApplyDraft";
 import { ConfirmApplyDialog } from "~/features/services/components/ConfirmApplyDialog";
 import { ServiceRequirementsDialog } from "~/features/services/components/ServiceRequirementsDialog";
 import {
@@ -93,6 +94,7 @@ export function useServiceEntry(service: ServiceEntryProps, canApply = true) {
     // reopen the checklist behind the apply flow.
     setConfirmFromChecklist(false);
     setConfirmOpen(false);
+    resetApplyChoices(routeCode);
     navigate({
       to: "/apply/$serviceCode/case",
       params: { serviceCode: routeCode },

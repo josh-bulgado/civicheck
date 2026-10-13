@@ -251,6 +251,60 @@ export const deleteRequestDocumentFn = createServerFn({ method: "POST" })
     return { error: false };
   });
 
+const previewUrlsSchema = z.object({
+  storagePaths: z.array(z.string().min(1).max(1024)).max(100),
+  uploadDraftId: z.string().uuid(),
+});
+
+/**
+ * Short-lived links to files still staged in the applicant's own upload draft,
+ * so the apply wizard can show them back. The bucket is private, so a path alone
+ * is not viewable; every path is checked against the draft manifest first.
+ */
+export const getRequestDocumentPreviewUrlsFn = createServerFn({ method: "POST" })
+  .validator((d: { storagePaths: string[]; uploadDraftId: string }) =>
+    previewUrlsSchema.parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { supabase, user } = await requireActiveSession("requests:create");
+    const admin = getSupabaseAdminClient();
+
+    const expectedPrefix = `${user.id}/drafts/${data.uploadDraftId}/`;
+    const storagePaths = [...new Set(data.storagePaths)];
+    if (storagePaths.length === 0) return { error: false, urls: {} };
+    if (!storagePaths.every((path) => path.startsWith(expectedPrefix))) {
+      return { error: true, message: "You can't preview this file." };
+    }
+
+    const { data: records, error: recordsError } = await supabase
+      .from("request_upload_draft_files")
+      .select("storage_path, request_upload_drafts!inner(status)")
+      .eq("draft_id", data.uploadDraftId)
+      .in("storage_path", storagePaths)
+      .eq("request_upload_drafts.applicant_id", user.id)
+      .eq("request_upload_drafts.status", "draft");
+    if (recordsError) {
+      return { error: true, message: "The staged files could not be verified." };
+    }
+    const verifiedPaths = (records ?? []).map((record) => record.storage_path);
+    if (verifiedPaths.length === 0) return { error: false, urls: {} };
+
+    const { data: signed, error: signError } = await admin.storage
+      .from("request-documents")
+      .createSignedUrls(verifiedPaths, 60 * 60);
+    if (signError || !signed) {
+      return { error: true, message: "Could not generate previews for these files." };
+    }
+
+    const urls: Record<string, string> = {};
+    for (const entry of signed) {
+      if (entry.path && entry.signedUrl && !entry.error) {
+        urls[entry.path] = entry.signedUrl;
+      }
+    }
+    return { error: false, urls };
+  });
+
 export const discardRequestUploadDraftFn = createServerFn({ method: "POST" })
   .validator((d: { uploadDraftId: string | null }) => d)
   .handler(async ({ data }) => {

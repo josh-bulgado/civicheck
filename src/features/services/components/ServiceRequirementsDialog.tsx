@@ -161,9 +161,8 @@ export function ServiceRequirementsDialog({
         );
         if (cancelled) return;
         setOverview(data);
-      } catch (err) {
+      } catch {
         if (cancelled) return;
-        console.error("Failed to load service overview", err);
         setError("We couldn't load this checklist. Please try again.");
       } finally {
         if (!cancelled) setLoading(false);

@@ -9,6 +9,7 @@ import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
 import {
   DynamicFormFields,
+  visibleFieldsForStep,
   type DynamicFieldValues,
 } from "~/features/forms/components/DynamicFormFields";
 import { DerivedAnswerAlerts } from "~/features/forms/components/DerivedAnswerAlerts";
@@ -138,6 +139,20 @@ export function CaseStep({
     definition,
     derivedCaseAnswers,
   ).find((selected) => selected.notice.blocksProgress)?.notice;
+  // Every starred input is filled in. Mirrors what the form validates on
+  // submit: the case-selector questions resolve to a service only once they are
+  // all answered, and each field that is visible right now and marked required
+  // must have a value. The Next button uses this to show when the step is
+  // ready, without waiting for a failed submit to find out.
+  const hasRequiredAnswers =
+    (!isGroup || Boolean(draft.selectedServiceCode)) &&
+    visibleFieldsForStep(definition, "case", {
+      ...draft.caseSelectorAnswers,
+      ...watchedValues,
+    }).every((field) => {
+      const value = watchedValues[field.key];
+      return !field.required || (typeof value === "string" && value.trim() !== "");
+    });
   const watchedEventDate = watchedValues.event_date ?? "";
   const marriageTimingNotice = getMarriageTimingNotice(
     selectedService.service_code,
@@ -291,11 +306,7 @@ export function CaseStep({
   }
 
   return (
-    <WizardShell
-      step={1}
-      title="Tell us about your case"
-      description="A few quick questions to find the right service and get the details of your case."
-    >
+    <WizardShell step={1} title="Tell us about your case">
       <div className="flex flex-col gap-6">
         {isGroup ? (
           <CaseSelector
@@ -319,6 +330,7 @@ export function CaseStep({
         <DynamicFormFields
           definition={definition}
           step="case"
+          showRequiredMarks
           control={form.control}
           // Case-selector answers can show or hide fields, so they take part in
           // visibility alongside the form's own values.
@@ -383,7 +395,8 @@ export function CaseStep({
 
         <WizardFooterActions
           onContinue={form.handleSubmit(onSubmit)}
-          continueLabel="Continue to your details"
+          continueLabel="Next"
+          continueReady={hasRequiredAnswers}
           continueDisabled={
             (isGroup && !draft.selectedServiceCode) ||
             timingBlocks ||

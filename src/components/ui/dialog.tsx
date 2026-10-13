@@ -65,13 +65,14 @@ function DialogContent({
             render={
               <Button
                 variant="ghost"
-                className="absolute top-4 right-4"
-                size="icon-sm"
+                className="absolute top-3 right-3 text-foreground hover:bg-muted"
+                size="icon"
               />
             }
           >
-            <XIcon
-            />
+            {/* Full-ink, heavier stroke and a 36px target: a thin 16px X in the
+                corner was easy to miss. */}
+            <XIcon className="size-5" strokeWidth={2.5} aria-hidden="true" />
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>
         )}

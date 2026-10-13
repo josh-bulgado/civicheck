@@ -370,6 +370,8 @@ export function RequirementsSection({
     const nextIndex = requirementFields.fields.length;
     requirementFields.insert(nextIndex, {
       ...source,
+      // The override is a new checklist row; the shared one keeps its id.
+      requirement_id: undefined,
       applies_when: condition,
     });
     setInitiallyOpenIndex(nextIndex);

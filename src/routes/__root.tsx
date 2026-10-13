@@ -196,20 +196,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     document.documentElement.style.colorScheme = "light";
   }, []);
 
-  // Add in-page console (Eruda) for debugging when the real console is hidden
-  React.useEffect(() => {
-    if (import.meta.env.DEV) {
-      const script = document.createElement("script");
-      script.src = "https://cdn.jsdelivr.net/npm/eruda";
-      script.onload = () => {
-        if ((window as any).eruda) {
-          (window as any).eruda.init();
-        }
-      };
-      document.head.appendChild(script);
-    }
-  }, []);
-
   return (
     <html lang="en" suppressHydrationWarning>
       <head>

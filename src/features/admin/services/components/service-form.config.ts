@@ -13,6 +13,9 @@ import type {
 } from "../services.types";
 
 const requirementSchema = z.object({
+  // Id of the saved checklist row, so an edit updates that row instead of
+  // replacing it. Absent on a row added in the editor.
+  requirement_id: z.string().optional(),
   requirement_name: z.string().trim().min(1, "Requirement is required"),
   where_to_secure: z.string().optional(),
   is_mandatory: z.boolean(),
@@ -192,6 +195,7 @@ export function toServiceFormRequirement(requirement: ServiceRequirement) {
   const hasOwnColumn = Boolean(requirement.where_to_secure);
 
   return {
+    requirement_id: requirement.id as string | undefined,
     requirement_name: hasOwnColumn ? requirement.requirement_name : primary,
     where_to_secure: requirement.where_to_secure ?? secondary ?? "",
     is_mandatory: requirement.is_mandatory,

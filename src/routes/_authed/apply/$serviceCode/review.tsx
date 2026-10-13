@@ -7,12 +7,12 @@ export const Route = createFileRoute("/_authed/apply/$serviceCode/review")({
 });
 
 function RouteComponent() {
-  const { serviceCode } = Route.useParams();
-  const { displayName, services, requirements } = ApplyLayoutRoute.useLoaderData();
+  const { routeCode, displayName, services, requirements } =
+    ApplyLayoutRoute.useLoaderData();
 
   return (
     <ReviewStep
-      serviceCode={serviceCode}
+      serviceCode={routeCode}
       displayName={displayName}
       services={services}
       requirements={requirements}

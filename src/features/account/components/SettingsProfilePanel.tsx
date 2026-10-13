@@ -30,6 +30,7 @@ import {
 } from "~/components/ui/select";
 import { Spinner } from "~/components/ui/spinner";
 import { toDateKey } from "~/lib/date";
+import { mobileDigits } from "~/lib/phone";
 import { roleLabels } from "~/features/system-admin/system-admin.constants";
 import {
   getDisplayName,
@@ -283,7 +284,11 @@ export function SettingsProfilePanel({
                   </InputGroupAddon>
                   <InputGroupInput
                     {...field}
+                    onChange={(event) =>
+                      field.onChange(mobileDigits(event.target.value))
+                    }
                     id="profile-phone"
+                    type="tel"
                     inputMode="numeric"
                     placeholder="9171234567"
                     aria-invalid={fieldState.invalid}

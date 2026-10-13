@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from "~/utils/supabase";
 import type { Service, ServiceRequirement } from "./services.types";
 import { requireActiveSession } from "~/server/auth";
 import { parseConditionRule } from "~/features/forms/form-template.utils";
+import { sortChecklist } from "~/features/services/service-utils";
 
 export type { ServiceRequirement } from "./services.types";
 
@@ -49,10 +50,12 @@ export const getServiceChecklist = createServerFn({ method: "GET" })
       .order("is_mandatory", { ascending: false });
 
     if (error) throw new Error(error.message);
-    return (rows ?? []).map((requirement) => ({
-      ...requirement,
-      applies_when: parseConditionRule(requirement.applies_when),
-    })) as ServiceRequirement[];
+    return sortChecklist(
+      (rows ?? []).map((requirement) => ({
+        ...requirement,
+        applies_when: parseConditionRule(requirement.applies_when),
+      })) as ServiceRequirement[],
+    );
   });
 
 export const getServiceRequirements = createServerFn({ method: "GET" })
@@ -68,8 +71,10 @@ export const getServiceRequirements = createServerFn({ method: "GET" })
       .order("is_mandatory", { ascending: false });
 
     if (error) throw new Error(error.message);
-    return (data ?? []).map((requirement) => ({
-      ...requirement,
-      applies_when: parseConditionRule(requirement.applies_when),
-    })) as ServiceRequirement[];
+    return sortChecklist(
+      (data ?? []).map((requirement) => ({
+        ...requirement,
+        applies_when: parseConditionRule(requirement.applies_when),
+      })) as ServiceRequirement[],
+    );
   });

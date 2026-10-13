@@ -24,6 +24,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import SiteHeader from "~/features/landing/components/SiteHeader";
 import SiteFooter from "~/features/landing/components/SiteFooter";
+import { resetApplyChoices } from "~/features/apply/hooks/useApplyDraft";
 import { getAllServicesWithRequirements } from "~/features/services/services.queries";
 import {
   cachedServiceRead,
@@ -104,9 +105,8 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
           setExpandedCodes({ [selectedCode]: true });
           setTimeout(() => scrollWithinPage(`service-${selectedCode}`), 300);
         }
-      } catch (err) {
+      } catch {
         if (cancelled) return;
-        console.error("Failed to load services", err);
         setError("We couldn't load the requirements list. Please try again.");
       } finally {
         if (!cancelled) setLoading(false);
@@ -472,6 +472,11 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                               serviceCode:
                                 service.display_group ?? service.service_code,
                             }}
+                            onClick={() =>
+                              resetApplyChoices(
+                                service.display_group ?? service.service_code,
+                              )
+                            }
                             className={buttonVariants({ size: "sm" })}
                           >
                             Start application

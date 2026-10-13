@@ -6,6 +6,10 @@ import {
 import { getActiveDepartments } from "~/features/admin/departments.queries";
 import { ServiceFormPage } from "~/features/admin/services/components/ServiceFormPage";
 import { getAdminServices } from "~/features/admin/services/services.queries";
+import {
+  redirectToServiceSlug,
+  toServiceSlug,
+} from "~/features/services/service-slug";
 import { hasPermission } from "~/lib/permissions";
 import type { Role } from "~/lib/permissions";
 import { denyAccess } from "~/lib/access";
@@ -13,11 +17,18 @@ import { denyAccess } from "~/lib/access";
 export const Route = createFileRoute(
   "/_authed/_dashboard/admin/services_/$serviceCode/edit",
 )({
-  beforeLoad: ({ context, location }) => {
+  // Links pass the registry code; the address bar shows its slug.
+  params: {
+    stringify: ({ serviceCode }) => ({
+      serviceCode: toServiceSlug(serviceCode),
+    }),
+  },
+  beforeLoad: ({ context, location, params }) => {
     const role = (context.user?.role ?? "applicant") as Role;
     if (!hasPermission(role, "services:manage")) {
       denyAccess(location);
     }
+    redirectToServiceSlug(location, "/admin/services/", params.serviceCode);
   },
   loader: async ({ params: { serviceCode } }) => {
     const [services, departments] = await Promise.all([
@@ -25,7 +36,7 @@ export const Route = createFileRoute(
       getActiveDepartments(),
     ]);
     const service = services.find(
-      (entry) => entry.service_code === serviceCode,
+      (entry) => toServiceSlug(entry.service_code) === serviceCode,
     );
 
     if (!service) throw notFound();

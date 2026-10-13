@@ -101,6 +101,8 @@ export interface ServiceRequirement {
   requires_upload: boolean;
   upload_scope: RequirementUploadScope;
   subject_role: string | null;
+  /** Position within its checklist, as arranged in the admin service editor. */
+  sort_order?: number;
 }
 
 export interface CreateServiceRequirementInput {
@@ -126,16 +128,4 @@ export interface UpdateServiceRequirementInput {
   requires_upload?: boolean;
   upload_scope?: RequirementUploadScope;
   subject_role?: string | null;
-}
-
-// ─── Combined create (service + its checklist in one call) ───────────────────
-
-export interface CreateServiceWithRequirementsInput extends CreateServiceInput {
-  requirements: Omit<CreateServiceRequirementInput, "service_code">[];
-}
-
-export interface UpdateServiceWithRequirementsInput {
-  service_code: string;
-  updates: UpdateServiceInput;
-  requirements: Omit<CreateServiceRequirementInput, "service_code">[];
 }

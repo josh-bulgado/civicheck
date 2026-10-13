@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { FieldLegend, FieldSet } from "~/components/ui/field";
-import { ChoiceGroup } from "~/features/forms/components/ChoiceGroup";
+import { RequiredMark } from "~/components/ui/required-mark";
+import {
+  ChoiceGroup,
+  choiceLegendClass,
+} from "~/features/forms/components/ChoiceGroup";
 import type { CaseSelectorDefinition } from "~/features/forms/form-template.types";
 import { conditionRuleMatches } from "~/features/forms/form-template.utils";
 import { formatPesoFee } from "~/features/services/service-utils";
@@ -211,7 +215,9 @@ function LegacyCaseSelector({
         {/* No question can tell these variants apart, so let the applicant pick one. */}
         {!hasDimensions && (
           <FieldSet className="civic-enter-sm gap-3">
-            <FieldLegend variant="label">Which service do you need?</FieldLegend>
+            <FieldLegend variant="label" className={choiceLegendClass}>
+              Which service do you need? <RequiredMark />
+            </FieldLegend>
             <ChoiceGroup
               wide
               idPrefix="service"
@@ -229,8 +235,8 @@ function LegacyCaseSelector({
         {/* Step 1: Age */}
         {showAge && (
           <FieldSet className="civic-enter-sm gap-3">
-            <FieldLegend variant="label">
-              {stepPrefix(true)}Age of the person to be registered
+            <FieldLegend variant="label" className={choiceLegendClass}>
+              {stepPrefix(true)}Age of the person to be registered <RequiredMark />
             </FieldLegend>
             <ChoiceGroup
               wide
@@ -248,8 +254,8 @@ function LegacyCaseSelector({
         {/* Step 2: Program (only after age picked) */}
         {steps.hasProgram && age && (
           <FieldSet className="civic-enter-sm gap-3">
-            <FieldLegend variant="label">
-              {stepPrefix(true)}Registration program
+            <FieldLegend variant="label" className={choiceLegendClass}>
+              {stepPrefix(true)}Registration program <RequiredMark />
             </FieldLegend>
             <ChoiceGroup
               wide
@@ -270,8 +276,9 @@ function LegacyCaseSelector({
         {/* Step 3: Marital status — shown after program=normal, OR directly if no age/program steps */}
         {showMarital && (program === "normal" || (!steps.hasAge && !steps.hasProgram)) && (
           <FieldSet className="civic-enter-sm gap-3">
-            <FieldLegend variant="label">
-              {stepPrefix(true)}Are the child&rsquo;s parents legally married?
+            <FieldLegend variant="label" className={choiceLegendClass}>
+              {stepPrefix(true)}Are the child&rsquo;s parents legally married?{" "}
+              <RequiredMark />
             </FieldLegend>
             <ChoiceGroup
               wide
@@ -379,6 +386,15 @@ function ConfiguredCaseSelector({
           className="text-pretty text-lg font-bold text-foreground"
         >
           {definition.title}
+          {/* A lone question that repeats the title has no legend of its own,
+              so the heading is what the applicant answers. */}
+          {visibleQuestions.length === 1 &&
+          sameSentence(visibleQuestions[0].label, definition.title) ? (
+            <>
+              {" "}
+              <RequiredMark />
+            </>
+          ) : null}
         </h2>
         <p className="mt-1 max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground">
           {definition.description ??
@@ -396,9 +412,9 @@ function ConfiguredCaseSelector({
           return (
             <FieldSet key={question.key} className="civic-enter-sm gap-3">
               {repeatsTitle ? null : (
-                <FieldLegend variant="label">
+                <FieldLegend variant="label" className={choiceLegendClass}>
                   {visibleQuestions.length > 1 ? `${index + 1}. ` : ""}
-                  {question.label}
+                  {question.label} <RequiredMark />
                 </FieldLegend>
               )}
               {question.description ? (

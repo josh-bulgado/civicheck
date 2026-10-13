@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import {
+  canonicalRouteCode,
   collectRequirements,
   loadServiceCatalogue,
   resolveServices,
@@ -73,12 +74,15 @@ export type ServiceDetail = Awaited<ReturnType<typeof getServiceDetail>>;
 
 export const getServiceDetail = createServerFn({ method: "GET" })
   .validator((d: string) => d)
-  .handler(async ({ data: serviceCodeOrGroup }) => {
+  .handler(async ({ data: slugOrCode }) => {
     const catalogue = await loadServiceCatalogue();
+    // The apply URL carries a slug ("marriage-license"); everything past this
+    // point — checklist keys, draft storage, uploads — runs on the real code.
+    const serviceCodeOrGroup = canonicalRouteCode(catalogue, slugOrCode);
     const { services, isGroup } = resolveServices(catalogue, serviceCodeOrGroup);
 
     if (services.length === 0) {
-      throw new Error(`No service found for "${serviceCodeOrGroup}".`);
+      throw new Error(`No service found for "${slugOrCode}".`);
     }
 
     // Grouped services resolve their checklist off the group key; a standalone
@@ -101,6 +105,7 @@ export const getServiceDetail = createServerFn({ method: "GET" })
     }));
 
     return {
+      routeCode: serviceCodeOrGroup,
       isGroup,
       displayName: services[0].display_name ?? services[0].name,
       services: configuredServices,

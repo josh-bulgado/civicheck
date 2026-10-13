@@ -4,7 +4,6 @@ import { DatePicker } from "~/components/ui/date-picker";
 import {
   Field,
   FieldDescription,
-  FieldError,
   FieldGroup,
   FieldLabel,
   FieldLegend,
@@ -28,9 +27,21 @@ import {
 import { RequiredMark } from "~/components/ui/required-mark";
 import { Textarea } from "~/components/ui/textarea";
 import { toDateKey } from "~/lib/date";
+import { mobileDigits } from "~/lib/phone";
 import { cn } from "~/lib/utils";
-import { ChoiceGroup, isChoiceGroup, planChoiceLayout } from "./ChoiceGroup";
+import {
+  ChoiceGroup,
+  choiceLegendClass,
+  isChoiceGroup,
+  planChoiceLayout,
+} from "./ChoiceGroup";
 import { NoticeAlert } from "./NoticeAlert";
+import {
+  WIZARD_CONTROL_CLASS,
+  WIZARD_LABEL_CLASS,
+  WIZARD_TEXTAREA_CLASS,
+  WizardFieldError,
+} from "./wizard-field";
 import type {
   FormSectionDefinition,
   FormStep,
@@ -50,6 +61,22 @@ function conditionMatches(
       ? current === field.visibleWhen.value
       : current !== field.visibleWhen.value;
   });
+}
+
+/**
+ * The fields a step is showing right now: `visibleWhen` rules applied, person
+ * groups left out (they have their own inputs). Callers use it to ask which
+ * required fields are still empty without re-implementing the visibility rule.
+ */
+export function visibleFieldsForStep(
+  definition: FormTemplateDefinition,
+  step: FormStep,
+  values: DynamicFieldValues,
+) {
+  return definition.sections
+    .filter((section) => section.step === step)
+    .flatMap((section) => conditionMatches(section, values))
+    .filter((field) => field.type !== "person_group");
 }
 
 type FieldSpan = "full" | "half" | "third" | "follow-up" | "pair-start" | "pair-end";
@@ -209,7 +236,7 @@ export function DynamicFormFields({
                       </div>
                     ) : null}
                     {fieldState.invalid ? (
-                      <FieldError errors={[fieldState.error]} />
+                      <WizardFieldError error={fieldState.error} />
                     ) : null}
                   </>
                 );
@@ -220,7 +247,10 @@ export function DynamicFormFields({
                     {definitionField.label}
                     {!definitionField.required ? " (optional)" : ""}
                     {showRequiredMarks && definitionField.required ? (
-                      <RequiredMark />
+                      <>
+                        {" "}
+                        <RequiredMark />
+                      </>
                     ) : null}
                   </>
                 );
@@ -238,7 +268,11 @@ export function DynamicFormFields({
                         SPAN_CLASS[spans.get(definitionField.key) ?? "full"],
                       )}
                     >
-                      <FieldLegend variant="label" id={legendId}>
+                      <FieldLegend
+                        variant="label"
+                        id={legendId}
+                        className={choiceLegendClass}
+                      >
                         {legendLabel}
                       </FieldLegend>
                       <ChoiceGroup
@@ -260,7 +294,10 @@ export function DynamicFormFields({
                     data-invalid={fieldState.invalid}
                     className={SPAN_CLASS[spans.get(definitionField.key) ?? "half"]}
                   >
-                    <FieldLabel htmlFor={`dynamic-${definitionField.key}`}>
+                    <FieldLabel
+                      htmlFor={`dynamic-${definitionField.key}`}
+                      className={WIZARD_LABEL_CLASS}
+                    >
                       {legendLabel}
                     </FieldLabel>
 
@@ -272,6 +309,7 @@ export function DynamicFormFields({
                         maxLength={2_000}
                         placeholder={definitionField.placeholder}
                         aria-invalid={fieldState.invalid}
+                        className={WIZARD_TEXTAREA_CLASS}
                       />
                     ) : definitionField.type === "date" ? (
                       <DatePicker
@@ -293,6 +331,7 @@ export function DynamicFormFields({
                           `Select ${definitionField.label.toLowerCase()}`
                         }
                         invalid={fieldState.invalid}
+                        className={WIZARD_CONTROL_CLASS}
                       />
                     ) : definitionField.type === "select" ? (
                       <Select
@@ -302,7 +341,7 @@ export function DynamicFormFields({
                       >
                         <SelectTrigger
                           id={`dynamic-${definitionField.key}`}
-                          className="w-full"
+                          className={cn("w-full", WIZARD_CONTROL_CLASS)}
                           aria-invalid={fieldState.invalid}
                         >
                           <SelectValue placeholder="Select one" />
@@ -325,6 +364,11 @@ export function DynamicFormFields({
                         </InputGroupAddon>
                         <InputGroupInput
                           {...field}
+                          // Letters and symbols never reach the field, typed
+                          // or pasted.
+                          onChange={(event) =>
+                            field.onChange(mobileDigits(event.target.value))
+                          }
                           id={`dynamic-${definitionField.key}`}
                           type="tel"
                           inputMode="numeric"
@@ -342,6 +386,7 @@ export function DynamicFormFields({
                         placeholder={definitionField.placeholder}
                         maxLength={240}
                         aria-invalid={fieldState.invalid}
+                        className={WIZARD_CONTROL_CLASS}
                       />
                     )}
                     {common}

@@ -5,6 +5,7 @@ import { Checkbox } from "~/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { Field, FieldLabel } from "~/components/ui/field";
+import { RequiredMark } from "~/components/ui/required-mark";
 import {
   clampCopies,
   formatFee,
@@ -24,43 +25,21 @@ import type { ServiceDetail } from "~/features/services/services.queries";
 import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
 import { ChangeServiceButton } from "~/features/apply/components/ApplicationDocket";
+import { DocumentPreview } from "~/features/apply/components/DocumentPreview";
 import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
+import { useDocumentPreviewUrls } from "~/features/apply/hooks/useDocumentPreviewUrls";
 import {
   canonicalizeTemplateAnswers,
   isFieldVisible,
   visibleCaseSelectorQuestions,
 } from "~/features/forms/form-template.utils";
-import type {
-  FormFieldDefinition,
-  TemplateAnswers,
-} from "~/features/forms/form-template.types";
+import { formatFieldAnswer } from "~/features/forms/answer-format";
+import type { TemplateAnswers } from "~/features/forms/form-template.types";
 import {
   impliedSex,
   reconcileSubjects,
   subjectFullName,
 } from "~/lib/subject-fields";
-
-const REVIEW_DATE_FORMATTER = new Intl.DateTimeFormat("en-PH", {
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-});
-
-function formatReviewDate(value: string) {
-  if (!value) return "—";
-  const date = new Date(value + "T00:00:00");
-  return Number.isNaN(date.getTime()) ? value : REVIEW_DATE_FORMATTER.format(date);
-}
-
-function formatFieldAnswer(field: FormFieldDefinition, value: string) {
-  if (!value) return "—";
-  if (field.type === "date") return formatReviewDate(value);
-  if (field.type === "phone") return `+63 ${value}`;
-  if (field.type === "select") {
-    return field.options?.find((option) => option.value === value)?.label ?? value;
-  }
-  return value;
-}
 
 interface ReviewStepProps {
   serviceCode: string;
@@ -148,6 +127,11 @@ export function ReviewStep({
       requirementUploadKey(document.requirementId, document.subjectRole),
     ),
   );
+  const { urls: previewUrls, refresh: refreshPreviewUrl } =
+    useDocumentPreviewUrls(
+      draft.uploadDraftId,
+      activeDocuments.map((document) => document.storagePath),
+    );
   const documentTotals = new Map<string, number>();
   for (const document of activeDocuments) {
     const key = requirementUploadKey(
@@ -375,11 +359,19 @@ export function ReviewStep({
                 ({ document: doc, fileNumber, fileTotal }) => (
                   <div
                     key={doc.storagePath}
-                    className="flex items-start gap-2.5 text-sm"
+                    className="flex items-center gap-2.5 text-sm"
                   >
-                    <span className="mt-0.5 flex size-4.5 shrink-0 items-center justify-center rounded-[5px] bg-success text-[10px] font-bold text-white">
+                    <span className="flex size-4.5 shrink-0 items-center justify-center rounded-[5px] bg-success text-[10px] font-bold text-white">
                       <Check className="size-2.5" aria-hidden="true" />
                     </span>
+                    <DocumentPreview
+                      fileName={doc.fileName}
+                      url={previewUrls[doc.storagePath]}
+                      label={`${doc.requirementName.replace(/\s*[—–]\s*/g, " - ")}${
+                        fileTotal > 1 ? ` · file ${fileNumber} of ${fileTotal}` : ""
+                      }`}
+                      onUrlError={() => refreshPreviewUrl(doc.storagePath)}
+                    />
                     <span className="flex min-w-0 flex-col gap-0.5">
                       <span className="wrap-break-word text-foreground">
                         {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
@@ -421,9 +413,14 @@ export function ReviewStep({
             checked={confirmed}
             onCheckedChange={(checked) => setConfirmed(checked === true)}
           />
-          <FieldLabel htmlFor="confirm-application-details">
-            I confirm the selected service and details above are correct, and I
-            will bring the original documents.
+          <FieldLabel
+            htmlFor="confirm-application-details"
+            className="text-[15px] leading-snug font-semibold"
+          >
+            <span>
+              I confirm the selected service and details above are correct, and
+              I will bring the original documents. <RequiredMark />
+            </span>
           </FieldLabel>
         </Field>
 
@@ -462,13 +459,14 @@ function EditSection({
   return (
     <div className="overflow-hidden rounded-[10px] border border-border-light">
       <div className="flex items-center justify-between gap-3 border-b border-border-light bg-background px-4.5 py-3">
-        <span className="text-sm font-bold text-foreground">{title}</span>
+        <span className="text-[15px] font-bold text-foreground">{title}</span>
         {action ??
           (onEdit ? (
             <Button
               type="button"
               variant="link"
               size="sm"
+              className="text-[15px] font-semibold hover:text-primary-hover"
               onClick={onEdit}
             >
               Edit
@@ -482,7 +480,7 @@ function EditSection({
 
 function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex min-w-0 justify-between gap-3 text-sm">
+    <div className="flex min-w-0 justify-between gap-3 text-[15px]">
       <span className="shrink-0 text-muted-foreground">{label}</span>
       <span className="min-w-0 break-words text-right font-bold text-foreground">
         {value}
@@ -498,7 +496,7 @@ function WhatHappensNextCard() {
     "Present your tracking number at the counter when you arrive.",
   ];
   return (
-    <div className="civic-card overflow-hidden">
+    <div className="civic-card overflow-hidden rounded-2xl">
       <div className="border-b border-border-light px-4.5 py-3.5 text-base font-bold text-foreground">
         What happens next
       </div>

@@ -7,12 +7,12 @@ export const Route = createFileRoute("/_authed/apply/$serviceCode/case")({
 });
 
 function RouteComponent() {
-  const { serviceCode } = Route.useParams();
-  const { isGroup, requirements, services } = ApplyLayoutRoute.useLoaderData();
+  const { routeCode, isGroup, requirements, services } =
+    ApplyLayoutRoute.useLoaderData();
 
   return (
     <CaseStep
-      serviceCode={serviceCode}
+      serviceCode={routeCode}
       isGroup={isGroup}
       requirements={requirements}
       services={services}

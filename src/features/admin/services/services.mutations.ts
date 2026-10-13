@@ -1,57 +1,26 @@
 import { createServerFn } from "@tanstack/react-start";
 import { rbacMiddleware, requirePermission } from "~/middleware/auth";
+import { buildLegacyFormDefinition } from "~/features/forms/form-template.utils";
 import { invalidateServiceCatalogue } from "~/features/services/services.catalogue";
+import {
+  assertFormFitsRegistry,
+  loadLiveFormDefinition,
+  recordServiceAudit,
+  runSaveServiceConfiguration,
+} from "./service-configuration.server";
+import {
+  findRequirementIssue,
+  saveServiceConfigurationSchema,
+  type SaveServiceConfigurationInput,
+} from "./service-configuration.schema";
 import type {
   CreateServiceInput,
   UpdateServiceInput,
   CreateServiceRequirementInput,
-  CreateServiceWithRequirementsInput,
-  UpdateServiceWithRequirementsInput,
   UpdateServiceRequirementInput,
   Service,
   ServiceRequirement,
 } from "./services.types";
-
-/**
- * `service_code` is the primary key and is supplied by the admin, so a collision
- * is an expected user error rather than a bug. Postgres reports it as 23505 with
- * a raw constraint message — turn that into something a form can display.
- */
-function describeInsertError(
-  error: { code?: string; message: string },
-  service_code: string
-): string {
-  if (error.code === "23505" || /duplicate key/i.test(error.message)) {
-    return `A service with the code "${service_code}" already exists.`;
-  }
-  return error.message;
-}
-
-/**
- * Requirement rows use one of two linkage conventions in this database, and a
- * write must not silently convert between them:
- *
- *  - **Group-owned** — several services share one checklist (all six DCOLB
- *    services resolve to `birth_delayed`). Those rows carry the group and leave
- *    `service_code` null, because they belong to no single service.
- *  - **Service-owned** — the service has its own checklist, and the row carries
- *    both its `service_code` and a group equal to that code.
- */
-function linkRequirements(
-  requirements: Omit<CreateServiceRequirementInput, "service_code">[],
-  service_code: string,
-  requirementGroup: string | null | undefined
-) {
-  const groupKey = requirementGroup || service_code;
-  const isGroupOwned = groupKey !== service_code;
-
-  return requirements.map((requirement) => ({
-    ...requirement,
-    service_code: isGroupOwned ? null : service_code,
-    requirement_group: requirement.requirement_group ?? groupKey,
-    is_mandatory: requirement.is_mandatory ?? true,
-  }));
-}
 
 // ─── services_registry mutations ─────────────────────────────────────────────
 
@@ -66,60 +35,6 @@ export const createService = createServerFn({ method: "POST" })
       .single();
 
     if (error) throw new Error(error.message);
-
-    invalidateServiceCatalogue();
-    return created as Service;
-  });
-
-/**
- * Create a service together with its full requirement checklist in one round trip.
- *
- * Requirements are tagged with `requirement_group` (falling back to the service's
- * own code) because the citizen-facing `getServiceDetail` resolves a checklist
- * *only* by `requirement_group` — requirements carrying just a `service_code`
- * would be invisible to applicants, which is the exact gap this system exists to
- * close.
- */
-export const createServiceWithRequirements = createServerFn({ method: "POST" })
-  .middleware([requirePermission("services:manage")])
-  .validator((d: CreateServiceWithRequirementsInput) => d)
-  .handler(async ({ data, context }) => {
-    const { requirements, ...service } = data;
-
-    const { data: created, error } = await context.supabase
-      .from("services_registry")
-      .insert({
-        ...service,
-        // NOT NULL with no DB default — never let it through as undefined.
-        steps_description: service.steps_description ?? [],
-      })
-      .select()
-      .single();
-
-    if (error) throw new Error(describeInsertError(error, service.service_code));
-
-    if (requirements.length > 0) {
-      const { error: reqError } = await context.supabase
-        .from("service_requirements_metadata")
-        .insert(
-          linkRequirements(
-            requirements,
-            created.service_code,
-            service.requirement_group
-          )
-        );
-
-      if (reqError) {
-        // Roll the service row back so the admin can fix the checklist and retry
-        // without the now-taken primary key blocking them.
-        await context.supabase
-          .from("services_registry")
-          .delete()
-          .eq("service_code", created.service_code);
-
-        throw new Error(reqError.message);
-      }
-    }
 
     invalidateServiceCatalogue();
     return created as Service;
@@ -143,55 +58,115 @@ export const updateService = createServerFn({ method: "POST" })
   });
 
 /**
- * Update a service and replace its requirement checklist.
+ * Save a service's whole configuration — registry row, requirement checklist,
+ * and application form — as one all-or-nothing change.
  *
- * The checklist is replaced wholesale rather than diffed row by row: nothing
- * Existing request attachments reference metadata rows with ON DELETE SET NULL,
- * so historical uploads remain intact when the editable checklist is recreated.
- * A replace keeps the saved state identical to what the admin saw in the form.
+ * This is what the admin service editor calls, for both a new service and an
+ * edit. The three parts are written by a single database function
+ * (`save_service_configuration`), because they only make sense together: a
+ * checklist condition names a question in the form, and applicants must never
+ * be shown one without the other.
  *
- * Note this edits the checklist for the whole `requirement_group`. Where several
- * services share a group, all of them are affected — the form warns before
- * saving, and `case_tag` is preserved so variant-specific rows survive.
+ * Checklist rows are matched by id, so editing a service keeps the documents
+ * applicants already uploaded attached to their requirement. The form is only
+ * republished when it actually changed.
  *
- * `service_code` is never updated: `requests.request_type` references it with
- * ON DELETE RESTRICT, so it is the stable identity of the service.
+ * `service_code` is never changed by an edit: `requests.request_type` references
+ * it with ON DELETE RESTRICT, so it is the stable identity of the service.
+ *
+ * A save edits the checklist for the whole `requirement_group`. Where several
+ * services share a group, all of them are affected — the editor warns first.
  */
-export const updateServiceWithRequirements = createServerFn({ method: "POST" })
+export const saveServiceConfiguration = createServerFn({ method: "POST" })
   .middleware([requirePermission("services:manage")])
-  .validator((d: UpdateServiceWithRequirementsInput) => d)
-  .handler(async ({ data: { service_code, updates, requirements }, context }) => {
-    const { data: updated, error } = await context.supabase
-      .from("services_registry")
-      .update(updates)
-      .eq("service_code", service_code)
-      .select()
-      .single();
+  .validator((input: SaveServiceConfigurationInput) => {
+    const parsed = saveServiceConfigurationSchema.safeParse(input);
+    if (!parsed.success) {
+      // The editor shows this message as-is, so name the field it is about.
+      const issue = parsed.error.issues[0];
+      throw new Error(
+        issue
+          ? `${issue.path.join(".")}: ${issue.message}`
+          : "Check the service details.",
+      );
+    }
+    return parsed.data;
+  })
+  .handler(async ({ data, context }) => {
+    const { serviceCode, service, form } = data;
+    const isCreate = data.mode === "create";
 
-    if (error) throw new Error(error.message);
+    const seenIds = new Set<string>();
+    const requirements = data.requirements.map((requirement) => {
+      // An id may only be claimed once: a second row carrying it is a copy the
+      // editor made of the first (a per-variant override), so it is a new row.
+      const id =
+        requirement.id && !seenIds.has(requirement.id) ? requirement.id : null;
+      if (id) seenIds.add(id);
 
-    const groupKey = updated.requirement_group ?? updated.service_code;
+      const isSubjectScoped =
+        requirement.requires_upload &&
+        requirement.upload_scope === "specific_subject";
+      return {
+        id,
+        requirement_name: requirement.requirement_name,
+        where_to_secure: requirement.where_to_secure,
+        case_tag: requirement.case_tag,
+        applies_when: requirement.applies_when,
+        is_mandatory: requirement.is_mandatory,
+        requires_upload: requirement.requires_upload,
+        upload_scope: requirement.requires_upload
+          ? requirement.upload_scope
+          : ("request" as const),
+        subject_role: isSubjectScoped ? requirement.subject_role : null,
+      };
+    });
 
-    // Same predicate the form loaded with (see getServiceChecklist).
-    const { error: deleteError } = await context.supabase
-      .from("service_requirements_metadata")
-      .delete()
-      .or(`requirement_group.eq.${groupKey},service_code.eq.${service_code}`);
+    // Conditions are checked against the form applicants will actually see: the
+    // one being published, or — on a variant-only save, which leaves the form
+    // alone — the one that is already live.
+    const definition =
+      form?.definition ??
+      (isCreate
+        ? null
+        : await loadLiveFormDefinition(context.supabase, serviceCode)) ??
+      buildLegacyFormDefinition({ service_code: serviceCode, ...service });
+    const requirementIssue = findRequirementIssue(
+      definition,
+      requirements,
+      service.party_roles,
+    );
+    if (requirementIssue) throw new Error(requirementIssue);
 
-    if (deleteError) throw new Error(deleteError.message);
-
-    if (requirements.length > 0) {
-      const { error: insertError } = await context.supabase
-        .from("service_requirements_metadata")
-        .insert(
-          linkRequirements(requirements, service_code, updated.requirement_group)
-        );
-
-      if (insertError) throw new Error(insertError.message);
+    if (form) {
+      await assertFormFitsRegistry(context.supabase, serviceCode, form.definition);
     }
 
+    const saved = await runSaveServiceConfiguration(context.supabase, {
+      serviceCode,
+      create: isCreate,
+      service,
+      requirements,
+      form,
+    });
+
     invalidateServiceCatalogue();
-    return updated as Service;
+    await recordServiceAudit(
+      context.user.id,
+      isCreate ? "service_created" : "service_updated",
+      {
+        service_code: serviceCode,
+        requirement_count: String(requirements.length),
+        ...(saved.form
+          ? {
+              form_version: String(saved.form.version),
+              form_published: String(saved.form.published),
+            }
+          : {}),
+      },
+    );
+
+    return saved;
   });
 
 export const deleteService = createServerFn({ method: "POST" })
@@ -206,6 +181,9 @@ export const deleteService = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     invalidateServiceCatalogue();
+    await recordServiceAudit(context.user.id, "service_deleted", {
+      service_code,
+    });
     return { success: true, service_code };
   });
 

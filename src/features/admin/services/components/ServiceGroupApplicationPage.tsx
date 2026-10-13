@@ -65,6 +65,9 @@ export function ServiceGroupApplicationPage({
   const [isDirty, setIsDirty] = useState(false);
   const [templateName, setTemplateName] = useState("Application form");
   const [templateVersion, setTemplateVersion] = useState(0);
+  const [templateVersionId, setTemplateVersionId] = useState<string | null>(
+    null,
+  );
   const [templateSharedCodes, setTemplateSharedCodes] = useState<string[]>([]);
   const [immutableKeys, setImmutableKeys] = useState<string[]>([]);
   const [definition, setDefinition] = useState<FormTemplateDefinition>(() =>
@@ -84,6 +87,7 @@ export function ServiceGroupApplicationPage({
           template?.templateName ?? `${displayName} application`,
         );
         setTemplateVersion(template?.version ?? 0);
+        setTemplateVersionId(template?.versionId ?? null);
         setTemplateSharedCodes(
           template?.sharedServiceCodes ??
             orderedVariants.map((variant) => variant.service_code),
@@ -162,15 +166,23 @@ export function ServiceGroupApplicationPage({
           templateName:
             templateName.trim() || `${displayName} application`,
           definition: parsed.data,
+          expectedVersionId: templateVersionId,
         },
       });
       setTemplateVersion(published.version);
+      setTemplateVersionId(published.versionId);
       setImmutableKeys(publishedKeys(parsed.data));
       setIsDirty(false);
       await router.invalidate();
-      toast.success("Shared application published.", {
-        description: `Version ${published.version} now applies to all ${orderedVariants.length} variants.`,
-      });
+      if (published.published) {
+        toast.success("Shared application published.", {
+          description: `Version ${published.version} now applies to all ${orderedVariants.length} variants.`,
+        });
+      } else {
+        toast.success("Shared application saved.", {
+          description: `The questions are unchanged, so version ${published.version} stays active.`,
+        });
+      }
     } catch (error) {
       toast.error("Could not publish the shared application.", {
         description: error instanceof Error ? error.message : undefined,

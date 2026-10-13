@@ -72,6 +72,21 @@ export function splitCaseLabel(name: string): {
   return { caseLabel: match[1].trim(), name: match[2].trim() };
 }
 
+/**
+ * Order a checklist the way applicants read it: mandatory documents first, then
+ * the order the admin arranged them in. Rows from before `sort_order` existed
+ * tie on it, and the stable sort leaves those in the order they arrived.
+ */
+export function sortChecklist<
+  T extends { is_mandatory: boolean; sort_order?: number | null },
+>(requirements: T[]): T[] {
+  return [...requirements].sort(
+    (a, b) =>
+      Number(b.is_mandatory) - Number(a.is_mandatory) ||
+      (a.sort_order ?? 0) - (b.sort_order ?? 0),
+  );
+}
+
 // ─── Editorial caveat patterns ───────────────────────────────────────────────
 // These phrases indicate internal notes that leaked into user-facing step copy.
 // The regex matches parenthesized text containing any of these phrases.

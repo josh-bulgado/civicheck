@@ -217,6 +217,36 @@ export function seedDraftForGroup(groupOrCode: string, seed: Partial<ApplyDraft>
   writeDraft(storageKey(groupOrCode), next);
 }
 
+/**
+ * Clears which service the applicant had picked — the case-selector answers,
+ * the resolved service and any redirect presets — while leaving the rest of the
+ * saved draft (names, answers, uploads) alone.
+ *
+ * Called when an application is started from the service directory. A draft
+ * is kept per service, so without this a returning applicant lands on the case
+ * step with last time's choices already ticked, and a new application reads as
+ * if someone else had answered for them. Moving between wizard steps never
+ * calls this, so Back and Edit keep every answer.
+ */
+export function resetApplyChoices(groupOrCode: string) {
+  const key = storageKey(groupOrCode);
+  const previous = readDraft(key);
+  const hasChoices =
+    previous.selectedServiceCode !== null ||
+    Object.keys(previous.caseSelectorAnswers).length > 0 ||
+    previous.presetAge !== null ||
+    previous.presetMarital !== null;
+  if (!hasChoices) return;
+  writeDraft(key, {
+    ...previous,
+    selectedServiceCode: null,
+    caseSelectorAnswers: {},
+    presetAge: null,
+    presetMarital: null,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
 export function useApplyDraft(groupOrCode: string) {
   const key = storageKey(groupOrCode);
 

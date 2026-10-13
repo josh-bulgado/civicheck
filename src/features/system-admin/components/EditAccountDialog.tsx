@@ -37,6 +37,7 @@ import {
 } from "~/components/ui/select";
 import { Spinner } from "~/components/ui/spinner";
 import { toDateKey } from "~/lib/date";
+import { mobileDigits } from "~/lib/phone";
 import { getInitials } from "~/features/account/account.types";
 import { roleLabels } from "../system-admin.constants";
 import type {
@@ -353,7 +354,11 @@ function EditAccountForm({
                     </InputGroupAddon>
                     <InputGroupInput
                       {...field}
+                      onChange={(event) =>
+                        field.onChange(mobileDigits(event.target.value))
+                      }
                       id="edit-account-phone"
+                      type="tel"
                       inputMode="numeric"
                       placeholder="9171234567"
                       aria-invalid={fieldState.invalid}

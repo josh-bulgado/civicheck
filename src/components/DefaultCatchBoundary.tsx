@@ -36,10 +36,6 @@ export function DefaultCatchBoundary({ error, reset }: ErrorComponentProps) {
   const unauthorized = isUnauthorizedError(error);
   const offline = !forbidden && !unauthorized && isNetworkError(error);
 
-  React.useEffect(() => {
-    if (!forbidden && !unauthorized) console.error(error);
-  }, [error, forbidden, unauthorized]);
-
   // The page failed because the connection dropped; the moment it returns,
   // retry on the person's behalf rather than making them hunt for the button.
   const wasOffline = React.useRef(false);

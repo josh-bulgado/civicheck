@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CalendarIcon, X } from "lucide-react";
+import { ChevronDownIcon, X } from "lucide-react";
 
 import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
@@ -86,7 +86,9 @@ export function DatePicker({
             disabled={disabled}
             aria-invalid={invalid}
             className={cn(
-              "w-full justify-start border-input px-2.5 font-normal shadow-xs",
+              // Same surface as Input/SelectTrigger: the outline variant's
+              // bg-background is a tinted gray in light mode, so reset it.
+              "w-full justify-between border-input bg-transparent px-2.5 text-left font-normal shadow-xs",
               size === "sm" ? "h-8 text-xs" : "h-9",
               !selected && "text-muted-foreground",
               className,
@@ -94,16 +96,18 @@ export function DatePicker({
           />
         }
       >
-        <CalendarIcon
-          className={cn("shrink-0 text-muted-foreground", size === "sm" && "size-3.5")}
-          aria-hidden="true"
-        />
         <span className="truncate">
           {selected ? formatDateKey(value) : placeholder}
         </span>
+        <ChevronDownIcon
+          data-icon="inline-end"
+          className={cn("text-muted-foreground", size === "sm" && "size-3.5")}
+          aria-hidden="true"
+        />
       </PopoverTrigger>
 
-      <PopoverContent align="start" className="w-auto p-3">
+      {/* Calendar already pads itself, so the popover adds none. */}
+      <PopoverContent align="start" className="w-auto p-0">
         <Calendar
           mode="single"
           captionLayout="dropdown"
@@ -121,7 +125,7 @@ export function DatePicker({
           autoFocus
         />
         {(todayInRange || (clearable && value)) && (
-          <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3">
+          <div className="flex items-center justify-between gap-2 border-t border-border p-3">
             {todayInRange ? (
               <Button
                 type="button"
