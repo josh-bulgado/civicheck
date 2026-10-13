@@ -733,9 +733,11 @@
   /* ─── Application wizard ───────────────────────────────────────────────────
      The apply layout puts `.apply-wizard` on its wrapper. This is the
      contrast pass for the case → details → documents → review flow: secondary
-     ink, control borders and dividers are darkened until text clears AA (4.5:1)
-     and control edges clear the 3:1 non-text minimum against white. Scoped like
-     `.citizen-portal`, so the rest of the app keeps its tokens. */
+     ink is darkened until text clears AA (4.5:1). Borders are deliberately
+     NOT darkened here: the wizard uses the same soft borders and borderless
+     `.portal-card` surfaces as the rest of the citizen portal. Fields stay
+     identifiable by their radio rings, chevrons and the focus ring.
+     Scoped like `.citizen-portal`, so the rest of the app keeps its tokens. */
   .apply-wizard {
     --primary: #0b3d91;
     --primary-hover: #082c69;
@@ -744,15 +746,6 @@
     --body: #1e293b;
     --destructive: #b01616;
     --success: #0f6b3d;
-    /* Form controls and choice tiles. */
-    --control-border: #64748b;
-    --input: #64748b;
-    /* Dividers, the wizard card and the unfilled progress track. */
-    --border: #94a3b8;
-    --border-strong: #94a3b8;
-    --border-light: #cbd5e1;
-    /* Dashed "add a file" outlines on the upload step. */
-    --dashed-border: #94a3b8;
   }
 
   .portal-page {

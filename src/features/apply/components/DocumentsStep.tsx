@@ -496,8 +496,8 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
           isDropTarget
             ? "border-primary bg-primary-soft ring-2 ring-primary/30"
             : pageCount > 0
-              ? "border-border"
-              : "border-dashed border-dashed-border",
+              ? "border-border-light"
+              : "border-dashed border-border",
         )}
       >
         <div className="flex items-start gap-3 px-4 py-4 sm:px-5">
@@ -744,7 +744,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
         {!hydrated ? (
           <Skeleton className="h-24 rounded-xl" />
         ) : mandatoryReqs.length === 0 ? (
-          <p className="rounded-[10px] border border-dashed border-dashed-border bg-white p-5 text-sm italic text-muted-foreground">
+          <p className="rounded-[10px] border border-dashed border-border bg-white p-5 text-sm italic text-muted-foreground">
             No specific required documents are listed for this service — you can continue.
           </p>
         ) : null}
@@ -766,7 +766,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
           : null}
 
         {hydrated && inPersonRequirements.length > 0 ? (
-          <section className="rounded-[10px] border border-border bg-surface-subtle p-5">
+          <section className="rounded-[10px] border border-border-light bg-surface-subtle p-5">
             <div className="flex items-start gap-3">
               <ClipboardCheck className="mt-0.5 size-5 shrink-0 text-primary" />
               <div className="min-w-0">

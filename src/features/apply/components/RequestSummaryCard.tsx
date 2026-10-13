@@ -12,7 +12,7 @@ export function RequestSummaryCard({ rows }: RequestSummaryCardProps) {
   if (rows.length === 0) return null;
 
   return (
-    <div className="civic-card overflow-hidden rounded-2xl">
+    <div className="portal-card overflow-hidden">
       <div className="border-b border-border-light px-4.5 py-3.5 text-base font-bold text-foreground">
         Details so far
       </div>

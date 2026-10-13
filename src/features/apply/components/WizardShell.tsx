@@ -30,7 +30,7 @@ export function WizardShell({
             : "mx-auto max-w-263.5"
         }
       >
-        <div className="civic-enter civic-card rounded-2xl p-4 sm:p-7.5">
+        <div className="civic-enter portal-card p-4 sm:p-7.5">
           <div className="flex flex-col gap-1.5 pb-5">
             <h1 className="civic-title text-[clamp(1.5rem,2.6vw,1.875rem)] leading-tight">
               {title}
