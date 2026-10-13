@@ -125,6 +125,7 @@ begin
       steps_description, party_roles,
       event_date_label, event_place_label, event_date_direction,
       reference_number_label, asks_purpose, asks_birth_details,
+      allows_messages,
       display_group, display_name, requirement_group
     ) values (
       p_service_code,
@@ -153,6 +154,7 @@ begin
       nullif(p_service->>'reference_number_label', ''),
       coalesce((p_service->>'asks_purpose')::boolean, true),
       coalesce((p_service->>'asks_birth_details')::boolean, false),
+      coalesce((p_service->>'allows_messages')::boolean, false),
       nullif(p_service->>'display_group', ''),
       nullif(p_service->>'display_name', ''),
       nullif(p_service->>'requirement_group', '')
@@ -185,6 +187,8 @@ begin
         reference_number_label = nullif(p_service->>'reference_number_label', ''),
         asks_purpose = coalesce((p_service->>'asks_purpose')::boolean, true),
         asks_birth_details = coalesce((p_service->>'asks_birth_details')::boolean, false),
+        -- A save that does not carry the switch keeps whatever it is now.
+        allows_messages = coalesce((p_service->>'allows_messages')::boolean, allows_messages),
         display_group = nullif(p_service->>'display_group', ''),
         display_name = nullif(p_service->>'display_name', ''),
         requirement_group = nullif(p_service->>'requirement_group', '')

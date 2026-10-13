@@ -43,6 +43,8 @@ export interface Service {
   asks_purpose: boolean;
   /** Whether the case step asks for the informant and whether birth was at a hospital or at home. */
   asks_birth_details: boolean;
+  /** Whether applicants and staff can exchange messages on requests for this service. */
+  allows_messages: boolean;
   /** Active, published application form resolved through service_form_templates. */
   form_template?: PublishedFormTemplate;
 }
@@ -65,6 +67,7 @@ export interface CreateServiceInput {
   reference_number_label?: string | null;
   asks_purpose?: boolean;
   asks_birth_details?: boolean;
+  allows_messages?: boolean;
 }
 
 export interface UpdateServiceInput {
@@ -84,6 +87,7 @@ export interface UpdateServiceInput {
   reference_number_label?: string | null;
   asks_purpose?: boolean;
   asks_birth_details?: boolean;
+  allows_messages?: boolean;
 }
 
 // ─── service_requirements_metadata ───────────────────────────────────────────

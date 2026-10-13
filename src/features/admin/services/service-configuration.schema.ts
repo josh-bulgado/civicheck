@@ -62,6 +62,8 @@ export const serviceFieldsSchema = z
     reference_number_label: optionalText(160),
     asks_purpose: z.boolean(),
     asks_birth_details: z.boolean(),
+    // Optional: a save that does not carry the switch leaves it as it is.
+    allows_messages: z.boolean().optional(),
     display_group: groupKeySchema,
     display_name: optionalText(200),
     requirement_group: groupKeySchema,
