@@ -27,6 +27,15 @@ export const PURPOSE_OPTIONS = [
   "Other",
 ].map((value) => ({ value, label: value }));
 
+// Purposes only the Issuance of Other Certificates form offers (it carries its
+// own purpose options instead of the shared block). Listed here so the admin
+// service report counts them rather than folding them into "Other".
+export const ADDITIONAL_PURPOSES = [
+  "Supporting document for a petition or correction",
+  "Settlement of estate or property",
+  "Personal reference or records",
+];
+
 const PLACE_TYPE_OPTIONS = [
   { value: "hospital", label: "Hospital / Clinic" },
   { value: "home", label: "Home" },
