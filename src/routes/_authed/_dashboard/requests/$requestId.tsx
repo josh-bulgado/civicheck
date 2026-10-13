@@ -23,7 +23,7 @@ function RequestDetailRoute() {
   const request = Route.useLoaderData();
   const router = useRouter();
   useRealtimeRefresh({
-    tables: ["requests", "application_logs", "requirements_attachments"],
+    tables: ["requests", "application_logs", "requirements_attachments", "request_messages"],
   });
 
   return <RequestDetailPage request={request} onUpdated={() => router.invalidate()} />;

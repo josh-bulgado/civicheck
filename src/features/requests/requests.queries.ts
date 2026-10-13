@@ -7,6 +7,7 @@ import {
   parseFormTemplateDefinition,
   templateFieldLabels,
 } from "~/features/forms/form-template.utils";
+import { readRequestMessages } from "~/features/requests/request-messages.server";
 
 const trackingLookupSchema = z.object({ trackingNumber: z.string().min(1) });
 const requestIdSchema = z.object({ requestId: z.string().uuid() });
@@ -46,6 +47,7 @@ type ServiceEmbed = {
   event_date_label?: string | null;
   event_place_label?: string | null;
   reference_number_label?: string | null;
+  allows_messages?: boolean;
 };
 
 /**
@@ -329,7 +331,7 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
         `id, tracking_number, request_type, status, payment_status, or_number,
          fees_due, copies, form_data, applicant_id, created_at, updated_at,
          services_registry(name, display_name, processing_time, department_id, departments(id, name),
-           event_date_label, event_place_label, reference_number_label),
+           event_date_label, event_place_label, reference_number_label, allows_messages),
          profiles(first_name, last_name),
          form_template_versions(definition)`,
       )
@@ -363,6 +365,11 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
     if (attachments.error) throw new Error(attachments.error.message);
     if (logs.error) throw new Error(logs.error.message);
 
+    const allowsMessages = service?.allows_messages === true;
+    const messages = allowsMessages
+      ? await readRequestMessages(supabase, data.requestId)
+      : [];
+
     return {
       id: row.id,
       trackingNumber: row.tracking_number,
@@ -382,6 +389,8 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       eventDateLabel: service?.event_date_label ?? null,
       eventPlaceLabel: service?.event_place_label ?? null,
       referenceNumberLabel: service?.reference_number_label ?? null,
+      allowsMessages,
+      messages,
       fieldLabels: fieldLabelsOf(row),
       applicantName: applicantNameOf(row),
       createdAt: row.created_at,

@@ -422,6 +422,7 @@ export function ServiceFormPage({
       reference_number_label: values.reference_number_label?.trim() || null,
       asks_purpose: values.asks_purpose,
       asks_birth_details: values.asks_birth_details,
+      allows_messages: values.allows_messages,
       display_group: values.display_group?.trim() || null,
       display_name: values.display_name?.trim() || null,
       requirement_group: values.requirement_group?.trim() || null,

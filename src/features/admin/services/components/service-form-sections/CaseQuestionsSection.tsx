@@ -253,6 +253,40 @@ export function CaseQuestionsSection({
                   </FieldLabel>
                 )}
               />
+
+              <Controller
+                control={form.control}
+                name="allows_messages"
+                render={({ field }) => (
+                  <FieldLabel
+                    htmlFor="service-allows-messages"
+                    className="cursor-pointer"
+                  >
+                    <Field
+                      orientation="horizontal"
+                      className="items-start gap-4 p-4 sm:p-5"
+                    >
+                      <Checkbox
+                        id="service-allows-messages"
+                        name={field.name}
+                        checked={field.value}
+                        onCheckedChange={(checked) =>
+                          field.onChange(checked === true)
+                        }
+                      />
+                      <FieldContent className="gap-1.5">
+                        <FieldTitle>Allow messages on requests</FieldTitle>
+                        <FieldDescription>
+                          Applicants and staff can exchange short messages
+                          inside a request, for services that work as
+                          questions and answers, such as an online inquiry.
+                          Staff are notified when an applicant writes.
+                        </FieldDescription>
+                      </FieldContent>
+                    </Field>
+                  </FieldLabel>
+                )}
+              />
             </FieldGroup>
           </FieldSet>
 

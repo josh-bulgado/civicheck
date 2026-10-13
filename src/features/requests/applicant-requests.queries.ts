@@ -4,6 +4,7 @@ import {
   parseFormTemplateDefinition,
   templateFieldLabels,
 } from "~/features/forms/form-template.utils";
+import { readRequestMessages } from "~/features/requests/request-messages.server";
 
 function one<T>(value: T | T[] | null | undefined): T | undefined {
   return Array.isArray(value) ? value[0] : (value ?? undefined);
@@ -70,7 +71,7 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
         `id, tracking_number, request_type, status, payment_status,
          fees_due, copies, form_data, created_at, updated_at,
          services_registry(name, display_name, processing_time, departments(name),
-           event_date_label, event_place_label, reference_number_label),
+           event_date_label, event_place_label, reference_number_label, allows_messages),
          form_template_versions(definition)`,
       )
       .eq("id", data.requestId)
@@ -87,6 +88,7 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
       event_date_label?: string | null;
       event_place_label?: string | null;
       reference_number_label?: string | null;
+      allows_messages?: boolean;
     }>(row.services_registry);
 
     const [attachments, logs] = await Promise.all([
@@ -105,6 +107,11 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
     if (attachments.error) throw new Error(attachments.error.message);
     if (logs.error) throw new Error(logs.error.message);
 
+    const allowsMessages = service?.allows_messages === true;
+    const messages = allowsMessages
+      ? await readRequestMessages(supabase, data.requestId)
+      : [];
+
     return {
       id: row.id,
       trackingNumber: row.tracking_number,
@@ -119,6 +126,8 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
       eventDateLabel: service?.event_date_label ?? null,
       eventPlaceLabel: service?.event_place_label ?? null,
       referenceNumberLabel: service?.reference_number_label ?? null,
+      allowsMessages,
+      messages,
       fieldLabels: fieldLabelsOf(row),
       createdAt: row.created_at,
       updatedAt: row.updated_at,

@@ -2,7 +2,10 @@
 // separate from `service-report.queries.ts` so the page and its cards can
 // import them without pulling a server function into the client bundle.
 
-import { PURPOSE_OPTIONS } from "~/features/forms/form-template.utils";
+import {
+  ADDITIONAL_PURPOSES,
+  PURPOSE_OPTIONS,
+} from "~/features/forms/form-template.utils";
 
 /**
  * Below this many requests a breakdown is not rendered at all.
@@ -50,8 +53,11 @@ export const LAG_BUCKETS = [
   { key: "over_18y", label: "Over 18 years" },
 ] as const;
 
-/** The six fixed choices; anything else the applicant typed collapses to "Other". */
-export const CANONICAL_PURPOSES = PURPOSE_OPTIONS.map((option) => option.value);
+/** The fixed choices; anything else the applicant typed collapses to "Other". */
+export const CANONICAL_PURPOSES = [
+  ...PURPOSE_OPTIONS.map((option) => option.value),
+  ...ADDITIONAL_PURPOSES,
+];
 
 export const SEX_LABELS: Record<string, string> = {
   female: "Female",

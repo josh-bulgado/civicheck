@@ -9,13 +9,15 @@ export type NotificationType =
   | "status_change"
   | "pre_validation_complete"
   | "document_rejected"
+  | "message"
   // CCRO personnel feed
   | "new_request"
   | "document_resubmitted"
   | "awaiting_cashier"
   | "ready_to_release"
   | "request_incomplete"
-  | "request_rejected";
+  | "request_rejected"
+  | "new_message";
 
 /**
  * Where opening a notification leads. The cashier has no access to the request

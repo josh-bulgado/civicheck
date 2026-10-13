@@ -62,6 +62,7 @@ import {
 } from "~/features/requests/components/AttachmentViewerDialog";
 import { RequestDetailHero } from "~/features/requests/components/RequestDetailHero";
 import { RequestHistoryTimeline } from "~/features/requests/components/RequestHistoryTimeline";
+import { RequestMessagesCard } from "~/features/requests/components/RequestMessagesCard";
 import { SubmittedDetailsCard } from "~/features/requests/components/SubmittedDetailsCard";
 import {
   RejectionReasonPicker,
@@ -380,6 +381,15 @@ export default function RequestDetailPage({
               </div>
             )}
           </section>
+
+          {request.allowsMessages && !request.isWalkIn && (
+            <RequestMessagesCard
+              requestId={request.id}
+              messages={request.messages}
+              viewer="staff"
+              onSent={onUpdated}
+            />
+          )}
 
           <PaymentVerificationPanel
             requestId={request.id}
