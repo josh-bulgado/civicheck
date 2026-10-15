@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requirePermission } from "~/middleware/auth";
@@ -49,11 +50,42 @@ interface ActiveTemplate {
   serviceCodes: string[];
 }
 
-type SupabaseLike = {
-  from: (table: string) => any;
-};
+/** All the shared helpers need of a Supabase client. */
+type SupabaseLike = Pick<SupabaseClient, "from">;
 
-function toBlockRecord(row: any): FormFieldBlockRecord {
+// What each query's `select` returns. The client is not generated from the
+// schema, so these state each row's shape where it is read.
+
+/** A `form_field_blocks` row, `select("*")`. */
+interface FormFieldBlockRow {
+  id: string;
+  block_key: string;
+  name: string;
+  description: string | null;
+  step: FormFieldBlock["step"];
+  fields: unknown;
+  version: number;
+  updated_at: string;
+}
+
+interface TemplateRow {
+  id: string;
+  template_key: string;
+  name: string;
+  active_version_id: string | null;
+}
+
+interface VersionRow {
+  id: string;
+  definition: unknown;
+}
+
+interface BindingRow {
+  service_code: string;
+  template_id: string;
+}
+
+function toBlockRecord(row: FormFieldBlockRow): FormFieldBlockRecord {
   const fields = z.array(formFieldBlockFieldSchema).parse(row.fields ?? []);
   return {
     id: row.id,
@@ -80,8 +112,9 @@ async function loadActiveTemplates(
   if (templatesResult.error) throw new Error(templatesResult.error.message);
   if (bindingsResult.error) throw new Error(bindingsResult.error.message);
 
-  const templates = (templatesResult.data ?? []).filter(
-    (template: any) => template.active_version_id,
+  const templates = ((templatesResult.data ?? []) as TemplateRow[]).filter(
+    (template): template is TemplateRow & { active_version_id: string } =>
+      Boolean(template.active_version_id),
   );
   if (templates.length === 0) return [];
 
@@ -90,18 +123,18 @@ async function loadActiveTemplates(
     .select("id, definition")
     .in(
       "id",
-      templates.map((template: any) => template.active_version_id),
+      templates.map((template) => template.active_version_id),
     );
   if (versionsResult.error) throw new Error(versionsResult.error.message);
 
   const definitionByVersion = new Map<string, unknown>(
-    (versionsResult.data ?? []).map((version: any) => [
+    ((versionsResult.data ?? []) as VersionRow[]).map((version) => [
       version.id,
       version.definition,
     ]),
   );
   const codesByTemplate = new Map<string, string[]>();
-  for (const binding of bindingsResult.data ?? []) {
+  for (const binding of (bindingsResult.data ?? []) as BindingRow[]) {
     const bucket = codesByTemplate.get(binding.template_id) ?? [];
     bucket.push(binding.service_code);
     codesByTemplate.set(binding.template_id, bucket);
@@ -155,7 +188,7 @@ export const listFormFieldBlocksFn = createServerFn({ method: "GET" })
     }
 
     const templates = await loadActiveTemplates(context.supabase);
-    return (data ?? []).map((row: any) => {
+    return ((data ?? []) as FormFieldBlockRow[]).map((row) => {
       const block = toBlockRecord(row);
       return { block, usage: usageFor(templates, block.blockKey) };
     });

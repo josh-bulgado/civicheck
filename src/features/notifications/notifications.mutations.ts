@@ -62,6 +62,38 @@ export const updateNotificationFn = createServerFn({ method: "POST" })
     return { error: false };
   });
 
+/**
+ * Opening a request is reading what it says, so its unread updates clear with
+ * it. Applicant feed only; a request that isn't the caller's matches nothing.
+ */
+export const markRequestNotificationsReadFn = createServerFn({ method: "POST" })
+  .validator((d: { requestId: string }) => d)
+  .handler(async ({ data }) => {
+    const { supabase, user, role } = await requireActiveSession();
+    if (getNotificationAudience(role) !== "applicant") return { error: false };
+
+    // Same two-step shape as markAllNotificationsReadFn: PostgREST can't filter
+    // an UPDATE by a joined table, so ownership is resolved with a SELECT.
+    const { data: unread, error: fetchError } = await supabase
+      .from("notifications")
+      .select("id, requests!inner(applicant_id)")
+      .eq("request_id", data.requestId)
+      .eq("requests.applicant_id", user.id)
+      .eq("is_read", false);
+    if (fetchError) return { error: true, message: fetchError.message };
+
+    const ids = (unread ?? []).map((row) => row.id);
+    if (ids.length === 0) return { error: false };
+
+    const { error } = await supabase
+      .from("notifications")
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .in("id", ids);
+    if (error) return { error: true, message: error.message };
+
+    return { error: false };
+  });
+
 export const markAllNotificationsReadFn = createServerFn({ method: "POST" }).handler(
   async () => {
     const { supabase, user, role } = await requireActiveSession();

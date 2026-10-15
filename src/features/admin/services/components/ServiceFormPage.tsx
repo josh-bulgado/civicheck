@@ -436,6 +436,7 @@ export function ServiceFormPage({
       allows_messages: values.allows_messages,
       display_group: values.display_group?.trim() || null,
       display_name: values.display_name?.trim() || null,
+      short_name: values.short_name?.trim() || null,
       requirement_group: values.requirement_group?.trim() || null,
     };
 

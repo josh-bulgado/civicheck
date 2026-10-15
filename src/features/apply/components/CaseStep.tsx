@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { CalendarClock } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
+import { NoticeAlert } from "~/features/forms/components/NoticeAlert";
 import { TrackRedirectDialog } from "~/features/apply/components/TrackRedirectDialog";
 import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
@@ -22,12 +21,13 @@ import {
   getSelectedOptionNotices,
   todayKeyInTimeZone,
 } from "~/features/forms/form-template.utils";
+import type { EventTimingRule } from "~/features/forms/form-template.types";
 import { isRequirementApplicable } from "~/features/services/service-utils";
 import { CopiesStepper } from "~/features/services/components/CopiesStepper";
 import type { ServiceDetail } from "~/features/services/services.queries";
 import {
-  seedDraftForGroup,
   useApplyDraft,
+  useSeedDraftForGroup,
 } from "~/features/apply/hooks/useApplyDraft";
 import { discardRequestUploadDraftFn } from "~/features/apply/apply.mutations";
 import { ageInYears, diffInDays, toDateKey } from "~/lib/date";
@@ -66,6 +66,25 @@ function getMarriageTimingNotice(serviceCode: string | undefined, intendedDate: 
   return null;
 }
 
+// The seeded wording of the birth on-time rule. It states a problem, so the
+// dialog says the same thing calmly. A rule an admin has written their own
+// copy for (or any other service's rule) keeps its words untouched.
+const SEEDED_LATE_BIRTH_TITLE = "This date is more than 30 days ago";
+
+function trackRedirectCopy(rule: EventTimingRule) {
+  if (
+    rule.targetServiceCode === "birth_delayed" &&
+    rule.mismatch === "outside_window" &&
+    rule.title === SEEDED_LATE_BIRTH_TITLE
+  ) {
+    return {
+      title: `This birth date is over ${rule.windowDays} days ago`,
+      description: `Births registered after ${rule.windowDays} days use the Delayed Registration track.`,
+    };
+  }
+  return { title: rule.title, description: rule.description };
+}
+
 interface CaseStepProps {
   serviceCode: string;
   isGroup: ServiceDetail["isGroup"];
@@ -81,6 +100,7 @@ export function CaseStep({
 }: CaseStepProps) {
   const navigate = useNavigate();
   const { draft, update, hydrated, clear } = useApplyDraft(serviceCode);
+  const seedDraftForGroup = useSeedDraftForGroup();
   const selectedService =
     services.find((service) => service.service_code === draft.selectedServiceCode) ??
     services[0];
@@ -354,43 +374,49 @@ export function CaseStep({
         />
 
         {marriageTimingNotice ? (
-          <Alert variant="warning" role="status" aria-live="polite">
-            <CalendarClock aria-hidden="true" />
-            <AlertTitle>{marriageTimingNotice.title}</AlertTitle>
-            <AlertDescription>{marriageTimingNotice.description}</AlertDescription>
-          </Alert>
+          <NoticeAlert
+            variant="warning"
+            role="status"
+            icon={CalendarClock}
+            title={marriageTimingNotice.title}
+          >
+            {marriageTimingNotice.description}
+          </NoticeAlert>
         ) : null}
 
         {timingMismatch && timingRule ? (
-          <Alert variant="warning" role="status" aria-live="polite">
-            <CalendarClock aria-hidden="true" />
-            <AlertTitle>{timingRule.title}</AlertTitle>
-            <AlertDescription className="flex flex-wrap items-center gap-3">
+          <NoticeAlert
+            variant="warning"
+            role="status"
+            icon={CalendarClock}
+            title={timingRule.title}
+          >
+            <span className="flex flex-wrap items-center gap-x-4 gap-y-3">
               {timingRule.description}
               {timingMismatch.behavior === "redirect_confirm" ||
               timingMismatch.behavior === "warn_allow" ? (
-                <Button
+                <button
                   type="button"
-                  variant="outline"
-                  size="sm"
                   onClick={() => setRedirectOpen(true)}
+                  className="civic-press h-11 rounded-full border border-[#e0bd5c] bg-white/70 px-5 text-[15px] font-semibold text-[#5c3a00] hover:bg-white"
                 >
                   {timingRule.ctaLabel}
-                </Button>
+                </button>
               ) : null}
-            </AlertDescription>
-          </Alert>
+            </span>
+          </NoticeAlert>
         ) : null}
 
         {timingDeferredNotice ? (
-          <Alert role="status" aria-live="polite">
-            <CalendarClock aria-hidden="true" />
-            <AlertTitle>{timingDeferredNotice.rule.title}</AlertTitle>
-            <AlertDescription>
-              {timingDeferredNotice.rule.description} We&rsquo;ll confirm this
-              against your supporting document before processing.
-            </AlertDescription>
-          </Alert>
+          <NoticeAlert
+            variant="default"
+            role="status"
+            icon={CalendarClock}
+            title={timingDeferredNotice.rule.title}
+          >
+            {timingDeferredNotice.rule.description} We&rsquo;ll confirm this
+            against your supporting document before processing.
+          </NoticeAlert>
         ) : null}
 
         <WizardFooterActions
@@ -418,11 +444,14 @@ export function CaseStep({
       <TrackRedirectDialog
         open={redirectOpen}
         onOpenChange={setRedirectOpen}
-        title={timingRule?.title ?? ""}
-        description={timingRule?.description ?? ""}
-        ctaLabel={timingRule?.ctaLabel ?? "Switch registration track"}
+        title={timingRule ? trackRedirectCopy(timingRule).title : ""}
+        description={timingRule ? trackRedirectCopy(timingRule).description : ""}
         onKeepEditing={() => setRedirectOpen(false)}
         onSwitch={handleSwitchTrack}
+        // Closing, by any route, puts the cursor back on the date.
+        returnFocusTo={() =>
+          timingRule ? document.getElementById(`dynamic-${timingRule.triggerField}`) : null
+        }
       />
     </WizardShell>
   );

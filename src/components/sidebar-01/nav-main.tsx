@@ -9,8 +9,9 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "~/components/ui/sidebar";
-import { Link } from "@tanstack/react-router";
+import { QuietLink } from "~/components/quiet-link";
 import { staggerStyle } from "~/components/motion/stagger";
+import { cn } from "~/lib/utils";
 import type { NavGroup } from "./types";
 
 interface NavMainProps {
@@ -22,7 +23,7 @@ interface NavMainProps {
 export function NavMain({ groups, citizen = false }: NavMainProps) {
   if (citizen) {
     return (
-      <SidebarMenu className="civic-stagger">
+      <SidebarMenu className="civic-stagger gap-2">
         {groups
           .flatMap((group) => group.items)
           .map((item, index) => {
@@ -30,21 +31,33 @@ export function NavMain({ groups, citizen = false }: NavMainProps) {
 
             return (
               <SidebarMenuItem key={item.id} style={staggerStyle(index)}>
-                <Link
+                <QuietLink
                   to={item.url}
-                  className="civic-press flex h-11 items-center gap-2.5 rounded-xl pr-2.5 pl-3 text-sm font-medium text-body-2 hover:bg-muted data-[status=active]:bg-primary data-[status=active]:font-semibold data-[status=active]:text-white data-[status=active]:hover:bg-primary"
+                  // Active is a white pill with a soft blue lift; the label
+                  // keeps its ink and only the icon turns brand blue, with a
+                  // faint fill inside its strokes. The explicit active+hover
+                  // pairing keeps the pill opaque.
+                  className={cn(
+                    "group/nav civic-press flex h-13.5 items-center gap-3.5 rounded-[18px] pl-4.5 text-[15.5px] text-foreground hover:bg-white/50",
+                    "data-[status=active]:bg-white data-[status=active]:font-semibold data-[status=active]:shadow-portal-nav-active data-[status=active]:hover:bg-white",
+                    item.badge ? "pr-3.5" : "pr-4.5",
+                  )}
                 >
-                  <Icon className="size-4.5 shrink-0" aria-hidden="true" />
+                  <Icon
+                    strokeWidth={1.8}
+                    className="size-5.5 shrink-0 text-portal-ink-2 group-data-[status=active]/nav:fill-primary/14 group-data-[status=active]/nav:text-primary"
+                    aria-hidden="true"
+                  />
                   <span className="flex-1 truncate">{item.title}</span>
                   {!!item.badge && (
                     <span
                       key={item.badge}
-                      className="civic-enter-scale flex h-5.5 min-w-5.5 items-center justify-center rounded-full bg-brand-gold px-1.5 text-xs font-bold text-foreground"
+                      className="civic-enter-scale flex h-6 min-w-6 items-center justify-center rounded-full bg-brand-gold px-1.75 text-[13px] font-bold text-foreground"
                     >
                       {item.badge > 99 ? "99+" : item.badge}
                     </span>
                   )}
-                </Link>
+                </QuietLink>
               </SidebarMenuItem>
             );
           })}
@@ -71,7 +84,7 @@ export function NavMain({ groups, citizen = false }: NavMainProps) {
 
                 return (
                   <SidebarMenuItem key={item.id} style={staggerStyle(index)}>
-                    <Link
+                    <QuietLink
                       to={item.url}
                       activeOptions={{ exact: item.url === "/admin" }}
                       className="flex w-full items-center rounded-lg [&[data-status=active]>button]:bg-primary-soft [&[data-status=active]>button]:font-bold [&[data-status=active]>button]:text-primary"
@@ -91,7 +104,7 @@ export function NavMain({ groups, citizen = false }: NavMainProps) {
                           </span>
                         )}
                       </SidebarMenuButton>
-                    </Link>
+                    </QuietLink>
                   </SidebarMenuItem>
                 );
               })}

@@ -1,22 +1,13 @@
-import { Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { QuietLink } from "~/components/quiet-link";
+import { useMemo, useState, type ReactNode } from "react";
 import { Check, CheckCircle2, Download } from "lucide-react";
 import { Checkbox } from "~/components/ui/checkbox";
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, buttonVariants } from "~/components/ui/button";
-import { Field, FieldLabel } from "~/components/ui/field";
 import { RequiredMark } from "~/components/ui/required-mark";
 import {
-  parseFeeComponents,
-  splitFeeComponents,
-  type FeeComponent,
-} from "~/features/services/fee-components";
-import {
   clampCopies,
-  formatFee,
-  formatPesoFee,
   isRequirementApplicable,
-  totalFee,
 } from "~/features/services/service-utils";
 import {
   expandRequirementUploadSlots,
@@ -25,11 +16,9 @@ import {
 import { submitRequestFn } from "~/features/services/services.mutations";
 import { useAcknowledgmentPdfDownload } from "~/features/requests/pdf/useAcknowledgmentPdfDownload";
 import type { AcknowledgmentPdfData } from "~/features/requests/pdf/types";
-import { discardRequestUploadDraftFn } from "~/features/apply/apply.mutations";
 import type { ServiceDetail } from "~/features/services/services.queries";
 import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
-import { ChangeServiceButton } from "~/features/apply/components/ApplicationDocket";
 import { DocumentPreview } from "~/features/apply/components/DocumentPreview";
 import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
 import { useDocumentPreviewUrls } from "~/features/apply/hooks/useDocumentPreviewUrls";
@@ -55,7 +44,6 @@ interface ReviewStepProps {
 
 export function ReviewStep({
   serviceCode,
-  displayName,
   services,
   requirements,
 }: ReviewStepProps) {
@@ -72,14 +60,6 @@ export function ReviewStep({
   const { download: downloadAcknowledgmentPdf, downloading: downloadingPdf } =
     useAcknowledgmentPdfDownload();
 
-  function handleDiscard() {
-    const uploadDraftId = draft.uploadDraftId;
-    clear();
-    if (uploadDraftId) {
-      discardRequestUploadDraftFn({ data: { uploadDraftId } }).catch(() => {});
-    }
-  }
-
   const selectedService = useMemo(
     () => services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0],
     [services, draft.selectedServiceCode],
@@ -95,27 +75,6 @@ export function ReviewStep({
   // server recomputes the same total on submit.
   const feePerCopy = selectedService?.fee_per_copy === true;
   const copies = feePerCopy ? clampCopies(draft.copies) : 1;
-  const feeDueLabel = selectedService
-    ? formatFee(totalFee(selectedService.fee, copies, feePerCopy))
-    : "—";
-  // The itemized charges behind the total. A per-copy service already shows
-  // "N × ₱X per copy" above, so it never carries a breakdown of its own.
-  const { included: feeParts, alsoPayable } = splitFeeComponents(
-    feePerCopy ? [] : parseFeeComponents(selectedService?.fee_components),
-  );
-  const feeLines: FeeComponent[] =
-    feeParts.length > 0
-      ? feeParts
-      : selectedService
-        ? [
-            {
-              label: "Service fee",
-              amount: totalFee(selectedService.fee, copies, feePerCopy),
-              included: true,
-            },
-          ]
-        : [];
-  const showFeeBreakdown = feeParts.length > 1 || alsoPayable.length > 0;
 
   const showRoleLabels = subjects.length > 1;
   const sexLabel = (sex: string) =>
@@ -231,7 +190,7 @@ export function ReviewStep({
         title="Request submitted"
         description="CCRO staff will pre-check your documents. You'll be notified in-system and by email as your request moves forward."
       >
-        <div className="flex flex-col items-start gap-5 rounded-xl border border-success/25 bg-success-soft-2 p-6">
+        <div className="flex flex-col items-start gap-5 rounded-[20px] border border-success/25 bg-success-soft-2 p-6">
           <div className="flex items-center gap-3">
             <CheckCircle2 className="size-8 text-success" />
             <div>
@@ -246,226 +205,191 @@ export function ReviewStep({
             <Button
               size="lg"
               variant="outline"
+              className="h-13 rounded-full px-6 text-base font-semibold"
               disabled={downloadingPdf}
               onClick={() => downloadAcknowledgmentPdf(result.pdfData)}
             >
               <Download data-icon="inline-start" />
               {downloadingPdf ? "Preparing PDF..." : "Download Acknowledgment PDF"}
             </Button>
-            <Link
+            <QuietLink
               to="/my-requests"
-              className={buttonVariants({ size: "lg" })}
+              className={buttonVariants({
+                size: "lg",
+                className: "h-13 rounded-full px-6 text-base font-semibold",
+              })}
             >
               View my requests
-            </Link>
+            </QuietLink>
           </div>
         </div>
       </WizardShell>
     );
   }
 
-  return (
-    <WizardShell
-      step={4}
-      title="Check everything before you send"
-      description="Staff pre-check your file before you visit the CCRO counter. You can still edit any section."
-      sidebar={<WhatHappensNextCard />}
-    >
-      <div className="flex flex-col gap-5">
-        <EditSection
-          title="Selected service"
-          action={
-            selectedService ? (
-              <ChangeServiceButton
-                serviceName={selectedService.name}
-                onDiscard={handleDiscard}
-                label="Change"
-              />
-            ) : null
-          }
-        >
-          <ReviewRow
-            label="Service"
-            value={selectedService?.name ?? displayName}
-          />
-          {selectedService && selectedService.name !== displayName ? (
-            <ReviewRow label="Service family" value={displayName} />
-          ) : null}
-          {feePerCopy && selectedService ? (
-            <ReviewRow
-              label="Number of copies"
-              value={`${copies} × ${formatPesoFee(selectedService.fee)} per copy`}
-            />
-          ) : null}
-          <ReviewRow label="Fee at cashier" value={feeDueLabel} />
-          {visibleCaseSelectorQuestions(definition, answerBag).map(
-            (question) => {
-              const answer = answerBag[question.key];
-              const value = typeof answer === "string" ? answer : "";
-              return (
-                <ReviewRow
-                  key={question.key}
-                  label={question.label}
-                  value={
-                    question.options.find((option) => option.value === value)
-                      ?.label ?? (value || "—")
-                  }
-                />
-              );
-            },
-          )}
-        </EditSection>
+  // Everything the applicant said, in the two places they said it. The service
+  // and its fee are in the docket above, so they are not repeated here.
+  const caseQuestions = visibleCaseSelectorQuestions(definition, answerBag).map((question) => {
+    const answer = answerBag[question.key];
+    const value = typeof answer === "string" ? answer : "";
+    return (
+      <ReviewRow
+        key={question.key}
+        label={question.label}
+        value={
+          question.options.find((option) => option.value === value)?.label ?? (value || "—")
+        }
+      />
+    );
+  });
 
-        {definition.sections.map((section) => (
-          <EditSection
-            key={section.key}
-            title={section.title}
+  const rowsForStep = (step: "case" | "details") =>
+    definition.sections
+      .filter((section) => (step === "case" ? section.step === "case" : section.step !== "case"))
+      .flatMap((section) =>
+        section.fields
+          .filter((field) => isFieldVisible(field, answerBag))
+          .flatMap((field) => {
+            if (field.type === "person_group") {
+              return [
+                ...subjects.map((subject, index) => (
+                  <ReviewRow
+                    key={`${field.key}-name-${index}`}
+                    label={showRoleLabels ? subject.role : field.label}
+                    value={subjectFullName(subject) || "—"}
+                  />
+                )),
+                ...subjects
+                  .filter((subject) => impliedSex(subject.role) === null)
+                  .map((subject, index) => (
+                    <ReviewRow
+                      key={`${field.key}-sex-${index}`}
+                      label={showRoleLabels ? `${subject.role}'s sex` : "Sex"}
+                      value={sexLabel(subject.sex)}
+                    />
+                  )),
+              ];
+            }
+            const answer = answerBag[field.key];
+            return [
+              <ReviewRow
+                key={field.key}
+                label={field.label}
+                value={formatFieldAnswer(field, typeof answer === "string" ? answer : "")}
+              />,
+            ];
+          }),
+      );
+
+  const caseRows = [...caseQuestions, ...rowsForStep("case")];
+  const detailRows = rowsForStep("details");
+
+  return (
+    <WizardShell step={4} title="Check everything before you send" sidebar={<WhatHappensNextCard />}>
+      <div className="flex flex-col gap-5">
+        {caseRows.length > 0 ? (
+          <ReviewBlock
+            title="About your case"
             onEdit={() =>
-              navigate({
-                to:
-                  section.step === "case"
-                    ? "/apply/$serviceCode/case"
-                    : "/apply/$serviceCode/details",
-                params: { serviceCode },
-              })
+              navigate({ to: "/apply/$serviceCode/case", params: { serviceCode } })
             }
           >
-            {section.fields
-              .filter((field) => isFieldVisible(field, answerBag))
-              .flatMap((field) => {
-                if (field.type === "person_group") {
-                  return [
-                    ...subjects.map((subject, index) => (
-                      <ReviewRow
-                        key={`${field.key}-name-${index}`}
-                        label={showRoleLabels ? subject.role : field.label}
-                        value={subjectFullName(subject) || "—"}
-                      />
-                    )),
-                    ...subjects
-                      .filter((subject) => impliedSex(subject.role) === null)
-                      .map((subject, index) => (
-                        <ReviewRow
-                          key={`${field.key}-sex-${index}`}
-                          label={showRoleLabels ? `${subject.role}'s sex` : "Sex"}
-                          value={sexLabel(subject.sex)}
-                        />
-                      )),
-                  ];
-                }
-                const answer = answerBag[field.key];
-                return [
-                  <ReviewRow
-                    key={field.key}
-                    label={field.label}
-                    value={formatFieldAnswer(
-                      field,
-                      typeof answer === "string" ? answer : "",
-                    )}
-                  />,
-                ];
-              })}
-          </EditSection>
-        ))}
+            {caseRows}
+          </ReviewBlock>
+        ) : null}
 
-        <EditSection
-          title={`Documents · ${activeDocuments.length} uploaded`}
+        {detailRows.length > 0 ? (
+          <ReviewBlock
+            title="Your details"
+            onEdit={() =>
+              navigate({ to: "/apply/$serviceCode/details", params: { serviceCode } })
+            }
+          >
+            {detailRows}
+          </ReviewBlock>
+        ) : null}
+
+        <ReviewBlock
+          title="Documents"
           onEdit={() =>
             navigate({ to: "/apply/$serviceCode/documents", params: { serviceCode } })
           }
         >
           {activeDocuments.length === 0 ? (
-            <p className="text-sm text-muted-foreground sm:col-span-2">No documents uploaded yet.</p>
+            <p className="text-base text-muted-foreground sm:col-span-2">
+              No documents uploaded yet.
+            </p>
           ) : (
-            <div className="flex flex-col gap-2.5 sm:col-span-2">
+            <div className="flex flex-col gap-3.5 sm:col-span-2">
               {activeDocumentsWithPositions.map(
-                ({ document: doc, fileNumber, fileTotal }) => (
-                  <div
-                    key={doc.storagePath}
-                    className="flex items-center gap-2.5 text-sm"
-                  >
-                    <span className="flex size-4.5 shrink-0 items-center justify-center rounded-[5px] bg-success text-[10px] font-bold text-white">
-                      <Check className="size-2.5" aria-hidden="true" />
-                    </span>
-                    <DocumentPreview
-                      fileName={doc.fileName}
-                      url={previewUrls[doc.storagePath]}
-                      label={`${doc.requirementName.replace(/\s*[—–]\s*/g, " - ")}${
-                        fileTotal > 1 ? ` · file ${fileNumber} of ${fileTotal}` : ""
-                      }`}
-                      onUrlError={() => refreshPreviewUrl(doc.storagePath)}
-                    />
-                    <span className="flex min-w-0 flex-col gap-0.5">
-                      <span className="wrap-break-word text-foreground">
+                ({ document: doc, fileNumber, fileTotal }) => {
+                  const name = doc.requirementName.replace(/\s*[—–]\s*/g, " - ");
+                  const suffix = fileTotal > 1 ? ` · file ${fileNumber} of ${fileTotal}` : "";
+                  return (
+                    <div key={doc.storagePath} className="flex items-center gap-3.5">
+                      <span className="flex size-5.5 shrink-0 items-center justify-center rounded-md bg-success text-white">
+                        <Check className="size-3.5" strokeWidth={3} aria-hidden="true" />
+                      </span>
+                      <DocumentPreview
+                        fileName={doc.fileName}
+                        url={previewUrls[doc.storagePath]}
+                        label={`${name}${suffix}`}
+                        onUrlError={() => refreshPreviewUrl(doc.storagePath)}
+                      />
+                      <span className="min-w-0 text-base leading-snug font-medium wrap-break-word text-foreground">
                         {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
-                        {doc.requirementName.replace(/\s*[—–]\s*/g, " - ")}
-                        {fileTotal > 1
-                          ? ` · file ${fileNumber} of ${fileTotal}`
-                          : ""}
+                        {name}
+                        {suffix}
                       </span>
-                      <span
-                        className="truncate text-xs text-muted-foreground"
-                        title={doc.fileName}
-                      >
-                        {doc.fileName}
-                      </span>
-                    </span>
-                  </div>
-                ),
+                    </div>
+                  );
+                },
               )}
             </div>
           )}
-        </EditSection>
+        </ReviewBlock>
 
-        <div className="rounded-[10px] border border-border-light bg-primary-tint px-4.5 py-4">
-          <div className="flex items-center justify-between gap-5">
-            <div>
-              <p className="text-base font-bold text-foreground">Nothing is paid online</p>
-              <p className="text-sm leading-relaxed text-body">
-                Bring {selectedService ? feeDueLabel : "the fee"} in cash to the
-                CCRO cashier when you visit.
-              </p>
-            </div>
-            <p className="whitespace-nowrap text-2xl font-bold text-foreground">
-              {feeDueLabel}
-            </p>
-          </div>
-          {showFeeBreakdown ? (
-            <div className="mt-3.5 flex flex-col gap-3.5 border-t border-border-light pt-3.5">
-              <FeeLines title="What the fee covers" lines={feeLines} />
-              {alsoPayable.length > 0 ? (
-                <FeeLines
-                  title="Also payable, not in the amount above"
-                  lines={alsoPayable}
-                  muted
-                />
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-
-        <Field orientation="horizontal">
+        <div className="flex items-start gap-3">
           <Checkbox
             id="confirm-application-details"
             checked={confirmed}
             onCheckedChange={(checked) => setConfirmed(checked === true)}
+            className="mt-px size-6.5 rounded-lg border-[1.5px] border-[#b9c7de] shadow-none data-checked:border-primary [&_svg]:size-4.5"
           />
-          <FieldLabel
+          <label
             htmlFor="confirm-application-details"
-            className="text-[15px] leading-snug font-semibold"
+            className="cursor-pointer text-base leading-[1.6] font-semibold text-foreground"
           >
-            <span>
-              I confirm the selected service and details above are correct, and
-              I will bring the original documents. <RequiredMark />
-            </span>
-          </FieldLabel>
-        </Field>
+            I confirm these details are correct. <RequiredMark />
+          </label>
+        </div>
 
         {submitError && (
-          <Alert variant="destructive">
-            <AlertTitle>Unable to submit request</AlertTitle>
-            <AlertDescription>{submitError}</AlertDescription>
-          </Alert>
+          <div
+            role="alert"
+            className="flex flex-col gap-3 rounded-[18px] bg-portal-danger-soft px-5 py-4"
+          >
+            <p className="text-[15px] leading-snug font-semibold text-destructive">
+              {submitError}
+            </p>
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="civic-press h-12 rounded-full bg-primary px-6 text-base font-semibold text-white hover:bg-primary-hover disabled:opacity-60"
+              >
+                Try again
+              </button>
+              <button
+                type="button"
+                onClick={() => setSubmitError(null)}
+                className="civic-press rounded-full px-1 py-2 text-[15px] font-semibold text-body-2 hover:text-foreground"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         )}
       </div>
 
@@ -475,6 +399,7 @@ export function ReviewStep({
         }
         onContinue={handleSubmit}
         continueLabel="Submit request"
+        pendingLabel="Submitting…"
         continueDisabled={!confirmed}
         continuePending={submitting}
       />
@@ -482,82 +407,40 @@ export function ReviewStep({
   );
 }
 
-function EditSection({
+/** One of the review's three blocks: its name, an Edit link, and the answers in two columns. */
+function ReviewBlock({
   title,
   onEdit,
-  action,
   children,
 }: {
   title: string;
-  onEdit?: () => void;
-  action?: React.ReactNode;
-  children: React.ReactNode;
+  onEdit: () => void;
+  children: ReactNode;
 }) {
   return (
-    <div className="overflow-hidden rounded-[10px] border border-border-light">
-      <div className="flex items-center justify-between gap-3 border-b border-border-light bg-background px-4.5 py-3">
-        <span className="text-[15px] font-bold text-foreground">{title}</span>
-        {action ??
-          (onEdit ? (
-            <Button
-              type="button"
-              variant="link"
-              size="sm"
-              className="text-[15px] font-semibold hover:text-primary-hover"
-              onClick={onEdit}
-            >
-              Edit
-            </Button>
-          ) : null)}
+    <section className="overflow-hidden rounded-[18px] border border-[#e4e9f1]">
+      <div className="flex items-center justify-between gap-3 bg-portal-panel px-5.5 py-3.5">
+        <h2 className="text-[17px] leading-[normal] font-bold text-foreground">{title}</h2>
+        <button
+          type="button"
+          onClick={onEdit}
+          className="civic-press rounded-full px-1 py-1 text-[15px] font-semibold text-primary hover:text-primary-hover"
+        >
+          Edit
+        </button>
       </div>
-      <div className="grid grid-cols-1 gap-2.5 px-4.5 py-3.5 sm:grid-cols-2">{children}</div>
-    </div>
-  );
-}
-
-function FeeLines({
-  title,
-  lines,
-  muted = false,
-}: {
-  title: string;
-  lines: FeeComponent[];
-  muted?: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
-        {title}
-      </p>
-      <dl className="flex flex-col gap-1.5">
-        {lines.map((line, index) => (
-          <div
-            // Labels are admin-authored and may repeat, so the position is part of the key.
-            key={`${line.label}-${index}`}
-            className="flex justify-between gap-3 text-[15px]"
-          >
-            <dt className={muted ? "text-muted-foreground" : "text-body"}>
-              {line.label}
-            </dt>
-            <dd
-              className={`shrink-0 tabular-nums ${
-                muted ? "text-muted-foreground" : "font-semibold text-foreground"
-              }`}
-            >
-              {formatPesoFee(line.amount)}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </div>
+      <div className="grid grid-cols-1 gap-x-10 gap-y-3 px-5.5 py-4.5 sm:grid-cols-2">
+        {children}
+      </div>
+    </section>
   );
 }
 
 function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex min-w-0 justify-between gap-3 text-[15px]">
+    <div className="flex min-w-0 justify-between gap-4 text-base">
       <span className="shrink-0 text-muted-foreground">{label}</span>
-      <span className="min-w-0 break-words text-right font-bold text-foreground">
+      <span className="min-w-0 text-right font-bold wrap-break-word text-foreground">
         {value}
       </span>
     </div>
@@ -565,26 +448,27 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
 }
 
 function WhatHappensNextCard() {
-  const steps = [
-    "Staff pre-check your uploads within 1 working day.",
-    "Visit the CCRO counter with your original documents — no appointment needed.",
-    "Present your tracking number at the counter when you arrive.",
-  ];
   return (
-    <div className="portal-card overflow-hidden">
-      <div className="border-b border-border-light px-4.5 py-3.5 text-base font-bold text-foreground">
+    <div className="overflow-hidden rounded-[24px] bg-card shadow-portal-card">
+      <div className="border-b border-[#e4e9f1] px-5.5 py-4 text-[17px] font-bold text-foreground">
         What happens next
       </div>
-      <div className="flex flex-col gap-3.5 px-4.5 py-4">
-        {steps.map((step, index) => (
-          <div key={step} className="flex items-start gap-3">
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-bold text-primary">
+      <ol className="flex flex-col gap-4 px-5.5 py-5">
+        {[
+          "Staff pre-check your uploads.",
+          <>
+            Visit the CCRO with your <strong className="font-bold">original documents</strong>.
+          </>,
+          "Show your tracking number.",
+        ].map((step, index) => (
+          <li key={index} className="flex items-start gap-3">
+            <span className="flex size-6.5 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[13px] font-bold text-primary">
               {index + 1}
             </span>
-            <p className="text-sm leading-relaxed text-body-strong">{step}</p>
-          </div>
+            <p className="pt-0.5 text-[15px] leading-snug text-body-strong">{step}</p>
+          </li>
         ))}
-      </div>
+      </ol>
     </div>
   );
 }

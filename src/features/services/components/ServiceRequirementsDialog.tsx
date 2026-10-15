@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -24,13 +24,7 @@ import {
   CollapsibleTrigger,
 } from "~/components/ui/collapsible";
 import { staggerStyle } from "~/components/motion/stagger";
-import { getServiceOverview } from "~/features/services/services.queries";
-import {
-  cachedServiceRead,
-  invalidateServiceCache,
-  peekServiceCache,
-  serviceCacheKeys,
-} from "~/features/services/services.cache";
+import { useServiceOverview } from "~/features/services/hooks/useServiceOverview";
 import type { ServiceRequirement } from "~/features/admin/services/services.types";
 import {
   cleanStepText,
@@ -59,8 +53,6 @@ interface ServiceRequirementsDialogProps {
    */
   onApply?: () => void;
 }
-
-type Overview = Awaited<ReturnType<typeof getServiceOverview>>;
 
 const CASE_TAG_LABELS: Record<string, string> = {
   marital_only: "Marital child only",
@@ -130,55 +122,8 @@ export function ServiceRequirementsDialog({
   onOpenChange,
   onApply,
 }: ServiceRequirementsDialogProps) {
-  const [overview, setOverview] = useState<Overview | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [reloadToken, setReloadToken] = useState(0);
+  const { overview, loading, error, retry } = useServiceOverview(serviceCode, open);
   const [conditionalOpen, setConditionalOpen] = useState(false);
-
-  // Checklists are shared through the service cache, so reopening this popup —
-  // or opening another card backed by the same service — costs no query.
-  useEffect(() => {
-    if (!open) return;
-    const cacheKey = serviceCacheKeys.overview(serviceCode);
-
-    const cached = peekServiceCache<Overview>(cacheKey);
-    if (cached) {
-      setOverview(cached);
-      setError(null);
-      setLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    async function loadOverview() {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await cachedServiceRead(cacheKey, () =>
-          getServiceOverview({ data: serviceCode }),
-        );
-        if (cancelled) return;
-        setOverview(data);
-      } catch {
-        if (cancelled) return;
-        setError("We couldn't load this checklist. Please try again.");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    loadOverview();
-    return () => {
-      cancelled = true;
-    };
-  }, [open, serviceCode, reloadToken]);
-
-  const retry = () => {
-    invalidateServiceCache(serviceCacheKeys.overview(serviceCode));
-    setReloadToken((token) => token + 1);
-  };
 
   const visitBadge = getVisitBadge(processingTime);
   const isGroup = overview?.isGroup ?? false;

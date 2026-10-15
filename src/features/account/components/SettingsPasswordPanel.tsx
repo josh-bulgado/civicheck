@@ -2,23 +2,19 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
 import { Controller, useForm } from "react-hook-form";
 import z from "zod";
-import { Eye, EyeClosed, Lock } from "lucide-react";
-import { Button } from "~/components/ui/button";
-import { DialogFooter } from "~/components/ui/dialog";
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "~/components/ui/field";
+import { Eye, EyeClosed } from "lucide-react";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
   InputGroupInput,
 } from "~/components/ui/input-group";
-import { Spinner } from "~/components/ui/spinner";
 import { useChangePassword } from "../hooks/useChangePassword";
+import {
+  SETTINGS_GROUP_CLASS,
+  SettingsFormFooter,
+  SettingsRow,
+} from "./settings-form";
 import { SettingsPanelBody } from "./SettingsPanelBody";
 
 const formSchema = z
@@ -51,26 +47,29 @@ const passwordFields = [
   {
     name: "currentPassword",
     label: "Current password",
-    placeholder: "Your current password",
     autoComplete: "current-password",
   },
   {
     name: "newPassword",
     label: "New password",
-    placeholder: "At least 8 characters, including a number",
     autoComplete: "new-password",
+    hint: "At least 8 characters, including a number.",
   },
   {
     name: "confirmPassword",
     label: "Confirm new password",
-    placeholder: "Re-enter your new password",
     autoComplete: "new-password",
   },
 ] as const;
 
 export function SettingsPasswordPanel({ onClose }: { onClose: () => void }) {
   const changePasswordMutation = useChangePassword();
-  const [showPasswords, setShowPasswords] = React.useState(false);
+  // Each field's eye reveals only that field.
+  const [revealed, setRevealed] = React.useState<Record<keyof FormValues, boolean>>({
+    currentPassword: false,
+    newPassword: false,
+    confirmPassword: false,
+  });
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -95,81 +94,65 @@ export function SettingsPasswordPanel({ onClose }: { onClose: () => void }) {
   return (
     <form
       onSubmit={form.handleSubmit(onSubmit)}
-      className="flex min-h-0 flex-1 flex-col gap-4"
+      className="flex min-h-0 flex-1 flex-col"
     >
       <SettingsPanelBody>
-        <FieldGroup className="gap-5">
-          <p className="text-xs text-muted-foreground">
-            Enter your current password to confirm it's you. You will stay
-            signed in on this device afterwards.
-          </p>
-
-          {passwordFields.map((passwordField) => (
-            <Controller
-              key={passwordField.name}
-              control={form.control}
-              name={passwordField.name}
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor={`settings-${passwordField.name}`}>
-                    {passwordField.label}
-                  </FieldLabel>
-                  <InputGroup>
-                    <InputGroupAddon>
-                      <Lock size={16} aria-hidden="true" />
-                    </InputGroupAddon>
-                    <InputGroupInput
-                      {...field}
-                      id={`settings-${passwordField.name}`}
-                      type={showPasswords ? "text" : "password"}
-                      placeholder={passwordField.placeholder}
-                      autoComplete={passwordField.autoComplete}
-                      aria-invalid={fieldState.invalid}
-                    />
-                    <InputGroupAddon align="inline-end">
-                      <InputGroupButton
-                        size="icon-xs"
-                        onClick={() => setShowPasswords((shown) => !shown)}
-                        aria-label={
-                          showPasswords ? "Hide passwords" : "Show passwords"
-                        }
-                      >
-                        {showPasswords ? (
-                          <EyeClosed size={16} aria-hidden="true" />
-                        ) : (
-                          <Eye size={16} aria-hidden="true" />
-                        )}
-                      </InputGroupButton>
-                    </InputGroupAddon>
-                  </InputGroup>
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
-                  )}
-                </Field>
-              )}
-            />
-          ))}
-        </FieldGroup>
+        {passwordFields.map((passwordField) => (
+          <Controller
+            key={passwordField.name}
+            control={form.control}
+            name={passwordField.name}
+            render={({ field, fieldState }) => (
+              <SettingsRow
+                label={passwordField.label}
+                htmlFor={`settings-${passwordField.name}`}
+                required
+                hint={"hint" in passwordField ? passwordField.hint : undefined}
+                invalid={fieldState.invalid}
+                error={fieldState.error}
+              >
+                <InputGroup className={SETTINGS_GROUP_CLASS}>
+                  <InputGroupInput
+                    {...field}
+                    id={`settings-${passwordField.name}`}
+                    type={revealed[passwordField.name] ? "text" : "password"}
+                    autoComplete={passwordField.autoComplete}
+                    aria-invalid={fieldState.invalid}
+                  />
+                  <InputGroupAddon align="inline-end">
+                    <InputGroupButton
+                      size="icon-sm"
+                      onClick={() =>
+                        setRevealed((current) => ({
+                          ...current,
+                          [passwordField.name]: !current[passwordField.name],
+                        }))
+                      }
+                      aria-label={`${
+                        revealed[passwordField.name] ? "Hide" : "Show"
+                      } ${passwordField.label.toLowerCase()}`}
+                      aria-pressed={revealed[passwordField.name]}
+                      className="text-[#5f6b7c]"
+                    >
+                      {revealed[passwordField.name] ? (
+                        <EyeClosed size={16} aria-hidden="true" />
+                      ) : (
+                        <Eye size={16} aria-hidden="true" />
+                      )}
+                    </InputGroupButton>
+                  </InputGroupAddon>
+                </InputGroup>
+              </SettingsRow>
+            )}
+          />
+        ))}
       </SettingsPanelBody>
 
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button
-          type="submit"
-          disabled={changePasswordMutation.status === "pending"}
-        >
-          {changePasswordMutation.status === "pending" ? (
-            <span className="flex items-center gap-2">
-              <Spinner className="size-4" />
-              Updating...
-            </span>
-          ) : (
-            "Update password"
-          )}
-        </Button>
-      </DialogFooter>
+      <SettingsFormFooter
+        onCancel={onClose}
+        canSave={form.formState.isDirty}
+        pending={changePasswordMutation.status === "pending"}
+      />
     </form>
   );
 }

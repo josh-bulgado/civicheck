@@ -8,7 +8,7 @@ import { FieldError } from "~/components/ui/field";
  */
 
 /** Label above a field, and the legend above a group of choice tiles. */
-export const WIZARD_LABEL_CLASS = "text-[15px] font-semibold";
+export const WIZARD_LABEL_CLASS = "text-[15px] font-semibold text-portal-ink-2";
 
 // An invalid control gets a tinted face and a solid 1px ring on top of the red
 // border, so the error is visible without relying on the border hue alone.
@@ -16,14 +16,20 @@ const INVALID_CONTROL_CLASS =
   "aria-invalid:bg-destructive/10 aria-invalid:ring-1 aria-invalid:ring-destructive";
 
 /**
- * Single-line controls. On a phone they are 44px tall with 16px type: iOS
- * Safari zooms the whole page when a field under 16px gains focus, and 44px is
- * the touch-target size. From `md` up they are 38px tall with 15px type to
- * match the labels above them.
+ * Single-line controls: 56px tall, 14px corners, a 1px #d7dee9 line on white,
+ * 17px type. The type size is also what keeps iOS Safari from zooming the page
+ * when a field gains focus (it does so under 16px), and 56px is well past the
+ * 44px touch target, so one size serves every screen. `data-[size=default]`
+ * is there because a select's own height is set under that selector, which a
+ * plain `h-14` would lose to.
  */
-export const WIZARD_CONTROL_CLASS = `h-11 text-base md:h-9.5 md:text-[15px] ${INVALID_CONTROL_CLASS}`;
+export const WIZARD_CONTROL_CLASS = `h-14 rounded-[14px] border-[#d7dee9] bg-white px-4.5 text-[17px] shadow-none placeholder:text-[#8a97a8] data-placeholder:text-[#8a97a8] data-[size=default]:h-14 md:text-[17px] ${INVALID_CONTROL_CLASS}`;
 
-export const WIZARD_TEXTAREA_CLASS = `text-base md:text-[15px] ${INVALID_CONTROL_CLASS}`;
+export const WIZARD_TEXTAREA_CLASS = `rounded-[14px] border-[#d7dee9] bg-white px-4.5 py-3.5 text-[17px] shadow-none placeholder:text-[#8a97a8] md:text-[17px] ${INVALID_CONTROL_CLASS}`;
+
+/** A control made of an addon and an input (the mobile number): same face as the single-line ones. */
+export const WIZARD_GROUP_CLASS =
+  "h-14 rounded-[14px] border-[#d7dee9] bg-white shadow-none *:data-[slot=input-group-control]:text-[17px] md:*:data-[slot=input-group-control]:text-[17px]";
 
 /** Error line under a field: icon plus message, 15px semibold in the error ink. */
 export function WizardFieldError({

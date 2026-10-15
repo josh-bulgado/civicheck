@@ -27,6 +27,8 @@ interface RequestMessagesCardProps {
   viewer: MessageSenderRole;
   /** Called after a message is sent, so the route can re-run its loader. */
   onSent: () => void;
+  /** The applicant page's softer card; staff keep the default. */
+  variant?: "dashboard" | "portal";
 }
 
 function senderLabel(message: RequestMessage, viewer: MessageSenderRole) {
@@ -45,7 +47,9 @@ export function RequestMessagesCard({
   messages,
   viewer,
   onSent,
+  variant = "dashboard",
 }: RequestMessagesCardProps) {
+  const portal = variant === "portal";
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -80,8 +84,20 @@ export function RequestMessagesCard({
   const inputId = `message-draft-${requestId}`;
 
   return (
-    <section className="dashboard-panel min-w-0 p-5">
-      <h2 className="text-lg font-bold text-foreground">
+    <section
+      className={
+        portal
+          ? "min-w-0 rounded-[28px] bg-card p-6 shadow-portal-card md:p-7"
+          : "dashboard-panel min-w-0 p-5"
+      }
+    >
+      <h2
+        className={
+          portal
+            ? "text-[22px] leading-[normal] font-semibold text-foreground"
+            : "text-lg font-bold text-foreground"
+        }
+      >
         {viewer === "applicant" ? "Messages with CCRO" : "Messages with the applicant"}
       </h2>
       <p className="mb-3 mt-1 text-xs text-muted-foreground">

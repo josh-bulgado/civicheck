@@ -19,7 +19,7 @@ import {
 import { getAppUrl } from "./app-url";
 
 /** Auth cookies are only ever sent over HTTPS when the app is served on it. */
-function useSecureCookies() {
+function secureCookiesEnabled() {
   return getAppUrl().startsWith("https://");
 }
 
@@ -34,7 +34,7 @@ export function setSessionScope(sessionOnly: boolean) {
     setCookie(
       SESSION_SCOPE_COOKIE,
       PERSISTENT_SESSION_VALUE,
-      persistentMarkerOptions(useSecureCookies()),
+      persistentMarkerOptions(secureCookiesEnabled()),
     );
   }
 }
@@ -101,7 +101,7 @@ export async function limitSessionToBrowser(
   setCookie(SESSION_SCOPE_COOKIE, proof, {
     path: "/",
     sameSite: "lax",
-    secure: useSecureCookies(),
+    secure: secureCookiesEnabled(),
   });
   return true;
 }
@@ -118,7 +118,7 @@ export function getSupabaseServerClient(options?: { sessionOnly?: boolean }) {
       options?.sessionOnly ??
       !isPersistentScope(getCookie(SESSION_SCOPE_COOKIE)),
   };
-  const secure = useSecureCookies();
+  const secure = secureCookiesEnabled();
 
   const client = createServerClient(
     process.env.SUPABASE_URL!,

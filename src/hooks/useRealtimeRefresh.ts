@@ -36,10 +36,17 @@ export function useRealtimeRefresh({
   tables,
   schema = "public",
   enabled = true,
+  onChange,
 }: {
   tables: string[];
   schema?: string;
   enabled?: boolean;
+  /**
+   * Runs for each realtime row change, ahead of the debounced refetch, so a
+   * client-side cache can mark itself stale. Not called by the focus/visibility
+   * fallback — a cache has its own expiry for that.
+   */
+  onChange?: () => void;
 }): RealtimeStatus {
   const router = useRouter();
   const [status, setStatus] = useState<RealtimeStatus>(
@@ -48,6 +55,8 @@ export function useRealtimeRefresh({
   // Keeps the effect from re-subscribing every time the router object changes.
   const routerRef = useRef(router);
   routerRef.current = router;
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
   // Arrays are a fresh reference each render, so the effect keys off the names.
   const tableKey = tables.join(",");
 
@@ -71,6 +80,11 @@ export function useRealtimeRefresh({
     const scheduleRefresh = () => {
       if (debounce) clearTimeout(debounce);
       debounce = setTimeout(refreshNow, REFRESH_DEBOUNCE_MS);
+    };
+
+    const handleChange = () => {
+      onChangeRef.current?.();
+      scheduleRefresh();
     };
 
     // Belt and braces. A backgrounded tab gets its timers throttled, which can
@@ -103,7 +117,7 @@ export function useRealtimeRefresh({
         pending = pending.on(
           "postgres_changes",
           { event: "*", schema, table },
-          scheduleRefresh,
+          handleChange,
         );
       }
 

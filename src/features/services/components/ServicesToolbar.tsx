@@ -23,7 +23,8 @@ import {
 import type { ServiceView } from "~/features/services/hooks/useServiceView";
 
 export type CategoryFilter = "all" | ServiceCategory | "one-visit";
-export type SortOption = "az" | "fee";
+/** `popular` (most requested first) is the applicant directory's default; staff choose from the other two. */
+export type SortOption = "popular" | "az" | "fee";
 
 // `shortLabel` drives the <640px chip label so long categories like
 // "Copies & endorsements" don't each take a whole line of the wrap.
@@ -89,6 +90,112 @@ const VIEW_OPTIONS: {
     icon: Rows3,
   },
 ];
+
+interface PortalServicesToolbarProps {
+  /** The phone's page-level search; from `md` the top bar's search does this. */
+  searchTerm: string;
+  onSearchTermChange: (value: string) => void;
+  category: CategoryFilter;
+  onCategoryChange: (value: CategoryFilter) => void;
+  sort: SortOption;
+  onSortChange: (value: SortOption) => void;
+}
+
+// The applicant portal drops "Finished in one visit" (the card's own wait line
+// says as much) and the category counts.
+const PORTAL_CATEGORY_FILTERS = CATEGORY_FILTERS.filter(
+  (filter) => filter.value !== "one-visit",
+);
+
+const PORTAL_SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: "popular", label: "Most used first" },
+  { value: "az", label: "A to Z" },
+  { value: "fee", label: "Lowest fee" },
+];
+
+/**
+ * The applicant portal's toolbar: category pills on the left, the sort as a
+ * plain text control on the right. No search (the top bar's already finds
+ * services), no layout toggle and no counts.
+ */
+export function PortalServicesToolbar({
+  searchTerm,
+  onSearchTermChange,
+  category,
+  onCategoryChange,
+  sort,
+  onSortChange,
+}: PortalServicesToolbarProps) {
+  return (
+    <div className="flex flex-col gap-4.5 md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-x-6 md:gap-y-3">
+      {/* Phone only. A desktop has the search in its top bar, so two fields are
+          not shown there. */}
+      <label className="flex h-13 items-center gap-3 rounded-full bg-card px-5 text-base text-[#5f6b7c] shadow-portal-card md:hidden">
+        <Search className="size-5 shrink-0" aria-hidden="true" />
+        <input
+          type="search"
+          value={searchTerm}
+          onChange={(event) => onSearchTermChange(event.target.value)}
+          placeholder="Search a service"
+          aria-label="Search a service"
+          autoComplete="off"
+          className="min-w-0 flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-[#5f6b7c]"
+        />
+      </label>
+
+      {/* A phone's pills scroll sideways, out to the edge of the screen; a
+          desktop's wrap, so every category is on screen at once. */}
+      <div
+        role="group"
+        aria-label="Filter services by category"
+        className="flex gap-2 max-md:-mx-5 max-md:overflow-x-auto max-md:px-5 max-md:[scrollbar-width:none] md:flex-wrap md:gap-2.5"
+      >
+        {PORTAL_CATEGORY_FILTERS.map((filter) => {
+          const isActive = category === filter.value;
+          return (
+            <button
+              key={filter.value}
+              type="button"
+              aria-pressed={isActive}
+              onClick={() => onCategoryChange(filter.value)}
+              className={cn(
+                "civic-press h-10.5 shrink-0 rounded-full px-4.5 text-[15px] font-semibold whitespace-nowrap transition-colors md:h-12 md:px-5.5 md:text-base",
+                isActive
+                  ? "bg-primary text-white shadow-[0_6px_16px_rgba(11,77,162,0.25)]"
+                  : "bg-card text-portal-ink-2 shadow-portal-card hover:bg-primary-tint",
+              )}
+            >
+              <span className="sm:hidden">{filter.shortLabel}</span>
+              <span className="hidden sm:inline">{filter.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <Select
+        items={PORTAL_SORT_OPTIONS}
+        value={sort}
+        onValueChange={(value) => onSortChange(value as SortOption)}
+      >
+        <SelectTrigger
+          aria-label="Sort services"
+          className="gap-1.5 border-0 max-md:hidden bg-transparent px-2 text-[15px] text-muted-foreground shadow-none hover:text-foreground data-[size=default]:h-10"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent align="end">
+          <SelectGroup>
+            {PORTAL_SORT_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
 
 interface ServicesToolbarProps {
   searchTerm: string;

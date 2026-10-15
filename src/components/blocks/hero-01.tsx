@@ -33,7 +33,6 @@ export default function Hero01() {
           href="#"
           className="flex items-center gap-2 font-semibold tracking-tight text-foreground"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="https://blockus.lndevui.com/brand/logo.svg"
             alt="blockus"

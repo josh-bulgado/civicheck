@@ -32,6 +32,8 @@ const tabsListVariants = cva(
         line: "gap-1 bg-transparent",
         accent: "bg-muted",
         pill: "gap-1 rounded-full bg-muted p-1 group-data-horizontal/tabs:h-auto",
+        // Bare track for a settings sidebar: each tab is its own soft pill.
+        sidebar: "w-full gap-1 rounded-none bg-transparent p-0 group-data-horizontal/tabs:h-auto",
       },
     },
     defaultVariants: {
@@ -65,6 +67,7 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
         "data-active:bg-background data-active:text-foreground dark:data-active:border-input dark:data-active:bg-input/30 dark:data-active:text-foreground",
         "group-data-[variant=accent]/tabs-list:data-active:bg-primary group-data-[variant=accent]/tabs-list:data-active:text-primary-foreground group-data-[variant=accent]/tabs-list:data-active:shadow-sm group-data-[variant=accent]/tabs-list:not-data-active:hover:text-foreground group-data-[variant=accent]/tabs-list:data-active:hover:bg-primary group-data-[variant=accent]/tabs-list:data-active:hover:text-primary-foreground",
         "group-data-[variant=pill]/tabs-list:rounded-full group-data-[variant=pill]/tabs-list:font-semibold group-data-[variant=pill]/tabs-list:text-body-2 group-data-[variant=pill]/tabs-list:hover:text-foreground group-data-[variant=pill]/tabs-list:data-active:bg-foreground group-data-[variant=pill]/tabs-list:data-active:text-white group-data-[variant=pill]/tabs-list:data-active:hover:text-white",
+        "group-data-[variant=sidebar]/tabs-list:h-9 group-data-[variant=sidebar]/tabs-list:gap-2.5 group-data-[variant=sidebar]/tabs-list:rounded-xl group-data-[variant=sidebar]/tabs-list:px-3 group-data-[variant=sidebar]/tabs-list:text-[13px] group-data-[variant=sidebar]/tabs-list:font-medium group-data-[variant=sidebar]/tabs-list:text-body-2 group-data-[variant=sidebar]/tabs-list:hover:bg-white/70 group-data-[variant=sidebar]/tabs-list:hover:text-foreground group-data-[variant=sidebar]/tabs-list:data-active:bg-primary-soft group-data-[variant=sidebar]/tabs-list:data-active:font-semibold group-data-[variant=sidebar]/tabs-list:data-active:text-primary group-data-[variant=sidebar]/tabs-list:data-active:hover:bg-primary-soft group-data-[variant=sidebar]/tabs-list:data-active:hover:text-primary",
         "after:absolute after:bg-foreground after:opacity-0 after:transition-opacity group-data-horizontal/tabs:after:inset-x-0 group-data-horizontal/tabs:after:bottom-[-5px] group-data-horizontal/tabs:after:h-0.5 group-data-vertical/tabs:after:inset-y-0 group-data-vertical/tabs:after:-right-1 group-data-vertical/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100",
         className
       )}

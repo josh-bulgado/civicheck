@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { QuietLink } from "~/components/quiet-link";
 import { Search, ChevronDown, ArrowRight, PhilippinePeso } from "lucide-react";
 import { enterDelay, staggerStyle } from "~/components/motion/stagger";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -24,7 +24,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import SiteHeader from "~/features/landing/components/SiteHeader";
 import SiteFooter from "~/features/landing/components/SiteFooter";
-import { resetApplyChoices } from "~/features/apply/hooks/useApplyDraft";
+import { useResetApplyChoices } from "~/features/apply/hooks/useApplyDraft";
 import { getAllServicesWithRequirements } from "~/features/services/services.queries";
 import {
   cachedServiceRead,
@@ -71,6 +71,7 @@ function scrollWithinPage(id: string) {
 }
 
 export default function ServicesPage({ selectedCode }: ServicesPageProps) {
+  const resetApplyChoices = useResetApplyChoices();
   const [services, setServices] = useState<Service[]>([]);
   const [requirements, setRequirements] = useState<ServiceRequirement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -456,7 +457,7 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                           </p>
                         </div>
                         <div className="flex flex-wrap gap-3">
-                          <Link
+                          <QuietLink
                             to="/login"
                             search={{ redirect: "/requirements" }}
                             className={buttonVariants({
@@ -465,8 +466,8 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                             })}
                           >
                             Save checklist
-                          </Link>
-                          <Link
+                          </QuietLink>
+                          <QuietLink
                             to="/apply/$serviceCode/case"
                             params={{
                               serviceCode:
@@ -481,7 +482,7 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                           >
                             Start application
                             <ArrowRight className="size-3.5" />
-                          </Link>
+                          </QuietLink>
                         </div>
                       </div>
                     </div>

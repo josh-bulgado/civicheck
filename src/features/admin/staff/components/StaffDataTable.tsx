@@ -64,11 +64,12 @@ export function StaffDataTable({
       ? (resendInvitation.variables?.data.staffId ?? null)
       : null;
 
+  const resend = resendInvitation.mutate;
   const handleResend = useCallback(
     (staffMember: StaffMember) => {
-      void resendInvitation.mutate({ data: { staffId: staffMember.id } });
+      void resend({ data: { staffId: staffMember.id } });
     },
-    [resendInvitation.mutate],
+    [resend],
   );
 
   const handleCancelRequest = useCallback((staffMember: StaffMember) => {
@@ -101,6 +102,7 @@ export function StaffDataTable({
     setRemoveTarget(staffMember);
   }, []);
 
+  const reactivate = reactivateStaff.mutate;
   const columns = useMemo(
     () =>
       createStaffColumns({
@@ -112,7 +114,7 @@ export function StaffDataTable({
         onCancel: handleCancelRequest,
         onRemove: handleRemoveRequest,
         onReactivate: (staffMember) =>
-          void reactivateStaff.mutate({ data: { staffId: staffMember.id } }),
+          void reactivate({ data: { staffId: staffMember.id } }),
       }),
     [
       checkingStaffId,
@@ -122,7 +124,7 @@ export function StaffDataTable({
       handleRemoveRequest,
       handleResend,
       resendingStaffId,
-      reactivateStaff.mutate,
+      reactivate,
     ],
   );
 

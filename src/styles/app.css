@@ -3,6 +3,11 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Screens too short for the desktop shell's full spacing. A page that is meant
+   to fit one screen (the applicant dashboard) tightens up under this instead of
+   scrolling. */
+@custom-variant short (@media (max-height: 820px));
+
 @layer base {
   *,
   ::after,
@@ -19,6 +24,11 @@
   html {
     color-scheme: light;
     scroll-behavior: smooth;
+    /* Reserve the scrollbar's width on every page. Without it a short page
+       (dashboard) is wider than a long one (notifications, services), so
+       right-aligned chrome like the bell and seal slides sideways as you
+       navigate or as a list grows past the fold. */
+    scrollbar-gutter: stable;
     @apply font-sans antialiased;
   }
 
@@ -121,6 +131,12 @@
   --color-surface-subtle: var(--surface-subtle);
   --color-sidebar-muted: var(--sidebar-muted);
 
+  /* Citizen portal, calm round. */
+  --color-portal-panel: var(--portal-panel);
+  --color-portal-search: var(--portal-search);
+  --color-portal-ink-2: var(--portal-ink-2);
+  --color-portal-danger-soft: var(--portal-danger-soft);
+
   --color-tone-review: var(--tone-review);
   --color-tone-review-soft: var(--tone-review-soft);
   --color-tone-progress: var(--tone-progress);
@@ -159,6 +175,31 @@
   --radius-2xl: 1rem;
   --radius-3xl: 1.25rem;
   --radius-4xl: 1.5rem;
+  /* The citizen portal's inset panel and its hero card. Cards are 4xl (24px),
+     icon tiles 2xl (16px). */
+  --radius-panel: 1.75rem;
+  /* The one blue card for the main request, and the header band of dialogs. */
+  --radius-hero: 2rem;
+
+  /* Citizen portal shadows. The panel's 1px ring stands in for a border, and
+     so do the 1px rings on the menu, popover and dialog. */
+  --shadow-portal-card: 0 1px 2px rgba(15, 27, 45, 0.04);
+  --shadow-portal-panel:
+    0 0 0 1px rgba(15, 27, 45, 0.04), 0 24px 60px rgba(30, 60, 110, 0.08);
+  --shadow-portal-button: 0 10px 24px rgba(11, 77, 162, 0.28);
+  --shadow-portal-nav-active:
+    0 1px 2px rgba(15, 27, 45, 0.06), 0 8px 22px rgba(11, 77, 162, 0.1);
+  /* White pill buttons that sit on the blue hero or the gradient ground. */
+  --shadow-portal-pill:
+    0 1px 2px rgba(15, 27, 45, 0.08), 0 4px 12px rgba(15, 27, 45, 0.08);
+  /* The sidebar's profile menu. */
+  --shadow-portal-menu:
+    0 12px 40px rgba(15, 27, 45, 0.16), 0 0 0 1px rgba(15, 27, 45, 0.05);
+  /* The bell's notification popup. */
+  --shadow-portal-popover:
+    0 20px 60px rgba(15, 27, 45, 0.18), 0 0 0 1px rgba(15, 27, 45, 0.05);
+  --shadow-portal-dialog:
+    0 30px 80px rgba(15, 27, 45, 0.3), 0 0 0 1px rgba(15, 27, 45, 0.05);
 }
 
 :root {
@@ -180,6 +221,14 @@
   --secondary: #eef1f6;
   --secondary-foreground: #0f1b2d;
   --muted: #eef1f6;
+  /* Placeholder blocks while a page loads. `--muted` is the same grey as the
+     workspace and almost the same as the portal panel, so a skeleton drawn with
+     it is there but cannot be seen. This one reads on the panel, the workspace
+     and a white card alike. The sheen is kept low so that at the peak of the
+     sweep the block is still a shade darker than the panel it sits on, instead
+     of dissolving into it. */
+  --skeleton: #dde4ee;
+  --skeleton-sheen: color-mix(in srgb, white 40%, transparent);
   --muted-foreground: #6b7787;
   --muted-2: #5d6a7c;
   --body: #475363;
@@ -275,6 +324,45 @@
   --panel-dark-highlight-border: #2d6cbf;
   --panel-dark-text: #cdd7e4;
   --panel-dark-muted: #9fb0c6;
+
+  /* ─── Citizen portal, calm round ───────────────────────────────────────────
+     On :root rather than under `.citizen-portal` because the mobile sidebar
+     sheet renders in a portal outside that wrapper and still needs them. All
+     new names, so nothing outside the citizen shell reads them. */
+  /* The inset panel behind the cards, and the search pill that sits on it. */
+  --portal-panel: #f4f6fa;
+  --portal-search: #e8ecf3;
+  /* Inactive nav icons. */
+  --portal-ink-2: #1b2a3f;
+  /* Tint behind red (--destructive) text: the "Action needed" tag, the
+     Incomplete pill. Red is only for what the applicant must act on. */
+  --portal-danger-soft: #fde8e6;
+  /* Ground under the sidebar and the panel: a soft blue wash. Every gradient
+     in the portal is blue; gold is only for brand marks and unread dots. */
+  --portal-ground: linear-gradient(
+    180deg,
+    #d6e3f6 0%,
+    #e4ecf7 36%,
+    #ecf0f6 70%,
+    #e6ebf2 100%
+  );
+  /* The main request's card on the dashboard, and the header band of the
+     requirements and apply dialogs. */
+  --portal-hero: linear-gradient(
+    160deg,
+    #a9c3ee 0%,
+    #c7d9f4 48%,
+    #e4ecf9 100%
+  );
+  /* A request row or card with an unread update (My Requests). */
+  --portal-unread-highlight: linear-gradient(
+    90deg,
+    #d0e0fa 0%,
+    #e6effc 55%,
+    #f5f8fe 100%
+  );
+  /* Unread notification rows on the full page. */
+  --portal-unread-row: linear-gradient(90deg, #eaf1fc, #ffffff 70%);
 
   /* ─── Motion tokens ────────────────────────────────────────────────────────
      One scale for the whole app so timings stay in step. `--ease-civic` is a
@@ -568,12 +656,14 @@
   }
 }
 
-/* The citizen sidebar is shadcn's floating variant reshaped into the design's
-   inset card. Unlayered on purpose: the variant sets its radius and shadow with
-   utilities, which a rule inside `@layer components` cannot override. */
+/* The citizen sidebar is shadcn's floating variant with its box taken away: the
+   nav and the user card sit straight on the gradient ground. Unlayered on
+   purpose: the variant sets its background, radius and ring with utilities,
+   which a rule inside `@layer components` cannot override. */
 .citizen-portal [data-slot="sidebar-inner"] {
-  border-radius: 1rem;
-  box-shadow: 0 0 0 1px var(--sidebar-border);
+  background-color: transparent;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 /* Shared civic layout primitives. */
@@ -720,9 +810,22 @@
     /* Secondary text sits on tinted rows and bands here; the default gray dips
        under AA on those. */
     --muted-foreground: #5f6b7c;
-    --sidebar: #f7f9fc;
-    /* The ground runs under the sidebar card too, not just the main column. */
-    background-color: var(--ground);
+    /* Keeps the ground layer below (z-index: -1) inside the shell instead of
+       letting it drop behind the page background. */
+    isolation: isolate;
+  }
+
+  /* The gradient ground under the sidebar and the panel. A fixed layer rather
+     than a background on the wrapper: it stays put while the page scrolls, so
+     the (also fixed) sidebar always sits on the same wash, and it is composited
+     instead of repainted on scroll. */
+  .citizen-portal::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: var(--portal-ground);
+    pointer-events: none;
   }
 
   .citizen-portal :focus-visible {
@@ -731,21 +834,33 @@
   }
 
   /* ─── Application wizard ───────────────────────────────────────────────────
-     The apply layout puts `.apply-wizard` on its wrapper. This is the
-     contrast pass for the case → details → documents → review flow: secondary
-     ink is darkened until text clears AA (4.5:1). Borders are deliberately
-     NOT darkened here: the wizard uses the same soft borders and borderless
-     `.portal-card` surfaces as the rest of the citizen portal. Fields stay
-     identifiable by their radio rings, chevrons and the focus ring.
-     Scoped like `.citizen-portal`, so the rest of the app keeps its tokens. */
+     The apply layout puts `.apply-wizard` on its wrapper, and dialogs that
+     portal out of it re-apply the class. It takes the citizen portal's colours
+     (the brand blue, success green and the red for what must be fixed), and its
+     secondary ink: #5f6b7c is 5.4:1 on white, which clears AA. Scoped like
+     `.citizen-portal`, so the rest of the app is untouched. */
   .apply-wizard {
-    --primary: #0b3d91;
-    --primary-hover: #082c69;
-    --ring: #0b3d91;
-    --muted-foreground: #334155;
-    --body: #1e293b;
-    --destructive: #b01616;
-    --success: #0f6b3d;
+    --muted-foreground: #5f6b7c;
+    --body: #3d4a5c;
+    --destructive: #b3261e;
+  }
+
+  /* The portal's gradient ground, as a fixed layer so it stays put while the
+     card scrolls. Only the page wrappers carry it. A dialog or popover that
+     re-applies `.apply-wizard` for the colours must not: it is itself
+     transformed, so a fixed layer inside it fills the dialog's own box and
+     paints over its white, with square corners past the rounded ones. */
+  .apply-wizard-ground {
+    isolation: isolate;
+  }
+
+  .apply-wizard-ground::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: var(--portal-ground);
+    pointer-events: none;
   }
 
   .portal-page {
@@ -759,11 +874,11 @@
   }
 
   .portal-title {
-    @apply text-[1.75rem] leading-tight font-bold tracking-[-0.025em] text-foreground sm:text-[2.125rem];
+    @apply text-[1.75rem] leading-[1.15] font-semibold tracking-[-0.02em] text-foreground md:text-[2.375rem];
   }
 
   .portal-heading {
-    @apply text-xl font-bold tracking-[-0.01em] text-foreground;
+    @apply text-[1.375rem] leading-[normal] font-semibold tracking-[-0.01em] text-foreground md:text-2xl;
   }
 
   .portal-eyebrow {
@@ -817,6 +932,12 @@
   .civic-enter-left {
     animation: civic-slide-in-left var(--duration-base) var(--ease-civic) both;
     animation-delay: var(--enter-delay, 0ms);
+  }
+
+  /* Real content taking the place of its skeleton: a short fade, no movement,
+     so the swap reads as the same page filling in. */
+  .civic-content-in {
+    animation: civic-fade-in var(--duration-fast) var(--ease-civic) both;
   }
 
   /* Uploaded-file row: lands, then its number badge shows a check and returns
@@ -941,16 +1062,24 @@
      and out, and it makes a slow load feel shorter than it is. */
 
   .civic-skeleton {
-    background-color: var(--muted);
+    background-color: var(--skeleton);
     background-image: linear-gradient(
       90deg,
       transparent 0%,
-      color-mix(in srgb, white 62%, transparent) 50%,
+      var(--skeleton-sheen) 50%,
       transparent 100%
     );
     background-size: 220% 100%;
     background-repeat: no-repeat;
-    animation: civic-shimmer 1.5s var(--ease-civic) infinite;
+    /* Fades in rather than snapping on. `--skeleton-delay` holds it back first:
+       a load that finishes inside the delay never shows a skeleton at all, so a
+       fast page does not flash one. It is plain CSS on purpose, so it also works
+       in server-rendered HTML before any script has run. Left at 0 where the
+       router already waits before showing a pending page. */
+    animation:
+      civic-fade-in var(--duration-fast) var(--ease-civic)
+        var(--skeleton-delay, 0ms) both,
+      civic-shimmer 1.5s var(--ease-civic) infinite;
   }
 
   /* Thin indeterminate bar, for the top of a panel that is refreshing. */
@@ -1008,6 +1137,7 @@
   .civic-enter-fade,
   .civic-enter-scale,
   .civic-enter-left,
+  .civic-content-in,
   .civic-upload-land,
   .civic-upload-check,
   .civic-upload-number,
@@ -1057,7 +1187,7 @@
    With `.apply-wizard` darkening --muted-foreground, that utility would make a
    placeholder read as a typed value, so it gets its own lighter ink (4.7:1). */
 .apply-wizard ::placeholder {
-  color: #64748b;
+  color: #8a97a8;
   opacity: 1;
 }
 
@@ -1082,4 +1212,92 @@ input[aria-hidden="true"][tabindex="-1"] {
   position: absolute !important;
   top: auto !important;
   left: auto !important;
+}
+
+/* ─── Wizard waiting states ──────────────────────────────────────────────────
+   An indeterminate bar, the signal bars of the weak-connection notice, and the
+   skeleton shimmer. Under `prefers-reduced-motion` none of them animate:
+   skeletons stay a flat grey, the bar rests part-filled, the signal bars sit at
+   full height. */
+@keyframes wizard-bar-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(263%);
+  }
+}
+
+.wizard-bar {
+  position: relative;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--wizard-bar-track, #e4e9f1);
+}
+
+.wizard-bar::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 38%;
+  border-radius: inherit;
+  background: var(--wizard-bar-fill, var(--primary));
+  animation: wizard-bar-slide 1.4s ease-in-out infinite;
+}
+
+@keyframes wizard-signal {
+  0%,
+  100% {
+    transform: scaleY(0.4);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.wizard-signal > span {
+  transform-origin: bottom;
+  animation: wizard-signal 1s ease-in-out infinite;
+}
+.wizard-signal > span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.wizard-signal > span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.wizard-signal > span:nth-child(4) {
+  animation-delay: 0.45s;
+}
+
+@keyframes wizard-shimmer {
+  from {
+    background-position: -400px 0;
+  }
+  to {
+    background-position: 400px 0;
+  }
+}
+
+.wizard-skeleton {
+  background: linear-gradient(90deg, #e8ecf3 0%, #f6f8fb 50%, #e8ecf3 100%);
+  background-size: 800px 100%;
+  /* The same short fade the rest of the app's skeletons come in with. */
+  animation:
+    civic-fade-in var(--duration-fast) var(--ease-civic) both,
+    wizard-shimmer 1.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wizard-bar::after {
+    animation: none;
+  }
+  .wizard-signal > span {
+    animation: none;
+    transform: none;
+  }
+  .wizard-skeleton {
+    animation: none;
+    background: #e8ecf3;
+  }
 }

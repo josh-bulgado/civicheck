@@ -5,10 +5,13 @@ import { loginWithOAuthFn } from "../auth.mutations";
 
 type OAuthProvider = "google" | "apple";
 
+/** What `loginWithOAuthFn` hands back: an error to show, or the URL to leave for. */
+type OAuthResult = { error?: boolean; message?: string; url?: string | null };
+
 export function useOAuthLogin() {
   const mutation = useMutation<
     { provider: OAuthProvider; keepSignedIn?: boolean },
-    any
+    OAuthResult
   >({
     fn: async ({ provider, keepSignedIn }) =>
       loginWithOAuthFn({ data: { provider, keepSignedIn } }),

@@ -1,4 +1,9 @@
-import { Controller, type Control } from "react-hook-form";
+import {
+  Controller,
+  type Control,
+  type FieldValues,
+  type Path,
+} from "react-hook-form";
 import { Phone } from "lucide-react";
 import { DatePicker } from "~/components/ui/date-picker";
 import {
@@ -38,6 +43,7 @@ import {
 import { NoticeAlert } from "./NoticeAlert";
 import {
   WIZARD_CONTROL_CLASS,
+  WIZARD_GROUP_CLASS,
   WIZARD_LABEL_CLASS,
   WIZARD_TEXTAREA_CLASS,
   WizardFieldError,
@@ -138,7 +144,7 @@ function planFieldSpans(
   return spans;
 }
 
-export function DynamicFormFields({
+export function DynamicFormFields<TFieldValues extends FieldValues>({
   definition,
   step,
   control,
@@ -149,7 +155,11 @@ export function DynamicFormFields({
 }: {
   definition: FormTemplateDefinition;
   step: FormStep;
-  control: Control<any>;
+  /**
+   * The calling form's own control. Field keys come from the published template
+   * at runtime, so they cannot be checked against `TFieldValues` here.
+   */
+  control: Control<TFieldValues>;
   values: DynamicFieldValues;
   onDateChange?: (fieldKey: string, value: string) => void;
   /** Adds an asterisk to required labels; the caller owns the legend. */
@@ -191,12 +201,12 @@ export function DynamicFormFields({
           </div>
         ) : null}
 
-        <FieldGroup className="grid grid-cols-1 gap-4 sm:grid-cols-6">
+        <FieldGroup className="grid grid-cols-1 gap-5 sm:grid-cols-6">
           {fields.map((definitionField) => (
             <Controller
               key={definitionField.key}
               control={control}
-              name={definitionField.key}
+              name={definitionField.key as Path<TFieldValues>}
               rules={{
                 required: definitionField.required
                   ? `${definitionField.label} is required`
@@ -331,6 +341,7 @@ export function DynamicFormFields({
                           `Select ${definitionField.label.toLowerCase()}`
                         }
                         invalid={fieldState.invalid}
+                        icon="calendar"
                         className={WIZARD_CONTROL_CLASS}
                       />
                     ) : definitionField.type === "select" ? (
@@ -357,7 +368,7 @@ export function DynamicFormFields({
                         </SelectContent>
                       </Select>
                     ) : definitionField.type === "phone" ? (
-                      <InputGroup>
+                      <InputGroup className={WIZARD_GROUP_CLASS}>
                         <InputGroupAddon>
                           <Phone aria-hidden="true" />
                           <InputGroupText>+63</InputGroupText>

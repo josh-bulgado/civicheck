@@ -18,8 +18,8 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "~/components/ui/sidebar";
-import { LogOut, Settings, User } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { ChevronsUpDown, LogOut, Settings, User } from "lucide-react";
+import { QuietLink } from "~/components/quiet-link";
 import { SettingsDialog } from "~/features/account/components/SettingsDialog";
 import {
   getDisplayName,
@@ -28,14 +28,9 @@ import {
   type SettingsTab,
 } from "~/features/account/account.types";
 
-const CITIZEN_ROW =
-  "flex h-12 w-full items-center gap-3 rounded-xl px-2 text-left text-sm font-semibold whitespace-nowrap text-sidebar-foreground hover:bg-muted";
-const CITIZEN_ROW_TILE =
-  "flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-primary-soft text-primary";
-
 interface NavFooterProps {
   account: AccountProfile | null;
-  /** The applicant shell: account actions as visible rows, not a dropdown. */
+  /** The applicant shell: one user card that opens a Settings / Log out menu. */
   citizen?: boolean;
 }
 
@@ -50,6 +45,9 @@ export function NavFooter({ account, citizen = false }: NavFooterProps) {
   const name = account ? getDisplayName(account) : "CiviCheck User";
   const email = account?.email ?? "";
   const initials = getInitials(name);
+  // The calm user card shows the first name only; an account without one falls
+  // back to the full display name rather than an empty card.
+  const firstName = account?.firstName.trim() || name;
 
   const settingsDialog = account && (
     <SettingsDialog
@@ -62,48 +60,58 @@ export function NavFooter({ account, citizen = false }: NavFooterProps) {
   );
 
   if (citizen) {
+    // The whole card is the menu's trigger. The menu opens upward and is as
+    // wide as the card, so the two read as one piece. Its items sit in the
+    // popup's own portal, outside `.citizen-portal`, so they use explicit
+    // colours rather than the portal's remapped tokens.
     return (
-      <SidebarFooter className="gap-0 px-3 pt-0 pb-6">
-        <button
-          type="button"
-          disabled={!account}
-          onClick={() => setSettingsTab("profile")}
-          aria-label={`${name}, open profile settings`}
-          className="flex flex-col items-center gap-1 rounded-xl px-2 pt-4 pb-1 text-center hover:bg-muted"
-        >
-          <span
-            className="mb-2 flex size-13 items-center justify-center rounded-full bg-primary-soft text-[17px] font-bold text-primary"
-            aria-hidden="true"
-          >
-            {initials}
-          </span>
-          <span className="max-w-full truncate text-[15px] font-semibold text-sidebar-foreground">
-            {name}
-          </span>
-          <span className="max-w-full truncate text-xs text-muted-foreground">
-            {email}
-          </span>
-        </button>
-        <div className="mx-2 mt-4 mb-2 h-px bg-sidebar-border" />
-        <div className="flex flex-col gap-0.5">
-          <button
-            type="button"
+      <SidebarFooter className="gap-0 p-0 pb-1.5">
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            nativeButton
             disabled={!account}
-            onClick={() => setSettingsTab("general")}
-            className={CITIZEN_ROW}
+            aria-label={`${name}, account menu`}
+            className="civic-press flex w-full items-center gap-3 rounded-[22px] bg-white/78 py-2.5 pr-3.5 pl-3 text-left shadow-[0_1px_2px_rgba(15,27,45,0.05),0_8px_24px_rgba(11,77,162,0.07)] hover:bg-white/90 data-popup-open:bg-white"
           >
-            <span className={CITIZEN_ROW_TILE}>
-              <Settings className="size-4" aria-hidden="true" />
+            <span
+              className="flex size-10.5 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-primary"
+              aria-hidden="true"
+            >
+              {initials}
             </span>
-            Account settings
-          </button>
-          <Link to="/logout" className={CITIZEN_ROW}>
-            <span className={CITIZEN_ROW_TILE}>
-              <LogOut className="size-4" aria-hidden="true" />
+            <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-sidebar-foreground">
+              {firstName}
             </span>
-            Log out
-          </Link>
-        </div>
+            <ChevronsUpDown
+              className="size-5 shrink-0 text-muted-foreground"
+              aria-hidden="true"
+            />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            side="top"
+            align="start"
+            sideOffset={8}
+            className="flex flex-col gap-0.5 rounded-[20px] bg-white p-2 shadow-portal-menu ring-0"
+          >
+            {/* `!` on the gear: the item restyles every descendant's colour on
+                focus, which would turn the brand-blue icon dark. */}
+            <DropdownMenuItem
+              onClick={() => setSettingsTab("general")}
+              className="h-12 gap-3 rounded-[14px] px-3.5 text-[15px] font-medium focus:bg-portal-panel"
+            >
+              <Settings className="size-5 text-primary!" aria-hidden="true" />
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              render={<QuietLink to="/logout" />}
+              className="h-12 gap-3 rounded-[14px] px-3.5 text-[15px] font-medium"
+            >
+              <LogOut className="size-5" aria-hidden="true" />
+              Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {settingsDialog}
       </SidebarFooter>
@@ -168,12 +176,12 @@ export function NavFooter({ account, citizen = false }: NavFooterProps) {
                 <Settings size={16} className="opacity-80" aria-hidden="true" />
                 Settings
               </DropdownMenuItem>
-              <Link to="/logout">
+              <QuietLink to="/logout">
                 <DropdownMenuItem variant="destructive">
                   <LogOut size={16} className="opacity-80" aria-hidden="true" />
                   Logout
                 </DropdownMenuItem>
-              </Link>
+              </QuietLink>
             </DropdownMenuContent>
           </DropdownMenu>
         </SidebarMenuItem>

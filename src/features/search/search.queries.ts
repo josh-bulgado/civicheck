@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireActiveSession } from "~/server/auth";
 import { hasPermission, isDepartmentScopedRole } from "~/lib/permissions";
 import { loadServiceCatalogue } from "~/features/services/services.catalogue";
+import { TERMINAL_STATUSES } from "~/features/requests/request-workflow";
 import type { Service } from "~/features/admin/services/services.types";
 
 const searchInput = z.object({
@@ -35,6 +36,8 @@ export interface RequestSearchHit {
   status: string;
   serviceName: string;
   applicantName: string;
+  /** When the request was submitted (ISO). */
+  createdAt: string;
   /** Matched fields, passed to cmdk so its filter mirrors the server's. */
   keywords: string;
 }
@@ -49,6 +52,40 @@ const REQUEST_RESULT_LIMIT = 6;
 
 function one<T>(value: T | T[] | null | undefined): T | undefined {
   return Array.isArray(value) ? value[0] : (value ?? undefined);
+}
+
+type Embed<T> = T | T[] | null | undefined;
+
+interface ServiceNameEmbed {
+  name?: string | null;
+  display_name?: string | null;
+}
+
+/** A `requests` row as `searchEverythingFn` selects it. */
+interface RequestSearchRow {
+  id: string;
+  tracking_number: string;
+  request_type: string | null;
+  status: string;
+  created_at: string;
+  form_data: Record<string, unknown> | null;
+  services_registry: Embed<
+    ServiceNameEmbed & {
+      department_id?: string | null;
+      departments?: Embed<{ id: string; name: string }>;
+    }
+  >;
+  profiles: Embed<{ first_name?: string | null; last_name?: string | null }>;
+}
+
+/** A `requests` row as `getPaletteDefaultsFn` selects it. */
+interface PaletteDefaultRow {
+  id: string;
+  tracking_number: string;
+  request_type: string | null;
+  status: string;
+  created_at: string;
+  services_registry: Embed<ServiceNameEmbed>;
 }
 
 /** Everything a service search can match on, as one lowercased string. */
@@ -70,6 +107,11 @@ function serviceHaystack(service: Service): string {
 function matchesService(service: Service, term: string): boolean {
   return serviceHaystack(service).includes(term);
 }
+
+/** How many requests the palette lists before a word is typed. */
+const DEFAULT_REQUEST_LIMIT = 3;
+/** How far back to look for them: enough to find a ready one among newer ones. */
+const DEFAULT_REQUEST_LOOKBACK = 20;
 
 /**
  * PostgREST reads these characters as `or` syntax, so a search term containing
@@ -135,7 +177,7 @@ export const searchEverythingFn = createServerFn({ method: "GET" })
     let query = supabase
       .from("requests")
       .select(
-        `id, tracking_number, request_type, status, form_data,
+        `id, tracking_number, request_type, status, created_at, form_data,
          services_registry(name, display_name, department_id, departments(id, name)),
          profiles(first_name, last_name)`,
       )
@@ -157,13 +199,11 @@ export const searchEverythingFn = createServerFn({ method: "GET" })
     const { data: rows, error } = await query;
     if (error) throw new Error(error.message);
 
-    const requests = (rows ?? [])
-      .map((row: any) => {
-        const service = one<any>(row.services_registry);
-        const department = one<{ id: string }>(service?.departments);
-        const profile = one<{ first_name?: string; last_name?: string }>(
-          row.profiles,
-        );
+    const requests = ((rows ?? []) as RequestSearchRow[])
+      .map((row) => {
+        const service = one(row.services_registry);
+        const department = one(service?.departments);
+        const profile = one(row.profiles);
         const fromProfile = profile
           ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim()
           : "";
@@ -181,6 +221,7 @@ export const searchEverythingFn = createServerFn({ method: "GET" })
           status: row.status as string,
           serviceName,
           applicantName,
+          createdAt: row.created_at as string,
           keywords: [
             row.tracking_number,
             row.request_type,
@@ -206,3 +247,51 @@ export const searchEverythingFn = createServerFn({ method: "GET" })
 
     return { services, requests };
   });
+
+/**
+ * What the applicant's palette shows before a word is typed: the requests still
+ * moving, the one waiting at the cashier first, then newest first. Finished ones
+ * are for the full list. Anyone who isn't an applicant gets nothing —
+ * personnel keep the plain palette.
+ */
+export const getPaletteDefaultsFn = createServerFn({ method: "GET" }).handler(
+  async (): Promise<RequestSearchHit[]> => {
+    const { supabase, user, role } = await requireActiveSession();
+    const isApplicant =
+      hasPermission(role, "requests:view_own") &&
+      !hasPermission(role, "requests:view_all");
+    if (!isApplicant) return [];
+
+    const { data: rows, error } = await supabase
+      .from("requests")
+      .select(
+        "id, tracking_number, request_type, status, created_at, services_registry(name, display_name)",
+      )
+      .eq("applicant_id", user.id)
+      .not("status", "in", `(${TERMINAL_STATUSES.join(",")})`)
+      .order("created_at", { ascending: false })
+      .limit(DEFAULT_REQUEST_LOOKBACK);
+    if (error) throw new Error(error.message);
+
+    // Stable: within "ready" and within "the rest", newest stays first.
+    const ordered = [...((rows ?? []) as PaletteDefaultRow[])].sort(
+      (a, b) =>
+        Number(b.status === "ready_for_release") - Number(a.status === "ready_for_release"),
+    );
+
+    return ordered.slice(0, DEFAULT_REQUEST_LIMIT).map((row): RequestSearchHit => {
+      const service = one(row.services_registry);
+      const serviceName =
+        service?.display_name || service?.name || row.request_type || "—";
+      return {
+        id: row.id,
+        trackingNumber: row.tracking_number,
+        status: row.status,
+        serviceName,
+        applicantName: "",
+        createdAt: row.created_at,
+        keywords: `${row.tracking_number} ${serviceName}`.toLowerCase(),
+      };
+    });
+  },
+);

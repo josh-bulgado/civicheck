@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { resetApplyChoices } from "~/features/apply/hooks/useApplyDraft";
+import { useResetApplyChoices } from "~/features/apply/hooks/useApplyDraft";
 import { ConfirmApplyDialog } from "~/features/services/components/ConfirmApplyDialog";
+import { PortalRequirementsDialog } from "~/features/services/components/PortalRequirementsDialog";
 import { ServiceRequirementsDialog } from "~/features/services/components/ServiceRequirementsDialog";
 import {
   formatPesoFee,
   getVisitBadge,
   isFullyOnline,
+  portalWait,
   summarizeWait,
 } from "~/features/services/service-utils";
 
@@ -27,6 +29,8 @@ export interface ServiceEntryProps {
   processing_time: string;
   display_group: string | null;
   display_name: string | null;
+  /** A short card title an admin may have set. */
+  short_name?: string | null;
   steps_description: string[] | null;
   requirement_count: number;
 }
@@ -52,6 +56,7 @@ export const badgeToneClasses = {
  */
 export function useServiceEntry(service: ServiceEntryProps, canApply = true) {
   const navigate = useNavigate();
+  const resetApplyChoices = useResetApplyChoices();
   const [requirementsOpen, setRequirementsOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   // Applying from inside the checklist popup closes it. If the applicant backs
@@ -61,6 +66,8 @@ export function useServiceEntry(service: ServiceEntryProps, canApply = true) {
 
   const routeCode = service.display_group ?? service.service_code;
   const title = service.display_name ?? service.name;
+  // What a card calls it. The full name is for the dialogs, where there is room.
+  const shortTitle = service.short_name || title;
   const fullyOnline = isFullyOnline(service.steps_description);
   const visitBadge = getVisitBadge(service.processing_time);
   const feeLabel = formatPesoFee(service.fee, service.display_group);
@@ -89,6 +96,14 @@ export function useServiceEntry(service: ServiceEntryProps, canApply = true) {
     }
   }
 
+  // From the confirmation: read the checklist before deciding. It is the
+  // checklist that then offers Apply again, so back-out never loops.
+  function checkRequirementsFirst() {
+    setConfirmFromChecklist(false);
+    setConfirmOpen(false);
+    setRequirementsOpen(true);
+  }
+
   function confirmApply() {
     // Clear the flag first, so closing the confirmation on the way out doesn't
     // reopen the checklist behind the apply flow.
@@ -105,6 +120,7 @@ export function useServiceEntry(service: ServiceEntryProps, canApply = true) {
     service,
     routeCode,
     title,
+    shortTitle,
     isFree,
     badge,
     requirementLabel:
@@ -114,6 +130,8 @@ export function useServiceEntry(service: ServiceEntryProps, canApply = true) {
     /** "Answered in" for the email service, "Released" for counter services. */
     waitTerm: fullyOnline ? "Answered in" : "Released",
     waitLabel: summarizeWait(service.processing_time),
+    /** The wait in the applicant portal's wording: always working days. */
+    portalWaitLabel: portalWait(service.processing_time),
     feeLabel,
     canApply,
     openRequirements: () => setRequirementsOpen(true),
@@ -125,17 +143,31 @@ export function useServiceEntry(service: ServiceEntryProps, canApply = true) {
     applyFromChecklist: () => askToApply(true),
     confirmOpen,
     handleConfirmOpenChange,
+    checkRequirementsFirst,
     confirmApply,
   };
 }
 
 export type ServiceEntry = ReturnType<typeof useServiceEntry>;
 
-/** The checklist popup and apply confirmation shared by both densities. */
-export function ServiceEntryDialogs({ entry }: { entry: ServiceEntry }) {
+/**
+ * The checklist popup and apply confirmation shared by both densities.
+ * `variant="portal"` is the applicant directory's restyled checklist; staff
+ * keep the plain reference one.
+ */
+export function ServiceEntryDialogs({
+  entry,
+  variant = "dashboard",
+}: {
+  entry: ServiceEntry;
+  variant?: "dashboard" | "portal";
+}) {
+  const Checklist =
+    variant === "portal" ? PortalRequirementsDialog : ServiceRequirementsDialog;
+
   return (
     <>
-      <ServiceRequirementsDialog
+      <Checklist
         serviceCode={entry.routeCode}
         title={entry.title}
         fee={entry.service.fee}
@@ -154,6 +186,7 @@ export function ServiceEntryDialogs({ entry }: { entry: ServiceEntry }) {
           open={entry.confirmOpen}
           onOpenChange={entry.handleConfirmOpenChange}
           onConfirm={entry.confirmApply}
+          onCheckRequirements={entry.checkRequirementsFirst}
         />
       )}
     </>

@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { rbacMiddleware, requirePermission } from "~/middleware/auth";
+import { requirePermission } from "~/middleware/auth";
 import { buildLegacyFormDefinition } from "~/features/forms/form-template.utils";
 import { invalidateServiceCatalogue } from "~/features/services/services.catalogue";
 import {

@@ -54,14 +54,16 @@ export const Route = createFileRoute("/_authed/_dashboard/system-admin/accounts"
   },
   loaderDeps: ({ search }) => search,
   loader: ({ deps }) => getAccounts({ data: { ...deps, pageSize: 20 } }),
-  component: () => {
-    const data = Route.useLoaderData();
-    const { q, role, status, departmentId, signIn } = Route.useSearch();
-    return (
-      <AccountsPage
-        {...data}
-        filters={{ q, role, status, departmentId, signIn }}
-      />
-    );
-  },
+  component: RouteComponent,
 });
+
+function RouteComponent() {
+  const data = Route.useLoaderData();
+  const { q, role, status, departmentId, signIn } = Route.useSearch();
+  return (
+    <AccountsPage
+      {...data}
+      filters={{ q, role, status, departmentId, signIn }}
+    />
+  );
+}

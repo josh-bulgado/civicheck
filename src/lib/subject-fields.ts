@@ -26,6 +26,11 @@ export interface SubjectFields {
   lastName: string;
   suffix: string;
   sex: string;
+  /**
+   * The applicant said this person has no middle name, as opposed to not having
+   * filled it in yet. Only the applicant wizard sets it; `middleName` is "" either way.
+   */
+  noMiddleName?: boolean;
 }
 
 const IMPLIED_SEX: Record<string, "male" | "female"> = {

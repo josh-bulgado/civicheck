@@ -1,22 +1,13 @@
 import { useState, useTransition } from "react";
-import { Link } from "@tanstack/react-router";
+import { QuietLink } from "~/components/quiet-link";
 import {
   Archive,
   ArchiveRestore,
-  Banknote,
   Bell,
   Check,
-  CircleCheckBig,
-  CircleX,
-  FilePlus2,
-  FileUp,
-  FileWarning,
   MailWarning,
-  MessageSquare,
   MoreHorizontal,
-  RefreshCw,
   Undo2,
-  type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { staggerStyle } from "~/components/motion/stagger";
@@ -52,25 +43,23 @@ import {
   updateNotificationFn,
   type NotificationAction,
 } from "~/features/notifications/notifications.mutations";
-import type {
-  NotificationRow,
-  NotificationTarget,
-  NotificationType,
-} from "~/features/notifications/notifications.queries";
+import { MarkAllReadButton } from "~/features/notifications/components/MarkAllReadButton";
+import type { NotificationRow } from "~/features/notifications/notifications.queries";
 import type { NotificationAudience } from "~/features/notifications/notification-audience";
+import {
+  DAY_MS,
+  TIME_ZONE,
+  TYPE_STYLE,
+  dayKeyFormat,
+  feedDetail,
+  feedTitle,
+  feedWhen,
+  linkFor,
+  timeFormat,
+} from "~/features/notifications/notification-display";
+import { invalidateNotificationPreview } from "~/features/notifications/notification-preview-cache";
 import { usePermissions } from "~/hooks/usePermissions";
 
-// CCRO Legazpi is a single-office deployment, so day boundaries are pinned to
-// Philippine time. This also keeps the server-rendered and client-rendered
-// group headings identical regardless of where either one happens to run.
-const TIME_ZONE = "Asia/Manila";
-
-const dayKeyFormat = new Intl.DateTimeFormat("en-CA", {
-  timeZone: TIME_ZONE,
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
 const dayLabelFormat = new Intl.DateTimeFormat("en-US", {
   timeZone: TIME_ZONE,
   weekday: "long",
@@ -78,57 +67,13 @@ const dayLabelFormat = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
   year: "numeric",
 });
-const timeFormat = new Intl.DateTimeFormat("en-US", {
-  timeZone: TIME_ZONE,
-  hour: "numeric",
-  minute: "2-digit",
-});
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 type Filter = "all" | "unread" | "archived";
 
 const UPDATE_FAILED = "We couldn't update your notifications. Please try again.";
 
-/** Sizing for a trigger inside the applicant header's `pill` tab track. */
-const PILL_TAB = "h-9.5 flex-none px-3.5";
-
 function failureMessage(result: { error: boolean; message?: string }) {
   return result.message ?? UPDATE_FAILED;
-}
-
-const TYPE_STYLE: Record<NotificationType, { icon: LucideIcon; unreadClass: string }> = {
-  status_change: { icon: RefreshCw, unreadClass: "bg-primary text-white" },
-  pre_validation_complete: { icon: CircleCheckBig, unreadClass: "bg-primary text-white" },
-  document_rejected: { icon: FileWarning, unreadClass: "bg-tone-danger text-white" },
-  new_request: { icon: FilePlus2, unreadClass: "bg-primary text-white" },
-  document_resubmitted: { icon: FileUp, unreadClass: "bg-primary text-white" },
-  awaiting_cashier: { icon: Banknote, unreadClass: "bg-primary text-white" },
-  ready_to_release: { icon: CircleCheckBig, unreadClass: "bg-primary text-white" },
-  request_incomplete: { icon: FileWarning, unreadClass: "bg-tone-danger text-white" },
-  request_rejected: { icon: CircleX, unreadClass: "bg-tone-danger text-white" },
-  message: { icon: MessageSquare, unreadClass: "bg-primary text-white" },
-  new_message: { icon: MessageSquare, unreadClass: "bg-primary text-white" },
-};
-
-/** One typed `Link` per destination, so each keeps its own params/search checking. */
-function linkFor(target: NotificationTarget, onClick: () => void) {
-  switch (target.to) {
-    case "/requests/$requestId":
-      return (
-        <Link to="/requests/$requestId" params={{ requestId: target.requestId }} onClick={onClick} />
-      );
-    case "/cashier":
-      return <Link to="/cashier" search={{ tracking: target.tracking }} onClick={onClick} />;
-    default:
-      return (
-        <Link
-          to="/my-requests/$requestId"
-          params={{ requestId: target.requestId }}
-          onClick={onClick}
-        />
-      );
-  }
 }
 
 interface DayGroup {
@@ -169,6 +114,12 @@ interface NotificationsPageProps {
   onLoadMore: () => Promise<unknown>;
   /** Called after a mutation succeeds, so the route can re-run its loader. */
   onUpdated: () => void;
+  /**
+   * How many are unread in all, which can be more than the page has loaded. The
+   * applicant's "Mark all as read" follows this, the number the sidebar badge
+   * and the bell dot show, so the three always agree.
+   */
+  unreadTotal?: number;
 }
 
 interface RowHandlers {
@@ -176,13 +127,351 @@ interface RowHandlers {
   onAction: (notification: NotificationRow, action: NotificationAction) => void;
 }
 
+/** The read/unread and archive choices, shared by both audiences' row menus. */
+function NotificationMenuItems({
+  notification,
+  onAction,
+}: {
+  notification: NotificationRow;
+  onAction: RowHandlers["onAction"];
+}) {
+  return (
+    <>
+      {notification.isRead ? (
+        <DropdownMenuItem onClick={() => onAction(notification, "unread")}>
+          <Undo2 />
+          Mark as unread
+        </DropdownMenuItem>
+      ) : (
+        <DropdownMenuItem onClick={() => onAction(notification, "read")}>
+          <Check />
+          Mark as read
+        </DropdownMenuItem>
+      )}
+      <DropdownMenuSeparator />
+      {notification.archivedAt !== null ? (
+        <DropdownMenuItem onClick={() => onAction(notification, "unarchive")}>
+          <ArchiveRestore />
+          Restore to inbox
+        </DropdownMenuItem>
+      ) : (
+        <DropdownMenuItem onClick={() => onAction(notification, "archive")}>
+          <Archive />
+          Archive
+        </DropdownMenuItem>
+      )}
+    </>
+  );
+}
+
+// ─── Applicant portal ───────────────────────────────────────────────────────
+
+/**
+ * One notification: the service it is about, what happened, and when. Unread
+ * ones also carry their one line of detail. The whole row opens the request;
+ * archiving lives in a menu that takes the place of the time on hover, and
+ * sits beside it where there is no hover.
+ */
+function PortalNotificationRow({
+  notification,
+  now,
+  onOpen,
+  onAction,
+}: { notification: NotificationRow; now: number } & RowHandlers) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { icon: TypeIcon, unreadClass } = TYPE_STYLE[notification.type] ?? TYPE_STYLE.status_change;
+  const unread = !notification.isRead;
+  const detail = unread ? feedDetail(notification) : null;
+
+  return (
+    <div
+      className={cn("group/row relative", unread && "bg-(image:--portal-unread-row)")}
+    >
+      {linkFor(notification.target, () => onOpen(notification), {
+        className: cn(
+          "civic-interactive flex items-center gap-4 px-5 hover:bg-foreground/3 max-md:items-start max-md:gap-3.5 max-md:px-4.5 max-md:py-4 @3xl:gap-5 @3xl:px-8 [@media(hover:none)]:pr-16!",
+          unread ? "py-5 @3xl:py-6" : "py-4 @3xl:py-5",
+        ),
+        children: (
+          <>
+            <span
+              className={cn(
+                "flex size-13 shrink-0 items-center justify-center rounded-full max-md:size-11",
+                unread ? unreadClass : "bg-muted text-muted-foreground",
+              )}
+              aria-hidden="true"
+            >
+              <TypeIcon className="size-5.75 max-md:size-5" />
+            </span>
+
+            <span className="min-w-0 flex-1">
+              {/* On a phone the time sits on this line, at the right; from md
+                  it has a column of its own. */}
+              <span className="flex items-baseline justify-between gap-2">
+                {notification.serviceName ? (
+                  <span
+                    className={cn(
+                      "block min-w-0 truncate text-[15px] leading-snug font-semibold max-md:text-[13px]",
+                      unread ? "text-primary" : "text-muted-foreground",
+                    )}
+                  >
+                    {notification.serviceName}
+                  </span>
+                ) : (
+                  <span />
+                )}
+                <time
+                  dateTime={notification.sentAt}
+                  className="shrink-0 text-[13px] text-muted-foreground md:hidden"
+                >
+                  {feedWhen(notification.sentAt, now)}
+                </time>
+              </span>
+              <span
+                className={cn(
+                  "block leading-snug text-foreground",
+                  unread
+                    ? "text-xl font-bold max-md:text-[17px]"
+                    : "text-[19px] font-medium max-md:text-[17px]",
+                )}
+              >
+                {unread ? <span className="sr-only">Unread: </span> : null}
+                {feedTitle(notification.subject)}
+              </span>
+              {detail ? (
+                <span className="mt-0.5 line-clamp-2 block text-base leading-snug text-body-2 max-md:mt-1 max-md:text-sm max-md:leading-[1.4]">
+                  {detail}
+                </span>
+              ) : null}
+            </span>
+
+            <time
+              dateTime={notification.sentAt}
+              className={cn(
+                "shrink-0 text-[15px] text-muted-foreground max-md:hidden",
+                menuOpen
+                  ? "invisible"
+                  : "group-hover/row:invisible group-focus-within/row:invisible",
+              )}
+            >
+              {feedWhen(notification.sentAt, now)}
+            </time>
+          </>
+        ),
+      })}
+
+      <div
+        className={cn(
+          "absolute top-1/2 right-4 -translate-y-1/2 transition-opacity @3xl:right-6",
+          menuOpen
+            ? "opacity-100"
+            : "opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100 [@media(hover:none)]:opacity-100",
+        )}
+      >
+        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+          <DropdownMenuTrigger
+            nativeButton
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-10 rounded-full bg-white text-muted-foreground shadow-[0_1px_3px_rgba(15,27,45,0.1)] hover:bg-white hover:text-primary data-open:text-primary"
+              />
+            }
+          >
+            <MoreHorizontal aria-hidden="true" />
+            <span className="sr-only">
+              More actions for "{feedTitle(notification.subject)}"
+            </span>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <NotificationMenuItems notification={notification} onAction={onAction} />
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
+}
+
+function PortalNotificationGroup({
+  label,
+  items,
+  now,
+  start,
+  ...handlers
+}: {
+  label: string;
+  items: NotificationRow[];
+  now: number;
+  /** Row number of this group's first row, so the entrance cascades through all groups. */
+  start: number;
+} & RowHandlers) {
+  return (
+    <section aria-label={label}>
+      <h2 className="mb-2.5 px-1 text-[15px] leading-[normal] font-semibold text-muted-foreground md:mb-3 md:px-1.5 md:text-base">
+        {label}
+      </h2>
+      <ul className="civic-stagger divide-y divide-border-lighter overflow-hidden rounded-4xl bg-card shadow-portal-card md:rounded-[28px]">
+        {items.map((notification, index) => (
+          <li key={notification.id} style={staggerStyle(start + index)}>
+            <PortalNotificationRow notification={notification} now={now} {...handlers} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+interface PortalNotificationsProps extends RowHandlers {
+  notifications: NotificationRow[];
+  /** Unread in all (see `unreadTotal`): what "Mark all as read" is lit by. */
+  unreadCount: number;
+  now: number;
+  hasMore: boolean;
+  isMarkingAll: boolean;
+  isLoadingMore: boolean;
+  onMarkAllRead: () => void;
+  onLoadMore: () => void;
+}
+
+/**
+ * The applicant's feed: what's new, then everything earlier. Archived ones stay
+ * out of sight behind a small link under Earlier, shown only when there are any.
+ */
+function PortalNotifications({
+  notifications,
+  unreadCount,
+  now,
+  hasMore,
+  isMarkingAll,
+  isLoadingMore,
+  onMarkAllRead,
+  onLoadMore,
+  ...handlers
+}: PortalNotificationsProps) {
+  const [showArchived, setShowArchived] = useState(false);
+
+  const inbox = notifications.filter((n) => n.archivedAt === null);
+  const fresh = inbox.filter((n) => !n.isRead);
+  const earlier = inbox.filter((n) => n.isRead);
+  const archived = notifications.filter((n) => n.archivedAt !== null);
+
+  return (
+    <div className="portal-page gap-4.5 md:gap-7">
+      <div className="flex items-center justify-between gap-x-6 gap-y-3">
+        <h1 className="portal-title">Notifications</h1>
+        {/* Always here. It is lit while something is unread, and quiet (not
+            gone) once nothing is, so it does not come and go under the cursor. */}
+        <MarkAllReadButton
+          hasUnread={unreadCount > 0 && !isMarkingAll}
+          onClick={onMarkAllRead}
+          className="h-10 px-4 text-sm md:h-12 md:px-6 md:text-base"
+          compactLabel="Mark all read"
+        />
+      </div>
+
+      {notifications.length === 0 ? (
+        <Empty className="civic-enter-scale gap-5 rounded-[28px] bg-card px-8 py-16 shadow-portal-card">
+          <EmptyHeader className="max-w-110 gap-3">
+            <EmptyMedia
+              variant="icon"
+              className="size-13 rounded-[14px] bg-primary-soft text-primary"
+            >
+              <Bell />
+            </EmptyMedia>
+            <EmptyTitle className="text-xl font-bold">No notifications yet</EmptyTitle>
+            <EmptyDescription className="leading-[1.55] text-pretty">
+              Once you submit a request, we'll post an update here whenever staff review
+              your documents or move it to the next step.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <QuietLink
+              to="/my-requests"
+              className={cn(buttonVariants({ variant: "outline" }), pillButton.outline)}
+            >
+              Go to my requests
+            </QuietLink>
+          </EmptyContent>
+        </Empty>
+      ) : (
+        // The rows lay themselves out from this container's width, not the
+        // window's: the sidebar takes a fixed share of the window.
+        <div className="@container flex flex-col gap-6 md:gap-7">
+          {inbox.length === 0 ? (
+            <p className="rounded-[28px] bg-card px-6 py-12 text-center text-[15px] text-muted-foreground shadow-portal-card">
+              You're all caught up. New updates will show up here.
+            </p>
+          ) : null}
+
+          {fresh.length > 0 ? (
+            <PortalNotificationGroup
+              label="New"
+              items={fresh}
+              now={now}
+              start={0}
+              {...handlers}
+            />
+          ) : null}
+
+          {earlier.length > 0 ? (
+            <PortalNotificationGroup
+              label="Earlier"
+              items={earlier}
+              now={now}
+              start={fresh.length}
+              {...handlers}
+            />
+          ) : null}
+
+          {archived.length > 0 ? (
+            <div className="flex flex-col gap-2.5">
+              <button
+                type="button"
+                aria-expanded={showArchived}
+                onClick={() => setShowArchived((open) => !open)}
+                className="self-start rounded-full px-1.5 py-1 text-[15px] font-semibold text-primary hover:text-primary-hover"
+              >
+                {showArchived ? "Hide archived" : `Archived (${archived.length})`}
+              </button>
+              {showArchived ? (
+                <PortalNotificationGroup
+                  label="Archived"
+                  items={archived}
+                  now={now}
+                  start={0}
+                  {...handlers}
+                />
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {hasMore ? (
+        <div className="flex justify-center">
+          <Button
+            variant="outline"
+            className={pillButton.outline}
+            onClick={onLoadMore}
+            disabled={isLoadingMore}
+          >
+            {isLoadingMore ? "Loading…" : "Load older notifications"}
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// ─── CCRO staff / admin / cashier ───────────────────────────────────────────
+
 function NotificationItem({
   notification,
   onOpen,
   onAction,
 }: { notification: NotificationRow } & RowHandlers) {
   const { icon: TypeIcon, unreadClass } = TYPE_STYLE[notification.type] ?? TYPE_STYLE.status_change;
-  const isArchived = notification.archivedAt !== null;
 
   return (
     <div className={cn("flex items-stretch", !notification.isRead && "bg-primary-soft/40")}>
@@ -256,29 +545,7 @@ function NotificationItem({
             <span className="sr-only">More actions for "{notification.subject}"</span>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            {notification.isRead ? (
-              <DropdownMenuItem onClick={() => onAction(notification, "unread")}>
-                <Undo2 />
-                Mark as unread
-              </DropdownMenuItem>
-            ) : (
-              <DropdownMenuItem onClick={() => onAction(notification, "read")}>
-                <Check />
-                Mark as read
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            {isArchived ? (
-              <DropdownMenuItem onClick={() => onAction(notification, "unarchive")}>
-                <ArchiveRestore />
-                Restore to inbox
-              </DropdownMenuItem>
-            ) : (
-              <DropdownMenuItem onClick={() => onAction(notification, "archive")}>
-                <Archive />
-                Archive
-              </DropdownMenuItem>
-            )}
+            <NotificationMenuItems notification={notification} onAction={onAction} />
           </DropdownMenuContent>
         </DropdownMenu>
       </ItemActions>
@@ -290,20 +557,15 @@ function NotificationList({
   items,
   now,
   emptyMessage,
-  citizen,
   ...handlers
 }: {
   items: NotificationRow[];
   now: number;
   emptyMessage: string;
-  /** Applicant portal: flat cards on the ground instead of bordered panels. */
-  citizen: boolean;
 } & RowHandlers) {
-  const panel = citizen ? "portal-card" : "dashboard-panel";
-
   if (items.length === 0) {
     return (
-      <div className={panel}>
+      <div className="dashboard-panel">
         <p className="px-6 py-12 text-center text-sm text-muted-foreground">{emptyMessage}</p>
       </div>
     );
@@ -311,13 +573,13 @@ function NotificationList({
 
   let index = 0;
   return (
-    <div className={cn("flex flex-col", citizen ? "gap-4" : "gap-6")}>
+    <div className="flex flex-col gap-6">
       {groupByDay(items, now).map((group) => (
         <section key={group.key} aria-label={group.label}>
           <h2 className="mb-2 px-2 pt-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">
             {group.label}
           </h2>
-          <div className={cn(panel, "overflow-hidden")}>
+          <div className="dashboard-panel overflow-hidden">
             <div className="civic-stagger divide-y divide-border-lighter">
               {group.items.map((notification) => (
                 <div key={notification.id} style={staggerStyle(index++)}>
@@ -338,6 +600,7 @@ export default function NotificationsPage({
   hasMore,
   onLoadMore,
   onUpdated,
+  unreadTotal,
 }: NotificationsPageProps) {
   const isApplicant = audience === "applicant";
   const { can } = usePermissions();
@@ -360,6 +623,8 @@ export default function NotificationsPage({
         toast.error(failureMessage(result));
         return false;
       }
+      // The bell's popover keeps its own cached copy of these rows.
+      invalidateNotificationPreview();
       onUpdated();
       return true;
     } catch {
@@ -390,6 +655,7 @@ export default function NotificationsPage({
           return;
         }
         toast.success("All notifications marked as read.");
+        invalidateNotificationPreview();
         onUpdated();
       } catch {
         toast.error(UPDATE_FAILED);
@@ -409,130 +675,19 @@ export default function NotificationsPage({
 
   const handlers: RowHandlers = { onOpen: handleOpen, onAction: handleAction };
 
-  const tabPanels = (
-    <>
-      <TabsContent value="all">
-        <NotificationList
-          items={inbox}
-          now={now}
-          emptyMessage="Your inbox is empty. Archived notifications are in the Archived tab."
-          citizen={isApplicant}
-          {...handlers}
-        />
-      </TabsContent>
-      <TabsContent value="unread">
-        <NotificationList
-          items={unread}
-          now={now}
-          emptyMessage="You're all caught up. New updates will show up here."
-          citizen={isApplicant}
-          {...handlers}
-        />
-      </TabsContent>
-      <TabsContent value="archived">
-        <NotificationList
-          items={archived}
-          now={now}
-          emptyMessage="Nothing archived. Use the ⋯ menu on a notification to tuck it away."
-          citizen={isApplicant}
-          {...handlers}
-        />
-      </TabsContent>
-    </>
-  );
-
-  // The applicant portal: a header card with the filter pills in it, then the
-  // day groups as their own cards. `Tabs` wraps the page so the pills can sit
-  // in the header while the panels sit below it.
   if (isApplicant) {
     return (
-      <Tabs
-        value={filter}
-        onValueChange={(value) => setFilter(value as Filter)}
-        className="portal-page gap-4"
-      >
-        <header className="portal-card flex flex-col gap-6 px-5 py-6 sm:px-8 sm:py-7">
-          <div className="flex flex-wrap items-end gap-6">
-            <div className="mr-auto flex max-w-160 flex-col gap-1.5">
-              <h1 className="portal-title">Notifications</h1>
-              <p className="text-sm leading-normal text-muted-foreground text-pretty">
-                {unreadCount > 0
-                  ? `You have ${unreadCount} unread ${unreadCount === 1 ? "update" : "updates"} on your requests. We also email you each one.`
-                  : "You're all caught up. We'll post here, and email you, whenever a request changes."}
-              </p>
-            </div>
-            {unreadCount > 0 ? (
-              <Button
-                variant="outline"
-                className={cn(pillButton.outline, "text-primary")}
-                onClick={markAllRead}
-                disabled={isMarkingAll}
-              >
-                <Check data-icon="inline-start" aria-hidden="true" />
-                {isMarkingAll ? "Marking as read…" : "Mark all as read"}
-              </Button>
-            ) : null}
-          </div>
-          {notifications.length > 0 ? (
-            <TabsList
-              variant="pill"
-              aria-label="Filter notifications"
-              className="no-scrollbar max-w-full justify-start self-start overflow-x-auto"
-            >
-              <TabsTrigger value="all" className={PILL_TAB}>
-                All ({inbox.length})
-              </TabsTrigger>
-              <TabsTrigger value="unread" className={PILL_TAB}>
-                Unread ({unreadCount})
-              </TabsTrigger>
-              <TabsTrigger value="archived" className={PILL_TAB}>
-                Archived ({archived.length})
-              </TabsTrigger>
-            </TabsList>
-          ) : null}
-        </header>
-
-        {notifications.length === 0 ? (
-          <Empty className="portal-card civic-enter-scale gap-5 rounded-2xl px-8 py-16">
-            <EmptyHeader className="max-w-110 gap-3">
-              <EmptyMedia
-                variant="icon"
-                className="size-13 rounded-[14px] bg-primary-soft text-primary"
-              >
-                <Bell />
-              </EmptyMedia>
-              <EmptyTitle className="text-xl font-bold">No notifications yet</EmptyTitle>
-              <EmptyDescription className="leading-[1.55] text-pretty">
-                Once you submit a request, we'll post an update here whenever staff review
-                your documents or move it to the next step.
-              </EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>
-              <Link
-                to="/my-requests"
-                className={cn(buttonVariants({ variant: "outline" }), pillButton.outline)}
-              >
-                Go to my requests
-              </Link>
-            </EmptyContent>
-          </Empty>
-        ) : (
-          tabPanels
-        )}
-
-        {hasMore ? (
-          <div className="flex justify-center pt-2">
-            <Button
-              variant="outline"
-              className={pillButton.outline}
-              onClick={loadMore}
-              disabled={isLoadingMore}
-            >
-              {isLoadingMore ? "Loading…" : "Load older notifications"}
-            </Button>
-          </div>
-        ) : null}
-      </Tabs>
+      <PortalNotifications
+        notifications={notifications}
+        unreadCount={unreadTotal ?? unreadCount}
+        now={now}
+        hasMore={hasMore}
+        isMarkingAll={isMarkingAll}
+        isLoadingMore={isLoadingMore}
+        onMarkAllRead={markAllRead}
+        onLoadMore={loadMore}
+        {...handlers}
+      />
     );
   }
 
@@ -580,19 +735,19 @@ export default function NotificationsPage({
           </EmptyHeader>
           <EmptyContent>
             {can("requests:view_all") ? (
-              <Link
+              <QuietLink
                 to="/requests"
                 className={buttonVariants({ variant: "outline", size: "lg" })}
               >
                 Open the request queue
-              </Link>
+              </QuietLink>
             ) : (
-              <Link
+              <QuietLink
                 to="/cashier"
                 className={buttonVariants({ variant: "outline", size: "lg" })}
               >
                 Open the cashier counter
-              </Link>
+              </QuietLink>
             )}
           </EmptyContent>
         </Empty>
@@ -607,7 +762,30 @@ export default function NotificationsPage({
             <TabsTrigger value="unread">Unread ({unreadCount})</TabsTrigger>
             <TabsTrigger value="archived">Archived ({archived.length})</TabsTrigger>
           </TabsList>
-          {tabPanels}
+          <TabsContent value="all">
+            <NotificationList
+              items={inbox}
+              now={now}
+              emptyMessage="Your inbox is empty. Archived notifications are in the Archived tab."
+              {...handlers}
+            />
+          </TabsContent>
+          <TabsContent value="unread">
+            <NotificationList
+              items={unread}
+              now={now}
+              emptyMessage="You're all caught up. New updates will show up here."
+              {...handlers}
+            />
+          </TabsContent>
+          <TabsContent value="archived">
+            <NotificationList
+              items={archived}
+              now={now}
+              emptyMessage="Nothing archived. Use the ⋯ menu on a notification to tuck it away."
+              {...handlers}
+            />
+          </TabsContent>
         </Tabs>
       )}
 
