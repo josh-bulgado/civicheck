@@ -95,9 +95,7 @@ export default function MyRequestDetailPage({
             </dl>
           </SubmittedDetailsCard>
 
-          <MyRequestDocumentsCard documents={request.attachments} onChanged={onUpdated} />
-
-          <section className="flex items-center gap-4 rounded-[28px] bg-card p-6 shadow-portal-card md:p-7">
+          <section className="flex items-center gap-4 rounded-[28px] bg-card p-6 shadow-portal-card ring-2 ring-border-light md:p-7">
             <div className="min-w-0 flex-1">
               <h2 className="text-[22px] leading-[normal] font-semibold text-foreground">
                 Acknowledgment slip
@@ -116,6 +114,8 @@ export default function MyRequestDetailPage({
               {downloadingPdf ? "Preparing..." : "Download PDF"}
             </Button>
           </section>
+
+          <MyRequestDocumentsCard documents={request.attachments} onChanged={onUpdated} />
         </div>
       </div>
     </div>

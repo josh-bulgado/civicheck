@@ -37,7 +37,7 @@ export function RequestStatusHistory({ logs }: { logs: HistoryLog[] }) {
   return (
     <section
       aria-labelledby="status-history-heading"
-      className="rounded-[28px] bg-card px-6 py-6 shadow-portal-card md:px-9 md:py-8"
+      className="rounded-[28px] bg-card px-6 py-6 shadow-portal-card ring-2 ring-border-light md:px-9 md:py-8"
     >
       <h2
         id="status-history-heading"

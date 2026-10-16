@@ -189,7 +189,7 @@ function PortalNotificationRow({
     >
       {linkFor(notification.target, () => onOpen(notification), {
         className: cn(
-          "civic-interactive flex items-center gap-4 px-5 hover:bg-foreground/3 max-md:items-start max-md:gap-3.5 max-md:px-4.5 max-md:py-4 @3xl:gap-5 @3xl:px-8 [@media(hover:none)]:pr-16!",
+          "civic-interactive flex items-center gap-4 px-5 hover:bg-primary/8 max-md:items-start max-md:gap-3.5 max-md:px-4.5 max-md:py-4 @3xl:gap-5 @3xl:px-8 [@media(hover:none)]:pr-16!",
           unread ? "py-5 @3xl:py-6" : "py-4 @3xl:py-5",
         ),
         children: (
@@ -311,7 +311,7 @@ function PortalNotificationGroup({
       <h2 className="mb-2.5 px-1 text-[15px] leading-[normal] font-semibold text-muted-foreground md:mb-3 md:px-1.5 md:text-base">
         {label}
       </h2>
-      <ul className="civic-stagger divide-y divide-border-lighter overflow-hidden rounded-4xl bg-card shadow-portal-card md:rounded-[28px]">
+      <ul className="civic-stagger divide-y divide-border-light overflow-hidden rounded-4xl bg-card shadow-portal-card ring-2 ring-border-light md:rounded-[28px]">
         {items.map((notification, index) => (
           <li key={notification.id} style={staggerStyle(start + index)}>
             <PortalNotificationRow notification={notification} now={now} {...handlers} />

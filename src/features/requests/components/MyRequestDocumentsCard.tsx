@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { ExternalLink, FileText, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import {
@@ -8,6 +8,7 @@ import {
   resubmitOwnAttachmentFn,
 } from "~/features/requests/applicant-requests.mutations";
 import { AttachmentGroups } from "~/features/requests/components/AttachmentGroups";
+import { AttachmentThumbnail } from "~/features/requests/components/AttachmentThumbnail";
 import { AttachmentViewerDialog } from "~/features/requests/components/AttachmentViewerDialog";
 
 const ACCEPT = "image/jpeg,image/png,application/pdf";
@@ -41,7 +42,7 @@ export function MyRequestDocumentsCard({
   return (
     <section
       aria-labelledby="request-documents-heading"
-      className="rounded-[28px] bg-card p-6 shadow-portal-card md:p-7"
+      className="rounded-[28px] bg-card p-6 shadow-portal-card ring-2 ring-border-light md:p-7"
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <h2
@@ -93,7 +94,13 @@ function AttachmentRow({
   const rejected = doc.verificationStatus === "rejected";
   const pending = !rejected && doc.verificationStatus !== "approved";
 
-  async function handleViewFile() {
+  async function handleViewFile(knownUrl?: string) {
+    // The thumbnail already holds a fresh link, and the file behind it is in the
+    // cache: open straight away instead of signing another.
+    if (knownUrl) {
+      setViewerUrl(knownUrl);
+      return;
+    }
     setViewing(true);
     try {
       const res = await getMyAttachmentSignedUrlFn({
@@ -140,12 +147,13 @@ function AttachmentRow({
   return (
     <div className="flex flex-col gap-3.5 rounded-[20px] border border-border-lighter p-4">
       <div className="flex items-start gap-3.5">
-        <span
-          className="flex size-9.5 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary"
-          aria-hidden="true"
-        >
-          <FileText className="size-5" />
-        </span>
+        <AttachmentThumbnail
+          attachmentId={doc.id}
+          version={doc.verificationStatus}
+          label={`${doc.subjectRole ? `${doc.subjectRole}: ` : ""}${doc.requirementName}`}
+          busy={viewing}
+          onOpen={handleViewFile}
+        />
         <div className="min-w-0 flex-1">
           <p className="text-[17px] leading-snug font-semibold text-foreground">
             {title ??
@@ -169,16 +177,6 @@ function AttachmentRow({
             </>
           )}
         </div>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="shrink-0 rounded-full text-primary"
-          disabled={viewing}
-          onClick={handleViewFile}
-        >
-          <ExternalLink data-icon="inline-start" />
-          View file
-        </Button>
       </div>
 
       {rejected && (

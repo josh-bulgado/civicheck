@@ -156,7 +156,7 @@ export default function MyRequestsPage({ requests, unreadRequestIds }: MyRequest
                 >
                   {group.label}
                 </h2>
-                <ul className="civic-stagger divide-y divide-border-lighter overflow-hidden rounded-4xl bg-card shadow-portal-card md:rounded-[28px]">
+                <ul className="civic-stagger divide-y divide-border-lighter overflow-hidden rounded-4xl bg-card shadow-portal-card ring-2 ring-border-light md:rounded-[28px]">
                   {group.items.map((request, index) => (
                     <li key={request.id} style={staggerStyle(group.start + index)}>
                       <RequestRow request={request} isNew={unread.has(request.id)} />

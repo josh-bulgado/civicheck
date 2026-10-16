@@ -74,7 +74,9 @@ export function SubmittedDetailsCard({
   return (
     <section
       className={
-        portal ? "rounded-[28px] bg-card p-6 shadow-portal-card md:p-7" : "dashboard-panel p-6"
+        portal
+          ? "rounded-[28px] bg-card p-6 shadow-portal-card ring-2 ring-border-light md:p-7"
+          : "dashboard-panel p-6"
       }
     >
       <h2

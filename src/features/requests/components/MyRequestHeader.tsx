@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-react";
 import { QuietLink } from "~/components/quiet-link";
 import { StatusPill } from "~/features/requests/components/StatusPill";
 
@@ -18,8 +19,9 @@ export function MyRequestHeader({
     <header>
       <QuietLink
         to="/my-requests"
-        className="text-base font-semibold text-primary hover:text-primary-hover hover:underline"
+        className="civic-press inline-flex h-11 items-center gap-2 rounded-full border border-border bg-white px-5 text-base font-semibold text-foreground shadow-portal-pill transition-colors duration-150 hover:bg-primary-tint hover:text-primary-hover"
       >
+        <ArrowLeft className="size-4.5 text-black" aria-hidden="true" />
         Back to my requests
       </QuietLink>
       <div className="mt-4 flex items-start justify-between gap-4 md:gap-6">
