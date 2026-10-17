@@ -1,5 +1,11 @@
-import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { Document, Font, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { VerificationFormPdfData } from "~/features/requests/pdf/types";
+
+// Wrap whole words instead of splitting them with a hyphen ("regis-tered"), so
+// names and places stay readable. Set globally, and again on each answer below
+// because the per-text setting is the one the layout engine always honors.
+const keepWordsWhole = (word: string) => [word];
+Font.registerHyphenationCallback(keepWordsWhole);
 
 // While the CCRO has not approved this layout, every copy is marked SAMPLE so it
 // cannot be mistaken for the office's own form. Set to false once they sign off.
@@ -157,7 +163,9 @@ const styles = StyleSheet.create({
   split: { flexDirection: "row" },
   left: { flex: 1, paddingRight: 18 },
   right: { width: 170 },
-  field: { flexDirection: "row", alignItems: "flex-end", marginBottom: 9 },
+  // The label stays level with the first line, so a long answer that wraps
+  // flows downward under the same label instead of pushing it to the bottom.
+  field: { flexDirection: "row", alignItems: "flex-start", marginBottom: 9 },
   fieldLabel: { fontSize: 10 },
   fieldLine: {
     flex: 1,
@@ -194,7 +202,9 @@ function Field({ label, value }: Row) {
     <View style={styles.field} wrap={false}>
       <Text style={styles.fieldLabel}>{label}:</Text>
       <View style={styles.fieldLine}>
-        <Text style={styles.fieldValue}>{value}</Text>
+        <Text style={styles.fieldValue} hyphenationCallback={keepWordsWhole}>
+          {value}
+        </Text>
       </View>
     </View>
   );
