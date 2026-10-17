@@ -11,7 +11,8 @@
 --      requests already filed on them still open normally; they simply stop
 --      being the version new applicants see.
 --   2. The "Authorization Letter" requirement goes back to its original wording
---      and rule (needed whenever the requester is not the owner).
+--      and rule (needed whenever the requester is not the owner), and the
+--      "Verification Form" requirement goes back to a mandatory upload.
 --   3. The "Registry/OCT number" label comes back on the two CTC services.
 --
 -- What it does not touch
@@ -53,6 +54,14 @@ set requirement_name = 'Authorization Letter of the document owner / Affidavit o
       ))
     )
 where id = '44722972-6714-4c5c-a829-f66ab881d881';
+
+-- 2b. Restore the Verification Form as a mandatory upload (it was changed to
+--     "we fill it in; sign it at the CCRO", with no upload slot).
+update public.service_requirements_metadata
+set requirement_name = 'Verification Form, properly filled up and signed by the requesting party',
+    requires_upload = true,
+    upload_scope = 'request'
+where id = 'c3815a6a-97df-46ed-b22b-3c14ecfdbe6b';
 
 -- 3. Restore the "Registry/OCT number" label on the CTC services.
 update public.services_registry
