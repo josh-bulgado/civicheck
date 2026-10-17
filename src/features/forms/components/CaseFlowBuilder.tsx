@@ -490,6 +490,7 @@ export function CaseFlowBuilder({
                     <FieldLabel>Question visibility</FieldLabel>
                     <ConditionRuleBuilder
                       idPrefix={`case-question-${questionIndex}-visibility`}
+                      lead="Show when"
                       rule={question.visibleWhen ?? null}
                       sources={sourcesForQuestions(
                         caseFlow.questions.slice(0, questionIndex),
@@ -561,6 +562,7 @@ export function CaseFlowBuilder({
                     </div>
                     <ConditionRuleBuilder
                       idPrefix={`case-outcome-${variant.service_code}`}
+                      lead="Choose when"
                       rule={outcome?.when ?? null}
                       sources={allSources}
                       emptyLabel="No answer combination is mapped to this variant yet."

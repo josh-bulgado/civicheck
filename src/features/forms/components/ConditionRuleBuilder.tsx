@@ -1,11 +1,6 @@
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "~/components/ui/field";
+import { FieldDescription } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import {
   Select,
@@ -27,6 +22,14 @@ export interface ConditionSource {
   options?: FormOption[];
 }
 
+/**
+ * The pills are narrower than some of their options, and a select's popup
+ * defaults to the trigger's width and clips the rest. Let it grow to the widest
+ * option instead, up to a cap, and never below the trigger.
+ */
+const POPUP_CLASS =
+  "w-auto min-w-(--anchor-width) max-w-[min(28rem,var(--available-width))]";
+
 function initialCondition(source: ConditionSource): FormCondition {
   return {
     field: source.key,
@@ -35,18 +38,30 @@ function initialCondition(source: ConditionSource): FormCondition {
   };
 }
 
+/**
+ * Edits a rule as a sentence: "When [question] is [answer] and [question] is
+ * not [answer]". A rule has one connective for the whole sentence, so the
+ * and/or chip flips every row at once rather than pretending each row is
+ * independent.
+ */
 export function ConditionRuleBuilder({
   idPrefix,
   rule,
   sources,
   onChange,
   emptyLabel = "Always applies",
+  lead = "When",
+  single = false,
 }: {
   idPrefix: string;
   rule: ConditionRule | null;
   sources: ConditionSource[];
   onChange: (rule: ConditionRule | null) => void;
   emptyLabel?: string;
+  /** The word that opens the sentence, e.g. "Show when". */
+  lead?: string;
+  /** One condition only: no Add Condition button and no AND/OR chip. */
+  single?: boolean;
 }) {
   function updateCondition(index: number, patch: Partial<FormCondition>) {
     if (!rule) return;
@@ -57,7 +72,7 @@ export function ConditionRuleBuilder({
 
   if (!rule) {
     return (
-      <Field>
+      <div className="flex flex-col items-start gap-2">
         <FieldDescription>{emptyLabel}</FieldDescription>
         <Button
           type="button"
@@ -73,48 +88,60 @@ export function ConditionRuleBuilder({
           }
         >
           <Plus aria-hidden="true" data-icon="inline-start" />
-          Add condition
+          Add Condition
         </Button>
-      </Field>
+      </div>
     );
   }
 
-  return (
-    <FieldGroup className="gap-3 rounded-lg border border-border bg-background p-3">
-      {rule.conditions.length > 1 ? (
-        <Field>
-          <FieldLabel htmlFor={`${idPrefix}-match`}>Match</FieldLabel>
-          <Select
-            value={rule.match}
-            onValueChange={(value) =>
-              onChange({ ...rule, match: value === "any" ? "any" : "all" })
-            }
-          >
-            <SelectTrigger id={`${idPrefix}-match`} className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="all">All conditions</SelectItem>
-                <SelectItem value="any">Any condition</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </Field>
-      ) : null}
+  const matchAll = rule.match === "all";
 
+  return (
+    <div
+      role="group"
+      aria-label="Conditions"
+      className="flex flex-col gap-3 rounded-lg border border-border bg-surface-subtle p-3"
+    >
       {rule.conditions.map((condition, index) => {
-        const source = sources.find((candidate) => candidate.key === condition.field);
+        const source = sources.find(
+          (candidate) => candidate.key === condition.field,
+        );
+        const position = index + 1;
+
         return (
-          <div
-            key={`${condition.field}-${index}`}
-            className="grid grid-cols-1 items-end gap-2 sm:grid-cols-[minmax(0,1fr)_10rem_minmax(0,1fr)_auto]"
-          >
-            <Field>
-              <FieldLabel htmlFor={`${idPrefix}-${index}-field`}>
-                Answer
-              </FieldLabel>
+          // Rows are positional: keying by the chosen question would remount
+          // the row, and drop focus, every time that question changes.
+          <div key={index} className="flex items-start gap-2">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+              {index === 0 ? (
+                <span className="min-w-16 text-sm text-muted-foreground">
+                  {lead}
+                </span>
+              ) : (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="min-w-16 font-semibold tracking-wide"
+                  title="Switch between AND and OR for the whole rule"
+                  aria-label={
+                    matchAll
+                      ? "All conditions must match. Switch to any."
+                      : "Any condition can match. Switch to all."
+                  }
+                  onClick={() =>
+                    onChange({ ...rule, match: matchAll ? "any" : "all" })
+                  }
+                >
+                  {matchAll ? "AND" : "OR"}
+                </Button>
+              )}
+
               <Select
+                items={sources.map((candidate) => ({
+                  value: candidate.key,
+                  label: candidate.label,
+                }))}
                 value={condition.field}
                 onValueChange={(value) => {
                   const nextSource = sources.find(
@@ -126,11 +153,12 @@ export function ConditionRuleBuilder({
               >
                 <SelectTrigger
                   id={`${idPrefix}-${index}-field`}
-                  className="w-full"
+                  className="w-auto max-w-full min-w-40 rounded-full border-primary/30 bg-primary-soft font-medium text-primary"
+                  aria-label={`Condition ${position}: question`}
                 >
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className={POPUP_CLASS}>
                   <SelectGroup>
                     {sources.map((candidate) => (
                       <SelectItem key={candidate.key} value={candidate.key}>
@@ -140,12 +168,7 @@ export function ConditionRuleBuilder({
                   </SelectGroup>
                 </SelectContent>
               </Select>
-            </Field>
 
-            <Field>
-              <FieldLabel htmlFor={`${idPrefix}-${index}-operator`}>
-                Comparison
-              </FieldLabel>
               <Select
                 value={condition.operator}
                 onValueChange={(value) =>
@@ -156,25 +179,24 @@ export function ConditionRuleBuilder({
               >
                 <SelectTrigger
                   id={`${idPrefix}-${index}-operator`}
-                  className="w-full"
+                  className="w-auto rounded-full border-primary/30 bg-primary-soft font-medium text-primary"
+                  aria-label={`Condition ${position}: comparison`}
                 >
-                  <SelectValue />
+                  <SelectValue>
+                    {(operator) => (operator === "not_equals" ? "is not" : "is")}
+                  </SelectValue>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className={POPUP_CLASS}>
                   <SelectGroup>
-                    <SelectItem value="equals">Equals</SelectItem>
-                    <SelectItem value="not_equals">Does not equal</SelectItem>
+                    <SelectItem value="equals">is</SelectItem>
+                    <SelectItem value="not_equals">is not</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>
-            </Field>
 
-            <Field>
-              <FieldLabel htmlFor={`${idPrefix}-${index}-value`}>
-                Value
-              </FieldLabel>
               {source?.options?.length ? (
                 <Select
+                  items={source.options}
                   value={condition.value}
                   onValueChange={(value) =>
                     updateCondition(index, { value: value ?? "" })
@@ -182,11 +204,12 @@ export function ConditionRuleBuilder({
                 >
                   <SelectTrigger
                     id={`${idPrefix}-${index}-value`}
-                    className="w-full"
+                    className="w-auto max-w-full min-w-40 rounded-full border-primary/30 bg-primary-soft font-medium text-primary"
+                    aria-label={`Condition ${position}: answer`}
                   >
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className={POPUP_CLASS}>
                     <SelectGroup>
                       {source.options.map((option) => (
                         <SelectItem key={option.value} value={option.value}>
@@ -204,14 +227,17 @@ export function ConditionRuleBuilder({
                     updateCondition(index, { value: event.target.value })
                   }
                   autoComplete="off"
+                  aria-label={`Condition ${position}: answer`}
+                  className="w-48 rounded-full"
                 />
               )}
-            </Field>
+            </div>
 
             <Button
               type="button"
               variant="ghost"
               size="icon-sm"
+              className="mt-0.5 shrink-0 text-muted-foreground hover:text-destructive"
               onClick={() => {
                 const conditions = rule.conditions.filter(
                   (_, conditionIndex) => conditionIndex !== index,
@@ -220,7 +246,7 @@ export function ConditionRuleBuilder({
                   conditions.length > 0 ? { ...rule, conditions } : null,
                 );
               }}
-              aria-label={`Remove condition ${index + 1}`}
+              aria-label={`Remove condition ${position}`}
             >
               <Trash2 aria-hidden="true" />
             </Button>
@@ -228,22 +254,32 @@ export function ConditionRuleBuilder({
         );
       })}
 
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="self-start"
-        disabled={sources.length === 0 || rule.conditions.length >= 20}
-        onClick={() =>
-          onChange({
-            ...rule,
-            conditions: [...rule.conditions, initialCondition(sources[0])],
-          })
-        }
-      >
-        <Plus aria-hidden="true" data-icon="inline-start" />
-        Add condition
-      </Button>
-    </FieldGroup>
+      {!single && rule.conditions.length > 1 ? (
+        <p className="text-xs text-muted-foreground">
+          {matchAll
+            ? "Every condition above must match."
+            : "Any one of the conditions above is enough."}
+        </p>
+      ) : null}
+
+      {single ? null : (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="self-start rounded-full border-dashed border-primary/40 text-primary"
+          disabled={sources.length === 0 || rule.conditions.length >= 20}
+          onClick={() =>
+            onChange({
+              ...rule,
+              conditions: [...rule.conditions, initialCondition(sources[0])],
+            })
+          }
+        >
+          <Plus aria-hidden="true" data-icon="inline-start" />
+          Add Condition
+        </Button>
+      )}
+    </div>
   );
 }

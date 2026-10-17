@@ -19,7 +19,7 @@ import {
 const serviceCodeSchema = z
   .string()
   .trim()
-  .min(1, "Service code is required")
+  .min(1, "Enter a service code")
   .max(80)
   .regex(
     /^[A-Z0-9_-]+$/,
@@ -57,7 +57,7 @@ export const serviceFieldsSchema = z
     processing_time: z
       .string()
       .trim()
-      .min(1, "Processing time is required")
+      .min(1, "Enter a processing time")
       .max(200),
     department_id: optionalText(64),
     steps_description: z.array(z.string().trim().min(1).max(2_000)).max(30),
@@ -70,6 +70,8 @@ export const serviceFieldsSchema = z
     asks_birth_details: z.boolean(),
     // Optional: a save that does not carry the switch leaves it as it is.
     allows_messages: z.boolean().optional(),
+    // Optional: a save that does not carry the switch leaves it as it is.
+    fee_per_copy: z.boolean().optional(),
     display_group: groupKeySchema,
     display_name: optionalText(200),
     // Mirrors the column's 40-character check.

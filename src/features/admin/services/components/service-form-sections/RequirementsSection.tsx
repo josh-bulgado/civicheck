@@ -10,13 +10,13 @@ import {
   Search,
   Unlock,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
@@ -57,6 +57,7 @@ interface RequirementsSectionProps {
   formDefinition: FormTemplateDefinition;
   currentServiceCode: string | null;
   variantCodes: string[];
+  embedded?: boolean;
 }
 
 interface RequirementEntry {
@@ -145,7 +146,7 @@ function RequirementGroup({
             </span>
             <ChevronDown
               aria-hidden="true"
-              className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
+              className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-data-[panel-open]:rotate-180"
             />
           </CollapsibleTrigger>
           {showLock ? (
@@ -158,7 +159,7 @@ function RequirementGroup({
               {locked ? (
                 <>
                   <Unlock aria-hidden="true" data-icon="inline-start" />
-                  Unlock to edit
+                  Unlock to Edit
                 </>
               ) : (
                 <>
@@ -208,6 +209,7 @@ export function RequirementsSection({
   formDefinition,
   currentServiceCode,
   variantCodes,
+  embedded = false,
 }: RequirementsSectionProps) {
   const form = useFormContext<ServiceFormValues>();
   const requirementFields = useFieldArray({
@@ -360,6 +362,24 @@ export function RequirementsSection({
     setOpenGroups((current) => ({ ...current, variant: true }));
   }
 
+  function removeRequirement(index: number) {
+    const removed = form.getValues("requirements")[index];
+    if (!removed) return;
+    requirementFields.remove(index);
+    toast(
+      `Removed “${removed.requirement_name?.trim() || "Untitled requirement"}”`,
+      {
+        action: {
+          label: "Undo",
+          onClick: () => {
+            const count = form.getValues("requirements").length;
+            requirementFields.insert(Math.min(index, count), removed);
+          },
+        },
+      },
+    );
+  }
+
   function overrideRequirement(index: number) {
     const source = requirementValues[index];
     if (!source) return;
@@ -379,31 +399,32 @@ export function RequirementsSection({
   }
 
   return (
-    <Card id="requirements" className="scroll-mt-6 overflow-visible">
-      <CardHeader className="border-b">
-        <div className="flex items-start gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
-            <ClipboardCheck aria-hidden="true" className="size-4" />
+    <Card
+      id={embedded ? undefined : "requirements"}
+      variant={embedded ? "embedded" : "default"}
+      className={embedded ? "overflow-visible" : "scroll-mt-6 overflow-visible"}
+    >
+      {!embedded ? (
+        <CardHeader className="border-b">
+          <div className="flex items-start gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+              <ClipboardCheck aria-hidden="true" className="size-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <CardTitle>
+                <h2>Requirements</h2>
+              </CardTitle>
+              {entries.length > 0 ? (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <Badge variant="neutral">{entries.length} total</Badge>
+                  <Badge variant="default">{variantCount} this variant</Badge>
+                  <Badge variant="outline">{inheritedCount} shared</Badge>
+                </div>
+              ) : null}
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <CardTitle>
-              <h2>Requirements</h2>
-            </CardTitle>
-            <CardDescription>
-              What applicants must bring, where to secure it, and when each item
-              applies. Variant-specific rows are listed first; inherited rows
-              are grouped and locked.
-            </CardDescription>
-            {entries.length > 0 ? (
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <Badge variant="neutral">{entries.length} total</Badge>
-                <Badge variant="default">{variantCount} this variant</Badge>
-                <Badge variant="outline">{inheritedCount} shared</Badge>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      </CardHeader>
+        </CardHeader>
+      ) : null}
       <CardContent className="flex flex-col gap-4 pt-4">
         {sharedWith.length > 0 ? (
           <Alert variant="warning">
@@ -436,6 +457,8 @@ export function RequirementsSection({
                 />
                 <Input
                   type="search"
+                  name="requirements_search"
+                  autoComplete="off"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Search requirements…"
@@ -447,26 +470,26 @@ export function RequirementsSection({
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
+                  className="min-h-11"
                   disabled={!canOverride}
                   title={
                     canOverride
                       ? undefined
-                      : "Bind this checklist to a shared application with routing to scope a requirement to one variant."
+                      : "Connect this checklist to a shared application form with routing to limit a requirement to one variant."
                   }
                   onClick={addVariantSpecific}
                 >
                   <GitBranch aria-hidden="true" data-icon="inline-start" />
-                  Add variant-specific
+                  Add Variant-Specific
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
+                  className="min-h-11"
                   onClick={addBlank}
                 >
                   <Plus aria-hidden="true" data-icon="inline-start" />
-                  Add requirement
+                  Add Requirement
                 </Button>
               </div>
             </div>
@@ -514,7 +537,7 @@ export function RequirementsSection({
                       }
                       conditionSources={conditionSources}
                       partyRoles={partyRoles}
-                      onRemove={(index) => requirementFields.remove(index)}
+                      onRemove={removeRequirement}
                       onOverride={
                         canOverride ? overrideRequirement : undefined
                       }

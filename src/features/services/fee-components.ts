@@ -62,5 +62,5 @@ export function feeComponentsIssue(
   if (!components.some((component) => component.included)) return null;
   const total = includedFeeTotal(components);
   if (toCents(total) === toCents(fee)) return null;
-  return `The included charges add up to ${pesos(total)}, but the total fee is ${pesos(fee)}.`;
+  return `The charges marked “In total” add up to ${pesos(total)}, but the total fee is ${pesos(fee)}. Change an amount or the total fee so they match.`;
 }

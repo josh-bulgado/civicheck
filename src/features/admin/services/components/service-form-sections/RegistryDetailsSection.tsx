@@ -1,15 +1,15 @@
-import { Controller, useFormContext } from "react-hook-form";
+import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { Copy, FileText, PhilippinePeso } from "lucide-react";
 import type { Department } from "~/features/admin/departments.queries";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
 import {
   Field,
+  FieldContent,
   FieldDescription,
   FieldError,
   FieldGroup,
@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { Switch } from "~/components/ui/switch";
 import type { Service } from "../../services.types";
 import { FeeBreakdownFields } from "./FeeBreakdownFields";
 import {
@@ -43,6 +44,7 @@ interface RegistryDetailsSectionProps {
   isEdit: boolean;
   presetCode: string;
   onPresetChange: (code: string | null) => void;
+  embedded?: boolean;
 }
 
 export function RegistryDetailsSection({
@@ -51,27 +53,31 @@ export function RegistryDetailsSection({
   isEdit,
   presetCode,
   onPresetChange,
+  embedded = false,
 }: RegistryDetailsSectionProps) {
   const form = useFormContext<ServiceFormValues>();
+  const feePerCopy = useWatch({ control: form.control, name: "fee_per_copy" });
 
   return (
-    <Card id="registry-details" className="scroll-mt-6">
-      <CardHeader className="border-b">
-        <div className="flex items-start gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
-            <FileText aria-hidden="true" className="size-4" />
+    <Card
+      id={embedded ? undefined : "registry-details"}
+      variant={embedded ? "embedded" : "default"}
+      className={embedded ? undefined : "scroll-mt-6"}
+    >
+      {!embedded ? (
+        <CardHeader className="border-b">
+          <div className="flex items-start gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+              <FileText aria-hidden="true" className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <CardTitle>
+                <h2 className="text-pretty">Registry &amp; Fees</h2>
+              </CardTitle>
+            </div>
           </div>
-          <div className="min-w-0">
-            <CardTitle>
-              <h2 className="text-pretty">Registry Details</h2>
-            </CardTitle>
-            <CardDescription>
-              The official identity, owner, fee, and Citizen&rsquo;s Charter
-              classification.
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
+        </CardHeader>
+      ) : null}
       <CardContent>
         <FieldGroup>
           {!isEdit ? (
@@ -111,12 +117,31 @@ export function RegistryDetailsSection({
               <FieldDescription>
                 <span className="flex items-center gap-1.5">
                   <Copy aria-hidden="true" className="size-3" />
-                  Copies everything except the service code, which must be
-                  unique.
+                  Fills in this form from an existing service.
                 </span>
               </FieldDescription>
             </Field>
           ) : null}
+
+          <Controller
+            control={form.control}
+            name="name"
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="service-name">Service Name</FieldLabel>
+                <Input
+                  {...field}
+                  id="service-name"
+                  placeholder="Issuance of Certified True Copies of Civil Registry Records…"
+                  autoComplete="off"
+                  aria-invalid={fieldState.invalid}
+                />
+                {fieldState.invalid ? (
+                  <FieldError errors={[fieldState.error]} />
+                ) : null}
+              </Field>
+            )}
+          />
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Controller
@@ -143,8 +168,8 @@ export function RegistryDetailsSection({
                   ) : (
                     <FieldDescription>
                       {isEdit
-                        ? "Permanent — requests reference this code."
-                        : "Permanent identifier. Cannot be changed later."}
+                        ? "Can’t be changed. Requests use this code."
+                        : "Can’t be changed after the service is created."}
                     </FieldDescription>
                   )}
                 </Field>
@@ -156,7 +181,9 @@ export function RegistryDetailsSection({
               name="fee"
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="service-fee">Total Fee</FieldLabel>
+                  <FieldLabel htmlFor="service-fee">
+                    {feePerCopy ? "Fee per Copy" : "Total Fee"}
+                  </FieldLabel>
                   <InputGroup>
                     <InputGroupAddon>
                       <PhilippinePeso size={16} />
@@ -173,34 +200,37 @@ export function RegistryDetailsSection({
                   </InputGroup>
                   {fieldState.invalid ? (
                     <FieldError errors={[fieldState.error]} />
-                  ) : (
+                  ) : feePerCopy ? (
                     <FieldDescription>
-                      The charter&rsquo;s Total row. Enter 0 if free.
+                      Charged for each copy requested.
                     </FieldDescription>
-                  )}
+                  ) : null}
                 </Field>
               )}
             />
           </div>
 
-          <FeeBreakdownFields />
-
           <Controller
             control={form.control}
-            name="name"
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="service-name">Service Name</FieldLabel>
-                <Input
-                  {...field}
-                  id="service-name"
-                  placeholder="Issuance of Certified True Copies of Civil Registry Records…"
-                  autoComplete="off"
-                  aria-invalid={fieldState.invalid}
+            name="fee_per_copy"
+            render={({ field }) => (
+              <Field orientation="horizontal">
+                <FieldContent>
+                  <FieldLabel htmlFor="service-fee-per-copy">
+                    Allow multiple copies
+                  </FieldLabel>
+                  <FieldDescription>
+                    Applicants choose how many copies to request. The fee is charged for each, and the fee breakdown is hidden.
+                  </FieldDescription>
+                </FieldContent>
+                <Switch
+                  id="service-fee-per-copy"
+                  name={field.name}
+                  checked={field.value}
+                  onCheckedChange={(checked) =>
+                    field.onChange(checked === true)
+                  }
                 />
-                {fieldState.invalid ? (
-                  <FieldError errors={[fieldState.error]} />
-                ) : null}
               </Field>
             )}
           />
@@ -320,14 +350,11 @@ export function RegistryDetailsSection({
                       </SelectGroup>
                     </SelectContent>
                   </Select>
-                  <FieldDescription>
-                    Which CCRO department requests for this service are routed
-                    to.
-                  </FieldDescription>
                 </Field>
               )}
             />
           </div>
+          <FeeBreakdownFields />
         </FieldGroup>
       </CardContent>
     </Card>

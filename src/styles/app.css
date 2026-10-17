@@ -730,7 +730,7 @@
     @apply h-px w-7 shrink-0 bg-primary/45;
   }
 
-  .civic-workspace [data-slot="card"] {
+  .civic-workspace [data-slot="card"]:not([data-variant="embedded"]) {
     border: 1px solid var(--border-strong);
     box-shadow:
       0 1px 3px rgb(23 33 43 / 0.08),
@@ -756,6 +756,12 @@
   .dashboard-page {
     @apply mx-auto w-full max-w-[1440px] space-y-6;
     animation: civic-fade-in var(--duration-base) var(--ease-civic) both;
+  }
+
+  /* Leave breathing room when focusing fields in the editor's scroll pane. */
+  [data-service-editor]
+    :where(a, button, input, textarea, [role="combobox"], [tabindex]) {
+    scroll-margin-block: 1.5rem;
   }
 
   .system-health-page {

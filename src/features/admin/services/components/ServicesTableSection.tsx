@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { Blocks, Plus } from "lucide-react";
 import { buttonVariants } from "~/components/ui/button";
 import { ServiceDetailSheet } from "~/features/services/components/ServiceDetailSheet";
-import { cn } from "~/lib/utils";
 import { ServicesDataTable } from "./ServicesDataTable";
 import type { ServiceDossier } from "./ServicesColumn";
 import type { Department } from "~/features/admin/departments.queries";
@@ -32,13 +31,20 @@ export function ServicesTableSection({
             processing steps.
           </p>
         </div>
-        <Link
-          to="/admin/services/new"
-          className={cn(buttonVariants(), "shrink-0")}
-        >
-          <Plus aria-hidden="true" data-icon="inline-start" />
-          Add Service
-        </Link>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <Link
+            to="/admin/services/blocks"
+            search={{ block: undefined }}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            <Blocks aria-hidden="true" data-icon="inline-start" />
+            Shared Question Blocks
+          </Link>
+          <Link to="/admin/services/new" className={buttonVariants()}>
+            <Plus aria-hidden="true" data-icon="inline-start" />
+            Add Service
+          </Link>
+        </div>
       </div>
 
       <div className="p-5 sm:p-6">

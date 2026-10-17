@@ -1,5 +1,9 @@
 import type { CSSProperties } from "react";
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Outlet,
+  useRouterState,
+} from "@tanstack/react-router";
 import {
   SidebarInset,
   SidebarProvider,
@@ -56,6 +60,20 @@ function refreshPortalCaches() {
 }
 
 function DashboardLayout() {
+  const isServiceEditor = useRouterState({
+    select: (state) =>
+      state.matches.some(
+        (match) =>
+          match.routeId ===
+            "/_authed/_dashboard/admin/services_/$serviceCode/edit" ||
+          match.routeId === "/_authed/_dashboard/admin/services_/new" ||
+          // The shared application editor is the group-level twin of the
+          // service editor, so it takes over the screen the same way.
+          (match.routeId ===
+            "/_authed/_dashboard/admin/services_/groups/$displayGroup" &&
+            (match.search as { scope?: string }).scope === "application"),
+      ),
+  });
   const { user } = Route.useRouteContext();
   const { unreadNotifications } = Route.useLoaderData();
   const workspace = getWorkspaceDetails((user?.role ?? "applicant") as Role);
@@ -83,8 +101,18 @@ function DashboardLayout() {
       >
         Skip to Main Content
       </a>
-      <AppSidebar user={user} unreadNotifications={unreadNotifications} />
-      {isCitizen ? (
+      {!isServiceEditor && (
+        <AppSidebar user={user} unreadNotifications={unreadNotifications} />
+      )}
+      {isServiceEditor ? (
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="civic-workspace min-w-0 w-full bg-workspace text-foreground"
+        >
+          <Outlet />
+        </main>
+      ) : isCitizen ? (
         // 10px of frame on every side; on desktop the sidebar column already
         // carries the left one (and the 6px gap), so it is dropped while the
         // sidebar is open and comes back when Ctrl+B tucks it away.
@@ -126,7 +154,10 @@ function DashboardLayout() {
                 </p>
               </div>
             </div>
-            <CityGovernmentIdentity compact className="[&>span:first-child]:size-8" />
+            <CityGovernmentIdentity
+              compact
+              className="[&>span:first-child]:size-8"
+            />
           </header>
           <main
             id="main-content"

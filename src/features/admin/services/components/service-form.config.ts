@@ -10,7 +10,6 @@ import {
 } from "~/features/forms/form-template.types";
 import { buildLegacyFormDefinition } from "~/features/forms/form-template.utils";
 import type {
-  EventDateDirection,
   Service,
   ServiceClassification,
   ServiceRequirement,
@@ -20,7 +19,7 @@ const requirementSchema = z.object({
   // Id of the saved checklist row, so an edit updates that row instead of
   // replacing it. Absent on a row added in the editor.
   requirement_id: z.string().optional(),
-  requirement_name: z.string().trim().min(1, "Requirement is required"),
+  requirement_name: z.string().trim().min(1, "Enter a requirement title"),
   where_to_secure: z.string().optional(),
   is_mandatory: z.boolean(),
   case_tag: z.string().optional(),
@@ -63,26 +62,26 @@ export function buildServiceFormSchema(takenCodes: Set<string>) {
       service_code: z
         .string()
         .trim()
-        .min(1, "Service code is required")
+        .min(1, "Enter a service code")
         .regex(
           /^[A-Z0-9_-]+$/,
           "Use uppercase letters, numbers, underscores, and hyphens only",
         )
         .refine(
           (code) => !takenCodes.has(code),
-          "A service with this code already exists",
+          "This code is already in use. Choose a different one.",
         ),
-      name: z.string().trim().min(1, "Service name is required"),
+      name: z.string().trim().min(1, "Enter a service name"),
       classification: z.enum(["simple", "complex", "highly_technical"]),
       fee: z
         .string()
         .trim()
-        .min(1, "Fee is required — enter 0 for a free service")
+        .min(1, "Enter a fee, or 0 for a free service")
         .refine(
           (value) => !Number.isNaN(Number(value)) && Number(value) >= 0,
           "Enter a valid amount (0 or more)",
         ),
-      processing_time: z.string().trim().min(1, "Processing time is required"),
+      processing_time: z.string().trim().min(1, "Enter a processing time"),
       department_id: z.string().optional(),
       steps: z.array(z.object({ value: z.string() })),
       party_roles: z.array(z.object({ value: z.string() })),
@@ -94,6 +93,7 @@ export function buildServiceFormSchema(takenCodes: Set<string>) {
       asks_purpose: z.boolean(),
       asks_birth_details: z.boolean(),
       allows_messages: z.boolean(),
+      fee_per_copy: z.boolean(),
       display_group: z.string().optional(),
       display_name: z.string().optional(),
       short_name: z.string().max(40, "Keep it to 40 characters or fewer").optional(),
@@ -146,25 +146,6 @@ export function defaultPartyRoles() {
   return [{ value: "Subject" }];
 }
 
-export const DATE_DIRECTIONS: {
-  value: EventDateDirection;
-  label: string;
-}[] = [
-  { value: "past", label: "Past dates only" },
-  { value: "future", label: "Future dates only" },
-  { value: "any", label: "Any date" },
-];
-
-export const SERVICE_EDITOR_SECTIONS = [
-  { id: "registry-details", label: "Registry Details" },
-  { id: "citizen-journey", label: "Citizen Journey" },
-  { id: "case-questions", label: "Case Questions" },
-  { id: "timing-routing", label: "Timing & Routing" },
-  { id: "application-form", label: "Application Form" },
-  { id: "requirements", label: "Requirements" },
-  { id: "relationships", label: "Relationships" },
-] as const;
-
 export const EMPTY_REQUIREMENT = {
   requirement_name: "",
   where_to_secure: "",
@@ -204,6 +185,7 @@ export function emptyServiceFormDefaults(): ServiceFormValues {
     asks_purpose: true,
     asks_birth_details: false,
     allows_messages: false,
+    fee_per_copy: false,
     display_group: "",
     display_name: "",
     short_name: "",
@@ -232,6 +214,7 @@ export function serviceFormDefaults(service: Service): ServiceFormValues {
     asks_purpose: service.asks_purpose,
     asks_birth_details: service.asks_birth_details,
     allows_messages: service.allows_messages ?? false,
+    fee_per_copy: service.fee_per_copy ?? false,
     display_group: service.display_group ?? "",
     display_name: service.display_name ?? "",
     short_name: service.short_name ?? "",

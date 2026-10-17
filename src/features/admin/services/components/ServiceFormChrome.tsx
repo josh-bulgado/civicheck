@@ -1,6 +1,11 @@
-import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Check } from "lucide-react";
+import {
+  ArrowLeft,
+  Save,
+  type LucideIcon,
+} from "lucide-react";
+import { Badge } from "~/components/ui/badge";
 import { Button, buttonVariants } from "~/components/ui/button";
 import {
   Card,
@@ -10,311 +15,249 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { Spinner } from "~/components/ui/spinner";
+import { TabsContent } from "~/components/ui/tabs";
 import { formatServiceCode } from "~/features/services/service-utils";
 import { cn } from "~/lib/utils";
-import { SERVICE_EDITOR_SECTIONS } from "./service-form.config";
 
-type EditorMode = "full" | "variant";
-
-const VARIANT_EDITOR_SECTIONS = SERVICE_EDITOR_SECTIONS.filter(
-  (section) =>
-    section.id !== "case-questions" &&
-    section.id !== "timing-routing" &&
-    section.id !== "application-form",
-);
-
-export function ServiceDossierNavigation({
-  mode = "full",
-}: {
-  mode?: EditorMode;
-}) {
-  const editorSections =
-    mode === "variant" ? VARIANT_EDITOR_SECTIONS : SERVICE_EDITOR_SECTIONS;
-  const [activeSection, setActiveSection] = useState<string>(
-    editorSections[0].id,
-  );
-
-  useEffect(() => {
-    const sections = editorSections.map(({ id }) =>
-      document.getElementById(id),
-    ).filter((section): section is HTMLElement => section !== null);
-    let animationFrame: number | null = null;
-
-    const updateActiveSection = () => {
-      if (animationFrame !== null) return;
-
-      animationFrame = window.requestAnimationFrame(() => {
-        const marker = Math.min(window.innerHeight * 0.28, 240);
-        let nextSection = sections[0]?.id ?? editorSections[0].id;
-
-        for (const section of sections) {
-          if (section.getBoundingClientRect().top > marker) break;
-          nextSection = section.id;
-        }
-
-        const atPageEnd =
-          window.scrollY + window.innerHeight >=
-          document.documentElement.scrollHeight - 2;
-        if (atPageEnd) {
-          nextSection = editorSections.at(-1)?.id ?? nextSection;
-        }
-
-        setActiveSection((current) =>
-          current === nextSection ? current : nextSection,
-        );
-        animationFrame = null;
-      });
-    };
-
-    updateActiveSection();
-    window.addEventListener("scroll", updateActiveSection, { passive: true });
-    window.addEventListener("resize", updateActiveSection);
-
-    return () => {
-      window.removeEventListener("scroll", updateActiveSection);
-      window.removeEventListener("resize", updateActiveSection);
-      if (animationFrame !== null) {
-        window.cancelAnimationFrame(animationFrame);
-      }
-    };
-  }, [editorSections]);
-
-  const activeIndex = editorSections.findIndex(
-    ({ id }) => id === activeSection,
-  );
-  const lineProgress =
-    activeIndex / Math.max(editorSections.length - 1, 1);
-
-  return (
-    <nav aria-label="Service editor sections">
-      <ol className="relative flex flex-col gap-1">
-        <span
-          aria-hidden="true"
-          className="absolute bottom-4 left-[0.4375rem] top-4 w-px bg-border"
-        />
-        <span
-          aria-hidden="true"
-          className="absolute bottom-4 left-[0.4375rem] top-4 w-px origin-top bg-primary transition-transform duration-300 ease-out motion-reduce:transition-none"
-          style={{ transform: `scaleY(${lineProgress})` }}
-        />
-
-        {editorSections.map((section, index) => {
-          const isCurrent = index === activeIndex;
-          const isComplete = index < activeIndex;
-
-          return (
-            <li key={section.id} className="relative">
-              <a
-                href={`#${section.id}`}
-                aria-current={isCurrent ? "location" : undefined}
-                className={cn(
-                  "flex min-w-0 items-center gap-3 rounded-md py-1.5 text-sm hover:bg-muted",
-                  isCurrent
-                    ? "font-semibold text-primary"
-                    : isComplete
-                      ? "text-foreground"
-                      : "text-muted-foreground",
-                )}
-              >
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    "relative flex size-3.5 shrink-0 items-center justify-center rounded-full border bg-card",
-                    isCurrent
-                      ? "border-primary ring-4 ring-primary-soft"
-                      : isComplete
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border-strong",
-                  )}
-                >
-                  {isComplete ? (
-                    <Check className="size-2.5" />
-                  ) : isCurrent ? (
-                    <span className="size-1.5 rounded-full bg-primary" />
-                  ) : null}
-                </span>
-                <span
-                  className={cn(
-                    "min-w-0 px-1",
-                    isCurrent && "rounded bg-primary-soft px-2 py-1",
-                  )}
-                >
-                  {section.label}
-                </span>
-              </a>
-            </li>
-          );
-        })}
-      </ol>
-    </nav>
-  );
-}
+type EditorMode = "full" | "variant" | "group";
 
 interface ServiceDossierHeaderProps {
   isEdit: boolean;
   serviceCode: string;
+  serviceName?: string;
+  applicationVersion: number;
+  applicationLoading: boolean;
   mode?: EditorMode;
   displayGroup?: string | null;
+  children: ReactNode;
 }
 
 export function ServiceDossierHeader({
   isEdit,
   serviceCode,
+  serviceName,
+  applicationVersion,
+  applicationLoading,
   mode = "full",
   displayGroup = null,
+  children,
 }: ServiceDossierHeaderProps) {
   const isVariant = mode === "variant";
-  const heading = isVariant
-    ? "Edit Internal Variant"
-    : isEdit
-      ? "Edit Service"
-      : "Register a Service";
-  const description = isVariant
-    ? "Update this internal registry record. The checklist section identifies when requirements are shared, while the group-wide applicant application is managed separately."
-    : isEdit
-      ? "Update the registry record, citizen-facing questions, application form, and requirements in one place."
-      : "Build one complete registry record from the charter entry, including its public process, application form, and checklist.";
-  const editorSections = isVariant
-    ? VARIANT_EDITOR_SECTIONS
-    : SERVICE_EDITOR_SECTIONS;
+  const isGroup = mode === "group";
+  const backClassName = cn(
+    buttonVariants({ variant: "outline", size: "icon" }),
+    "size-11 shrink-0",
+  );
 
   return (
-    <header className="px-1 pt-1">
-      <div className="flex items-center justify-between gap-3 pb-3">
-        {isVariant && displayGroup ? (
+    <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-border bg-background px-4 py-4 sm:px-8">
+      <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+        {(isVariant || isGroup) && displayGroup ? (
           <Link
             to="/admin/services/groups/$displayGroup"
             params={{ displayGroup }}
             search={{ scope: undefined }}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+            className={backClassName}
+            aria-label="Back to service group"
           >
-            <ArrowLeft aria-hidden="true" className="size-4" />
-            Service group
+            <ArrowLeft aria-hidden="true" />
           </Link>
         ) : (
           <Link
             to="/admin/services"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+            className={backClassName}
+            aria-label="Back to services registry"
           >
-            <ArrowLeft aria-hidden="true" className="size-4" />
-            Services Registry
+            <ArrowLeft aria-hidden="true" />
           </Link>
         )}
-        <p className="font-mono text-xs text-muted-foreground">
-          Service dossier
-        </p>
-      </div>
-
-      <div className="grid gap-6 border-y py-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:py-7">
-        <div className="min-w-0">
-          <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-primary">
-            Citizen&rsquo;s Charter
-          </p>
-          <h1 className="text-pretty text-3xl font-bold tracking-[-0.03em] text-foreground sm:text-4xl">
-            {heading}
-          </h1>
-          <p className="mt-3 max-w-3xl text-pretty text-sm leading-6 text-muted-foreground">
-            {description}
-          </p>
+        <div className="flex min-w-0 flex-col gap-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+            <span>Services Registry</span>
+            <span aria-hidden="true">/</span>
+            <span>
+              {isGroup
+                ? "Edit Shared Application"
+                : isVariant
+                  ? "Edit Variant"
+                  : isEdit
+                    ? "Edit Service"
+                    : "New Service"}
+            </span>
+            {isGroup ? null : (
+              <>
+                <span aria-hidden="true" className="hidden sm:inline">
+                  ·
+                </span>
+                <span translate="no" className="hidden font-mono sm:inline">
+                  {formatServiceCode(serviceCode)}
+                </span>
+              </>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h1 className="text-pretty text-lg font-semibold tracking-tight sm:text-xl">
+              {serviceName || (isEdit ? "Edit Service" : "Register a Service")}
+            </h1>
+            {isVariant ? (
+              <Badge variant="neutral">Variant Record</Badge>
+            ) : applicationLoading ? (
+              <Badge variant="neutral">Loading…</Badge>
+            ) : applicationVersion > 0 ? (
+              <Badge variant="success">
+                Application v{applicationVersion} Live
+              </Badge>
+            ) : (
+              <Badge variant="warning">Application Not Published</Badge>
+            )}
+          </div>
         </div>
-        <div className="min-w-0 sm:max-w-56 sm:text-right">
-          <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
-            {isVariant ? "Internal variant" : "Registry record"}
-          </p>
-          <p className="mt-1 break-words text-lg font-semibold leading-tight text-primary sm:text-xl">
-            {formatServiceCode(serviceCode)}
-          </p>
-        </div>
       </div>
-
-      <div className="flex items-center justify-between gap-3 pt-3 text-xs text-muted-foreground">
-        <span>{isVariant ? "Variant-specific record" : "Complete service record"}</span>
-        <span>{editorSections.length} dossier sections</span>
-      </div>
+      {children}
     </header>
   );
 }
 
-interface ServiceFormSidebarProps {
+interface ServiceEditorSectionProps {
+  id: string;
+  icon: LucideIcon;
+  title: string;
+    description?: string;
+  summary?: string;
+  hasError?: boolean;
+  children: ReactNode;
+}
+
+export function ServiceEditorSection({
+  id,
+  icon: Icon,
+  title,
+  description,
+  summary,
+  hasError = false,
+  children,
+}: ServiceEditorSectionProps) {
+  return (
+    <TabsContent
+      value={id}
+      keepMounted
+      className="min-w-0 data-[hidden]:hidden"
+    >
+      <Card id={id} className="min-w-0 gap-0 py-0">
+        <CardHeader className="border-b py-6 sm:px-8">
+          <div className="flex items-start gap-3">
+            <span
+              aria-hidden="true"
+              className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary"
+            >
+              <Icon className="size-5" />
+            </span>
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <CardTitle>
+                  <h2 className="text-pretty">{title}</h2>
+                </CardTitle>
+                {hasError ? (
+                  <Badge variant="destructive">Needs Attention</Badge>
+                ) : summary ? (
+                  <Badge variant="neutral">{summary}</Badge>
+                ) : null}
+              </div>
+              {description ? <CardDescription>{description}</CardDescription> : null}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="px-0 py-6 [&>[data-slot=card]]:py-0 [&>[data-slot=card]>[data-slot=card-content]]:sm:px-8">
+          {children}
+        </CardContent>
+      </Card>
+    </TabsContent>
+  );
+}
+
+interface ServiceFormActionBarProps {
   isEdit: boolean;
   isSaving: boolean;
   isDisabled: boolean;
+  isDirty: boolean;
   mode?: EditorMode;
   displayGroup?: string | null;
 }
 
-export function ServiceFormSidebar({
+export function ServiceFormActionBar({
   isEdit,
   isSaving,
   isDisabled,
+  isDirty,
   mode = "full",
   displayGroup = null,
-}: ServiceFormSidebarProps) {
+}: ServiceFormActionBarProps) {
   const isVariant = mode === "variant";
-  return (
-    <aside className="lg:sticky lg:top-6">
-      <Card className="border-primary/15 shadow-sm">
-        <CardHeader className="border-b">
-          <CardTitle>
-            <h2>{isVariant ? "Internal Variant" : "Service Dossier"}</h2>
-          </CardTitle>
-          <CardDescription>
-            {isVariant
-              ? "Only this service code is changed here."
-              : "Your place in the record updates as you move through it."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-5">
-          <ServiceDossierNavigation mode={mode} />
+  const isGroup = mode === "group";
+  const cancelClassName = cn(
+    buttonVariants({ variant: "outline" }),
+    "min-h-11",
+  );
 
-          <div className="flex flex-col gap-2 border-t border-border pt-5">
-            <Button
-              type="submit"
-              aria-live="polite"
-              disabled={isDisabled}
-            >
-              {isSaving ? (
-                <>
-                  <Spinner data-icon="inline-start" />
-                  {isVariant
-                    ? "Saving Variant…"
-                    : isEdit
-                      ? "Saving & Publishing…"
-                      : "Creating & Publishing…"}
-                </>
-              ) : isVariant ? (
-                "Save Variant"
-              ) : isEdit ? (
-                "Save & Publish"
-              ) : (
-                "Create & Publish"
-              )}
-            </Button>
-            {isVariant && displayGroup ? (
-              <Link
-                to="/admin/services/groups/$displayGroup"
-                params={{ displayGroup }}
-                search={{ scope: undefined }}
-                className={cn(buttonVariants({ variant: "outline" }), "w-full")}
-              >
-                Cancel
-              </Link>
-            ) : (
-              <Link
-                to="/admin/services"
-                className={cn(buttonVariants({ variant: "outline" }), "w-full")}
-              >
-                Cancel
-              </Link>
-            )}
-            <p className="text-pretty text-xs leading-5 text-muted-foreground">
-              {isVariant
-                ? "The shared application form is not published from this editor."
-                : "Publishing activates an immutable application-form version."}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    </aside>
+  return (
+    <div
+      className="flex w-full shrink-0 flex-wrap items-center justify-end gap-2 sm:w-auto"
+      role="region"
+      aria-label="Service editor actions"
+    >
+      <p
+        className="mr-auto flex items-center gap-2 text-xs text-muted-foreground sm:mr-3"
+        aria-live="polite"
+      >
+        <span
+          aria-hidden="true"
+          className={cn(
+            "size-2 shrink-0 rounded-full",
+            isSaving
+              ? "bg-tone-progress"
+              : isDirty
+                ? "bg-tone-warning"
+                : "bg-tone-success",
+          )}
+        />
+        {isSaving
+          ? "Saving changes…"
+          : isDirty
+            ? "Unsaved changes"
+            : "No unsaved changes"}
+      </p>
+      {(isVariant || isGroup) && displayGroup ? (
+        <Link
+          to="/admin/services/groups/$displayGroup"
+          params={{ displayGroup }}
+          search={{ scope: undefined }}
+          className={cancelClassName}
+        >
+          Cancel
+        </Link>
+      ) : (
+        <Link to="/admin/services" className={cancelClassName}>
+          Cancel
+        </Link>
+      )}
+      <Button type="submit" className="min-h-11" disabled={isDisabled}>
+        {isSaving ? (
+          <Spinner data-icon="inline-start" />
+        ) : (
+          <Save aria-hidden="true" data-icon="inline-start" />
+        )}
+        {isSaving
+          ? isGroup
+            ? "Publishing…"
+            : "Saving…"
+          : isGroup
+            ? "Publish Changes"
+            : isVariant
+              ? "Save Variant"
+              : isEdit
+                ? "Save & Publish"
+                : "Create & Publish"}
+      </Button>
+    </div>
   );
 }
