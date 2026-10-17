@@ -357,11 +357,11 @@ export function CaseStep({
           values={{ ...draft.caseSelectorAnswers, ...watchedValues }}
           onDateChange={handleEventDateChange}
           // With the service questions above, head the fields as their own block.
-          showSectionTitles={isGroup}
-        />
+          showSectionTitles={isGroup}        />
 
         {draft.selectedServiceCode && selectedService.fee_per_copy ? (
           <CopiesStepper
+            wizard
             value={draft.copies}
             onChange={(copies) => update({ copies })}
             unitFee={selectedService.fee}

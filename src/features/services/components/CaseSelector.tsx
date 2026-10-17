@@ -201,11 +201,11 @@ function LegacyCaseSelector({
       <div>
         <h2
           id="case-selector-title"
-          className="text-pretty text-lg font-bold text-foreground"
+          className="text-pretty text-lg leading-tight font-bold text-foreground"
         >
           Find the right service
         </h2>
-        <p className="mt-1 max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground">
+        <p className="mt-0.5 max-w-2xl text-pretty text-sm leading-snug text-muted-foreground">
           Choose the answers that match this case. We&rsquo;ll select the correct
           service.
         </p>
@@ -383,7 +383,7 @@ function ConfiguredCaseSelector({
       <div>
         <h2
           id="case-selector-title"
-          className="text-pretty text-lg font-bold text-foreground"
+          className="text-pretty text-lg leading-tight font-bold text-foreground"
         >
           {definition.title}
           {/* A lone question that repeats the title has no legend of its own,
@@ -396,7 +396,7 @@ function ConfiguredCaseSelector({
             </>
           ) : null}
         </h2>
-        <p className="mt-1 max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground">
+        <p className="mt-0.5 max-w-2xl text-pretty text-sm leading-snug text-muted-foreground">
           {definition.description ??
             "Choose the answers that match this case. We’ll select the correct service."}
         </p>

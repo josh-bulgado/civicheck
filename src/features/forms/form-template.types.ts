@@ -162,6 +162,34 @@ export const formFieldDefinitionSchema = z.object({
   dateDirection: z.enum(["past", "future", "any"]).optional(),
   visibleWhen: formConditionSchema.optional(),
   /**
+   * In a single-column step, keep this field beside its neighbours instead of on
+   * its own row. Consecutive inline fields share a row (up to three), which is
+   * how a first/middle/last name sits on one line.
+   */
+  inline: z.boolean().optional(),
+  /**
+   * On a text field, adds an "I don't have one" checkbox under the input (for
+   * example "I don't have a middle name"). Ticking it clears and disables the
+   * input; it is a display aid only and nothing extra is saved.
+   */
+  noneLabel: z.string().min(1).max(120).optional(),
+  /**
+   * On a `person_group` field, star the middle name: it must be filled in, or
+   * the "I don't have a middle name" box ticked. Enforced in the wizard.
+   */
+  requireMiddleName: z.boolean().optional(),
+  /**
+   * On a `person_group` field with one person, a heading above the name boxes
+   * that depends on an earlier answer, e.g. "Full name of the deceased" when the
+   * record type is death. `labels` maps an answer value to the heading.
+   */
+  labelByAnswer: z
+    .object({
+      field: z.string().min(1).max(64),
+      labels: z.record(z.string().min(1).max(120), z.string().min(1).max(160)),
+    })
+    .optional(),
+  /**
    * Set when the field was copied in from a shared field block. The published
    * definition always carries the full field, so the applicant wizard never
    * resolves blocks; the marker only tells the admin editor which fields to
@@ -239,6 +267,12 @@ export const formSectionDefinitionSchema = z.object({
   step: formStepSchema,
   title: z.string().min(1).max(160),
   description: z.string().max(500).optional(),
+  /**
+   * Show this section's fields one per row (fields marked `inline` still share a
+   * row) and, when it is not the first section of its step, set it apart with a
+   * rule and extra room.
+   */
+  singleColumn: z.boolean().optional(),
   fields: z.array(formFieldDefinitionSchema).max(100),
 });
 
@@ -406,11 +440,17 @@ export const formTemplateDefinitionSchema = z
           });
         } else if (
           field.visibleWhen &&
-          stepsByKey.get(field.visibleWhen.field) !== section.step
+          stepsByKey.get(field.visibleWhen.field) !== section.step &&
+          // The details step comes after the case step, so it may depend on an
+          // answer already given there (e.g. the record type).
+          !(
+            section.step === "details" &&
+            stepsByKey.get(field.visibleWhen.field) === "case"
+          )
         ) {
           context.addIssue({
             code: z.ZodIssueCode.custom,
-            message: `Visibility condition for "${field.label}" must reference a field on the same step`,
+            message: `Visibility condition for "${field.label}" must reference a field on the same step or an earlier one`,
             path: ["sections"],
           });
         } else if (

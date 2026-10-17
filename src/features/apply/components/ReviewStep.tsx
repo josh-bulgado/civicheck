@@ -15,7 +15,11 @@ import {
 } from "~/features/services/requirement-upload.utils";
 import { submitRequestFn } from "~/features/services/services.mutations";
 import { useAcknowledgmentPdfDownload } from "~/features/requests/pdf/useAcknowledgmentPdfDownload";
-import type { AcknowledgmentPdfData } from "~/features/requests/pdf/types";
+import { useVerificationFormPdfDownload } from "~/features/requests/pdf/useVerificationFormPdfDownload";
+import type {
+  AcknowledgmentPdfData,
+  VerificationFormPdfData,
+} from "~/features/requests/pdf/types";
 import type { ServiceDetail } from "~/features/services/services.queries";
 import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
@@ -30,6 +34,7 @@ import {
 import { formatFieldAnswer } from "~/features/forms/answer-format";
 import type { TemplateAnswers } from "~/features/forms/form-template.types";
 import {
+  flattenSubjects,
   impliedSex,
   reconcileSubjects,
   subjectFullName,
@@ -56,9 +61,15 @@ export function ReviewStep({
     trackingNumber: string;
     documentWarning?: string;
     pdfData: AcknowledgmentPdfData;
+    /** Set only for services that collect the requester's name (the CTC form). */
+    verificationData: VerificationFormPdfData | null;
   } | null>(null);
   const { download: downloadAcknowledgmentPdf, downloading: downloadingPdf } =
     useAcknowledgmentPdfDownload();
+  const {
+    download: downloadVerificationForm,
+    downloading: downloadingVerificationForm,
+  } = useVerificationFormPdfDownload();
 
   const selectedService = useMemo(
     () => services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0],
@@ -166,10 +177,25 @@ export function ReviewStep({
         return;
       }
 
+      // The printable Verification Form is filled in from the same answers the
+      // request was saved with (text answers plus the flattened name keys).
+      const textAnswers = Object.fromEntries(
+        Object.entries(answerBag).filter(([, value]) => typeof value === "string"),
+      ) as Record<string, string>;
+      const verificationData: VerificationFormPdfData | null =
+        typeof textAnswers.requester_first_name === "string"
+          ? {
+              trackingNumber: res.trackingNumber!,
+              copies,
+              formData: { ...textAnswers, ...flattenSubjects(subjects) },
+            }
+          : null;
+
       setResult({
         trackingNumber: res.trackingNumber!,
         documentWarning: res.documentWarning,
         pdfData: res.pdfData!,
+        verificationData,
       });
       clear();
     } catch (err) {
@@ -212,6 +238,18 @@ export function ReviewStep({
               <Download data-icon="inline-start" />
               {downloadingPdf ? "Preparing PDF..." : "Download Acknowledgment PDF"}
             </Button>
+            {result.verificationData ? (
+              <Button
+                size="lg"
+                variant="outline"
+                className="h-13 rounded-full px-6 text-base font-semibold"
+                disabled={downloadingVerificationForm}
+                onClick={() => downloadVerificationForm(result.verificationData!)}
+              >
+                <Download data-icon="inline-start" />
+                {downloadingVerificationForm ? "Preparing PDF..." : "Download Verification Form"}
+              </Button>
+            ) : null}
             <QuietLink
               to="/my-requests"
               className={buttonVariants({

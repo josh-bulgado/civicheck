@@ -20,7 +20,18 @@ export interface FormDataGroup {
 
 const PARTY_KEY = /^(subject|party(\d+))_(role|first_name|middle_name|last_name|suffix|sex)$/;
 
-const EVENT_KEYS = ["event_date", "event_place", "place_type", "reference_number"];
+const EVENT_KEYS = [
+  "event_date",
+  "event_place",
+  "death_date",
+  "death_place",
+  "marriage_date",
+  "marriage_place",
+  "record_date",
+  "record_place",
+  "place_type",
+  "reference_number",
+];
 const INFORMANT_KEYS = ["informant_name", "informant_relationship"];
 
 function hasValue(value: FormValue | undefined): value is string | number | boolean {

@@ -3,6 +3,11 @@ import { Minus, Plus } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import {
+  WIZARD_CONTROL_CLASS,
+  WIZARD_LABEL_CLASS,
+} from "~/features/forms/components/wizard-field";
+import { cn } from "~/lib/utils";
+import {
   clampCopies,
   formatPesoFee,
   MAX_COPIES,
@@ -14,6 +19,8 @@ interface CopiesStepperProps {
   /** Fee for one copy; drives the running total shown beside the stepper. */
   unitFee: number | string;
   disabled?: boolean;
+  /** Match the applicant wizard's field styling (label, input height and font). */
+  wizard?: boolean;
 }
 
 /**
@@ -26,6 +33,7 @@ export function CopiesStepper({
   onChange,
   unitFee,
   disabled = false,
+  wizard = false,
 }: CopiesStepperProps) {
   const labelId = useId();
   const [text, setText] = useState(String(value));
@@ -44,7 +52,10 @@ export function CopiesStepper({
 
   return (
     <div className="flex flex-col gap-2">
-      <span id={labelId} className="text-sm font-medium text-foreground">
+      <span
+        id={labelId}
+        className={wizard ? WIZARD_LABEL_CLASS : "text-sm font-medium text-foreground"}
+      >
         Number of copies
       </span>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -53,6 +64,7 @@ export function CopiesStepper({
             type="button"
             variant="outline"
             size="icon"
+            className={wizard ? "size-14 rounded-[14px]" : undefined}
             aria-label="Decrease number of copies"
             disabled={disabled || value <= 1}
             onClick={() => commit(value - 1)}
@@ -63,7 +75,10 @@ export function CopiesStepper({
             inputMode="numeric"
             autoComplete="off"
             aria-label="Number of copies"
-            className="w-14 text-center tabular-nums"
+            className={cn(
+              "w-14 text-center tabular-nums",
+              wizard && cn(WIZARD_CONTROL_CLASS, "w-20 px-2 text-center"),
+            )}
             value={text}
             disabled={disabled}
             onChange={(event) => setText(event.target.value.replace(/\D/g, "").slice(0, 2))}
@@ -79,6 +94,7 @@ export function CopiesStepper({
             type="button"
             variant="outline"
             size="icon"
+            className={wizard ? "size-14 rounded-[14px]" : undefined}
             aria-label="Increase number of copies"
             disabled={disabled || value >= MAX_COPIES}
             onClick={() => commit(value + 1)}
@@ -89,7 +105,10 @@ export function CopiesStepper({
         <p
           role="status"
           aria-live="polite"
-          className="text-sm text-muted-foreground tabular-nums"
+          className={cn(
+            "text-sm text-muted-foreground tabular-nums",
+            wizard && "text-[15px]",
+          )}
         >
           {formatPesoFee(unitFee)} per copy
           <span aria-hidden="true"> · </span>
@@ -99,7 +118,7 @@ export function CopiesStepper({
           </span>
         </p>
       </div>
-      <p className="text-xs text-muted-foreground">
+      <p className={cn("text-xs text-muted-foreground", wizard && "text-sm")}>
         Up to {MAX_COPIES} copies per request. The fee is paid at the cashier.
       </p>
     </div>
