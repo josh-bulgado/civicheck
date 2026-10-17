@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useLocation } from "@tanstack/react-router";
 import { QuietLink } from "~/components/quiet-link";
+import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { LogOut, Search, Settings } from "lucide-react";
 import {
   DropdownMenu,
@@ -30,8 +31,8 @@ interface CitizenMobileHeaderProps {
 
 /**
  * The phone's top row, in place of the desktop top bar: the mark, the bell and
- * the person's initials. The bell opens its feed as a sheet across the screen;
- * the initials open Settings and Log out. Home also has a search button, since
+ * the person's photo (or initials). The bell opens its feed as a sheet across the
+ * screen; the photo opens Settings and Log out. Home also has a search button, since
  * every other page already has its own field or none.
  */
 export function CitizenMobileHeader({
@@ -81,9 +82,16 @@ export function CitizenMobileHeader({
           nativeButton
           disabled={!account}
           aria-label={`${name}, account menu`}
-          className="civic-press flex size-11 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-primary"
+          className="civic-press flex size-11 shrink-0 items-center justify-center rounded-full"
         >
-          {account ? getInitials(name) : ""}
+          <Avatar className="size-11" aria-hidden="true">
+            {account?.avatarUrl ? (
+              <AvatarImage src={account.avatarUrl} alt="" />
+            ) : null}
+            <AvatarFallback className="bg-primary-soft text-sm font-bold text-primary">
+              {account ? getInitials(name) : ""}
+            </AvatarFallback>
+          </Avatar>
         </DropdownMenuTrigger>
         <DropdownMenuContent
           side="bottom"
@@ -92,7 +100,7 @@ export function CitizenMobileHeader({
           className="w-56 rounded-[20px] bg-white p-2 shadow-portal-menu ring-0"
         >
           <DropdownMenuItem
-            onClick={() => setSettingsTab("general")}
+            onClick={() => setSettingsTab("profile")}
             className="h-12 gap-3 rounded-[14px] px-3.5 text-[15px] font-medium focus:bg-portal-panel"
           >
             <Settings className="size-5 text-primary!" aria-hidden="true" />
@@ -112,8 +120,8 @@ export function CitizenMobileHeader({
       {account ? (
         <SettingsDialog
           open={settingsTab !== null}
-          onOpenChange={(open) => setSettingsTab(open ? "general" : null)}
-          tab={settingsTab ?? "general"}
+          onOpenChange={(open) => setSettingsTab(open ? "profile" : null)}
+          tab={settingsTab ?? "profile"}
           onTabChange={setSettingsTab}
           account={account}
         />

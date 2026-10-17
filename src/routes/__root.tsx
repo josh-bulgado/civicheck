@@ -26,6 +26,7 @@ import type { AccountProfile } from "~/features/account/account.types";
 import { ApplyTransitionLoader } from "~/features/services/components/ApplyTransitionLoader";
 import { isInternalRole, type AccountStatus, type Role } from "~/lib/permissions";
 import { getVerifiedSessionUser, isSessionRevoked } from "~/server/auth";
+import { getAvatarUrl } from "~/server/avatar";
 import { loadCurrentUser } from "~/features/auth/current-user";
 
 const PUBLIC_ROUTES = new Set([
@@ -54,7 +55,7 @@ const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "role, first_name, middle_name, last_name, suffix, date_of_birth, sex, phone_number, access_status, sessions_revoked_at, created_at, last_login_at, welcome_tutorial_seen",
+      "role, first_name, middle_name, has_no_middle_name, last_name, suffix, date_of_birth, sex, phone_number, access_status, sessions_revoked_at, created_at, last_login_at, welcome_tutorial_seen, avatar_path",
     )
     .eq("id", user.id)
     .single();
@@ -85,6 +86,7 @@ const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
     role: (profile?.role ?? "applicant") as Role,
     firstName: profile?.first_name ?? "",
     middleName: profile?.middle_name ?? "",
+    hasNoMiddleName: profile?.has_no_middle_name ?? false,
     lastName: profile?.last_name ?? "",
     suffix: profile?.suffix ?? "",
     dateOfBirth: profile?.date_of_birth ?? "",
@@ -94,6 +96,7 @@ const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
     createdAt: profile?.created_at ?? "",
     lastLoginAt: profile?.last_login_at ?? null,
     welcomeTutorialSeen: profile?.welcome_tutorial_seen ?? false,
+    avatarUrl: await getAvatarUrl(supabase, profile?.avatar_path),
   } satisfies AccountProfile;
 });
 

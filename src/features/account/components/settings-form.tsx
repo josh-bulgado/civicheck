@@ -1,7 +1,8 @@
+import { CircleAlert } from "lucide-react";
 import type * as React from "react";
 import { Button } from "~/components/ui/button";
 import { DialogFooter } from "~/components/ui/dialog";
-import { Field, FieldError, FieldLabel } from "~/components/ui/field";
+import { Field, FieldLabel } from "~/components/ui/field";
 import { RequiredMark } from "~/components/ui/required-mark";
 import { Spinner } from "~/components/ui/spinner";
 import { pillButton } from "~/components/portal/styles";
@@ -9,34 +10,35 @@ import { cn } from "~/lib/utils";
 
 /**
  * The look of a field in the settings dialog. The dialog portals outside the
- * citizen shell, so ink and line colours are spelled out rather than read from
- * the shell's tokens.
+ * citizen shell, so ink and line colours can't come from the shell's tokens.
+ * They are set once as `--settings-*` variables on the dialog's content (see
+ * SettingsDialog) and read from here.
  *
- * Controls are 13px on desktop and 16px below `md`, where anything smaller makes
- * iOS zoom the page on focus.
+ * Controls are 48px and 16px below `md`, where anything smaller makes iOS zoom
+ * the page on focus, and 44px and 15px from `md` up. Both clear the 44px touch
+ * minimum.
  */
 
-/** Label beside a field: 13px medium, the asterisk sits close to the text. */
+/** Label above a field: 14px semibold, the asterisk sits close to the text. */
 export const SETTINGS_LABEL_CLASS =
-  "gap-1 text-[13px] leading-5 font-medium text-foreground";
+  "gap-1 text-sm leading-5 font-semibold text-foreground";
 
-/** Single-line controls: 40px tall, 12px corners, a 1px line on white. */
+/** Single-line controls: a 1px line dark enough to find the field by. */
 export const SETTINGS_CONTROL_CLASS =
-  "h-10 rounded-xl border-[#d7dee9] bg-white px-3.5 text-base shadow-none placeholder:text-[#8a97a8] md:text-[13px]";
+  "h-12 rounded-xl border-(--settings-line) bg-white px-3.5 text-base shadow-none placeholder:text-(--settings-placeholder) md:h-11 md:text-[15px]";
 
 /** A control made of an input and a trailing button (the password fields). */
 export const SETTINGS_GROUP_CLASS =
-  "h-10 rounded-xl border-[#d7dee9] bg-white shadow-none *:data-[slot=input-group-control]:h-full *:data-[slot=input-group-control]:px-3.5 *:data-[slot=input-group-control]:text-base md:*:data-[slot=input-group-control]:text-[13px]";
+  "h-12 rounded-xl border-(--settings-line) bg-white shadow-none md:h-11 *:data-[slot=input-group-control]:h-full *:data-[slot=input-group-control]:px-3.5 *:data-[slot=input-group-control]:text-base md:*:data-[slot=input-group-control]:text-[15px]";
 
 /** The date picker's trigger, to match the other controls. */
 export const SETTINGS_PICKER_CLASS =
-  "h-10 rounded-xl border-[#d7dee9] bg-white px-3.5 text-[13px] shadow-none hover:bg-white";
+  "h-12 rounded-xl border-(--settings-line) bg-white px-3.5 text-base shadow-none hover:bg-white md:h-11 md:text-[15px]";
 
 /**
- * One labelled setting: the label (and an optional hint) on the left, the
- * control on the right, a hairline under every row but the last. Below `sm` the
- * control drops under its label. The label stays level with the control's first
- * line, so an error message growing the row does not drag it down.
+ * One labelled setting: the label on top, then the control, then an optional
+ * hint, then the error. Stacking them keeps the eye on one line and lets the
+ * same field work at every width.
  */
 export function SettingsRow({
   label,
@@ -45,59 +47,85 @@ export function SettingsRow({
   hint,
   invalid = false,
   error,
+  className,
   children,
 }: {
   label: string;
   htmlFor: string;
   required?: boolean;
-  hint?: string;
+  hint?: React.ReactNode;
   invalid?: boolean;
   error?: { message?: string };
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
-    <Field
-      data-invalid={invalid}
-      className="grid gap-2 border-b border-border-lighter py-3 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_16.5rem] sm:gap-x-4"
-    >
-      <div className="flex min-h-10 flex-col justify-center">
-        <FieldLabel htmlFor={htmlFor} className={SETTINGS_LABEL_CLASS}>
-          {label}
-          {required && <RequiredMark />}
-        </FieldLabel>
-        {hint && <p className="text-xs leading-4 text-body-2">{hint}</p>}
-      </div>
-      <div className="flex min-w-0 flex-col gap-1.5">
-        {children}
-        {invalid && error && (
-          <FieldError errors={[error]} className="text-xs" />
-        )}
-      </div>
+    <Field data-invalid={invalid} className={cn("min-w-0 gap-1.5", className)}>
+      <FieldLabel htmlFor={htmlFor} className={SETTINGS_LABEL_CLASS}>
+        {label}
+        {required && <RequiredMark />}
+      </FieldLabel>
+      {children}
+      {hint && (
+        <div className="text-[13px] leading-[18px] text-body-2">{hint}</div>
+      )}
+      {invalid && error?.message && (
+        <p
+          role="alert"
+          className="flex items-start gap-1.5 text-[13px] leading-[18px] text-destructive"
+        >
+          <CircleAlert className="mt-px size-4 shrink-0" aria-hidden="true" />
+          {error.message}
+        </p>
+      )}
     </Field>
   );
 }
 
 /**
- * Cancel and Save for a settings form, under a hairline. Save stays pale until
- * something has been changed, and keeps its colour while saving so the
- * spinner does not read as a disabled button.
+ * Cancel and Save for a settings form, under a hairline. While there are edits
+ * the footer says so, in words as well as colour (from `md`; on a phone the
+ * enabled Save button is the cue). Save stays pale until something has been
+ * changed, and keeps its colour while saving so the spinner does not read as a
+ * disabled button.
  */
 export function SettingsFormFooter({
   onCancel,
   canSave,
   pending,
+  submitLabel = "Save changes",
+  pendingLabel = "Saving…",
 }: {
   onCancel: () => void;
   canSave: boolean;
   pending: boolean;
+  submitLabel?: string;
+  pendingLabel?: string;
 }) {
   return (
-    <DialogFooter className="mt-3 shrink-0 flex-row justify-end gap-2 border-t border-border-lighter pt-4 pb-5">
+    <DialogFooter className="shrink-0 flex-row items-center gap-2 border-t border-border-lighter px-5 pt-4 pb-5 md:gap-3 md:px-8">
+      <p
+        role="status"
+        className="hidden flex-1 items-center gap-2 text-sm text-body-2 md:flex"
+      >
+        {canSave && !pending ? (
+          <>
+            <span
+              className="size-2 rounded-full bg-warning"
+              aria-hidden="true"
+            />
+            Unsaved changes
+          </>
+        ) : null}
+      </p>
       <Button
         type="button"
         variant="outline"
         onClick={onCancel}
-        className={cn(pillButton.outline, "h-10 px-5 text-[13px]")}
+        className={cn(
+          pillButton.outline,
+          "h-12 flex-1 px-5 text-base md:h-11 md:flex-none md:text-[15px]",
+        )}
       >
         Cancel
       </Button>
@@ -106,19 +134,19 @@ export function SettingsFormFooter({
         disabled={!canSave || pending}
         className={cn(
           pillButton.primary,
-          "h-10 px-5 text-[13px] disabled:opacity-100",
+          "h-12 flex-2 px-6 text-base disabled:opacity-100 md:h-11 md:flex-none md:text-[15px]",
           pending
             ? "disabled:bg-primary disabled:text-primary-foreground"
-            : "disabled:bg-[#e4e9f1] disabled:text-[#8a97a8]",
+            : "disabled:bg-(--settings-disabled-bg) disabled:text-(--settings-disabled-ink)",
         )}
       >
         {pending ? (
           <span className="flex items-center gap-2">
             <Spinner className="size-4" />
-            Saving...
+            {pendingLabel}
           </span>
         ) : (
-          "Save changes"
+          submitLabel
         )}
       </Button>
     </DialogFooter>

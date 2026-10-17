@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Avatar, AvatarFallback } from "~/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +18,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "~/components/ui/sidebar";
-import { ChevronsUpDown, LogOut, Settings, User } from "lucide-react";
+import { ChevronsUpDown, Lock, LogOut, Settings, User } from "lucide-react";
 import { QuietLink } from "~/components/quiet-link";
 import { SettingsDialog } from "~/features/account/components/SettingsDialog";
 import {
@@ -52,8 +52,8 @@ export function NavFooter({ account, citizen = false }: NavFooterProps) {
   const settingsDialog = account && (
     <SettingsDialog
       open={settingsTab !== null}
-      onOpenChange={(open) => setSettingsTab(open ? "general" : null)}
-      tab={settingsTab ?? "general"}
+      onOpenChange={(open) => setSettingsTab(open ? "profile" : null)}
+      tab={settingsTab ?? "profile"}
       onTabChange={setSettingsTab}
       account={account}
     />
@@ -73,12 +73,14 @@ export function NavFooter({ account, citizen = false }: NavFooterProps) {
             aria-label={`${name}, account menu`}
             className="civic-press flex w-full items-center gap-3 rounded-[22px] bg-white/78 py-2.5 pr-3.5 pl-3 text-left shadow-[0_1px_2px_rgba(15,27,45,0.05),0_8px_24px_rgba(11,77,162,0.07)] hover:bg-white/90 data-popup-open:bg-white"
           >
-            <span
-              className="flex size-10.5 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-primary"
-              aria-hidden="true"
-            >
-              {initials}
-            </span>
+            <Avatar className="size-10.5" aria-hidden="true">
+              {account?.avatarUrl ? (
+                <AvatarImage src={account.avatarUrl} alt="" />
+              ) : null}
+              <AvatarFallback className="bg-primary-soft text-sm font-bold text-primary">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
             <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-sidebar-foreground">
               {firstName}
             </span>
@@ -96,7 +98,7 @@ export function NavFooter({ account, citizen = false }: NavFooterProps) {
             {/* `!` on the gear: the item restyles every descendant's colour on
                 focus, which would turn the brand-blue icon dark. */}
             <DropdownMenuItem
-              onClick={() => setSettingsTab("general")}
+              onClick={() => setSettingsTab("profile")}
               className="h-12 gap-3 rounded-[14px] px-3.5 text-[15px] font-medium focus:bg-portal-panel"
             >
               <Settings className="size-5 text-primary!" aria-hidden="true" />
@@ -134,6 +136,9 @@ export function NavFooter({ account, citizen = false }: NavFooterProps) {
               }
             >
               <Avatar className="h-8 w-8 rounded-full shrink-0">
+                {account?.avatarUrl ? (
+                  <AvatarImage src={account.avatarUrl} alt="" />
+                ) : null}
                 <AvatarFallback
                   className="rounded-full bg-primary-soft font-bold text-primary"
                   aria-label={`${name} initials`}
@@ -171,10 +176,10 @@ export function NavFooter({ account, citizen = false }: NavFooterProps) {
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={!account}
-                onClick={() => setSettingsTab("general")}
+                onClick={() => setSettingsTab("security")}
               >
-                <Settings size={16} className="opacity-80" aria-hidden="true" />
-                Settings
+                <Lock size={16} className="opacity-80" aria-hidden="true" />
+                Security
               </DropdownMenuItem>
               <QuietLink to="/logout">
                 <DropdownMenuItem variant="destructive">

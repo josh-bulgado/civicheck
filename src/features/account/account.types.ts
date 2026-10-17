@@ -10,6 +10,8 @@ export type AccountProfile = {
   role: Role;
   firstName: string;
   middleName: string;
+  /** The person said they have no middle name, as opposed to leaving it blank. */
+  hasNoMiddleName: boolean;
   lastName: string;
   suffix: string;
   dateOfBirth: string;
@@ -19,10 +21,15 @@ export type AccountProfile = {
   createdAt: string;
   lastLoginAt: string | null;
   welcomeTutorialSeen: boolean;
+  /**
+   * A short-lived signed link to the profile photo (the bucket is private), or
+   * null when there is no photo. Initials stand in for it.
+   */
+  avatarUrl: string | null;
 };
 
 /** Sections of the account settings dialog, in tab order. */
-export type SettingsTab = "profile" | "general" | "password";
+export type SettingsTab = "profile" | "security";
 
 export function getDisplayName(account: AccountProfile): string {
   return (

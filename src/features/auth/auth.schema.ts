@@ -8,7 +8,7 @@ import { NO_SUFFIX, SUFFIXES } from "~/lib/subject-fields";
 
 const EMAIL_MAX = 254;
 const NAME_MAX = 120;
-const PASSWORD_MIN = 8;
+export const PASSWORD_MIN = 8;
 // bcrypt ignores everything past 72 bytes, so a longer password would be
 // silently truncated and two different passwords could match. Measured in
 // bytes: a multi-byte character costs more than one.
@@ -36,6 +36,11 @@ export const newPasswordSchema = z
     (value) => new TextEncoder().encode(value).length <= PASSWORD_MAX_BYTES,
     `Password is too long. Use ${PASSWORD_MAX_BYTES} characters or fewer`,
   );
+
+/** The extra rule signup and password changes add on top of the above. */
+export const PASSWORD_NUMBER_MESSAGE =
+  "Password must include at least one number";
+export const passwordHasNumber = (value: string) => /\d/.test(value);
 
 /**
  * A password being entered to sign in. Only bounded, never held to the creation
@@ -76,8 +81,8 @@ export const signupFieldsSchema = z.object({
     ),
   email: emailSchema,
   password: newPasswordSchema.refine(
-    (value) => /\d/.test(value),
-    "Password must include at least one number",
+    passwordHasNumber,
+    PASSWORD_NUMBER_MESSAGE,
   ),
 });
 
