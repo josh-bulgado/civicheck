@@ -96,7 +96,7 @@ const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
     createdAt: profile?.created_at ?? "",
     lastLoginAt: profile?.last_login_at ?? null,
     welcomeTutorialSeen: profile?.welcome_tutorial_seen ?? false,
-    avatarUrl: await getAvatarUrl(supabase, profile?.avatar_path),
+    avatarUrl: await getAvatarUrl(supabase, user.id, profile?.avatar_path),
   } satisfies AccountProfile;
 });
 

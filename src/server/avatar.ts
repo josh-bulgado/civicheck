@@ -11,18 +11,21 @@ const SIGNED_URL_TTL_SECONDS = 60 * 60;
 const REUSE_FOR_MS = (SIGNED_URL_TTL_SECONDS - 10 * 60) * 1000;
 
 // Keyed by the object path, which starts with the owner's id and changes on
-// every upload, so a link can only ever be returned for the file it signs.
+// every upload. The cache is shared by every request in the process, so a path is
+// only looked up after it has been confirmed to belong to the caller.
 const signedUrls = new Map<string, { url: string; reusableUntil: number }>();
 
 /**
- * A signed link to a profile photo, or null when there is none or it can't be
- * signed. Never throws: a missing photo must not stop the app loading.
+ * A signed link to the signed-in user's own profile photo, or null when there is
+ * none or it can't be signed. Never throws: a missing photo must not stop the app
+ * loading.
  */
 export async function getAvatarUrl(
   supabase: SupabaseClient,
+  userId: string,
   path: string | null | undefined,
 ): Promise<string | null> {
-  if (!path) return null;
+  if (!path || !path.startsWith(`${userId}/`)) return null;
 
   const now = Date.now();
   const cached = signedUrls.get(path);
