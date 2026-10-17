@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useRouter } from "@tanstack/react-router";
+import { Link, useBlocker, useRouter } from "@tanstack/react-router";
 import { ArrowLeft, Blocks, Plus, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -104,6 +104,9 @@ export function FormBlocksPage({
   const [isSaving, setIsSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  // A block the person clicked while this one had unsaved edits, held until
+  // they confirm that switching discards them.
+  const [pendingKey, setPendingKey] = useState<string | null>(null);
 
   // Reload the draft when the selection changes or the server data refreshes
   // (after a save the version moves on).
@@ -124,6 +127,21 @@ export function FormBlocksPage({
     0,
   );
   const lockedKeys = selected ? selected.block.fields.map((field) => field.key) : [];
+
+  // Leaving the page drops the draft too, so it gets the same confirmation the
+  // service editor shows.
+  const blocker = useBlocker({
+    enableBeforeUnload: isDirty,
+    shouldBlockFn: ({ current, next }) =>
+      isDirty && current.pathname !== next.pathname,
+    withResolver: true,
+  });
+
+  function selectBlock(key: string) {
+    if (key === selectedKey) return;
+    if (isDirty) setPendingKey(key);
+    else setSelectedKey(key);
+  }
 
   function patch(next: Partial<FormFieldBlock>) {
     setDraft((previous) => ({ ...previous, ...next }));
@@ -230,7 +248,7 @@ export function FormBlocksPage({
           <Button
             type="button"
             variant="outline"
-            onClick={() => setSelectedKey("new")}
+            onClick={() => selectBlock("new")}
             className="justify-start"
           >
             <Plus data-icon="inline-start" />
@@ -240,7 +258,7 @@ export function FormBlocksPage({
             <button
               key={block.blockKey}
               type="button"
-              onClick={() => setSelectedKey(block.blockKey)}
+              onClick={() => selectBlock(block.blockKey)}
               aria-current={selectedKey === block.blockKey ? "true" : undefined}
               className={cn(
                 "flex flex-col gap-1 rounded-lg border border-border bg-background px-3 py-2.5 text-left transition-colors hover:bg-muted/50",
@@ -447,6 +465,57 @@ export function FormBlocksPage({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => void save()}>
               Save and republish
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={pendingKey !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingKey(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your edits to this block are not saved. Switching blocks now
+              will lose them.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                if (pendingKey) setSelectedKey(pendingKey);
+                setPendingKey(null);
+              }}
+            >
+              Discard changes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={blocker.status === "blocked"}
+        onOpenChange={(open) => {
+          if (!open && blocker.status === "blocked") blocker.reset();
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              If you leave this page now, your unsaved changes will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={blocker.proceed}>
+              Discard and leave
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
