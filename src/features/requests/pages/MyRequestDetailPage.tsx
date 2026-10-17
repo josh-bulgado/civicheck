@@ -10,6 +10,7 @@ import { NextStepsCard } from "~/features/requests/components/NextStepsCard";
 import { RequestMessagesCard } from "~/features/requests/components/RequestMessagesCard";
 import { RequestStatusHistory } from "~/features/requests/components/RequestStatusHistory";
 import { SubmittedDetailsCard } from "~/features/requests/components/SubmittedDetailsCard";
+import { VerificationFormCard } from "~/features/requests/components/VerificationFormCard";
 import { nextSteps } from "~/features/requests/next-steps";
 
 interface MyRequestDetailPageProps {
@@ -114,6 +115,12 @@ export default function MyRequestDetailPage({
               {downloadingPdf ? "Preparing..." : "Download PDF"}
             </Button>
           </section>
+
+          <VerificationFormCard
+            trackingNumber={request.trackingNumber}
+            copies={request.copies}
+            formData={request.formData}
+          />
 
           <MyRequestDocumentsCard documents={request.attachments} onChanged={onUpdated} />
         </div>

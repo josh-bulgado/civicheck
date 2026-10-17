@@ -64,6 +64,7 @@ import { RequestDetailHero } from "~/features/requests/components/RequestDetailH
 import { RequestHistoryTimeline } from "~/features/requests/components/RequestHistoryTimeline";
 import { RequestMessagesCard } from "~/features/requests/components/RequestMessagesCard";
 import { SubmittedDetailsCard } from "~/features/requests/components/SubmittedDetailsCard";
+import { VerificationFormCard } from "~/features/requests/components/VerificationFormCard";
 import {
   RejectionReasonPicker,
   useRejectionReason,
@@ -208,6 +209,13 @@ export default function RequestDetailPage({
           className="flex flex-col gap-6 lg:col-span-2"
         >
           <SubmittedDetailsCard request={request} showEmpty />
+
+          <VerificationFormCard
+            variant="staff"
+            trackingNumber={request.trackingNumber}
+            copies={request.copies}
+            formData={request.formData}
+          />
 
           <section className="dashboard-panel p-6">
             <h2 className="mb-4 text-lg font-bold text-foreground">

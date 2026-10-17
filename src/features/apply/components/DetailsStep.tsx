@@ -1,4 +1,4 @@
-import { useEffect, useId, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Controller,
@@ -25,6 +25,7 @@ import { WizardFooterActions } from "~/features/apply/components/WizardFooterAct
 import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
 import {
   DynamicFormFields,
+  NONE_ANSWER,
   visibleFieldsForStep,
   type DynamicFieldValues,
 } from "~/features/forms/components/DynamicFormFields";
@@ -114,10 +115,13 @@ function MiddleNameField({
   control,
   setValue,
   index,
+  required = false,
 }: {
   control: Control<DetailsValues>;
   setValue: UseFormSetValue<DetailsValues>;
   index: number;
+  /** Starred: filled in, or the "I don't have one" box ticked. */
+  required?: boolean;
 }) {
   const inputId = `subject-${index}-middleName`;
   const none = useWatch({ control, name: `subjects.${index}.noMiddleName` }) === true;
@@ -125,36 +129,53 @@ function MiddleNameField({
   return (
     <Field>
       <FieldLabel htmlFor={inputId} className={WIZARD_LABEL_CLASS}>
-        Middle name
+        Middle name {required ? <RequiredMark /> : null}
       </FieldLabel>
       <Controller
         control={control}
         name={`subjects.${index}.middleName`}
-        render={({ field }) => (
-          <Input
-            id={inputId}
-            placeholder={none ? "No middle name" : "Santos"}
-            maxLength={120}
-            autoComplete="off"
-            className={cn(WIZARD_CONTROL_CLASS, none && "border-[#e4e9f1] bg-portal-panel")}
-            {...field}
-            disabled={none}
-          />
+        rules={{
+          // Read the box from the form values, not from this render: ticking it
+          // re-runs this check, and it must see the box as ticked.
+          validate: (value, formValues) =>
+            !required ||
+            formValues.subjects?.[index]?.noMiddleName === true ||
+            (value ?? "").trim() !== "" ||
+            "Middle name is required",
+        }}
+        render={({ field, fieldState }) => (
+          <>
+            <Input
+              id={inputId}
+              placeholder="Santos"
+              maxLength={120}
+              autoComplete="off"
+              aria-invalid={fieldState.invalid}
+              className={cn(WIZARD_CONTROL_CLASS, none && "border-[#e4e9f1] bg-portal-panel")}
+              {...field}
+              // A ticked box shows "N/A" (the saved name stays blank).
+              value={none ? "N/A" : (field.value ?? "")}
+              disabled={none}
+            />
+            {fieldState.invalid && <WizardFieldError error={fieldState.error} />}
+          </>
         )}
       />
       <Controller
         control={control}
         name={`subjects.${index}.noMiddleName`}
         render={({ field }) => (
-          // The whole row is the target, 44px tall for a thumb.
-          <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-[15px] text-portal-ink-2">
+          // The whole row is the target, 44px tall for a thumb. The negative
+          // margin pulls the box up to the input without shrinking that target.
+          <label className="-mt-2.5 flex min-h-11 cursor-pointer items-center gap-2.5 text-[15px] leading-none text-portal-ink-2">
             <Checkbox
               checked={field.value === true}
               onCheckedChange={(checked) => {
                 const next = checked === true;
                 field.onChange(next);
                 if (next) {
-                  setValue(`subjects.${index}.middleName`, "");
+                  // Re-check the box now, so an earlier "required" error clears.
+                  setValue(`subjects.${index}.middleName`, "", { shouldValidate: true });
                 } else {
                   // After the input is enabled again.
                   requestAnimationFrame(() => document.getElementById(inputId)?.focus());
@@ -180,11 +201,13 @@ function SubjectFieldGrid({
   setValue,
   index,
   role,
+  requireMiddleName = false,
 }: {
   control: Control<DetailsValues>;
   setValue: UseFormSetValue<DetailsValues>;
   index: number;
   role: string;
+  requireMiddleName?: boolean;
 }) {
   const watchedSex = useWatch({ control, name: `subjects.${index}.sex` });
   const { showSuffix, showSex } = subjectFieldVisibility(role, watchedSex);
@@ -211,7 +234,12 @@ function SubjectFieldGrid({
           </Field>
         )}
       />
-      <MiddleNameField control={control} setValue={setValue} index={index} />
+      <MiddleNameField
+        control={control}
+        setValue={setValue}
+        index={index}
+        required={requireMiddleName}
+      />
       <Controller
         control={control}
         name={`subjects.${index}.lastName`}
@@ -329,6 +357,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   const detailsFields = fieldsForStep(definition, "details");
   const personGroupField = detailsFields.find((field) => field.type === "person_group");
   const hasPersonGroup = Boolean(personGroupField);
+  const requireMiddleName = personGroupField?.requireMiddleName === true;
   const roles = selectedService?.party_roles?.length
     ? selectedService.party_roles
     : ["Subject"];
@@ -344,6 +373,16 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     // the effect on its contents instead of its reference.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, hasPersonGroup, roles.join("|"), draft.subjects, update]);
+
+  // The owner's block can sit under its own heading after other sections (CTC
+  // asks about the requester first). Then the name inputs are drawn inside that
+  // section, and the page is headed for both people.
+  const detailSections = definition.sections.filter((section) => section.step === "details");
+  const personSection = detailSections.find((section) =>
+    section.fields.some((field) => field.type === "person_group"),
+  );
+  const ownerBlockInSection =
+    Boolean(personSection) && detailSections.indexOf(personSection!) > 0;
 
   const detailAnswers = Object.fromEntries(
     detailsFields
@@ -373,6 +412,68 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   // imply it) sex, plus every visible required template field. The Next button
   // reads this to show when the step is ready.
   const watchedValues = form.watch();
+  // Fields here can depend on an answer from the case step (the record type), so
+  // visibility is worked out from those earlier answers plus what is typed here.
+  const visibilityValues = {
+    ...Object.fromEntries(
+      Object.entries(draft.answers).filter(([, value]) => typeof value === "string"),
+    ),
+    ...watchedValues,
+  } as unknown as DynamicFieldValues;
+
+  // When the requester says they are the document owner, the owner's name boxes
+  // follow the requester's name as it is typed. They stay editable (a married
+  // woman uses her maiden name on the form): once the owner's boxes differ from
+  // what was last copied, they are left alone.
+  const mirroredOwner = useRef<{
+    first: string;
+    middle: string;
+    none: boolean;
+    last: string;
+  } | null>(null);
+  const textOf = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+  const relationship = textOf(watchedValues.requester_relationship);
+  const requesterFirst = textOf(watchedValues.requester_first_name);
+  const requesterMiddle = textOf(watchedValues.requester_middle_name);
+  const requesterLast = textOf(watchedValues.requester_last_name);
+  useEffect(() => {
+    if (!hasPersonGroup || roles.length !== 1) return;
+    if (relationship !== "owner") {
+      mirroredOwner.current = null;
+      return;
+    }
+    // "N/A" is what the requester's "I don't have a middle name" box stores.
+    const none = requesterMiddle === NONE_ANSWER;
+    const next = {
+      first: requesterFirst,
+      middle: none ? "" : requesterMiddle,
+      none,
+      last: requesterLast,
+    };
+    const owner = form.getValues("subjects.0");
+    if (!owner) return;
+    const ownerBlank =
+      !owner.firstName?.trim() &&
+      !owner.middleName?.trim() &&
+      !owner.lastName?.trim() &&
+      !owner.noMiddleName;
+    const last = mirroredOwner.current;
+    const ownerUntouched =
+      last !== null &&
+      owner.firstName === last.first &&
+      owner.middleName === last.middle &&
+      owner.lastName === last.last &&
+      Boolean(owner.noMiddleName) === last.none;
+    if (!ownerBlank && !ownerUntouched) return;
+    form.setValue("subjects.0.firstName", next.first);
+    form.setValue("subjects.0.middleName", next.middle);
+    form.setValue("subjects.0.lastName", next.last);
+    form.setValue("subjects.0.noMiddleName", next.none);
+    mirroredOwner.current = next;
+    // `form`, `roles` and `hasPersonGroup` are stable for a given service.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [relationship, requesterFirst, requesterMiddle, requesterLast]);
+
   // The role comes from the field array, not the watched values: `role` has no
   // input of its own, so `shouldUnregister` drops it from the watched rows.
   const subjectsReady =
@@ -382,16 +483,13 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       return Boolean(
         subject?.firstName?.trim() &&
           subject.lastName?.trim() &&
+          (!requireMiddleName || subject.middleName?.trim() || subject.noMiddleName) &&
           (impliedSex(field.role) !== null || subject.sex),
       );
     });
   const hasRequiredAnswers =
     subjectsReady &&
-    visibleFieldsForStep(
-      definition,
-      "details",
-      watchedValues as unknown as DynamicFieldValues,
-    ).every((field) => {
+    visibleFieldsForStep(definition, "details", visibilityValues).every((field) => {
       const value = watchedValues[field.key];
       return !field.required || (typeof value === "string" && value.trim() !== "");
     });
@@ -445,51 +543,83 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     navigate({ to: "/apply/$serviceCode/documents", params: { serviceCode } });
   }
 
+  const labelRule = personGroupField?.labelByAnswer;
+  const ownerLabel = labelRule
+    ? (labelRule.labels[String(visibilityValues[labelRule.field] ?? "")] ?? undefined)
+    : undefined;
+
+  const ownerBlock =
+    hasPersonGroup && showRoleLabels ? (
+      // Each party is its own headed section, stacked, so its name parts
+      // can run across the card instead of sharing narrow columns.
+      <div className="flex flex-col gap-7.5">
+        {subjectFields.fields.map((subjectField, index) => (
+          <PartySection key={subjectField.id} role={subjectField.role}>
+            <SubjectFieldGrid
+              control={form.control}
+              setValue={form.setValue}
+              index={index}
+              role={subjectField.role}
+              requireMiddleName={requireMiddleName}
+            />
+          </PartySection>
+        ))}
+      </div>
+    ) : hasPersonGroup ? (
+      subjectFields.fields.map((subjectField, index) =>
+        ownerLabel ? (
+          // A heading that names whose name this is ("Full name of the deceased").
+          <div key={subjectField.id} className="flex flex-col gap-3">
+            <span className={WIZARD_LABEL_CLASS}>{ownerLabel}</span>
+            <SubjectFieldGrid
+              control={form.control}
+              setValue={form.setValue}
+              index={index}
+              role={subjectField.role}
+              requireMiddleName={requireMiddleName}
+            />
+          </div>
+        ) : (
+          <FieldGroup key={subjectField.id}>
+            <SubjectFieldGrid
+              control={form.control}
+              setValue={form.setValue}
+              index={index}
+              role={subjectField.role}
+              requireMiddleName={requireMiddleName}
+            />
+          </FieldGroup>
+        ),
+      )
+    ) : null;
+
   return (
     <WizardShell
       step={2}
-      title="Who is this document for?"
+      title={ownerBlockInSection ? "Your details" : "Who is this document for?"}
       description={
-        showRoleLabels
-          ? "Enter each party's full name exactly as it should appear on the civil registry record."
-          : "Enter the full name of the person named on the civil registry record, exactly as it should appear."
+        ownerBlockInSection
+          ? "Tell us who is making this request, then who the record is for."
+          : showRoleLabels
+            ? "Enter each party's full name exactly as it should appear on the civil registry record."
+            : "Enter the full name of the person named on the civil registry record, exactly as it should appear."
       }
     >
       <div className="flex flex-col gap-6">
-        {hasPersonGroup && showRoleLabels ? (
-          // Each party is its own headed section, stacked, so its name parts
-          // can run across the card instead of sharing narrow columns.
-          <div className="flex flex-col gap-7.5">
-            {subjectFields.fields.map((subjectField, index) => (
-              <PartySection key={subjectField.id} role={subjectField.role}>
-                <SubjectFieldGrid
-                  control={form.control}
-                  setValue={form.setValue}
-                  index={index}
-                  role={subjectField.role}
-                />
-              </PartySection>
-            ))}
-          </div>
-        ) : hasPersonGroup ? (
-          subjectFields.fields.map((subjectField, index) => (
-            <FieldGroup key={subjectField.id}>
-              <SubjectFieldGrid
-                control={form.control}
-                setValue={form.setValue}
-                index={index}
-                role={subjectField.role}
-              />
-            </FieldGroup>
-          ))
-        ) : null}
+        {ownerBlockInSection ? null : ownerBlock}
 
         <DynamicFormFields
           definition={definition}
           step="details"
           showRequiredMarks
+          showSectionTitles={detailSections.length > 1}
           control={form.control}
-          values={watchedValues as unknown as DynamicFieldValues}
+          values={visibilityValues}
+          renderSectionLead={
+            ownerBlockInSection
+              ? (section) => (section.key === personSection?.key ? ownerBlock : null)
+              : undefined
+          }
         />
 
         <WizardFooterActions

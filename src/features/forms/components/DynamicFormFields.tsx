@@ -1,9 +1,11 @@
+import type { ReactNode } from "react";
 import {
   Controller,
   type Control,
   type FieldValues,
   type Path,
 } from "react-hook-form";
+import { Checkbox } from "~/components/ui/checkbox";
 import { Phone } from "lucide-react";
 import { DatePicker } from "~/components/ui/date-picker";
 import {
@@ -56,6 +58,69 @@ import type {
 
 export type DynamicFieldValues = Record<string, string>;
 
+/** What a ticked "I don't have one" box stores, so a required field counts as answered. */
+export const NONE_ANSWER = "N/A";
+
+/**
+ * A text input with an "I don't have one" checkbox (the middle-name pattern from
+ * the details step). Ticking it fills the input with "N/A" and switches it off,
+ * so the question still counts as answered; unticking clears it and puts the
+ * cursor back in it. The box reads as ticked whenever the stored answer is "N/A",
+ * so it survives leaving and coming back to the step.
+ */
+function TextWithNoneOption({
+  field,
+  id,
+  placeholder,
+  invalid,
+  noneLabel,
+}: {
+  field: {
+    value: string | undefined;
+    onChange: (value: string) => void;
+    onBlur: () => void;
+    name: string;
+    ref: React.Ref<HTMLInputElement>;
+  };
+  id: string;
+  placeholder?: string;
+  invalid: boolean;
+  noneLabel: string;
+}) {
+  const none = field.value === NONE_ANSWER;
+  return (
+    <>
+      <Input
+        {...field}
+        value={field.value ?? ""}
+        onChange={(event) => field.onChange(event.target.value)}
+        id={id}
+        autoComplete="off"
+        placeholder={placeholder}
+        maxLength={240}
+        disabled={none}
+        aria-invalid={invalid}
+        className={cn(WIZARD_CONTROL_CLASS, none && "border-[#e4e9f1] bg-portal-panel")}
+      />
+      <label className="-mt-2.5 flex min-h-11 cursor-pointer items-center gap-2.5 text-[15px] leading-none text-portal-ink-2">
+        <Checkbox
+          checked={none}
+          onCheckedChange={(checked) => {
+            if (checked === true) {
+              field.onChange(NONE_ANSWER);
+            } else {
+              field.onChange("");
+              requestAnimationFrame(() => document.getElementById(id)?.focus());
+            }
+          }}
+          className="size-5.5 rounded-md border-[1.5px] border-[#b9c7de] shadow-none [&_svg]:size-4"
+        />
+        {noneLabel}
+      </label>
+    </>
+  );
+}
+
 function conditionMatches(
   section: FormSectionDefinition,
   values: DynamicFieldValues,
@@ -85,7 +150,14 @@ export function visibleFieldsForStep(
     .filter((field) => field.type !== "person_group");
 }
 
-type FieldSpan = "full" | "half" | "third" | "follow-up" | "pair-start" | "pair-end";
+type FieldSpan =
+  | "full"
+  | "half"
+  | "third"
+  | "inline"
+  | "follow-up"
+  | "pair-start"
+  | "pair-end";
 
 // The grid has six columns so a row can hold two fields (3 + 3) or three
 // (2 + 2 + 2). Every field gets a span from the plan below; nothing is left to
@@ -95,6 +167,8 @@ const SPAN_CLASS: Record<FieldSpan, string> = {
   half: "sm:col-span-3",
   // Three short inputs share a row once there is room for all three.
   third: "sm:col-span-3 lg:col-span-2",
+  // A field marked `inline` in a single-column step: up to three share a row.
+  inline: "sm:col-span-2",
   // A follow-up (a field that only appears for one answer of an earlier
   // question) takes its own row directly under that question, at half width.
   "follow-up": "sm:col-span-6 sm:max-w-[calc(50%-0.5rem)]",
@@ -152,6 +226,8 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
   onDateChange,
   showRequiredMarks = false,
   showSectionTitles = false,
+  singleColumn = false,
+  renderSectionLead,
 }: {
   definition: FormTemplateDefinition;
   step: FormStep;
@@ -170,26 +246,51 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
    * the page reads as headed blocks.
    */
   showSectionTitles?: boolean;
+  /** Stacks every field on its own row instead of pairing short inputs. */
+  singleColumn?: boolean;
+  /**
+   * Content drawn under a section's heading, before its fields. The details step
+   * uses it to place the person-name block (which has its own inputs) inside the
+   * section that owns the `person_group` field, so sections can be reordered.
+   */
+  renderSectionLead?: (section: FormSectionDefinition) => ReactNode;
 }) {
   const sections = definition.sections.filter((section) => section.step === step);
 
-  return sections.map((section) => {
+  return sections.map((section, sectionIndex) => {
     const fields = conditionMatches(section, values).filter(
       (field) => field.type !== "person_group",
     );
-    if (!fields.length) return null;
+    const lead = renderSectionLead?.(section) ?? null;
+    if (!fields.length && !lead) return null;
     const choicePlacements = planChoiceLayout(fields);
     const spans = planFieldSpans(fields, choicePlacements);
+    // A section (or the whole call) can ask for one field per row; fields marked
+    // `inline` still share a row, which is how a first/middle/last name sits on
+    // one line.
+    const stacked = singleColumn || section.singleColumn === true;
+    if (stacked) {
+      for (const field of fields) spans.set(field.key, field.inline ? "inline" : "full");
+    }
     const titled = showSectionTitles || sections.length > 1;
+    // Stacked sections after the first are set apart with a rule and generous
+    // room, so the applicant sees where one block ends and the next begins.
+    const setApart = stacked && sectionIndex > 0;
 
     return (
-      <section key={section.key} className="flex flex-col gap-3">
+      <section
+        key={section.key}
+        className={cn(
+          "flex flex-col gap-3",
+          setApart && "mt-8 border-t border-[#e4e9f1] pt-12 sm:mt-10 sm:pt-14",
+        )}
+      >
         {titled ? (
-          <div className="flex flex-col gap-1">
+          <div className="-mb-2 flex flex-col gap-0.5">
             <h2
               className={
                 showSectionTitles
-                  ? "text-pretty text-lg font-bold text-foreground"
+                  ? "text-pretty text-lg leading-tight font-bold text-foreground"
                   : "text-sm font-semibold text-foreground"
               }
             >
@@ -201,7 +302,16 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
           </div>
         ) : null}
 
-        <FieldGroup className="grid grid-cols-1 gap-5 sm:grid-cols-6">
+        {lead}
+
+        {/* The section's own gap is smaller than the gap between fields, so after
+            a lead block (the owner's name boxes) add the difference to match. */}
+        <FieldGroup
+          className={cn(
+            "grid grid-cols-1 gap-5 sm:grid-cols-6",
+            lead && fields.length > 0 && "mt-2",
+          )}
+        >
           {fields.map((definitionField) => (
             <Controller
               key={definitionField.key}
@@ -302,7 +412,12 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                 return (
                   <Field
                     data-invalid={fieldState.invalid}
-                    className={SPAN_CLASS[spans.get(definitionField.key) ?? "half"]}
+                    className={cn(
+                      SPAN_CLASS[spans.get(definitionField.key) ?? "half"],
+                      // The tiles above a free-text box sit tight against its
+                      // label; a few extra pixels keep them apart.
+                      stacked && definitionField.type === "textarea" && "mt-2 sm:mt-3",
+                    )}
                   >
                     <FieldLabel
                       htmlFor={`dynamic-${definitionField.key}`}
@@ -389,6 +504,14 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                           aria-invalid={fieldState.invalid}
                         />
                       </InputGroup>
+                    ) : definitionField.noneLabel ? (
+                      <TextWithNoneOption
+                        field={field}
+                        id={`dynamic-${definitionField.key}`}
+                        placeholder={definitionField.placeholder}
+                        invalid={fieldState.invalid}
+                        noneLabel={definitionField.noneLabel}
+                      />
                     ) : (
                       <Input
                         {...field}
