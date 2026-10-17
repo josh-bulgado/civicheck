@@ -31,6 +31,7 @@ import type {
   FormFieldDefinition,
   FormFieldType,
 } from "../form-template.types";
+import { ConditionRuleBuilder } from "./ConditionRuleBuilder";
 import { fieldTypeLabel, type FormFieldTypeOption } from "./form-field-types";
 
 interface FormFieldInspectorProps {
@@ -45,7 +46,6 @@ interface FormFieldInspectorProps {
   immutableKeys: Set<string>;
   blockNameByKey: Map<string, string>;
   onUpdate: (patch: Partial<FormFieldDefinition>) => void;
-  onRemove: () => void;
   onDetach: (blockKey: string) => void;
 }
 
@@ -55,10 +55,8 @@ const DATE_DIRECTIONS = [
   { value: "any", label: "Any date" },
 ] as const;
 
-const CONDITION_OPERATORS = [
-  { value: "equals", label: "Equals" },
-  { value: "not_equals", label: "Does not equal" },
-] as const;
+const LEGEND_CLASS =
+  "text-xs font-semibold tracking-wide text-muted-foreground uppercase";
 
 /**
  * Edits one application question in a side sheet, so the list stays in view
@@ -75,7 +73,6 @@ export function FormFieldInspector({
   immutableKeys,
   blockNameByKey,
   onUpdate,
-  onRemove,
   onDetach,
 }: FormFieldInspectorProps) {
   return (
@@ -113,17 +110,7 @@ export function FormFieldInspector({
               )}
             </div>
 
-            <SheetFooter className="flex-row justify-between border-t border-border">
-              <Button
-                type="button"
-                variant="ghost"
-                className="min-h-11 text-destructive hover:text-destructive"
-                disabled={field.type === "person_group" || Boolean(field.blockKey)}
-                onClick={onRemove}
-              >
-                <Trash2 aria-hidden="true" data-icon="inline-start" />
-                Remove Field
-              </Button>
+            <SheetFooter className="flex-row justify-end border-t border-border">
               <Button
                 type="button"
                 className="min-h-11"
@@ -201,9 +188,6 @@ function FieldEditor({
   const earlierSelects = fields
     .slice(0, index)
     .filter((candidate) => candidate.type === "select");
-  const conditionSource = field.visibleWhen
-    ? fields.find((candidate) => candidate.key === field.visibleWhen?.field)
-    : undefined;
 
   return (
     <FieldGroup>
@@ -402,168 +386,32 @@ function FieldEditor({
         </FieldSet>
       ) : null}
 
-      {field.visibleWhen ? (
-        <FieldGroup className="gap-3 rounded-lg border border-border p-3">
-          <div>
-            <p className="text-sm font-semibold text-foreground">
-              Conditional Visibility
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Reveal this question only after the applicant selects the matching
-              answer.
-            </p>
-          </div>
-          <Field>
-            <FieldLabel htmlFor="inspector-condition-field">
-              Earlier Question
-            </FieldLabel>
-            <Select
-              items={earlierSelects.map((candidate) => ({
-                value: candidate.key,
-                label: candidate.label,
-              }))}
-              value={field.visibleWhen.field}
-              onValueChange={(value) => {
-                const source = fields.find(
-                  (candidate) => candidate.key === value,
-                );
-                onUpdate({
-                  visibleWhen: {
-                    ...field.visibleWhen!,
-                    field: value ?? "",
-                    value: source?.options?.[0]?.value ?? "",
-                  },
-                });
-              }}
-            >
-              <SelectTrigger id="inspector-condition-field" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {earlierSelects.map((candidate) => (
-                    <SelectItem key={candidate.key} value={candidate.key}>
-                      {candidate.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </Field>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field>
-              <FieldLabel htmlFor="inspector-condition-operator">
-                Comparison
-              </FieldLabel>
-              <Select
-                items={
-                  CONDITION_OPERATORS as unknown as {
-                    value: string;
-                    label: string;
-                  }[]
-                }
-                value={field.visibleWhen.operator}
-                onValueChange={(value) =>
-                  onUpdate({
-                    visibleWhen: {
-                      ...field.visibleWhen!,
-                      operator: value as "equals" | "not_equals",
-                    },
-                  })
-                }
-              >
-                <SelectTrigger
-                  id="inspector-condition-operator"
-                  className="w-full"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {CONDITION_OPERATORS.map((operator) => (
-                      <SelectItem key={operator.value} value={operator.value}>
-                        {operator.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="inspector-condition-value">
-                Selected Answer
-              </FieldLabel>
-              {conditionSource?.options?.length ? (
-                <Select
-                  value={field.visibleWhen.value}
-                  onValueChange={(value) =>
-                    onUpdate({
-                      visibleWhen: {
-                        ...field.visibleWhen!,
-                        value: value ?? "",
-                      },
-                    })
-                  }
-                >
-                  <SelectTrigger id="inspector-condition-value" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {conditionSource.options.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Input
-                  id="inspector-condition-value"
-                  value={field.visibleWhen.value}
-                  autoComplete="off"
-                  onChange={(event) =>
-                    onUpdate({
-                      visibleWhen: {
-                        ...field.visibleWhen!,
-                        value: event.target.value,
-                      },
-                    })
-                  }
-                />
-              )}
-            </Field>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="self-start"
-            onClick={() => onUpdate({ visibleWhen: undefined })}
-          >
-            Remove Condition
-          </Button>
-        </FieldGroup>
-      ) : earlierSelects.length > 0 && field.type !== "person_group" ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="self-start"
-          onClick={() => {
-            const source = earlierSelects[0];
-            onUpdate({
-              visibleWhen: {
-                field: source.key,
-                operator: "equals",
-                value: source.options?.[0]?.value ?? "",
-              },
-            });
-          }}
-        >
-          Show This Question Conditionally
-        </Button>
+      {field.visibleWhen ||
+      (earlierSelects.length > 0 && field.type !== "person_group") ? (
+        <FieldSet className="min-w-0">
+          <FieldLegend variant="label" className={LEGEND_CLASS}>
+            Show When
+          </FieldLegend>
+          <ConditionRuleBuilder
+            idPrefix="inspector-condition"
+            single
+            lead="Show when"
+            emptyLabel="Always shown."
+            sources={earlierSelects.map((candidate) => ({
+              key: candidate.key,
+              label: candidate.label,
+              options: candidate.options,
+            }))}
+            rule={
+              field.visibleWhen
+                ? { match: "all", conditions: [field.visibleWhen] }
+                : null
+            }
+            onChange={(rule) =>
+              onUpdate({ visibleWhen: rule?.conditions[0] })
+            }
+          />
+        </FieldSet>
       ) : null}
     </FieldGroup>
   );

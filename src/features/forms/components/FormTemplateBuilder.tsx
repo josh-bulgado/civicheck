@@ -41,6 +41,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -408,29 +409,31 @@ export function FormTemplateBuilder({
                       Insert Shared Block
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="min-w-64">
-                      <DropdownMenuLabel>
-                        Shared question blocks
-                      </DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      {stepBlocks.map((block) => {
-                        const included = includedBlockKeys.has(block.blockKey);
-                        return (
-                          <DropdownMenuItem
-                            key={block.blockKey}
-                            disabled={included}
-                            onClick={() => addBlock(block)}
-                          >
-                            <span className="flex flex-col gap-0.5">
-                              <span>{block.name}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {included
-                                  ? "Already in this form"
-                                  : `${block.fields.length} ${block.fields.length === 1 ? "question" : "questions"}`}
+                      <DropdownMenuGroup>
+                        <DropdownMenuLabel>
+                          Shared question blocks
+                        </DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {stepBlocks.map((block) => {
+                          const included = includedBlockKeys.has(block.blockKey);
+                          return (
+                            <DropdownMenuItem
+                              key={block.blockKey}
+                              disabled={included}
+                              onClick={() => addBlock(block)}
+                            >
+                              <span className="flex flex-col gap-0.5">
+                                <span>{block.name}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {included
+                                    ? "Already in this form"
+                                    : `${block.fields.length} ${block.fields.length === 1 ? "question" : "questions"}`}
+                                </span>
                               </span>
-                            </span>
-                          </DropdownMenuItem>
-                        );
-                      })}
+                            </DropdownMenuItem>
+                          );
+                        })}
+                      </DropdownMenuGroup>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : null}
@@ -485,11 +488,6 @@ export function FormTemplateBuilder({
         onUpdate={(patch) => {
           if (selected && selectedIndex >= 0) {
             updateField(selected.step, selectedIndex, patch);
-          }
-        }}
-        onRemove={() => {
-          if (selected && selectedIndex >= 0) {
-            removeField(selected.step, selectedIndex);
           }
         }}
         onDetach={detach}
