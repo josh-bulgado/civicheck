@@ -61,18 +61,23 @@ export const postRequestMessageFn = createServerFn({ method: "POST" })
       return { error: true as const, message: normalized.message };
     }
 
-    const { data: request, error: fetchError } = await supabase
+    type ServiceFlags = { allows_messages: boolean; department_id: string | null };
+    const { data: found, error: fetchError } = await supabase
       .from("requests")
       .select(
         "id, tracking_number, applicant_id, services_registry(allows_messages, department_id)",
       )
       .eq("id", data.requestId)
       .maybeSingle();
-    if (fetchError || !request) return NOT_FOUND;
+    if (fetchError || !found) return NOT_FOUND;
+    const request = found as {
+      id: string;
+      tracking_number: string;
+      applicant_id: string | null;
+      services_registry: ServiceFlags | ServiceFlags[] | null;
+    };
 
-    const service = one<{ allows_messages: boolean; department_id: string | null }>(
-      (request as any).services_registry,
-    );
+    const service = one<ServiceFlags>(request.services_registry);
     if (!service?.allows_messages) {
       return {
         error: true as const,

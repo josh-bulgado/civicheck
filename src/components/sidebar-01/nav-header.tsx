@@ -1,7 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { QuietLink } from "~/components/quiet-link";
 import { CiviCheckIdentity } from "~/components/brand/civic-identity";
 import { Button } from "~/components/ui/button";
 import { Kbd } from "~/components/ui/kbd";
@@ -12,7 +12,7 @@ import type { WorkspaceDetails } from "~/components/sidebar-01/workspace";
 
 interface NavHeaderProps {
   workspace: WorkspaceDetails;
-  /** The applicant shell: brand block only, search lives in the top bar. */
+  /** The applicant shell: logo and name only, search lives in the top bar. */
   citizen?: boolean;
 }
 
@@ -22,35 +22,30 @@ export function NavHeader({ workspace, citizen = false }: NavHeaderProps) {
 
   if (citizen) {
     return (
-      <SidebarHeader className="gap-0 px-3 pt-6 pb-0">
-        <Link
+      // The bottom padding is the 40px between the logo and the first pill.
+      <SidebarHeader className="gap-0 px-2.5 pt-2 pb-10">
+        <QuietLink
           to="/dashboard"
-          className="flex items-center gap-2.5 rounded-xl px-2 text-sidebar-foreground"
+          className="flex items-center gap-2.5 rounded-xl text-sidebar-foreground"
         >
           {/* Text stand-in: the official emblem isn't cleared for use yet. */}
           <span
-            className="flex size-10 shrink-0 items-center justify-center rounded-full border border-sidebar-border bg-white text-[10px] font-extrabold tracking-[0.02em] text-primary"
+            className="flex size-10.5 shrink-0 items-center justify-center rounded-full border-2 border-brand-gold bg-white text-[10px] font-extrabold tracking-[0.02em] text-primary"
             aria-hidden="true"
           >
             CCRO
           </span>
-          <span className="flex min-w-0 flex-col gap-px">
-            <span className="truncate text-lg leading-tight font-extrabold tracking-[-0.02em]">
-              CiviCheck
-            </span>
-            <span className="truncate text-xs font-semibold text-primary">
-              {workspace.label}
-            </span>
+          <span className="truncate text-[23px] font-semibold tracking-[-0.02em]">
+            CiviCheck
           </span>
-        </Link>
-        <div className="mx-2 mt-5 mb-4 h-px bg-sidebar-border" />
+        </QuietLink>
       </SidebarHeader>
     );
   }
 
   return (
     <SidebarHeader className="border-b border-sidebar-border p-2.5 group-data-[collapsible=icon]:px-2">
-      <Link
+      <QuietLink
         to="/dashboard"
         className={cn(
           "mb-1 flex min-h-14 w-full items-center gap-3 rounded-xl px-2 text-sidebar-foreground transition-colors hover:bg-sidebar-accent",
@@ -64,7 +59,7 @@ export function NavHeader({ workspace, citizen = false }: NavHeaderProps) {
               "mx-auto justify-center gap-0 [&>span:first-child]:size-8 [&>span:last-child]:hidden",
           )}
         />
-      </Link>
+      </QuietLink>
       {!isCollapsed && (
         <p className="px-2 pb-1 text-xs font-semibold text-primary">
           {workspace.label}

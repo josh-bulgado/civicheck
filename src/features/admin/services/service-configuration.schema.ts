@@ -74,6 +74,8 @@ export const serviceFieldsSchema = z
     fee_per_copy: z.boolean().optional(),
     display_group: groupKeySchema,
     display_name: optionalText(200),
+    // Mirrors the column's 40-character check.
+    short_name: optionalText(40),
     requirement_group: groupKeySchema,
   })
   .superRefine((service, context) => {

@@ -1,3 +1,5 @@
+import type { RequestServiceName } from "~/features/requests/applicant-requests.queries";
+
 /** A row from `getMyRequestsFn` as consumed by the applicant dashboard. */
 export interface CitizenDashboardRequest {
   id: string;
@@ -7,11 +9,12 @@ export interface CitizenDashboardRequest {
   payment_status: string | null;
   created_at: string;
   fees_due: number | string | null;
-  /**
-   * Supabase's inferred embed type is an array, but the to-one select returns a
-   * single object at runtime — kept loose to match the row as consumed here.
-   */
-  services_registry?: any;
+  /** The service the request is for; `getMyRequestsFn` flattens the embed to one object. */
+  services_registry?: RequestServiceName | null;
+  /** The service's short name, when an admin set one. */
+  short_name?: string | null;
+  /** Every status change on the request, in no particular order. */
+  application_logs?: { action_status: string; created_at: string }[] | null;
 }
 
 export interface AttentionItem {

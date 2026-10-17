@@ -93,11 +93,13 @@ async function sendSignupOtpEmail(
           "If you did not create a CiviCheck account, you can safely ignore this email.",
       }),
     });
-  } catch (sendError: any) {
+  } catch (sendError) {
     console.error("Resend sending error:", sendError);
     return {
       error: true,
-      message: `Failed to send the verification code: ${sendError.message}`,
+      message: `Failed to send the verification code: ${
+        sendError instanceof Error ? sendError.message : String(sendError)
+      }`,
     };
   }
 
@@ -213,10 +215,11 @@ export const signupFn = createServerFn({ method: "POST" })
         signUpResult.error.message.includes("already exists");
 
       if (isAlreadyRegistered) {
-        // Fetch users to check if this existing user is unconfirmed
+        // Fetch users to check if this existing user is unconfirmed. If the
+        // lookup fails there is no user to find, and the "already registered"
+        // error below is the right answer anyway.
         const {
           data: { users },
-          error: listError,
         } = await adminSupabase.auth.admin.listUsers({
           perPage: 1000,
         });
@@ -506,11 +509,13 @@ export const forgotPasswordFn = createServerFn({ method: "POST" })
             "If you did not request a password reset, you can safely ignore this email — your password stays the same.",
         }),
       });
-    } catch (sendError: any) {
+    } catch (sendError) {
       console.error("Resend sending error:", sendError);
       return {
         error: true,
-        message: `Failed to send the password reset code: ${sendError.message}`,
+        message: `Failed to send the password reset code: ${
+          sendError instanceof Error ? sendError.message : String(sendError)
+        }`,
       };
     }
 

@@ -3,12 +3,10 @@ import {
   Sheet,
   SheetContent,
   SheetClose,
-  SheetHeader,
   SheetTitle,
   SheetDescription,
 } from "~/components/ui/sheet";
 import { Button } from "~/components/ui/button";
-import { Separator } from "~/components/ui/separator";
 import {
   Collapsible,
   CollapsibleContent,
@@ -27,12 +25,10 @@ import {
   Clock,
   CircleDollarSign,
   Layers,
-  CheckCircle2,
   AlertTriangle,
   ArrowRight,
   FileText,
   ChevronDown,
-  Send,
 } from "lucide-react";
 import {
   cleanStepText,
@@ -88,8 +84,10 @@ export function ServiceDetailSheet({
             }),
         );
         setRequirements(data);
-      } catch (err: any) {
-        setError(err.message || "Failed to load requirements.");
+      } catch (err) {
+        setError(
+          (err instanceof Error && err.message) || "Failed to load requirements.",
+        );
       } finally {
         setLoading(false);
       }

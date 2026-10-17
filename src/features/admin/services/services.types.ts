@@ -31,6 +31,11 @@ export interface Service {
   steps_description: string[] | null;
   display_group: string | null;
   display_name: string | null;
+  /**
+   * A short title for the applicant's service cards and dashboard headline.
+   * Empty = use `display_name`. Absent until the column exists in the database.
+   */
+  short_name?: string | null;
   requirement_group: string | null;
   /** Owning CCRO department — what the request queue's Department column reads. */
   department_id: string | null;
@@ -64,6 +69,7 @@ export interface CreateServiceInput {
   steps_description?: string[];
   display_group?: string | null;
   display_name?: string | null;
+  short_name?: string | null;
   requirement_group?: string | null;
   department_id?: string | null;
   party_roles?: string[];
@@ -86,6 +92,7 @@ export interface UpdateServiceInput {
   steps_description?: string[];
   display_group?: string | null;
   display_name?: string | null;
+  short_name?: string | null;
   requirement_group?: string | null;
   department_id?: string | null;
   party_roles?: string[];

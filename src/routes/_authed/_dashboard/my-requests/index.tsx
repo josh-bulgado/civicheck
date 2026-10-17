@@ -1,10 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import { hasPermission, type Role } from "~/lib/permissions";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { getMyRequestsFn } from "~/features/requests/applicant-requests.queries";
 import MyRequestsPage from "~/features/requests/pages/MyRequestsPage";
 import { MyRequestsPageSkeleton } from "~/features/requests/pages/MyRequestsPageSkeleton";
 import { denyAccess } from "~/lib/access";
+
+// The dashboard layout already loads the unread state the sidebar badge shows.
+const dashboardLayout = getRouteApi("/_authed/_dashboard");
 
 export const Route = createFileRoute("/_authed/_dashboard/my-requests/")({
   beforeLoad: ({ context, location }) => {
@@ -20,9 +23,10 @@ export const Route = createFileRoute("/_authed/_dashboard/my-requests/")({
 
 function MyRequestsRoute() {
   const requests = Route.useLoaderData();
+  const { unreadRequestIds } = dashboardLayout.useLoaderData();
   // The applicant's own status tracker — this is the "no polling-by-phone-call"
   // promise, so it has to move the moment staff advance the request.
   useRealtimeRefresh({ tables: ["requests"] });
 
-  return <MyRequestsPage requests={requests} />;
+  return <MyRequestsPage requests={requests} unreadRequestIds={unreadRequestIds} />;
 }

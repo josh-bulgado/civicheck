@@ -47,7 +47,7 @@ import {
   AuthFormHeading,
   AuthSplitLayout,
 } from "./AuthSplitLayout";
-import { RequiredLegend, RequiredMark } from "~/components/ui/required-mark";
+import { RequiredMark } from "~/components/ui/required-mark";
 import { GoogleIcon } from "./GoogleIcon";
 import { PasswordToggle } from "./PasswordToggle";
 import { VerifyEmailNotice } from "./VerifyEmailNotice";

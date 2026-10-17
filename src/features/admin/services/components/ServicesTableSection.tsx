@@ -5,7 +5,6 @@ import { buttonVariants } from "~/components/ui/button";
 import { ServiceDetailSheet } from "~/features/services/components/ServiceDetailSheet";
 import { ServicesDataTable } from "./ServicesDataTable";
 import type { ServiceDossier } from "./ServicesColumn";
-import type { Service } from "../services.types";
 import type { Department } from "~/features/admin/departments.queries";
 
 interface ServicesTableSectionProps {

@@ -57,6 +57,27 @@ export interface ServiceCatalogue {
   formTemplatesByService: Map<string, PublishedFormTemplate>;
 }
 
+// What the three form-template queries in `fetchCatalogue` select.
+interface TemplateRow {
+  id: string;
+  template_key: string;
+  name: string;
+  active_version_id: string | null;
+}
+
+interface TemplateVersionRow {
+  id: string;
+  template_id: string;
+  version: number;
+  status: string;
+  definition: unknown;
+}
+
+interface TemplateBindingRow {
+  service_code: string;
+  template_id: string;
+}
+
 let entry: { promise: Promise<ServiceCatalogue>; expiresAt: number } | null =
   null;
 
@@ -161,18 +182,25 @@ async function fetchCatalogue(): Promise<ServiceCatalogue> {
   }
 
   const versionById = new Map(
-    (versionsResult.data ?? []).map((version: any) => [version.id, version]),
+    ((versionsResult.data ?? []) as TemplateVersionRow[]).map((version) => [
+      version.id,
+      version,
+    ]),
   );
   const templateById = new Map(
-    (templatesResult.data ?? []).map((template: any) => [template.id, template]),
+    ((templatesResult.data ?? []) as TemplateRow[]).map((template) => [
+      template.id,
+      template,
+    ]),
   );
   const formTemplatesByService = new Map<string, PublishedFormTemplate>();
-  for (const binding of bindingsResult.data ?? []) {
-    const template = templateById.get((binding as any).template_id) as any;
-    const version = template ? (versionById.get(template.active_version_id) as any) : null;
+  for (const binding of (bindingsResult.data ?? []) as TemplateBindingRow[]) {
+    const template = templateById.get(binding.template_id);
+    const version =
+      template?.active_version_id ? versionById.get(template.active_version_id) : null;
     if (!template || !version) continue;
     try {
-      formTemplatesByService.set((binding as any).service_code, {
+      formTemplatesByService.set(binding.service_code, {
         templateId: template.id,
         templateKey: template.template_key,
         templateName: template.name,

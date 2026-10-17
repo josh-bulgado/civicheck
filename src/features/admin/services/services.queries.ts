@@ -17,7 +17,13 @@ export const getAdminServices = createServerFn({ method: "GET" }).handler(
       .order("name", { ascending: true });
 
     if (error) throw new Error(error.message);
-    return (data || []).map((row: any) => {
+    // `select("*, departments(id, name)")`: every service column, plus the
+    // department it belongs to as an embed.
+    type DepartmentEmbed = { id: string; name: string };
+    type ServiceWithDepartment = Omit<Service, "department_name"> & {
+      departments?: DepartmentEmbed | DepartmentEmbed[] | null;
+    };
+    return ((data ?? []) as ServiceWithDepartment[]).map((row) => {
       const { departments, ...service } = row;
       const department = Array.isArray(departments) ? departments[0] : departments;
       return { ...service, department_name: department?.name ?? null } as Service;

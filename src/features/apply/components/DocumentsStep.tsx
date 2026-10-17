@@ -1,31 +1,16 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Camera,
-  Check,
-  ClipboardCheck,
-  Files,
-  FileText,
-  FileX,
-  X,
-} from "lucide-react";
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
+import { Camera, Check, ClipboardCheck, Files, FileText, FileX, X } from "lucide-react";
 import { RequiredMark } from "~/components/ui/required-mark";
-import { Skeleton } from "~/components/ui/skeleton";
-import { Spinner } from "~/components/ui/spinner";
+import { Input } from "~/components/ui/input";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogMedia,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "~/components/ui/alert-dialog";
 import {
   isRequirementApplicable,
@@ -43,12 +28,20 @@ import {
 import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
 import { RequestSummaryCard } from "~/features/apply/components/RequestSummaryCard";
+import { SlotCardSkeleton } from "~/features/apply/components/WizardPageSkeleton";
+import {
+  AfterDelay,
+  ConnectionNotice,
+  WizardBar,
+  WizardSpinner,
+  useConnectionState,
+} from "~/features/apply/components/wizard-feedback";
 import {
   CameraCaptureDialog,
   canUseBrowserCamera,
 } from "~/features/apply/components/CameraCaptureDialog";
 import { DocumentPreview } from "~/features/apply/components/DocumentPreview";
-import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
+import { useApplyDraft, type ApplyDraftDocument } from "~/features/apply/hooks/useApplyDraft";
 import { useDocumentPreviewUrls } from "~/features/apply/hooks/useDocumentPreviewUrls";
 import { canonicalizeTemplateAnswers } from "~/features/forms/form-template.utils";
 import {
@@ -87,6 +80,24 @@ interface RejectedFile {
   detail?: string;
 }
 
+/** A card's upload or removal that did not go through: what to say, and how to try again. */
+interface SlotFailure {
+  message: string;
+  /** What the server said, when it said something specific. */
+  detail?: string;
+  retry: () => void;
+}
+
+interface RemovalTarget {
+  slotKey: string;
+  storagePath: string;
+  index: number;
+  fileName: string;
+  fileSize: number;
+  /** "{role}: {requirement}", or the requirement alone. */
+  caption: string;
+}
+
 interface DocumentsStepProps {
   serviceCode: string;
   requirements: ServiceDetail["requirements"];
@@ -96,6 +107,12 @@ interface DocumentsStepProps {
 export function DocumentsStep({ serviceCode, requirements, services }: DocumentsStepProps) {
   const navigate = useNavigate();
   const { draft, update, hydrated } = useApplyDraft(serviceCode);
+  // The draft as of the latest render. A "Try again" button keeps the
+  // `handleFiles` of the render it was made in, so reading `draft` there would
+  // restart the retry from the draft as it was before the batch's first file
+  // landed: no upload draft yet, and the files already uploaded forgotten.
+  const latestDraft = useRef(draft);
+  latestDraft.current = draft;
   const selectedService =
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
   const definition = selectedService.form_template!.definition;
@@ -119,9 +136,20 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
     type: "upload" | "remove";
     completed?: number;
     total?: number;
+    /** The file being removed, so its row can step back while it goes. */
+    storagePath?: string;
   } | null>(null);
+  // Files of the running upload batch that have not landed yet, for their rows.
+  const [pendingFiles, setPendingFiles] = useState<{ name: string; size: number }[]>([]);
+  // Plain notes (a file-count limit, say) versus failures that offer a retry.
   const [rowError, setRowError] = useState<Record<string, string>>({});
+  const [failure, setFailure] = useState<Record<string, SlotFailure | undefined>>({});
+  // Raised by pressing Next while a document is missing: which cards are empty.
+  const [showMissing, setShowMissing] = useState(false);
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
+  // Bumped by Cancel. A batch that sees a different number than it started with
+  // stops, and cleans up whatever it managed to upload meanwhile.
+  const uploadRun = useRef(0);
   // The slot being photographed in the in-browser camera dialog, if any.
   const [cameraSlot, setCameraSlot] = useState<
     ReturnType<typeof expandRequirementUploadSlots>[number] | null
@@ -134,6 +162,13 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
   const [rejectedOpen, setRejectedOpen] = useState(false);
   const hasTypeRejection = rejectedFiles.some((file) => file.reason === "type");
   const hasSizeRejection = rejectedFiles.some((file) => file.reason === "size");
+  // The file the "Remove file?" dialog is asking about, and whether it is working.
+  // `removal` outlives `removalOpen`, so the dialog keeps its content while it
+  // animates closed instead of collapsing to an empty box.
+  const [removal, setRemoval] = useState<RemovalTarget | null>(null);
+  const [removalOpen, setRemovalOpen] = useState(false);
+  const [removeBusy, setRemoveBusy] = useState(false);
+  const keepFile = useRef<HTMLButtonElement>(null);
 
   // A file dropped anywhere outside a slot would otherwise make the browser
   // open it, replacing the wizard. Swallow those misses for as long as this
@@ -206,7 +241,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
   }, [uploadSlots]);
 
   const documentsByRequirement = useMemo(() => {
-    const map = new Map<string, typeof draft.documents>();
+    const map = new Map<string, ApplyDraftDocument[]>();
     for (const doc of draft.documents) {
       const key = requirementUploadKey(doc.requirementId, doc.subjectRole);
       const existing = map.get(key);
@@ -243,11 +278,16 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
     }
   }
 
-  const uploadedCount = uploadSlots.filter((slot) =>
-    (documentsByRequirement.get(slot.key)?.length ?? 0) > 0,
-  ).length;
-  const allUploaded = uploadedCount === uploadSlots.length;
+  const allUploaded = uploadSlots.every(
+    (slot) => (documentsByRequirement.get(slot.key)?.length ?? 0) > 0,
+  );
   const hasPendingAction = pendingAction !== null;
+  // The wait is the connection's, not ours, once it runs long or is offline.
+  const connection = useConnectionState(hasPendingAction);
+
+  function setSlotFailure(slotKey: string, next: SlotFailure | undefined) {
+    setFailure((previous) => ({ ...previous, [slotKey]: next }));
+  }
 
   async function handleFiles(
     slot: (typeof uploadSlots)[number],
@@ -257,7 +297,9 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
     if (selectedFiles.length === 0) return;
 
     setRowError((prev) => ({ ...prev, [slot.key]: "" }));
-    const remainingCapacity = MAX_TOTAL_FILES - draft.documents.length;
+    setSlotFailure(slot.key, undefined);
+    const remainingCapacity =
+      MAX_TOTAL_FILES - latestDraft.current.documents.length;
     if (remainingCapacity <= 0) {
       setRowError((prev) => ({
         ...prev,
@@ -265,6 +307,9 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
       }));
       return;
     }
+
+    const runId = ++uploadRun.current;
+    const cancelled = () => uploadRun.current !== runId;
 
     // Camera photos are resized and re-encoded on the device first; it takes a
     // moment, so show the card as busy before validating the prepared files.
@@ -286,6 +331,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
             : file,
         ),
     );
+    if (cancelled()) return;
     const unsupportedFiles = files.filter(
       (file) => !ACCEPTED_TYPES.has(file.type),
     );
@@ -313,15 +359,15 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
       setRejectedFiles(rejected);
       setRejectedOpen(true);
     }
-    const errors: string[] = [];
+    const notes: string[] = [];
 
     if (selectedFiles.length > remainingCapacity) {
-      errors.push(
+      notes.push(
         `Only the first ${remainingCapacity} file${remainingCapacity === 1 ? "" : "s"} fit within the ${MAX_TOTAL_FILES}-file application limit.`,
       );
     }
     if (validFiles.length === 0) {
-      setRowError((prev) => ({ ...prev, [slot.key]: errors.join(" ") }));
+      setRowError((prev) => ({ ...prev, [slot.key]: notes.join(" ") }));
       setPendingAction(null);
       return;
     }
@@ -332,9 +378,25 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
       completed: 0,
       total: validFiles.length,
     });
+    setPendingFiles(validFiles.map((file) => ({ name: file.name, size: file.size })));
     try {
       const uploadedDocuments: typeof draft.documents = [];
-      let activeUploadDraftId = draft.uploadDraftId;
+      const failedFiles: File[] = [];
+      let serverDetail: string | undefined;
+      let activeUploadDraftId = latestDraft.current.uploadDraftId;
+      // Cancelled: none of this batch is kept, and the applicant never saw the
+      // files that had already landed, so take them back out too.
+      const discardLanded = () => {
+        for (const landed of uploadedDocuments) {
+          evictCachedFile(landed.storagePath);
+          void deleteRequestDocumentFn({
+            data: {
+              storagePath: landed.storagePath,
+              uploadDraftId: activeUploadDraftId,
+            },
+          }).catch(() => {});
+        }
+      };
 
       for (const [index, file] of validFiles.entries()) {
         const formData = new FormData();
@@ -348,8 +410,23 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
 
         try {
           const res = await uploadRequestDocumentFn({ data: formData });
+          if (cancelled()) {
+            // Cancelled while it was on its way: it landed anyway, so take it
+            // back out rather than leave a file nobody is looking at.
+            if (!res.error && res.storagePath) {
+              void deleteRequestDocumentFn({
+                data: {
+                  storagePath: res.storagePath,
+                  uploadDraftId: res.uploadDraftId ?? activeUploadDraftId,
+                },
+              }).catch(() => {});
+            }
+            discardLanded();
+            return;
+          }
           if (res.error) {
-            errors.push(`${file.name}: ${res.message || "Upload failed."}`);
+            failedFiles.push(file);
+            serverDetail ??= res.message || undefined;
           } else {
             activeUploadDraftId = res.uploadDraftId!;
             // The browser already holds this file; keep it so the first
@@ -366,9 +443,14 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
             });
           }
         } catch {
-          errors.push(`${file.name}: check your connection and try again.`);
+          if (cancelled()) {
+            discardLanded();
+            return;
+          }
+          failedFiles.push(file);
         }
 
+        setPendingFiles((previous) => previous.slice(1));
         setPendingAction({
           slotKey: slot.key,
           type: "upload",
@@ -390,12 +472,30 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
           ],
         }));
       }
-      if (errors.length > 0) {
-        setRowError((prev) => ({ ...prev, [slot.key]: errors.join(" ") }));
+      if (notes.length > 0) {
+        setRowError((prev) => ({ ...prev, [slot.key]: notes.join(" ") }));
+      }
+      if (failedFiles.length > 0) {
+        setSlotFailure(slot.key, {
+          message: `Could not upload ${failedFiles.map((file) => file.name).join(", ")}.`,
+          detail: serverDetail,
+          // The files were already prepared, so they go back through as chosen ones.
+          retry: () => void handleFiles(slot, failedFiles, "files"),
+        });
       }
     } finally {
-      setPendingAction(null);
+      if (!cancelled()) {
+        setPendingAction(null);
+        setPendingFiles([]);
+      }
     }
+  }
+
+  /** Stops waiting on the running upload. Whatever lands afterwards is removed again. */
+  function cancelUpload() {
+    uploadRun.current += 1;
+    setPendingAction(null);
+    setPendingFiles([]);
   }
 
   /**
@@ -413,25 +513,28 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
   }
 
   async function handleRemove(slotKey: string, storagePath: string) {
-    const existing = documentsByRequirement
-      .get(slotKey)
-      ?.find((document) => document.storagePath === storagePath);
+    const current = latestDraft.current;
+    const existing = current.documents.find(
+      (document) => document.storagePath === storagePath,
+    );
     if (!existing) return;
     setRowError((previous) => ({ ...previous, [slotKey]: "" }));
-    setPendingAction({ slotKey, type: "remove" });
+    setSlotFailure(slotKey, undefined);
+    setPendingAction({ slotKey, type: "remove", storagePath });
+    const failed = () =>
+      setSlotFailure(slotKey, {
+        message: "Could not remove the file. Check your connection and try again.",
+        retry: () => void handleRemove(slotKey, storagePath),
+      });
     try {
       const result = await deleteRequestDocumentFn({
         data: {
           storagePath: existing.storagePath,
-          uploadDraftId: draft.uploadDraftId,
+          uploadDraftId: current.uploadDraftId,
         },
       });
       if (result.error) {
-        setRowError((previous) => ({
-          ...previous,
-          [slotKey]:
-            result.message || "The upload could not be removed. Try again.",
-        }));
+        failed();
         return;
       }
       evictCachedFile(storagePath);
@@ -441,13 +544,55 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
         ),
       }));
     } catch {
-      setRowError((previous) => ({
-        ...previous,
-        [slotKey]:
-          "The upload could not be removed. Check your connection and try again.",
-      }));
+      failed();
     } finally {
       setPendingAction(null);
+    }
+  }
+
+  async function confirmRemoval() {
+    if (!removal || removeBusy) return;
+    setRemoveBusy(true);
+    await handleRemove(removal.slotKey, removal.storagePath);
+    setRemoveBusy(false);
+    // On success the row is gone; on failure the card says so and offers to retry.
+    setRemovalOpen(false);
+  }
+
+  /**
+   * Where focus goes when the dialog closes. After a removal the button that
+   * opened it is gone, so focus would fall to the page: put it on the card's
+   * next file instead, or on its first action when it has none left.
+   */
+  function removalFinalFocus() {
+    if (!removal) return true;
+    const card = document.getElementById(`slot-${removal.slotKey}`);
+    if (!card) return true;
+    const removeButtons = Array.from(
+      card.querySelectorAll<HTMLButtonElement>("button[data-remove-file]"),
+    ).filter((button) => !button.disabled);
+    return (
+      removeButtons.find((button) => button.dataset.removeFile === removal.storagePath) ??
+      removeButtons[0] ??
+      card.querySelector<HTMLButtonElement>("button:not(:disabled)") ??
+      true
+    );
+  }
+
+  function handleNext() {
+    if (allUploaded) {
+      navigate({ to: "/apply/$serviceCode/review", params: { serviceCode } });
+      return;
+    }
+    // Pressing a button that is not ready is how you ask what is missing.
+    setShowMissing(true);
+    const firstEmpty = uploadSlots.find(
+      (slot) => (documentsByRequirement.get(slot.key)?.length ?? 0) === 0,
+    );
+    if (firstEmpty) {
+      document
+        .getElementById(`slot-${firstEmpty.key}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }
 
@@ -456,11 +601,15 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
     const { primary } = parseRequirementName(req.requirement_name);
     const documents = documentsByRequirement.get(slot.key) ?? [];
     const isPending = pendingAction?.slotKey === slot.key;
-    const error = rowError[slot.key];
+    const uploading = isPending && pendingAction.type === "upload";
+    const removing = isPending && pendingAction.type === "remove";
+    const note = rowError[slot.key];
+    const slotFailure = failure[slot.key];
     const pageCount = documents.length;
     const captureInputKey = `${slot.key}:capture`;
     const filesInputKey = `${slot.key}:files`;
     const isDropTarget = dragSlotKey === slot.key;
+    const isMissing = showMissing && pageCount === 0;
 
     // Dropped files take the same path as chosen ones, so the type, size and
     // file-count checks in `handleFiles` apply to them unchanged.
@@ -474,6 +623,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
     return (
       <article
         key={slot.key}
+        id={`slot-${slot.key}`}
         aria-busy={isPending}
         onDragEnter={handleDragOver}
         onDragOver={handleDragOver}
@@ -492,68 +642,108 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
           void handleFiles(slot, Array.from(event.dataTransfer.files), "files");
         }}
         className={cn(
-          "overflow-hidden rounded-[10px] border bg-card transition-colors",
+          "overflow-hidden rounded-[20px] bg-card transition-[background-color,box-shadow,border-color] duration-150",
           isDropTarget
-            ? "border-primary bg-primary-soft ring-2 ring-primary/30"
+            ? "border-2 border-solid border-primary bg-primary-soft shadow-[0_0_0_4px_rgba(11,77,162,0.18)]"
             : pageCount > 0
-              ? "border-border-light"
-              : "border-dashed border-border",
+              ? "border border-solid border-[#e4e9f1]"
+              : cn(
+                  "border-2 border-dashed",
+                  isMissing ? "border-destructive" : "border-[#b9c7de]",
+                ),
         )}
       >
-        <div className="flex items-start gap-3 px-4 py-4 sm:px-5">
+        <div className="flex items-start gap-4 px-5 pt-5.5 pb-4.5 sm:px-6">
           <div
             className={cn(
-              "flex size-11 shrink-0 items-center justify-center rounded-md sm:size-13",
-              pageCount > 0
-                ? "bg-primary-soft text-primary"
-                : "bg-background text-disabled",
+              "flex size-14 shrink-0 items-center justify-center rounded-[14px] transition-colors",
+              isDropTarget
+                ? "bg-white text-primary"
+                : pageCount > 0
+                  ? "bg-primary-soft text-primary"
+                  : "bg-portal-panel text-[#8a97a8]",
             )}
           >
-            <FileText className="size-5 sm:size-6" aria-hidden="true" />
+            <FileText className="size-6.5" aria-hidden="true" />
           </div>
 
           <div className="min-w-0 flex-1" aria-live="polite">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="min-w-0 break-words text-base font-bold text-foreground">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <h3 className="min-w-0 text-[19px] leading-snug font-bold wrap-break-word text-foreground">
                 {primary} <RequiredMark />
               </h3>
               {pageCount > 0 ? (
                 // Keyed on the count so each added or removed file replays the
                 // pop, which is what makes the tally read as having changed.
-                <Badge
+                <span
                   key={pageCount}
-                  variant="success"
-                  className="civic-enter-scale"
+                  className="civic-enter-scale inline-flex h-7 items-center rounded-full bg-[#e2f2e7] px-3 text-[13px] font-semibold text-[#1a6a3c]"
                 >
                   {pageCount} {pageCount === 1 ? "file" : "files"}
-                </Badge>
+                </span>
               ) : null}
             </div>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              {isDropTarget
-                ? "Drop to add to this document."
-                : pageCount > 0
-                  ? "Keep photos in reading order. A multi-page PDF can stay as one file."
-                  : "Required · add a PDF or photograph each page."}
-            </p>
-            {isPending ? (
-              <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-                {pendingAction.type === "remove" ? (
-                  "Removing page…"
-                ) : (
-                  <>
-                    <Spinner className="size-3.5" aria-hidden="true" />
-                    Uploading{" "}
-                    {Math.min(
+
+            {uploading || removing ? (
+              <p className="mt-1 flex items-center gap-2 text-[15px] font-semibold text-body-2">
+                <WizardSpinner className="size-4 border-2" />
+                {removing
+                  ? "Removing…"
+                  : `Uploading ${Math.min(
                       (pendingAction.completed ?? 0) + 1,
                       pendingAction.total ?? 1,
-                    )}{" "}
-                    of {pendingAction.total ?? 1}…
-                  </>
-                )}
+                    )} of ${pendingAction.total ?? 1}…`}
               </p>
-            ) : error ? (
-              <p className="mt-1 text-sm text-warning-strong">{error}</p>
+            ) : (
+              <p
+                className={cn(
+                  "mt-1 text-[15px] leading-snug",
+                  isDropTarget
+                    ? "font-semibold text-primary-hover"
+                    : isMissing
+                      ? "font-semibold text-destructive"
+                      : "text-muted-foreground",
+                )}
+              >
+                {isDropTarget
+                  ? "Drop to add to this document."
+                  : pageCount > 0
+                    ? "Keep photos in reading order. A multi-page PDF can stay as one file."
+                    : "Required · add a PDF or photograph each page."}
+              </p>
+            )}
+
+            {note && !slotFailure ? (
+              <p className="mt-1.5 text-[15px] leading-snug text-warning-strong">{note}</p>
+            ) : null}
+
+            {slotFailure ? (
+              <div className="mt-2 flex flex-col gap-2.5">
+                <p className="text-[15px] leading-snug font-semibold text-destructive">
+                  {slotFailure.message}
+                  {slotFailure.detail ? ` ${slotFailure.detail}` : ""}
+                </p>
+                <div className="flex items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSlotFailure(slot.key, undefined);
+                      slotFailure.retry();
+                    }}
+                    disabled={hasPendingAction}
+                    className="civic-press h-12 rounded-full bg-primary px-6 text-base font-semibold text-white hover:bg-primary-hover disabled:opacity-60"
+                  >
+                    Try again
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSlotFailure(slot.key, undefined)}
+                    className="civic-press rounded-full px-1 py-2 text-[15px] font-semibold text-body-2 hover:text-foreground"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
             ) : null}
           </div>
         </div>
@@ -588,121 +778,150 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
           }}
         />
 
-        {pageCount > 0 ? (
-          <ol className="flex flex-col border-y border-border-light bg-background">
-            {documents.map((document, index) => (
-              <li
-                key={document.storagePath}
-                className={cn(
-                  "flex min-w-0 items-center gap-3 border-b border-border-light px-4 py-3 last:border-b-0 sm:px-5",
-                  freshPaths.current.has(document.storagePath) &&
-                    "civic-upload-land",
-                )}
-              >
-                <span className="relative flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-bold text-primary">
-                  <span
-                    className={cn(
-                      freshPaths.current.has(document.storagePath) &&
-                        "civic-upload-number",
-                    )}
-                  >
-                    {index + 1}
-                  </span>
-                  {freshPaths.current.has(document.storagePath) ? (
-                    <span
-                      aria-hidden="true"
-                      className="civic-upload-check absolute inset-0 flex items-center justify-center rounded-full bg-success text-white"
-                    >
-                      <Check className="size-4" strokeWidth={3} />
+        {pageCount > 0 || (uploading && pendingFiles.length > 0) ? (
+          <ol className="flex flex-col border-t border-[#e4e9f1] bg-portal-panel">
+            {documents.map((document, index) => {
+              const fresh = freshPaths.current.has(document.storagePath);
+              const beingRemoved =
+                removing && pendingAction.storagePath === document.storagePath;
+              return (
+                <li
+                  key={document.storagePath}
+                  className={cn(
+                    "border-b border-[#e4e9f1] px-5 py-3 transition-opacity last:border-b-0 sm:px-6",
+                    fresh && "civic-upload-land",
+                    beingRemoved && "opacity-55",
+                  )}
+                >
+                  <div className="flex min-w-0 items-center gap-3.5">
+                    <span className="relative flex size-8.5 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-primary">
+                      <span className={cn(fresh && "civic-upload-number")}>{index + 1}</span>
+                      {fresh ? (
+                        <span
+                          aria-hidden="true"
+                          className="civic-upload-check absolute inset-0 flex items-center justify-center rounded-full bg-success text-white"
+                        >
+                          <Check className="size-4" strokeWidth={3} />
+                        </span>
+                      ) : null}
                     </span>
+                    <DocumentPreview
+                      className="size-11.5 rounded-lg"
+                      fileName={document.fileName}
+                      url={previewUrls[document.storagePath]}
+                      label={`File ${index + 1} of ${primary}`}
+                      onUrlError={() => refreshPreviewUrl(document.storagePath)}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[15px] font-bold text-foreground">
+                        File {index + 1} · {document.fileName}
+                      </p>
+                      <p className="text-[13px] text-muted-foreground">
+                        {formatSize(document.fileSize)} · pending staff review
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      data-remove-file={document.storagePath}
+                      disabled={hasPendingAction}
+                      aria-label={`Remove file ${index + 1} of ${primary}`}
+                      onClick={() => {
+                        setRemoval({
+                          slotKey: slot.key,
+                          storagePath: document.storagePath,
+                          index: index + 1,
+                          fileName: document.fileName,
+                          fileSize: document.fileSize,
+                          caption: `${slot.subjectRole ? `${slot.subjectRole}: ` : ""}${primary}`,
+                        });
+                        setRemovalOpen(true);
+                      }}
+                      className="civic-press flex size-9.5 shrink-0 items-center justify-center rounded-full text-body-2 hover:bg-white hover:text-destructive disabled:opacity-40"
+                    >
+                      <X className="size-5" aria-hidden="true" />
+                    </button>
+                  </div>
+                  {beingRemoved ? (
+                    <p className="mt-2 flex items-center gap-2 pl-12 text-[15px] font-semibold text-body-2">
+                      <WizardSpinner className="size-4 border-2" />
+                      Removing…
+                    </p>
                   ) : null}
-                </span>
-                <DocumentPreview
-                  fileName={document.fileName}
-                  url={previewUrls[document.storagePath]}
-                  label={`File ${index + 1} of ${primary}`}
-                  onUrlError={() => refreshPreviewUrl(document.storagePath)}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-foreground">
-                    File {index + 1} · {document.fileName}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatSize(document.fileSize)} · pending staff review
-                  </p>
-                </div>
-                <AlertDialog>
-                  <AlertDialogTrigger
-                    render={
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        disabled={hasPendingAction}
-                        aria-label={`Remove file ${index + 1} of ${primary}`}
-                      />
-                    }
+                </li>
+              );
+            })}
+
+            {/* Files on their way: the name and size, a bar, and, once the wait is
+                the connection's, what that means and a way out. */}
+            {uploading
+              ? pendingFiles.map((file, index) => (
+                  <li
+                    key={`${file.name}-${index}`}
+                    className="border-b border-[#e4e9f1] px-5 py-3 last:border-b-0 sm:px-6"
                   >
-                    <X />
-                  </AlertDialogTrigger>
-                  {/* The popup is portaled out of the wizard wrapper, so it
-                      re-applies `.apply-wizard` to keep that contrast pass. */}
-                  <AlertDialogContent className="apply-wizard">
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Remove file {index + 1}?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        <span className="font-semibold wrap-anywhere text-foreground">
-                          {document.fileName}
-                        </span>{" "}
-                        will be removed from this document set. Other uploaded
-                        pages will stay in the draft.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel className="min-h-11">
-                        Keep file
-                      </AlertDialogCancel>
-                      <AlertDialogAction
-                        variant="destructive"
-                        // Solid, not the variant's pale tint: this is the
-                        // dialog's one irreversible action.
-                        className="min-h-11 bg-destructive text-white hover:bg-destructive/90"
-                        onClick={() =>
-                          handleRemove(slot.key, document.storagePath)
-                        }
+                    <div className="flex min-w-0 items-center gap-3.5">
+                      <span
+                        className="flex size-8.5 shrink-0 items-center justify-center rounded-full bg-white text-sm font-bold text-muted-foreground"
+                        aria-hidden="true"
                       >
-                        Remove file
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </li>
-            ))}
+                        {pageCount + index + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[15px] font-bold text-foreground">
+                          {file.name}
+                        </p>
+                        <p className="text-[13px] text-muted-foreground">
+                          {formatSize(file.size)} · Uploading
+                        </p>
+                        <WizardBar className="mt-2 h-1.5" />
+                        {connection ? (
+                          <div className="mt-2 flex items-center justify-between gap-3">
+                            <span className="text-sm text-muted-foreground">
+                              Waiting for connection…
+                            </span>
+                            <button
+                              type="button"
+                              onClick={cancelUpload}
+                              className="civic-press rounded-full px-1 py-1 text-[15px] font-semibold text-body-2 hover:text-foreground"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </li>
+                ))
+              : null}
           </ol>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-2 px-4 py-3 min-[420px]:grid-cols-2 sm:flex sm:px-5">
-          <Button
+        <div
+          className={cn(
+            "grid grid-cols-1 items-center gap-3 px-5 pt-4 pb-5 min-[420px]:grid-cols-2 sm:flex sm:px-6",
+            hasPendingAction && "[&>button]:opacity-45",
+          )}
+        >
+          <button
             type="button"
-            className="min-h-11"
             disabled={hasPendingAction}
             onClick={() => startPhoto(slot)}
+            className="civic-press inline-flex h-12 items-center justify-center gap-2.5 rounded-full bg-primary px-6 text-base font-semibold text-white hover:bg-primary-hover disabled:cursor-default"
           >
-            <Camera data-icon="inline-start" />
+            <Camera className="size-5" aria-hidden="true" />
             {pageCount > 0 ? "Add photo" : "Take photo"}
-          </Button>
-          <Button
+          </button>
+          <button
             type="button"
-            variant="outline"
-            className="min-h-11"
             disabled={hasPendingAction}
             onClick={() => fileInputs.current[filesInputKey]?.click()}
+            className="civic-press inline-flex h-12 items-center justify-center gap-2.5 rounded-full border border-[#cfd8e8] bg-white px-6 text-base font-semibold text-foreground hover:bg-primary-tint disabled:cursor-default"
           >
-            <Files data-icon="inline-start" />
+            <Files className="size-5" aria-hidden="true" />
             {pageCount > 0 ? "Add files" : "Choose files"}
-          </Button>
+          </button>
           {/* Dragging needs a mouse or trackpad, so touch screens skip the hint. */}
-          <p className="hidden self-center text-sm text-muted-foreground pointer-fine:sm:block">
+          <p className="hidden text-[15px] text-muted-foreground pointer-fine:sm:block">
             or drag and drop files here
           </p>
         </div>
@@ -719,45 +938,33 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
         summaryRows.length > 0 ? <RequestSummaryCard rows={summaryRows} /> : null
       }
     >
-      <div className="flex flex-col gap-5">
-        {uploadSlots.length > 0 && (
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="text-base font-bold text-foreground">
-              {uploadedCount} of {uploadSlots.length} requirements ready
-            </h2>
-            <div
-              role="progressbar"
-              aria-label="Required documents uploaded"
-              aria-valuemin={0}
-              aria-valuemax={uploadSlots.length}
-              aria-valuenow={uploadedCount}
-              className="h-2 w-35 shrink-0 overflow-hidden rounded-full bg-border-light"
-            >
-              <div
-                className="h-full rounded-full bg-primary transition-[width]"
-                style={{ width: `${(uploadedCount / uploadSlots.length) * 100}%` }}
-              />
-            </div>
-          </div>
-        )}
+      <div className="flex flex-col gap-7">
+        <ConnectionNotice state={connection} />
 
         {!hydrated ? (
-          <Skeleton className="h-24 rounded-xl" />
+          // Shapes in the layout the slots will take, held back 200ms so a quick
+          // read of the draft never flashes them.
+          <AfterDelay>
+            <div className="flex flex-col gap-3.5">
+              <SlotCardSkeleton />
+              <SlotCardSkeleton />
+            </div>
+          </AfterDelay>
         ) : mandatoryReqs.length === 0 ? (
-          <p className="rounded-[10px] border border-dashed border-border bg-white p-5 text-sm italic text-muted-foreground">
+          <p className="rounded-[20px] border border-dashed border-[#b9c7de] bg-white p-5 text-[15px] text-muted-foreground italic">
             No specific required documents are listed for this service — you can continue.
           </p>
         ) : null}
 
         {hydrated
           ? uploadGroups.map((group) => (
-              <section key={group.role ?? "request"} className="flex flex-col gap-3">
+              <section key={group.role ?? "request"} className="flex flex-col gap-3.5">
                 <div>
-                  <h2 className="text-base font-bold text-foreground">
+                  <h2 className="text-xl leading-[normal] font-bold text-foreground">
                     {group.role ? `${group.role}’s documents` : "Shared documents"}
                   </h2>
                   {group.name ? (
-                    <p className="text-sm text-muted-foreground">{group.name}</p>
+                    <p className="mt-0.5 text-[15px] text-muted-foreground">{group.name}</p>
                   ) : null}
                 </div>
                 {group.slots.map(renderUploadSlot)}
@@ -766,14 +973,14 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
           : null}
 
         {hydrated && inPersonRequirements.length > 0 ? (
-          <section className="rounded-[10px] border border-border-light bg-surface-subtle p-5">
-            <div className="flex items-start gap-3">
-              <ClipboardCheck className="mt-0.5 size-5 shrink-0 text-primary" />
+          <section className="rounded-[20px] border border-[#e4e9f1] bg-portal-panel p-5.5">
+            <div className="flex items-start gap-3.5">
+              <ClipboardCheck className="mt-0.5 size-5.5 shrink-0 text-primary" />
               <div className="min-w-0">
-                <h2 className="font-bold text-foreground">
+                <h2 className="text-lg font-bold text-foreground">
                   Complete at the CCRO — no upload needed
                 </h2>
-                <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-sm text-muted-foreground">
+                <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-[15px] text-body-2">
                   {inPersonRequirements.map((requirement) => (
                     <li key={requirement.id}>
                       {parseRequirementName(requirement.requirement_name).primary}
@@ -809,35 +1016,117 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
         }}
       />
 
+      {/* Remove a file (3t). It stays open and busy while the request runs, and
+          Escape and a click outside are ignored until it is done. */}
+      <AlertDialog
+        open={removalOpen}
+        onOpenChange={(open) => {
+          if (!open && !removeBusy) setRemovalOpen(false);
+        }}
+      >
+        <AlertDialogContent
+          initialFocus={keepFile}
+          finalFocus={removalFinalFocus}
+          overlayClassName="bg-[rgba(15,27,45,0.28)] backdrop-blur-sm"
+          className="apply-wizard w-[min(32.5rem,calc(100%-2rem))] grid-cols-[minmax(0,1fr)] gap-0 rounded-[28px] bg-white p-8 pb-7 shadow-portal-dialog ring-0 data-[size=default]:max-w-none data-[size=default]:sm:max-w-none"
+        >
+          {removal ? (
+            <>
+              <AlertDialogTitle className="font-sans text-[28px] leading-[1.15] font-semibold tracking-[-0.02em] text-foreground">
+                Remove file {removal.index}?
+              </AlertDialogTitle>
+              <div className="mt-5 flex items-center gap-3.5 rounded-2xl bg-portal-panel px-4 py-3.5">
+                <DocumentPreview
+                  className="size-12 rounded-xl bg-white"
+                  fileName={removal.fileName}
+                  url={previewUrls[removal.storagePath]}
+                  label={removal.fileName}
+                  onUrlError={() => refreshPreviewUrl(removal.storagePath)}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-base font-bold text-foreground">
+                    {removal.fileName}
+                  </p>
+                  <p className="truncate text-sm text-[#5f6b7c]">
+                    {formatSize(removal.fileSize)} · {removal.caption}
+                  </p>
+                </div>
+              </div>
+
+              {removeBusy ? (
+                <WizardBar tone="danger" className="mt-5 h-1" />
+              ) : (
+                <AlertDialogDescription className="mt-5 text-base leading-snug text-body-2">
+                  Your other pages stay in the draft.
+                </AlertDialogDescription>
+              )}
+
+              <div className="mt-6 flex justify-end gap-2.5">
+                {/* Both stay focusable while busy (`aria-disabled`, not `disabled`),
+                    so focus doesn't drop to the page mid-request. A press does
+                    nothing: the dialog ignores a close until the request ends. */}
+                <AlertDialogCancel
+                  ref={keepFile}
+                  aria-disabled={removeBusy}
+                  className={cn(
+                    "civic-press h-13 rounded-full border bg-white px-7 text-base font-semibold shadow-none",
+                    removeBusy
+                      ? "cursor-default border-[#e4e9f1] text-[#8a97a8] opacity-100"
+                      : "border-primary text-foreground hover:bg-primary-tint focus-visible:ring-4 focus-visible:ring-primary/20",
+                  )}
+                >
+                  Keep file
+                </AlertDialogCancel>
+                <button
+                  type="button"
+                  onClick={() => void confirmRemoval()}
+                  aria-disabled={removeBusy}
+                  className={cn(
+                    "civic-press inline-flex h-13 items-center justify-center gap-2.5 rounded-full bg-destructive px-7 text-base font-semibold text-white",
+                    removeBusy ? "cursor-default opacity-85" : "hover:bg-destructive/90",
+                  )}
+                >
+                  {removeBusy ? <WizardSpinner /> : null}
+                  {removeBusy ? "Removing…" : "Remove file"}
+                </button>
+              </div>
+            </>
+          ) : null}
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={rejectedOpen} onOpenChange={setRejectedOpen}>
-        <AlertDialogContent className="apply-wizard gap-4 p-5 data-[size=default]:sm:max-w-md">
+        <AlertDialogContent
+          overlayClassName="bg-[rgba(15,27,45,0.28)] backdrop-blur-sm"
+          className="apply-wizard gap-4 rounded-[28px] bg-white p-7 shadow-portal-dialog ring-0 data-[size=default]:sm:max-w-md"
+        >
           {/* The only way out besides Escape: there is nothing to confirm. */}
           <AlertDialogCancel
             variant="ghost"
             size="icon-sm"
             aria-label="Close"
-            className="absolute top-3 right-3 text-foreground"
+            className="absolute top-4 right-4 rounded-full text-foreground"
           >
             <X className="size-4" strokeWidth={2.5} aria-hidden="true" />
           </AlertDialogCancel>
           <AlertDialogHeader className="gap-y-0.5 pr-9 has-data-[slot=alert-dialog-media]:gap-x-3 sm:grid-cols-[auto_1fr]">
-            <AlertDialogMedia className="mb-0 size-10 self-center bg-destructive/10 text-destructive">
-              <FileX className="size-5" aria-hidden="true" />
+            <AlertDialogMedia className="mb-0 size-11 self-center rounded-xl bg-portal-danger-soft text-destructive">
+              <FileX className="size-5.5" aria-hidden="true" />
             </AlertDialogMedia>
-            <AlertDialogTitle className="text-base">
+            <AlertDialogTitle className="font-sans text-lg">
               {rejectedFiles.length === 1
                 ? hasSizeRejection
                   ? "This file is too large"
                   : "This file can't be uploaded"
                 : `${rejectedFiles.length} files can't be uploaded`}
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-sm leading-snug">
+            <AlertDialogDescription className="text-[15px] leading-snug">
               {hasTypeRejection
                 ? "Only JPG, PNG, or PDF files are accepted, up to 10 MB each."
                 : "Each file must be 10 MB or smaller."}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <ul className="flex max-h-32 flex-col gap-1 overflow-y-auto rounded-lg border border-border-light bg-surface-subtle px-3 py-2">
+          <ul className="flex max-h-32 flex-col gap-1 overflow-y-auto rounded-2xl bg-portal-panel px-3.5 py-2.5">
             {rejectedFiles.map((file, index) => (
               <li
                 key={`${index}:${file.name}`}
@@ -851,7 +1140,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
                 <span className="min-w-0">
                   <span className="wrap-anywhere">{file.name}</span>
                   {file.detail ? (
-                    <span className="block text-xs font-normal text-muted-foreground">
+                    <span className="block text-xs font-normal text-[#5f6b7c]">
                       {file.detail}
                     </span>
                   ) : null}
@@ -866,16 +1155,11 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
         onBack={() =>
           navigate({ to: "/apply/$serviceCode/details", params: { serviceCode } })
         }
-        onContinue={() =>
-          navigate({ to: "/apply/$serviceCode/review", params: { serviceCode } })
-        }
+        onContinue={handleNext}
         continueLabel="Next"
-        continueDisabled={!allUploaded}
-        note={
-          !allUploaded
-            ? "Upload every required document to continue"
-            : undefined
-        }
+        // Not ready until every card has a file, but still pressable: a press
+        // shows which ones are empty.
+        continueReady={allUploaded}
       />
     </WizardShell>
   );

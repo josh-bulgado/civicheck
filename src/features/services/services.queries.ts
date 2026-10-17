@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireActiveSession } from "~/server/auth";
 import {
   canonicalRouteCode,
   collectRequirements,
@@ -23,7 +24,11 @@ export type ServiceSummary = Pick<
   | "display_name"
   | "steps_description"
   | "department_id"
-> & { requirement_count: number };
+> & {
+  /** Short card title; null until an admin sets one (or before the column exists). */
+  short_name: string | null;
+  requirement_count: number;
+};
 
 export const getServices = createServerFn({ method: "GET" }).handler(
   async (): Promise<ServiceSummary[]> => {
@@ -61,12 +66,57 @@ export const getServices = createServerFn({ method: "GET" }).handler(
           processing_time: service.processing_time,
           display_group: service.display_group,
           display_name: service.display_name,
+          short_name: service.short_name ?? null,
           steps_description: service.steps_description,
           department_id: service.department_id,
           requirement_count: collectRequirements(catalogue, routeCode, cases)
             .length,
         };
       });
+  },
+);
+
+const USAGE_TTL_MS = 5 * 60 * 1000;
+const USAGE_RETRY_MS = 60 * 1000;
+let usageCache: { value: Record<string, number>; expiresAt: number } | null = null;
+
+/**
+ * How many requests each service card has ever had, keyed by the code a card
+ * routes on (`display_group ?? service_code`), for the applicant's "Most used
+ * first" sort.
+ *
+ * It is a count per service and nothing else, so one copy is shared by every
+ * applicant. The database function that takes it is not in every environment
+ * yet; without it the answer is empty and the sort falls back to A to Z.
+ */
+export const getServiceUsageFn = createServerFn({ method: "GET" }).handler(
+  async (): Promise<Record<string, number>> => {
+    const { supabase, role } = await requireActiveSession();
+    // Only the applicant's directory has this sort.
+    if (role !== "applicant") return {};
+    if (usageCache && usageCache.expiresAt > Date.now()) return usageCache.value;
+
+    try {
+      const [{ data, error }, catalogue] = await Promise.all([
+        supabase.rpc("service_request_counts"),
+        loadServiceCatalogue(),
+      ]);
+      if (error) throw new Error(error.message);
+
+      const usage: Record<string, number> = {};
+      for (const row of (data ?? []) as { service_code: string; request_count: number }[]) {
+        const routeCode =
+          catalogue.servicesByCode.get(row.service_code)?.display_group ?? row.service_code;
+        usage[routeCode] = (usage[routeCode] ?? 0) + Number(row.request_count);
+      }
+      usageCache = { value: usage, expiresAt: Date.now() + USAGE_TTL_MS };
+      return usage;
+    } catch {
+      // Keep the last good numbers if there are any; look again soon either way.
+      const value = usageCache?.value ?? {};
+      usageCache = { value, expiresAt: Date.now() + USAGE_RETRY_MS };
+      return value;
+    }
   },
 );
 

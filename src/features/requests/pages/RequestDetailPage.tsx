@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { QuietLink } from "~/components/quiet-link";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -181,13 +181,13 @@ export default function RequestDetailPage({
 
   return (
     <div className="dashboard-page ">
-      <Link
+      <QuietLink
         to="/requests"
         className="group mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
       >
         <ArrowLeft className="size-4 transition-transform duration-200 group-hover:-translate-x-1" />
         Back to the queue
-      </Link>
+      </QuietLink>
 
       <RequestDetailHero
         trackingNumber={request.trackingNumber}

@@ -260,6 +260,31 @@ export function summarizeWait(processingTime: string): string {
   return processingTime.split(";")[0].split("(")[0].trim();
 }
 
+/**
+ * `summarizeWait` as the applicant portal words it: always in working days.
+ *   "... after a 10-day posting period" -> "After 10 working days"
+ *   "3 days" / "3 working days"          -> "Within 3 working days"
+ *   "Same day", "3 hours", "2 weeks"      -> unchanged
+ * `summarizeWait` itself stays as it was for staff.
+ */
+export function portalWait(processingTime: string): string {
+  const hasWaitWindow = /posting|publication/i.test(processingTime);
+  const days = (text: string) =>
+    text.match(/(\d+)[\s-]*(?:calendar[\s-]*|working[\s-]*|business[\s-]*)?days?\b/i);
+
+  if (hasWaitWindow) {
+    const window = days(processingTime);
+    if (window) return `After ${window[1]} working days`;
+    return summarizeWait(processingTime);
+  }
+
+  const lead = processingTime.split(";")[0].split("(")[0].trim();
+  if (/^same[\s-]*day$/i.test(lead)) return "Same day";
+  const within = days(lead);
+  if (within) return `Within ${within[1]} working days`;
+  return lead;
+}
+
 export type ServiceCategory =
   | "birth"
   | "marriage"

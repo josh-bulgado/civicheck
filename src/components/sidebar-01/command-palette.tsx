@@ -3,7 +3,7 @@
 import { ClipboardList, FileText, Loader2 } from "lucide-react";
 import * as React from "react";
 import { useEffect } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 
 import {
   CommandDialog,
@@ -25,7 +25,9 @@ import {
   type SearchResults,
   type ServiceSearchHit,
 } from "~/features/search/search.queries";
+import { usePaletteDefaults } from "~/features/search/palette-defaults";
 import { buildNavGroups } from "./nav-config";
+import { PortalCommandPalette } from "./portal-command-palette";
 
 const OPEN_EVENT = "civicheck:open-command-palette";
 
@@ -63,8 +65,11 @@ function serviceMeta(service: ServiceSearchHit): string {
  * dashboard layout rather than inside the sidebar: the sidebar unmounts while
  * its mobile sheet is closed, and the palette has to stay reachable from the
  * top bar either way.
+ *
+ * Applicants get the portal's rounded sheet (see PortalCommandPalette); CCRO
+ * personnel keep the compact list below. Both share this state and search.
  */
-export function CommandPalette() {
+export function CommandPalette({ userId = "" }: { userId?: string }) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [results, setResults] = React.useState<SearchResults>(EMPTY_RESULTS);
@@ -73,6 +78,8 @@ export function CommandPalette() {
   const navigate = useNavigate();
   const canViewAllRequests = can("requests:view_all");
   const items = buildNavGroups(role, can).flatMap((group) => group.items);
+  const isApplicant = role === "applicant";
+  const defaults = usePaletteDefaults(userId, open && isApplicant);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -89,6 +96,21 @@ export function CommandPalette() {
       window.removeEventListener(OPEN_EVENT, show);
     };
   }, []);
+
+  // The palette lives in the layout, which stays mounted across navigation, so
+  // it would otherwise stay open (and keep its dimmed backdrop) over whatever
+  // page the router lands on: browser Back, a link elsewhere, a redirect. Any
+  // change of page closes it.
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const lastPathname = React.useRef(pathname);
+  useEffect(() => {
+    if (lastPathname.current === pathname) return;
+    lastPathname.current = pathname;
+    setOpen(false);
+    setQuery("");
+    setResults(EMPTY_RESULTS);
+    setStatus("idle");
+  }, [pathname]);
 
   useEffect(() => {
     const term = query.trim();
@@ -150,6 +172,23 @@ export function CommandPalette() {
   const isSearching = open && query.trim().length >= MIN_QUERY_LENGTH;
   const hasDataMatches =
     results.services.length > 0 || results.requests.length > 0;
+
+  if (isApplicant) {
+    return (
+      <PortalCommandPalette
+        open={open}
+        onOpenChange={handleOpenChange}
+        query={query}
+        onQueryChange={setQuery}
+        minQueryLength={MIN_QUERY_LENGTH}
+        search={{ status, results }}
+        defaults={defaults}
+        onSelectRoute={selectRoute}
+        onSelectService={selectService}
+        onSelectRequest={selectRequest}
+      />
+    );
+  }
 
   return (
     <CommandDialog

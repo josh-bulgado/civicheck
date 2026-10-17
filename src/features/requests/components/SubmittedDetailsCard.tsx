@@ -51,16 +51,20 @@ function formatValue(key: string, value: string | number | boolean) {
  * The "Submitted details" card shared by the applicant and staff request
  * pages: answers grouped by who/what they describe. `showEmpty` is for staff,
  * where a blank field is worth seeing; `children` renders below the groups.
+ * `variant="portal"` is the applicant page's softer card; staff keep the default.
  */
 export function SubmittedDetailsCard({
   request,
   showEmpty = false,
+  variant = "dashboard",
   children,
 }: {
   request: DetailsSource;
   showEmpty?: boolean;
+  variant?: "dashboard" | "portal";
   children?: ReactNode;
 }) {
+  const portal = variant === "portal";
   const groups = groupFormData(
     request.formData,
     (key) => formDataLabel(key, request),
@@ -68,19 +72,53 @@ export function SubmittedDetailsCard({
   );
 
   return (
-    <section className="dashboard-panel p-6">
-      <h2 className="mb-4 text-lg font-bold text-foreground">Submitted details</h2>
-      <div className="flex flex-col divide-y divide-border">
+    <section
+      className={
+        portal
+          ? "rounded-[28px] bg-card p-6 shadow-portal-card ring-2 ring-border-light md:p-7"
+          : "dashboard-panel p-6"
+      }
+    >
+      <h2
+        className={
+          portal
+            ? "mb-4 text-[22px] leading-[normal] font-semibold text-foreground"
+            : "mb-4 text-lg font-bold text-foreground"
+        }
+      >
+        Submitted details
+      </h2>
+      <div
+        className={
+          portal
+            ? "flex flex-col divide-y divide-border-lighter"
+            : "flex flex-col divide-y divide-border"
+        }
+      >
         {groups.map((group) => (
           <div key={group.id} className="py-4 first:pt-0 last:pb-0">
-            <h3 className="mb-3 text-sm font-semibold text-foreground">{group.title}</h3>
+            <h3
+              className={
+                portal
+                  ? "mb-3 text-base font-semibold text-foreground"
+                  : "mb-3 text-sm font-semibold text-foreground"
+              }
+            >
+              {group.title}
+            </h3>
             <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
               {group.rows.map(({ key, label, value }) => (
                 <div key={key}>
                   <dt className="text-xs uppercase tracking-wide text-muted-foreground">
                     {label}
                   </dt>
-                  <dd className="text-sm text-foreground capitalize">
+                  <dd
+                    className={
+                      portal
+                        ? "text-[17px] text-foreground capitalize"
+                        : "text-sm text-foreground capitalize"
+                    }
+                  >
                     {formatValue(key, value)}
                   </dd>
                 </div>

@@ -3,13 +3,15 @@ import { useNavigate } from "@tanstack/react-router";
 import { Building2, CalendarClock, Files, ShieldCheck } from "lucide-react";
 import { CountUp } from "~/components/motion/count-up";
 import { enterDelay, staggerStyle } from "~/components/motion/stagger";
-import { StatFigure, StatFigures } from "~/components/portal/stat-figure";
 import { pillButton } from "~/components/portal/styles";
 import { Button } from "~/components/ui/button";
+import { PortalRequirementsDialog } from "~/features/services/components/PortalRequirementsDialog";
+import { PortalServiceCard } from "~/features/services/components/PortalServiceCard";
 import ServiceCard from "~/features/services/components/ServiceCard";
 import { ServiceDirectory } from "~/features/services/components/ServiceDirectory";
 import { ServiceRequirementsDialog } from "~/features/services/components/ServiceRequirementsDialog";
 import {
+  PortalServicesToolbar,
   ServicesToolbar,
   type CategoryFilter,
   type SortOption,
@@ -21,7 +23,7 @@ import {
   getVisitBadge,
 } from "~/features/services/service-utils";
 import type { getMyDepartmentScopeFn } from "~/features/requests/requests.queries";
-import { resetApplyChoices } from "~/features/apply/hooks/useApplyDraft";
+import { useResetApplyChoices } from "~/features/apply/hooks/useApplyDraft";
 import { usePermissions } from "~/hooks/usePermissions";
 import { cn } from "~/lib/utils";
 
@@ -36,6 +38,8 @@ const INITIAL_VISIBLE_COUNT = { cards: 9, rows: 30 } as const;
 interface ServiceCatalogPageProps {
   services: ServiceSummary[];
   scope: Awaited<ReturnType<typeof getMyDepartmentScopeFn>>;
+  /** Requests per card, keyed by `display_group ?? service_code`: "Most used first". */
+  usage: Record<string, number>;
   /** `display_group ?? service_code` deep-linked from the command palette. */
   selectedService?: string;
   onDismissSelectedService?: () => void;
@@ -44,13 +48,17 @@ interface ServiceCatalogPageProps {
 export default function ServiceCatalogPage({
   services: allServices,
   scope,
+  usage,
   selectedService,
   onDismissSelectedService,
 }: ServiceCatalogPageProps) {
   const { view, chooseView } = useServiceView();
   const { role } = usePermissions();
   const navigate = useNavigate();
+  const resetApplyChoices = useResetApplyChoices();
   const canApply = role === "applicant";
+  // The deep-linked checklist matches whichever directory it opens over.
+  const Checklist = canApply ? PortalRequirementsDialog : ServiceRequirementsDialog;
 
   // Department-scoped staff (staff/supervisor) only handle their own
   // department's services — the same scoping already applied to Request
@@ -79,7 +87,9 @@ export default function ServiceCatalogPage({
 
   const [searchTerm, setSearchTerm] = useState("");
   const [category, setCategory] = useState<CategoryFilter>("all");
-  const [sort, setSort] = useState<SortOption>("az");
+  // The applicant's directory opens on what other people ask for most; staff
+  // keep their alphabetical reference.
+  const [sort, setSort] = useState<SortOption>(canApply ? "popular" : "az");
   const [showAll, setShowAll] = useState(false);
 
   const oneVisitCount = useMemo(
@@ -125,21 +135,30 @@ export default function ServiceCatalogPage({
       return getServiceCategory(service.department_id) === category;
     });
 
+    const byName = (a: ServiceSummary, b: ServiceSummary) =>
+      (a.display_name ?? a.name).localeCompare(b.display_name ?? b.name);
+    const used = (service: ServiceSummary) =>
+      usage[service.display_group ?? service.service_code] ?? 0;
+
     const sorted = [...filtered];
-    if (sort === "az") {
-      sorted.sort((a, b) =>
-        (a.display_name ?? a.name).localeCompare(b.display_name ?? b.name),
-      );
+    if (sort === "popular") {
+      // Ties (and a catalogue nobody has used yet) fall back to A to Z.
+      sorted.sort((a, b) => used(b) - used(a) || byName(a, b));
+    } else if (sort === "az") {
+      sorted.sort(byName);
     } else {
-      sorted.sort((a, b) => Number(a.fee) - Number(b.fee));
+      sorted.sort((a, b) => Number(a.fee) - Number(b.fee) || byName(a, b));
     }
 
     return sorted;
-  }, [services, searchTerm, category, sort]);
+  }, [services, searchTerm, category, sort, usage]);
 
-  const visibleServices = showAll
-    ? filteredServices
-    : filteredServices.slice(0, INITIAL_VISIBLE_COUNT[view]);
+  // The applicant sees every service at once and scrolls; the saved Cards/List
+  // choice only decides how much staff see before asking for the rest.
+  const visibleServices =
+    canApply || showAll
+      ? filteredServices
+      : filteredServices.slice(0, INITIAL_VISIBLE_COUNT[view]);
   const remainingCount = filteredServices.length - visibleServices.length;
 
   function updateSearchTerm(value: string) {
@@ -157,8 +176,62 @@ export default function ServiceCatalogPage({
     setShowAll(false);
   }
 
-  // Toolbar, results and "show the rest": the same in both shells, only the
-  // card around it differs.
+  const noMatches = (
+    <div className="civic-enter-scale rounded-[14px] border border-dashed border-border-strong px-6 py-12 text-center">
+      <p className="text-base font-bold text-foreground">
+        No services match your search
+      </p>
+      <p className="mt-1.5 text-sm text-muted-foreground">
+        Try a different keyword, or clear the filters above.
+      </p>
+    </div>
+  );
+
+  // The applicant's directory: category pills with a sort, then every service in
+  // a grid that simply scrolls. It answers to the width of the panel it sits in,
+  // not the window's, because the sidebar takes a fixed share of the window.
+  const portalDirectory = (
+    <>
+      <PortalServicesToolbar
+        searchTerm={searchTerm}
+        onSearchTermChange={updateSearchTerm}
+        category={category}
+        onCategoryChange={updateCategory}
+        sort={sort}
+        onSortChange={updateSort}
+      />
+
+      {visibleServices.length === 0 ? (
+        <div className="civic-enter-scale flex flex-col items-center gap-4 rounded-[28px] bg-card px-6 py-14 text-center shadow-portal-card">
+          <p className="text-lg font-semibold text-foreground">
+            No services in this category
+          </p>
+          <button
+            type="button"
+            onClick={() => updateCategory("all")}
+            className={cn(pillButton.light, "h-11 shadow-portal-card")}
+          >
+            Show all
+          </button>
+        </div>
+      ) : (
+        <div className="@container">
+          <div className="civic-stagger grid grid-cols-1 gap-4.5 md:gap-5 @xl:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4">
+            {visibleServices.map((service, index) => (
+              <PortalServiceCard
+                key={service.service_code}
+                style={staggerStyle(index)}
+                {...service}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  // Staff toolbar, results and "show the rest": the same in both of their
+  // densities, only the card around it differs.
   const directory = (
     <>
       <ServicesToolbar
@@ -174,14 +247,7 @@ export default function ServiceCatalogPage({
       />
 
       {visibleServices.length === 0 ? (
-        <div className="civic-enter-scale rounded-[14px] border border-dashed border-border-strong px-6 py-12 text-center">
-          <p className="text-base font-bold text-foreground">
-            No services match your search
-          </p>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            Try a different keyword, or clear the filters above.
-          </p>
-        </div>
+        noMatches
       ) : view === "rows" ? (
         <ServiceDirectory services={visibleServices} canApply={canApply} />
       ) : (
@@ -215,44 +281,16 @@ export default function ServiceCatalogPage({
   );
 
   return (
-    <div className={canApply ? "portal-page" : "dashboard-page"}>
+    <div className={canApply ? "portal-page gap-4.5 md:gap-6" : "dashboard-page"}>
       {canApply ? (
         <>
-          <header className="portal-card civic-enter flex flex-wrap items-end gap-6 px-5 py-6 sm:px-8 sm:py-7">
-            <div className="mr-auto flex max-w-160 flex-col gap-1.5">
-              <p className="portal-eyebrow flex items-center gap-1.5">
-                <ShieldCheck className="size-3.5" aria-hidden="true" />
-                Official CCRO services
-              </p>
-              <h1 className="portal-title">Browse document services</h1>
-              <p className="text-sm leading-normal text-muted-foreground text-pretty">
-                Review the official checklist, prepare your documents, and send
-                your request intent to the City Civil Registrar Office.
-              </p>
-            </div>
-            <StatFigures>
-              <StatFigure
-                index={0}
-                label="Services available"
-                value={services.length}
-              />
-              <StatFigure
-                index={1}
-                label="Finished in one visit"
-                value={oneVisitCount}
-              />
-            </StatFigures>
-          </header>
+          <h1 className="portal-title">Browse services</h1>
 
           <section
-            aria-labelledby="services-list-heading"
-            className="portal-card civic-enter flex flex-col gap-5 px-5 pt-6 pb-8 sm:px-8"
-            style={enterDelay(120)}
+            aria-label="Select a document service"
+            className="flex flex-col gap-4.5 md:gap-5"
           >
-            <h2 id="services-list-heading" className="sr-only">
-              Select a document service
-            </h2>
-            {directory}
+            {portalDirectory}
           </section>
         </>
       ) : (
@@ -355,7 +393,7 @@ export default function ServiceCatalogPage({
       )}
 
       {focusedService && (
-        <ServiceRequirementsDialog
+        <Checklist
           serviceCode={
             focusedService.display_group ?? focusedService.service_code
           }

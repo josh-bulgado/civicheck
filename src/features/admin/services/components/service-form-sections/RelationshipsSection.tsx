@@ -95,6 +95,30 @@ export function RelationshipsSection({
                   </Field>
                 )}
               />
+
+              <Controller
+                control={form.control}
+                name="short_name"
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="service-short-name">
+                      Short Name
+                    </FieldLabel>
+                    <Input
+                      {...field}
+                      id="service-short-name"
+                      placeholder="Marriage License…"
+                      maxLength={40}
+                      autoComplete="off"
+                      aria-invalid={fieldState.invalid}
+                    />
+                    <FieldDescription>
+                      Shown on applicants' service cards. Leave empty to use the
+                      display name.
+                    </FieldDescription>
+                  </Field>
+                )}
+              />
             </div>
 
             <Controller

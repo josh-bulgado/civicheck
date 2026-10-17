@@ -5,12 +5,24 @@ import {
   templateFieldLabels,
 } from "~/features/forms/form-template.utils";
 import { readRequestMessages } from "~/features/requests/request-messages.server";
+import { loadServiceCatalogue } from "~/features/services/services.catalogue";
 
 function one<T>(value: T | T[] | null | undefined): T | undefined {
   return Array.isArray(value) ? value[0] : (value ?? undefined);
 }
 
-function fieldLabelsOf(row: any): Record<string, string> {
+/** The service a request is for, as the applicant's list embeds it. */
+export interface RequestServiceName {
+  name?: string | null;
+  display_name?: string | null;
+}
+
+function fieldLabelsOf(row: {
+  form_template_versions?:
+    | { definition?: unknown }
+    | { definition?: unknown }[]
+    | null;
+}): Record<string, string> {
   const version = one<{ definition?: unknown }>(row.form_template_versions);
   if (!version?.definition) return {};
   try {
@@ -28,29 +40,24 @@ export const getMyRequestsFn = createServerFn({ method: "GET" }).handler(async (
     .from("requests")
     .select(
       `id, tracking_number, request_type, status, payment_status, created_at,
-       fees_due, form_data, services_registry(name)`,
+       fees_due, form_data, services_registry(name, display_name),
+       application_logs(action_status, created_at)`,
     )
     .eq("applicant_id", user.id)
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);
-  return data || [];
-});
 
-/**
- * How many requests the applicant has ever submitted. The portal's top bar
- * greets a first-timer differently from someone coming back to check on one.
- */
-export const getMyRequestCountFn = createServerFn({ method: "GET" }).handler(async () => {
-  const { supabase, user } = await requireActiveSession("requests:view_own");
-
-  const { count, error } = await supabase
-    .from("requests")
-    .select("id", { count: "exact", head: true })
-    .eq("applicant_id", user.id);
-
-  if (error) throw new Error(error.message);
-  return count ?? 0;
+  // The short name comes from the in-process catalogue rather than another
+  // embed on this query: it is reference data, the catalogue is already warm,
+  // and a missing catalogue just means requests keep their full service name.
+  const catalogue = await loadServiceCatalogue().catch(() => null);
+  return (data ?? []).map((row) => ({
+    ...row,
+    // A to-one embed: the client types it as a list, but it is one object.
+    services_registry: one<RequestServiceName>(row.services_registry) ?? null,
+    short_name: catalogue?.servicesByCode.get(row.request_type)?.short_name ?? null,
+  }));
 });
 
 /**

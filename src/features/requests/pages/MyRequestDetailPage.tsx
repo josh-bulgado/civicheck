@@ -1,56 +1,16 @@
-import { Link } from "@tanstack/react-router";
-import { useRef, useState } from "react";
-import { toast } from "sonner";
-import {
-  ArrowLeft,
-  Download,
-  ExternalLink,
-  File,
-  FileText,
-  Image as ImageIcon,
-  Upload,
-} from "lucide-react";
-import { Badge } from "~/components/ui/badge";
+import { Download } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import { useAcknowledgmentPdfDownload } from "~/features/requests/pdf/useAcknowledgmentPdfDownload";
-import { Input } from "~/components/ui/input";
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from "~/components/ui/item";
-import type { MyRequestDetail } from "~/features/requests/applicant-requests.queries";
-import {
-  getMyAttachmentSignedUrlFn,
-  resubmitOwnAttachmentFn,
-} from "~/features/requests/applicant-requests.mutations";
-import { formatFee } from "~/features/services/service-utils";
 import { staggerStyle } from "~/components/motion/stagger";
-import { AttachmentGroups } from "~/features/requests/components/AttachmentGroups";
-import { AttachmentViewerDialog } from "~/features/requests/components/AttachmentViewerDialog";
-import { RequestDetailHero } from "~/features/requests/components/RequestDetailHero";
-import { RequestHistoryTimeline } from "~/features/requests/components/RequestHistoryTimeline";
+import { useAcknowledgmentPdfDownload } from "~/features/requests/pdf/useAcknowledgmentPdfDownload";
+import type { MyRequestDetail } from "~/features/requests/applicant-requests.queries";
+import { formatFee } from "~/features/services/service-utils";
+import { MyRequestDocumentsCard } from "~/features/requests/components/MyRequestDocumentsCard";
+import { MyRequestHeader } from "~/features/requests/components/MyRequestHeader";
+import { NextStepsCard } from "~/features/requests/components/NextStepsCard";
 import { RequestMessagesCard } from "~/features/requests/components/RequestMessagesCard";
+import { RequestStatusHistory } from "~/features/requests/components/RequestStatusHistory";
 import { SubmittedDetailsCard } from "~/features/requests/components/SubmittedDetailsCard";
-
-const ACCEPT = "image/jpeg,image/png,application/pdf";
-const MAX_SIZE = 10 * 1024 * 1024;
-
-function getAttachmentStatusVariant(
-  status: string,
-): "success" | "destructive" | "warning" {
-  switch (status) {
-    case "approved":
-      return "success";
-    case "rejected":
-      return "destructive";
-    default:
-      return "warning";
-  }
-}
+import { nextSteps } from "~/features/requests/next-steps";
 
 interface MyRequestDetailPageProps {
   request: MyRequestDetail;
@@ -78,73 +38,27 @@ export default function MyRequestDetailPage({
     });
   }
 
-  return (
-    <div className="dashboard-page">
-      <Link
-        to="/my-requests"
-        className="group mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
-      >
-        <ArrowLeft className="size-4 transition-transform duration-200 group-hover:-translate-x-1" />
-        Back to my requests
-      </Link>
+  const next = nextSteps({
+    status: request.status,
+    paymentStatus: request.paymentStatus,
+    feesDue: request.feesDue,
+    allowsMessages: request.allowsMessages,
+    attachments: request.attachments,
+    logs: request.logs,
+  });
 
-      <RequestDetailHero
+  return (
+    <div className="portal-page gap-6 md:gap-7">
+      <MyRequestHeader
+        serviceName={request.serviceName}
         trackingNumber={request.trackingNumber}
         status={request.status}
-        paymentStatus={request.paymentStatus}
-        feesDue={request.feesDue}
-        subtitle={request.serviceName}
-      ></RequestDetailHero>
+      />
 
-      <div className="civic-stagger mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div
-          style={staggerStyle(0)}
-          className="flex flex-col gap-6 lg:col-span-2"
-        >
-          <SubmittedDetailsCard request={request}>
-            {request.feesDue > 0 && (
-              <div className="mt-4 flex items-center justify-between border-t border-border pt-4 text-sm">
-                <span className="font-medium text-muted-foreground">
-                  Fees due
-                  {request.copies > 1 ? ` (${request.copies} copies)` : ""}
-                </span>
-                <span className="font-bold text-primary">
-                  {formatFee(request.feesDue)} · pay at the CCRO cashier
-                </span>
-              </div>
-            )}
-          </SubmittedDetailsCard>
-
-          <section className="dashboard-panel p-6">
-            <h2 className="mb-4 text-lg font-bold text-foreground">
-              Your documents ({request.attachments.length})
-            </h2>
-            {request.attachments.length === 0 ? (
-              <p className="text-sm italic text-muted-foreground">
-                Nothing was pre-uploaded for this request.
-              </p>
-            ) : (
-              <ItemGroup className="civic-stagger-auto gap-3">
-                <AttachmentGroups
-                  docs={request.attachments}
-                  renderRow={(doc, title) => (
-                    <AttachmentRow
-                      key={doc.id}
-                      doc={doc}
-                      title={title}
-                      onChanged={onUpdated}
-                    />
-                  )}
-                />
-              </ItemGroup>
-            )}
-          </section>
-
-          <RequestHistoryTimeline
-            logs={request.logs}
-            audience="applicant"
-            feesDue={request.feesDue}
-          />
+      <div className="civic-stagger grid grid-cols-1 items-start gap-6 md:gap-7 lg:grid-cols-[minmax(0,1fr)_30rem]">
+        <div style={staggerStyle(0)} className="flex flex-col gap-6 md:gap-7">
+          <NextStepsCard status={request.status} next={next} />
+          <RequestStatusHistory logs={request.logs} />
         </div>
 
         <div style={staggerStyle(1)} className="flex flex-col gap-6">
@@ -154,20 +68,45 @@ export default function MyRequestDetailPage({
               messages={request.messages}
               viewer="applicant"
               onSent={onUpdated}
+              variant="portal"
             />
           )}
 
-          <section className="dashboard-panel p-6">
-            <h2 className="mb-2 text-lg font-bold text-foreground">
-              Acknowledgment slip
-            </h2>
-            <p className="mb-4 text-sm text-muted-foreground">
-              A PDF with your tracking number, fees and document list. Save it
-              or print it to bring along.
-            </p>
+          <SubmittedDetailsCard request={request} variant="portal">
+            <dl className="mt-5 flex flex-col divide-y divide-border-lighter border-t border-border-lighter text-[17px]">
+              {request.feesDue > 0 && (
+                <div className="flex items-baseline justify-between gap-4 py-3.5">
+                  <dt className="text-muted-foreground">
+                    Fees due
+                    {request.copies > 1 ? ` (${request.copies} copies)` : ""}
+                  </dt>
+                  <dd className="text-right font-semibold text-foreground">
+                    {formatFee(request.feesDue)}
+                  </dd>
+                </div>
+              )}
+              <div className="flex items-baseline justify-between gap-4 py-3.5 last:pb-0">
+                <dt className="text-muted-foreground">Processing time</dt>
+                <dd className="text-right font-semibold text-foreground">
+                  {request.processingTime ||
+                    "Varies by document type — check with the CCRO."}
+                </dd>
+              </div>
+            </dl>
+          </SubmittedDetailsCard>
+
+          <section className="flex items-center gap-4 rounded-[28px] bg-card p-6 shadow-portal-card ring-2 ring-border-light md:p-7">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-[22px] leading-[normal] font-semibold text-foreground">
+                Acknowledgment slip
+              </h2>
+              <p className="mt-1.5 text-[15px] leading-[1.45] text-muted-foreground">
+                A PDF with your tracking number, fees and document list. Save it or
+                print it to bring along.
+              </p>
+            </div>
             <Button
-              variant="outline"
-              className="w-full"
+              className="h-11.5 shrink-0 rounded-full bg-primary-soft px-5 text-[15px] font-semibold text-primary hover:bg-primary-soft/70"
               disabled={downloadingPdf}
               onClick={handleDownloadPdf}
             >
@@ -176,168 +115,9 @@ export default function MyRequestDetailPage({
             </Button>
           </section>
 
-          <section className="dashboard-panel p-6">
-            <h2 className="mb-3 text-lg font-bold text-foreground">
-              Processing time
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {request.processingTime ||
-                "Varies by document type — check with the CCRO."}
-            </p>
-          </section>
-
-          {request.status === "ready_for_release" && (
-            <section className="civic-enter-scale rounded-xl border border-success/25 bg-success-soft-2 p-6">
-              <h2 className="mb-2 text-lg font-bold text-foreground">
-                Ready for release
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {request.allowsMessages
-                  ? "Your inquiry has been processed. CCRO's reply is in the messages on this page and in your email — no visit to the CCRO is needed."
-                  : request.feesDue <= 0
-                    ? "No fee is due — claim your document at the CCRO."
-                    : request.paymentStatus === "verified"
-                      ? "Payment verified — claim your document at the CCRO."
-                      : "Bring payment to the CCRO cashier to claim your document."}
-              </p>
-            </section>
-          )}
+          <MyRequestDocumentsCard documents={request.attachments} onChanged={onUpdated} />
         </div>
       </div>
-    </div>
-  );
-}
-
-type AttachmentDoc = {
-  id: string;
-  requirementName: string;
-  subjectRole: string | null;
-  verificationStatus: string;
-  rejectionReason: string | null;
-};
-
-function AttachmentRow({
-  doc,
-  title,
-  onChanged,
-}: {
-  doc: AttachmentDoc;
-  /** Overrides the requirement name, e.g. "File 2 of 3" inside a group. */
-  title?: string;
-  onChanged: () => void;
-}) {
-  const fileInput = useRef<HTMLInputElement | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [viewing, setViewing] = useState(false);
-  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
-
-  async function handleViewFile() {
-    setViewing(true);
-    try {
-      const res = await getMyAttachmentSignedUrlFn({
-        data: { attachmentId: doc.id },
-      });
-      if (res.error) {
-        toast.error(res.message);
-        return;
-      }
-      setViewerUrl(res.url);
-    } finally {
-      setViewing(false);
-    }
-  }
-
-  async function handleFile(file: File) {
-    if (!file.type || !ACCEPT.split(",").includes(file.type)) {
-      toast.error("Only JPG, PNG, or PDF files are accepted.");
-      return;
-    }
-    if (file.size > MAX_SIZE) {
-      toast.error("Files must be 10 MB or smaller.");
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const formData = new FormData();
-      formData.set("file", file);
-      formData.set("attachmentId", doc.id);
-
-      const res = await resubmitOwnAttachmentFn({ data: formData });
-      if (res.error) {
-        toast.error(res.message);
-        return;
-      }
-      toast.success("Document resubmitted for review.");
-      onChanged();
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <div className="flex flex-col gap-3">
-      <Item variant="outline" className="rounded-lg border-border-light p-4">
-        <ItemMedia variant="icon">
-          <FileText className="size-4" />
-        </ItemMedia>
-        <ItemContent>
-          <ItemTitle className="font-semibold text-foreground">
-            {title ??
-              `${doc.subjectRole ? `${doc.subjectRole}: ` : ""}${doc.requirementName}`}
-          </ItemTitle>
-          <Badge
-            variant={getAttachmentStatusVariant(doc.verificationStatus)}
-            className="w-fit capitalize"
-          >
-            {doc.verificationStatus}
-          </Badge>
-          {doc.verificationStatus === "rejected" && doc.rejectionReason && (
-            <p className="text-xs text-destructive">{doc.rejectionReason}</p>
-          )}
-        </ItemContent>
-        <ItemActions className="flex-wrap">
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={viewing}
-            onClick={handleViewFile}
-          >
-            <ExternalLink data-icon="inline-start" />
-            View file
-          </Button>
-          {doc.verificationStatus === "rejected" && (
-            <>
-              <Input
-                ref={fileInput}
-                type="file"
-                accept={ACCEPT}
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleFile(file);
-                  e.target.value = "";
-                }}
-              />
-              <Button
-                size="sm"
-                disabled={submitting}
-                onClick={() => fileInput.current?.click()}
-              >
-                <Upload data-icon="inline-start" />
-                {submitting ? "Uploading..." : "Resubmit"}
-              </Button>
-            </>
-          )}
-        </ItemActions>
-      </Item>
-
-      <AttachmentViewerDialog
-        url={viewerUrl}
-        subjectRole={doc.subjectRole}
-        requirementName={doc.requirementName}
-        onClose={() => setViewerUrl(null)}
-      />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { getServices } from "~/features/services/services.queries";
+import { getServices, getServiceUsageFn } from "~/features/services/services.queries";
 import ServiceCatalogPage from "~/features/services/pages/ServiceCatalogPage";
 import { getMyDepartmentScopeFn } from "~/features/requests/requests.queries";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
@@ -15,11 +15,13 @@ export const Route = createFileRoute("/_authed/_dashboard/(service)/services")({
     service: typeof search.service === "string" ? search.service : undefined,
   }),
   loader: async () => {
-    const [services, scope] = await Promise.all([
+    const [services, scope, usage] = await Promise.all([
       getServices(),
       getMyDepartmentScopeFn(),
+      // Only orders the applicant's cards; never worth failing the page for.
+      getServiceUsageFn().catch((): Record<string, number> => ({})),
     ]);
-    return { services, scope };
+    return { services, scope, usage };
   },
   // The registry only changes when an admin edits it, and those edits already
   // call `router.invalidate()`, so browsing away and back can reuse this —
@@ -30,7 +32,7 @@ export const Route = createFileRoute("/_authed/_dashboard/(service)/services")({
 });
 
 function ServicesRoute() {
-  const { services, scope } = Route.useLoaderData();
+  const { services, scope, usage } = Route.useLoaderData();
   const { service } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   useRealtimeRefresh({
@@ -41,6 +43,7 @@ function ServicesRoute() {
     <ServiceCatalogPage
       services={services}
       scope={scope}
+      usage={usage}
       selectedService={service}
       onDismissSelectedService={() =>
         navigate({ search: {}, replace: true })

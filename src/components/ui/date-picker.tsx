@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDownIcon, X } from "lucide-react";
+import { CalendarIcon, ChevronDownIcon, X } from "lucide-react";
 
 import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
@@ -24,6 +24,8 @@ export type DatePickerProps = {
   placeholder?: string;
   disabled?: boolean;
   invalid?: boolean;
+  /** The glyph at the right of the trigger. Defaults to a chevron. */
+  icon?: "chevron" | "calendar" | "none";
   /** Shows a Clear action — leave off for required fields. */
   clearable?: boolean;
   size?: "default" | "sm";
@@ -42,6 +44,7 @@ export function DatePicker({
   invalid,
   clearable = true,
   size = "default",
+  icon = "chevron",
   className,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
@@ -99,11 +102,19 @@ export function DatePicker({
         <span className="truncate">
           {selected ? formatDateKey(value) : placeholder}
         </span>
-        <ChevronDownIcon
-          data-icon="inline-end"
-          className={cn("text-muted-foreground", size === "sm" && "size-3.5")}
-          aria-hidden="true"
-        />
+        {icon === "calendar" ? (
+          <CalendarIcon
+            data-icon="inline-end"
+            className={cn("text-muted-foreground", size === "sm" && "size-3.5")}
+            aria-hidden="true"
+          />
+        ) : icon === "chevron" ? (
+          <ChevronDownIcon
+            data-icon="inline-end"
+            className={cn("text-muted-foreground", size === "sm" && "size-3.5")}
+            aria-hidden="true"
+          />
+        ) : null}
       </PopoverTrigger>
 
       {/* Calendar already pads itself, so the popover adds none. */}

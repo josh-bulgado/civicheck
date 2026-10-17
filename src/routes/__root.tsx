@@ -189,8 +189,6 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { user } = Route.useRouteContext();
-
   React.useEffect(() => {
     document.documentElement.classList.remove("dark");
     document.documentElement.style.colorScheme = "light";

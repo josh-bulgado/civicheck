@@ -27,10 +27,17 @@ export async function readRequestMessages(
 
   if (error) throw new Error(error.message);
 
-  return (data ?? []).map((row: any): RequestMessage => {
-    const profile = one<{ first_name?: string | null; last_name?: string | null }>(
-      row.profiles,
-    );
+  type PersonName = { first_name?: string | null; last_name?: string | null };
+  type MessageRow = {
+    id: string;
+    sender_role: string;
+    body: string;
+    created_at: string;
+    profiles: PersonName | PersonName[] | null;
+  };
+
+  return ((data ?? []) as MessageRow[]).map((row): RequestMessage => {
+    const profile = one<PersonName>(row.profiles);
     const name = profile
       ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim()
       : "";

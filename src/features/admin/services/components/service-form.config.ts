@@ -96,6 +96,7 @@ export function buildServiceFormSchema(takenCodes: Set<string>) {
       fee_per_copy: z.boolean(),
       display_group: z.string().optional(),
       display_name: z.string().optional(),
+      short_name: z.string().max(40, "Keep it to 40 characters or fewer").optional(),
       requirement_group: z.string().optional(),
       fee_components: z.array(feeComponentFormSchema),
     })
@@ -187,6 +188,7 @@ export function emptyServiceFormDefaults(): ServiceFormValues {
     fee_per_copy: false,
     display_group: "",
     display_name: "",
+    short_name: "",
     requirement_group: "",
     fee_components: [],
   };
@@ -215,6 +217,7 @@ export function serviceFormDefaults(service: Service): ServiceFormValues {
     fee_per_copy: service.fee_per_copy ?? false,
     display_group: service.display_group ?? "",
     display_name: service.display_name ?? "",
+    short_name: service.short_name ?? "",
     requirement_group: service.requirement_group ?? "",
     fee_components: parseFeeComponents(service.fee_components).map(
       (component) => ({

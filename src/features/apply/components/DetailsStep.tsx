@@ -8,6 +8,7 @@ import {
   type Control,
   type UseFormSetValue,
 } from "react-hook-form";
+import { Checkbox } from "~/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { RequiredMark } from "~/components/ui/required-mark";
@@ -54,6 +55,7 @@ type DetailsSubject = {
   lastName: string;
   suffix: string;
   sex: string;
+  noMiddleName?: boolean;
 };
 
 type DetailsValues = Record<string, string | DetailsSubject[]> & {
@@ -93,12 +95,78 @@ function subjectFieldVisibility(role: string, sex: string | undefined) {
 function PartySection({ role, children }: { role: string; children: ReactNode }) {
   const headingId = useId();
   return (
-    <div role="group" aria-labelledby={headingId} className="flex flex-col gap-3">
-      <h2 id={headingId} className="text-base font-bold text-foreground">
+    <div role="group" aria-labelledby={headingId} className="flex flex-col gap-4">
+      <h2 id={headingId} className="text-xl leading-[normal] font-bold text-foreground">
         {role}
       </h2>
       {children}
     </div>
+  );
+}
+
+/**
+ * Middle name, with its "I don't have one" box. Ticking it clears the input and
+ * switches it off (so it can neither be required nor validated); unticking
+ * switches it back on and puts the cursor in it. The choice is part of the
+ * subject, so it is saved with the draft and survives a reload.
+ */
+function MiddleNameField({
+  control,
+  setValue,
+  index,
+}: {
+  control: Control<DetailsValues>;
+  setValue: UseFormSetValue<DetailsValues>;
+  index: number;
+}) {
+  const inputId = `subject-${index}-middleName`;
+  const none = useWatch({ control, name: `subjects.${index}.noMiddleName` }) === true;
+
+  return (
+    <Field>
+      <FieldLabel htmlFor={inputId} className={WIZARD_LABEL_CLASS}>
+        Middle name
+      </FieldLabel>
+      <Controller
+        control={control}
+        name={`subjects.${index}.middleName`}
+        render={({ field }) => (
+          <Input
+            id={inputId}
+            placeholder={none ? "No middle name" : "Santos"}
+            maxLength={120}
+            autoComplete="off"
+            className={cn(WIZARD_CONTROL_CLASS, none && "border-[#e4e9f1] bg-portal-panel")}
+            {...field}
+            disabled={none}
+          />
+        )}
+      />
+      <Controller
+        control={control}
+        name={`subjects.${index}.noMiddleName`}
+        render={({ field }) => (
+          // The whole row is the target, 44px tall for a thumb.
+          <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-[15px] text-portal-ink-2">
+            <Checkbox
+              checked={field.value === true}
+              onCheckedChange={(checked) => {
+                const next = checked === true;
+                field.onChange(next);
+                if (next) {
+                  setValue(`subjects.${index}.middleName`, "");
+                } else {
+                  // After the input is enabled again.
+                  requestAnimationFrame(() => document.getElementById(inputId)?.focus());
+                }
+              }}
+              className="size-5.5 rounded-md border-[1.5px] border-[#b9c7de] shadow-none [&_svg]:size-4"
+            />
+            I don&rsquo;t have a middle name
+          </label>
+        )}
+      />
+    </Field>
   );
 }
 
@@ -113,8 +181,8 @@ function SubjectFieldGrid({
   index,
   role,
 }: {
-  control: Control<any>;
-  setValue: UseFormSetValue<any>;
+  control: Control<DetailsValues>;
+  setValue: UseFormSetValue<DetailsValues>;
   index: number;
   role: string;
 }) {
@@ -122,7 +190,7 @@ function SubjectFieldGrid({
   const { showSuffix, showSex } = subjectFieldVisibility(role, watchedSex);
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-6 sm:*:col-span-3 md:*:col-span-2">
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-6 sm:*:col-span-3 md:*:col-span-2">
       <Controller
         control={control}
         name={`subjects.${index}.firstName`}
@@ -143,23 +211,7 @@ function SubjectFieldGrid({
           </Field>
         )}
       />
-      <Controller
-        control={control}
-        name={`subjects.${index}.middleName`}
-        render={({ field }) => (
-          <Field>
-            <FieldLabel htmlFor={`subject-${index}-middleName`} className={WIZARD_LABEL_CLASS}>Middle name</FieldLabel>
-            <Input
-              id={`subject-${index}-middleName`}
-              placeholder="Santos"
-              maxLength={120}
-              autoComplete="off"
-              className={WIZARD_CONTROL_CLASS}
-              {...field}
-            />
-          </Field>
-        )}
-      />
+      <MiddleNameField control={control} setValue={setValue} index={index} />
       <Controller
         control={control}
         name={`subjects.${index}.lastName`}
@@ -407,7 +459,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
         {hasPersonGroup && showRoleLabels ? (
           // Each party is its own headed section, stacked, so its name parts
           // can run across the card instead of sharing narrow columns.
-          <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-7.5">
             {subjectFields.fields.map((subjectField, index) => (
               <PartySection key={subjectField.id} role={subjectField.role}>
                 <SubjectFieldGrid

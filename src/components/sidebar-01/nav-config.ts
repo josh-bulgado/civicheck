@@ -4,10 +4,11 @@ import {
   Bell,
   BookOpen,
   ClipboardCheck,
+  ClipboardList,
+  Compass,
   Gauge,
   History,
   LayoutDashboard,
-  LayoutGrid,
   ListChecks,
   Shield,
   ShieldAlert,
@@ -35,6 +36,8 @@ interface NavEntry {
   title: string | ((role: Role) => string);
   url: string;
   icon: NavItem["icon"];
+  /** Drawn instead of `icon` in the applicant's sidebar, where that differs. */
+  applicantIcon?: NavItem["icon"];
   /** Shown when the role holds at least one of these permissions. */
   anyOf: Permission[];
 }
@@ -56,7 +59,7 @@ const NAV_ENTRIES = {
   "applicant-dashboard": {
     title: "Dashboard",
     url: "/dashboard",
-    icon: LayoutGrid,
+    icon: LayoutDashboard,
     anyOf: ["dashboard:applicant"],
   },
   // Applicants read their own request-scoped feed; personnel read their own
@@ -81,12 +84,13 @@ const NAV_ENTRIES = {
       role === "staff" || role === "supervisor" ? "Service Reference" : "Browse Services",
     url: "/services",
     icon: BookOpen,
+    applicantIcon: Compass,
     anyOf: ["services:view"],
   },
   "my-requests": {
     title: "My Requests",
     url: "/my-requests",
-    icon: ClipboardCheck,
+    icon: ClipboardList,
     anyOf: ["requests:view_own"],
   },
 
@@ -169,11 +173,16 @@ const PERSONNEL_LAYOUT: GroupLayout[] = [
 /**
  * Every role's layout. Each starts with an unlabelled home group (its
  * dashboard, then Notifications) so the inbox is in the same place for everyone.
+ * The exception is the applicant's: its sidebar is one flat list in order of
+ * importance (start something, then follow it) that ends on Notifications,
+ * where the unread badge reads best.
  */
 const ROLE_LAYOUTS: Record<Role, GroupLayout[]> = {
   applicant: [
-    { id: "home", itemIds: ["applicant-dashboard", "notifications"] },
-    { id: "requests", label: "Requests", itemIds: ["services", "my-requests"] },
+    {
+      id: "home",
+      itemIds: ["applicant-dashboard", "services", "my-requests", "notifications"],
+    },
   ],
   staff: PERSONNEL_LAYOUT,
   supervisor: PERSONNEL_LAYOUT,
@@ -213,7 +222,8 @@ export function buildNavGroups(
             id,
             title: typeof entry.title === "function" ? entry.title(role) : entry.title,
             url: entry.url,
-            icon: entry.icon,
+            icon:
+              role === "applicant" ? (entry.applicantIcon ?? entry.icon) : entry.icon,
             ...(id === "notifications" ? { badge: unreadNotifications } : {}),
           },
         ];

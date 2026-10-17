@@ -1,6 +1,6 @@
-import { Link } from "@tanstack/react-router";
+import { QuietLink } from "~/components/quiet-link";
 import { Check } from "lucide-react";
-import { CiviCheckIdentity } from "~/components/brand/civic-identity";
+import { cn } from "~/lib/utils";
 
 const STEPS = [
   { step: 1, label: "About your case" },
@@ -24,6 +24,10 @@ interface ApplyStepRailProps {
   draftUpdatedAt: string | null;
 }
 
+/**
+ * The wizard's only chrome above the card: the mark at the left, the four steps
+ * centred, nothing at the right. It sits straight on the gradient ground.
+ */
 export function ApplyStepRail({
   currentStep,
   draftUpdatedAt,
@@ -31,21 +35,28 @@ export function ApplyStepRail({
   const savedLabel = formatSavedAt(draftUpdatedAt);
 
   return (
-    <header className="border-b border-border-light bg-white">
-      <div className="flex items-center justify-between gap-4 px-5 py-3 sm:px-8">
-        <div className="flex min-w-0 items-center gap-3">
-          <Link to="/dashboard" aria-label="Back to your dashboard" className="shrink-0">
-            <CiviCheckIdentity compact className="[&>span:last-child]:hidden" />
-          </Link>
-          <span className="hidden text-lg font-bold text-foreground sm:inline">CiviCheck</span>
-        </div>
-        {/* Kept for assistive tech only: the draft-saved status is tracked and
-            announced to screen readers, but not shown on screen. */}
-        {savedLabel && <span className="sr-only">{savedLabel}</span>}
-      </div>
+    <header className="flex flex-col gap-4 px-5 pt-5 pb-4 sm:px-8 md:flex-row md:items-center md:gap-6 md:px-14 md:pt-7 md:pb-6.5">
+      <QuietLink
+        to="/dashboard"
+        aria-label="CiviCheck, back to your dashboard"
+        className="flex shrink-0 items-center gap-2.5 text-foreground md:w-60"
+      >
+        {/* Text stand-in: the official emblem isn't cleared for use yet. */}
+        <span
+          className="flex size-10.5 shrink-0 items-center justify-center rounded-full border-2 border-brand-gold bg-white text-[10px] font-extrabold tracking-[0.02em] text-primary"
+          aria-hidden="true"
+        >
+          CCRO
+        </span>
+        <span className="text-[23px] font-semibold tracking-[-0.02em]">CiviCheck</span>
+      </QuietLink>
 
-      <nav aria-label="Application progress">
-        <ol className="flex items-center gap-2 px-5 pt-3 pb-5.5 sm:gap-3 sm:px-8">
+      {/* Kept for assistive tech only: the draft-saved status is tracked and
+          announced to screen readers, but not shown on screen. */}
+      {savedLabel && <span className="sr-only">{savedLabel}</span>}
+
+      <nav aria-label="Application progress" className="min-w-0 md:flex-1">
+        <ol className="flex items-center gap-2 md:mx-auto md:max-w-245 md:gap-3.5">
           {STEPS.map(({ step, label }, index) => {
             const isDone = step < currentStep;
             const isCurrent = step === currentStep;
@@ -53,21 +64,23 @@ export function ApplyStepRail({
               <li
                 key={step}
                 aria-current={isCurrent ? "step" : undefined}
-                className="flex flex-1 items-center gap-3 last:flex-initial"
+                className="flex flex-1 items-center gap-2 last:flex-initial md:gap-3.5"
               >
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2.5">
                   <span
-                    className={`flex size-6.5 shrink-0 items-center justify-center rounded-full border text-xs font-bold transition-[background-color,color,border-color] duration-300 ease-out motion-reduce:transition-none ${
+                    className={cn(
+                      "flex size-8.5 shrink-0 items-center justify-center rounded-full border-2 text-[15px] font-bold transition-[background-color,color,border-color] duration-300 ease-out motion-reduce:transition-none",
                       isDone
                         ? "border-success bg-success text-white"
                         : isCurrent
                           ? "border-primary bg-primary text-white"
-                          : "border-control-border bg-white text-muted-foreground"
-                    }`}
+                          : "border-[#b9c7de] bg-white text-muted-foreground",
+                    )}
                   >
                     {isDone ? (
                       <Check
-                        className="civic-enter-scale size-3"
+                        className="civic-enter-scale size-4"
+                        strokeWidth={3}
                         aria-hidden="true"
                       />
                     ) : (
@@ -78,13 +91,12 @@ export function ApplyStepRail({
                       below `sm`, so the rail drops to circles-and-connectors
                       there; the wizard card's title names the step instead. */}
                   <span
-                    className={`sr-only whitespace-nowrap text-sm transition-colors duration-300 motion-reduce:transition-none sm:not-sr-only ${
+                    className={cn(
+                      "sr-only text-[17px] whitespace-nowrap transition-colors duration-300 motion-reduce:transition-none md:not-sr-only",
                       isCurrent
                         ? "font-bold text-foreground"
-                        : isDone
-                          ? "font-medium text-body-strong"
-                          : "font-medium text-muted-foreground"
-                    }`}
+                        : "font-medium text-muted-foreground",
+                    )}
                   >
                     {label}
                   </span>
@@ -95,12 +107,13 @@ export function ApplyStepRail({
                   // and an overlay scales across it, so nothing reflows.
                   <div
                     aria-hidden="true"
-                    className="relative h-0.5 flex-1 overflow-hidden rounded-full bg-border"
+                    className="relative h-0.75 flex-1 overflow-hidden rounded-full bg-[#cfd8e8]"
                   >
                     <div
-                      className={`absolute inset-0 origin-left rounded-full bg-success transition-transform duration-500 ease-out motion-reduce:transition-none ${
-                        isDone ? "scale-x-100" : "scale-x-0"
-                      }`}
+                      className={cn(
+                        "absolute inset-0 origin-left rounded-full bg-success transition-transform duration-500 ease-out motion-reduce:transition-none",
+                        isDone ? "scale-x-100" : "scale-x-0",
+                      )}
                     />
                   </div>
                 )}
@@ -109,6 +122,9 @@ export function ApplyStepRail({
           })}
         </ol>
       </nav>
+
+      {/* Balances the mark, so the steps stay centred under the card. */}
+      <span className="hidden md:block md:w-60" aria-hidden="true" />
     </header>
   );
 }

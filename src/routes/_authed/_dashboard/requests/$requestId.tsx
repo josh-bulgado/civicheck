@@ -3,6 +3,7 @@ import { hasPermission, type Role } from "~/lib/permissions";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { getRequestDetailFn } from "~/features/requests/requests.queries";
 import RequestDetailPage from "~/features/requests/pages/RequestDetailPage";
+import { RequestDetailPageSkeleton } from "~/features/requests/pages/RequestDetailPageSkeleton";
 import { denyAccess } from "~/lib/access";
 
 export const Route = createFileRoute("/_authed/_dashboard/requests/$requestId")({
@@ -16,6 +17,9 @@ export const Route = createFileRoute("/_authed/_dashboard/requests/$requestId")(
   loader: ({ params }) =>
     getRequestDetailFn({ data: { requestId: params.requestId } }),
   staleTime: 30_000,
+  pendingMs: 250,
+  pendingMinMs: 250,
+  pendingComponent: RequestDetailPageSkeleton,
   component: RequestDetailRoute,
 });
 

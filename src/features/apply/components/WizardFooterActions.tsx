@@ -1,6 +1,5 @@
-import { Button } from "~/components/ui/button";
-import { Spinner } from "~/components/ui/spinner";
 import { cn } from "~/lib/utils";
+import { WizardSpinner } from "~/features/apply/components/wizard-feedback";
 
 interface WizardFooterActionsProps {
   onBack?: () => void;
@@ -9,6 +8,8 @@ interface WizardFooterActionsProps {
   continueLabel?: string;
   continueDisabled?: boolean;
   continuePending?: boolean;
+  /** What the button says while it works: "Saving…" by default, "Submitting…" on the last step. */
+  pendingLabel?: string;
   /**
    * False while required answers are still missing: the button drops its blue
    * fill but stays pressable, so pressing it shows what is left to fill in.
@@ -24,53 +25,50 @@ export function WizardFooterActions({
   continueLabel = "Continue",
   continueDisabled,
   continuePending,
+  pendingLabel = "Saving…",
   continueReady = true,
   note,
 }: WizardFooterActionsProps) {
+  const quiet = !continueReady || continueDisabled || continuePending;
+
   return (
-    <div className="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-border-light pt-6 sm:flex-row sm:items-center sm:gap-4">
+    <div className="mt-7.5 flex flex-col-reverse items-stretch justify-between gap-3 border-t border-[#e4e9f1] pt-6.5 sm:flex-row sm:items-center sm:gap-4">
       {onBack ? (
-        <Button
+        <button
           type="button"
-          variant="outline"
-          size="lg"
-          className="rounded-lg px-4 text-[15px] font-semibold"
           onClick={onBack}
+          className="civic-press h-13.5 rounded-xl border border-[#d7dee9] bg-white px-7 text-base font-semibold text-foreground transition-colors hover:bg-primary-tint"
         >
           {backLabel}
-        </Button>
+        </button>
       ) : (
         <span />
       )}
-      <div className="flex flex-col items-stretch justify-end gap-3 sm:flex-row sm:items-center sm:gap-4">
+      <div className="flex flex-col items-stretch justify-end gap-3 sm:flex-row sm:items-center sm:gap-5">
         {note && (
-          <p
-            className="text-center text-sm text-muted-foreground sm:text-right"
-            aria-live="polite"
-          >
+          <p className="text-center text-[15px] text-muted-foreground sm:text-right" aria-live="polite">
             {note}
           </p>
         )}
-        <Button
+        <button
           type="button"
-          size="lg"
-          // Disabled reads as a gray control with legible text (4.7:1), not the
-          // primary fill faded to 50%, which left white text on pale blue.
-          className={cn(
-            "rounded-lg px-4 text-[15px] font-semibold hover:bg-primary-hover disabled:border-border disabled:bg-muted disabled:text-muted-2 disabled:opacity-100",
-            // Not ready reads the same as disabled, but stays clickable so a
-            // press surfaces which required fields are still empty.
-            !continueReady &&
-              "border-border bg-muted text-muted-2 hover:bg-muted",
-          )}
           onClick={onContinue}
           disabled={continueDisabled || continuePending}
+          aria-busy={continuePending || undefined}
+          // Not ready reads the same as disabled, but stays clickable so a press
+          // surfaces which required fields are still empty.
+          className={cn(
+            "civic-press inline-flex h-13.5 items-center justify-center gap-2.5 rounded-xl border px-8 text-base font-semibold transition-colors",
+            quiet
+              ? "border-[#e4e9f1] bg-[#eef1f6] text-[#7a8696] disabled:cursor-default"
+              : "border-primary bg-primary text-white shadow-[0_8px_20px_rgba(11,77,162,0.25)] hover:bg-primary-hover",
+          )}
         >
-          {/* A spinner alongside the label makes the wait legible as work in
+          {/* A spinner beside the label makes the wait legible as work in
               progress rather than a button that simply stopped responding. */}
-          {continuePending && <Spinner aria-hidden="true" />}
-          {continuePending ? "Saving…" : continueLabel}
-        </Button>
+          {continuePending && <WizardSpinner />}
+          {continuePending ? pendingLabel : continueLabel}
+        </button>
       </div>
     </div>
   );

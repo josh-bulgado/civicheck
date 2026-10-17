@@ -1,4 +1,5 @@
 import { useCallback, useSyncExternalStore } from "react";
+import { useRouteContext } from "@tanstack/react-router";
 import type { SubjectFields } from "~/lib/subject-fields";
 import type { TemplateAnswers } from "~/features/forms/form-template.types";
 import { clampCopies } from "~/features/services/service-utils";
@@ -22,6 +23,11 @@ export interface ApplyDraftDocument {
 }
 
 export interface ApplyDraft {
+  /**
+   * What to call this application on the dashboard ("Marriage License"). Written
+   * by the wizard once the draft has anything in it; null until then.
+   */
+  serviceName: string | null;
   selectedServiceCode: string | null;
   /** Server-issued owner/lifecycle record for files staged before submission. */
   uploadDraftId: string | null;
@@ -59,6 +65,7 @@ export interface ApplyDraft {
 }
 
 export const DEFAULT_APPLY_DRAFT: ApplyDraft = {
+  serviceName: null,
   selectedServiceCode: null,
   uploadDraftId: null,
   caseSelectorAnswers: {},
@@ -142,8 +149,48 @@ function withMigratedAnswers(value: Partial<ApplyDraft>): ApplyDraft {
   };
 }
 
-function storageKey(groupOrCode: string) {
-  return `civicheck.apply.${groupOrCode}`;
+// A draft holds a person's answers and the paths of the files staged for them,
+// and `localStorage` belongs to the browser, not the account. Every key carries
+// the account it belongs to, so signing in as someone else never reads,
+// continues or overwrites the previous person's application.
+const DRAFT_PREFIX = "civicheck.applications.";
+/** Outside the signed-in app there is no account; those drafts get their own bucket. */
+const GUEST_OWNER = "guest";
+/**
+ * Drafts saved before they were kept per account. Nothing says whose they are,
+ * so none is handed to whoever signs in next: they are removed instead.
+ */
+const LEGACY_PREFIX = "civicheck.apply.";
+
+function ownerPrefix(owner: string | null) {
+  return `${DRAFT_PREFIX}${owner ?? GUEST_OWNER}.`;
+}
+
+function storageKey(owner: string | null, groupOrCode: string) {
+  return `${ownerPrefix(owner)}${groupOrCode}`;
+}
+
+/** The account whose drafts this component reads and writes. */
+function useApplyDraftOwner(): string | null {
+  const { user } = useRouteContext({ from: "__root__" });
+  return user?.id ?? null;
+}
+
+let legacyPurged = false;
+
+function purgeLegacyDrafts() {
+  if (legacyPurged || typeof window === "undefined") return;
+  legacyPurged = true;
+  try {
+    const stale: string[] = [];
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index);
+      if (key?.startsWith(LEGACY_PREFIX)) stale.push(key);
+    }
+    for (const key of stale) window.localStorage.removeItem(key);
+  } catch {
+    // storage unavailable: there is nothing to purge
+  }
 }
 
 function notifyDraftChange(key: string, draft: ApplyDraft) {
@@ -165,6 +212,7 @@ const SERVER_DRAFT = DEFAULT_APPLY_DRAFT;
 const draftCache = new Map<string, ApplyDraft>();
 
 function readDraft(key: string): ApplyDraft {
+  purgeLegacyDrafts();
   const cached = draftCache.get(key);
   if (cached) return cached;
   // A fresh object, never the `SERVER_DRAFT` singleton itself — `hydrated`
@@ -207,14 +255,28 @@ function subscribeToDraft(key: string, onStoreChange: () => void) {
  * Writes a fresh draft under a *different* group/code's storage key — used
  * when the On-Time/Delayed birth-registration redirect switches the
  * applicant to a different `display_group`, which has its own draft key.
- * Not a hook: this fires once, outside of any component bound to that key.
+ * Not bound to a key: this fires once, outside of any component reading it.
  */
-export function seedDraftForGroup(groupOrCode: string, seed: Partial<ApplyDraft>) {
+function seedDraftForGroup(
+  owner: string | null,
+  groupOrCode: string,
+  seed: Partial<ApplyDraft>,
+) {
   const next: ApplyDraft = {
     ...withMigratedAnswers(seed),
     updatedAt: new Date().toISOString(),
   };
-  writeDraft(storageKey(groupOrCode), next);
+  writeDraft(storageKey(owner, groupOrCode), next);
+}
+
+/** `seedDraftForGroup` for the signed-in account. */
+export function useSeedDraftForGroup() {
+  const owner = useApplyDraftOwner();
+  return useCallback(
+    (groupOrCode: string, seed: Partial<ApplyDraft>) =>
+      seedDraftForGroup(owner, groupOrCode, seed),
+    [owner],
+  );
 }
 
 /**
@@ -228,8 +290,8 @@ export function seedDraftForGroup(groupOrCode: string, seed: Partial<ApplyDraft>
  * if someone else had answered for them. Moving between wizard steps never
  * calls this, so Back and Edit keep every answer.
  */
-export function resetApplyChoices(groupOrCode: string) {
-  const key = storageKey(groupOrCode);
+function resetApplyChoices(owner: string | null, groupOrCode: string) {
+  const key = storageKey(owner, groupOrCode);
   const previous = readDraft(key);
   const hasChoices =
     previous.selectedServiceCode !== null ||
@@ -247,8 +309,120 @@ export function resetApplyChoices(groupOrCode: string) {
   });
 }
 
+/** `resetApplyChoices` for the signed-in account. */
+export function useResetApplyChoices() {
+  const owner = useApplyDraftOwner();
+  return useCallback(
+    (groupOrCode: string) => resetApplyChoices(owner, groupOrCode),
+    [owner],
+  );
+}
+
+// ─── An application left unfinished on this device ───────────────────────────
+
+export interface ContinuableApplication {
+  /** `display_group ?? service_code`: what the apply route is keyed on. */
+  routeCode: string;
+  serviceName: string | null;
+  updatedAt: string;
+}
+
+/** A draft worth offering to continue: something was chosen, typed or uploaded. */
+function hasContent(draft: ApplyDraft): boolean {
+  return (
+    draft.updatedAt !== null &&
+    (draft.selectedServiceCode !== null ||
+      Object.keys(draft.caseSelectorAnswers).length > 0 ||
+      draft.documents.length > 0 ||
+      draft.subjects.some((subject) => subject.firstName.trim() || subject.lastName.trim()))
+  );
+}
+
+/** This account's most recently touched unfinished application on this device, or null. */
+function readContinuableApplication(owner: string | null): ContinuableApplication | null {
+  const prefix = ownerPrefix(owner);
+  let latest: ContinuableApplication | null = null;
+  try {
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index);
+      if (!key?.startsWith(prefix)) continue;
+      const draft = readDraft(key);
+      if (!hasContent(draft) || !draft.updatedAt) continue;
+      if (!latest || draft.updatedAt > latest.updatedAt) {
+        latest = {
+          routeCode: key.slice(prefix.length),
+          serviceName: draft.serviceName,
+          updatedAt: draft.updatedAt,
+        };
+      }
+    }
+  } catch {
+    // storage unavailable: there is simply nothing to continue
+  }
+  return latest;
+}
+
+// `useSyncExternalStore` needs the same object back while nothing changed, or it
+// re-renders forever; the signature says whether anything did.
+let continuableSignature = "";
+let continuableValue: ContinuableApplication | null = null;
+
+function snapshotContinuable(owner: string | null): ContinuableApplication | null {
+  const next = readContinuableApplication(owner);
+  // The owner is part of the signature: the same draft under another account is
+  // a different answer, and a stale one must never be handed back.
+  const signature = next
+    ? `${owner}|${next.routeCode}|${next.updatedAt}|${next.serviceName}`
+    : "";
+  if (signature !== continuableSignature) {
+    continuableSignature = signature;
+    continuableValue = next;
+  }
+  return continuableValue;
+}
+
+function subscribeToAnyDraft(onStoreChange: () => void) {
+  window.addEventListener(APPLY_DRAFT_EVENT, onStoreChange);
+  // Another tab of this site finished or discarded the application.
+  window.addEventListener("storage", onStoreChange);
+  return () => {
+    window.removeEventListener(APPLY_DRAFT_EVENT, onStoreChange);
+    window.removeEventListener("storage", onStoreChange);
+  };
+}
+
+/** What the server (and hydration) hands back: storage has not been read yet. */
+const NOT_READ = Symbol("continuable-application-not-read");
+
+/**
+ * The application to offer "Continue" for, if there is one.
+ *
+ * Drafts live in this browser's storage, which the server cannot see, so the
+ * server render and the first client render do not know. `ready` is false for
+ * those two; `application` is null then, but that means "not read yet", not
+ * "nothing to continue". A page that would otherwise show the answer a beat
+ * late holds a skeleton until `ready`. On a client-side navigation the draft is
+ * read straight away and `ready` is true from the first render.
+ */
+export function useContinuableApplication(): {
+  application: ContinuableApplication | null;
+  ready: boolean;
+} {
+  const owner = useApplyDraftOwner();
+  const getSnapshot = useCallback(() => snapshotContinuable(owner), [owner]);
+  const snapshot = useSyncExternalStore<ContinuableApplication | null | typeof NOT_READ>(
+    subscribeToAnyDraft,
+    getSnapshot,
+    () => NOT_READ,
+  );
+  return snapshot === NOT_READ
+    ? { application: null, ready: false }
+    : { application: snapshot, ready: true };
+}
+
 export function useApplyDraft(groupOrCode: string) {
-  const key = storageKey(groupOrCode);
+  const owner = useApplyDraftOwner();
+  const key = storageKey(owner, groupOrCode);
 
   const draft = useSyncExternalStore(
     useCallback((onStoreChange) => subscribeToDraft(key, onStoreChange), [key]),

@@ -8,6 +8,18 @@ export function digitsOnly(value: string): string {
 }
 
 /**
+ * A stored ten-digit mobile number as it is read locally: "9171234567" becomes
+ * "0917 123 4567". A partial number is grouped the same way as it is typed.
+ */
+export function formatLocalMobile(digits: string): string {
+  if (!digits) return "";
+  const local = `0${digits}`;
+  return [local.slice(0, 4), local.slice(4, 7), local.slice(7, 11)]
+    .filter(Boolean)
+    .join(" ");
+}
+
+/**
  * What a "+63" mobile input keeps of its raw value: digits only, at most ten.
  * A number pasted in full ("+63 917 123 4567", "0917-123-4567") loses the
  * country code or leading zero the prefix already stands for.

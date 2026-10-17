@@ -133,7 +133,6 @@ export function QrScannerDialog({ open, onOpenChange, onDecode }: QrScannerDialo
           </Field>
         </FieldGroup>
         <div className="overflow-hidden rounded-lg bg-black">
-          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
           <video
             ref={videoRef}
             className="aspect-video w-full object-contain"

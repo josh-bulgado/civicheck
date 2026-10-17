@@ -75,6 +75,19 @@ function periodStart(now: Date, months: ReportPeriodMonths): Date {
 
 const asNumber = (value: unknown): number => (typeof value === "number" ? value : 0);
 
+type JsonObject = Record<string, unknown>;
+
+/** The RPC's jsonb is untyped: anything that is not an object reads as empty. */
+function asObject(value: unknown): JsonObject {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as JsonObject)
+    : {};
+}
+
+function asObjects(value: unknown): JsonObject[] {
+  return Array.isArray(value) ? value.map(asObject) : [];
+}
+
 /** jsonb objects arrive as `unknown`; keep only the numeric entries. */
 function asTally(value: unknown): Record<string, number> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -117,10 +130,10 @@ export const getCcroServiceReport = createServerFn({ method: "GET" })
       throw new Error(`Could not load the service report: ${error.message}`);
     }
 
-    const payload = (report ?? {}) as Record<string, any>;
-    const rawServices: any[] = Array.isArray(payload.services) ? payload.services : [];
-    const rawInsight: Record<string, any> = payload.insight ?? {};
-    const rawTotals: Record<string, any> = payload.totals ?? {};
+    const payload = asObject(report);
+    const rawServices = asObjects(payload.services);
+    const rawInsight = asObject(payload.insight);
+    const rawTotals = asObject(payload.totals);
 
     const services: ServiceReportRow[] = rawServices.map((row) => ({
       key: String(row.key),
@@ -151,10 +164,7 @@ export const getCcroServiceReport = createServerFn({ method: "GET" })
       serviceKey: rawInsight.serviceKey ? String(rawInsight.serviceKey) : null,
       sampleSize: asNumber(rawInsight.sampleSize),
       eventDated: asNumber(rawInsight.eventDated),
-      seasonality: (Array.isArray(rawInsight.seasonality)
-        ? rawInsight.seasonality
-        : []
-      ).map((bucket: any) => ({
+      seasonality: asObjects(rawInsight.seasonality).map((bucket) => ({
         month: asNumber(bucket.month),
         count: asNumber(bucket.count),
       })),
@@ -162,12 +172,13 @@ export const getCcroServiceReport = createServerFn({ method: "GET" })
       sex: asTally(rawInsight.sex),
       purpose: asTally(rawInsight.purpose),
       channel: {
-        online: asNumber(rawInsight.channel?.online),
-        walkIn: asNumber(rawInsight.channel?.walkIn),
+        online: asNumber(asObject(rawInsight.channel).online),
+        walkIn: asNumber(asObject(rawInsight.channel).walkIn),
       },
-      upcoming: (Array.isArray(rawInsight.upcoming) ? rawInsight.upcoming : []).map(
-        (entry: any) => ({ date: String(entry.date), count: asNumber(entry.count) }),
-      ),
+      upcoming: asObjects(rawInsight.upcoming).map((entry) => ({
+        date: String(entry.date),
+        count: asNumber(entry.count),
+      })),
     };
 
     return {

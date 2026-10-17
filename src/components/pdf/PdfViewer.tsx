@@ -36,6 +36,18 @@ function loadPdfjs() {
   return pdfjsPromise;
 }
 
+/**
+ * Starts loading pdf.js and its worker ahead of time, so the first PDF a reader
+ * opens isn't also waiting for the library. Safe to call any number of times;
+ * does nothing on the server.
+ */
+export function preloadPdfjs() {
+  if (typeof window === "undefined") return;
+  loadPdfjs().catch(() => {
+    // A failed preload is retried when a viewer actually needs the library.
+  });
+}
+
 // Self-hosted decoders and fallback fonts, copied from node_modules/pdfjs-dist
 // into public/pdfjs. Without them, scans stored as JPEG 2000 or JBIG2 render
 // blank and PDFs that don't embed their fonts fall back to guesses. Refresh the

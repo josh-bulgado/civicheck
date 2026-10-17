@@ -62,8 +62,92 @@ function departmentOf(service: ServiceEmbed | undefined) {
   };
 }
 
-function applicantNameOf(row: any): string {
-  const profile = one<{ first_name?: string; last_name?: string }>(row.profiles);
+type PersonName = { first_name?: string | null; last_name?: string | null };
+type Embed<T> = T | T[] | null | undefined;
+
+// What each query's `select` returns, written out. The client is not generated
+// from the schema, so these are the one place a row's shape is stated; a to-one
+// embed may arrive as an object or a one-item list, hence `Embed`.
+
+/** A `requests` row as `getAllRequestsFn` selects it. */
+interface RequestListRow {
+  id: string;
+  tracking_number: string;
+  request_type: string | null;
+  status: string;
+  payment_status: string;
+  fees_due: number | string | null;
+  form_data: Record<string, unknown> | null;
+  applicant_id: string | null;
+  created_at: string;
+  updated_at: string;
+  services_registry: Embed<ServiceEmbed>;
+  profiles: Embed<PersonName>;
+}
+
+/** A `requests` row as `lookupRequestByTrackingFn` selects it. */
+interface CashierLookupRow {
+  id: string;
+  tracking_number: string;
+  status: string;
+  payment_status: string;
+  or_number: string | null;
+  fees_due: number | string | null;
+  subject_first_name: string | null;
+  subject_last_name: string | null;
+  services_registry: Embed<ServiceEmbed>;
+  profiles: Embed<PersonName>;
+}
+
+/** An `application_logs` row, with whoever acted, as the detail and payment queries select it. */
+interface ActionLogRow {
+  id: string;
+  action_status: string;
+  remarks: string | null;
+  created_at: string;
+  profiles: Embed<PersonName>;
+}
+
+/** A verified-payment log, with the request it was for, as `getPaymentHistoryFn` selects it. */
+interface PaymentLogRow {
+  id: string;
+  created_at: string;
+  profiles: Embed<PersonName>;
+  requests: Embed<{
+    tracking_number: string;
+    fees_due: number | string | null;
+    or_number: string | null;
+    services_registry: Embed<ServiceEmbed>;
+    profiles: Embed<PersonName>;
+    subject_first_name: string | null;
+    subject_last_name: string | null;
+  }>;
+}
+
+/** A `requests` row as `getRequestDetailFn` selects it. */
+interface RequestDetailRow {
+  id: string;
+  tracking_number: string;
+  request_type: string | null;
+  status: string;
+  payment_status: string;
+  or_number: string | null;
+  fees_due: number | string | null;
+  copies: number | null;
+  form_data: Record<string, unknown> | null;
+  applicant_id: string | null;
+  created_at: string;
+  updated_at: string;
+  services_registry: Embed<ServiceEmbed>;
+  profiles: Embed<PersonName>;
+  form_template_versions: Embed<{ definition?: unknown }>;
+}
+
+function applicantNameOf(row: {
+  profiles?: Embed<PersonName>;
+  form_data?: Record<string, unknown> | null;
+}): string {
+  const profile = one<PersonName>(row.profiles);
   const fromProfile = profile
     ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim()
     : "";
@@ -74,7 +158,9 @@ function applicantNameOf(row: any): string {
   return fromForm || "—";
 }
 
-function fieldLabelsOf(row: any): Record<string, string> {
+function fieldLabelsOf(row: {
+  form_template_versions?: Embed<{ definition?: unknown }>;
+}): Record<string, string> {
   const version = one<{ definition?: unknown }>(row.form_template_versions);
   if (!version?.definition) return {};
   try {
@@ -105,7 +191,7 @@ export const getAllRequestsFn = createServerFn({ method: "GET" }).handler(async 
 
   if (error) throw new Error(error.message);
 
-  const rows = (data ?? []).map((row: any): StaffRequestRow => {
+  const rows = ((data ?? []) as RequestListRow[]).map((row): StaffRequestRow => {
     const service = one<ServiceEmbed>(row.services_registry);
     return {
       id: row.id,
@@ -152,7 +238,7 @@ export const lookupRequestByTrackingFn = createServerFn({ method: "GET" })
     const trackingNumber = data.trackingNumber.trim();
     if (!trackingNumber) return null;
 
-    const { data: row, error } = await supabase
+    const { data: found, error } = await supabase
       .from("requests")
       .select(
         `id, tracking_number, status, payment_status, or_number, fees_due,
@@ -165,15 +251,14 @@ export const lookupRequestByTrackingFn = createServerFn({ method: "GET" })
       .maybeSingle();
 
     if (error) throw new Error(error.message);
-    if (!row) return null;
+    if (!found) return null;
+    const row = found as CashierLookupRow;
 
-    const service = one<ServiceEmbed>((row as any).services_registry);
-    const profile = one<{ first_name?: string; last_name?: string }>(
-      (row as any).profiles,
-    );
+    const service = one<ServiceEmbed>(row.services_registry);
+    const profile = one<PersonName>(row.profiles);
     const applicantName =
       (profile ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() : "") ||
-      `${(row as any).subject_first_name ?? ""} ${(row as any).subject_last_name ?? ""}`.trim() ||
+      `${row.subject_first_name ?? ""} ${row.subject_last_name ?? ""}`.trim() ||
       "—";
 
     return {
@@ -229,7 +314,7 @@ export const getPaymentHistoryFn = createServerFn({ method: "GET" })
 
     const { start, end } = paymentRangeBounds(normalizePaymentRange(range.from, range.to));
 
-    const logs: any[] = [];
+    const logs: PaymentLogRow[] = [];
     for (let page = 0; page < MAX_PAYMENT_PAGES; page++) {
       const { data, error } = await supabase
         .from("application_logs")
@@ -250,18 +335,16 @@ export const getPaymentHistoryFn = createServerFn({ method: "GET" })
         .range(page * PAYMENT_PAGE_SIZE, (page + 1) * PAYMENT_PAGE_SIZE - 1);
 
       if (error) throw new Error(error.message);
-      logs.push(...(data ?? []));
+      logs.push(...((data ?? []) as PaymentLogRow[]));
       if ((data?.length ?? 0) < PAYMENT_PAGE_SIZE) break;
     }
 
     return logs.flatMap((log): PaymentHistoryRow[] => {
-      const request = one<any>(log.requests);
+      const request = one(log.requests);
       if (!request) return [];
 
       const service = one<ServiceEmbed>(request.services_registry);
-      const applicantProfile = one<{ first_name?: string; last_name?: string }>(
-        request.profiles,
-      );
+      const applicantProfile = one<PersonName>(request.profiles);
       const applicantName =
         (applicantProfile
           ? `${applicantProfile.first_name ?? ""} ${applicantProfile.last_name ?? ""}`.trim()
@@ -269,7 +352,7 @@ export const getPaymentHistoryFn = createServerFn({ method: "GET" })
         `${request.subject_first_name ?? ""} ${request.subject_last_name ?? ""}`.trim() ||
         "—";
 
-      const verifier = one<{ first_name?: string; last_name?: string }>(log.profiles);
+      const verifier = one<PersonName>(log.profiles);
       const verifiedBy = verifier
         ? `${verifier.first_name ?? ""} ${verifier.last_name ?? ""}`.trim() || "System"
         : "System";
@@ -325,7 +408,7 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { supabase, role, departmentId } = await requireActiveSession("requests:view_all");
 
-    const { data: row, error } = await supabase
+    const { data: found, error } = await supabase
       .from("requests")
       .select(
         `id, tracking_number, request_type, status, payment_status, or_number,
@@ -338,9 +421,10 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       .eq("id", data.requestId)
       .single();
 
-    if (error || !row) throw new Error(error?.message ?? "Request not found");
+    if (error || !found) throw new Error(error?.message ?? "Request not found");
+    const row = found as RequestDetailRow;
 
-    const service = one<ServiceEmbed>((row as any).services_registry);
+    const service = one<ServiceEmbed>(row.services_registry);
     // Same "not found" phrasing as a missing row — a department-scoped staff
     // member shouldn't be able to tell a wrong-department request even exists.
     if (isDepartmentScopedRole(role) && departmentOf(service).departmentId !== departmentId) {
@@ -403,8 +487,8 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
         verificationStatus: a.verification_status,
         rejectionReason: a.rejection_reason,
       })),
-      logs: (logs.data ?? []).map((l: any) => {
-        const actor = one<{ first_name?: string; last_name?: string }>(l.profiles);
+      logs: ((logs.data ?? []) as ActionLogRow[]).map((l) => {
+        const actor = one<PersonName>(l.profiles);
         const fallbackActor = l.action_status === "document_resubmitted" ? "Applicant" : "System";
         return {
           id: l.id,
