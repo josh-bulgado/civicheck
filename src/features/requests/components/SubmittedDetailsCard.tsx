@@ -32,9 +32,18 @@ function formDataLabel(key: string, request: DetailsSource) {
   return formatKey(key);
 }
 
+// Answers that hold a date and are shown as "September 9, 2026".
+const DATE_KEYS = new Set([
+  "event_date",
+  "death_date",
+  "marriage_date",
+  "record_date",
+  "registered_late_when",
+]);
+
 function formatValue(key: string, value: string | number | boolean) {
   if (value === "") return "—";
-  if (key === "event_date") {
+  if (DATE_KEYS.has(key)) {
     const date = new Date(String(value));
     if (!Number.isNaN(date.getTime())) {
       return date.toLocaleDateString("en-US", {
