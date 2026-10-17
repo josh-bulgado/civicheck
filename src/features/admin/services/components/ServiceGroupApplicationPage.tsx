@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useBlocker, useRouter } from "@tanstack/react-router";
-import { ArrowLeft, GitBranch, Save } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useBlocker, useRouter } from "@tanstack/react-router";
+import { ArrowLeft, ArrowRight, GitBranch, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
@@ -13,9 +13,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog";
-import { Button, buttonVariants } from "~/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Button } from "~/components/ui/button";
+import { Card, CardContent } from "~/components/ui/card";
+import {
+  FieldDescription,
+  FieldGroup,
+  FieldLegend,
+  FieldSet,
+} from "~/components/ui/field";
 import { Spinner } from "~/components/ui/spinner";
+import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import {
+  ServiceDossierHeader,
+  ServiceEditorSection,
+  ServiceFormActionBar,
+} from "./ServiceFormChrome";
 import { ApplicationFormSection } from "./service-form-sections/ApplicationFormSection";
 import { EventTimingSection } from "./service-form-sections/EventTimingSection";
 import { CaseFlowBuilder } from "~/features/forms/components/CaseFlowBuilder";
@@ -29,8 +41,14 @@ import {
 } from "~/features/forms/form-template.types";
 import { buildLegacyFormDefinition } from "~/features/forms/form-template.utils";
 import { formatServiceCode } from "~/features/services/service-utils";
-import { cn } from "~/lib/utils";
 import type { Service } from "../services.types";
+
+const SECTIONS = [
+  { id: "variant-routing", label: "Timing & Routing", icon: GitBranch },
+  { id: "application-form", label: "Application Form", icon: SlidersHorizontal },
+] as const;
+
+type SectionId = (typeof SECTIONS)[number]["id"];
 
 function publishedKeys(definition: FormTemplateDefinition) {
   return [
@@ -60,6 +78,8 @@ export function ServiceGroupApplicationPage({
   const groupKey = representative.display_group!;
   const displayName = representative.display_name ?? groupKey;
 
+  const [activeSection, setActiveSection] = useState<SectionId>("variant-routing");
+  const workspaceRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -108,12 +128,22 @@ export function ServiceGroupApplicationPage({
     };
   }, [displayName, orderedVariants, representative]);
 
+  // This page and the group overview share a pathname and differ only by
+  // `?scope=application`, so leaving for the overview has to compare it too.
   const blocker = useBlocker({
     enableBeforeUnload: isDirty,
     shouldBlockFn: ({ current, next }) =>
-      current.pathname !== next.pathname && isDirty,
+      isDirty &&
+      (current.pathname !== next.pathname ||
+        (current.search as { scope?: string }).scope !==
+          (next.search as { scope?: string }).scope),
     withResolver: true,
   });
+
+  function showSection(id: SectionId) {
+    setActiveSection(id);
+    workspaceRef.current?.scrollTo({ top: 0 });
+  }
 
   function updateDefinition(nextDefinition: FormTemplateDefinition) {
     setDefinition(nextDefinition);
@@ -123,8 +153,10 @@ export function ServiceGroupApplicationPage({
   async function publish() {
     const parsed = formTemplateDefinitionSchema.safeParse(definition);
     if (!parsed.success) {
+      showSection("application-form");
       toast.error(
-        parsed.error.issues[0]?.message ?? "Check the application form fields.",
+        parsed.error.issues[0]?.message ??
+          "Fix the errors in the application form, then publish again.",
       );
       return;
     }
@@ -141,6 +173,7 @@ export function ServiceGroupApplicationPage({
       expectedCodes.size !== mappedCodes.size ||
       [...expectedCodes].some((code) => !mappedCodes.has(code))
     ) {
+      showSection("variant-routing");
       toast.error("Map every internal variant before publishing.");
       return;
     }
@@ -152,9 +185,8 @@ export function ServiceGroupApplicationPage({
         (option) => option.value === eventTiming.targetServiceCode,
       )
     ) {
-      toast.error(
-        "Choose a valid service to switch mismatched applicants to.",
-      );
+      showSection("variant-routing");
+      toast.error("Choose an Alternate Service Track for the window rule.");
       return;
     }
 
@@ -192,179 +224,213 @@ export function ServiceGroupApplicationPage({
     }
   }
 
+  const activeIndex = SECTIONS.findIndex(({ id }) => id === activeSection);
+  const previousSection = SECTIONS[activeIndex - 1];
+  const nextSection = SECTIONS[activeIndex + 1];
+  const ruleCount =
+    Number(Boolean(definition.caseSelector)) +
+    Number(Boolean(definition.eventTiming));
+  const routingSummary =
+    ruleCount > 0
+      ? `${ruleCount} rule ${ruleCount === 1 ? "set" : "sets"}`
+      : "Routing needed";
+  const fieldCount = definition.sections.reduce(
+    (count, section) => count + section.fields.length,
+    0,
+  );
+  const applicationSummary = `${fieldCount} ${fieldCount === 1 ? "field" : "fields"}`;
+  const tabCounts: Record<SectionId, string> = {
+    "variant-routing": ruleCount > 0 ? routingSummary : "",
+    "application-form": applicationSummary,
+  };
+
   return (
-    <div className="dashboard-page max-w-7xl">
-      <header className="px-1 pt-1">
-        <div className="flex items-center justify-between gap-3 pb-3">
-          <Link
-            to="/admin/services/groups/$displayGroup"
-            params={{ displayGroup: groupKey }}
-            search={{ scope: undefined }}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+    <div
+      className="flex h-dvh min-h-0 w-full flex-col overflow-hidden"
+      data-service-editor
+    >
+      <form
+        className="flex min-h-0 min-w-0 flex-1 flex-col"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void publish();
+        }}
+      >
+        <ServiceDossierHeader
+          isEdit
+          serviceCode=""
+          serviceName={displayName}
+          applicationVersion={templateVersion}
+          applicationLoading={isLoading}
+          mode="group"
+          displayGroup={groupKey}
+        >
+          <ServiceFormActionBar
+            isEdit
+            isSaving={isSaving}
+            isDisabled={isLoading || isSaving || !isDirty}
+            isDirty={isDirty}
+            mode="group"
+            displayGroup={groupKey}
+          />
+        </ServiceDossierHeader>
+        <Tabs
+          value={activeSection}
+          onValueChange={(value) => showSection(value as SectionId)}
+          className="min-h-0 min-w-0 flex-1 gap-0"
+        >
+          <div className="shrink-0 overflow-x-auto border-b border-border bg-background px-4 sm:px-8">
+            <TabsList
+              variant="editor"
+              aria-label="Shared application configuration"
+              className="w-full min-w-max justify-start gap-2 p-0 group-data-horizontal/tabs:h-auto"
+            >
+              {SECTIONS.map(({ id, label, icon: Icon }) => (
+                <TabsTrigger
+                  key={id}
+                  value={id}
+                  className="min-h-14 gap-2 px-3 py-3 after:bottom-0"
+                >
+                  <Icon aria-hidden="true" />
+                  <span>{label}</span>
+                  {tabCounts[id] ? (
+                    <span className="hidden text-xs font-normal tabular-nums text-muted-foreground sm:inline">
+                      {tabCounts[id]}
+                    </span>
+                  ) : null}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+          <div
+            ref={workspaceRef}
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-8"
+            data-editor-workspace
           >
-            <ArrowLeft aria-hidden="true" className="size-4" />
-            {displayName}
-          </Link>
-          <p className="font-mono text-xs text-muted-foreground">
-            Shared application
-          </p>
-        </div>
+            <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-6">
+              <Alert variant="warning">
+                <GitBranch aria-hidden="true" />
+                <AlertTitle>Publishes to the entire service group</AlertTitle>
+                <AlertDescription>
+                  Changes here affect all {orderedVariants.length} bound
+                  variants:{" "}
+                  {orderedVariants
+                    .map((variant) => formatServiceCode(variant.service_code))
+                    .join(", ")}
+                  . Fees and other individual registry fields are edited
+                  separately.
+                </AlertDescription>
+              </Alert>
 
-        <div className="grid gap-6 border-y py-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:py-7">
-          <div className="min-w-0">
-            <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-primary">
-              Group-wide configuration
-            </p>
-            <h1 className="text-pretty text-3xl font-bold tracking-[-0.03em] text-foreground sm:text-4xl">
-              Edit shared application
-            </h1>
-            <p className="mt-3 max-w-3xl text-pretty text-sm leading-6 text-muted-foreground">
-              Configure the questions that identify the correct internal variant
-              and the application fields every applicant completes.
-            </p>
-          </div>
-          <div className="sm:text-right">
-            <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
-              Active version
-            </p>
-            <p className="mt-1 text-xl font-semibold text-primary">
-              {templateVersion > 0 ? `v${templateVersion}` : "Not published"}
-            </p>
-          </div>
-        </div>
-      </header>
+              <ServiceEditorSection
+                id="variant-routing"
+                icon={GitBranch}
+                title="Timing & Routing"
+                summary={routingSummary}
+              >
+                <Card variant="embedded">
+                  <CardContent>
+                    {isLoading ? (
+                      <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                        <Spinner /> Loading routing configuration&hellip;
+                      </div>
+                    ) : (
+                      <FieldGroup>
+                        <FieldSet className="gap-4">
+                          <FieldLegend variant="label" className="mb-0">
+                            Variant routing
+                          </FieldLegend>
+                          <FieldDescription>
+                            Applicants see one service. Their answers pick the
+                            internal variant.
+                          </FieldDescription>
+                          <CaseFlowBuilder
+                            definition={definition.caseSelector}
+                            variants={orderedVariants}
+                            derivedSources={(definition.derivedAnswers ?? []).map(
+                              (derived) => ({
+                                key: derived.key,
+                                label: derived.label,
+                                options: derived.bands.map((band) => ({
+                                  value: band.value,
+                                  label: band.label,
+                                })),
+                              }),
+                            )}
+                            immutableQuestionKeys={immutableKeys}
+                            onChange={(caseSelector) =>
+                              updateDefinition({ ...definition, caseSelector })
+                            }
+                          />
+                        </FieldSet>
 
-      <main className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_17rem]">
-        <div className="flex min-w-0 flex-col gap-6">
-          <Alert variant="warning">
-            <GitBranch aria-hidden="true" />
-            <AlertTitle>Publishes to the entire service group</AlertTitle>
-            <AlertDescription>
-              Changes here affect all {orderedVariants.length} bound variants:
-              {" "}{orderedVariants
-                .map((variant) => formatServiceCode(variant.service_code))
-                .join(", ")}.
-              Fees and other individual registry fields are edited separately.
-            </AlertDescription>
-          </Alert>
+                        <EventTimingSection
+                          id="timing-routing"
+                          formDefinition={definition}
+                          targetOptions={targetOptions}
+                          onFormDefinitionChange={updateDefinition}
+                        />
+                      </FieldGroup>
+                    )}
+                  </CardContent>
+                </Card>
+              </ServiceEditorSection>
 
-          <Card>
-            <CardHeader className="border-b">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
-                  Step 1 · Match the internal record
-                </p>
-                <CardTitle className="mt-1">Variant routing</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-                  <Spinner /> Loading routing configuration&hellip;
-                </div>
-              ) : (
-                <CaseFlowBuilder
-                  definition={definition.caseSelector}
-                  variants={orderedVariants}
-                  derivedSources={(definition.derivedAnswers ?? []).map(
-                    (derived) => ({
-                      key: derived.key,
-                      label: derived.label,
-                      options: derived.bands.map((band) => ({
-                        value: band.value,
-                        label: band.label,
-                      })),
-                    }),
-                  )}
-                  immutableQuestionKeys={immutableKeys}
-                  onChange={(caseSelector) =>
-                    updateDefinition({ ...definition, caseSelector })
-                  }
-                />
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="border-b">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
-                  Step 2 · Match the registration track
-                </p>
-                <CardTitle className="mt-1">
-                  Registration window &amp; routing
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-                  <Spinner /> Loading window configuration&hellip;
-                </div>
-              ) : (
-                <EventTimingSection
-                  id="timing-routing"
+              <ServiceEditorSection
+                id="application-form"
+                icon={SlidersHorizontal}
+                title="Application Form"
+                summary={applicationSummary}
+              >
+                <ApplicationFormSection
+                  embedded
+                  templateName={templateName}
+                  templateVersion={templateVersion}
+                  templateSharedCodes={templateSharedCodes}
+                  publishedFieldKeys={immutableKeys}
                   formDefinition={definition}
-                  targetOptions={targetOptions}
+                  isLoading={isLoading}
+                  onTemplateNameChange={(name) => {
+                    setTemplateName(name);
+                    setIsDirty(true);
+                  }}
                   onFormDefinitionChange={updateDefinition}
                 />
-              )}
-            </CardContent>
-          </Card>
+              </ServiceEditorSection>
 
-          <ApplicationFormSection
-            templateName={templateName}
-            templateVersion={templateVersion}
-            templateSharedCodes={templateSharedCodes}
-            publishedFieldKeys={immutableKeys}
-            formDefinition={definition}
-            isLoading={isLoading}
-            onTemplateNameChange={(name) => {
-              setTemplateName(name);
-              setIsDirty(true);
-            }}
-            onFormDefinitionChange={updateDefinition}
-          />
-        </div>
-
-        <aside className="lg:sticky lg:top-6">
-          <Card className="border-primary/15 shadow-sm">
-            <CardHeader className="border-b">
-              <CardTitle>Shared application</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              <Button
-                type="button"
-                onClick={publish}
-                disabled={isLoading || isSaving || !isDirty}
-              >
-                {isSaving ? (
-                  <>
-                    <Spinner data-icon="inline-start" /> Publishing&hellip;
-                  </>
-                ) : (
-                  <>
-                    <Save aria-hidden="true" data-icon="inline-start" />
-                    Publish changes
-                  </>
-                )}
-              </Button>
-              <Link
-                to="/admin/services/groups/$displayGroup"
-                params={{ displayGroup: groupKey }}
-                search={{ scope: undefined }}
-                className={cn(buttonVariants({ variant: "outline" }), "w-full")}
-              >
-                Back to group
-              </Link>
-              <p className="text-xs leading-5 text-muted-foreground">
-                Publishing creates a new immutable template version. It does not
-                change variant fees or processing times.
-              </p>
-            </CardContent>
-          </Card>
-        </aside>
-      </main>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs text-muted-foreground">
+                  Section {activeIndex + 1} of {SECTIONS.length}
+                </p>
+                <div className="ml-auto flex items-center gap-2">
+                  {previousSection ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="min-h-11"
+                      onClick={() => showSection(previousSection.id)}
+                    >
+                      <ArrowLeft aria-hidden="true" data-icon="inline-start" />
+                      Previous
+                    </Button>
+                  ) : null}
+                  {nextSection ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="min-h-11"
+                      onClick={() => showSection(nextSection.id)}
+                    >
+                      {nextSection.label}
+                      <ArrowRight aria-hidden="true" data-icon="inline-end" />
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </div>
+        </Tabs>
+      </form>
 
       <AlertDialog
         open={blocker.status === "blocked"}
@@ -374,9 +440,10 @@ export function ServiceGroupApplicationPage({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Discard unpublished changes?</AlertDialogTitle>
+            <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
             <AlertDialogDescription>
-              If you leave now, changes to this shared application will be lost.
+              If you leave the shared application now, your unsaved changes
+              will be lost.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

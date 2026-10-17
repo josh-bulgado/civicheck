@@ -56,7 +56,12 @@ function DashboardLayout() {
         (match) =>
           match.routeId ===
             "/_authed/_dashboard/admin/services_/$serviceCode/edit" ||
-          match.routeId === "/_authed/_dashboard/admin/services_/new",
+          match.routeId === "/_authed/_dashboard/admin/services_/new" ||
+          // The shared application editor is the group-level twin of the
+          // service editor, so it takes over the screen the same way.
+          (match.routeId ===
+            "/_authed/_dashboard/admin/services_/groups/$displayGroup" &&
+            (match.search as { scope?: string }).scope === "application"),
       ),
   });
   const { user } = Route.useRouteContext();

@@ -19,7 +19,7 @@ import { TabsContent } from "~/components/ui/tabs";
 import { formatServiceCode } from "~/features/services/service-utils";
 import { cn } from "~/lib/utils";
 
-type EditorMode = "full" | "variant";
+type EditorMode = "full" | "variant" | "group";
 
 interface ServiceDossierHeaderProps {
   isEdit: boolean;
@@ -43,6 +43,7 @@ export function ServiceDossierHeader({
   children,
 }: ServiceDossierHeaderProps) {
   const isVariant = mode === "variant";
+  const isGroup = mode === "group";
   const backClassName = cn(
     buttonVariants({ variant: "outline", size: "icon" }),
     "size-11 shrink-0",
@@ -51,7 +52,7 @@ export function ServiceDossierHeader({
   return (
     <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-border bg-background px-4 py-4 sm:px-8">
       <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
-        {isVariant && displayGroup ? (
+        {(isVariant || isGroup) && displayGroup ? (
           <Link
             to="/admin/services/groups/$displayGroup"
             params={{ displayGroup }}
@@ -75,18 +76,24 @@ export function ServiceDossierHeader({
             <span>Services Registry</span>
             <span aria-hidden="true">/</span>
             <span>
-              {isVariant
-                ? "Edit Variant"
-                : isEdit
-                  ? "Edit Service"
-                  : "New Service"}
+              {isGroup
+                ? "Edit Shared Application"
+                : isVariant
+                  ? "Edit Variant"
+                  : isEdit
+                    ? "Edit Service"
+                    : "New Service"}
             </span>
-            <span aria-hidden="true" className="hidden sm:inline">
-              ·
-            </span>
-            <span translate="no" className="hidden font-mono sm:inline">
-              {formatServiceCode(serviceCode)}
-            </span>
+            {isGroup ? null : (
+              <>
+                <span aria-hidden="true" className="hidden sm:inline">
+                  ·
+                </span>
+                <span translate="no" className="hidden font-mono sm:inline">
+                  {formatServiceCode(serviceCode)}
+                </span>
+              </>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <h1 className="text-pretty text-lg font-semibold tracking-tight sm:text-xl">
@@ -186,6 +193,7 @@ export function ServiceFormActionBar({
   displayGroup = null,
 }: ServiceFormActionBarProps) {
   const isVariant = mode === "variant";
+  const isGroup = mode === "group";
   const cancelClassName = cn(
     buttonVariants({ variant: "outline" }),
     "min-h-11",
@@ -218,7 +226,7 @@ export function ServiceFormActionBar({
             ? "Unsaved changes"
             : "No unsaved changes"}
       </p>
-      {isVariant && displayGroup ? (
+      {(isVariant || isGroup) && displayGroup ? (
         <Link
           to="/admin/services/groups/$displayGroup"
           params={{ displayGroup }}
@@ -239,12 +247,16 @@ export function ServiceFormActionBar({
           <Save aria-hidden="true" data-icon="inline-start" />
         )}
         {isSaving
-          ? "Saving…"
-          : isVariant
-            ? "Save Variant"
-            : isEdit
-              ? "Save & Publish"
-              : "Create & Publish"}
+          ? isGroup
+            ? "Publishing…"
+            : "Saving…"
+          : isGroup
+            ? "Publish Changes"
+            : isVariant
+              ? "Save Variant"
+              : isEdit
+                ? "Save & Publish"
+                : "Create & Publish"}
       </Button>
     </div>
   );
