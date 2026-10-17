@@ -4,6 +4,9 @@
 -- maths) shipped with the CTC migration, but nothing could change it except a
 -- migration. Same save function as before, plus `fee_per_copy` on create and
 -- update. A save that does not carry the key keeps whatever is stored.
+--
+-- Built on the live function, which also saves `short_name` (added by a
+-- migration applied straight to the database), so that stays intact.
 create or replace function public.save_service_configuration(
   p_service_code text,
   p_create boolean,
@@ -55,7 +58,7 @@ begin
       event_date_label, event_place_label, event_date_direction,
       reference_number_label, asks_purpose, asks_birth_details,
       allows_messages, fee_per_copy,
-      display_group, display_name, requirement_group, fee_components
+      display_group, display_name, short_name, requirement_group, fee_components
     ) values (
       p_service_code,
       p_service->>'name',
@@ -87,6 +90,7 @@ begin
       coalesce((p_service->>'fee_per_copy')::boolean, false),
       nullif(p_service->>'display_group', ''),
       nullif(p_service->>'display_name', ''),
+      nullif(btrim(p_service->>'short_name'), ''),
       nullif(p_service->>'requirement_group', ''),
       coalesce(p_service->'fee_components', '[]'::jsonb)
     )
@@ -124,6 +128,12 @@ begin
         fee_per_copy = coalesce((p_service->>'fee_per_copy')::boolean, fee_per_copy),
         display_group = nullif(p_service->>'display_group', ''),
         display_name = nullif(p_service->>'display_name', ''),
+        -- A save that does not carry the key keeps the stored short name; an
+        -- empty one clears it.
+        short_name = case
+          when p_service ? 'short_name' then nullif(btrim(p_service->>'short_name'), '')
+          else short_name
+        end,
         requirement_group = nullif(p_service->>'requirement_group', ''),
         -- A save that does not carry the breakdown keeps the stored one.
         fee_components = coalesce(p_service->'fee_components', fee_components)
