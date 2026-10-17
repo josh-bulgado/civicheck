@@ -99,7 +99,7 @@ export function FeeBreakdownFields() {
                   issue ? "text-destructive" : "text-muted-foreground",
                 )}
               >
-                {issue ? "Doesn’t add up to the total fee" : summary}
+                {issue ? "Doesn’t match the total fee" : summary}
               </span>
             </span>
             <ChevronDown
@@ -111,9 +111,7 @@ export function FeeBreakdownFields() {
 
         <CollapsibleContent className="flex flex-col gap-3">
           <FieldDescription>
-            Applicants see these rows on the review page. Rows marked &ldquo;In
-            total&rdquo; must add up to the total fee; unmarked rows are shown
-            as also payable and are not added.
+            Rows marked &ldquo;In total&rdquo; must add up to the total fee. Other rows show as also payable.
           </FieldDescription>
 
           {rows.fields.length > 0 ? (

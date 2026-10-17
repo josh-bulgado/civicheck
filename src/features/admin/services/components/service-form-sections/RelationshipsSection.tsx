@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { ChevronDown, Settings2 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import {
   Collapsible,
   CollapsibleContent,
@@ -36,10 +36,6 @@ export function RelationshipsSection({
               <CardTitle>
                 <h2>Relationships</h2>
               </CardTitle>
-              <CardDescription>
-                Optional grouping for variants that share a public card or
-                checklist.
-              </CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -58,10 +54,7 @@ export function RelationshipsSection({
           </CollapsibleTrigger>
           <CollapsibleContent className="flex flex-col gap-4 pt-4">
             <p className="text-xs text-muted-foreground">
-              Only needed when this service is one variant of a service
-              applicants browse as a single card (e.g. on-time and delayed
-              birth registration). Leave blank for a standalone service — its
-              checklist is then keyed to its own service code.
+              Only for services shown to applicants as one card with several variants. Leave blank for a standalone service.
             </p>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -121,8 +114,7 @@ export function RelationshipsSection({
                     spellCheck={false}
                   />
                   <FieldDescription>
-                    Set this to share one checklist across several service
-                    variants.
+                    Services with the same group share one checklist.
                   </FieldDescription>
                 </Field>
               )}

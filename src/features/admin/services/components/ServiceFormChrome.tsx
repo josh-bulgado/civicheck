@@ -115,7 +115,7 @@ interface ServiceEditorSectionProps {
   id: string;
   icon: LucideIcon;
   title: string;
-  description: string;
+    description?: string;
   summary?: string;
   hasError?: boolean;
   children: ReactNode;
@@ -156,7 +156,7 @@ export function ServiceEditorSection({
                   <Badge variant="neutral">{summary}</Badge>
                 ) : null}
               </div>
-              <CardDescription>{description}</CardDescription>
+              {description ? <CardDescription>{description}</CardDescription> : null}
             </div>
           </div>
         </CardHeader>

@@ -44,12 +44,10 @@ export function ApplicationFormSection({
             </div>
             <div className="min-w-0">
               <CardTitle>
-                <h2>Dynamic Application Questions</h2>
+                <h2>Application Form</h2>
               </CardTitle>
               <CardDescription>
-                Add applicant questions and use conditional visibility to reveal
-                follow-up questions from selected answers. Saving publishes an
-                immutable database version
+                Add the questions applicants answer, and show follow-up questions based on earlier answers. Each save publishes a new version, and published versions can’t be edited
                 {templateVersion > 0 ? ` after version ${templateVersion}` : ""}.
               </CardDescription>
             </div>
@@ -70,8 +68,7 @@ export function ApplicationFormSection({
             autoComplete="off"
           />
           <FieldDescription>
-            A reusable administrative name. It is not shown as a question to
-            applicants.
+            For staff only. Applicants don’t see this name.
           </FieldDescription>
         </Field>
 

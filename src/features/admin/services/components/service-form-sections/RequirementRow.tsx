@@ -425,10 +425,6 @@ export function RequirementRow({
                                     </SelectGroup>
                                   </SelectContent>
                                 </Select>
-                                <FieldDescription>
-                                  For example, CENOMAR can require one file
-                                  from every applicant.
-                                </FieldDescription>
                               </Field>
                             )}
                           />
@@ -539,7 +535,7 @@ export function RequirementRow({
                           <CircleCheck aria-hidden="true" />
                           <AlertDescription>
                             <span className="font-medium">
-                              Citizen impact:
+                              What applicants see:
                             </span>{" "}
                             {field.value
                               ? `Applicants will see this requirement when ${summarizeCondition(field.value, conditionSources, true)}.`

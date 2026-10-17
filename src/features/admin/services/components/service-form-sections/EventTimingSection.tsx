@@ -50,7 +50,7 @@ export const TIMING_BEHAVIORS: {
   {
     value: "redirect_confirm",
     label: "Offer switch",
-    hint: "Applicant receives an advisory prompt suggesting an instant transfer to the alternate track.",
+    hint: "Applicants are offered a switch to the alternate track.",
   },
   {
     value: "warn_allow",
@@ -60,12 +60,12 @@ export const TIMING_BEHAVIORS: {
   {
     value: "block",
     label: "Block entry",
-    hint: "Applicant is stopped and no switch is offered.",
+    hint: "Applicants can’t continue, and no switch is offered.",
   },
   {
     value: "auto_route",
     label: "Switch automatically",
-    hint: "Applicant is moved to the alternate track as soon as the date is chosen.",
+    hint: "Applicants move to the alternate track as soon as they pick the date.",
   },
 ];
 
@@ -156,7 +156,7 @@ export function EventTimingSection({
     if (!timing) return;
     const removed = timing;
     onFormDefinitionChange({ ...formDefinition, eventTiming: undefined });
-    toast("Removed the window rule", {
+    toast("Window rule removed", {
       action: {
         label: "Undo",
         // Restore into whatever the definition is by then, not the snapshot
@@ -212,7 +212,7 @@ export function EventTimingSection({
       {!timing ? (
         <FieldDescription>
           {caseDateFields.length === 0
-            ? "Add a date field to the case step before configuring a window."
+            ? "Add a date field to the Application Form before setting a window rule."
             : "No window rule yet. Applicants see no track prompt for this service."}
         </FieldDescription>
       ) : (
@@ -307,15 +307,9 @@ export function EventTimingSection({
             </div>
             {zoneInvalid ? (
               <FieldError
-                errors={[{ message: "Use an IANA timezone, such as Asia/Manila." }]}
+                errors={[{ message: "Enter a timezone name, such as Asia/Manila." }]}
               />
-            ) : (
-              <FieldDescription>
-                This rule evaluates submissions against events within{" "}
-                {timing.windowDays} {timing.windowDays === 1 ? "day" : "days"}{" "}
-                of the {triggerLabel.toLowerCase()}.
-              </FieldDescription>
-            )}
+            ) : null}
           </div>
 
           <Field>
@@ -396,14 +390,14 @@ export function EventTimingSection({
                   Advanced Settings &amp; Verification
                 </span>
                 <span className="ml-auto hidden text-xs font-normal text-muted-foreground sm:inline">
-                  Wrong-track side &amp; document check
+                  Date condition &amp; document check
                 </span>
               </CollapsibleTrigger>
               <CollapsibleContent className="px-1 pt-4">
                 <FieldGroup className="gap-4">
                   <Field>
                     <FieldLabel htmlFor="timing-mismatch">
-                      This Service Is the Wrong Track When the Date Is
+                      Route Applicants Away When the Date Is
                     </FieldLabel>
                     <Select
                       value={timing.mismatch}
@@ -432,8 +426,7 @@ export function EventTimingSection({
                       </SelectContent>
                     </Select>
                     <FieldDescription>
-                      An on-time service routes when the date is outside the
-                      window; its delayed counterpart routes when it is inside.
+                      Choose “Outside the window” for an on-time service and “Inside the window” for its delayed counterpart.
                     </FieldDescription>
                   </Field>
 
@@ -451,10 +444,6 @@ export function EventTimingSection({
                       <FieldLabel htmlFor="timing-require-document">
                         Require the supporting document before the date check
                       </FieldLabel>
-                      <FieldDescription>
-                        Defer routing until the applicant uploads the document;
-                        the date is validated against it later.
-                      </FieldDescription>
                     </FieldContent>
                   </Field>
                 </FieldGroup>
@@ -476,10 +465,10 @@ export function EventTimingSection({
                   className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[panel-open]:rotate-90"
                 />
                 <span className="text-sm font-medium">
-                  Applicant Notification Copy
+                  Alert Shown to Applicants
                 </span>
                 <span className="ml-auto hidden text-xs font-normal text-muted-foreground sm:inline">
-                  Alert text
+                  Title, message &amp; button
                 </span>
               </CollapsibleTrigger>
               <CollapsibleContent className="px-1 pt-4">

@@ -17,7 +17,6 @@ import { Button } from "~/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
@@ -415,11 +414,6 @@ export function RequirementsSection({
               <CardTitle>
                 <h2>Requirements</h2>
               </CardTitle>
-              <CardDescription>
-                What applicants must bring, where to secure it, and when each
-                item applies. Variant-specific rows are listed first; inherited
-                rows are grouped and locked.
-              </CardDescription>
               {entries.length > 0 ? (
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <Badge variant="neutral">{entries.length} total</Badge>
@@ -481,7 +475,7 @@ export function RequirementsSection({
                   title={
                     canOverride
                       ? undefined
-                      : "Bind this checklist to a shared application with routing to scope a requirement to one variant."
+                      : "Connect this checklist to a shared application form with routing to limit a requirement to one variant."
                   }
                   onClick={addVariantSpecific}
                 >

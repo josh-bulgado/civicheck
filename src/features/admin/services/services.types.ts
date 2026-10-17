@@ -74,6 +74,7 @@ export interface CreateServiceInput {
   asks_purpose?: boolean;
   asks_birth_details?: boolean;
   allows_messages?: boolean;
+  fee_per_copy?: boolean;
   fee_components?: FeeComponent[];
 }
 
@@ -95,6 +96,7 @@ export interface UpdateServiceInput {
   asks_purpose?: boolean;
   asks_birth_details?: boolean;
   allows_messages?: boolean;
+  fee_per_copy?: boolean;
   fee_components?: FeeComponent[];
 }
 

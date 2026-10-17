@@ -81,7 +81,7 @@ type EditorSectionId = (typeof EDITOR_SECTION_IDS)[number];
 const EDITOR_TABS = [
   { id: "registry-details", label: "Registry & Fees", icon: FileText },
   { id: "citizen-journey", label: "Citizen Journey", icon: RouteIcon },
-  { id: "case-questions", label: "Case Logic", icon: GitBranch },
+  { id: "case-questions", label: "Timing & Routing", icon: GitBranch },
   {
     id: "application-form",
     label: "Application Form",
@@ -349,7 +349,7 @@ export function ServiceFormPage({
       })
       .catch(() => {
         if (!cancelled) {
-          toast.error("Could not load this service's checklist.");
+          toast.error("Couldn't load this service's checklist. Reload the page to try again.");
         }
       })
       .finally(() => {
@@ -387,7 +387,7 @@ export function ServiceFormPage({
         if (cancelled) return;
         setFormDefinition(buildLegacyFormDefinition(service));
         setPublishedFieldKeys([]);
-        toast.error("Could not load this service's application form.");
+        toast.error("Couldn't load this service's application form. Reload the page to try again.");
       })
       .finally(() => {
         if (!cancelled) setTemplateLoading(false);
@@ -503,6 +503,7 @@ export function ServiceFormPage({
     form.setValue("name", source.name);
     form.setValue("classification", source.classification ?? "simple");
     form.setValue("fee", String(source.fee ?? 0));
+    form.setValue("fee_per_copy", source.fee_per_copy ?? false);
     form.setValue(
       "fee_components",
       parseFeeComponents(source.fee_components).map((component) => ({
@@ -552,7 +553,7 @@ export function ServiceFormPage({
     } catch {
       setFormDefinition(buildLegacyFormDefinition(source));
       toast.error(
-        "Copied the service, but its application form could not be loaded.",
+        "Service details copied, but the application form didn't load. The form shows a default template instead.",
       );
     } finally {
       setTemplateLoading(false);
@@ -576,7 +577,7 @@ export function ServiceFormPage({
       );
     } catch {
       toast.error(
-        "Copied the service details, but its checklist could not be loaded.",
+        "Service details copied, but the checklist didn't load. Add the requirements manually.",
       );
     } finally {
       setChecklistLoading(false);
@@ -592,7 +593,7 @@ export function ServiceFormPage({
       revealSection("application-form");
       toast.error(
         parsedDefinition.error.issues[0]?.message ??
-          "Check the application form fields.",
+          "Fix the errors in the application form, then publish again.",
       );
       return;
     }
@@ -623,7 +624,7 @@ export function ServiceFormPage({
       if (!targetExists) {
         revealSection("case-questions");
         toast.error(
-          "Choose a valid service to switch mismatched applicants to.",
+          "Choose an Alternate Service Track for the window rule.",
         );
         return;
       }
@@ -663,6 +664,35 @@ export function ServiceFormPage({
           ? requirement.subject_role?.trim() || null
           : null,
     }));
+    // The case labels are edited as fields in the Application Form; the
+    // registry columns only cache them for the reports. Refresh the cache from
+    // the form being saved. A variant save carries no form, and a form that
+    // lacks the date or place field keeps the stored label, so neither wipes it.
+    const caseFields = new Map(
+      parsedDefinition.data.sections
+        .flatMap((section) => section.fields)
+        .map((field) => [field.key, field]),
+    );
+    const eventDate = caseFields.get("event_date");
+    const caseLabels = variantOnly
+      ? {
+          event_date_label: values.event_date_label?.trim() || null,
+          event_place_label: values.event_place_label?.trim() || null,
+          event_date_direction: values.event_date_direction,
+          reference_number_label: values.reference_number_label?.trim() || null,
+        }
+      : {
+          event_date_label:
+            eventDate?.label.trim() || values.event_date_label?.trim() || null,
+          event_place_label:
+            caseFields.get("event_place")?.label.trim() ||
+            values.event_place_label?.trim() ||
+            null,
+          event_date_direction:
+            eventDate?.dateDirection ?? values.event_date_direction,
+          reference_number_label:
+            caseFields.get("reference_number")?.label.trim() || null,
+        };
     const fields = {
       name: values.name.trim(),
       classification: values.classification,
@@ -676,13 +706,11 @@ export function ServiceFormPage({
           : values.department_id,
       steps_description: steps,
       party_roles: partyRoles.length > 0 ? partyRoles : ["Subject"],
-      event_date_label: values.event_date_label?.trim() || null,
-      event_place_label: values.event_place_label?.trim() || null,
-      event_date_direction: values.event_date_direction,
-      reference_number_label: values.reference_number_label?.trim() || null,
+      ...caseLabels,
       asks_purpose: values.asks_purpose,
       asks_birth_details: values.asks_birth_details,
       allows_messages: values.allows_messages,
+      fee_per_copy: values.fee_per_copy,
       display_group: values.display_group?.trim() || null,
       display_name: values.display_name?.trim() || null,
       requirement_group: values.requirement_group?.trim() || null,
@@ -855,11 +883,11 @@ export function ServiceFormPage({
               <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-6">
                 {submitted && mutation.error ? (
                   <Alert variant="destructive" role="alert">
-                    <AlertTitle>Service Could Not Be Saved</AlertTitle>
+                    <AlertTitle>Service Not Saved</AlertTitle>
                     <AlertDescription>
                       {mutation.error instanceof Error
                         ? mutation.error.message
-                        : "Unable to save the service. Please try again."}
+                        : "Unable to save the service. Check your connection and try again."}
                     </AlertDescription>
                   </Alert>
                 ) : null}
@@ -872,8 +900,9 @@ export function ServiceFormPage({
                   >
                     <Alert variant="destructive" role="alert">
                       <AlertTitle>
-                        Review {errorSummary.length}{" "}
-                        {errorSummary.length === 1 ? "Field" : "Fields"}
+                        Fix {errorSummary.length}{" "}
+                        {errorSummary.length === 1 ? "Field" : "Fields"} Before
+                        Saving
                       </AlertTitle>
                       <AlertDescription>
                         <ul className="flex list-disc flex-col gap-1 pl-4">
@@ -917,8 +946,7 @@ export function ServiceFormPage({
                 <ServiceEditorSection
                   id="registry-details"
                   icon={FileText}
-                  title="Registry Details & Fees"
-                  description="Official identity, routing department, classification, processing time, and fee schedule."
+                  title="Registry & Fees"
                   summary={registrySummary}
                   hasError={invalidSections.has("registry-details")}
                 >
@@ -936,7 +964,6 @@ export function ServiceFormPage({
                   id="citizen-journey"
                   icon={RouteIcon}
                   title="Citizen Journey"
-                  description="Public steps citizens follow and the people represented in an application."
                   summary={journeySummary}
                   hasError={invalidSections.has("citizen-journey")}
                 >
@@ -947,8 +974,7 @@ export function ServiceFormPage({
                   <ServiceEditorSection
                     id="case-questions"
                     icon={GitBranch}
-                    title="Case Questions & Timing"
-                    description="Case routing questions, protected date rules, and registration-window behavior."
+                    title="Timing & Routing"
                     summary={caseSummary}
                     hasError={invalidSections.has("case-questions")}
                   >
@@ -970,8 +996,8 @@ export function ServiceFormPage({
                   <ServiceEditorSection
                     id="application-form"
                     icon={SlidersHorizontal}
-                    title="Dynamic Application Form"
-                    description="Build the questions citizens answer when applying, including conditional fields and shared question blocks."
+                    title="Application Form"
+                    description="Questions applicants answer, including follow-ups and shared blocks."
                     summary={applicationSummary}
                     hasError={invalidSections.has("application-form")}
                   >
@@ -998,8 +1024,7 @@ export function ServiceFormPage({
                 <ServiceEditorSection
                   id="requirements"
                   icon={ClipboardCheck}
-                  title="Requirements Checklist"
-                  description="Physical and digital documents applicants must submit, including conditional rules."
+                  title="Requirements"
                   summary={requirementsSummary}
                   hasError={invalidSections.has("requirements")}
                 >
@@ -1018,8 +1043,7 @@ export function ServiceFormPage({
                 <ServiceEditorSection
                   id="relationships"
                   icon={Link2}
-                  title="Relationships & Linkage"
-                  description="Optional public-card variants and shared checklist groupings."
+                  title="Relationships"
                   summary={relationshipsSummary}
                   hasError={invalidSections.has("relationships")}
                 >
@@ -1028,10 +1052,6 @@ export function ServiceFormPage({
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <p className="text-xs text-muted-foreground">
                     Section {activeTabIndex + 1} of {availableTabs.length}
-                    <span className="hidden sm:inline">
-                      {" "}
-                      · Changes are kept while switching sections.
-                    </span>
                   </p>
                   <div className="ml-auto flex items-center gap-2">
                     {previousTab ? (
