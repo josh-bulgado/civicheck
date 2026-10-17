@@ -1,5 +1,4 @@
-import { Link } from "@tanstack/react-router";
-import { Blocks, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 
 export function ServicesPageHeader() {
   return (
@@ -19,14 +18,6 @@ export function ServicesPageHeader() {
             the Legazpi City Government.
           </p>
         </div>
-        <Link
-          to="/admin/services/blocks"
-          search={{ block: undefined }}
-          className="inline-flex h-9 shrink-0 items-center gap-2 self-start rounded-lg border border-white/25 px-3 text-sm font-semibold text-white transition-colors hover:bg-white/10 md:self-center"
-        >
-          <Blocks className="size-4" aria-hidden="true" />
-          Shared question blocks
-        </Link>
       </div>
     </header>
   );
