@@ -29,7 +29,7 @@ export function ServiceHero({ service, displayName }: ServiceHeroProps) {
   const visitBadge = getVisitBadge(service.processing_time);
 
   return (
-    <div className="flex flex-col gap-5 rounded-xl border border-primary-hover bg-primary px-5 py-5.5 text-white shadow-[0_14px_32px_rgba(0,59,134,0.16)] sm:flex-row sm:items-center sm:justify-between sm:px-7">
+    <div className="flex flex-col gap-5 rounded-xl border border-primary-hover bg-primary px-5 py-5.5 text-primary-foreground shadow-[0_14px_32px_rgba(0,59,134,0.16)] sm:flex-row sm:items-center sm:justify-between sm:px-7">
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2.5">
           <span

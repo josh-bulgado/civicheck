@@ -355,7 +355,7 @@ function PdfPage({ doc, pageNumber, width, aspect, label }: PdfPageProps) {
       ref={wrapperRef}
       role="img"
       aria-label={label}
-      className="relative shrink-0 bg-white shadow-sm ring-1 ring-border-light"
+      className="relative shrink-0 bg-card shadow-sm ring-1 ring-border-light"
       style={{ width, height: width * (measuredAspect ?? aspect) }}
     >
       <canvas ref={canvasRef} className="block size-full" />

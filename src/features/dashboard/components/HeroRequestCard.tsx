@@ -79,7 +79,7 @@ export function HeroRequestCard({ request, compact = false }: HeroRequestCardPro
       <QuietLink
         to="/my-requests/$requestId"
         params={{ requestId: request.id }}
-        className="civic-press mt-4.5 inline-flex h-13.5 shrink-0 items-center justify-center self-start rounded-full bg-primary px-7 text-[17px] font-semibold whitespace-nowrap text-white shadow-portal-button hover:bg-primary-hover max-md:order-last max-md:w-full md:mt-[clamp(0.75rem,2.2vh,1.5rem)] md:h-[clamp(2.75rem,5vh,3.5rem)]"
+        className="civic-press mt-4.5 inline-flex h-13.5 shrink-0 items-center justify-center self-start rounded-full bg-primary px-7 text-[17px] font-semibold whitespace-nowrap text-primary-foreground shadow-portal-button hover:bg-primary-hover max-md:order-last max-md:w-full md:mt-[clamp(0.75rem,2.2vh,1.5rem)] md:h-[clamp(2.75rem,5vh,3.5rem)]"
       >
         {heroActionLabel(request.status)}
       </QuietLink>

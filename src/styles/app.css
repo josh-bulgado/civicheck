@@ -8,6 +8,11 @@
    scrolling. */
 @custom-variant short (@media (max-height: 820px));
 
+/* `dark:` follows the `.dark` class on <html>, set by the theme switch, not the
+   OS setting. Without this, an OS in dark mode would trigger `dark:` utilities
+   on a page the applicant never switched. */
+@custom-variant dark (&:is(.dark, .dark *));
+
 @layer base {
   *,
   ::after,
@@ -181,6 +186,11 @@
   /* The one blue card for the main request, and the header band of dialogs. */
   --radius-hero: 2rem;
 
+}
+
+/* Not `inline`, so the dark theme can swap these: an inline theme bakes the
+   value into each utility, a plain one keeps `var(--shadow-portal-*)`. */
+@theme {
   /* Citizen portal shadows. The panel's 1px ring stands in for a border, and
      so do the 1px rings on the menu, popover and dialog. */
   --shadow-portal-card: 0 1px 2px rgba(15, 27, 45, 0.04);
@@ -364,6 +374,35 @@
   /* Unread notification rows on the full page. */
   --portal-unread-row: linear-gradient(90deg, #eaf1fc, #ffffff 70%);
 
+  /* Category washes: the service cards use from/to/ink, the dashboard's
+     certificate tiles use the stronger tile-* set and a scrim as an rgb triple. */
+  --svc-birth-from: #ecf2fb;
+  --svc-birth-to: #f6f9fd;
+  --svc-birth-ink: #2f5fb3;
+  --svc-marriage-from: #f0eefa;
+  --svc-marriage-to: #f8f7fd;
+  --svc-marriage-ink: #6a53b8;
+  --svc-death-from: #edf0f5;
+  --svc-death-to: #f7f8fa;
+  --svc-death-ink: #566680;
+  --svc-copies-from: #ebf5ef;
+  --svc-copies-to: #f6faf8;
+  --svc-copies-ink: #2f7d52;
+  --tile-birth-from: #dbe7fa;
+  --tile-birth-to: #bfd3f2;
+  --tile-birth-scrim: 191, 211, 242;
+  --tile-marriage-from: #e9e6fa;
+  --tile-marriage-to: #d4cff2;
+  --tile-marriage-scrim: 212, 207, 242;
+  --tile-death-from: #e6ebf4;
+  --tile-death-to: #cfd8e8;
+  --tile-death-scrim: 207, 216, 232;
+  --tile-copies-from: #dcf0e5;
+  --tile-copies-to: #bfe3cf;
+  --tile-copies-scrim: 191, 227, 207;
+  /* The fade behind the phone's bottom bar: the ground's own colour. */
+  --portal-fade: #e4ecf7;
+
   /* ─── Motion tokens ────────────────────────────────────────────────────────
      One scale for the whole app so timings stay in step. `--ease-civic` is a
      decelerating curve: quick to start, settling at the end, which reads as
@@ -376,6 +415,161 @@
   --duration-slow: 380ms;
   /* Gap between consecutive items in a staggered list. */
   --stagger-step: 55ms;
+}
+
+/* ─── Dark theme ─────────────────────────────────────────────────────────────
+   Only the applicant portal opts in (see `ThemeScope`): `.dark` goes on <html>
+   while the citizen shell is mounted and comes off when it unmounts, so staff,
+   admin and the public pages stay light. Every token here has a light twin in
+   `:root` above. The brand blue is lifted so it reads as text on a dark card,
+   and `--primary-foreground` flips to navy so the filled buttons stay legible. */
+.dark {
+  color-scheme: dark;
+
+  --background: #0b1220;
+  --workspace: #0e1626;
+  --ground: #0a101b;
+  --foreground: #e8eef7;
+  --card: #131d2e;
+  --card-foreground: #e8eef7;
+  --popover: #162135;
+  --popover-foreground: #e8eef7;
+
+  --primary: #6ea6f2;
+  --primary-hover: #8bbaf6;
+  --primary-foreground: #0b1a2f;
+  --primary-soft: #1a2b47;
+  --primary-tint: #14213a;
+  --secondary: #1a2538;
+  --secondary-foreground: #e8eef7;
+  --muted: #1a2538;
+  --skeleton: #1f2b40;
+  --skeleton-sheen: color-mix(in srgb, white 8%, transparent);
+  --muted-foreground: #9fb0c6;
+  --muted-2: #9aaabf;
+  --body: #b9c5d6;
+  --body-strong: #d3dce8;
+  --body-2: #c3cedd;
+  --accent: #1a2b47;
+  --accent-foreground: #cfe0fa;
+  --surface-subtle: #101a2b;
+
+  --destructive: #f0867e;
+  --success: #5fcf9a;
+  --success-soft: #12301f;
+  --success-soft-2: #0f2619;
+  --success-dot: #4ec98a;
+  --warning: #e8b45a;
+  --warning-strong: #f0c777;
+  --warning-soft: #2f240d;
+  --warning-border: #6e5420;
+
+  --tone-review: #a9c8f7;
+  --tone-review-soft: #17294a;
+  --tone-progress: #c3b8f2;
+  --tone-progress-soft: #251f45;
+  --tone-warning: #f0c777;
+  --tone-warning-soft: #3a2c0e;
+  --tone-success: #8fd6ac;
+  --tone-success-soft: #12301f;
+  --tone-neutral: var(--body-2);
+  --tone-neutral-soft: var(--muted);
+  --tone-danger: #f3a29b;
+  --tone-danger-soft: #3d1a18;
+
+  --disabled: #7d8ca2;
+  --border: #26344b;
+  --border-light: #223046;
+  --border-lighter: #1b283b;
+  --border-strong: #2c3b53;
+  --control-border: #34455f;
+  --dashed-border: #3a4b66;
+  --input: #34455f;
+  --ring: #6ea6f2;
+
+  --sidebar: #0f1828;
+  --sidebar-foreground: #e8eef7;
+  --sidebar-primary: #6ea6f2;
+  --sidebar-primary-foreground: #0b1a2f;
+  --sidebar-accent: #1a2b47;
+  --sidebar-accent-foreground: #cfe0fa;
+  --sidebar-muted: #9fb0c6;
+  --sidebar-border: #26344b;
+  --sidebar-ring: #6ea6f2;
+
+  --portal-panel: #0f1828;
+  --portal-search: #1a2538;
+  --portal-ink-2: #c3cedd;
+  --portal-danger-soft: #3d1a18;
+  --portal-ground: linear-gradient(
+    180deg,
+    #0f1b30 0%,
+    #0b1526 40%,
+    #09111e 100%
+  );
+  --portal-hero: linear-gradient(
+    160deg,
+    #1d3a6a 0%,
+    #17305a 50%,
+    #122546 100%
+  );
+  --portal-unread-highlight: linear-gradient(
+    90deg,
+    #1d3358 0%,
+    #162844 55%,
+    #131d2e 100%
+  );
+  --portal-unread-row: linear-gradient(90deg, #172a47, #131d2e 70%);
+
+  --svc-birth-from: #1a2740;
+  --svc-birth-to: #16202f;
+  --svc-birth-ink: #8db3ee;
+  --svc-marriage-from: #231f3a;
+  --svc-marriage-to: #16202f;
+  --svc-marriage-ink: #b3a3ee;
+  --svc-death-from: #1d2531;
+  --svc-death-to: #16202f;
+  --svc-death-ink: #a9b6c9;
+  --svc-copies-from: #172a24;
+  --svc-copies-to: #16202f;
+  --svc-copies-ink: #84c9a2;
+  --tile-birth-from: #1c2c4a;
+  --tile-birth-to: #16243d;
+  --tile-birth-scrim: 22, 36, 61;
+  --tile-marriage-from: #251f42;
+  --tile-marriage-to: #1b1833;
+  --tile-marriage-scrim: 27, 24, 51;
+  --tile-death-from: #1f2836;
+  --tile-death-to: #18202c;
+  --tile-death-scrim: 24, 32, 44;
+  --tile-copies-from: #17302a;
+  --tile-copies-to: #122520;
+  --tile-copies-scrim: 18, 37, 32;
+  --portal-fade: #09111e;
+
+  --shadow-portal-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-portal-panel:
+    0 0 0 1px rgba(255, 255, 255, 0.05), 0 24px 60px rgba(0, 0, 0, 0.4);
+  --shadow-portal-button: 0 10px 24px rgba(0, 0, 0, 0.45);
+  --shadow-portal-nav-active:
+    0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 22px rgba(0, 0, 0, 0.35);
+  --shadow-portal-pill:
+    0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-portal-menu:
+    0 12px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-portal-popover:
+    0 20px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-portal-dialog:
+    0 30px 80px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* The portal and the wizard pin a darker secondary ink for AA on tinted rows
+   (see below); in dark that would be unreadable, so they get a lighter one. */
+.dark .citizen-portal,
+.dark .apply-wizard {
+  --muted-foreground: #a9b8cc;
+  --body: #b9c5d6;
+  --destructive: #f0867e;
 }
 
 /* ─── Keyframes ──────────────────────────────────────────────────────────────
@@ -798,7 +992,7 @@
   }
 
   .dashboard-panel {
-    @apply rounded-xl border border-border-strong bg-white shadow-[0_1px_3px_rgba(23,33,43,0.08),0_10px_28px_rgba(23,33,43,0.035)];
+    @apply rounded-xl border border-border-strong bg-card shadow-[0_1px_3px_rgba(23,33,43,0.08),0_10px_28px_rgba(23,33,43,0.035)];
   }
 
   /* ─── Citizen portal ───────────────────────────────────────────────────────

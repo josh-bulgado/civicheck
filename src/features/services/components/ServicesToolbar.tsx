@@ -130,7 +130,7 @@ export function PortalServicesToolbar({
     <div className="flex flex-col gap-4.5 md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-x-6 md:gap-y-3">
       {/* Phone only. A desktop has the search in its top bar, so two fields are
           not shown there. */}
-      <label className="flex h-13 items-center gap-3 rounded-full bg-card px-5 text-base text-[#5f6b7c] shadow-portal-card md:hidden">
+      <label className="flex h-13 items-center gap-3 rounded-full bg-card px-5 text-base text-muted-2 shadow-portal-card md:hidden">
         <Search className="size-5 shrink-0" aria-hidden="true" />
         <input
           type="search"
@@ -139,7 +139,7 @@ export function PortalServicesToolbar({
           placeholder="Search a service"
           aria-label="Search a service"
           autoComplete="off"
-          className="min-w-0 flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-[#5f6b7c]"
+          className="min-w-0 flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-muted-2"
         />
       </label>
 
@@ -161,7 +161,7 @@ export function PortalServicesToolbar({
               className={cn(
                 "civic-press h-10.5 shrink-0 rounded-full px-4.5 text-[15px] font-semibold whitespace-nowrap transition-colors md:h-12 md:px-5.5 md:text-base",
                 isActive
-                  ? "bg-primary text-white shadow-[0_6px_16px_rgba(11,77,162,0.25)]"
+                  ? "bg-primary text-primary-foreground shadow-[0_6px_16px_rgba(11,77,162,0.25)]"
                   : "bg-card text-portal-ink-2 shadow-portal-card hover:bg-primary-tint",
               )}
             >
@@ -249,7 +249,7 @@ export function ServicesToolbar({
               key={option.value}
               value={option.value}
               title={option.hint}
-              className="h-11 gap-2 rounded-full px-3.5 font-semibold text-body-2 aria-pressed:bg-foreground aria-pressed:text-white aria-pressed:hover:bg-foreground aria-pressed:hover:text-white sm:h-9"
+              className="h-11 gap-2 rounded-full px-3.5 font-semibold text-body-2 aria-pressed:bg-foreground aria-pressed:text-background aria-pressed:hover:bg-foreground aria-pressed:hover:text-white sm:h-9"
             >
               <option.icon data-icon="inline-start" aria-hidden="true" />
               {option.label}
@@ -299,7 +299,7 @@ export function ServicesToolbar({
                 key={filter.value}
                 value={filter.value}
                 className={cn(
-                  "h-11 flex-none gap-2 border-border bg-white pl-3.5 text-[13px] data-active:border-foreground sm:h-9",
+                  "h-11 flex-none gap-2 border-border bg-card pl-3.5 text-[13px] data-active:border-foreground sm:h-9",
                   showCount ? "pr-1.5" : "pr-3.5",
                 )}
               >

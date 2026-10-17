@@ -44,10 +44,10 @@ export function NextStepsCard({
               {next.steps.map((step, index) => (
                 <li
                   key={step}
-                  className="flex items-center gap-4 rounded-[20px] bg-white/78 px-5 py-4"
+                  className="flex items-center gap-4 rounded-[20px] bg-card/78 px-5 py-4"
                 >
                   <span
-                    className="flex size-10.5 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-bold text-white"
+                    className="flex size-10.5 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-bold text-primary-foreground"
                     aria-hidden="true"
                   >
                     {index + 1}
@@ -59,7 +59,7 @@ export function NextStepsCard({
               ))}
             </ol>
           ) : (
-            <p className="mt-4 rounded-[20px] bg-white/78 px-5 py-4 text-[19px] leading-snug font-semibold text-foreground">
+            <p className="mt-4 rounded-[20px] bg-card/78 px-5 py-4 text-[19px] leading-snug font-semibold text-foreground">
               {next.text}
             </p>
           )}

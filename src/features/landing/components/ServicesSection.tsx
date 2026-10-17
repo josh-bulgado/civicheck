@@ -47,7 +47,7 @@ const services = [
 
 const ServicesSection = () => {
   return (
-    <section className="border-b border-border-light bg-white">
+    <section className="border-b border-border-light bg-card">
       <div className="civic-container civic-section">
         <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
           <div>

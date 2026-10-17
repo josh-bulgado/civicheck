@@ -132,7 +132,7 @@ export function SettingsPasswordPanel({ onClose }: { onClose: () => void }) {
                         revealed[passwordField.name] ? "Hide" : "Show"
                       } ${passwordField.label.toLowerCase()}`}
                       aria-pressed={revealed[passwordField.name]}
-                      className="text-[#5f6b7c]"
+                      className="text-muted-2"
                     >
                       {revealed[passwordField.name] ? (
                         <EyeClosed size={16} aria-hidden="true" />

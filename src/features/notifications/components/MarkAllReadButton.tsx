@@ -31,8 +31,8 @@ export function MarkAllReadButton({
       className={cn(
         "shrink-0 rounded-full font-semibold whitespace-nowrap transition-colors duration-150",
         hasUnread
-          ? "civic-press bg-primary text-white shadow-[0_8px_20px_rgba(11,77,162,0.25)] hover:bg-primary-hover"
-          : "pointer-events-none cursor-default bg-muted text-[#8a97a8]",
+          ? "civic-press bg-primary text-primary-foreground shadow-[0_8px_20px_rgba(11,77,162,0.25)] hover:bg-primary-hover"
+          : "pointer-events-none cursor-default bg-muted text-disabled",
         className,
       )}
     >

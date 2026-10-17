@@ -115,7 +115,7 @@ export function WelcomeTutorial() {
           type="button"
           onClick={close}
           aria-label="Close tutorial"
-          className="absolute top-3.5 right-3.5 z-10 flex size-11 items-center justify-center rounded-full bg-white/85 text-body-strong transition-colors hover:bg-white"
+          className="absolute top-3.5 right-3.5 z-10 flex size-11 items-center justify-center rounded-full bg-card/85 text-body-strong transition-colors hover:bg-card"
         >
           <X className="size-5" aria-hidden="true" />
         </button>
@@ -137,7 +137,7 @@ export function WelcomeTutorial() {
                     <span className="absolute -bottom-[70px] -left-10 size-[200px] rounded-full border-[32px]" style={{ borderColor: t.ring }} />
                     <span className="absolute -top-[50px] -right-[30px] size-[140px] rounded-full border-[22px]" style={{ borderColor: t.ring }} />
                     <span
-                      className="civic-enter-scale relative flex size-[104px] items-center justify-center rounded-[28px] bg-white shadow-[0_12px_28px_-12px_rgba(15,27,45,0.35)]"
+                      className="civic-enter-scale relative flex size-[104px] items-center justify-center rounded-[28px] bg-card shadow-[0_12px_28px_-12px_rgba(15,27,45,0.35)]"
                       style={{ color: t.ink, ...ICON_ENTER }}
                     >
                       <Icon className="size-[52px]" strokeWidth={1.75} aria-hidden="true" />

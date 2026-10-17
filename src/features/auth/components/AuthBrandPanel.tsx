@@ -60,7 +60,7 @@ export function AuthBrandPanel({
                   className="flex items-center gap-3 border-b border-white/15 py-3 text-[15px] leading-snug text-white/90 last:border-b-0"
                 >
                   <span
-                    className="size-1.5 shrink-0 rounded-full bg-white/55"
+                    className="size-1.5 shrink-0 rounded-full bg-card/55"
                     aria-hidden="true"
                   />
                   {benefit}

@@ -51,17 +51,17 @@ export const TYPE_STYLE: Record<
   NotificationType,
   { icon: LucideIcon; unreadClass: string }
 > = {
-  status_change: { icon: RefreshCw, unreadClass: "bg-primary text-white" },
-  pre_validation_complete: { icon: CircleCheckBig, unreadClass: "bg-primary text-white" },
-  document_rejected: { icon: FileWarning, unreadClass: "bg-destructive text-white" },
-  new_request: { icon: FilePlus2, unreadClass: "bg-primary text-white" },
-  document_resubmitted: { icon: FileUp, unreadClass: "bg-primary text-white" },
-  awaiting_cashier: { icon: Banknote, unreadClass: "bg-primary text-white" },
-  ready_to_release: { icon: CircleCheckBig, unreadClass: "bg-primary text-white" },
-  request_incomplete: { icon: FileWarning, unreadClass: "bg-destructive text-white" },
-  request_rejected: { icon: CircleX, unreadClass: "bg-destructive text-white" },
-  message: { icon: MessageSquare, unreadClass: "bg-primary text-white" },
-  new_message: { icon: MessageSquare, unreadClass: "bg-primary text-white" },
+  status_change: { icon: RefreshCw, unreadClass: "bg-primary text-primary-foreground" },
+  pre_validation_complete: { icon: CircleCheckBig, unreadClass: "bg-primary text-primary-foreground" },
+  document_rejected: { icon: FileWarning, unreadClass: "bg-destructive text-primary-foreground" },
+  new_request: { icon: FilePlus2, unreadClass: "bg-primary text-primary-foreground" },
+  document_resubmitted: { icon: FileUp, unreadClass: "bg-primary text-primary-foreground" },
+  awaiting_cashier: { icon: Banknote, unreadClass: "bg-primary text-primary-foreground" },
+  ready_to_release: { icon: CircleCheckBig, unreadClass: "bg-primary text-primary-foreground" },
+  request_incomplete: { icon: FileWarning, unreadClass: "bg-destructive text-primary-foreground" },
+  request_rejected: { icon: CircleX, unreadClass: "bg-destructive text-primary-foreground" },
+  message: { icon: MessageSquare, unreadClass: "bg-primary text-primary-foreground" },
+  new_message: { icon: MessageSquare, unreadClass: "bg-primary text-primary-foreground" },
 };
 
 /** One typed `QuietLink` per destination, so each keeps its own params/search checking. */

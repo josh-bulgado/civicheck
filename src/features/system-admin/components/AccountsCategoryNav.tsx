@@ -23,7 +23,7 @@ export function AccountsCategoryNav({
 }) {
   return (
     <Tabs value={activeCategory} className="w-full items-center">
-      <TabsList className="h-auto! w-full justify-start gap-1 overflow-auto rounded-xl border border-border bg-white p-2">
+      <TabsList className="h-auto! w-full justify-start gap-1 overflow-auto rounded-xl border border-border bg-card p-2">
         {categories.map((category) => {
           const Icon = categoryIcons[category];
 

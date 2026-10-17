@@ -109,7 +109,7 @@ export function DocumentPreview({
       {url ? (
         <span
           aria-hidden="true"
-          className="absolute right-0.5 bottom-0.5 flex size-4 items-center justify-center rounded-sm bg-foreground/75 text-white"
+          className="absolute right-0.5 bottom-0.5 flex size-4 items-center justify-center rounded-sm bg-foreground/75 text-background"
         >
           <Maximize2 className="size-2.5" />
         </span>

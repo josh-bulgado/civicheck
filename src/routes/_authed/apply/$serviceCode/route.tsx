@@ -14,6 +14,7 @@ import { ApplicationDocket } from "~/features/apply/components/ApplicationDocket
 import { ApplyStepRail } from "~/features/apply/components/ApplyStepRail";
 import { WizardPageSkeleton } from "~/features/apply/components/WizardPageSkeleton";
 import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
+import { ThemeScope } from "~/components/theme-scope";
 
 // The session + active-account check now lives on the parent `/_authed`
 // layer, shared with the dashboard shell — this route only needs its own
@@ -86,6 +87,7 @@ function ApplyLayout() {
 
   return (
     <div className="apply-wizard apply-wizard-ground min-h-screen">
+      <ThemeScope />
       <ApplyStepRail
         currentStep={currentStep}
         draftUpdatedAt={hydrated ? draft.updatedAt : null}

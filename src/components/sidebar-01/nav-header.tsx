@@ -7,6 +7,7 @@ import { Button } from "~/components/ui/button";
 import { Kbd } from "~/components/ui/kbd";
 import { SidebarHeader, useSidebar } from "~/components/ui/sidebar";
 import { cn } from "~/lib/utils";
+import { useModifierKeyLabel } from "~/hooks/useModifierKeyLabel";
 import { openCommandPalette } from "~/components/sidebar-01/command-palette";
 import type { WorkspaceDetails } from "~/components/sidebar-01/workspace";
 
@@ -18,6 +19,7 @@ interface NavHeaderProps {
 
 export function NavHeader({ workspace, citizen = false }: NavHeaderProps) {
   const { state } = useSidebar();
+  const modifier = useModifierKeyLabel();
   const isCollapsed = state === "collapsed";
 
   if (citizen) {
@@ -30,7 +32,7 @@ export function NavHeader({ workspace, citizen = false }: NavHeaderProps) {
         >
           {/* Text stand-in: the official emblem isn't cleared for use yet. */}
           <span
-            className="flex size-10.5 shrink-0 items-center justify-center rounded-full border-2 border-brand-gold bg-white text-[10px] font-extrabold tracking-[0.02em] text-primary"
+            className="flex size-10.5 shrink-0 items-center justify-center rounded-full border-2 border-brand-gold bg-card text-[10px] font-extrabold tracking-[0.02em] text-primary"
             aria-hidden="true"
           >
             CCRO
@@ -85,7 +87,7 @@ export function NavHeader({ workspace, citizen = false }: NavHeaderProps) {
           )}
         </div>
         {!isCollapsed && (
-          <Kbd>⌘K</Kbd>
+          <Kbd>{modifier}+K</Kbd>
         )}
       </Button>
     </SidebarHeader>

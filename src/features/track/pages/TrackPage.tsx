@@ -138,7 +138,7 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
         </div>
 
         <div
-          className="civic-enter rounded-xl border border-border bg-white p-6 sm:p-8"
+          className="civic-enter rounded-xl border border-border bg-card p-6 sm:p-8"
           style={enterDelay(90)}
         >
           <FieldGroup>
@@ -200,7 +200,7 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
           // the entrance instead of silently swapping the numbers in place.
           <div
             key={result.trackingNumber}
-            className="civic-enter mt-6 rounded-xl border border-border bg-white p-6 sm:p-8"
+            className="civic-enter mt-6 rounded-xl border border-border bg-card p-6 sm:p-8"
           >
             <div className="mb-5 flex items-start gap-3">
               <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">

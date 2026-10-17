@@ -22,6 +22,7 @@ import {
 import { BackendActivityIndicator } from "~/components/feedback/BackendActivityIndicator";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
+import { THEME_INIT_SCRIPT } from "~/lib/theme";
 import type { AccountProfile } from "~/features/account/account.types";
 import { ApplyTransitionLoader } from "~/features/services/components/ApplyTransitionLoader";
 import { isInternalRole, type AccountStatus, type Role } from "~/lib/permissions";
@@ -189,17 +190,12 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  React.useEffect(() => {
-    document.documentElement.classList.remove("dark");
-    document.documentElement.style.colorScheme = "light";
-  }, []);
-
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{document.documentElement.classList.remove('dark');document.documentElement.style.colorScheme='light'}catch(e){}})()`,
+            __html: THEME_INIT_SCRIPT,
           }}
         />
         <HeadContent />

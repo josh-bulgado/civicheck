@@ -51,7 +51,7 @@ const HowItWorksSection = () => {
             {steps.map((step, index) => (
               <Reveal key={step.number} delay={index * 70}>
                 <div className="civic-card civic-interactive civic-lift group relative h-full p-6 hover:border-primary/30 hover:shadow-[0_12px_28px_rgba(15,27,45,0.09)]">
-                  <span className="mb-5 flex size-10 items-center justify-center rounded-full bg-primary text-[17px] font-bold text-white shadow-[0_4px_12px_rgba(11,77,162,0.25)] transition-transform duration-200 group-hover:scale-110">
+                  <span className="mb-5 flex size-10 items-center justify-center rounded-full bg-primary text-[17px] font-bold text-primary-foreground shadow-[0_4px_12px_rgba(11,77,162,0.25)] transition-transform duration-200 group-hover:scale-110">
                     {step.number}
                   </span>
                   <h3 className="mb-2 text-[19px] font-bold leading-snug text-foreground">

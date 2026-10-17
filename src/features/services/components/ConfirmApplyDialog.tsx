@@ -50,7 +50,7 @@ export function ConfirmApplyDialog({
         showCloseButton={false}
         initialFocus={notYet}
         overlayClassName="bg-[rgba(15,27,45,0.28)] backdrop-blur-sm"
-        className="w-[min(35rem,calc(100%-2rem))] max-w-none gap-0 overflow-hidden rounded-[28px] bg-white p-0 shadow-portal-dialog ring-0 sm:max-w-none"
+        className="w-[min(35rem,calc(100%-2rem))] max-w-none gap-0 overflow-hidden rounded-[28px] bg-card p-0 shadow-portal-dialog ring-0 sm:max-w-none"
       >
         <header className="relative bg-(image:--portal-hero) px-6 pt-7.5 pr-18 pb-7 sm:px-8">
           <DialogTitle className="font-sans text-[26px] leading-[1.15] font-semibold tracking-[-0.02em] text-foreground sm:text-[30px]">
@@ -65,7 +65,7 @@ export function ConfirmApplyDialog({
               <button
                 type="button"
                 aria-label="Close"
-                className="civic-press absolute top-4.5 right-4.5 flex size-10 items-center justify-center rounded-full bg-white/70 text-foreground hover:bg-white"
+                className="civic-press absolute top-4.5 right-4.5 flex size-10 items-center justify-center rounded-full bg-card/70 text-foreground hover:bg-card"
               />
             }
           >
@@ -89,7 +89,7 @@ export function ConfirmApplyDialog({
           {/* One line runs through the four numbers, from the first to the last. */}
           <ol className="relative mt-6.5 grid grid-cols-4">
             <span
-              className="absolute top-4.25 right-[12.5%] left-[12.5%] h-0.5 bg-[#cfd8e8]"
+              className="absolute top-4.25 right-[12.5%] left-[12.5%] h-0.5 bg-border-strong"
               aria-hidden="true"
             />
             {STEPS.map((step, index) => (
@@ -126,14 +126,14 @@ export function ConfirmApplyDialog({
                 ref={notYet}
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="civic-press h-13 rounded-full border border-[#d7dee9] bg-white px-6.5 text-base font-semibold text-foreground hover:bg-primary-tint"
+                className="civic-press h-13 rounded-full border border-border bg-card px-6.5 text-base font-semibold text-foreground hover:bg-primary-tint"
               >
                 Not yet
               </button>
               <button
                 type="button"
                 onClick={onConfirm}
-                className="civic-press inline-flex h-13 items-center gap-2.5 rounded-full bg-primary px-6.5 text-base font-semibold whitespace-nowrap text-white shadow-[0_8px_20px_rgba(11,77,162,0.28)] hover:bg-primary-hover"
+                className="civic-press inline-flex h-13 items-center gap-2.5 rounded-full bg-primary px-6.5 text-base font-semibold whitespace-nowrap text-primary-foreground shadow-[0_8px_20px_rgba(11,77,162,0.28)] hover:bg-primary-hover"
               >
                 Yes, apply
                 <ArrowRight className="size-4.5" aria-hidden="true" />

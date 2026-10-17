@@ -279,7 +279,7 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                     }))
                   }
                   style={staggerStyle(serviceIndex)}
-                  className="civic-interactive overflow-hidden rounded-xl border border-border bg-white hover:border-border-strong hover:shadow-[0_4px_14px_rgba(23,33,43,0.06)]"
+                  className="civic-interactive overflow-hidden rounded-xl border border-border bg-card hover:border-border-strong hover:shadow-[0_4px_14px_rgba(23,33,43,0.06)]"
                 >
                   <CollapsibleTrigger
                     render={

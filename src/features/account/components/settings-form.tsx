@@ -22,15 +22,15 @@ export const SETTINGS_LABEL_CLASS =
 
 /** Single-line controls: 40px tall, 12px corners, a 1px line on white. */
 export const SETTINGS_CONTROL_CLASS =
-  "h-10 rounded-xl border-[#d7dee9] bg-white px-3.5 text-base shadow-none placeholder:text-[#8a97a8] md:text-[13px]";
+  "h-10 rounded-xl border-border bg-card px-3.5 text-base shadow-none placeholder:text-disabled md:text-[13px]";
 
 /** A control made of an input and a trailing button (the password fields). */
 export const SETTINGS_GROUP_CLASS =
-  "h-10 rounded-xl border-[#d7dee9] bg-white shadow-none *:data-[slot=input-group-control]:h-full *:data-[slot=input-group-control]:px-3.5 *:data-[slot=input-group-control]:text-base md:*:data-[slot=input-group-control]:text-[13px]";
+  "h-10 rounded-xl border-border bg-card shadow-none *:data-[slot=input-group-control]:h-full *:data-[slot=input-group-control]:px-3.5 *:data-[slot=input-group-control]:text-base md:*:data-[slot=input-group-control]:text-[13px]";
 
 /** The date picker's trigger, to match the other controls. */
 export const SETTINGS_PICKER_CLASS =
-  "h-10 rounded-xl border-[#d7dee9] bg-white px-3.5 text-[13px] shadow-none hover:bg-white";
+  "h-10 rounded-xl border-border bg-card px-3.5 text-[13px] shadow-none hover:bg-card";
 
 /**
  * One labelled setting: the label (and an optional hint) on the left, the
@@ -109,7 +109,7 @@ export function SettingsFormFooter({
           "h-10 px-5 text-[13px] disabled:opacity-100",
           pending
             ? "disabled:bg-primary disabled:text-primary-foreground"
-            : "disabled:bg-[#e4e9f1] disabled:text-[#8a97a8]",
+            : "disabled:bg-[#e4e9f1] disabled:text-disabled",
         )}
       >
         {pending ? (

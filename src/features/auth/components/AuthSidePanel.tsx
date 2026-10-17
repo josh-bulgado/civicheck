@@ -28,7 +28,7 @@ function CornerSquares({
       {opacities.map((opacity, index) => (
         <span
           key={index}
-          className={cn("rounded-[5px] bg-white", size)}
+          className={cn("rounded-[5px] bg-card", size)}
           style={{ opacity }}
         />
       ))}
@@ -60,7 +60,7 @@ export function AuthProgressPanel() {
 
       <div className="relative mx-auto h-75 w-full max-w-112" aria-hidden="true">
         <div
-          className="civic-enter-scale absolute top-0 left-0 flex w-79 flex-col gap-3.5 rounded-xl bg-white px-4.5 pt-4 pb-3.5 shadow-[0_18px_40px_-16px_rgba(3,20,42,0.55)]"
+          className="civic-enter-scale absolute top-0 left-0 flex w-79 flex-col gap-3.5 rounded-xl bg-card px-4.5 pt-4 pb-3.5 shadow-[0_18px_40px_-16px_rgba(3,20,42,0.55)]"
           style={enterDelay(140)}
         >
           <div className="flex items-center justify-between gap-3">
@@ -87,7 +87,7 @@ export function AuthProgressPanel() {
                 )}
               >
                 {step.state === "done" ? (
-                  <span className="grid size-4 shrink-0 place-items-center rounded-full bg-primary text-white">
+                  <span className="grid size-4 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
                     <CheckIcon className="size-2.5" strokeWidth={3} />
                   </span>
                 ) : (
@@ -112,7 +112,7 @@ export function AuthProgressPanel() {
         </div>
 
         <div
-          className="civic-enter-scale absolute right-0 bottom-0 flex w-44 flex-col items-center gap-3 rounded-xl bg-white p-4.5 shadow-[0_20px_44px_-14px_rgba(3,20,42,0.6)]"
+          className="civic-enter-scale absolute right-0 bottom-0 flex w-44 flex-col items-center gap-3 rounded-xl bg-card p-4.5 shadow-[0_20px_44px_-14px_rgba(3,20,42,0.6)]"
           style={enterDelay(300)}
         >
           <div
@@ -122,7 +122,7 @@ export function AuthProgressPanel() {
                 "conic-gradient(var(--primary) 0turn 0.75turn, var(--border-light) 0.75turn 1turn)",
             }}
           >
-            <div className="flex size-17 flex-col items-center justify-center rounded-full bg-white">
+            <div className="flex size-17 flex-col items-center justify-center rounded-full bg-card">
               <span className="text-[10.5px] text-muted-foreground">
                 Complete
               </span>
@@ -166,7 +166,7 @@ export function AuthEmblemPanel() {
       <div className="civic-enter-scale flex flex-col items-center gap-7">
         <div
           aria-hidden="true"
-          className="flex size-40 items-center justify-center rounded-full border border-primary/20 bg-white text-sm font-extrabold tracking-tight text-primary xl:size-44"
+          className="flex size-40 items-center justify-center rounded-full border border-primary/20 bg-card text-sm font-extrabold tracking-tight text-primary xl:size-44"
         >
           CCRO
         </div>

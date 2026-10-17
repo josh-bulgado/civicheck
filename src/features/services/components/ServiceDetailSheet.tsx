@@ -112,7 +112,7 @@ export function ServiceDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-md w-full h-full flex flex-col p-0 border-l border-border bg-white shadow-2xl overflow-hidden">
+      <SheetContent className="sm:max-w-md w-full h-full flex flex-col p-0 border-l border-border bg-card shadow-2xl overflow-hidden">
         {/* Header Section - clean and neutral */}
         <div className="relative p-6 bg-card border-b border-border">
           <div className="space-y-2 pr-8">

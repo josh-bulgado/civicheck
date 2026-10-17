@@ -46,7 +46,7 @@ export function SettingsDialog({
       <DialogContent
         showCloseButton={false}
         overlayClassName="bg-[rgba(15,27,45,0.28)] backdrop-blur-sm"
-        className="flex h-[min(40rem,calc(100dvh-2rem))] w-[min(49.5rem,calc(100%-2rem))] max-w-none flex-col gap-0 overflow-hidden rounded-panel bg-white p-0 shadow-portal-dialog ring-0 sm:max-w-none md:h-[min(30rem,calc(100dvh-2rem))]"
+        className="flex h-[min(40rem,calc(100dvh-2rem))] w-[min(49.5rem,calc(100%-2rem))] max-w-none flex-col gap-0 overflow-hidden rounded-panel bg-card p-0 shadow-portal-dialog ring-0 sm:max-w-none md:h-[min(30rem,calc(100dvh-2rem))]"
       >
         <DialogDescription className="sr-only">
           Manage your personal details and password.

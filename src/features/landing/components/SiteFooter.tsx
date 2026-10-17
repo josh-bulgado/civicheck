@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { CityGovernmentIdentity, CiviCheckIdentity } from "~/components/brand/civic-identity";
 
 const SiteFooter = () => (
-  <footer className="border-t border-border bg-white">
+  <footer className="border-t border-border bg-card">
     <div className="civic-container grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr]">
       <div className="max-w-md">
         <CiviCheckIdentity />

@@ -398,7 +398,7 @@ export function CaseStep({
                 <button
                   type="button"
                   onClick={() => setRedirectOpen(true)}
-                  className="civic-press h-11 rounded-full border border-[#e0bd5c] bg-white/70 px-5 text-[15px] font-semibold text-[#5c3a00] hover:bg-white"
+                  className="civic-press h-11 rounded-full border border-warning-border bg-card/70 px-5 text-[15px] font-semibold text-tone-warning hover:bg-card"
                 >
                   {timingRule.ctaLabel}
                 </button>

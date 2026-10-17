@@ -1,6 +1,7 @@
 import { QuietLink } from "~/components/quiet-link";
 import { Check } from "lucide-react";
 import { cn } from "~/lib/utils";
+import { ThemeToggle } from "~/components/theme-toggle";
 
 const STEPS = [
   { step: 1, label: "About your case" },
@@ -35,7 +36,7 @@ export function ApplyStepRail({
   const savedLabel = formatSavedAt(draftUpdatedAt);
 
   return (
-    <header className="flex flex-col gap-4 px-5 pt-5 pb-4 sm:px-8 md:flex-row md:items-center md:gap-6 md:px-14 md:pt-7 md:pb-6.5">
+    <header className="relative flex flex-col gap-4 px-5 pt-5 pb-4 sm:px-8 md:flex-row md:items-center md:gap-6 md:px-14 md:pt-7 md:pb-6.5">
       <QuietLink
         to="/dashboard"
         aria-label="CiviCheck, back to your dashboard"
@@ -43,7 +44,7 @@ export function ApplyStepRail({
       >
         {/* Text stand-in: the official emblem isn't cleared for use yet. */}
         <span
-          className="flex size-10.5 shrink-0 items-center justify-center rounded-full border-2 border-brand-gold bg-white text-[10px] font-extrabold tracking-[0.02em] text-primary"
+          className="flex size-10.5 shrink-0 items-center justify-center rounded-full border-2 border-brand-gold bg-card text-[10px] font-extrabold tracking-[0.02em] text-primary"
           aria-hidden="true"
         >
           CCRO
@@ -71,10 +72,10 @@ export function ApplyStepRail({
                     className={cn(
                       "flex size-8.5 shrink-0 items-center justify-center rounded-full border-2 text-[15px] font-bold transition-[background-color,color,border-color] duration-300 ease-out motion-reduce:transition-none",
                       isDone
-                        ? "border-success bg-success text-white"
+                        ? "border-success bg-success text-primary-foreground"
                         : isCurrent
-                          ? "border-primary bg-primary text-white"
-                          : "border-[#b9c7de] bg-white text-muted-foreground",
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-dashed-border bg-card text-muted-foreground",
                     )}
                   >
                     {isDone ? (
@@ -107,7 +108,7 @@ export function ApplyStepRail({
                   // and an overlay scales across it, so nothing reflows.
                   <div
                     aria-hidden="true"
-                    className="relative h-0.75 flex-1 overflow-hidden rounded-full bg-[#cfd8e8]"
+                    className="relative h-0.75 flex-1 overflow-hidden rounded-full bg-border-strong"
                   >
                     <div
                       className={cn(
@@ -124,7 +125,10 @@ export function ApplyStepRail({
       </nav>
 
       {/* Balances the mark, so the steps stay centred under the card. */}
-      <span className="hidden md:block md:w-60" aria-hidden="true" />
+      <div className="hidden md:flex md:w-60 md:justify-end">
+        <ThemeToggle />
+      </div>
+      <ThemeToggle className="absolute top-4 right-5 sm:right-8 md:hidden" />
     </header>
   );
 }

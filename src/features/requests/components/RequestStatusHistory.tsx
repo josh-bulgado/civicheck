@@ -65,7 +65,7 @@ export function RequestStatusHistory({ logs }: { logs: HistoryLog[] }) {
                           "size-4 ring-4 ring-primary/15",
                           getCurrentDotClass(log.actionStatus),
                         )
-                      : "size-3 bg-[#cfd8e8]",
+                      : "size-3 bg-border-strong",
                   )}
                 />
               </span>

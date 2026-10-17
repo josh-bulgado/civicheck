@@ -114,7 +114,7 @@ export function AttachmentThumbnail({
       )}
       <span
         aria-hidden="true"
-        className="absolute right-1 bottom-1 flex size-5 items-center justify-center rounded-full bg-foreground/75 text-white"
+        className="absolute right-1 bottom-1 flex size-5 items-center justify-center rounded-full bg-foreground/75 text-background"
       >
         <Eye className="size-3" />
       </span>

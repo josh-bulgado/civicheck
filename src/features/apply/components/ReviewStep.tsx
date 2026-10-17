@@ -327,7 +327,7 @@ export function ReviewStep({
                   const suffix = fileTotal > 1 ? ` · file ${fileNumber} of ${fileTotal}` : "";
                   return (
                     <div key={doc.storagePath} className="flex items-center gap-3.5">
-                      <span className="flex size-5.5 shrink-0 items-center justify-center rounded-md bg-success text-white">
+                      <span className="flex size-5.5 shrink-0 items-center justify-center rounded-md bg-success text-primary-foreground">
                         <Check className="size-3.5" strokeWidth={3} aria-hidden="true" />
                       </span>
                       <DocumentPreview
@@ -354,7 +354,7 @@ export function ReviewStep({
             id="confirm-application-details"
             checked={confirmed}
             onCheckedChange={(checked) => setConfirmed(checked === true)}
-            className="mt-px size-6.5 rounded-lg border-[1.5px] border-[#b9c7de] shadow-none data-checked:border-primary [&_svg]:size-4.5"
+            className="mt-px size-6.5 rounded-lg border-[1.5px] border-dashed-border shadow-none data-checked:border-primary [&_svg]:size-4.5"
           />
           <label
             htmlFor="confirm-application-details"
@@ -377,7 +377,7 @@ export function ReviewStep({
                 type="button"
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="civic-press h-12 rounded-full bg-primary px-6 text-base font-semibold text-white hover:bg-primary-hover disabled:opacity-60"
+                className="civic-press h-12 rounded-full bg-primary px-6 text-base font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60"
               >
                 Try again
               </button>
@@ -418,7 +418,7 @@ function ReviewBlock({
   children: ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-[18px] border border-[#e4e9f1]">
+    <section className="overflow-hidden rounded-[18px] border border-border-light">
       <div className="flex items-center justify-between gap-3 bg-portal-panel px-5.5 py-3.5">
         <h2 className="text-[17px] leading-[normal] font-bold text-foreground">{title}</h2>
         <button
@@ -450,7 +450,7 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
 function WhatHappensNextCard() {
   return (
     <div className="overflow-hidden rounded-[24px] bg-card shadow-portal-card">
-      <div className="border-b border-[#e4e9f1] px-5.5 py-4 text-[17px] font-bold text-foreground">
+      <div className="border-b border-border-light px-5.5 py-4 text-[17px] font-bold text-foreground">
         What happens next
       </div>
       <ol className="flex flex-col gap-4 px-5.5 py-5">

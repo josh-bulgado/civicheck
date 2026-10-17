@@ -3,9 +3,12 @@
 import { Search } from "lucide-react";
 import { SidebarTrigger, useSidebar } from "~/components/ui/sidebar";
 import { cn } from "~/lib/utils";
+import { useModifierKeyLabel } from "~/hooks/useModifierKeyLabel";
+import { ThemeToggle } from "~/components/theme-toggle";
 import { openCommandPalette } from "~/components/sidebar-01/command-palette";
 import { NotificationsPopover } from "~/features/notifications/components/NotificationsPopover";
 import { loadPaletteDefaults } from "~/features/search/palette-defaults";
+import { Kbd, KbdGroup } from "../ui/kbd";
 
 interface CitizenTopBarProps {
   /** Keys the bell popover's cache, so one person's list never shows to another. */
@@ -19,8 +22,12 @@ interface CitizenTopBarProps {
  * wraps: as the bar narrows the search pill drops its label and the seal goes,
  * leaving circles. Greeting and "How it works" live on the dashboard now.
  */
-export function CitizenTopBar({ userId, unreadNotifications }: CitizenTopBarProps) {
+export function CitizenTopBar({
+  userId,
+  unreadNotifications,
+}: CitizenTopBarProps) {
   const { state } = useSidebar();
+  const modifier = useModifierKeyLabel();
   // The search sheet lists your latest requests before you type. Hovering or
   // focusing the pill starts that load; the cache makes repeats free.
   const warmSearch = () => {
@@ -33,7 +40,7 @@ export function CitizenTopBar({ userId, unreadNotifications }: CitizenTopBarProp
           it is a sheet, or after Ctrl+B has tucked it away. */}
       <SidebarTrigger
         className={cn(
-          "size-12.5 shrink-0 rounded-full border border-border-light bg-white text-portal-ink-2 hover:bg-primary-tint [&_svg]:size-5",
+          "size-12.5 shrink-0 rounded-full border border-border-light bg-card text-portal-ink-2 hover:bg-primary-tint [&_svg]:size-5",
           state === "expanded" && "md:hidden",
         )}
       />
@@ -49,12 +56,14 @@ export function CitizenTopBar({ userId, unreadNotifications }: CitizenTopBarProp
         <span className="hidden truncate sm:inline">
           Search services or tracking no.
         </span>
+        <Kbd className="align-bottom sm:ml-auto">{modifier} + K</Kbd>
       </button>
       <div className="flex-1" aria-hidden="true" />
+      <ThemeToggle />
       <NotificationsPopover userId={userId} unreadCount={unreadNotifications} />
       {/* Text stand-in for the city seal, which isn't cleared for use yet. */}
       <span
-        className="hidden size-12.5 shrink-0 items-center justify-center rounded-full border-2 border-brand-gold bg-white text-[10px] font-extrabold tracking-[0.02em] text-primary sm:flex"
+        className="hidden size-12.5 shrink-0 items-center justify-center rounded-full border-2 border-brand-gold bg-card text-[10px] font-extrabold tracking-[0.02em] text-primary sm:flex"
         aria-hidden="true"
       >
         CITY

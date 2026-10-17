@@ -136,7 +136,7 @@ function MiddleNameField({
             placeholder={none ? "No middle name" : "Santos"}
             maxLength={120}
             autoComplete="off"
-            className={cn(WIZARD_CONTROL_CLASS, none && "border-[#e4e9f1] bg-portal-panel")}
+            className={cn(WIZARD_CONTROL_CLASS, none && "border-border-light bg-portal-panel")}
             {...field}
             disabled={none}
           />
@@ -160,7 +160,7 @@ function MiddleNameField({
                   requestAnimationFrame(() => document.getElementById(inputId)?.focus());
                 }
               }}
-              className="size-5.5 rounded-md border-[1.5px] border-[#b9c7de] shadow-none [&_svg]:size-4"
+              className="size-5.5 rounded-md border-[1.5px] border-dashed-border shadow-none [&_svg]:size-4"
             />
             I don&rsquo;t have a middle name
           </label>

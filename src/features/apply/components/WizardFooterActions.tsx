@@ -32,12 +32,12 @@ export function WizardFooterActions({
   const quiet = !continueReady || continueDisabled || continuePending;
 
   return (
-    <div className="mt-7.5 flex flex-col-reverse items-stretch justify-between gap-3 border-t border-[#e4e9f1] pt-6.5 sm:flex-row sm:items-center sm:gap-4">
+    <div className="mt-7.5 flex flex-col-reverse items-stretch justify-between gap-3 border-t border-border-light pt-6.5 sm:flex-row sm:items-center sm:gap-4">
       {onBack ? (
         <button
           type="button"
           onClick={onBack}
-          className="civic-press h-13.5 rounded-xl border border-[#d7dee9] bg-white px-7 text-base font-semibold text-foreground transition-colors hover:bg-primary-tint"
+          className="civic-press h-13.5 rounded-xl border border-border bg-card px-7 text-base font-semibold text-foreground transition-colors hover:bg-primary-tint"
         >
           {backLabel}
         </button>
@@ -60,8 +60,8 @@ export function WizardFooterActions({
           className={cn(
             "civic-press inline-flex h-13.5 items-center justify-center gap-2.5 rounded-xl border px-8 text-base font-semibold transition-colors",
             quiet
-              ? "border-[#e4e9f1] bg-[#eef1f6] text-[#7a8696] disabled:cursor-default"
-              : "border-primary bg-primary text-white shadow-[0_8px_20px_rgba(11,77,162,0.25)] hover:bg-primary-hover",
+              ? "border-border-light bg-muted text-disabled disabled:cursor-default"
+              : "border-primary bg-primary text-primary-foreground shadow-[0_8px_20px_rgba(11,77,162,0.25)] hover:bg-primary-hover",
           )}
         >
           {/* A spinner beside the label makes the wait legible as work in

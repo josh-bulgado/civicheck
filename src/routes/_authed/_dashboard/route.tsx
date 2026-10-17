@@ -18,6 +18,7 @@ import { invalidateNotificationPreview } from "~/features/notifications/notifica
 import { invalidatePaletteDefaults } from "~/features/search/palette-defaults";
 import { getNotificationAudience } from "~/features/notifications/notification-audience";
 import { WelcomeTutorial } from "~/features/onboarding/components/WelcomeTutorial";
+import { ThemeScope } from "~/components/theme-scope";
 import type { Role } from "~/lib/permissions";
 
 // The citizen sidebar's column: its own width, the 10px of frame to its left and
@@ -77,6 +78,7 @@ function DashboardLayout() {
       className={isCitizen ? "citizen-portal" : undefined}
       style={isCitizen ? CITIZEN_SIDEBAR_STYLE : undefined}
     >
+      <ThemeScope enabled={isCitizen} />
       <a
         href="#main-content"
         className="sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:not-sr-only focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-foreground focus:shadow-lg"
@@ -114,9 +116,9 @@ function DashboardLayout() {
         </SidebarInset>
       ) : (
         <SidebarInset>
-          <header className="flex h-[4.5rem] shrink-0 items-center justify-between border-b border-border-strong bg-white px-4 transition-[width,height] ease-linear sm:px-6">
+          <header className="flex h-[4.5rem] shrink-0 items-center justify-between border-b border-border-strong bg-card px-4 transition-[width,height] ease-linear sm:px-6">
             <div className="flex items-center gap-3">
-              <SidebarTrigger className="size-10 rounded-lg border border-border-strong bg-white shadow-xs hover:bg-surface-subtle" />
+              <SidebarTrigger className="size-10 rounded-lg border border-border-strong bg-card shadow-xs hover:bg-surface-subtle" />
               <div className="hidden sm:block">
                 <p className="text-sm font-bold text-foreground">
                   {workspace.label}

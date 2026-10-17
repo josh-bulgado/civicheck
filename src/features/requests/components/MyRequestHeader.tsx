@@ -19,7 +19,7 @@ export function MyRequestHeader({
     <header>
       <QuietLink
         to="/my-requests"
-        className="civic-press inline-flex h-11 items-center gap-2 rounded-full border border-border bg-white px-5 text-base font-semibold text-foreground shadow-portal-pill transition-colors duration-150 hover:bg-primary-tint hover:text-primary-hover"
+        className="civic-press inline-flex h-11 items-center gap-2 rounded-full border border-border bg-card px-5 text-base font-semibold text-foreground shadow-portal-pill transition-colors duration-150 hover:bg-primary-tint hover:text-primary-hover"
       >
         <ArrowLeft className="size-4.5 text-black" aria-hidden="true" />
         Back to my requests

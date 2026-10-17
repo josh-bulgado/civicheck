@@ -14,23 +14,23 @@ const ICONS = {
 // timing warnings, red only for what must be fixed, green for done.
 const TONES = {
   default: {
-    box: "border-[#d5e1f5] bg-[#eef3fc]",
+    box: "border-primary-soft bg-primary-tint",
     title: "text-primary-hover",
     text: "text-body-2",
   },
   warning: {
-    box: "border-[#f3d98a] bg-[#fdf1cf]",
-    title: "text-[#7a4b00]",
-    text: "text-[#5c3a00]",
+    box: "border-warning-border bg-tone-warning-soft",
+    title: "text-tone-warning",
+    text: "text-tone-warning",
   },
   destructive: {
-    box: "border-[#f5c6c1] bg-portal-danger-soft",
+    box: "border-destructive/25 bg-portal-danger-soft",
     title: "text-destructive",
-    text: "text-[#6b1a14]",
+    text: "text-[#6b1a14] dark:text-tone-danger",
   },
   success: {
-    box: "border-[#bfe3cf] bg-[#e7f6ee]",
-    title: "text-[#1a6a3c]",
+    box: "border-success/30 bg-success-soft",
+    title: "text-tone-success",
     text: "text-body-strong",
   },
 } as const;

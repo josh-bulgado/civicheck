@@ -207,7 +207,7 @@ export function AccountsDataTable({
         }
       />
 
-      <div className="overflow-hidden rounded-xl border border-border-strong bg-white">
+      <div className="overflow-hidden rounded-xl border border-border-strong bg-card">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader className="bg-surface-subtle">

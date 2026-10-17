@@ -38,8 +38,8 @@ export function NavMain({ groups, citizen = false }: NavMainProps) {
                   // faint fill inside its strokes. The explicit active+hover
                   // pairing keeps the pill opaque.
                   className={cn(
-                    "group/nav civic-press flex h-13.5 items-center gap-3.5 rounded-[18px] pl-4.5 text-[15.5px] text-foreground hover:bg-white/50",
-                    "data-[status=active]:bg-white data-[status=active]:font-semibold data-[status=active]:shadow-portal-nav-active data-[status=active]:hover:bg-white",
+                    "group/nav civic-press flex h-13.5 items-center gap-3.5 rounded-[18px] pl-4.5 text-[15.5px] text-foreground hover:bg-card/50",
+                    "data-[status=active]:bg-card data-[status=active]:font-semibold data-[status=active]:shadow-portal-nav-active data-[status=active]:hover:bg-card",
                     item.badge ? "pr-3.5" : "pr-4.5",
                   )}
                 >
@@ -98,7 +98,7 @@ export function NavMain({ groups, citizen = false }: NavMainProps) {
                         {!!item.badge && (
                           <span
                             key={item.badge}
-                            className="civic-enter-scale flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-2xs font-bold text-white group-data-[collapsible=icon]:hidden"
+                            className="civic-enter-scale flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-2xs font-bold text-primary-foreground group-data-[collapsible=icon]:hidden"
                           >
                             {item.badge > 99 ? "99+" : item.badge}
                           </span>

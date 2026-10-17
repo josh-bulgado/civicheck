@@ -18,7 +18,7 @@ export function AcceptInvitationPage() {
       />
 
       <main className="flex min-h-dvh flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-border bg-white px-5 py-4 sm:px-8 lg:hidden">
+        <header className="flex items-center justify-between border-b border-border bg-card px-5 py-4 sm:px-8 lg:hidden">
           <Link to="/"><CiviCheckIdentity /></Link>
         </header>
 
@@ -42,7 +42,7 @@ export function AcceptInvitationPage() {
               <AcceptInvitationForm />
             </div>
 
-            <div className="mt-5 flex items-start gap-3 rounded-lg border border-border bg-white px-4 py-3.5">
+            <div className="mt-5 flex items-start gap-3 rounded-lg border border-border bg-card px-4 py-3.5">
               <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
               <p className="text-xs leading-5 text-muted-foreground">
                 Your password is transmitted securely and is never visible to

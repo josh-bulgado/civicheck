@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import { ThemeToggle } from "~/components/theme-toggle";
 import { openCommandPalette } from "~/components/sidebar-01/command-palette";
 import { SettingsDialog } from "~/features/account/components/SettingsDialog";
 import {
@@ -52,7 +53,7 @@ export function CitizenMobileHeader({
       >
         {/* Text stand-in: the official emblem isn't cleared for use yet. */}
         <span
-          className="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-brand-gold bg-white text-[9px] font-extrabold tracking-[0.02em] text-primary"
+          className="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-brand-gold bg-card text-[9px] font-extrabold tracking-[0.02em] text-primary"
           aria-hidden="true"
         >
           CCRO
@@ -68,11 +69,13 @@ export function CitizenMobileHeader({
           onPointerEnter={() => {
             if (userId) void loadPaletteDefaults(userId).catch(() => undefined);
           }}
-          className="civic-press flex size-11 shrink-0 items-center justify-center rounded-full border border-border-light bg-white text-portal-ink-2"
+          className="civic-press flex size-11 shrink-0 items-center justify-center rounded-full border border-border-light bg-card text-portal-ink-2"
         >
           <Search className="size-5" aria-hidden="true" />
         </button>
       ) : null}
+
+      <ThemeToggle />
 
       <NotificationsPopover userId={userId} unreadCount={unreadNotifications} />
 
@@ -89,7 +92,7 @@ export function CitizenMobileHeader({
           side="bottom"
           align="end"
           sideOffset={8}
-          className="w-56 rounded-[20px] bg-white p-2 shadow-portal-menu ring-0"
+          className="w-56 rounded-[20px] bg-card p-2 shadow-portal-menu ring-0"
         >
           <DropdownMenuItem
             onClick={() => setSettingsTab("general")}

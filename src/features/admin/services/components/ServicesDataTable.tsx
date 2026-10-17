@@ -110,7 +110,7 @@ export function ServicesDataTable({
       />
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-border-strong bg-white">
+      <div className="overflow-hidden rounded-xl border border-border-strong bg-card">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader className="border-b border-border bg-surface-subtle">

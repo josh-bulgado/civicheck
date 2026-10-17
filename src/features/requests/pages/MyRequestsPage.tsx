@@ -206,7 +206,7 @@ function RequestRow({ request, isNew }: { request: MyRequest; isNew: boolean }) 
             {serviceName(request)}
           </p>
           {isNew && (
-            <span className="inline-flex h-6.5 shrink-0 items-center rounded-full bg-primary px-3 text-[13px] font-bold text-white max-md:h-6 max-md:px-2.5 max-md:text-xs">
+            <span className="inline-flex h-6.5 shrink-0 items-center rounded-full bg-primary px-3 text-[13px] font-bold text-primary-foreground max-md:h-6 max-md:px-2.5 max-md:text-xs">
               New
             </span>
           )}

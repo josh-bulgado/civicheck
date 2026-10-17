@@ -14,7 +14,7 @@ export function RequestSummaryCard({ rows }: RequestSummaryCardProps) {
 
   return (
     <div className="overflow-hidden rounded-4xl bg-card shadow-portal-card">
-      <div className="border-b border-[#e4e9f1] px-5.5 py-4 text-[17px] font-bold text-foreground">
+      <div className="border-b border-border-light px-5.5 py-4 text-[17px] font-bold text-foreground">
         Details so far
       </div>
       <div className="flex flex-col gap-3 px-5.5 py-4.5">

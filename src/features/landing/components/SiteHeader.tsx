@@ -23,7 +23,7 @@ const SiteHeader = () => {
   }, []);
 
   return (
-    <header className="civic-enter-fade sticky top-0 z-50 border-b border-border bg-white/95 backdrop-blur-md">
+    <header className="civic-enter-fade sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur-md">
       <div className="hidden border-b border-border-light bg-background sm:block">
         <div className="civic-container flex h-9 items-center justify-between">
           <p className="text-[13px] font-bold uppercase tracking-[0.09em] text-muted-2">
@@ -83,7 +83,7 @@ const SiteHeader = () => {
       {mobileMenuOpen ? (
         <nav
           id="mobile-navigation"
-          className="civic-enter-sm civic-stagger border-t border-border bg-white px-5 py-4 md:hidden"
+          className="civic-enter-sm civic-stagger border-t border-border bg-card px-5 py-4 md:hidden"
           aria-label="Mobile navigation"
         >
           <div className="mx-auto flex max-w-6xl flex-col gap-1">
@@ -100,7 +100,7 @@ const SiteHeader = () => {
             ))}
             <div className="my-2 h-px bg-border" />
             <Link to="/login" className="rounded-lg px-3 py-3 text-center text-sm font-semibold text-primary" onClick={() => setMobileMenuOpen(false)}>Sign in</Link>
-            <Link to="/signup" className="rounded-lg bg-primary px-3 py-3 text-center text-sm font-semibold text-white" onClick={() => setMobileMenuOpen(false)}>Get started</Link>
+            <Link to="/signup" className="rounded-lg bg-primary px-3 py-3 text-center text-sm font-semibold text-primary-foreground" onClick={() => setMobileMenuOpen(false)}>Get started</Link>
           </div>
         </nav>
       ) : null}

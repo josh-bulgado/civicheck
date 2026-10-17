@@ -53,7 +53,7 @@ export function AttentionPanel({ items }: AttentionPanelProps) {
               <QuietLink
                 to="/my-requests/$requestId"
                 params={{ requestId: request.id }}
-                className="civic-press inline-flex h-11 items-center rounded-full bg-primary px-5.5 text-[15px] font-semibold whitespace-nowrap text-white hover:bg-primary-hover max-md:col-start-2 max-md:justify-self-start"
+                className="civic-press inline-flex h-11 items-center rounded-full bg-primary px-5.5 text-[15px] font-semibold whitespace-nowrap text-primary-foreground hover:bg-primary-hover max-md:col-start-2 max-md:justify-self-start"
               >
                 {action}
               </QuietLink>
