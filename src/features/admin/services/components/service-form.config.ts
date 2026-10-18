@@ -3,6 +3,7 @@ import { parseRequirementName } from "~/features/services/service-utils";
 import {
   feeComponentsIssue,
   parseFeeComponents,
+  type FeeComponent,
 } from "~/features/services/fee-components";
 import {
   conditionRuleSchema,
@@ -41,17 +42,31 @@ const feeComponentFormSchema = z.object({
       "Enter a valid amount (0 or more)",
     ),
   included: z.boolean(),
+  // "" is flat. Only an "also payable" row can carry a unit or a note.
+  unit: z.enum(["", "page", "copy", "document"]),
+  note: z.string().max(120, "Keep it to 120 characters or fewer"),
 });
 
-/** Form rows -> the saved shape. Blank or unreadable amounts count as 0. */
+/**
+ * Form rows -> the saved shape. Blank or unreadable amounts count as 0. A unit
+ * or note is kept only on an "also payable" row and only when filled in.
+ */
 export function toFeeComponentPayload(
   rows: ServiceFormValues["fee_components"],
-) {
-  return rows.map((row) => ({
-    label: row.label.trim(),
-    amount: Number(row.amount) || 0,
-    included: row.included,
-  }));
+): FeeComponent[] {
+  return rows.map((row) => {
+    const component: FeeComponent = {
+      label: row.label.trim(),
+      amount: Number(row.amount) || 0,
+      included: row.included,
+    };
+    if (!row.included) {
+      if (row.unit) component.unit = row.unit;
+      const note = row.note.trim();
+      if (note) component.note = note;
+    }
+    return component;
+  });
 }
 
 // `fee` stays a string so the resolver's input and output types match the text
@@ -224,6 +239,8 @@ export function serviceFormDefaults(service: Service): ServiceFormValues {
         label: component.label,
         amount: String(component.amount),
         included: component.included,
+        unit: component.unit ?? "",
+        note: component.note ?? "",
       }),
     ),
   };

@@ -10,6 +10,7 @@ import {
 } from "~/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import {
+  describeAlsoPayable,
   parseFeeComponents,
   splitFeeComponents,
   type FeeComponent,
@@ -190,7 +191,8 @@ function FeeLines({
                 muted ? "text-muted-foreground" : "font-semibold text-foreground",
               )}
             >
-              {formatPesoFee(line.amount)}
+              {/* Only "also payable" lines (muted) carry a unit and a note. */}
+              {muted ? describeAlsoPayable(line) : formatPesoFee(line.amount)}
             </dd>
           </div>
         ))}

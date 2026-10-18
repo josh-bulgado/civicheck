@@ -230,7 +230,15 @@ export function FeeBreakdownFields() {
               type="button"
               variant="ghost"
               className="min-h-11 text-primary"
-              onClick={() => rows.append({ label: "", amount: "", included: true })}
+              onClick={() =>
+                rows.append({
+                  label: "",
+                  amount: "",
+                  included: true,
+                  unit: "",
+                  note: "",
+                })
+              }
             >
               <Plus aria-hidden="true" data-icon="inline-start" />
               Add Charge

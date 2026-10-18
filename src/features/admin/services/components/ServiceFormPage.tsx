@@ -510,6 +510,8 @@ export function ServiceFormPage({
         label: component.label,
         amount: String(component.amount),
         included: component.included,
+        unit: component.unit ?? "",
+        note: component.note ?? "",
       })),
     );
     form.setValue("processing_time", source.processing_time ?? "");
