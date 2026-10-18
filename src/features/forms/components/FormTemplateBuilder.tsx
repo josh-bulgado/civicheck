@@ -21,6 +21,7 @@ import {
   ArrowDown,
   ArrowUp,
   Blocks,
+  Copy,
   Eye,
   GitBranch,
   GripVertical,
@@ -119,6 +120,8 @@ function withStepFields(
   };
 }
 
+const COPY_SUFFIX = " (copy)";
+
 function nextFieldKey(definition: FormTemplateDefinition) {
   const used = new Set(
     definition.sections.flatMap((section) =>
@@ -195,6 +198,9 @@ export function FormTemplateBuilder({
     id: string;
   } | null>(null);
   const [liveMessage, setLiveMessage] = useState("");
+  // The control that opened the inspector sheet, so closing it can hand focus
+  // back there. Null when the sheet opened some other way (Add Field).
+  const openerRef = useRef<HTMLElement | null>(null);
 
   // Questions have no id of their own and their key is editable, so rows get a
   // client-only id. It keeps a row's identity (and focus) through key edits and
@@ -353,7 +359,64 @@ export function FormTemplateBuilder({
         },
       ]),
     );
+    openerRef.current = null;
     setSelected({ step, id });
+  }
+
+  function duplicateField(step: FormStep, index: number) {
+    const current = latestDefinition.current;
+    const fields = fieldsInStep(current, step);
+    const source = fields[index];
+    if (!source || source.blockKey || source.type === "person_group") return;
+
+    // Deep copy so editing the copy (options, visibility) never touches the
+    // original. A copy is always a local question, never a shared-block member.
+    const copy = structuredClone(source);
+    delete copy.blockKey;
+    copy.key = nextFieldKey(current);
+    copy.label = `${source.label.slice(0, 160 - COPY_SUFFIX.length)}${COPY_SUFFIX}`;
+
+    const ids = rowIdsFor(step, fields.length);
+    idsByStep.current[step] = [
+      ...ids.slice(0, index + 1),
+      mintId(step),
+      ...ids.slice(index + 1),
+    ];
+    onChange(
+      withStepFields(current, step, [
+        ...fields.slice(0, index + 1),
+        copy,
+        ...fields.slice(index + 1),
+      ]),
+    );
+    setLiveMessage(
+      `Duplicated ${source.label}. The copy is at position ${index + 2} of ${fields.length + 1}.`,
+    );
+  }
+
+  function openField(
+    step: FormStep,
+    id: string,
+    opener: HTMLElement | null,
+  ) {
+    openerRef.current = opener;
+    setSelected({ step, id });
+  }
+
+  function handleInspectorOpenChange(open: boolean) {
+    if (open) return;
+    setSelected(null);
+    const opener = openerRef.current;
+    openerRef.current = null;
+    if (!opener) return;
+    // Base UI only returns focus to whatever was focused when the sheet
+    // mounted. That is wrong for the row menu (the menu item is gone by then)
+    // and for Safari, which does not focus a button on click. Wait a frame so
+    // we run after the close has been committed; the library then sees focus
+    // already outside the sheet and leaves it alone.
+    requestAnimationFrame(() => {
+      if (opener.isConnected) opener.focus({ preventScroll: true });
+    });
   }
 
   const selectedFields = selected
@@ -465,8 +528,9 @@ export function FormTemplateBuilder({
                   selected?.step === step.value ? selected.id : null
                 }
                 blockNameByKey={blockNameByKey}
-                onOpen={(id) => setSelected({ step: step.value, id })}
+                onOpen={(id, opener) => openField(step.value, id, opener)}
                 onReorder={(from, to) => reorderField(step.value, from, to)}
+                onDuplicate={(index) => duplicateField(step.value, index)}
                 onRemove={(index) => removeField(step.value, index)}
               />
             )}
@@ -476,9 +540,7 @@ export function FormTemplateBuilder({
 
       <FormFieldInspector
         open={selectedField !== null}
-        onOpenChange={(open) => {
-          if (!open) setSelected(null);
-        }}
+        onOpenChange={handleInspectorOpenChange}
         field={selectedField}
         fields={selectedFields}
         index={selectedIndex}
@@ -534,6 +596,7 @@ function StepFieldTable({
   blockNameByKey,
   onOpen,
   onReorder,
+  onDuplicate,
   onRemove,
 }: {
   stepLabel: string;
@@ -542,8 +605,9 @@ function StepFieldTable({
   ids: string[];
   selectedId: string | null;
   blockNameByKey: Map<string, string>;
-  onOpen: (id: string) => void;
+  onOpen: (id: string, opener: HTMLElement | null) => void;
   onReorder: (from: number, to: number) => void;
+  onDuplicate: (index: number) => void;
   onRemove: (index: number) => void;
 }) {
   const sensors = useSensors(
@@ -618,10 +682,11 @@ function StepFieldTable({
                       ? (blockNameByKey.get(field.blockKey) ?? field.blockKey)
                       : null
                   }
-                  onOpen={() => onOpen(ids[index])}
+                  onOpen={(opener) => onOpen(ids[index], opener)}
                   onMoveBy={(direction) =>
                     onReorder(index, index + direction)
                   }
+                  onDuplicate={() => onDuplicate(index)}
                   onRemove={() => onRemove(index)}
                 />
               ))}
@@ -642,6 +707,7 @@ function FieldRow({
   blockName,
   onOpen,
   onMoveBy,
+  onDuplicate,
   onRemove,
 }: {
   id: string;
@@ -650,10 +716,12 @@ function FieldRow({
   index: number;
   selected: boolean;
   blockName: string | null;
-  onOpen: () => void;
+  onOpen: (opener: HTMLElement | null) => void;
   onMoveBy: (direction: -1 | 1) => void;
+  onDuplicate: () => void;
   onRemove: () => void;
 }) {
+  const nameButtonRef = useRef<HTMLButtonElement>(null);
   const locked = Boolean(field.blockKey);
   const {
     attributes,
@@ -677,16 +745,9 @@ function FieldRow({
         ),
         transition,
       }}
-      className={cn(
-        "cursor-pointer",
-        isDragging && "relative z-10 bg-background shadow-md",
-      )}
-      onClick={onOpen}
+      className={cn(isDragging && "relative z-10 bg-background shadow-md")}
     >
-      <TableCell
-        className="w-10 pr-0"
-        onClick={(event) => event.stopPropagation()}
-      >
+      <TableCell className="w-10 pr-0">
         <Button
           type="button"
           variant="ghost"
@@ -704,19 +765,20 @@ function FieldRow({
       </TableCell>
 
       <TableCell className="whitespace-normal">
-        <div className="flex items-center gap-3">
+        <button
+          type="button"
+          ref={nameButtonRef}
+          aria-current={selected ? "true" : undefined}
+          onClick={(event) => onOpen(event.currentTarget)}
+          className="group/name -mx-1 flex min-h-11 w-full items-center gap-3 rounded-md px-1 py-1 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
             <FormFieldIcon type={field.type} />
           </span>
           <span className="flex min-w-0 flex-col gap-0.5">
-            <Button
-              type="button"
-              variant="link"
-              aria-current={selected ? "true" : undefined}
-              className="h-auto min-h-11 justify-start p-0 text-left font-medium break-words whitespace-normal text-foreground"
-            >
+            <span className="text-sm font-medium break-words text-foreground underline-offset-4 group-hover/name:underline">
               {field.label}
-            </Button>
+            </span>
             {blockName ? (
               <span className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Blocks aria-hidden="true" className="size-3" />
@@ -724,7 +786,7 @@ function FieldRow({
               </span>
             ) : null}
           </span>
-        </div>
+        </button>
       </TableCell>
 
       <TableCell className="hidden md:table-cell">
@@ -762,7 +824,7 @@ function FieldRow({
             <span className="min-w-0 break-words">
               {visibility.misordered
                 ? `Depends on a question below: ${visibility.text}`
-                : `Only if ${visibility.text}`}
+                : `Shown when ${visibility.text}`}
             </span>
           </span>
         ) : (
@@ -770,7 +832,7 @@ function FieldRow({
         )}
       </TableCell>
 
-      <TableCell onClick={(event) => event.stopPropagation()}>
+      <TableCell>
         <DropdownMenu>
           <DropdownMenuTrigger
             nativeButton
@@ -787,7 +849,7 @@ function FieldRow({
             <MoreHorizontal aria-hidden="true" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-44">
-            <DropdownMenuItem onClick={onOpen}>
+            <DropdownMenuItem onClick={() => onOpen(nameButtonRef.current)}>
               <Pencil aria-hidden="true" />
               Edit Field
             </DropdownMenuItem>
@@ -804,6 +866,13 @@ function FieldRow({
             >
               <ArrowDown aria-hidden="true" />
               Move Down
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={locked || field.type === "person_group"}
+              onClick={onDuplicate}
+            >
+              <Copy aria-hidden="true" />
+              Duplicate
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
