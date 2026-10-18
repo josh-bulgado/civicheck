@@ -88,11 +88,15 @@ export function FeeBreakdownFields() {
     if (hasSubmitError) setOpen(true);
   }, [hasSubmitError]);
 
-  // The save-time error is only refreshed by a resolver run that names it, so
-  // once the rows add up again re-run it, or the old message would linger.
+  // The save-time mismatch message is only refreshed by a resolver run that
+  // names it, so once the rows add up again re-run it, or the old message
+  // would linger. Keyed on the message alone (not per-row errors) so it fires
+  // once and stops when the message clears; `trigger` is a stable method.
+  const hasStaleMismatch = Boolean(submitIssue) && !issue;
+  const { trigger } = form;
   useEffect(() => {
-    if (hasSubmitError && !issue) void form.trigger("fee_components");
-  }, [hasSubmitError, issue, form]);
+    if (hasStaleMismatch) void trigger("fee_components");
+  }, [hasStaleMismatch, trigger]);
 
   const summary =
     components.length === 0
