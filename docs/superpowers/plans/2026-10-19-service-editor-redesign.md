@@ -71,10 +71,10 @@ Needs the owner's OK to add a dev dependency (CLAUDE.md lists the stack as fixed
 **Interfaces:**
 - Produces: `npx vitest run <file>` works for `src/**/*.test.ts`, with the `~/` alias resolving to `src/`.
 
-- [ ] **Step 1: Install** `vitest` as a dev dependency (`npm i -D vitest`). Add script `"test": "vitest run"`.
+- [ ] **Step 1: Install** `vitest` as a dev dependency (`pnpm add -D vitest`; the repo uses pnpm, so commit `pnpm-lock.yaml`, never a `package-lock.json`). Add script `"test": "vitest run"`.
 - [ ] **Step 2: Create `vitest.config.ts`** with `test.environment = "node"`, `include: ["src/**/*.test.ts"]`, and `resolve.alias` mapping `~` to `./src` (copy the alias from `tsconfig.json`).
 - [ ] **Step 3: Smoke test** — create `src/features/services/fee-components.test.ts` containing one test `it("includedFeeTotal adds in cents", …)` asserting `includedFeeTotal([{label:"a",amount:0.1,included:true},{label:"b",amount:0.2,included:true}]) === 0.3`. Run `npx vitest run src/features/services/fee-components.test.ts`. Expected: PASS.
-- [ ] **Step 4: Commit** `git add package.json package-lock.json vitest.config.ts src/features/services/fee-components.test.ts` — `chore: add vitest for pure helpers`.
+- [ ] **Step 4: Commit** `git add package.json pnpm-lock.yaml vitest.config.ts src/features/services/fee-components.test.ts` — `chore: add vitest for pure helpers`.
 
 ---
 
