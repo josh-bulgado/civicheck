@@ -88,6 +88,12 @@ export function FeeBreakdownFields() {
     if (hasSubmitError) setOpen(true);
   }, [hasSubmitError]);
 
+  // The save-time error is only refreshed by a resolver run that names it, so
+  // once the rows add up again re-run it, or the old message would linger.
+  useEffect(() => {
+    if (hasSubmitError && !issue) void form.trigger("fee_components");
+  }, [hasSubmitError, issue, form]);
+
   const summary =
     components.length === 0
       ? "No itemized charges"
@@ -215,7 +221,7 @@ export function FeeBreakdownFields() {
                                 disabled={isIncluded}
                               >
                                 <SelectTrigger
-                                  className="w-full disabled:bg-muted/50"
+                                  className="w-full data-placeholder:text-foreground disabled:bg-muted/50"
                                   aria-label={`How charge ${index + 1} is charged`}
                                 >
                                   <SelectValue>
@@ -280,7 +286,7 @@ export function FeeBreakdownFields() {
                                   maxLength={120}
                                   disabled={isIncluded}
                                   className="disabled:bg-muted/50"
-                                  placeholder="Add when it applies…"
+                                  placeholder={isIncluded ? "—" : "Add when it applies…"}
                                   aria-label={`When charge ${index + 1} applies`}
                                   aria-invalid={fieldState.invalid}
                                   autoComplete="off"
@@ -349,12 +355,14 @@ export function FeeBreakdownFields() {
                   variant="outline"
                   size="sm"
                   className="min-h-11 sm:min-h-8"
-                  onClick={() =>
+                  onClick={() => {
                     form.setValue("fee", String(includedTotal), {
                       shouldDirty: true,
                       shouldValidate: true,
-                    })
-                  }
+                    });
+                    // Validating "fee" alone leaves a stale fee_components error.
+                    void form.trigger(["fee", "fee_components"]);
+                  }}
                 >
                   Set Total Fee to {pesoFormatter.format(includedTotal)}
                 </Button>
