@@ -1,5 +1,6 @@
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { Copy, Plus, Route as RouteIcon, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -7,16 +8,15 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { Checkbox } from "~/components/ui/checkbox";
 import {
   Field,
   FieldContent,
   FieldDescription,
   FieldLabel,
-  FieldTitle,
 } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { InputGroup, InputGroupTextarea } from "~/components/ui/input-group";
+import { Switch } from "~/components/ui/switch";
 import {
   STEP_PLACEHOLDERS,
   type ServiceFormValues,
@@ -36,6 +36,21 @@ export function CitizenJourneySection({
     control: form.control,
     name: "party_roles",
   });
+
+  function removeStep(index: number) {
+    const removed = form.getValues("steps")[index];
+    if (!removed) return;
+    stepFields.remove(index);
+    toast(`Removed step ${index + 1}`, {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          const count = form.getValues("steps").length;
+          stepFields.insert(Math.min(index, count), removed);
+        },
+      },
+    });
+  }
 
   return (
     <Card
@@ -129,7 +144,7 @@ export function CitizenJourneySection({
                     variant="ghost"
                     size="icon"
                     className="text-muted-foreground hover:text-destructive"
-                    onClick={() => stepFields.remove(index)}
+                    onClick={() => removeStep(index)}
                     aria-label={`Remove step ${index + 1}`}
                   >
                     <Trash2 aria-hidden="true" />
@@ -232,30 +247,29 @@ export function CitizenJourneySection({
             control={form.control}
             name="allows_messages"
             render={({ field }) => (
-              <FieldLabel
-                htmlFor="service-allows-messages"
-                className="cursor-pointer"
+              <Field
+                orientation="horizontal"
+                className="items-start gap-4 rounded-lg border border-border bg-card p-4 sm:items-center"
               >
-                <Field
-                  orientation="horizontal"
-                  className="items-start gap-4 p-4 sm:p-5"
-                >
-                  <Checkbox
-                    id="service-allows-messages"
-                    name={field.name}
-                    checked={field.value}
-                    onCheckedChange={(checked) =>
-                      field.onChange(checked === true)
-                    }
-                  />
-                  <FieldContent className="gap-1.5">
-                    <FieldTitle>Allow messages on requests</FieldTitle>
-                    <FieldDescription>
-                      Applicants and staff can exchange short messages inside a request, for question-and-answer services such as an online inquiry. Not available for walk-ins.
-                    </FieldDescription>
-                  </FieldContent>
-                </Field>
-              </FieldLabel>
+                <FieldContent className="min-w-0 gap-1.5">
+                  <FieldLabel htmlFor="service-allows-messages">
+                    Allow messages on requests
+                  </FieldLabel>
+                  <FieldDescription id="service-allows-messages-help">
+                    Applicants and staff can exchange short messages inside a request, for question-and-answer services such as an online inquiry. Not available for walk-ins.
+                  </FieldDescription>
+                </FieldContent>
+                <Switch
+                  id="service-allows-messages"
+                  name={field.name}
+                  className="ml-auto shrink-0"
+                  aria-describedby="service-allows-messages-help"
+                  checked={field.value}
+                  onCheckedChange={(checked) =>
+                    field.onChange(checked === true)
+                  }
+                />
+              </Field>
             )}
           />
         </section>
