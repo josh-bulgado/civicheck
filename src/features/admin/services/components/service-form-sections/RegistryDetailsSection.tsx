@@ -59,7 +59,7 @@ function SettingGroup({
       >
         {title}
       </h3>
-      <div className="flex flex-col divide-y divide-border border-y">
+      <div className="flex flex-col divide-y divide-border border-t">
         {children}
       </div>
     </section>
@@ -151,7 +151,7 @@ export function RegistryDetailsSection({
                   value={presetCode}
                   onValueChange={onPresetChange}
                 >
-                  <SelectTrigger id="service-preset">
+                  <SelectTrigger id="service-preset" className="w-full">
                     <SelectValue placeholder="Copy fields from a charter service…">
                       {(value) =>
                         services.find((entry) => entry.service_code === value)
@@ -277,7 +277,7 @@ export function RegistryDetailsSection({
                   <Switch
                     id="service-fee-per-copy"
                     name={field.name}
-                    className="shrink-0"
+                    className="ml-auto shrink-0"
                     checked={field.value}
                     onCheckedChange={(checked) =>
                       field.onChange(checked === true)
@@ -308,6 +308,7 @@ export function RegistryDetailsSection({
                   >
                     <SelectTrigger
                       id="service-classification"
+                      className="w-full"
                       aria-invalid={fieldState.invalid}
                     >
                       <SelectValue placeholder="Classification…">
@@ -373,6 +374,7 @@ export function RegistryDetailsSection({
                   >
                     <SelectTrigger
                       id="service-department"
+                      className="w-full"
                       aria-invalid={fieldState.invalid}
                     >
                       <SelectValue placeholder="Unassigned…">
