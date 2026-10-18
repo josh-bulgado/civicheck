@@ -987,6 +987,11 @@ export function ServiceFormPage({
                       formDefinition={formDefinition}
                       publishedFieldKeys={publishedFieldKeys}
                       targetOptions={timingTargetOptions}
+                      currentServiceCode={
+                        service
+                          ? (service.display_group ?? service.service_code)
+                          : null
+                      }
                       onFormDefinitionChange={(definition) => {
                         setFormDefinition(definition);
                         setTemplateDirty(true);

@@ -368,6 +368,7 @@ export function ServiceGroupApplicationPage({
                           id="timing-routing"
                           formDefinition={definition}
                           targetOptions={targetOptions}
+                          currentServiceCode={groupKey}
                           onFormDefinitionChange={updateDefinition}
                         />
                       </FieldGroup>

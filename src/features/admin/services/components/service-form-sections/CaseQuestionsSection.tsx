@@ -21,6 +21,7 @@ export function CaseQuestionsSection({
   formDefinition,
   publishedFieldKeys,
   targetOptions,
+  currentServiceCode,
   onFormDefinitionChange,
   embedded = false,
 }: {
@@ -28,6 +29,8 @@ export function CaseQuestionsSection({
   formDefinition: FormTemplateDefinition;
   publishedFieldKeys: string[];
   targetOptions: { value: string; label: string }[];
+  /** The `targetOptions` value for the service being edited, if it is saved. */
+  currentServiceCode?: string | null;
   onFormDefinitionChange: (definition: FormTemplateDefinition) => void;
   embedded?: boolean;
 }) {
@@ -57,6 +60,7 @@ export function CaseQuestionsSection({
             id="timing-routing"
             formDefinition={formDefinition}
             targetOptions={targetOptions}
+            currentServiceCode={currentServiceCode}
             onFormDefinitionChange={onFormDefinitionChange}
           />
 
