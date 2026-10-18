@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { AlertCircleIcon, Lock, Mail } from "lucide-react";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -30,8 +30,11 @@ import { NO_SUFFIX, SUFFIXES } from "~/lib/subject-fields";
 import { LegalDialogLink } from "~/features/legal/components/LegalDialogLink";
 import { checkMiddleNameAnswer, signupFieldsSchema } from "../auth.schema";
 import { useSignUp } from "../hooks/useSignUp";
-import { useVerifySignupOtp } from "../hooks/useVerifySignupOtp";
 import { useOAuthLogin } from "../hooks/useOAuthLogin";
+import {
+  setPendingVerification,
+  type PendingSignup,
+} from "../pending-verification";
 import { Spinner } from "~/components/ui/spinner";
 import { Button } from "~/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -50,7 +53,6 @@ import {
 import { RequiredMark } from "~/components/ui/required-mark";
 import { GoogleIcon } from "./GoogleIcon";
 import { PasswordToggle } from "./PasswordToggle";
-import { VerifyEmailNotice } from "./VerifyEmailNotice";
 
 // The field rules live in auth.schema.ts so the server enforces exactly what
 // this form shows; only the consent checkbox belongs to the form alone.
@@ -64,27 +66,11 @@ const formSchema = signupFieldsSchema
 
 type FormValues = z.infer<typeof formSchema>;
 
-type PendingSignup = {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  middleName: string;
-  hasNoMiddleName: boolean;
-  suffix: string;
-};
-
 const RegisterForm = () => {
+  const navigate = useNavigate();
   const signupMutation = useSignUp();
-  const verifyOtpMutation = useVerifySignupOtp();
   const oauthLoginMutation = useOAuthLogin();
   const [showPassword, setShowPassword] = useState(false);
-  // Kept in memory (never persisted) so the resend action can re-run the same
-  // signup call — that is what mints a fresh code once the previous one has
-  // been sent.
-  const [pendingSignup, setPendingSignup] = useState<PendingSignup | null>(
-    null,
-  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -122,38 +108,19 @@ const RegisterForm = () => {
     const result = await signupMutation.mutate({ data: signup });
 
     if (result && !result.error) {
-      setPendingSignup(signup);
-      form.reset();
+      // The code-entry step is its own page; this form goes with the navigation,
+      // so there is nothing to reset here.
+      setPendingVerification({
+        email: signup.email,
+        password: signup.password,
+        signup,
+      });
+      await navigate({ to: "/verify-email" });
     }
   }
 
-  const otpError = verifyOtpMutation.data?.error
-    ? verifyOtpMutation.data.message
-    : verifyOtpMutation.status === "error"
-      ? "We could not reach the account service. Please try again in a moment."
-      : null;
-
   return (
     <AuthSplitLayout panel={<AuthProgressPanel />} className="max-w-85">
-      <VerifyEmailNotice
-        open={pendingSignup !== null}
-        email={pendingSignup?.email ?? ""}
-        isVerifying={verifyOtpMutation.status === "pending"}
-        isResending={signupMutation.status === "pending"}
-        errorMessage={otpError}
-        onVerify={(token) => {
-          if (!pendingSignup) return;
-          verifyOtpMutation.mutate({
-            data: { email: pendingSignup.email, token },
-          });
-        }}
-        onResend={() => {
-          if (!pendingSignup) return;
-          signupMutation.mutate({ data: pendingSignup });
-        }}
-        onUseDifferentEmail={() => setPendingSignup(null)}
-      />
-
       <div className="flex flex-col gap-6.5">
         <AuthFormHeading title="Create an account" />
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "~/components/ui/button";
 
 import { AlertCircleIcon, Lock, Mail } from "lucide-react";
@@ -10,9 +10,8 @@ import { Controller, useForm } from "react-hook-form";
 import { staggerStyle } from "~/components/motion/stagger";
 import { useLogin } from "~/features/auth/hooks/useLogin";
 import { useOAuthLogin } from "~/features/auth/hooks/useOAuthLogin";
-import { useVerifySignupOtp } from "~/features/auth/hooks/useVerifySignupOtp";
 import { useResendSignupOtp } from "~/features/auth/hooks/useResendSignupOtp";
-import { VerifyEmailNotice } from "./VerifyEmailNotice";
+import { setPendingVerification } from "~/features/auth/pending-verification";
 import {
   Field,
   FieldError,
@@ -82,18 +81,10 @@ export function LoginForm({
   // Opt-in: a session that outlives the browser should be a deliberate choice,
   // since the next person on a shared computer would land in this account.
   const [keepSignedIn, setKeepSignedIn] = useState(false);
+  const navigate = useNavigate();
   const loginMutation = useLogin(redirectTo);
   const oauthLoginMutation = useOAuthLogin();
-  const verifyOtpMutation = useVerifySignupOtp();
   const resendOtpMutation = useResendSignupOtp();
-  // Set when a sign-in attempt fails specifically because the account was
-  // never confirmed — the credentials themselves were correct, so this skips
-  // straight to a fresh code instead of sending the applicant back to their
-  // inbox to dig up (or request again) whatever the signup flow originally sent.
-  const [unconfirmed, setUnconfirmed] = useState<{
-    email: string;
-    password: string;
-  } | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -108,45 +99,30 @@ export function LoginForm({
     const result = await loginMutation.mutate({
       data: { ...data, keepSignedIn },
     });
+    // The sign-in failed only because the account was never confirmed — the
+    // credentials themselves were correct, so this skips straight to a fresh
+    // code instead of sending the applicant back to their inbox to dig up (or
+    // request again) whatever the signup flow originally sent. The page only
+    // opens once that code is actually on its way.
     if (result?.error && /email not confirmed/i.test(result.message ?? "")) {
-      setUnconfirmed({ email: data.email, password: data.password });
-      resendOtpMutation.mutate({ data });
+      const resent = await resendOtpMutation.mutate({ data });
+      if (resent && !resent.error) {
+        setPendingVerification({ email: data.email, password: data.password });
+        await navigate({ to: "/verify-email" });
+      }
     }
   }
+
+  const isSigningIn =
+    loginMutation.status === "pending" || resendOtpMutation.status === "pending";
 
   const signInError = describeSignInError(
     loginMutation.data,
     loginMutation.status === "error",
   );
 
-  const otpError = verifyOtpMutation.data?.error
-    ? verifyOtpMutation.data.message
-    : verifyOtpMutation.status === "error"
-      ? "We could not reach the account service. Please try again in a moment."
-      : null;
-
   return (
     <AuthSplitLayout panel={<AuthEmblemPanel />}>
-      <VerifyEmailNotice
-        open={unconfirmed !== null}
-        email={unconfirmed?.email ?? ""}
-        isVerifying={verifyOtpMutation.status === "pending"}
-        isResending={resendOtpMutation.status === "pending"}
-        errorMessage={otpError}
-        onVerify={(token) => {
-          if (!unconfirmed) return;
-          verifyOtpMutation.mutate({
-            data: { email: unconfirmed.email, token },
-          });
-        }}
-        onResend={() => {
-          if (!unconfirmed) return;
-          resendOtpMutation.mutate({ data: unconfirmed });
-        }}
-        onUseDifferentEmail={() => setUnconfirmed(null)}
-        dismissLabel="Wrong account? Try again"
-      />
-
       <div className="flex flex-col gap-7">
         <AuthFormHeading
           title="Welcome back"
@@ -267,9 +243,9 @@ export function LoginForm({
               <Button
                 type="submit"
                 className={authButtonClass}
-                disabled={loginMutation.status === "pending"}
+                disabled={isSigningIn}
               >
-                {loginMutation.status === "pending" ? (
+                {isSigningIn ? (
                   <>
                     <Spinner />
                     Signing in

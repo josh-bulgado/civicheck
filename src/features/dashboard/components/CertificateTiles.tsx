@@ -30,8 +30,8 @@ const TILES = [
     scrim: "207,216,232",
   },
   {
-    label: "Certified True Copy",
-    photo: "/services/cert-copy.webp",
+    label: "Marriage License",
+    photo: "/services/cert-license.webp",
     from: "#dcf0e5",
     to: "#bfe3cf",
     scrim: "191,227,207",

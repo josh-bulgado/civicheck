@@ -6,7 +6,7 @@ export type OtpPurpose = "signup" | "recovery";
 /** Matches the "expires in 1 hour" promised in the OTP emails. */
 const CODE_LIFETIME_MS = 60 * 60 * 1000;
 
-const WRONG_CODE = "Wrong code. Please check it and try again.";
+const WRONG_CODE = "That code isn't right. Check the email and try again.";
 const OLD_CODE =
   "That's an old code. Enter the newest one we sent to your email.";
 const EXPIRED_CODE = "This code has expired. Tap Resend to get a new one.";

@@ -501,7 +501,6 @@ export const sendAccountPasswordReset = createServerFn({ method: "POST" })
       subject: "Reset your CiviCheck password",
       html: renderLinkEmail({
         preheader: "Choose a new password for your CiviCheck account.",
-        label: "Password reset",
         heading: "Reset your password",
         greeting: target.first_name ? `Hello ${target.first_name},` : undefined,
         paragraphs: [
@@ -587,7 +586,6 @@ export const resendAccountVerification = createServerFn({ method: "POST" })
       subject: "Verify your CiviCheck email address",
       html: renderLinkEmail({
         preheader: "Confirm your email address to finish setting up CiviCheck.",
-        label: "Email verification",
         heading: "Verify your email address",
         greeting: target.first_name ? `Hello ${target.first_name},` : undefined,
         paragraphs: [

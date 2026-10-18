@@ -78,7 +78,6 @@ async function sendSignupOtpEmail(
       subject: "Confirm your CiviCheck account",
       html: renderOtpEmail({
         preheader: "Use this code to confirm your CiviCheck account.",
-        label: "Email verification",
         greeting: `Hello ${params.firstName.trim()},`,
         heading: "Confirm your email address",
         paragraphs: [
@@ -498,7 +497,6 @@ export const forgotPasswordFn = createServerFn({ method: "POST" })
         subject: "Reset your CiviCheck password",
         html: renderOtpEmail({
           preheader: "Use this code to reset your CiviCheck password.",
-          label: "Password reset",
           heading: "Reset your password",
           paragraphs: [
             "We received a request to reset the password for your CiviCheck account. Enter the code below to continue.",

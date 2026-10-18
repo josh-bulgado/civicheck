@@ -22,6 +22,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TrackRouteImport } from './routes/track'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as AuthedDashboardRouteRouteImport } from './routes/_authed/_dashboard/route'
 import { Route as AuthedOnboardingRouteImport } from './routes/_authed/onboarding'
 import { Route as ApplyIndexRouteImport } from './routes/apply/index'
@@ -117,6 +118,11 @@ const TermsRoute = TermsRouteImport.update({
 const TrackRoute = TrackRouteImport.update({
   id: '/track',
   path: '/track',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyEmailRoute = VerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedDashboardRouteRoute = AuthedDashboardRouteRouteImport.update({
@@ -319,6 +325,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/track': typeof TrackRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/onboarding': typeof AuthedOnboardingRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/apply/': typeof ApplyIndexRoute
@@ -364,6 +371,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/track': typeof TrackRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/onboarding': typeof AuthedOnboardingRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/apply': typeof ApplyIndexRoute
@@ -410,6 +418,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/track': typeof TrackRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/_authed/_dashboard': typeof AuthedDashboardRouteRouteWithChildren
   '/_authed/onboarding': typeof AuthedOnboardingRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -458,6 +467,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/terms'
     | '/track'
+    | '/verify-email'
     | '/onboarding'
     | '/auth/callback'
     | '/apply/'
@@ -503,6 +513,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/terms'
     | '/track'
+    | '/verify-email'
     | '/onboarding'
     | '/auth/callback'
     | '/apply'
@@ -548,6 +559,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/terms'
     | '/track'
+    | '/verify-email'
     | '/_authed/_dashboard'
     | '/_authed/onboarding'
     | '/auth/callback'
@@ -596,6 +608,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
   TrackRoute: typeof TrackRoute
+  VerifyEmailRoute: typeof VerifyEmailRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   ApplyIndexRoute: typeof ApplyIndexRoute
 }
@@ -691,6 +704,13 @@ declare module '@tanstack/react-router' {
       path: '/track'
       fullPath: '/track'
       preLoaderRoute: typeof TrackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed/_dashboard': {
@@ -1032,6 +1052,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
   TrackRoute: TrackRoute,
+  VerifyEmailRoute: VerifyEmailRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   ApplyIndexRoute: ApplyIndexRoute,
 }

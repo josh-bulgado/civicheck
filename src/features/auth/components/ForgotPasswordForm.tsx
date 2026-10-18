@@ -1,6 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link } from "@tanstack/react-router";
-import { AlertCircleIcon, ArrowLeft, Mail } from "lucide-react";
+import { AlertCircleIcon, Mail } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import z from "zod";
 import { Button } from "~/components/ui/button";
@@ -20,14 +19,16 @@ import {
 } from "~/components/ui/input-group";
 import { Spinner } from "~/components/ui/spinner";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { AuthEmblemPanel } from "./AuthSidePanel";
+import { cn } from "~/lib/utils";
 import { OtpCodeForm } from "./OtpCodeForm";
 import {
   authButtonClass,
   authFieldClass,
-  authLabelClass,
-  AuthFormHeading,
-  AuthSplitLayout,
+  authStepLabelClass,
+  AuthBackLink,
+  AuthCenteredLayout,
+  AuthEmphasis,
+  AuthStepHeading,
 } from "./AuthSplitLayout";
 
 const formSchema = z.object({
@@ -73,113 +74,104 @@ const ForgotPasswordForm = () => {
   }
 
   return (
-    <AuthSplitLayout panel={<AuthEmblemPanel />}>
-      <div className="flex flex-col gap-7">
-        <AuthFormHeading
-          title={codeSent ? "Check your email" : "Forgot your password?"}
-          description={
-            codeSent
-              ? `We've sent a verification code to ${email}. Enter it below to continue.`
-              : "Enter your email address and we'll send you a code to reset your password."
-          }
-        />
+    <AuthCenteredLayout>
+      <div className="flex flex-col gap-6">
+        <AuthBackLink to="/login">Back to sign in</AuthBackLink>
 
         {codeSent ? (
-          <div className="civic-enter-scale flex flex-col gap-5">
-            <OtpCodeForm
-              isVerifying={verifyOtpMutation.status === "pending"}
-              isResending={forgotPasswordMutation.status === "pending"}
-              errorMessage={otpError}
-              onVerify={(token) =>
-                verifyOtpMutation.mutate({ data: { email, token } })
-              }
-              onResend={() =>
-                forgotPasswordMutation.mutate({ data: { email } })
-              }
-            />
+          <>
+            <AuthStepHeading title="Check your email">
+              We&apos;ve sent a verification code to{" "}
+              <AuthEmphasis>{email}</AuthEmphasis>. Enter it below to continue.
+            </AuthStepHeading>
 
-            <Link
-              to="/login"
-              className="group inline-flex items-center gap-2 text-sm text-primary hover:underline"
-            >
-              <ArrowLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1" />
-              Back to sign in
-            </Link>
-          </div>
-        ) : (
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="flex flex-col gap-5"
-          >
-            {requestError && (
-              <Alert variant="destructive" className="civic-enter-sm">
-                <AlertCircleIcon />
-                <AlertTitle>Reset code not sent</AlertTitle>
-                <AlertDescription>{requestError}</AlertDescription>
-              </Alert>
-            )}
-
-            <FieldGroup className="civic-stagger gap-5">
-              <Controller
-                control={form.control}
-                name="email"
-                render={({ field, fieldState }) => (
-                  <Field
-                    data-invalid={fieldState.invalid}
-                    style={staggerStyle(0)}
-                    className="gap-1.75"
-                  >
-                    <FieldLabel htmlFor="email" className={authLabelClass}>
-                      Email address
-                    </FieldLabel>
-                    <InputGroup className={`${authFieldClass} px-0`}>
-                      <InputGroupAddon>
-                        <Mail size={16} aria-hidden="true" />
-                      </InputGroupAddon>
-                      <InputGroupInput
-                        {...field}
-                        id="email"
-                        placeholder="juan.delacruz@email.com"
-                        aria-invalid={fieldState.invalid}
-                        autoComplete="email"
-                      />
-                    </InputGroup>
-                    {fieldState.invalid && (
-                      <FieldError errors={[fieldState.error]} />
-                    )}
-                  </Field>
-                )}
+            <div className="civic-enter-scale">
+              <OtpCodeForm
+                isVerifying={verifyOtpMutation.status === "pending"}
+                isResending={forgotPasswordMutation.status === "pending"}
+                errorMessage={otpError}
+                onVerify={(token) =>
+                  verifyOtpMutation.mutate({ data: { email, token } })
+                }
+                onResend={() =>
+                  forgotPasswordMutation.mutate({ data: { email } })
+                }
               />
+            </div>
+          </>
+        ) : (
+          <>
+            <AuthStepHeading title="Forgot your password?">
+              Enter your email address and we&apos;ll send you a code to reset
+              your password.
+            </AuthStepHeading>
 
-              <Button
-                type="submit"
-                className={authButtonClass}
-                style={staggerStyle(1)}
-                disabled={forgotPasswordMutation.status === "pending"}
-              >
-                {forgotPasswordMutation.status === "pending" ? (
-                  <>
-                    <Spinner />
-                    Sending
-                  </>
-                ) : (
-                  "Send reset code"
-                )}
-              </Button>
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="flex flex-col gap-5"
+            >
+              {requestError && (
+                <Alert variant="destructive" className="civic-enter-sm">
+                  <AlertCircleIcon />
+                  <AlertTitle>Reset code not sent</AlertTitle>
+                  <AlertDescription>{requestError}</AlertDescription>
+                </Alert>
+              )}
 
-              <Link
-                to="/login"
-                style={staggerStyle(2)}
-                className="group inline-flex items-center gap-2 text-sm text-primary hover:underline"
-              >
-                <ArrowLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1" />
-                Back to sign in
-              </Link>
-            </FieldGroup>
-          </form>
+              <FieldGroup className="civic-stagger gap-5">
+                <Controller
+                  control={form.control}
+                  name="email"
+                  render={({ field, fieldState }) => (
+                    <Field
+                      data-invalid={fieldState.invalid}
+                      style={staggerStyle(0)}
+                      className="gap-1.75"
+                    >
+                      <FieldLabel htmlFor="email" className={authStepLabelClass}>
+                        Email address
+                      </FieldLabel>
+                      <InputGroup className={`${authFieldClass} px-0`}>
+                        <InputGroupAddon>
+                          <Mail size={16} aria-hidden="true" />
+                        </InputGroupAddon>
+                        <InputGroupInput
+                          {...field}
+                          id="email"
+                          placeholder="juan.delacruz@email.com"
+                          aria-invalid={fieldState.invalid}
+                          autoComplete="email"
+                          autoFocus
+                        />
+                      </InputGroup>
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </Field>
+                  )}
+                />
+
+                <Button
+                  type="submit"
+                  className={cn(authButtonClass, "rounded-full")}
+                  style={staggerStyle(1)}
+                  disabled={forgotPasswordMutation.status === "pending"}
+                >
+                  {forgotPasswordMutation.status === "pending" ? (
+                    <>
+                      <Spinner />
+                      Sending
+                    </>
+                  ) : (
+                    "Send reset code"
+                  )}
+                </Button>
+              </FieldGroup>
+            </form>
+          </>
         )}
       </div>
-    </AuthSplitLayout>
+    </AuthCenteredLayout>
   );
 };
 
