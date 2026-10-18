@@ -1,12 +1,8 @@
+import { useId } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
-import { Copy, FileText, PhilippinePeso } from "lucide-react";
+import { FileText, PhilippinePeso } from "lucide-react";
 import type { Department } from "~/features/admin/departments.queries";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import {
   Field,
   FieldContent,
@@ -47,6 +43,62 @@ interface RegistryDetailsSectionProps {
   embedded?: boolean;
 }
 
+function SettingGroup({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  const headingId = useId();
+  return (
+    <section aria-labelledby={headingId} className="flex flex-col">
+      <h3
+        id={headingId}
+        className="pb-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase"
+      >
+        {title}
+      </h3>
+      <div className="flex flex-col divide-y divide-border border-y">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+interface SettingRowProps {
+  label: React.ReactNode;
+  htmlFor: string;
+  help?: React.ReactNode;
+  error?: { message?: string };
+  children: React.ReactNode;
+}
+
+/** Label and help on the left, control and error on the right; stacked below `sm`. */
+function SettingRow({
+  label,
+  htmlFor,
+  help,
+  error,
+  children,
+}: SettingRowProps) {
+  return (
+    <Field
+      data-invalid={Boolean(error)}
+      className="grid gap-3 py-5 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] sm:items-start sm:gap-x-8"
+    >
+      <FieldContent className="min-w-0">
+        <FieldLabel htmlFor={htmlFor}>{label}</FieldLabel>
+        {help ? <FieldDescription>{help}</FieldDescription> : null}
+      </FieldContent>
+      <div className="flex min-w-0 flex-col gap-2">
+        {children}
+        {error ? <FieldError errors={[error]} /> : null}
+      </div>
+    </Field>
+  );
+}
+
 export function RegistryDetailsSection({
   services,
   departments,
@@ -79,77 +131,85 @@ export function RegistryDetailsSection({
         </CardHeader>
       ) : null}
       <CardContent>
-        <FieldGroup>
-          {!isEdit ? (
-            <Field>
-              <FieldLabel htmlFor="service-preset">
-                Start From an Existing Service{" "}
-                <span className="font-normal text-muted-foreground">
-                  (optional)
-                </span>
-              </FieldLabel>
-              <Select
-                name="service_preset"
-                value={presetCode}
-                onValueChange={onPresetChange}
+        <FieldGroup className="gap-8">
+          <SettingGroup title="Service">
+            {!isEdit ? (
+              <SettingRow
+                label={
+                  <>
+                    Start From an Existing Service{" "}
+                    <span className="font-normal text-muted-foreground">
+                      (optional)
+                    </span>
+                  </>
+                }
+                htmlFor="service-preset"
+                help="Fills in this form from an existing service."
               >
-                <SelectTrigger id="service-preset">
-                  <SelectValue placeholder="Copy fields from a charter service…">
-                    {(value) =>
-                      services.find((entry) => entry.service_code === value)
-                        ?.name
-                    }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {services.map((entry) => (
-                      <SelectItem
-                        key={entry.service_code}
-                        value={entry.service_code}
-                      >
-                        {entry.name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-              <FieldDescription>
-                <span className="flex items-center gap-1.5">
-                  <Copy aria-hidden="true" className="size-3" />
-                  Fills in this form from an existing service.
-                </span>
-              </FieldDescription>
-            </Field>
-          ) : null}
+                <Select
+                  name="service_preset"
+                  value={presetCode}
+                  onValueChange={onPresetChange}
+                >
+                  <SelectTrigger id="service-preset">
+                    <SelectValue placeholder="Copy fields from a charter service…">
+                      {(value) =>
+                        services.find((entry) => entry.service_code === value)
+                          ?.name
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {services.map((entry) => (
+                        <SelectItem
+                          key={entry.service_code}
+                          value={entry.service_code}
+                        >
+                          {entry.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </SettingRow>
+            ) : null}
 
-          <Controller
-            control={form.control}
-            name="name"
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="service-name">Service Name</FieldLabel>
-                <Input
-                  {...field}
-                  id="service-name"
-                  placeholder="Issuance of Certified True Copies of Civil Registry Records…"
-                  autoComplete="off"
-                  aria-invalid={fieldState.invalid}
-                />
-                {fieldState.invalid ? (
-                  <FieldError errors={[fieldState.error]} />
-                ) : null}
-              </Field>
-            )}
-          />
+            <Controller
+              control={form.control}
+              name="name"
+              render={({ field, fieldState }) => (
+                <SettingRow
+                  label="Service Name"
+                  htmlFor="service-name"
+                  help="The full official name of the service."
+                  error={fieldState.invalid ? fieldState.error : undefined}
+                >
+                  <Input
+                    {...field}
+                    id="service-name"
+                    placeholder="Issuance of Certified True Copies of Civil Registry Records…"
+                    autoComplete="off"
+                    aria-invalid={fieldState.invalid}
+                  />
+                </SettingRow>
+              )}
+            />
 
-          <div className="grid gap-4 sm:grid-cols-2">
             <Controller
               control={form.control}
               name="service_code"
               render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="service-code">Service Code</FieldLabel>
+                <SettingRow
+                  label="Service Code"
+                  htmlFor="service-code"
+                  help={
+                    isEdit
+                      ? "Can’t be changed. Requests use this code."
+                      : "Can’t be changed after the service is created."
+                  }
+                  error={fieldState.invalid ? fieldState.error : undefined}
+                >
                   <Input
                     {...field}
                     id="service-code"
@@ -163,27 +223,22 @@ export function RegistryDetailsSection({
                       field.onChange(event.target.value.toUpperCase())
                     }
                   />
-                  {fieldState.invalid ? (
-                    <FieldError errors={[fieldState.error]} />
-                  ) : (
-                    <FieldDescription>
-                      {isEdit
-                        ? "Can’t be changed. Requests use this code."
-                        : "Can’t be changed after the service is created."}
-                    </FieldDescription>
-                  )}
-                </Field>
+                </SettingRow>
               )}
             />
+          </SettingGroup>
 
+          <SettingGroup title="Fees & Processing">
             <Controller
               control={form.control}
               name="fee"
               render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="service-fee">
-                    {feePerCopy ? "Fee per Copy" : "Total Fee"}
-                  </FieldLabel>
+                <SettingRow
+                  label={feePerCopy ? "Fee per Copy" : "Total Fee"}
+                  htmlFor="service-fee"
+                  help={feePerCopy ? "Charged for each copy requested." : null}
+                  error={fieldState.invalid ? fieldState.error : undefined}
+                >
                   <InputGroup>
                     <InputGroupAddon>
                       <PhilippinePeso size={16} />
@@ -198,52 +253,54 @@ export function RegistryDetailsSection({
                       aria-invalid={fieldState.invalid}
                     />
                   </InputGroup>
-                  {fieldState.invalid ? (
-                    <FieldError errors={[fieldState.error]} />
-                  ) : feePerCopy ? (
+                </SettingRow>
+              )}
+            />
+
+            <Controller
+              control={form.control}
+              name="fee_per_copy"
+              render={({ field }) => (
+                <Field
+                  orientation="horizontal"
+                  className="gap-6 py-5 has-[>[data-slot=field-content]]:items-start sm:has-[>[data-slot=field-content]]:items-center"
+                >
+                  <FieldContent className="min-w-0 max-w-[66ch]">
+                    <FieldLabel htmlFor="service-fee-per-copy">
+                      Allow multiple copies
+                    </FieldLabel>
                     <FieldDescription>
-                      Charged for each copy requested.
+                      Applicants choose how many copies to request. The fee is
+                      charged for each, and the fee breakdown is hidden.
                     </FieldDescription>
-                  ) : null}
+                  </FieldContent>
+                  <Switch
+                    id="service-fee-per-copy"
+                    name={field.name}
+                    className="shrink-0"
+                    checked={field.value}
+                    onCheckedChange={(checked) =>
+                      field.onChange(checked === true)
+                    }
+                  />
                 </Field>
               )}
             />
-          </div>
 
-          <Controller
-            control={form.control}
-            name="fee_per_copy"
-            render={({ field }) => (
-              <Field orientation="horizontal">
-                <FieldContent>
-                  <FieldLabel htmlFor="service-fee-per-copy">
-                    Allow multiple copies
-                  </FieldLabel>
-                  <FieldDescription>
-                    Applicants choose how many copies to request. The fee is charged for each, and the fee breakdown is hidden.
-                  </FieldDescription>
-                </FieldContent>
-                <Switch
-                  id="service-fee-per-copy"
-                  name={field.name}
-                  checked={field.value}
-                  onCheckedChange={(checked) =>
-                    field.onChange(checked === true)
-                  }
-                />
-              </Field>
-            )}
-          />
-
-          <div className="grid gap-4 sm:grid-cols-2">
             <Controller
               control={form.control}
               name="classification"
               render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="service-classification">
-                    Classification
-                  </FieldLabel>
+                <SettingRow
+                  label="Classification"
+                  htmlFor="service-classification"
+                  help={
+                    SERVICE_CLASSIFICATIONS.find(
+                      (classification) => classification.value === field.value,
+                    )?.hint
+                  }
+                  error={fieldState.invalid ? fieldState.error : undefined}
+                >
                   <Select
                     name={field.name}
                     value={field.value}
@@ -274,15 +331,7 @@ export function RegistryDetailsSection({
                       </SelectGroup>
                     </SelectContent>
                   </Select>
-                  <FieldDescription>
-                    {
-                      SERVICE_CLASSIFICATIONS.find(
-                        (classification) =>
-                          classification.value === field.value,
-                      )?.hint
-                    }
-                  </FieldDescription>
-                </Field>
+                </SettingRow>
               )}
             />
 
@@ -290,10 +339,12 @@ export function RegistryDetailsSection({
               control={form.control}
               name="processing_time"
               render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="service-processing-time">
-                    Processing Time
-                  </FieldLabel>
+                <SettingRow
+                  label="Processing Time"
+                  htmlFor="service-processing-time"
+                  help="Include any posting or publication wait."
+                  error={fieldState.invalid ? fieldState.error : undefined}
+                >
                   <Input
                     {...field}
                     id="service-processing-time"
@@ -301,14 +352,7 @@ export function RegistryDetailsSection({
                     autoComplete="off"
                     aria-invalid={fieldState.invalid}
                   />
-                  {fieldState.invalid ? (
-                    <FieldError errors={[fieldState.error]} />
-                  ) : (
-                    <FieldDescription>
-                      Include any posting or publication wait.
-                    </FieldDescription>
-                  )}
-                </Field>
+                </SettingRow>
               )}
             />
 
@@ -316,10 +360,12 @@ export function RegistryDetailsSection({
               control={form.control}
               name="department_id"
               render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="service-department">
-                    Handling Department
-                  </FieldLabel>
+                <SettingRow
+                  label="Handling Department"
+                  htmlFor="service-department"
+                  help="The office that processes requests for this service."
+                  error={fieldState.invalid ? fieldState.error : undefined}
+                >
                   <Select
                     name={field.name}
                     value={field.value ?? UNASSIGNED_DEPARTMENT_VALUE}
@@ -350,10 +396,10 @@ export function RegistryDetailsSection({
                       </SelectGroup>
                     </SelectContent>
                   </Select>
-                </Field>
+                </SettingRow>
               )}
             />
-          </div>
+          </SettingGroup>
           <FeeBreakdownFields />
         </FieldGroup>
       </CardContent>
