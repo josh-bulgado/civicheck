@@ -20,7 +20,7 @@ import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Alert, AlertTitle, AlertDescription } from "~/components/ui/alert";
 import { useState } from "react";
-import { AuthEmblemPanel } from "./AuthSidePanel";
+import { AuthDocketPanel } from "./AuthSidePanel";
 import {
   authButtonClass,
   authFieldClass,
@@ -75,7 +75,7 @@ const ResetPasswordForm = () => {
   }
 
   return (
-    <AuthSplitLayout panel={<AuthEmblemPanel />}>
+    <AuthSplitLayout panel={<AuthDocketPanel />}>
       <div className="flex flex-col gap-7">
         <AuthFormHeading
           title={isSuccess ? "Password updated!" : "Set a new password"}

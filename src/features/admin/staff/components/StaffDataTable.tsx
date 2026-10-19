@@ -176,7 +176,7 @@ export function StaffDataTable({
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border-strong bg-white">
+      <div className="overflow-hidden rounded-xl border border-border-strong bg-card">
         <Table>
           <TableHeader className="bg-surface-subtle">
             {table.getHeaderGroups().map((group) => (

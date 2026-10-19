@@ -71,7 +71,7 @@ export function AcceptInvitationForm() {
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
               <FieldLabel htmlFor="invitation-password">Password</FieldLabel>
-              <InputGroup className="h-11 bg-white">
+              <InputGroup className="h-11 bg-card">
                 <InputGroupAddon>
                   <Lock aria-hidden="true" />
                 </InputGroupAddon>
@@ -114,7 +114,7 @@ export function AcceptInvitationForm() {
               <FieldLabel htmlFor="invitation-confirm-password">
                 Confirm password
               </FieldLabel>
-              <InputGroup className="h-11 bg-white">
+              <InputGroup className="h-11 bg-card">
                 <InputGroupAddon>
                   <Lock aria-hidden="true" />
                 </InputGroupAddon>
@@ -154,7 +154,7 @@ export function AcceptInvitationForm() {
       <Button
         type="submit"
         size="lg"
-        className="w-full bg-primary text-white hover:bg-primary-hover"
+        className="w-full bg-primary-fill text-white hover:bg-primary-fill-hover"
         disabled={isPending}
       >
         {isPending ? (

@@ -58,7 +58,7 @@ export function CashierCounter({ initialTracking }: { initialTracking?: string }
 
   return (
     <div className="flex flex-col gap-6">
-      <section className="rounded-xl border border-border bg-white p-6">
+      <section className="rounded-xl border border-border bg-card p-6">
         <h2 className="mb-4 text-lg font-bold text-foreground">Look up a request</h2>
         <form
           className="flex flex-col gap-3 sm:flex-row sm:items-end"
@@ -105,7 +105,7 @@ export function CashierCounter({ initialTracking }: { initialTracking?: string }
         <div key={result.id} className="civic-stagger flex flex-col gap-6">
           <section
             style={staggerStyle(0)}
-            className="civic-interactive civic-lift rounded-xl border border-border bg-white p-6"
+            className="civic-interactive civic-lift rounded-xl border border-border bg-card p-6"
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>

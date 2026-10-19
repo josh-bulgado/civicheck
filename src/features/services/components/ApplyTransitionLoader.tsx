@@ -118,7 +118,7 @@ export function ApplyTransitionLoader() {
       <div aria-hidden="true" className="relative">
         <div
           data-stamped={stamped ? "" : undefined}
-          className="civic-apply-sheet group relative h-56 w-44 rounded-xl border border-border bg-white p-5 shadow-lg"
+          className="civic-apply-sheet group relative h-56 w-44 rounded-xl border border-border bg-card p-5 shadow-lg"
         >
           <div className="mb-5 h-1.5 w-1/3 rounded-full bg-brand-gold" />
           <div className="flex flex-col gap-4">

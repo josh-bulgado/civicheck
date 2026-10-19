@@ -34,8 +34,8 @@ export function WizardBar({
       style={
         tone === "danger"
           ? ({
-              "--wizard-bar-track": "#fde8e6",
-              "--wizard-bar-fill": "#b3261e",
+              "--wizard-bar-track": "var(--portal-danger-soft)",
+              "--wizard-bar-fill": "var(--destructive)",
             } as React.CSSProperties)
           : undefined
       }
@@ -52,7 +52,7 @@ function SignalBars({ moving }: { moving: boolean }) {
       className={cn(
         "flex h-5.5 shrink-0 items-end gap-0.75",
         moving && "wizard-signal",
-        moving ? "text-primary" : "text-[#9aa5b5]",
+        moving ? "text-primary" : "text-[#9aa5b5] dark:text-muted-foreground",
       )}
     >
       {heights.map((height) => (
@@ -118,7 +118,7 @@ export function ConnectionNotice({ state }: { state: ConnectionState }) {
   return (
     <div
       role="status"
-      className="flex items-center gap-3.5 rounded-[18px] border border-[#d5e1f5] bg-[#eef3fc] px-4 py-3.5"
+      className="flex items-center gap-3.5 rounded-[18px] border border-[#d5e1f5] bg-[#eef3fc] dark:border-health-info-border dark:bg-health-info-bg px-4 py-3.5"
     >
       <SignalBars moving={!offline} />
       <div className="min-w-0">

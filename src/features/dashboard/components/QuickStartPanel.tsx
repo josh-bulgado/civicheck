@@ -37,7 +37,7 @@ export function QuickStartPanel({ prominent = false }: QuickStartPanelProps) {
           </div>
           <QuietLink
             to="/services"
-            className="civic-press inline-flex h-13.5 max-md:w-full shrink-0 items-center justify-center rounded-full bg-white/78 px-7.5 text-[17px] font-semibold whitespace-nowrap text-foreground hover:bg-white md:h-13"
+            className="civic-press inline-flex h-13.5 max-md:w-full shrink-0 items-center justify-center rounded-full bg-card/78 px-7.5 text-[17px] font-semibold whitespace-nowrap text-foreground hover:bg-card md:h-13"
           >
             See all services
           </QuietLink>

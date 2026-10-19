@@ -275,7 +275,7 @@ function PortalNotificationRow({
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-10 rounded-full bg-white text-muted-foreground shadow-[0_1px_3px_rgba(15,27,45,0.1)] hover:bg-white hover:text-primary data-open:text-primary"
+                className="size-10 rounded-full bg-card text-muted-foreground shadow-[0_1px_3px_rgba(15,27,45,0.1)] hover:bg-card hover:text-primary data-open:text-primary"
               />
             }
           >
@@ -711,7 +711,7 @@ export default function NotificationsPage({
           {unreadCount > 0 ? (
             <Button
               variant="outline"
-              className="civic-press shrink-0 bg-white text-primary hover:bg-primary-soft"
+              className="civic-press shrink-0 bg-card text-primary hover:bg-primary-soft"
               onClick={markAllRead}
               disabled={isMarkingAll}
             >
@@ -725,7 +725,7 @@ export default function NotificationsPage({
       {notifications.length === 0 ? (
         <Empty className="dashboard-panel civic-enter-scale mx-auto mt-8 max-w-lg border-0 px-6 py-16">
           <EmptyHeader>
-            <EmptyMedia variant="icon" className="bg-primary text-white shadow-md">
+            <EmptyMedia variant="icon" className="bg-primary-fill text-white shadow-md">
               <Bell />
             </EmptyMedia>
             <EmptyTitle>No notifications yet</EmptyTitle>

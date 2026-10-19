@@ -71,7 +71,7 @@ export function NavFooter({ account, citizen = false }: NavFooterProps) {
             nativeButton
             disabled={!account}
             aria-label={`${name}, account menu`}
-            className="civic-press flex w-full items-center gap-3 rounded-[22px] bg-white/78 py-2.5 pr-3.5 pl-3 text-left shadow-[0_1px_2px_rgba(15,27,45,0.05),0_8px_24px_rgba(11,77,162,0.07)] hover:bg-white/90 data-popup-open:bg-white"
+            className="civic-press flex w-full items-center gap-3 rounded-[22px] bg-card/78 py-2.5 pr-3.5 pl-3 text-left shadow-[0_1px_2px_rgba(15,27,45,0.05),0_8px_24px_rgba(11,77,162,0.07)] hover:bg-card/90 data-popup-open:bg-card"
           >
             <Avatar className="size-10.5" aria-hidden="true">
               {account?.avatarUrl ? (
@@ -93,7 +93,7 @@ export function NavFooter({ account, citizen = false }: NavFooterProps) {
             side="top"
             align="start"
             sideOffset={8}
-            className="flex flex-col gap-0.5 rounded-[20px] bg-white p-2 shadow-portal-menu ring-0"
+            className="flex flex-col gap-0.5 rounded-[20px] bg-card p-2 shadow-portal-menu ring-0"
           >
             {/* `!` on the gear: the item restyles every descendant's colour on
                 focus, which would turn the brand-blue icon dark. */}

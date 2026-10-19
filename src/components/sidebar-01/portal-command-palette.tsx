@@ -51,10 +51,10 @@ function sentenceCase(label: string): string {
 // told apart: ready (green), processing (violet), anything else still moving
 // (blue); finished ones fall back to grey.
 const INK = {
-  ready: { dot: "bg-[#1f8a5b]", text: "text-[#1a6a3c]" },
-  processing: { dot: "bg-[#4a3b8f]", text: "text-[#4a3b8f]" },
-  moving: { dot: "bg-[#0b4da2]", text: "text-[#093a7a]" },
-  done: { dot: "bg-[#9aa5b5]", text: "text-[#5f6b7c]" },
+  ready: { dot: "bg-[#1f8a5b] dark:bg-success", text: "text-tone-success" },
+  processing: { dot: "bg-[#4a3b8f] dark:bg-tone-progress", text: "text-tone-progress" },
+  moving: { dot: "bg-[#0b4da2] dark:bg-primary", text: "text-accent-foreground" },
+  done: { dot: "bg-[#9aa5b5] dark:bg-muted-foreground", text: "text-muted-2" },
 } as const;
 
 function inkFor(status: string) {
@@ -75,7 +75,7 @@ function inkFor(status: string) {
 // This sheet is portaled outside the portal's wrapper, so the softer secondary
 // ink is spelled out here rather than read from the token it would override.
 const GROUP =
-  "**:[[cmdk-group-heading]]:px-4.5 **:[[cmdk-group-heading]]:pt-4 **:[[cmdk-group-heading]]:pb-1.5 **:[[cmdk-group-heading]]:text-sm **:[[cmdk-group-heading]]:font-semibold **:[[cmdk-group-heading]]:text-[#5f6b7c]";
+  "**:[[cmdk-group-heading]]:px-4.5 **:[[cmdk-group-heading]]:pt-4 **:[[cmdk-group-heading]]:pb-1.5 **:[[cmdk-group-heading]]:text-sm **:[[cmdk-group-heading]]:font-semibold **:[[cmdk-group-heading]]:text-muted-2";
 
 const ROW =
   "flex min-h-13 cursor-default items-center gap-4 rounded-2xl px-4.5 py-2.5 outline-none transition-colors duration-100 select-none data-selected:bg-portal-panel";
@@ -124,7 +124,7 @@ function RequestRow({
         <span className="block truncate text-[16.5px] leading-snug font-medium text-foreground">
           <Highlight text={request.serviceName} term={term} />
         </span>
-        <span className="block truncate text-[13px] leading-snug text-[#5f6b7c]">
+        <span className="block truncate text-[13px] leading-snug text-muted-2">
           <Highlight text={request.trackingNumber} term={term} />
           {submitted ? ` · Submitted ${submitted}` : ""}
         </span>
@@ -157,7 +157,7 @@ function ServiceRow({
       <span className="min-w-0 flex-1 truncate text-[16.5px] leading-snug font-medium text-foreground">
         <Highlight text={service.title} term={term} />
       </span>
-      <ChevronRight className="size-4.5 shrink-0 text-[#7a8696]" aria-hidden="true" />
+      <ChevronRight className="size-4.5 shrink-0 text-[#7a8696] dark:text-muted-foreground" aria-hidden="true" />
     </CommandPrimitive.Item>
   );
 }
@@ -248,7 +248,7 @@ export function PortalCommandPalette({
         <DialogOverlay className="bg-[rgba(15,27,45,0.24)] backdrop-blur-sm duration-150 data-closed:fill-mode-forwards" />
         <DialogPrimitive.Popup
           data-slot="portal-command-palette"
-          className="fixed top-14 left-1/2 z-50 w-[min(35rem,calc(100vw-1.5rem))] -translate-x-1/2 overflow-hidden rounded-panel bg-white p-2.5 pb-3 text-foreground shadow-[0_30px_80px_rgba(15,27,45,0.28),0_0_0_1px_rgba(15,27,45,0.05)] duration-150 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 data-closed:fill-mode-forwards"
+          className="fixed top-14 left-1/2 z-50 w-[min(35rem,calc(100vw-1.5rem))] -translate-x-1/2 overflow-hidden rounded-panel bg-card p-2.5 pb-3 text-foreground shadow-[0_30px_80px_rgba(15,27,45,0.28),0_0_0_1px_rgba(15,27,45,0.05)] duration-150 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 data-closed:fill-mode-forwards"
         >
           <DialogTitle className="sr-only">Search CiviCheck</DialogTitle>
           <DialogDescription className="sr-only">
@@ -262,22 +262,22 @@ export function PortalCommandPalette({
             className="flex flex-col"
           >
             <div className="flex h-14 items-center gap-3 rounded-full bg-portal-panel px-5">
-              <Search className="size-5 shrink-0 text-[#5f6b7c]" aria-hidden="true" />
+              <Search className="size-5 shrink-0 text-muted-2" aria-hidden="true" />
               <CommandPrimitive.Input
                 value={query}
                 onValueChange={onQueryChange}
                 placeholder="Search"
-                className="min-w-0 flex-1 bg-transparent text-[17px] text-foreground outline-none placeholder:text-[#7a8696]"
+                className="min-w-0 flex-1 bg-transparent text-[17px] text-foreground outline-none placeholder:text-[#7a8696] dark:placeholder:text-muted-foreground"
               />
               {isLoading ? (
                 <Loader2
-                  className="size-4.5 shrink-0 animate-spin text-[#7a8696]"
+                  className="size-4.5 shrink-0 animate-spin text-[#7a8696] dark:text-muted-foreground"
                   aria-hidden="true"
                 />
               ) : null}
               {/* Plain text, not a key cap: Escape is not the thing to reach for. */}
               <span
-                className="shrink-0 text-[13px] font-semibold text-[#7a8696]"
+                className="shrink-0 text-[13px] font-semibold text-[#7a8696] dark:text-muted-foreground"
                 aria-hidden="true"
               >
                 Esc
@@ -333,7 +333,7 @@ export function PortalCommandPalette({
                     <p
                       key={line}
                       className={cn(
-                        "text-[15px] text-[#5f6b7c]",
+                        "text-[15px] text-muted-2",
                         index === 0 && failed && "font-semibold text-foreground",
                       )}
                     >

@@ -51,7 +51,7 @@ export function TrackRedirectDialog({
         initialFocus={switchButton}
         finalFocus={returnFocusTo}
         overlayClassName="bg-[rgba(15,27,45,0.28)] backdrop-blur-sm duration-150 motion-reduce:duration-0"
-        className="apply-wizard w-[min(32.5rem,calc(100%-1.5rem))] max-w-none gap-0 rounded-[28px] bg-white p-8 pb-7 shadow-portal-dialog ring-0 duration-150 sm:max-w-none data-open:zoom-in-100 data-open:slide-in-from-bottom-2 data-closed:zoom-out-100 data-closed:slide-out-to-bottom-2 motion-reduce:duration-0 motion-reduce:data-open:animate-none motion-reduce:data-closed:animate-none"
+        className="apply-wizard w-[min(32.5rem,calc(100%-1.5rem))] max-w-none gap-0 rounded-[28px] bg-card p-8 pb-7 shadow-portal-dialog ring-0 duration-150 sm:max-w-none data-open:zoom-in-100 data-open:slide-in-from-bottom-2 data-closed:zoom-out-100 data-closed:slide-out-to-bottom-2 motion-reduce:duration-0 motion-reduce:data-open:animate-none motion-reduce:data-closed:animate-none"
       >
         <span
           className="flex size-10 items-center justify-center rounded-full bg-primary-soft text-primary"
@@ -72,7 +72,7 @@ export function TrackRedirectDialog({
           <button
             type="button"
             onClick={onKeepEditing}
-            className="civic-press h-13 min-w-0 flex-1 rounded-full border border-[#d7dee9] bg-white px-4 text-base font-semibold whitespace-nowrap text-foreground transition-colors hover:border-primary focus-visible:ring-4 focus-visible:ring-primary/20"
+            className="civic-press h-13 min-w-0 flex-1 rounded-full border border-border bg-card px-4 text-base font-semibold whitespace-nowrap text-foreground transition-colors hover:border-primary focus-visible:ring-4 focus-visible:ring-primary/20"
           >
             Fix the date
           </button>
@@ -80,7 +80,7 @@ export function TrackRedirectDialog({
             ref={switchButton}
             type="button"
             onClick={onSwitch}
-            className="civic-press h-13 min-w-0 flex-1 rounded-full border border-primary bg-primary px-4 text-base font-semibold whitespace-nowrap text-white transition-colors hover:bg-primary-hover focus:ring-4 focus:ring-primary/20 focus:outline-none"
+            className="civic-press h-13 min-w-0 flex-1 rounded-full border border-primary-fill bg-primary-fill px-4 text-base font-semibold whitespace-nowrap text-white transition-colors hover:bg-primary-fill-hover focus:ring-4 focus:ring-primary/20 focus:outline-none"
           >
             Switch track
           </button>

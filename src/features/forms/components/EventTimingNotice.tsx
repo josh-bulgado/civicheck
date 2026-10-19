@@ -9,10 +9,10 @@ const CTA =
 
 /** The button's look follows the notice's tone: filled for a suggestion, pale for a warning. */
 const CTA_TONE = {
-  default: "border-primary bg-primary text-primary-foreground hover:bg-primary-hover",
-  warning: "border-[#e0bd5c] bg-white/70 text-[#5c3a00] hover:bg-white",
-  destructive: "border-destructive/40 bg-white/70 text-destructive hover:bg-white",
-  success: "border-[#bfe3cf] bg-white/70 text-[#1a6a3c] hover:bg-white",
+  default: "border-primary-fill bg-primary-fill text-primary-foreground hover:bg-primary-fill-hover",
+  warning: "border-[#e0bd5c] dark:border-health-warning-border bg-card/70 text-[#5c3a00] dark:text-health-warning-fg hover:bg-card",
+  destructive: "border-destructive/40 bg-card/70 text-destructive hover:bg-card",
+  success: "border-[#bfe3cf] dark:border-health-success-border bg-card/70 text-tone-success hover:bg-card",
 } as const;
 
 /**

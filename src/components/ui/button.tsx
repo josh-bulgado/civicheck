@@ -8,7 +8,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/80",
+        default: "bg-primary-fill text-primary-foreground hover:bg-primary-fill/80",
         outline:
           "border-border bg-background shadow-xs hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
         secondary:
@@ -16,12 +16,12 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
         destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20",
+          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive focus-visible:ring-destructive/20",
         success:
-          "bg-success/10 text-success hover:bg-success/20 focus-visible:border-success/40 focus-visible:ring-success/20",
+          "bg-success/10 text-success hover:bg-success/20 focus-visible:border-success focus-visible:ring-success/20",
         // The service editor's primary: a lit top edge on the brand blue.
         raised:
-          "border-primary bg-primary bg-linear-to-b from-[color-mix(in_oklch,var(--primary),white_12%)] to-primary text-primary-foreground shadow-[0_1px_2px_color-mix(in_srgb,var(--primary)_35%,transparent),inset_0_1px_0_rgb(255_255_255/0.18)] hover:border-primary-hover hover:bg-primary-hover hover:bg-none",
+          "border-primary-fill bg-primary-fill bg-linear-to-b from-[color-mix(in_oklch,var(--primary-fill),white_12%)] to-primary-fill text-primary-foreground shadow-[0_1px_2px_color-mix(in_srgb,var(--primary-fill)_35%,transparent),inset_0_1px_0_rgb(255_255_255/0.18)] hover:border-primary-fill-hover hover:bg-primary-fill-hover hover:bg-none",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

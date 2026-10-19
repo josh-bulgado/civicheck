@@ -102,7 +102,7 @@ export function createAccountColumns({
         return (
           <div className="flex min-w-56 items-center gap-3">
             <Avatar size="lg" className="bg-primary">
-              <AvatarFallback className="bg-primary font-semibold text-white">
+              <AvatarFallback className="bg-primary-fill font-semibold text-white">
                 {getInitials(account)}
               </AvatarFallback>
             </Avatar>

@@ -81,13 +81,13 @@ export function NotificationsPopover({ userId, unreadCount }: NotificationsPopov
         onPointerEnter={warm}
         onFocus={warm}
         aria-label={hasUnread ? `Notifications, ${unreadCount} unread` : "Notifications"}
-        className="group/bell civic-press relative flex size-11 shrink-0 md:size-12.5 items-center justify-center rounded-full border border-border-light bg-white text-portal-ink-2 outline-none hover:bg-primary-tint focus-visible:ring-[3px] focus-visible:ring-ring/50 data-popup-open:border-[#cfdef5] data-popup-open:bg-primary-soft data-popup-open:text-primary"
+        className="group/bell civic-press relative flex size-11 shrink-0 md:size-12.5 items-center justify-center rounded-full border border-border-light bg-card text-portal-ink-2 outline-none hover:bg-primary-tint focus-visible:ring-[3px] focus-visible:ring-ring/50 data-popup-open:border-[#cfdef5] dark:data-popup-open:border-border-strong data-popup-open:bg-primary-soft data-popup-open:text-primary"
       >
         <Bell className="size-5" aria-hidden="true" />
         {/* The ring is the bell's own fill, so the dot stays cut out of it. */}
         {hasUnread && (
           <span
-            className="absolute top-2.75 right-3 size-2.25 rounded-full bg-brand-gold ring-2 ring-white group-data-[popup-open]/bell:ring-primary-soft md:top-3 md:right-3.25 md:size-2.5"
+            className="absolute top-2.75 right-3 size-2.25 rounded-full bg-brand-gold ring-2 ring-card group-data-[popup-open]/bell:ring-primary-soft md:top-3 md:right-3.25 md:size-2.5"
             aria-hidden="true"
           />
         )}
@@ -104,7 +104,7 @@ export function NotificationsPopover({ userId, unreadCount }: NotificationsPopov
         // popup never takes the whole screen. The list scrolls inside it, and
         // a short window still shrinks to fit its content.
         className={cn(
-          "flex max-h-[min(35rem,calc(100vh-100px),var(--available-height))] w-[min(26.25rem,calc(100vw-1.5rem))] flex-col gap-0 overflow-hidden rounded-panel border-0 bg-white p-0 shadow-portal-popover ring-0 duration-200 ease-(--ease-civic-emphasized) data-closed:duration-150",
+          "flex max-h-[min(35rem,calc(100vh-100px),var(--available-height))] w-[min(26.25rem,calc(100vw-1.5rem))] flex-col gap-0 overflow-hidden rounded-panel border-0 bg-card p-0 shadow-portal-popover ring-0 duration-200 ease-(--ease-civic-emphasized) data-closed:duration-150",
           full && "h-[min(35rem,calc(100vh-100px),var(--available-height))]",
         )}
       >
@@ -433,7 +433,7 @@ function FeedGroup({
     <section aria-label={label}>
       {/* Sticks to the top while its rows scroll beneath, on a solid ground (a
           blur would cost scroll smoothness on low-end phones). */}
-      <h3 className="sticky top-0 z-10 bg-white px-6.5 pt-2.5 pb-1.5 text-[15px] font-semibold text-muted-foreground">
+      <h3 className="sticky top-0 z-10 bg-card px-6.5 pt-2.5 pb-1.5 text-[15px] font-semibold text-muted-foreground">
         {label}
       </h3>
       <ul className="civic-stagger flex flex-col gap-1 px-3" style={ROW_CASCADE}>
@@ -463,7 +463,7 @@ function FeedRow({
   return linkFor(notification.target, () => onOpen(notification), {
     className: cn(
       "civic-interactive flex items-start gap-3.5 rounded-[18px] p-3",
-      unread ? "bg-[#f1f6fd]" : "hover:bg-foreground/3",
+      unread ? "bg-[#f1f6fd] dark:bg-primary-soft" : "hover:bg-foreground/3",
     ),
     children: (
       <>

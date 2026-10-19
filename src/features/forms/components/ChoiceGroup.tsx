@@ -91,7 +91,7 @@ const groupClass =
 // Keyboard focus draws a 2px outline inside the tile instead of only shifting
 // the background.
 const labelClass =
-  "cursor-pointer bg-white has-[>[data-slot=field]]:rounded-none has-[>[data-slot=field]]:border-0 *:data-[slot=field]:px-4 text-[15px] text-foreground transition-colors hover:bg-muted has-focus-visible:outline-2 has-focus-visible:-outline-offset-4 has-focus-visible:outline-primary has-data-checked:bg-primary-tint has-data-checked:hover:bg-primary-tint has-data-checked:font-semibold";
+  "cursor-pointer bg-card has-[>[data-slot=field]]:rounded-none has-[>[data-slot=field]]:border-0 *:data-[slot=field]:px-4 text-[15px] text-foreground transition-colors hover:bg-muted has-focus-visible:outline-2 has-focus-visible:-outline-offset-4 has-focus-visible:outline-primary has-data-checked:bg-primary-tint has-data-checked:hover:bg-primary-tint has-data-checked:font-semibold";
 
 // Field top-aligns rows that contain FieldContent (and nudges the radio 1px);
 // choice tiles are taller than their content, so center the radio and text.
@@ -102,7 +102,7 @@ const fieldClass =
 // white face and shows a primary dot, so the mark survives a high-contrast or
 // forced-colors palette better than a solid fill with a white dot.
 const radioClass =
-  "size-4.5 border-2 border-muted-foreground data-checked:border-primary data-checked:bg-white [&_[data-slot=radio-group-indicator]>span]:bg-primary";
+  "size-4.5 border-2 border-muted-foreground data-checked:border-primary data-checked:bg-card [&_[data-slot=radio-group-indicator]>span]:bg-primary";
 
 // Four short options read as one compact row of tiles on a wide screen instead
 // of a tall 2x2 block; they drop back to two columns below that.

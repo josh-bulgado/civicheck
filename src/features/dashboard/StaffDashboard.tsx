@@ -157,7 +157,7 @@ function NeedsAttentionCard({
   return (
     <div className="dashboard-panel flex min-h-56 flex-col p-5 sm:p-6">
       <div className="flex items-start gap-4">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-warning text-white shadow-sm">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-warning text-white dark:text-background shadow-sm">
           <AlertTriangle className="size-5" aria-hidden="true" />
         </div>
         <div className="min-w-0">
@@ -220,7 +220,7 @@ function RequestQueueSummaryCard({
   return (
     <div className="dashboard-panel flex min-h-56 flex-col p-5 sm:p-6">
       <Link to="/requests" className="group flex items-start gap-4">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary text-white shadow-sm">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary-fill text-white shadow-sm">
           <ListChecks className="size-5" aria-hidden="true" />
         </div>
         <div className="min-w-0">
@@ -308,7 +308,7 @@ function ToolCard({
       to={to}
       className="dashboard-panel flex min-h-56 flex-col p-5 transition-colors hover:border-primary sm:p-6"
     >
-      <div className="flex size-11 items-center justify-center rounded-lg bg-primary text-white shadow-sm">
+      <div className="flex size-11 items-center justify-center rounded-lg bg-primary-fill text-white shadow-sm">
         <Icon className="size-5" aria-hidden="true" />
       </div>
       <h3 className="mt-5 text-lg font-bold text-foreground">{title}</h3>

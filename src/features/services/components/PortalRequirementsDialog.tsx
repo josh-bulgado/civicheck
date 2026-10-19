@@ -109,14 +109,14 @@ function ScrollBody({ children }: { children: ReactNode }) {
       <div
         aria-hidden="true"
         className={cn(
-          "pointer-events-none absolute inset-x-0 top-0 h-14 bg-linear-to-b from-white to-white/0 transition-opacity duration-150",
+          "pointer-events-none absolute inset-x-0 top-0 h-14 bg-linear-to-b from-card to-card/0 transition-opacity duration-150",
           edges.top ? "opacity-100" : "opacity-0",
         )}
       />
       <div
         aria-hidden="true"
         className={cn(
-          "pointer-events-none absolute inset-x-0 bottom-0 h-22.5 bg-linear-to-t from-white to-white/0 transition-opacity duration-150",
+          "pointer-events-none absolute inset-x-0 bottom-0 h-22.5 bg-linear-to-t from-card to-card/0 transition-opacity duration-150",
           edges.bottom ? "opacity-100" : "opacity-0",
         )}
       />
@@ -137,7 +137,7 @@ function Stat({
 }) {
   return (
     <div className="rounded-[20px] bg-portal-panel px-6 py-5">
-      <p className="text-[13px] leading-[normal] font-bold tracking-[0.12em] text-[#5f6b7c] uppercase">
+      <p className="text-[13px] leading-[normal] font-bold tracking-[0.12em] text-muted-2 uppercase">
         {label}
       </p>
       <p
@@ -149,7 +149,7 @@ function Stat({
       >
         {value}
       </p>
-      <p className="mt-1 text-sm leading-snug text-[#5f6b7c]">{note}</p>
+      <p className="mt-1 text-sm leading-snug text-muted-2">{note}</p>
     </div>
   );
 }
@@ -191,10 +191,10 @@ function RequirementRow({ requirement }: { requirement: ServiceRequirement }) {
       <div className="min-w-0 flex-1">
         <p className="text-[17px] leading-snug font-semibold text-foreground">{primary}</p>
         {detail && (
-          <p className="mt-0.5 text-[15px] leading-snug text-[#5f6b7c]">{detail}</p>
+          <p className="mt-0.5 text-[15px] leading-snug text-muted-2">{detail}</p>
         )}
         {location && (
-          <p className="mt-1 flex items-start gap-1.5 text-sm leading-snug text-[#5f6b7c]">
+          <p className="mt-1 flex items-start gap-1.5 text-sm leading-snug text-muted-2">
             <MapPin className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
             {location}
           </p>
@@ -246,10 +246,10 @@ export function PortalRequirementsDialog({
         showCloseButton={false}
         initialFocus={titleRef}
         overlayClassName="bg-[rgba(15,27,45,0.28)] backdrop-blur-sm"
-        className="flex max-h-[min(60rem,calc(100vh-7.5rem))] w-[min(48.75rem,calc(100%-2rem))] max-w-none flex-col gap-0 overflow-hidden rounded-[28px] bg-white p-0 shadow-portal-dialog ring-0 sm:max-w-none"
+        className="flex max-h-[min(60rem,calc(100vh-7.5rem))] w-[min(48.75rem,calc(100%-2rem))] max-w-none flex-col gap-0 overflow-hidden rounded-[28px] bg-card p-0 shadow-portal-dialog ring-0 sm:max-w-none"
       >
         <header className="relative shrink-0 bg-(image:--portal-hero) px-6 pt-7.5 pr-18 pb-7 sm:px-9 sm:pr-20">
-          <span className="inline-flex h-7.5 items-center rounded-full bg-white/70 px-3.5 text-sm font-bold text-foreground">
+          <span className="inline-flex h-7.5 items-center rounded-full bg-card/70 px-3.5 text-sm font-bold text-foreground">
             {visitLabel}
           </span>
           <DialogTitle
@@ -268,7 +268,7 @@ export function PortalRequirementsDialog({
               <button
                 type="button"
                 aria-label="Close"
-                className="civic-press absolute top-4.5 right-4.5 flex size-10 items-center justify-center rounded-full bg-white/70 text-foreground hover:bg-white"
+                className="civic-press absolute top-4.5 right-4.5 flex size-10 items-center justify-center rounded-full bg-card/70 text-foreground hover:bg-card"
               />
             }
           >
@@ -316,7 +316,7 @@ export function PortalRequirementsDialog({
                   <h3 className="text-[21px] leading-[normal] font-bold text-foreground">
                     This service covers {overview.services.length} cases
                   </h3>
-                  <p className="mt-1.5 text-[15px] leading-snug text-[#5f6b7c]">
+                  <p className="mt-1.5 text-[15px] leading-snug text-muted-2">
                     The fee and the steps depend on which one applies to you — you'll pick yours
                     on the first step of the application.
                   </p>
@@ -343,12 +343,12 @@ export function PortalRequirementsDialog({
                   <h3 className="text-[21px] leading-[normal] font-bold text-foreground">
                     Documents to bring
                   </h3>
-                  <span className="inline-flex h-6.5 min-w-6.5 items-center justify-center rounded-full bg-primary px-2 text-[13px] font-bold text-white">
+                  <span className="inline-flex h-6.5 min-w-6.5 items-center justify-center rounded-full bg-primary-fill px-2 text-[13px] font-bold text-white">
                     {requirements.length}
                   </span>
                 </div>
                 {requirements.length === 0 ? (
-                  <p className="mt-4 rounded-[20px] border border-dashed border-dashed-border px-5.5 py-4 text-[15px] text-[#5f6b7c] italic">
+                  <p className="mt-4 rounded-[20px] border border-dashed border-dashed-border px-5.5 py-4 text-[15px] text-muted-2 italic">
                     No required documents are listed for this service.
                   </p>
                 ) : (
@@ -375,7 +375,7 @@ export function PortalRequirementsDialog({
                           </span>
                           {index < steps.length - 1 && (
                             <span
-                              className="mt-1.5 w-0.5 flex-1 bg-[#cfd8e8]"
+                              className="mt-1.5 w-0.5 flex-1 bg-[#cfd8e8] dark:bg-border-strong"
                               aria-hidden="true"
                             />
                           )}
@@ -402,7 +402,7 @@ export function PortalRequirementsDialog({
             render={
               <button
                 type="button"
-                className="civic-press h-13 rounded-full border border-[#d7dee9] bg-white px-7 text-base font-semibold text-foreground hover:bg-primary-tint"
+                className="civic-press h-13 rounded-full border border-border bg-card px-7 text-base font-semibold text-foreground hover:bg-primary-tint"
               />
             }
           >
@@ -412,7 +412,7 @@ export function PortalRequirementsDialog({
             <button
               type="button"
               onClick={onApply}
-              className="civic-press h-13 rounded-full bg-primary px-8 text-base font-semibold text-white shadow-[0_8px_20px_rgba(11,77,162,0.28)] hover:bg-primary-hover"
+              className="civic-press h-13 rounded-full bg-primary-fill px-8 text-base font-semibold text-white shadow-[0_8px_20px_rgba(11,77,162,0.28)] hover:bg-primary-fill-hover"
             >
               Apply
             </button>

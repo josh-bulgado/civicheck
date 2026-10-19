@@ -59,7 +59,7 @@ export function PaymentVerificationPanel({
   }
 
   return (
-    <section className="rounded-xl border border-border bg-white p-6">
+    <section className="rounded-xl border border-border bg-card p-6">
       <h2 className="mb-1 text-lg font-bold text-foreground">Payment</h2>
       <p className="mb-4 text-sm text-muted-foreground">
         Fee due: ₱{feesDue.toFixed(2)}

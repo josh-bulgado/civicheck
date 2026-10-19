@@ -43,7 +43,7 @@ export function ApplyStepRail({
       >
         {/* Text stand-in: the official emblem isn't cleared for use yet. */}
         <span
-          className="flex size-10.5 shrink-0 items-center justify-center rounded-full border-2 border-brand-gold bg-white text-[10px] font-extrabold tracking-[0.02em] text-primary"
+          className="flex size-10.5 shrink-0 items-center justify-center rounded-full border-2 border-brand-gold bg-card text-[10px] font-extrabold tracking-[0.02em] text-primary"
           aria-hidden="true"
         >
           CCRO
@@ -71,10 +71,10 @@ export function ApplyStepRail({
                     className={cn(
                       "flex size-8.5 shrink-0 items-center justify-center rounded-full border-2 text-[15px] font-bold transition-[background-color,color,border-color] duration-300 ease-out motion-reduce:transition-none",
                       isDone
-                        ? "border-success bg-success text-white"
+                        ? "border-success bg-success text-white dark:text-background"
                         : isCurrent
-                          ? "border-primary bg-primary text-white"
-                          : "border-[#b9c7de] bg-white text-muted-foreground",
+                          ? "border-primary-fill bg-primary-fill text-white"
+                          : "border-[#b9c7de] dark:border-border-strong bg-card text-muted-foreground",
                     )}
                   >
                     {isDone ? (
@@ -107,7 +107,7 @@ export function ApplyStepRail({
                   // and an overlay scales across it, so nothing reflows.
                   <div
                     aria-hidden="true"
-                    className="relative h-0.75 flex-1 overflow-hidden rounded-full bg-[#cfd8e8]"
+                    className="relative h-0.75 flex-1 overflow-hidden rounded-full bg-[#cfd8e8] dark:bg-border-strong"
                   >
                     <div
                       className={cn(

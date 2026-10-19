@@ -100,7 +100,7 @@ function TextWithNoneOption({
         maxLength={240}
         disabled={none}
         aria-invalid={invalid}
-        className={cn(WIZARD_CONTROL_CLASS, none && "border-[#e4e9f1] bg-portal-panel")}
+        className={cn(WIZARD_CONTROL_CLASS, none && "border-border-light bg-portal-panel")}
       />
       <label className="-mt-2.5 flex min-h-11 cursor-pointer items-center gap-2.5 text-[15px] leading-none text-portal-ink-2">
         <Checkbox
@@ -113,7 +113,7 @@ function TextWithNoneOption({
               requestAnimationFrame(() => document.getElementById(id)?.focus());
             }
           }}
-          className="size-5.5 rounded-md border-[1.5px] border-[#b9c7de] shadow-none [&_svg]:size-4"
+          className="size-5.5 rounded-md border-[1.5px] border-[#b9c7de] dark:border-border-strong shadow-none [&_svg]:size-4"
         />
         {noneLabel}
       </label>
@@ -282,7 +282,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
         key={section.key}
         className={cn(
           "flex flex-col gap-3",
-          setApart && "mt-8 border-t border-[#e4e9f1] pt-12 sm:mt-10 sm:pt-14",
+          setApart && "mt-8 border-t border-border-light pt-12 sm:mt-10 sm:pt-14",
         )}
       >
         {titled ? (

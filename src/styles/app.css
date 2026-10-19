@@ -10,6 +10,10 @@
    scrolling. */
 @custom-variant short (@media (max-height: 820px));
 
+/* `dark:` follows the `dark` class on <html> (set only inside the signed-in
+   app), not the device's own light/dark setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   *,
   ::after,
@@ -32,6 +36,10 @@
        navigate or as a list grows past the fold. */
     scrollbar-gutter: stable;
     @apply font-sans antialiased;
+  }
+
+  html.dark {
+    color-scheme: dark;
   }
 
   body {
@@ -100,6 +108,9 @@
   --color-border-strong: var(--border-strong);
   --color-primary-soft: var(--primary-soft);
   --color-primary-hover: var(--primary-hover);
+  --color-primary-fill: var(--primary-fill);
+  --color-primary-fill-hover: var(--primary-fill-hover);
+  --color-hero-fill: var(--hero-fill);
   --color-brand-red: var(--brand-red);
   --color-brand-gold: var(--brand-gold);
   --color-success: var(--success);
@@ -183,25 +194,17 @@
   /* The one blue card for the main request, and the header band of dialogs. */
   --radius-hero: 2rem;
 
-  /* Citizen portal shadows. The panel's 1px ring stands in for a border, and
-     so do the 1px rings on the menu, popover and dialog. */
-  --shadow-portal-card: 0 1px 2px rgba(15, 27, 45, 0.04);
-  --shadow-portal-panel:
-    0 0 0 1px rgba(15, 27, 45, 0.04), 0 24px 60px rgba(30, 60, 110, 0.08);
-  --shadow-portal-button: 0 10px 24px rgba(11, 77, 162, 0.28);
-  --shadow-portal-nav-active:
-    0 1px 2px rgba(15, 27, 45, 0.06), 0 8px 22px rgba(11, 77, 162, 0.1);
-  /* White pill buttons that sit on the blue hero or the gradient ground. */
-  --shadow-portal-pill:
-    0 1px 2px rgba(15, 27, 45, 0.08), 0 4px 12px rgba(15, 27, 45, 0.08);
-  /* The sidebar's profile menu. */
-  --shadow-portal-menu:
-    0 12px 40px rgba(15, 27, 45, 0.16), 0 0 0 1px rgba(15, 27, 45, 0.05);
-  /* The bell's notification popup. */
-  --shadow-portal-popover:
-    0 20px 60px rgba(15, 27, 45, 0.18), 0 0 0 1px rgba(15, 27, 45, 0.05);
-  --shadow-portal-dialog:
-    0 30px 80px rgba(15, 27, 45, 0.3), 0 0 0 1px rgba(15, 27, 45, 0.05);
+  /* Citizen portal shadows. Defined on :root as --portal-shadow-* (they cannot
+     live here: @theme inline copies the value into each utility, so a .dark
+     override would never reach it). */
+  --shadow-portal-card: var(--portal-shadow-card);
+  --shadow-portal-panel: var(--portal-shadow-panel);
+  --shadow-portal-button: var(--portal-shadow-button);
+  --shadow-portal-nav-active: var(--portal-shadow-nav-active);
+  --shadow-portal-pill: var(--portal-shadow-pill);
+  --shadow-portal-menu: var(--portal-shadow-menu);
+  --shadow-portal-popover: var(--portal-shadow-popover);
+  --shadow-portal-dialog: var(--portal-shadow-dialog);
 }
 
 :root {
@@ -217,6 +220,15 @@
 
   --primary: #0b4da2;
   --primary-hover: #093a7a;
+  /* Solid backgrounds that carry a white label (buttons, hero, step circles).
+     --primary stays the ink for text, borders and rings. Same colour in light;
+     in dark the ink is a light blue that white cannot sit on, so they split. */
+  --primary-fill: var(--primary);
+  --primary-fill-hover: var(--primary-hover);
+  /* The page-header band (.dashboard-hero, ServiceHero). Same blue as a button
+     in light; in dark it is deeper so white copy at 65-80% opacity and the gold
+     eyebrow stay AA on it. */
+  --hero-fill: var(--primary-fill);
   --primary-foreground: #ffffff;
   --primary-soft: #e7eefa;
   --primary-tint: #f0f5fc;
@@ -292,6 +304,12 @@
   --auth-panel: #0b3f86;
   /* Quiet counterpart to the solid panel, for the screens that don't sell. */
   --auth-panel-tint: #dbe6f4;
+  /* The sign-in and sign-up side panel: a stack of request sheets on soft blue. */
+  --docket-bg: radial-gradient(120% 80% at 30% 20%, #eef4fc 0%, #d4e2f5 70%);
+  --docket-sheet: #ffffff;
+  --docket-sheet-line: #c4d3ea;
+  --docket-skel: #dbe4f1;
+  --docket-shadow-color: rgba(15, 27, 45, 0.22);
 
   --border: #d7dee9;
   --border-light: #e4e9f1;
@@ -366,6 +384,30 @@
   /* Unread notification rows on the full page. */
   --portal-unread-row: linear-gradient(90deg, #eaf1fc, #ffffff 70%);
 
+  /* Citizen portal shadows. The panel's 1px ring stands in for a border, and
+     so do the 1px rings on the menu, popover and dialog. */
+  /* Shadows on cards and panels in the staff/admin workspace. */
+  --surface-shadow: 0 1px 3px rgba(23, 33, 43, 0.08);
+  --surface-shadow-raised:
+    0 1px 3px rgb(23 33 43 / 0.08), 0 10px 28px rgb(23 33 43 / 0.035);
+  --portal-shadow-card: 0 1px 2px rgba(15, 27, 45, 0.04);
+  --portal-shadow-panel:
+    0 0 0 1px rgba(15, 27, 45, 0.04), 0 24px 60px rgba(30, 60, 110, 0.08);
+  --portal-shadow-button: 0 10px 24px rgba(11, 77, 162, 0.28);
+  --portal-shadow-nav-active:
+    0 1px 2px rgba(15, 27, 45, 0.06), 0 8px 22px rgba(11, 77, 162, 0.1);
+  /* White pill buttons that sit on the blue hero or the gradient ground. */
+  --portal-shadow-pill:
+    0 1px 2px rgba(15, 27, 45, 0.08), 0 4px 12px rgba(15, 27, 45, 0.08);
+  /* The sidebar's profile menu. */
+  --portal-shadow-menu:
+    0 12px 40px rgba(15, 27, 45, 0.16), 0 0 0 1px rgba(15, 27, 45, 0.05);
+  /* The bell's notification popup. */
+  --portal-shadow-popover:
+    0 20px 60px rgba(15, 27, 45, 0.18), 0 0 0 1px rgba(15, 27, 45, 0.05);
+  --portal-shadow-dialog:
+    0 30px 80px rgba(15, 27, 45, 0.3), 0 0 0 1px rgba(15, 27, 45, 0.05);
+
   /* ─── Motion tokens ────────────────────────────────────────────────────────
      One scale for the whole app so timings stay in step. `--ease-civic` is a
      decelerating curve: quick to start, settling at the end, which reads as
@@ -378,6 +420,158 @@
   --duration-slow: 380ms;
   /* Gap between consecutive items in a staggered list. */
   --stagger-step: 55ms;
+}
+
+/* ─── Dark theme (Graphite) ──────────────────────────────────────────────────
+   Applied by the `dark` class on <html>, which only the signed-in app sets (see
+   ThemeScope). After :root so it wins at equal specificity. A new colour token
+   in :root needs a pair here; src/styles/dark-tokens.test.ts fails if not. */
+.dark {
+  --background: #101216;
+  --workspace: #121419;
+  --ground: #0d0f13;
+  --foreground: #e8eaee;
+  --card: #181b21;
+  --card-foreground: #e8eaee;
+  --popover: #181b21;
+  --popover-foreground: #e8eaee;
+
+  /* Ink for text, links, borders and rings. The solid blue that carries a white
+     label is --primary-fill. */
+  --primary: #7aa8ea;
+  --primary-hover: #9bbcf0;
+  --primary-fill: #3069c0;
+  --primary-fill-hover: #285aa8;
+  --hero-fill: #1f3a68;
+  --primary-soft: #1a2740;
+  --primary-tint: #1a2438;
+  --secondary: #1f232a;
+  --secondary-foreground: #e8eaee;
+  --muted: #1f232a;
+  --skeleton: #2a2f38;
+  --skeleton-sheen: color-mix(in srgb, white 9%, transparent);
+  --muted-foreground: #9aa1ad;
+  --muted-2: #aab0bb;
+  --body: #b9bfca;
+  --body-strong: #d5d9e0;
+  --body-2: #c3c8d2;
+  --accent: #1a2740;
+  --accent-foreground: #b9d1f5;
+  --surface-subtle: #1b1f26;
+
+  --destructive: #f28b85;
+  --success: #4fbf8a;
+  --success-soft: #12291d;
+  --success-soft-2: #0f2218;
+  --success-dot: #4ec98a;
+  --warning: #e0b25a;
+  --warning-strong: #eac26e;
+  --warning-soft: #33290f;
+  --warning-border: #6b5421;
+  --health-success-bg: #12291d;
+  --health-success-border: #2f6f4f;
+  --health-success-fg: #85d3a6;
+  --health-success-dot: #4ec98a;
+  --health-info-bg: #1a2740;
+  --health-info-border: #2f4f82;
+  --health-info-fg: #93b9f0;
+  --health-info-dot: #5b8fe0;
+  --health-warning-bg: #33290f;
+  --health-warning-border: #6b5421;
+  --health-warning-fg: #eac26e;
+  --health-warning-dot: #e0b25a;
+  --health-error-bg: #361b1b;
+  --health-error-border: #7a3b3b;
+  --health-error-fg: #f0a3a3;
+  --health-error-dot: #f07f78;
+  --health-neutral-bg: #22262d;
+  --health-neutral-border: #3a404b;
+  --health-neutral-fg: #b1b7c2;
+  --health-neutral-dot: #8e96a3;
+
+  --tone-review: #93b9f0;
+  --tone-review-soft: #1a2740;
+  --tone-progress: #bdb0ee;
+  --tone-progress-soft: #27213f;
+  --tone-warning: #eac26e;
+  --tone-warning-soft: #33290f;
+  --tone-success: #85d3a6;
+  --tone-success-soft: #12291d;
+  --tone-neutral: #b1b7c2;
+  --tone-neutral-soft: #22262d;
+  --tone-danger: #f0a3a3;
+  --tone-danger-soft: #361b1b;
+
+  --disabled: #6b7280;
+
+  --border: #2a2f38;
+  --border-light: #22262d;
+  --border-lighter: #1c2026;
+  --border-strong: #333944;
+  --control-border: #343a45;
+  --dashed-border: #3a4150;
+  --input: #343a45;
+  --ring: #7aa8ea;
+
+  --chart-1: #7aa8ea;
+  --chart-2: #5b8fe0;
+  --chart-3: #4fbf8a;
+  --chart-4: #e0b25a;
+  --chart-5: #f28b85;
+
+  --sidebar: #14171c;
+  --sidebar-foreground: #e8eaee;
+  --sidebar-primary: #3069c0;
+  --sidebar-accent: #1a2740;
+  --sidebar-accent-foreground: #b9d1f5;
+  --sidebar-muted: #9aa1ad;
+  --sidebar-border: #2a2f38;
+  --sidebar-ring: #7aa8ea;
+
+  /* Citizen portal. Every gradient stays blue. */
+  --portal-panel: #14171c;
+  --portal-search: #1f232a;
+  --portal-ink-2: #c3c8d2;
+  --portal-danger-soft: #361b1b;
+  --portal-ground: linear-gradient(
+    180deg,
+    #101a2b 0%,
+    #0e1521 40%,
+    #0c0f14 100%
+  );
+  --portal-hero: linear-gradient(160deg, #1f3a68 0%, #182d52 48%, #14223d 100%);
+  --portal-unread-highlight: linear-gradient(
+    90deg,
+    #1f3558 0%,
+    #182a46 55%,
+    #181b21 100%
+  );
+  --portal-unread-row: linear-gradient(90deg, #182a46, #181b21 70%);
+
+  /* No drop shadows on dark: a ring does the separating. Floating layers keep a
+     deep shadow under the ring so they lift off the page. */
+  --portal-shadow-card: 0 0 0 1px var(--border);
+  --portal-shadow-panel: 0 0 0 1px var(--border);
+  --portal-shadow-button: 0 8px 20px rgba(48, 105, 192, 0.25);
+  --portal-shadow-nav-active: 0 0 0 1px var(--border-strong);
+  --portal-shadow-pill: 0 0 0 1px var(--border-strong);
+  --portal-shadow-menu:
+    0 0 0 1px var(--border-strong), 0 12px 40px rgba(0, 0, 0, 0.5);
+  --portal-shadow-popover:
+    0 0 0 1px var(--border-strong), 0 20px 60px rgba(0, 0, 0, 0.55);
+  --portal-shadow-dialog:
+    0 0 0 1px var(--border-strong), 0 30px 80px rgba(0, 0, 0, 0.6);
+
+  --surface-shadow: 0 0 #0000;
+  --surface-shadow-raised: 0 0 #0000;
+
+  --docket-bg: radial-gradient(120% 80% at 30% 20%, #14305a 0%, #0b1a33 60%, #091426 100%);
+  --docket-sheet: rgba(255, 255, 255, 0.05);
+  --docket-sheet-line: rgba(255, 255, 255, 0.16);
+  --docket-skel: rgba(255, 255, 255, 0.14);
+  --docket-shadow-color: rgba(0, 0, 0, 0.45);
+
+  --wizard-bar-track: #2a2f38;
 }
 
 /* ─── Keyframes ──────────────────────────────────────────────────────────────
@@ -710,7 +904,7 @@
   }
 
   .civic-card {
-    @apply rounded-xl border border-border-strong bg-card shadow-[0_1px_3px_rgba(23,33,43,0.08)];
+    @apply rounded-xl border border-border-strong bg-card shadow-(--surface-shadow);
   }
 
   /* Tinted grid backdrop used behind the landing hero. */
@@ -757,9 +951,7 @@
 
   .civic-workspace [data-slot="card"]:not([data-variant="embedded"]) {
     border: 1px solid var(--border-strong);
-    box-shadow:
-      0 1px 3px rgb(23 33 43 / 0.08),
-      0 10px 28px rgb(23 33 43 / 0.035);
+    box-shadow: var(--surface-shadow-raised);
   }
 
   .civic-workspace [data-slot="input"],
@@ -769,6 +961,7 @@
     background-color: var(--card);
   }
 
+  /* Landing and auth only, which never go dark: the same blue and white in both themes. */
   .civic-auth-panel {
     @apply bg-auth-panel text-white;
   }
@@ -793,28 +986,224 @@
     --muted-foreground: #5f6b7c;
   }
 
-  .dark .system-health-page {
-    --muted-foreground: #b6c0ce;
-    --health-success-bg: #102c20;
-    --health-success-border: #2f6f4f;
-    --health-success-fg: #a7efc7;
-    --health-success-dot: #69d99b;
-    --health-warning-bg: #35280f;
-    --health-warning-border: #785d22;
-    --health-warning-fg: #ffda8a;
-    --health-warning-dot: #f1bd50;
-    --health-error-bg: #431b18;
-    --health-error-border: #8c403a;
-    --health-error-fg: #ffc0b9;
-    --health-error-dot: #ff8178;
-    --health-neutral-bg: #263345;
-    --health-neutral-border: #4f6075;
-    --health-neutral-fg: #d5dce7;
-    --health-neutral-dot: #aab6c5;
+  /* Certificate tiles and the service cards share these washes. Each element
+     sets --tile-from/--tile-to (and --tile-scrim, an "r g b" triple, for the
+     label fade) plus a -dark twin; inline style cannot switch on `.dark`. */
+  .tile-wash {
+    background-image: linear-gradient(155deg, var(--tile-from) 0%, var(--tile-to) 100%);
+  }
+
+  .dark .tile-wash {
+    background-image: linear-gradient(
+      155deg,
+      var(--tile-from-dark) 0%,
+      var(--tile-to-dark) 100%
+    );
+  }
+
+  .tile-scrim {
+    background-image: linear-gradient(
+      0deg,
+      rgb(var(--tile-scrim) / 0.96) 0%,
+      rgb(var(--tile-scrim) / 0.7) 24%,
+      rgb(var(--tile-scrim) / 0) 56%
+    );
+  }
+
+  .dark .tile-scrim {
+    background-image: linear-gradient(
+      0deg,
+      rgb(var(--tile-scrim-dark) / 0.96) 0%,
+      rgb(var(--tile-scrim-dark) / 0.7) 24%,
+      rgb(var(--tile-scrim-dark) / 0) 56%
+    );
+  }
+
+  /* ─── Auth side panel ──────────────────────────────────────────────────────
+     Sized in the panel's own width (cqw), so the composition scales the same at
+     any screen. The sheets are decorative; the caption underneath is the text. */
+  .docket-panel {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    height: 100%;
+    container-type: inline-size;
+    background: var(--docket-bg);
+    color: var(--foreground);
+    /* 1 is the size first drawn; the sheets and caption text scale together. */
+    --docket-scale: 0.75;
+  }
+
+  .docket-stage {
+    position: absolute;
+    inset: 0 0 20cqw 0;
+    display: grid;
+    place-items: center;
+  }
+
+  .docket-group {
+    position: relative;
+    width: calc(66cqw * var(--docket-scale));
+    height: calc(54cqw * var(--docket-scale));
+  }
+
+  .docket-panel[data-variant="tracker"] .docket-group {
+    width: calc(76cqw * var(--docket-scale));
+    height: calc(78cqw * var(--docket-scale));
+  }
+
+  .docket-sheet {
+    position: absolute;
+    inset: 0;
+    border-radius: calc(4cqw * var(--docket-scale));
+    background: var(--docket-sheet);
+    border: 1px solid var(--docket-sheet-line);
+  }
+
+  .docket-sheet[data-layer="1"] {
+    transform: rotate(-9deg) translate(calc(-3cqw * var(--docket-scale)), calc(3cqw * var(--docket-scale)));
+    opacity: 0.55;
+  }
+
+  .docket-sheet[data-layer="2"] {
+    transform: rotate(-4deg) translate(calc(-1cqw * var(--docket-scale)), calc(1cqw * var(--docket-scale)));
+    opacity: 0.8;
+  }
+
+  .docket-sheet[data-layer="3"] {
+    display: flex;
+    flex-direction: column;
+    gap: calc(3cqw * var(--docket-scale));
+    padding: calc(5cqw * var(--docket-scale));
+    transform: rotate(1.5deg);
+    box-shadow: 0 calc(3cqw * var(--docket-scale)) calc(6cqw * var(--docket-scale)) calc(-3cqw * var(--docket-scale)) var(--docket-shadow-color);
+  }
+
+  .docket-panel[data-variant="tracker"] .docket-sheet[data-layer="3"] {
+    gap: calc(5.6cqw * var(--docket-scale));
+    padding: calc(6cqw * var(--docket-scale));
+  }
+
+  .docket-stamp {
+    display: grid;
+    place-items: center;
+    width: calc(11cqw * var(--docket-scale));
+    height: calc(11cqw * var(--docket-scale));
+    border-radius: 50%;
+    border: calc(0.5cqw * var(--docket-scale)) solid var(--primary);
+    color: var(--primary);
+    font-size: calc(2.6cqw * var(--docket-scale));
+    font-weight: 800;
+  }
+
+  .docket-skel {
+    height: calc(2.2cqw * var(--docket-scale));
+    border-radius: 99px;
+    background: var(--docket-skel);
+  }
+
+  .docket-pill {
+    align-self: flex-start;
+    margin-top: auto;
+    padding: calc(1.4cqw * var(--docket-scale)) calc(3cqw * var(--docket-scale));
+    border-radius: 99px;
+    background: var(--tone-success-soft);
+    color: var(--tone-success);
+    font-size: calc(3cqw * var(--docket-scale));
+    font-weight: 600;
+  }
+
+  .docket-track-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: calc(3.9cqw * var(--docket-scale));
+    font-weight: 650;
+    color: var(--foreground);
+  }
+
+  .docket-track-head .docket-pill {
+    margin-top: 0;
+    padding: calc(1.1cqw * var(--docket-scale)) calc(2.6cqw * var(--docket-scale));
+    font-size: calc(2.7cqw * var(--docket-scale));
+  }
+
+  .docket-step {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: calc(3.2cqw * var(--docket-scale));
+    font-size: calc(3.4cqw * var(--docket-scale));
+    color: var(--foreground);
+  }
+
+  .docket-step small {
+    font-size: calc(2.8cqw * var(--docket-scale));
+    color: var(--body-2);
+  }
+
+  .docket-dot {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: calc(5.4cqw * var(--docket-scale));
+    height: calc(5.4cqw * var(--docket-scale));
+    border-radius: 50%;
+    border: calc(0.5cqw * var(--docket-scale)) solid var(--docket-sheet-line);
+  }
+
+  .docket-step[data-state="done"] .docket-dot {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--card);
+  }
+
+  .docket-step[data-state="current"] {
+    font-weight: 650;
+  }
+
+  .docket-step[data-state="current"] .docket-dot {
+    border-color: var(--primary);
+  }
+
+  .docket-step[data-state="current"] .docket-dot::after {
+    content: "";
+    position: absolute;
+    inset: calc(1.1cqw * var(--docket-scale));
+    border-radius: 50%;
+    background: var(--primary);
+  }
+
+  .docket-step[data-state="pending"] {
+    opacity: 0.55;
+  }
+
+  .docket-foot {
+    margin-top: auto;
+    font-size: calc(2.9cqw * var(--docket-scale));
+    color: var(--body-2);
+  }
+
+  .docket-caption {
+    position: absolute;
+    right: 7cqw;
+    bottom: 6cqw;
+    left: 7cqw;
+    z-index: 1;
+    font-size: calc(3.3cqw * var(--docket-scale));
+    line-height: 1.35;
+    color: var(--body-2);
+  }
+
+  .docket-caption :is(h2, strong) {
+    display: block;
+    font-size: calc(3.6cqw * var(--docket-scale));
+    font-weight: 650;
+    color: var(--foreground);
   }
 
   .dashboard-hero {
-    @apply relative overflow-hidden rounded-2xl border border-primary-hover bg-primary px-5 py-6 text-white shadow-[0_14px_32px_rgba(0,59,134,0.18)] sm:px-7 sm:py-7;
+    @apply relative overflow-hidden rounded-2xl border border-primary-fill-hover bg-hero-fill px-5 py-6 text-white shadow-[0_14px_32px_rgba(0,59,134,0.18)] sm:px-7 sm:py-7 dark:shadow-none;
   }
 
   .dashboard-hero::after {
@@ -829,7 +1218,7 @@
   }
 
   .dashboard-panel {
-    @apply rounded-xl border border-border-strong bg-white shadow-[0_1px_3px_rgba(23,33,43,0.08),0_10px_28px_rgba(23,33,43,0.035)];
+    @apply rounded-xl border border-border-strong bg-card shadow-(--surface-shadow-raised);
   }
 
   /* ─── Citizen portal ───────────────────────────────────────────────────────
@@ -874,6 +1263,20 @@
     --muted-foreground: #5f6b7c;
     --body: #3d4a5c;
     --destructive: #b3261e;
+  }
+
+  /* The scopes above pin their own ink on the wrapper, which beats the value
+     inherited from .dark, so each needs its dark pair spelled out (literals:
+     a var() to the same name would be a cycle). */
+  .dark .citizen-portal,
+  .dark .apply-wizard,
+  .dark .system-health-page {
+    --muted-foreground: #9aa1ad;
+  }
+
+  .dark .apply-wizard {
+    --body: #b9bfca;
+    --destructive: #f28b85;
   }
 
   /* The portal's gradient ground, as a fixed layer so it stays put while the
@@ -1222,6 +1625,10 @@
   opacity: 1;
 }
 
+.dark .apply-wizard ::placeholder {
+  color: #858e9c;
+}
+
 /* The apply wizard pins its selected-service band (about 7rem tall) to the top
    from `md` up. Without this, tabbing to a field or following an in-page
    anchor scrolls it under that band. */
@@ -1319,6 +1726,11 @@ input[aria-hidden="true"][tabindex="-1"] {
     wizard-shimmer 1.4s linear infinite;
 }
 
+.dark .wizard-skeleton {
+  background: linear-gradient(90deg, #22262d 0%, #2c313a 50%, #22262d 100%);
+  background-size: 800px 100%;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wizard-bar::after {
     animation: none;
@@ -1330,6 +1742,9 @@ input[aria-hidden="true"][tabindex="-1"] {
   .wizard-skeleton {
     animation: none;
     background: #e8ecf3;
+  }
+  .dark .wizard-skeleton {
+    background: #22262d;
   }
 }
 

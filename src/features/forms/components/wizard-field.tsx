@@ -23,13 +23,13 @@ const INVALID_CONTROL_CLASS =
  * is there because a select's own height is set under that selector, which a
  * plain `h-14` would lose to.
  */
-export const WIZARD_CONTROL_CLASS = `h-14 rounded-[14px] border-[#d7dee9] bg-white px-4.5 text-[17px] shadow-none placeholder:text-[#8a97a8] data-placeholder:text-[#8a97a8] data-[size=default]:h-14 md:text-[17px] ${INVALID_CONTROL_CLASS}`;
+export const WIZARD_CONTROL_CLASS = `h-14 rounded-[14px] border-border bg-card px-4.5 text-[17px] shadow-none placeholder:text-[#8a97a8] dark:placeholder:text-muted-foreground data-placeholder:text-[#8a97a8] dark:data-placeholder:text-muted-foreground dark:placeholder:text-muted-foreground data-[size=default]:h-14 md:text-[17px] ${INVALID_CONTROL_CLASS}`;
 
-export const WIZARD_TEXTAREA_CLASS = `rounded-[14px] border-[#d7dee9] bg-white px-4.5 py-3.5 text-[17px] shadow-none placeholder:text-[#8a97a8] md:text-[17px] ${INVALID_CONTROL_CLASS}`;
+export const WIZARD_TEXTAREA_CLASS = `rounded-[14px] border-border bg-card px-4.5 py-3.5 text-[17px] shadow-none placeholder:text-[#8a97a8] dark:placeholder:text-muted-foreground md:text-[17px] ${INVALID_CONTROL_CLASS}`;
 
 /** A control made of an addon and an input (the mobile number): same face as the single-line ones. */
 export const WIZARD_GROUP_CLASS =
-  "h-14 rounded-[14px] border-[#d7dee9] bg-white shadow-none *:data-[slot=input-group-control]:text-[17px] md:*:data-[slot=input-group-control]:text-[17px]";
+  "h-14 rounded-[14px] border-border bg-card shadow-none *:data-[slot=input-group-control]:text-[17px] md:*:data-[slot=input-group-control]:text-[17px]";
 
 /** Error line under a field: icon plus message, 15px semibold in the error ink. */
 export function WizardFieldError({

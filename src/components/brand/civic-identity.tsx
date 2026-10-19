@@ -21,7 +21,7 @@ function OfficialMark({
   return (
     <span
       className={cn(
-        "relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-primary/20 bg-white text-[10px] font-extrabold tracking-tight text-primary",
+        "relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-primary/20 bg-card text-[10px] font-extrabold tracking-tight text-primary",
         className,
       )}
       aria-hidden="true"

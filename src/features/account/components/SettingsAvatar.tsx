@@ -18,7 +18,7 @@ import { useAvatar } from "../hooks/useAvatar";
 
 // A 32px badge with a hit area stretched to 44px, the touch minimum.
 const badgeClassName =
-  "civic-press absolute right-[-4px] bottom-[-4px] flex size-8 items-center justify-center rounded-full border border-(--settings-line) bg-white text-primary shadow-[0_2px_6px_rgba(15,27,45,0.16)] outline-none after:absolute after:-inset-1.5 after:content-[''] focus-visible:ring-4 focus-visible:ring-primary/20 disabled:opacity-60";
+  "civic-press absolute right-[-4px] bottom-[-4px] flex size-8 items-center justify-center rounded-full border border-(--settings-line) bg-card text-primary shadow-[0_2px_6px_rgba(15,27,45,0.16)] outline-none after:absolute after:-inset-1.5 after:content-[''] focus-visible:ring-4 focus-visible:ring-primary/20 disabled:opacity-60";
 
 /**
  * The photo at the top of the Profile tab. The camera badge on the avatar adds
@@ -57,7 +57,7 @@ export function SettingsAvatar({ account }: { account: AccountProfile }) {
 
         {pending ? (
           <span
-            className="absolute inset-0 flex items-center justify-center rounded-full bg-white/70"
+            className="absolute inset-0 flex items-center justify-center rounded-full bg-card/70"
             role="status"
             aria-label="Updating photo"
           >
@@ -79,7 +79,7 @@ export function SettingsAvatar({ account }: { account: AccountProfile }) {
               side="bottom"
               align="start"
               sideOffset={8}
-              className="w-52 rounded-[16px] bg-white p-1.5 shadow-portal-menu ring-0"
+              className="w-52 rounded-[16px] bg-card p-1.5 shadow-portal-menu ring-0"
             >
               <DropdownMenuItem
                 onClick={choosePhoto}

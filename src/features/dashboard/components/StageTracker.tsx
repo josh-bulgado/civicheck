@@ -54,14 +54,14 @@ export function StageTracker({
                 className={cn(
                   "flex size-7 shrink-0 items-center justify-center rounded-full border-3 text-white",
                   fluid ? "md:size-[clamp(2rem,4.6vh,3.25rem)]" : "md:size-10",
-                  done && "border-primary bg-primary",
+                  done && "border-primary-fill bg-primary-fill",
                   here &&
-                    "border-primary bg-white shadow-[0_0_0_5px_rgba(11,77,162,0.18)]",
+                    "border-primary bg-card shadow-[0_0_0_5px_rgba(11,77,162,0.18)]",
                   here &&
                     (fluid
                       ? "md:shadow-[0_0_0_clamp(5px,0.8vh,9px)_rgba(11,77,162,0.18)]"
                       : "md:shadow-[0_0_0_7px_rgba(11,77,162,0.18)]"),
-                  !done && !here && "border-[#b9c7de] bg-white",
+                  !done && !here && "border-[#b9c7de] dark:border-border-strong bg-card",
                 )}
               >
                 {done && (
@@ -91,7 +91,7 @@ export function StageTracker({
                     fluid
                       ? "md:mx-[clamp(0.75rem,1.6vh,1.5rem)] md:h-[clamp(3px,0.5vh,6px)]"
                       : "md:mx-3.5 md:h-1",
-                    done ? "bg-primary" : "bg-[#b9c7de]",
+                    done ? "bg-primary" : "bg-[#b9c7de] dark:bg-border-strong",
                   )}
                   aria-hidden="true"
                 />
@@ -146,7 +146,7 @@ export function StageTracker({
                         : "mt-2 h-7 text-[13px]",
                       details.tag.tone === "action"
                         ? "bg-portal-danger-soft text-destructive"
-                        : "bg-white/75 text-primary-hover",
+                        : "bg-card/75 text-primary-hover",
                     )}
                   >
                     {details.tag.label}

@@ -62,7 +62,7 @@ export function BackendActivityIndicator() {
           <div
             role="status"
             aria-live="polite"
-            className="civic-enter-sm flex items-center gap-2.5 rounded-full border border-border bg-white px-4 py-2.5 text-sm font-medium text-foreground shadow-lg"
+            className="civic-enter-sm flex items-center gap-2.5 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground shadow-lg"
           >
             <Spinner className="text-primary" aria-hidden="true" />
             Still working — the server is taking longer than usual.

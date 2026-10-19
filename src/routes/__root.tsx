@@ -11,6 +11,7 @@ import { createServerFn } from "@tanstack/react-start";
 import * as React from "react";
 import { DefaultCatchBoundary } from "../components/DefaultCatchBoundary";
 import { NotFound } from "../components/NotFound";
+import { ThemeScope } from "~/components/theme-scope";
 import { OfflineBanner } from "~/components/errors/OfflineBanner";
 import appCss from "../styles/app.css?url";
 import { seo } from "../utils/seo";
@@ -192,22 +193,14 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  React.useEffect(() => {
-    document.documentElement.classList.remove("dark");
-    document.documentElement.style.colorScheme = "light";
-  }, []);
-
   return (
+    // The `dark` class on <html> is owned by ThemeScope below, for every page.
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{document.documentElement.classList.remove('dark');document.documentElement.style.colorScheme='light'}catch(e){}})()`,
-          }}
-        />
         <HeadContent />
       </head>
       <body suppressHydrationWarning>
+        <ThemeScope />
         <TooltipProvider>{children}</TooltipProvider>
         <OfflineBanner />
         <Scripts />
