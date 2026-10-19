@@ -30,6 +30,12 @@ export function optionUsage(
       if (field.visibleWhen?.field === fieldKey && field.visibleWhen.value === value) {
         usage.push(`Shown when this is chosen — ${field.label}`);
       }
+      if (
+        field.labelByAnswer?.field === fieldKey &&
+        Object.hasOwn(field.labelByAnswer.labels, value)
+      ) {
+        usage.push(`Sets a heading — ${field.label}`);
+      }
     }
   }
 

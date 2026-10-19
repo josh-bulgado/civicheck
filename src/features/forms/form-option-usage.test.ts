@@ -137,6 +137,29 @@ describe("optionUsage", () => {
     );
   });
 
+  it("counts a field labelByAnswer entry keyed by the option value", () => {
+    const def = definition();
+    def.sections[0].fields.push({
+      key: "owner_name",
+      type: "text",
+      label: "Owner name",
+      required: false,
+      labelByAnswer: {
+        field: "nationality",
+        labels: { foreign: "Foreign owner", other: "Owner" },
+      },
+    });
+    expect(optionUsage(def, "nationality", "foreign")).toContain(
+      "Sets a heading — Owner name",
+    );
+    expect(optionUsage(def, "nationality", "filipino")).not.toContain(
+      "Sets a heading — Owner name",
+    );
+    expect(optionUsage(def, "other_field", "foreign")).not.toContain(
+      "Sets a heading — Owner name",
+    );
+  });
+
   it("counts external condition refs with the same field and value", () => {
     const extra: ConditionRef[] = [
       { field: "nationality", value: "filipino", where: "Requirement: Valid ID" },
