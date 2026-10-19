@@ -878,7 +878,7 @@ export function ServiceFormPage({
                   <TabsTrigger
                     key={id}
                     value={id}
-                    className="min-h-14 gap-2 px-3 py-3 after:bottom-0"
+                    className="group/tab min-h-14 gap-2 px-3 py-3 after:bottom-0"
                   >
                     <Icon aria-hidden="true" />
                     <span>{label}</span>
@@ -888,7 +888,10 @@ export function ServiceFormPage({
                         className="text-destructive"
                       />
                     ) : tabCounts[id] ? (
-                      <span className="hidden text-xs font-normal tabular-nums text-muted-foreground sm:inline">
+                      // The active tab always shows its count from `sm` up;
+                      // the others join once the bar is wide enough for all
+                      // six (an approximation, not a measurement).
+                      <span className="hidden text-xs font-normal tabular-nums text-muted-foreground sm:group-data-[active]/tab:inline 2xl:inline">
                         {tabCounts[id]}
                       </span>
                     ) : null}
@@ -903,7 +906,7 @@ export function ServiceFormPage({
             >
               {/* One width for every section, so the card does not resize as
                   you move between steps. */}
-              <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-6">
+              <div className="mx-auto flex w-full min-w-0 max-w-[920px] flex-col gap-6">
                 {submitted && mutation.error ? (
                   <Alert variant="destructive" role="alert">
                     <AlertTitle>Service Not Saved</AlertTitle>
