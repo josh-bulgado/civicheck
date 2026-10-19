@@ -54,7 +54,8 @@ export function NoticeAlert({
   className?: string;
   /** Replaces the tone's usual glyph, e.g. a calendar for a date warning. */
   icon?: ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" | "false" }>;
-  role?: "alert" | "status";
+  /** "group" for a static preview, so editing it does not announce each keystroke. */
+  role?: "alert" | "status" | "group";
 }) {
   const Icon = icon ?? ICONS[variant];
   const tone = TONES[variant];
