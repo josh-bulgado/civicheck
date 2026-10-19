@@ -190,7 +190,7 @@ function RequirementTableRow({
                       variant="ghost"
                       size="icon"
                       className="relative size-9 text-muted-foreground after:absolute after:-inset-1"
-                      aria-label={`Actions for ${title}`}
+                      aria-label={`Actions for ${fullName}`}
                     />
                   }
                 >

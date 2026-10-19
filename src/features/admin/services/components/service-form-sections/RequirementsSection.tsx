@@ -172,10 +172,17 @@ export function RequirementsSection({
     return next;
   }, [entries]);
 
-  // Latch the default tab once the checklist has rows, so a later edit that
-  // changes the counts never moves the tab out from under the user.
+  // Latch the default tab once the checklist AND the form definition (which
+  // supplies the routing that classifies rows) have loaded, so a later edit
+  // that changes the counts never moves the tab out from under the user.
+  // Loading starting again (another service, a reload) clears the latch so
+  // the default is chosen afresh from the new data.
   useEffect(() => {
-    if (tab === null && !isLoading && entries.length > 0) {
+    if (isLoading) {
+      setTab(null);
+      return;
+    }
+    if (tab === null && entries.length > 0) {
       setTab(defaultRequirementTab(counts));
     }
   }, [tab, isLoading, entries.length, counts]);
@@ -500,6 +507,12 @@ export function RequirementsSection({
                 </div>
 
                 <TabsContent value={activeTab} className="flex flex-col gap-3">
+                  {activeTab === "other" ? (
+                    <p className="text-xs text-muted-foreground">
+                      Scoped by a condition that excludes this variant. Edit it
+                      from the variant it applies to.
+                    </p>
+                  ) : null}
                   {visibleEntries.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
                       {normalizedQuery

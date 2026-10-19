@@ -1054,7 +1054,7 @@ export function ServiceFormPage({
                 >
                   <RequirementsSection
                     embedded
-                    isLoading={checklistLoading}
+                    isLoading={checklistLoading || templateLoading}
                     sharedWith={sharedWith}
                     formDefinition={formDefinition}
                     currentServiceCode={service?.service_code ?? null}
