@@ -403,7 +403,7 @@ export function ServiceGroupApplicationPage({
                     <Button
                       type="button"
                       variant="outline"
-                      className="min-h-11"
+                      size="touch"
                       onClick={() => showSection(previousSection.id)}
                     >
                       <ArrowLeft aria-hidden="true" data-icon="inline-start" />
@@ -414,7 +414,7 @@ export function ServiceGroupApplicationPage({
                     <Button
                       type="button"
                       variant="outline"
-                      className="min-h-11"
+                      size="touch"
                       onClick={() => showSection(nextSection.id)}
                     >
                       {nextSection.label}

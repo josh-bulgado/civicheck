@@ -32,8 +32,6 @@ const STEP_ROW =
   "grid grid-cols-[30px_minmax(0,1fr)_auto] gap-x-3.5 gap-y-2 rounded-2xl bg-surface-subtle p-3.5 pl-4 ring-1 ring-border ring-inset";
 const NUMBER_BADGE =
   "flex size-[30px] shrink-0 items-center justify-center rounded-full bg-primary-soft text-[13px] font-bold text-primary";
-const TOUCH_TEXTAREA =
-  "min-h-[84px] rounded-xl bg-card px-3.5 py-3 leading-snug focus-visible:ring-4 focus-visible:ring-ring/25";
 const ADD_ROW =
   "w-full rounded-[14px] border-[1.5px] border-dashed border-foreground/20 bg-transparent text-body shadow-none hover:border-primary hover:bg-primary/5 hover:text-primary";
 
@@ -117,10 +115,8 @@ export function CitizenJourneySection({
                       id={`service-step-${index}`}
                       rows={2}
                       autoComplete="off"
-                      className={cn(
-                        TOUCH_TEXTAREA,
-                        "col-span-3 row-start-2 sm:col-span-1 sm:col-start-2",
-                      )}
+                      fieldSize="touch"
+                      className="col-span-3 row-start-2 bg-card sm:col-span-1 sm:col-start-2"
                       placeholder={`${
                         STEP_PLACEHOLDERS[index] ??
                         "Describe this step for the applicant"

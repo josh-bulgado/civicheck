@@ -11,6 +11,7 @@ import {
   FieldLegend,
   FieldSet,
 } from "~/components/ui/field";
+import { IconTile } from "~/components/ui/icon-tile";
 import { Input } from "~/components/ui/input";
 import {
   Select,
@@ -231,9 +232,7 @@ export function EventTimingSection({
 
       {!timing ? (
         <div className="flex flex-col items-center gap-3 px-4 pt-8 pb-10 text-center">
-          <span className="flex size-[52px] items-center justify-center rounded-2xl bg-primary-soft text-primary">
-            <GitBranch aria-hidden="true" className="size-[22px]" />
-          </span>
+          <IconTile icon={GitBranch} size="lg" />
           <h3 className="text-lg font-bold tracking-tight">No Window Rule Yet</h3>
           <p className="mb-2 max-w-[48ch] text-body">
             {caseDateFields.length === 0
@@ -595,7 +594,7 @@ export function EventTimingSection({
                     name="timing_description"
                     rows={3}
                     maxLength={500}
-                    className="min-h-[84px] rounded-xl px-3.5 py-3 leading-snug focus-visible:ring-4 focus-visible:ring-ring/25"
+                    fieldSize="touch"
                     value={timing.description}
                     onChange={(event) =>
                       updateTiming({ description: event.target.value })

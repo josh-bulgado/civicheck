@@ -1,10 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import {
-  ArrowLeft,
-  Save,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowLeft, Save, type LucideIcon } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Button, buttonVariants } from "~/components/ui/button";
 import {
@@ -14,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
+import { IconTile } from "~/components/ui/icon-tile";
 import { Spinner } from "~/components/ui/spinner";
 import { TabsContent } from "~/components/ui/tabs";
 import { formatServiceCode } from "~/features/services/service-utils";
@@ -122,7 +119,7 @@ interface ServiceEditorSectionProps {
   id: string;
   icon: LucideIcon;
   title: string;
-    description?: string;
+  description?: string;
   summary?: string;
   hasError?: boolean;
   /** Sits at the right of the card header, for an action on the whole section. */
@@ -154,12 +151,7 @@ export function ServiceEditorSection({
           className={cn("py-6 sm:px-8", headerDivider ? "border-b" : "pb-5")}
         >
           <div className="flex flex-wrap items-start gap-3">
-            <span
-              aria-hidden="true"
-              className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary"
-            >
-              <Icon className="size-[22px]" />
-            </span>
+            <IconTile icon={Icon} />
             <div className="flex min-w-0 flex-1 flex-col gap-1.5">
               <div className="flex flex-wrap items-center gap-2">
                 <CardTitle className="text-xl font-semibold tracking-tight">
@@ -257,12 +249,7 @@ export function ServiceFormActionBar({
           Cancel
         </Link>
       )}
-      <Button
-        type="submit"
-        variant="raised"
-        size="touch"
-        disabled={isDisabled}
-      >
+      <Button type="submit" variant="raised" size="touch" disabled={isDisabled}>
         {isSaving ? (
           <Spinner data-icon="inline-start" />
         ) : (
