@@ -170,11 +170,6 @@ const FIELD_ERROR_DESTINATIONS: Partial<
   },
 };
 
-const pesoFormatter = new Intl.NumberFormat("en-PH", {
-  style: "currency",
-  currency: "PHP",
-});
-
 function firstErrorMessage(value: unknown): string | null {
   if (!value || typeof value !== "object") return null;
   if (
@@ -297,23 +292,9 @@ export function ServiceFormPage({
     window.addEventListener("resize", keepActiveTabVisible);
     return () => window.removeEventListener("resize", keepActiveTabVisible);
   }, [activeSection]);
-  const [
-    fee,
-    steps,
-    partyRoles,
-    requirements,
-    displayGroup,
-    requirementGroup,
-  ] = useWatch({
+  const [requirements, displayGroup, requirementGroup] = useWatch({
     control: form.control,
-    name: [
-      "fee",
-      "steps",
-      "party_roles",
-      "requirements",
-      "display_group",
-      "requirement_group",
-    ],
+    name: ["requirements", "display_group", "requirement_group"],
   });
 
   // Requirement rules point at dropdown options by value; the form editor uses
@@ -367,7 +348,9 @@ export function ServiceFormPage({
       })
       .catch(() => {
         if (!cancelled) {
-          toast.error("Couldn't load this service's checklist. Reload the page to try again.");
+          toast.error(
+            "Couldn't load this service's checklist. Reload the page to try again.",
+          );
         }
       })
       .finally(() => {
@@ -405,7 +388,9 @@ export function ServiceFormPage({
         if (cancelled) return;
         setFormDefinition(buildLegacyFormDefinition(service));
         setPublishedFieldKeys([]);
-        toast.error("Couldn't load this service's application form. Reload the page to try again.");
+        toast.error(
+          "Couldn't load this service's application form. Reload the page to try again.",
+        );
       })
       .finally(() => {
         if (!cancelled) setTemplateLoading(false);
@@ -643,9 +628,7 @@ export function ServiceFormPage({
       );
       if (!targetExists) {
         revealSection("case-questions");
-        toast.error(
-          "Choose an Alternate Service Track for the window rule.",
-        );
+        toast.error("Choose an Alternate Service Track for the window rule.");
         return;
       }
     }
@@ -791,7 +774,6 @@ export function ServiceFormPage({
     });
   }, [form.formState.errors, submitted]);
   const invalidSections = new Set(errorSummary.map(({ section }) => section));
-  const journeySummary = `${steps?.filter((step) => step.value.trim()).length ?? 0} steps · ${partyRoles?.filter((role) => role.value.trim()).length ?? 0} roles`;
   const caseRuleCount =
     Number(Boolean(formDefinition.caseSelector)) +
     Number(Boolean(formDefinition.eventTiming));
@@ -813,20 +795,6 @@ export function ServiceFormPage({
     relationshipCount > 0
       ? `${relationshipCount} ${relationshipCount === 1 ? "link" : "links"}`
       : "Standalone service";
-
-  // Short per-tab counts. Optional sections stay blank until they hold
-  // something, so an empty tab is not made to look like missing work.
-  const tabCounts: Record<EditorSectionId, string | null> = {
-    "registry-details": pesoFormatter.format(Number(fee) || 0),
-    "citizen-journey": journeySummary,
-    "case-questions":
-      caseRuleCount > 0
-        ? `${caseRuleCount} ${caseRuleCount === 1 ? "rule" : "rules"}`
-        : null,
-    "application-form": applicationSummary,
-    requirements: String(requirementCount),
-    relationships: relationshipCount > 0 ? relationshipsSummary : null,
-  };
 
   return (
     <div
@@ -867,11 +835,12 @@ export function ServiceFormPage({
             <div className="shrink-0 border-b border-border bg-background px-4 pb-3 sm:px-8">
               <TabsList
                 ref={tabListRef}
-                variant="segmented"
+                variant="editor"
+                className="w-full"
                 aria-label="Service configuration"
               >
                 {availableTabs.map(({ id, label, icon: Icon }) => (
-                  <TabsTrigger key={id} value={id} className="group/tab gap-2">
+                  <TabsTrigger key={id} value={id} className="gap-2">
                     <Icon aria-hidden="true" />
                     <span>{label}</span>
                     {invalidSections.has(id) ? (
@@ -879,13 +848,6 @@ export function ServiceFormPage({
                         aria-label="Needs attention"
                         className="text-destructive"
                       />
-                    ) : tabCounts[id] ? (
-                      // The active tab always shows its count from `sm` up;
-                      // the others join once the bar is wide enough for all
-                      // six (an approximation, not a measurement).
-                      <span className="hidden text-xs font-normal tabular-nums text-muted-foreground sm:group-data-[active]/tab:inline 2xl:inline">
-                        {tabCounts[id]}
-                      </span>
                     ) : null}
                   </TabsTrigger>
                 ))}
@@ -898,7 +860,7 @@ export function ServiceFormPage({
             >
               {/* One width for every section, so the card does not resize as
                   you move between steps. */}
-              <div className="mx-auto flex w-full min-w-0 max-w-[920px] flex-col gap-6">
+              <div className="mx-auto flex w-full min-w-0 max-w-240 flex-col gap-6">
                 {submitted && mutation.error ? (
                   <Alert variant="destructive" role="alert">
                     <AlertTitle>Service Not Saved</AlertTitle>
@@ -1083,6 +1045,7 @@ export function ServiceFormPage({
                   id="relationships"
                   icon={Link2}
                   title="Relationships"
+                  description="Only for services shown to applicants as one card with several variants. Leave blank for a standalone service."
                   summary={relationshipsSummary}
                   hasError={invalidSections.has("relationships")}
                 >
