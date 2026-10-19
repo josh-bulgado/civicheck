@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import {
   ServiceEntryDialogs,
   useServiceEntry,
@@ -12,12 +13,15 @@ import { cn } from "~/lib/utils";
 
 // The same wash the dashboard's certificate tiles use, so a document reads as
 // the same colour wherever it turns up. Corrections and endorsements share one.
-const CATEGORY_TINT: Record<ServiceCategory, { from: string; to: string }> = {
-  birth: { from: "#dbe7fa", to: "#bfd3f2" },
-  marriage: { from: "#e9e6fa", to: "#d4cff2" },
-  death: { from: "#e6ebf4", to: "#cfd8e8" },
-  copies: { from: "#dcf0e5", to: "#bfe3cf" },
-  corrections: { from: "#dcf0e5", to: "#bfe3cf" },
+const CATEGORY_TINT: Record<
+  ServiceCategory,
+  { from: string; to: string; fromDark: string; toDark: string }
+> = {
+  birth: { from: "#dbe7fa", to: "#bfd3f2", fromDark: "#1c2b45", toDark: "#172338" },
+  marriage: { from: "#e9e6fa", to: "#d4cff2", fromDark: "#261f3d", toDark: "#1f1a33" },
+  death: { from: "#e6ebf4", to: "#cfd8e8", fromDark: "#23272e", toDark: "#1c2026" },
+  copies: { from: "#dcf0e5", to: "#bfe3cf", fromDark: "#14291f", toDark: "#10221a" },
+  corrections: { from: "#dcf0e5", to: "#bfe3cf", fromDark: "#14291f", toDark: "#10221a" },
 };
 
 /**
@@ -41,12 +45,17 @@ export function PortalServiceCard(
           count as a click on the card behind it. */}
       <article
         onClick={entry.openRequirements}
-        style={{
-          ...service.style,
-          backgroundImage: `linear-gradient(155deg, ${tint.from} 0%, ${tint.to} 100%)`,
-        }}
+        style={
+          {
+            ...service.style,
+            "--tile-from": tint.from,
+            "--tile-to": tint.to,
+            "--tile-from-dark": tint.fromDark,
+            "--tile-to-dark": tint.toDark,
+          } as CSSProperties
+        }
         className={cn(
-          "group/card relative flex min-h-65.5 cursor-pointer flex-col rounded-[28px] p-5.5 pb-5 text-foreground shadow-[0_1px_2px_rgba(15,27,45,0.05)] max-md:min-h-0 max-md:rounded-[26px] max-md:p-5 max-md:pb-4.5",
+          "tile-wash group/card relative flex min-h-65.5 cursor-pointer flex-col rounded-[28px] p-5.5 pb-5 text-foreground shadow-[0_1px_2px_rgba(15,27,45,0.05)] max-md:min-h-0 max-md:rounded-[26px] max-md:p-5 max-md:pb-4.5",
           "transition-[transform,box-shadow] duration-180 ease-(--ease-civic)",
           "hover:-translate-y-1.25 hover:shadow-[0_20px_44px_rgba(11,77,162,0.2)]",
           // The two buttons are what take keyboard focus; the card wears the ring.
@@ -55,7 +64,7 @@ export function PortalServiceCard(
         )}
       >
         {category && (
-          <span className="inline-flex h-7.5 w-fit items-center rounded-full bg-white/70 px-3 text-[13px] font-bold text-portal-ink-2 max-md:h-7">
+          <span className="inline-flex h-7.5 w-fit items-center rounded-full bg-card/70 px-3 text-[13px] font-bold text-portal-ink-2 max-md:h-7">
             {SERVICE_CATEGORY_LABELS[category]}
           </span>
         )}
@@ -92,7 +101,7 @@ export function PortalServiceCard(
                 anywhere on the card and Enter on this button do the same thing. */}
             <button
               type="button"
-              className="civic-press h-12.5 min-w-0 flex-1 rounded-full bg-white px-3 text-base font-semibold text-primary max-md:h-12 max-md:text-[15px] shadow-[0_4px_12px_rgba(15,27,45,0.1)] transition-colors duration-150 outline-none hover:bg-primary hover:text-white"
+              className="civic-press h-12.5 min-w-0 flex-1 rounded-full bg-card px-3 text-base font-semibold text-primary max-md:h-12 max-md:text-[15px] shadow-[0_4px_12px_rgba(15,27,45,0.1)] transition-colors duration-150 outline-none hover:bg-primary-fill hover:text-white"
             >
               Check requirements
             </button>

@@ -208,14 +208,14 @@ const HeroSection = ({ checklists }: { checklists: FeaturedChecklist[] }) => {
           <div className="flex flex-wrap gap-3.5 pt-1">
             <Link
               to="/requirements"
-              className="group civic-press inline-flex min-h-12 items-center gap-2 rounded-lg bg-primary px-6 text-[15px] font-semibold text-white shadow-[0_8px_20px_rgba(11,77,162,0.22)] hover:bg-primary-hover hover:shadow-[0_10px_26px_rgba(11,77,162,0.3)]"
+              className="group civic-press inline-flex min-h-12 items-center gap-2 rounded-lg bg-primary-fill px-6 text-[15px] font-semibold text-white shadow-[0_8px_20px_rgba(11,77,162,0.22)] hover:bg-primary-hover hover:shadow-[0_10px_26px_rgba(11,77,162,0.3)]"
             >
               Check my requirements
               <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" />
             </Link>
             <Link
               to="/track"
-              className="civic-press inline-flex min-h-12 items-center rounded-lg border border-control-border bg-white px-6 text-[15px] font-semibold text-foreground hover:border-primary/40 hover:text-primary"
+              className="civic-press inline-flex min-h-12 items-center rounded-lg border border-control-border bg-card px-6 text-[15px] font-semibold text-foreground hover:border-primary/40 hover:text-primary"
             >
               Track an existing request
             </Link>

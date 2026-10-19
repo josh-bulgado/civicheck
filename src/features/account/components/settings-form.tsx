@@ -25,15 +25,15 @@ export const SETTINGS_LABEL_CLASS =
 
 /** Single-line controls: a 1px line dark enough to find the field by. */
 export const SETTINGS_CONTROL_CLASS =
-  "h-12 rounded-xl border-(--settings-line) bg-white px-3.5 text-base shadow-none placeholder:text-(--settings-placeholder) md:h-11 md:text-[15px]";
+  "h-12 rounded-xl border-(--settings-line) bg-card px-3.5 text-base shadow-none placeholder:text-(--settings-placeholder) md:h-11 md:text-[15px]";
 
 /** A control made of an input and a trailing button (the password fields). */
 export const SETTINGS_GROUP_CLASS =
-  "h-12 rounded-xl border-(--settings-line) bg-white shadow-none md:h-11 *:data-[slot=input-group-control]:h-full *:data-[slot=input-group-control]:px-3.5 *:data-[slot=input-group-control]:text-base md:*:data-[slot=input-group-control]:text-[15px]";
+  "h-12 rounded-xl border-(--settings-line) bg-card shadow-none md:h-11 *:data-[slot=input-group-control]:h-full *:data-[slot=input-group-control]:px-3.5 *:data-[slot=input-group-control]:text-base md:*:data-[slot=input-group-control]:text-[15px]";
 
 /** The date picker's trigger, to match the other controls. */
 export const SETTINGS_PICKER_CLASS =
-  "h-12 rounded-xl border-(--settings-line) bg-white px-3.5 text-base shadow-none hover:bg-white md:h-11 md:text-[15px]";
+  "h-12 rounded-xl border-(--settings-line) bg-card px-3.5 text-base shadow-none hover:bg-card md:h-11 md:text-[15px]";
 
 /**
  * One labelled setting: the label on top, then the control, then an optional
@@ -136,7 +136,7 @@ export function SettingsFormFooter({
           pillButton.primary,
           "h-12 flex-2 px-6 text-base disabled:opacity-100 md:h-11 md:flex-none md:text-[15px]",
           pending
-            ? "disabled:bg-primary disabled:text-primary-foreground"
+            ? "disabled:bg-primary-fill disabled:text-primary-foreground"
             : "disabled:bg-(--settings-disabled-bg) disabled:text-(--settings-disabled-ink)",
         )}
       >

@@ -19,6 +19,7 @@ import {
   type AccountProfile,
   type SettingsTab,
 } from "~/features/account/account.types";
+import { ThemeSwitch } from "~/components/theme-switch";
 import { NotificationsPopover } from "~/features/notifications/components/NotificationsPopover";
 import { loadPaletteDefaults } from "~/features/search/palette-defaults";
 
@@ -53,7 +54,7 @@ export function CitizenMobileHeader({
       >
         {/* Text stand-in: the official emblem isn't cleared for use yet. */}
         <span
-          className="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-brand-gold bg-white text-[9px] font-extrabold tracking-[0.02em] text-primary"
+          className="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-brand-gold bg-card text-[9px] font-extrabold tracking-[0.02em] text-primary"
           aria-hidden="true"
         >
           CCRO
@@ -69,13 +70,15 @@ export function CitizenMobileHeader({
           onPointerEnter={() => {
             if (userId) void loadPaletteDefaults(userId).catch(() => undefined);
           }}
-          className="civic-press flex size-11 shrink-0 items-center justify-center rounded-full border border-border-light bg-white text-portal-ink-2"
+          className="civic-press flex size-11 shrink-0 items-center justify-center rounded-full border border-border-light bg-card text-portal-ink-2"
         >
           <Search className="size-5" aria-hidden="true" />
         </button>
       ) : null}
 
       <NotificationsPopover userId={userId} unreadCount={unreadNotifications} />
+
+      <ThemeSwitch />
 
       <DropdownMenu>
         <DropdownMenuTrigger
@@ -97,7 +100,7 @@ export function CitizenMobileHeader({
           side="bottom"
           align="end"
           sideOffset={8}
-          className="w-56 rounded-[20px] bg-white p-2 shadow-portal-menu ring-0"
+          className="w-56 rounded-[20px] bg-popover p-2 shadow-portal-menu ring-0"
         >
           <DropdownMenuItem
             onClick={() => setSettingsTab("profile")}

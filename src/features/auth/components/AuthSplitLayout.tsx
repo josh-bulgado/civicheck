@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { CiviCheckIdentity } from "~/components/brand/civic-identity";
 import { enterDelay } from "~/components/motion/stagger";
+import { ThemeSwitch } from "~/components/theme-switch";
 import { buttonVariants } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 
@@ -26,11 +27,14 @@ export function AuthSplitLayout({
   className?: string;
 }) {
   return (
-    <div className="flex min-h-dvh bg-card">
+    <div className="auth-scope flex min-h-dvh bg-(--auth-bg)">
       <div className="flex flex-1 flex-col px-5 py-8 sm:px-10">
-        <Link to="/" className="civic-enter-fade w-fit">
-          <CiviCheckIdentity compact />
-        </Link>
+        <div className="civic-enter-fade flex items-center justify-between">
+          <Link to="/" className="w-fit">
+            <CiviCheckIdentity compact />
+          </Link>
+          <ThemeSwitch />
+        </div>
 
         <div
           className={cn(
@@ -69,10 +73,13 @@ export function AuthCenteredLayout({
   className?: string;
 }) {
   return (
-    <div className="flex min-h-dvh flex-col bg-card px-5 py-8 sm:px-10">
-      <Link to="/" className="civic-enter-fade w-fit">
-        <CiviCheckIdentity compact />
-      </Link>
+    <div className="auth-scope flex min-h-dvh flex-col bg-(--auth-bg) px-5 py-8 sm:px-10">
+      <div className="civic-enter-fade flex items-center justify-between">
+        <Link to="/" className="w-fit">
+          <CiviCheckIdentity compact />
+        </Link>
+        <ThemeSwitch />
+      </div>
 
       <div
         className={cn(

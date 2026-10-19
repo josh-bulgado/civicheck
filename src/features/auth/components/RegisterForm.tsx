@@ -156,6 +156,7 @@ const RegisterForm = () => {
                   placeholder="Juan"
                   aria-invalid={fieldState.invalid}
                   autoComplete="given-name"
+                  fieldSize="touch"
                 />
                 {fieldState.invalid && (
                   <FieldError errors={[fieldState.error]} />

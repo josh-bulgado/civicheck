@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { QuietLink } from "~/components/quiet-link";
 import { staggerStyle } from "~/components/motion/stagger";
 import { cn } from "~/lib/utils";
@@ -13,28 +13,40 @@ const TILES = [
     photo: "/services/cert-birth.webp",
     from: "#dbe7fa",
     to: "#bfd3f2",
-    scrim: "191,211,242",
+    scrim: "191 211 242",
+    fromDark: "#1c2b45",
+    toDark: "#172338",
+    scrimDark: "23 35 56",
   },
   {
     label: "Marriage Certificate",
     photo: "/services/cert-marriage.webp",
     from: "#e9e6fa",
     to: "#d4cff2",
-    scrim: "212,207,242",
+    scrim: "212 207 242",
+    fromDark: "#261f3d",
+    toDark: "#1f1a33",
+    scrimDark: "31 26 51",
   },
   {
     label: "Death Certificate",
     photo: "/services/cert-death.webp",
     from: "#e6ebf4",
     to: "#cfd8e8",
-    scrim: "207,216,232",
+    scrim: "207 216 232",
+    fromDark: "#23272e",
+    toDark: "#1c2026",
+    scrimDark: "28 32 38",
   },
   {
     label: "Marriage License",
     photo: "/services/cert-license.webp",
     from: "#dcf0e5",
     to: "#bfe3cf",
-    scrim: "191,227,207",
+    scrim: "191 227 207",
+    fromDark: "#14291f",
+    toDark: "#10221a",
+    scrimDark: "16 34 26",
   },
 ] as const;
 
@@ -94,12 +106,19 @@ export function CertificateTiles({
         <QuietLink
           key={tile.label}
           to="/services"
-          style={{
-            ...staggerStyle(index),
-            backgroundImage: `linear-gradient(155deg, ${tile.from} 0%, ${tile.to} 100%)`,
-          }}
+          style={
+            {
+              ...staggerStyle(index),
+              "--tile-from": tile.from,
+              "--tile-to": tile.to,
+              "--tile-from-dark": tile.fromDark,
+              "--tile-to-dark": tile.toDark,
+              "--tile-scrim": tile.scrim,
+              "--tile-scrim-dark": tile.scrimDark,
+            } as CSSProperties
+          }
           className={cn(
-            "group/tile relative flex flex-col justify-end overflow-hidden text-foreground max-md:h-47.5 max-md:w-39.5 max-md:shrink-0 max-md:snap-start max-md:rounded-4xl shadow-[0_1px_2px_rgba(15,27,45,0.05)] transition-[transform,box-shadow] duration-200 ease-(--ease-civic) motion-reduce:transition-none motion-reduce:hover:translate-y-0",
+            "tile-wash group/tile relative flex flex-col justify-end overflow-hidden text-foreground max-md:h-47.5 max-md:w-39.5 max-md:shrink-0 max-md:snap-start max-md:rounded-4xl shadow-[0_1px_2px_rgba(15,27,45,0.05)] transition-[transform,box-shadow] duration-200 ease-(--ease-civic) motion-reduce:transition-none motion-reduce:hover:translate-y-0",
             strip
               ? "rounded-4xl hover:-translate-y-0.75 hover:shadow-[0_12px_28px_rgba(11,77,162,0.18)]"
               : "rounded-[28px] hover:-translate-y-1.25 hover:shadow-[0_20px_44px_rgba(11,77,162,0.2)]",
@@ -110,10 +129,7 @@ export function CertificateTiles({
               readable and the label always has something to sit on. */}
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0"
-            style={{
-              backgroundImage: `linear-gradient(0deg, rgba(${tile.scrim},0.96) 0%, rgba(${tile.scrim},0.7) 24%, rgba(${tile.scrim},0) 56%)`,
-            }}
+            className="tile-scrim pointer-events-none absolute inset-0"
           />
           <span
             className={cn(

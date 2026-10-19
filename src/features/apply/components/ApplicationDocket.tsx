@@ -24,7 +24,7 @@ import { cn } from "~/lib/utils";
 // Services; the one question is what happens to the draft.
 
 const DIALOG_PANEL =
-  "w-[min(33.75rem,calc(100%-2rem))] max-w-none gap-0 overflow-hidden rounded-[28px] bg-white p-8 pb-7 shadow-portal-dialog ring-0 sm:max-w-none max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:w-full max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none max-sm:px-6";
+  "w-[min(33.75rem,calc(100%-2rem))] max-w-none gap-0 overflow-hidden rounded-[28px] bg-card p-8 pb-7 shadow-portal-dialog ring-0 sm:max-w-none max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:w-full max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none max-sm:px-6";
 
 const PILL_BASE =
   "civic-press inline-flex h-13.5 min-w-0 flex-1 items-center justify-center rounded-full px-4 text-base font-semibold whitespace-nowrap";
@@ -114,7 +114,7 @@ function ChangeServiceDialog({
                 onClick={() => setConfirmingDiscard(false)}
                 className={cn(
                   PILL_BASE,
-                  "border border-[#d7dee9] bg-white text-foreground hover:bg-primary-tint focus-visible:ring-4 focus-visible:ring-primary/20",
+                  "border border-border bg-card text-foreground hover:bg-primary-tint focus-visible:ring-4 focus-visible:ring-primary/20",
                 )}
               >
                 Go back
@@ -125,7 +125,7 @@ function ChangeServiceDialog({
                   onDiscard();
                   leave();
                 }}
-                className={cn(PILL_BASE, "bg-destructive text-white hover:bg-destructive/90")}
+                className={cn(PILL_BASE, "bg-destructive text-white dark:text-background hover:bg-destructive/90")}
               >
                 Discard draft
               </button>
@@ -137,7 +137,7 @@ function ChangeServiceDialog({
                 onClick={() => setConfirmingDiscard(true)}
                 className={cn(
                   PILL_BASE,
-                  "border border-[#d7dee9] bg-white text-destructive hover:bg-portal-danger-soft",
+                  "border border-border bg-card text-destructive hover:bg-portal-danger-soft",
                 )}
               >
                 Discard draft
@@ -148,7 +148,7 @@ function ChangeServiceDialog({
                 onClick={leave}
                 className={cn(
                   PILL_BASE,
-                  "bg-primary text-white shadow-[0_8px_20px_rgba(11,77,162,0.28)] hover:bg-primary-hover",
+                  "bg-primary-fill text-white shadow-[0_8px_20px_rgba(11,77,162,0.28)] hover:bg-primary-fill-hover",
                 )}
               >
                 Keep draft
@@ -277,7 +277,7 @@ export function ApplicationDocket({
         </div>
 
         {feeLabel !== null ? (
-          <dl className="shrink-0 border-l border-[#e4e9f1] pl-4 leading-tight md:pl-6">
+          <dl className="shrink-0 border-l border-border-light pl-4 leading-tight md:pl-6">
             <dt className="text-[11px] font-bold tracking-[0.16em] text-muted-foreground uppercase">
               Fee at cashier
             </dt>
@@ -285,7 +285,7 @@ export function ApplicationDocket({
               {hasBreakdown ? (
                 <Popover>
                   <PopoverTrigger
-                    className="civic-press -mx-1 rounded-md px-1 underline decoration-[#b9c7de] decoration-dashed underline-offset-4 outline-none hover:decoration-primary focus-visible:ring-2 focus-visible:ring-primary"
+                    className="civic-press -mx-1 rounded-md px-1 underline decoration-[#b9c7de] dark:decoration-border-strong decoration-dashed underline-offset-4 outline-none hover:decoration-primary focus-visible:ring-2 focus-visible:ring-primary"
                     aria-label={`${feeLabel}, see what the fee covers`}
                   >
                     {feeLabel}
@@ -293,7 +293,7 @@ export function ApplicationDocket({
                   <PopoverContent
                     align="end"
                     sideOffset={10}
-                    className="apply-wizard flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-3.5 rounded-[20px] border-0 bg-white p-5 shadow-portal-popover ring-0"
+                    className="apply-wizard flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-3.5 rounded-[20px] border-0 bg-card p-5 shadow-portal-popover ring-0"
                   >
                     <FeeLines title="What the fee covers" lines={included} />
                     {alsoPayable.length > 0 ? (
@@ -320,7 +320,7 @@ export function ApplicationDocket({
         <button
           type="button"
           onClick={() => setChanging(true)}
-          className="civic-press hidden h-10 shrink-0 items-center rounded-full border border-[#d7dee9] bg-white px-4.5 text-[15px] font-semibold whitespace-nowrap text-body-2 transition-colors duration-150 hover:border-primary hover:text-primary md:inline-flex"
+          className="civic-press hidden h-10 shrink-0 items-center rounded-full border border-border bg-card px-4.5 text-[15px] font-semibold whitespace-nowrap text-body-2 transition-colors duration-150 hover:border-primary hover:text-primary md:inline-flex"
         >
           Change service
         </button>
@@ -339,7 +339,7 @@ export function ApplicationDocket({
         <DialogContent
           showCloseButton={false}
           overlayClassName="bg-[rgba(15,27,45,0.28)] backdrop-blur-sm"
-          className="apply-wizard top-auto bottom-0 left-0 w-full max-w-none translate-x-0 translate-y-0 gap-0 rounded-[28px] rounded-b-none bg-white p-4 pb-6 shadow-portal-dialog ring-0 sm:max-w-none"
+          className="apply-wizard top-auto bottom-0 left-0 w-full max-w-none translate-x-0 translate-y-0 gap-0 rounded-[28px] rounded-b-none bg-card p-4 pb-6 shadow-portal-dialog ring-0 sm:max-w-none"
         >
           <DialogTitle className="sr-only">Application options</DialogTitle>
           <DialogDescription className="sr-only">
@@ -351,7 +351,7 @@ export function ApplicationDocket({
               setMenuOpen(false);
               setChanging(true);
             }}
-            className="civic-press h-13.5 w-full rounded-full border border-[#d7dee9] bg-white text-base font-semibold text-foreground hover:bg-primary-tint"
+            className="civic-press h-13.5 w-full rounded-full border border-border bg-card text-base font-semibold text-foreground hover:bg-primary-tint"
           >
             Change service
           </button>

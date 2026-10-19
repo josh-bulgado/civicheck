@@ -14,23 +14,23 @@ const ICONS = {
 // timing warnings, red only for what must be fixed, green for done.
 const TONES = {
   default: {
-    box: "border-[#d5e1f5] bg-[#eef3fc]",
+    box: "border-[#d5e1f5] bg-[#eef3fc] dark:border-health-info-border dark:bg-health-info-bg",
     title: "text-primary-hover",
     text: "text-body-2",
   },
   warning: {
-    box: "border-[#f3d98a] bg-[#fdf1cf]",
-    title: "text-[#7a4b00]",
-    text: "text-[#5c3a00]",
+    box: "border-[#f3d98a] bg-[#fdf1cf] dark:border-health-warning-border dark:bg-health-warning-bg",
+    title: "text-tone-warning",
+    text: "text-[#5c3a00] dark:text-health-warning-fg",
   },
   destructive: {
-    box: "border-[#f5c6c1] bg-portal-danger-soft",
+    box: "border-[#f5c6c1] bg-portal-danger-soft dark:border-health-error-border",
     title: "text-destructive",
-    text: "text-[#6b1a14]",
+    text: "text-[#6b1a14] dark:text-health-error-fg",
   },
   success: {
-    box: "border-[#bfe3cf] bg-[#e7f6ee]",
-    title: "text-[#1a6a3c]",
+    box: "border-[#bfe3cf] dark:border-health-success-border bg-[#e7f6ee] dark:border-health-success-border dark:bg-health-success-bg",
+    title: "text-tone-success",
     text: "text-body-strong",
   },
 } as const;

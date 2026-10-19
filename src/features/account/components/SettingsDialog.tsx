@@ -103,7 +103,7 @@ export function SettingsDialog({
       <DialogContent
         showCloseButton={false}
         overlayClassName="bg-[rgba(15,27,45,0.28)] backdrop-blur-sm"
-        className="[--settings-disabled-bg:#e4e9f1] [--settings-disabled-ink:#566377] [--settings-line:#8d98a9] [--settings-placeholder:#667085] flex h-[min(47.5rem,calc(100dvh-1.5rem))] w-[calc(100%-1.5rem)] max-w-none flex-col gap-0 overflow-hidden rounded-panel bg-white p-0 shadow-portal-dialog ring-0 sm:max-w-none md:h-[min(43.75rem,calc(100dvh-2rem))] md:w-[min(55rem,calc(100%-2rem))] md:rounded-3xl"
+        className="[--settings-disabled-bg:#e4e9f1] [--settings-disabled-ink:#566377] [--settings-line:#8d98a9] [--settings-placeholder:#667085] dark:[--settings-disabled-bg:#22262d] dark:[--settings-disabled-ink:#9aa1ad] dark:[--settings-line:#4b525e] dark:[--settings-placeholder:#858e9c] flex h-[min(47.5rem,calc(100dvh-1.5rem))] w-[calc(100%-1.5rem)] max-w-none flex-col gap-0 overflow-hidden rounded-panel bg-card p-0 shadow-portal-dialog ring-0 sm:max-w-none md:h-[min(43.75rem,calc(100dvh-2rem))] md:w-[min(55rem,calc(100%-2rem))] md:rounded-3xl"
       >
         <DialogDescription className="sr-only">
           Manage your profile photo and personal details, and change your password.

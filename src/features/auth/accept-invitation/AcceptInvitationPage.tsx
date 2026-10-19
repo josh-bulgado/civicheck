@@ -1,24 +1,19 @@
+import { ThemeSwitch } from "~/components/theme-switch";
 import { Link } from "@tanstack/react-router";
 import { ShieldCheck } from "lucide-react";
 import { CiviCheckIdentity } from "~/components/brand/civic-identity";
-import { AuthBrandPanel } from "../components/AuthBrandPanel";
+import { AuthBadgePanel } from "../components/AuthSidePanel";
+import { enterDelay } from "~/components/motion/stagger";
 import { AcceptInvitationForm } from "./components/AcceptInvitationForm";
 
 export function AcceptInvitationPage() {
   return (
-    <div className="auth-page flex min-h-dvh bg-background">
-      <AuthBrandPanel
-        title="Secure access for public service."
-        description="Complete your account setup to access the CiviCheck staff workspace and serve civil registry requests securely."
-        benefits={[
-          "Your invitation has been verified",
-          "Create a password for protected access",
-          "Continue to your assigned workspace",
-        ]}
-      />
-
-      <main className="flex min-h-dvh flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-border bg-white px-5 py-4 sm:px-8 lg:hidden">
+    <div className="auth-page auth-scope flex min-h-dvh bg-(--auth-bg)">
+      <main className="relative flex min-h-dvh flex-1 flex-col">
+        <div className="absolute top-3 right-5 z-10 sm:right-8 lg:top-6">
+          <ThemeSwitch />
+        </div>
+        <header className="flex items-center justify-between border-b border-border bg-card px-5 py-4 sm:px-8 lg:hidden">
           <Link to="/"><CiviCheckIdentity /></Link>
         </header>
 
@@ -42,7 +37,7 @@ export function AcceptInvitationPage() {
               <AcceptInvitationForm />
             </div>
 
-            <div className="mt-5 flex items-start gap-3 rounded-lg border border-border bg-white px-4 py-3.5">
+            <div className="mt-5 flex items-start gap-3 rounded-lg border border-border bg-card px-4 py-3.5">
               <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
               <p className="text-xs leading-5 text-muted-foreground">
                 Your password is transmitted securely and is never visible to
@@ -56,6 +51,13 @@ export function AcceptInvitationPage() {
           Authorized access only · CiviCheck Staff Services
         </footer>
       </main>
+
+      <div
+        className="civic-enter-fade hidden shrink-0 lg:block lg:w-[42%] lg:max-w-190 xl:w-[45%]"
+        style={enterDelay(120)}
+      >
+        <AuthBadgePanel />
+      </div>
     </div>
   );
 }

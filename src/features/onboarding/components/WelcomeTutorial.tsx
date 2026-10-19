@@ -57,11 +57,17 @@ const SLIDES: Slide[] = [
   { kicker: "Step 4 of 4", title: "Pay and claim at the CCRO", body: "When your document is ready, go to the CCRO cashier, pay the fee, and take home your document.", icon: BadgeCheck, hue: 70 },
 ];
 
-const tone = (h: number) => ({
-  soft: `oklch(0.955 0.03 ${h})`,
-  ring: `oklch(0.9 0.05 ${h} / 0.6)`,
-  ink: `oklch(0.48 0.12 ${h})`,
-});
+// Each slide's colours as CSS variables, with a dark twin for each: inline
+// styles cannot switch on `.dark`, the classes using them can.
+const tone = (h: number) =>
+  ({
+    "--tone-soft": `oklch(0.955 0.03 ${h})`,
+    "--tone-ring": `oklch(0.9 0.05 ${h} / 0.6)`,
+    "--tone-ink": `oklch(0.48 0.12 ${h})`,
+    "--tone-soft-dark": `oklch(0.26 0.04 ${h})`,
+    "--tone-ring-dark": `oklch(0.34 0.06 ${h} / 0.6)`,
+    "--tone-ink-dark": `oklch(0.8 0.1 ${h})`,
+  }) as CSSProperties;
 
 // Entrance choreography once the card lands: icon, then the text lines one by
 // one, then the controls. Uses the app's civic-enter classes, which already
@@ -115,7 +121,7 @@ export function WelcomeTutorial() {
           type="button"
           onClick={close}
           aria-label="Close tutorial"
-          className="absolute top-3.5 right-3.5 z-10 flex size-11 items-center justify-center rounded-full bg-white/85 text-body-strong transition-colors hover:bg-white"
+          className="absolute top-3.5 right-3.5 z-10 flex size-11 items-center justify-center rounded-full bg-card/85 text-body-strong transition-colors hover:bg-card"
         >
           <X className="size-5" aria-hidden="true" />
         </button>
@@ -129,22 +135,21 @@ export function WelcomeTutorial() {
               const t = tone(slide.hue);
               const Icon = slide.icon;
               return (
-                <div key={slide.title} className="min-w-0 flex-[0_0_100%]" aria-hidden={i !== index}>
+                <div key={slide.title} className="min-w-0 flex-[0_0_100%]" style={t} aria-hidden={i !== index}>
                   <div
-                    className="relative flex h-[clamp(120px,26vh,220px)] items-center justify-center overflow-hidden"
-                    style={{ background: t.soft }}
+                    className="relative flex h-[clamp(120px,26vh,220px)] items-center justify-center overflow-hidden bg-(--tone-soft) dark:bg-(--tone-soft-dark)"
                   >
-                    <span className="absolute -bottom-[70px] -left-10 size-[200px] rounded-full border-[32px]" style={{ borderColor: t.ring }} />
-                    <span className="absolute -top-[50px] -right-[30px] size-[140px] rounded-full border-[22px]" style={{ borderColor: t.ring }} />
+                    <span className="absolute -bottom-[70px] -left-10 size-[200px] rounded-full border-[32px] border-(--tone-ring) dark:border-(--tone-ring-dark)" />
+                    <span className="absolute -top-[50px] -right-[30px] size-[140px] rounded-full border-[22px] border-(--tone-ring) dark:border-(--tone-ring-dark)" />
                     <span
-                      className="civic-enter-scale relative flex size-[104px] items-center justify-center rounded-[28px] bg-white shadow-[0_12px_28px_-12px_rgba(15,27,45,0.35)]"
-                      style={{ color: t.ink, ...ICON_ENTER }}
+                      className="civic-enter-scale relative flex size-[104px] items-center justify-center rounded-[28px] bg-card text-(--tone-ink) shadow-[0_12px_28px_-12px_rgba(15,27,45,0.35)] dark:text-(--tone-ink-dark)"
+                      style={ICON_ENTER}
                     >
                       <Icon className="size-[52px]" strokeWidth={1.75} aria-hidden="true" />
                     </span>
                   </div>
                   <div className="civic-stagger-auto px-9 pt-7 pb-2 text-center" style={TEXT_ENTER}>
-                    <p className="mb-2.5 text-sm font-bold uppercase tracking-[0.1em]" style={{ color: t.ink }}>
+                    <p className="mb-2.5 text-sm font-bold uppercase tracking-[0.1em] text-(--tone-ink) dark:text-(--tone-ink-dark)">
                       {slide.kicker}
                     </p>
                     {i === index ? (

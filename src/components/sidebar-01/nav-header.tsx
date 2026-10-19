@@ -35,7 +35,7 @@ export function NavHeader({ workspace, citizen = false }: NavHeaderProps) {
         >
           {/* Text stand-in: the official emblem isn't cleared for use yet. */}
           <span
-            className="flex size-10.5 shrink-0 items-center justify-center rounded-full border-2 border-brand-gold bg-white text-[10px] font-extrabold tracking-[0.02em] text-primary"
+            className="flex size-10.5 shrink-0 items-center justify-center rounded-full border-2 border-brand-gold bg-card text-[10px] font-extrabold tracking-[0.02em] text-primary"
             aria-hidden="true"
           >
             CCRO

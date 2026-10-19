@@ -66,7 +66,7 @@ export function OfflineBanner() {
             "flex size-6 shrink-0 items-center justify-center rounded-full",
             isOffline
               ? "bg-brand-gold text-panel-dark"
-              : "bg-health-success-dot text-white",
+              : "bg-health-success-dot text-white dark:text-background",
           )}
         >
           {isOffline ? (

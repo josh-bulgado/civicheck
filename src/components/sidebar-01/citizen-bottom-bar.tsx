@@ -29,11 +29,11 @@ export function CitizenBottomBar({ unreadNotifications }: { unreadNotifications:
     <div className="md:hidden">
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-30 h-32.5 bg-linear-to-t from-[#e4ecf7] from-45% to-[#e4ecf7]/0"
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-30 h-32.5 bg-linear-to-t from-[#e4ecf7] dark:from-ground from-45% to-[#e4ecf7]/0 dark:to-ground/0"
       />
       <nav
         aria-label="Main"
-        className="fixed inset-x-4 bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-40 flex h-17 items-center justify-between rounded-[34px] bg-white/94 p-2 shadow-[0_10px_30px_rgba(15,27,45,0.16)]"
+        className="fixed inset-x-4 bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-40 flex h-17 items-center justify-between rounded-[34px] bg-card/94 p-2 shadow-[0_10px_30px_rgba(15,27,45,0.16)]"
       >
         {items.map((item) => {
           const Icon = item.icon;
@@ -44,7 +44,7 @@ export function CitizenBottomBar({ unreadNotifications }: { unreadNotifications:
               aria-label={item.title}
               className={cn(
                 "group/tab civic-press relative flex h-13 w-13 items-center justify-center gap-2 rounded-full text-portal-ink-2 outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                "data-[status=active]:w-auto data-[status=active]:bg-primary data-[status=active]:px-4.5 data-[status=active]:text-white",
+                "data-[status=active]:w-auto data-[status=active]:bg-primary-fill data-[status=active]:px-4.5 data-[status=active]:text-white",
               )}
             >
               <Icon className="size-5.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
@@ -54,7 +54,7 @@ export function CitizenBottomBar({ unreadNotifications }: { unreadNotifications:
               {/* Gold is for what is unread: here, the Alerts tab. */}
               {item.badge ? (
                 <span
-                  className="absolute top-3.25 right-3.5 size-2.5 rounded-full bg-brand-gold ring-2 ring-white"
+                  className="absolute top-3.25 right-3.5 size-2.5 rounded-full bg-brand-gold ring-2 ring-card"
                   aria-hidden="true"
                 />
               ) : null}

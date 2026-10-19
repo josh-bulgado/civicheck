@@ -4,6 +4,7 @@ import { Search } from "lucide-react";
 import { SidebarTrigger, useSidebar } from "~/components/ui/sidebar";
 import { cn } from "~/lib/utils";
 import { openCommandPalette } from "~/components/sidebar-01/command-palette";
+import { ThemeSwitch } from "~/components/theme-switch";
 import { NotificationsPopover } from "~/features/notifications/components/NotificationsPopover";
 import { loadPaletteDefaults } from "~/features/search/palette-defaults";
 
@@ -33,7 +34,7 @@ export function CitizenTopBar({ userId, unreadNotifications }: CitizenTopBarProp
           it is a sheet, or after Ctrl+B has tucked it away. */}
       <SidebarTrigger
         className={cn(
-          "size-12.5 shrink-0 rounded-full border border-border-light bg-white text-portal-ink-2 hover:bg-primary-tint [&_svg]:size-5",
+          "size-12.5 shrink-0 rounded-full border border-border-light bg-card text-portal-ink-2 hover:bg-primary-tint [&_svg]:size-5",
           state === "expanded" && "md:hidden",
         )}
       />
@@ -52,9 +53,10 @@ export function CitizenTopBar({ userId, unreadNotifications }: CitizenTopBarProp
       </button>
       <div className="flex-1" aria-hidden="true" />
       <NotificationsPopover userId={userId} unreadCount={unreadNotifications} />
+      <ThemeSwitch />
       {/* Text stand-in for the city seal, which isn't cleared for use yet. */}
       <span
-        className="hidden size-12.5 shrink-0 items-center justify-center rounded-full border-2 border-brand-gold bg-white text-[10px] font-extrabold tracking-[0.02em] text-primary sm:flex"
+        className="hidden size-12.5 shrink-0 items-center justify-center rounded-full border-2 border-brand-gold bg-card text-[10px] font-extrabold tracking-[0.02em] text-primary sm:flex"
         aria-hidden="true"
       >
         CITY

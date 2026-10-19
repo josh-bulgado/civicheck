@@ -26,7 +26,7 @@ import {
 import { Checkbox } from "~/components/ui/checkbox";
 import { Spinner } from "~/components/ui/spinner";
 import { Alert, AlertDescription } from "~/components/ui/alert";
-import { AuthEmblemPanel } from "./AuthSidePanel";
+import { AuthDocketPanel } from "./AuthSidePanel";
 import {
   authButtonClass,
   authFieldClass,
@@ -122,7 +122,7 @@ export function LoginForm({
   );
 
   return (
-    <AuthSplitLayout panel={<AuthEmblemPanel />}>
+    <AuthSplitLayout panel={<AuthDocketPanel />}>
       <div className="flex flex-col gap-7">
         <AuthFormHeading
           title="Welcome back"

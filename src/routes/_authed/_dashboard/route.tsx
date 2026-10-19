@@ -15,6 +15,7 @@ import { CitizenMobileHeader } from "~/components/sidebar-01/citizen-mobile-head
 import { CitizenTopBar } from "~/components/sidebar-01/citizen-top-bar";
 import { CommandPalette } from "~/components/sidebar-01/command-palette";
 import { CityGovernmentIdentity } from "~/components/brand/civic-identity";
+import { ThemeSwitch } from "~/components/theme-switch";
 import { getWorkspaceDetails } from "~/components/sidebar-01/workspace";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { getUnreadNotificationSummaryFn } from "~/features/notifications/notifications.queries";
@@ -142,9 +143,9 @@ function DashboardLayout() {
         </SidebarInset>
       ) : (
         <SidebarInset>
-          <header className="flex h-[4.5rem] shrink-0 items-center justify-between border-b border-border-strong bg-white px-4 transition-[width,height] ease-linear sm:px-6">
+          <header className="flex h-[4.5rem] shrink-0 items-center justify-between border-b border-border-strong bg-card px-4 transition-[width,height] ease-linear sm:px-6">
             <div className="flex items-center gap-3">
-              <SidebarTrigger className="size-10 rounded-lg border border-border-strong bg-white shadow-xs hover:bg-surface-subtle" />
+              <SidebarTrigger className="size-10 rounded-lg border border-border-strong bg-card shadow-xs hover:bg-surface-subtle" />
               <div className="hidden sm:block">
                 <p className="text-sm font-bold text-foreground">
                   {workspace.label}
@@ -154,10 +155,13 @@ function DashboardLayout() {
                 </p>
               </div>
             </div>
-            <CityGovernmentIdentity
-              compact
-              className="[&>span:first-child]:size-8"
-            />
+            <div className="flex items-center gap-4">
+              <ThemeSwitch />
+              <CityGovernmentIdentity
+                compact
+                className="[&>span:first-child]:size-8"
+              />
+            </div>
           </header>
           <main
             id="main-content"

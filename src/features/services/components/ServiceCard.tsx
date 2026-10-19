@@ -19,7 +19,7 @@ const ServiceCard = (service: ServiceEntryProps & { canApply?: boolean }) => {
   return (
     <article
       style={service.style}
-      className="civic-interactive flex flex-col overflow-hidden rounded-[14px] border border-border bg-white text-card-foreground hover:border-primary/40"
+      className="civic-interactive flex flex-col overflow-hidden rounded-[14px] border border-border bg-card text-card-foreground hover:border-primary/40"
     >
       <div className="flex flex-1 flex-col gap-2 px-4.5 pt-4.5 pb-4">
         <div className="flex items-start justify-between gap-3">
@@ -73,8 +73,8 @@ const ServiceCard = (service: ServiceEntryProps & { canApply?: boolean }) => {
             onClick={entry.openRequirements}
             className={
               canApply
-                ? "h-10 rounded-full px-3.5 text-[13px] font-semibold hover:bg-white"
-                : "h-10 rounded-full px-4.5 text-[13px] font-semibold hover:bg-primary-hover"
+                ? "h-10 rounded-full px-3.5 text-[13px] font-semibold hover:bg-card"
+                : "h-10 rounded-full px-4.5 text-[13px] font-semibold hover:bg-primary-fill-hover"
             }
           >
             Requirements
@@ -83,7 +83,7 @@ const ServiceCard = (service: ServiceEntryProps & { canApply?: boolean }) => {
             <Button
               type="button"
               onClick={entry.startApply}
-              className="h-10 rounded-full px-4.5 text-[13px] font-semibold hover:bg-primary-hover"
+              className="h-10 rounded-full px-4.5 text-[13px] font-semibold hover:bg-primary-fill-hover"
             >
               Apply
             </Button>

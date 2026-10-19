@@ -646,10 +646,10 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
           isDropTarget
             ? "border-2 border-solid border-primary bg-primary-soft shadow-[0_0_0_4px_rgba(11,77,162,0.18)]"
             : pageCount > 0
-              ? "border border-solid border-[#e4e9f1]"
+              ? "border border-solid border-border-light"
               : cn(
                   "border-2 border-dashed",
-                  isMissing ? "border-destructive" : "border-[#b9c7de]",
+                  isMissing ? "border-destructive" : "border-[#b9c7de] dark:border-border-strong",
                 ),
         )}
       >
@@ -658,10 +658,10 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
             className={cn(
               "flex size-14 shrink-0 items-center justify-center rounded-[14px] transition-colors",
               isDropTarget
-                ? "bg-white text-primary"
+                ? "bg-card text-primary"
                 : pageCount > 0
                   ? "bg-primary-soft text-primary"
-                  : "bg-portal-panel text-[#8a97a8]",
+                  : "bg-portal-panel text-[#8a97a8] dark:text-muted-foreground",
             )}
           >
             <FileText className="size-6.5" aria-hidden="true" />
@@ -677,7 +677,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
                 // pop, which is what makes the tally read as having changed.
                 <span
                   key={pageCount}
-                  className="civic-enter-scale inline-flex h-7 items-center rounded-full bg-[#e2f2e7] px-3 text-[13px] font-semibold text-[#1a6a3c]"
+                  className="civic-enter-scale inline-flex h-7 items-center rounded-full bg-[#e2f2e7] dark:bg-tone-success-soft px-3 text-[13px] font-semibold text-tone-success"
                 >
                   {pageCount} {pageCount === 1 ? "file" : "files"}
                 </span>
@@ -731,7 +731,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
                       slotFailure.retry();
                     }}
                     disabled={hasPendingAction}
-                    className="civic-press h-12 rounded-full bg-primary px-6 text-base font-semibold text-white hover:bg-primary-hover disabled:opacity-60"
+                    className="civic-press h-12 rounded-full bg-primary-fill px-6 text-base font-semibold text-white hover:bg-primary-fill-hover disabled:opacity-60"
                   >
                     Try again
                   </button>
@@ -779,7 +779,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
         />
 
         {pageCount > 0 || (uploading && pendingFiles.length > 0) ? (
-          <ol className="flex flex-col border-t border-[#e4e9f1] bg-portal-panel">
+          <ol className="flex flex-col border-t border-border-light bg-portal-panel">
             {documents.map((document, index) => {
               const fresh = freshPaths.current.has(document.storagePath);
               const beingRemoved =
@@ -788,7 +788,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
                 <li
                   key={document.storagePath}
                   className={cn(
-                    "border-b border-[#e4e9f1] px-5 py-3 transition-opacity last:border-b-0 sm:px-6",
+                    "border-b border-border-light px-5 py-3 transition-opacity last:border-b-0 sm:px-6",
                     fresh && "civic-upload-land",
                     beingRemoved && "opacity-55",
                   )}
@@ -799,7 +799,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
                       {fresh ? (
                         <span
                           aria-hidden="true"
-                          className="civic-upload-check absolute inset-0 flex items-center justify-center rounded-full bg-success text-white"
+                          className="civic-upload-check absolute inset-0 flex items-center justify-center rounded-full bg-success text-white dark:text-background"
                         >
                           <Check className="size-4" strokeWidth={3} />
                         </span>
@@ -836,7 +836,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
                         });
                         setRemovalOpen(true);
                       }}
-                      className="civic-press flex size-9.5 shrink-0 items-center justify-center rounded-full text-body-2 hover:bg-white hover:text-destructive disabled:opacity-40"
+                      className="civic-press flex size-9.5 shrink-0 items-center justify-center rounded-full text-body-2 hover:bg-card hover:text-destructive disabled:opacity-40"
                     >
                       <X className="size-5" aria-hidden="true" />
                     </button>
@@ -857,11 +857,11 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
               ? pendingFiles.map((file, index) => (
                   <li
                     key={`${file.name}-${index}`}
-                    className="border-b border-[#e4e9f1] px-5 py-3 last:border-b-0 sm:px-6"
+                    className="border-b border-border-light px-5 py-3 last:border-b-0 sm:px-6"
                   >
                     <div className="flex min-w-0 items-center gap-3.5">
                       <span
-                        className="flex size-8.5 shrink-0 items-center justify-center rounded-full bg-white text-sm font-bold text-muted-foreground"
+                        className="flex size-8.5 shrink-0 items-center justify-center rounded-full bg-card text-sm font-bold text-muted-foreground"
                         aria-hidden="true"
                       >
                         {pageCount + index + 1}
@@ -906,7 +906,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
             type="button"
             disabled={hasPendingAction}
             onClick={() => startPhoto(slot)}
-            className="civic-press inline-flex h-12 items-center justify-center gap-2.5 rounded-full bg-primary px-6 text-base font-semibold text-white hover:bg-primary-hover disabled:cursor-default"
+            className="civic-press inline-flex h-12 items-center justify-center gap-2.5 rounded-full bg-primary-fill px-6 text-base font-semibold text-white hover:bg-primary-fill-hover disabled:cursor-default"
           >
             <Camera className="size-5" aria-hidden="true" />
             {pageCount > 0 ? "Add photo" : "Take photo"}
@@ -915,7 +915,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
             type="button"
             disabled={hasPendingAction}
             onClick={() => fileInputs.current[filesInputKey]?.click()}
-            className="civic-press inline-flex h-12 items-center justify-center gap-2.5 rounded-full border border-[#cfd8e8] bg-white px-6 text-base font-semibold text-foreground hover:bg-primary-tint disabled:cursor-default"
+            className="civic-press inline-flex h-12 items-center justify-center gap-2.5 rounded-full border border-[#cfd8e8] dark:border-border-strong bg-card px-6 text-base font-semibold text-foreground hover:bg-primary-tint disabled:cursor-default"
           >
             <Files className="size-5" aria-hidden="true" />
             {pageCount > 0 ? "Add files" : "Choose files"}
@@ -951,7 +951,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
             </div>
           </AfterDelay>
         ) : mandatoryReqs.length === 0 ? (
-          <p className="rounded-[20px] border border-dashed border-[#b9c7de] bg-white p-5 text-[15px] text-muted-foreground italic">
+          <p className="rounded-[20px] border border-dashed border-[#b9c7de] dark:border-border-strong bg-card p-5 text-[15px] text-muted-foreground italic">
             No specific required documents are listed for this service — you can continue.
           </p>
         ) : null}
@@ -973,7 +973,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
           : null}
 
         {hydrated && inPersonRequirements.length > 0 ? (
-          <section className="rounded-[20px] border border-[#e4e9f1] bg-portal-panel p-5.5">
+          <section className="rounded-[20px] border border-border-light bg-portal-panel p-5.5">
             <div className="flex items-start gap-3.5">
               <ClipboardCheck className="mt-0.5 size-5.5 shrink-0 text-primary" />
               <div className="min-w-0">
@@ -1028,7 +1028,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
           initialFocus={keepFile}
           finalFocus={removalFinalFocus}
           overlayClassName="bg-[rgba(15,27,45,0.28)] backdrop-blur-sm"
-          className="apply-wizard w-[min(32.5rem,calc(100%-2rem))] grid-cols-[minmax(0,1fr)] gap-0 rounded-[28px] bg-white p-8 pb-7 shadow-portal-dialog ring-0 data-[size=default]:max-w-none data-[size=default]:sm:max-w-none"
+          className="apply-wizard w-[min(32.5rem,calc(100%-2rem))] grid-cols-[minmax(0,1fr)] gap-0 rounded-[28px] bg-card p-8 pb-7 shadow-portal-dialog ring-0 data-[size=default]:max-w-none data-[size=default]:sm:max-w-none"
         >
           {removal ? (
             <>
@@ -1037,7 +1037,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
               </AlertDialogTitle>
               <div className="mt-5 flex items-center gap-3.5 rounded-2xl bg-portal-panel px-4 py-3.5">
                 <DocumentPreview
-                  className="size-12 rounded-xl bg-white"
+                  className="size-12 rounded-xl bg-card"
                   fileName={removal.fileName}
                   url={previewUrls[removal.storagePath]}
                   label={removal.fileName}
@@ -1047,7 +1047,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
                   <p className="truncate text-base font-bold text-foreground">
                     {removal.fileName}
                   </p>
-                  <p className="truncate text-sm text-[#5f6b7c]">
+                  <p className="truncate text-sm text-muted-2">
                     {formatSize(removal.fileSize)} · {removal.caption}
                   </p>
                 </div>
@@ -1069,9 +1069,9 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
                   ref={keepFile}
                   aria-disabled={removeBusy}
                   className={cn(
-                    "civic-press h-13 rounded-full border bg-white px-7 text-base font-semibold shadow-none",
+                    "civic-press h-13 rounded-full border bg-card px-7 text-base font-semibold shadow-none",
                     removeBusy
-                      ? "cursor-default border-[#e4e9f1] text-[#8a97a8] opacity-100"
+                      ? "cursor-default border-border-light text-[#8a97a8] dark:text-muted-foreground opacity-100"
                       : "border-primary text-foreground hover:bg-primary-tint focus-visible:ring-4 focus-visible:ring-primary/20",
                   )}
                 >
@@ -1082,7 +1082,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
                   onClick={() => void confirmRemoval()}
                   aria-disabled={removeBusy}
                   className={cn(
-                    "civic-press inline-flex h-13 items-center justify-center gap-2.5 rounded-full bg-destructive px-7 text-base font-semibold text-white",
+                    "civic-press inline-flex h-13 items-center justify-center gap-2.5 rounded-full bg-destructive px-7 text-base font-semibold text-white dark:text-background",
                     removeBusy ? "cursor-default opacity-85" : "hover:bg-destructive/90",
                   )}
                 >
@@ -1098,7 +1098,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
       <AlertDialog open={rejectedOpen} onOpenChange={setRejectedOpen}>
         <AlertDialogContent
           overlayClassName="bg-[rgba(15,27,45,0.28)] backdrop-blur-sm"
-          className="apply-wizard gap-4 rounded-[28px] bg-white p-7 shadow-portal-dialog ring-0 data-[size=default]:sm:max-w-md"
+          className="apply-wizard gap-4 rounded-[28px] bg-card p-7 shadow-portal-dialog ring-0 data-[size=default]:sm:max-w-md"
         >
           {/* The only way out besides Escape: there is nothing to confirm. */}
           <AlertDialogCancel
@@ -1140,7 +1140,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
                 <span className="min-w-0">
                   <span className="wrap-anywhere">{file.name}</span>
                   {file.detail ? (
-                    <span className="block text-xs font-normal text-[#5f6b7c]">
+                    <span className="block text-xs font-normal text-muted-2">
                       {file.detail}
                     </span>
                   ) : null}

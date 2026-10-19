@@ -108,7 +108,7 @@ export function createStaffColumns({
         return (
           <div className="flex min-w-72 items-center gap-3.5">
             <Avatar size="lg" className="bg-primary">
-              <AvatarFallback className="bg-primary font-semibold text-white">
+              <AvatarFallback className="bg-primary-fill font-semibold text-white">
                 {getInitials(staffMember)}
               </AvatarFallback>
             </Avatar>

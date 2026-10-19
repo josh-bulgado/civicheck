@@ -17,7 +17,7 @@ const HERO_DOT: Record<string, string> = {
   destructive: "bg-red-300",
   info: "bg-sky-300",
   progress: "bg-violet-300",
-  neutral: "bg-white/60",
+  neutral: "bg-primary-foreground/60",
 };
 
 function HeroBadge({

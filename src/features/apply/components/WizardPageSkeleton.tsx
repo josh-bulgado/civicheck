@@ -3,7 +3,7 @@ import { WizardBar, WizardSkeleton } from "~/features/apply/components/wizard-fe
 /** One upload slot as it will look: icon tile, two lines, two pill buttons. */
 export function SlotCardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-[20px] border-2 border-dashed border-[#d7dee9] bg-card">
+    <div className="overflow-hidden rounded-[20px] border-2 border-dashed border-border bg-card">
       <div className="flex items-start gap-4 px-6 pt-5.5 pb-4.5">
         <WizardSkeleton className="size-14 shrink-0 rounded-[14px]" />
         <div className="flex min-w-0 flex-1 flex-col gap-2.5 pt-1">

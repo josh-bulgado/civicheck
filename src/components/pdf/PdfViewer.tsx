@@ -355,7 +355,8 @@ function PdfPage({ doc, pageNumber, width, aspect, label }: PdfPageProps) {
       ref={wrapperRef}
       role="img"
       aria-label={label}
-      className="relative shrink-0 bg-white shadow-sm ring-1 ring-border-light"
+      // A document page: white in both themes until the canvas paints over it.
+      className="relative shrink-0 bg-primary-foreground shadow-sm ring-1 ring-border-light"
       style={{ width, height: width * (measuredAspect ?? aspect) }}
     >
       <canvas ref={canvasRef} className="block size-full" />

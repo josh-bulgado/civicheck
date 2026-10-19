@@ -121,7 +121,7 @@ const ServiceRow = (service: ServiceEntryProps & { canApply?: boolean }) => {
           className={
             canApply
               ? `${ACTION} bg-muted px-3 @4xl:bg-transparent`
-              : `${ACTION} px-4 hover:bg-primary-hover`
+              : `${ACTION} px-4 hover:bg-primary-fill-hover`
           }
         >
           Requirements
@@ -130,7 +130,7 @@ const ServiceRow = (service: ServiceEntryProps & { canApply?: boolean }) => {
           <Button
             type="button"
             onClick={entry.startApply}
-            className={`${ACTION} px-4 hover:bg-primary-hover`}
+            className={`${ACTION} px-4 hover:bg-primary-fill-hover`}
           >
             Apply
           </Button>
