@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFieldArray, useFormContext } from "react-hook-form";
 import {
   AlertTriangle,
@@ -111,6 +111,12 @@ export function RequirementsSection({
   const [sheetOpen, setSheetOpen] = useState(false);
   // A row added in this session that has not been confirmed with Done yet.
   const [newIndex, setNewIndex] = useState<number | null>(null);
+  // What to refocus when the sheet closes. Base UI only returns focus to what
+  // was focused when the sheet mounted, which is wrong for menu-originated
+  // opens and for Safari (it does not focus a button on click).
+  const openerRef = useRef<HTMLElement | null>(null);
+  const addButtonRef = useRef<HTMLButtonElement>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
 
   const conditionSources: ConditionSource[] = useMemo(
     () => [
@@ -240,22 +246,50 @@ export function RequirementsSection({
     return candidate === "all" ? entries.length : counts[candidate];
   }
 
-  function openRequirement(index: number) {
+  function openRequirement(index: number, opener: HTMLElement | null = null) {
+    openerRef.current = opener;
     setOpenIndex(index);
     setSheetOpen(true);
   }
 
+  // Wait a frame so this runs after the close has been committed; the library
+  // then sees focus already outside the sheet and leaves it alone. Prefers the
+  // opener, then the row's own button (a kept new row has no opener), then the
+  // Add button, so focus never falls back to <body>.
+  function returnFocus(opener: HTMLElement | null, index: number | null) {
+    requestAnimationFrame(() => {
+      const rowButton =
+        index === null
+          ? null
+          : tableRef.current?.querySelector<HTMLElement>(
+              `[data-requirement-opener="${index}"]`,
+            );
+      const target =
+        (opener?.isConnected ? opener : null) ??
+        rowButton ??
+        addButtonRef.current;
+      target?.focus({ preventScroll: true });
+    });
+  }
+
   function handleSheetOpenChange(open: boolean) {
     setSheetOpen(open);
-    if (!open) setNewIndex(null);
+    if (open) return;
+    const opener = openerRef.current;
+    openerRef.current = null;
+    setNewIndex(null);
+    returnFocus(opener, openIndex);
   }
 
   function discardNewRequirement() {
     const index = openIndex;
+    openerRef.current = null;
     setSheetOpen(false);
     setOpenIndex(null);
     setNewIndex(null);
     if (index !== null) requirementFields.remove(index);
+    // The row is gone, so the Add button is the right place to land.
+    returnFocus(null, null);
   }
 
   function addBlank() {
@@ -396,6 +430,7 @@ export function RequirementsSection({
                   nativeButton
                   render={
                     <Button
+                      ref={addButtonRef}
                       type="button"
                       variant="outline"
                       className="min-h-11"
@@ -521,9 +556,10 @@ export function RequirementsSection({
                     </div>
                   ) : (
                     <RequirementsTable
+                      ref={tableRef}
                       entries={visibleEntries}
                       locked={groupLocked}
-                      onOpen={(index) => openRequirement(index)}
+                      onOpen={openRequirement}
                       onOverride={
                         canOverride ? overrideRequirement : undefined
                       }

@@ -45,6 +45,12 @@ export type RequirementValue = ServiceFormValues["requirements"][number];
 /** Up to this many roles are shown as buttons; more fall back to a select. */
 const MAX_ROLE_BUTTONS = 4;
 
+const UPLOAD_SCOPES = [
+  { value: "request", label: "Once per request" },
+  { value: "each_subject", label: "Every person" },
+  { value: "specific_subject", label: "One specific person" },
+] as const;
+
 /** Section titles in the sheet: small, uppercase, quiet. */
 const LEGEND_CLASS =
   "text-xs font-semibold tracking-wide text-muted-foreground uppercase";
@@ -179,43 +185,37 @@ export function RequirementSheet({
                   </Field>
                 )}
               />
-            </FieldGroup>
-          </FieldSet>
 
-          <FieldSet>
-            <FieldLegend variant="label" className={LEGEND_CLASS}>
-              Is It Required?
-            </FieldLegend>
-            <Controller
-              control={form.control}
-              name={`requirements.${index}.is_mandatory`}
-              render={({ field }) => (
-                <ToggleGroup
-                  aria-label="Is it required?"
-                  spacing={1}
-                  value={[field.value ? "required" : "conditional"]}
-                  // A pressed toggle can be pressed again to clear it;
-                  // a requirement is always one or the other.
-                  onValueChange={(next) => {
-                    if (next[0]) field.onChange(next[0] === "required");
-                  }}
-                  className="grid w-full grid-cols-2 rounded-lg bg-muted p-1"
-                >
-                  <ToggleGroupItem
-                    value="required"
-                    className="min-h-11 aria-pressed:bg-background aria-pressed:shadow-sm"
+              <Controller
+                control={form.control}
+                name={`requirements.${index}.is_mandatory`}
+                render={({ field }) => (
+                  <Field
+                    orientation="horizontal"
+                    className="gap-4 has-[>[data-slot=field-content]]:items-start sm:has-[>[data-slot=field-content]]:items-center"
                   >
-                    Required
-                  </ToggleGroupItem>
-                  <ToggleGroupItem
-                    value="conditional"
-                    className="min-h-11 aria-pressed:bg-background aria-pressed:shadow-sm"
-                  >
-                    If applicable
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              )}
-            />
+                    <FieldContent className="min-w-0">
+                      <FieldLabel htmlFor={`requirement-mandatory-${index}`}>
+                        Required
+                      </FieldLabel>
+                      <FieldDescription>
+                        Turn off for items that only apply if the applicant
+                        has them.
+                      </FieldDescription>
+                    </FieldContent>
+                    <Switch
+                      id={`requirement-mandatory-${index}`}
+                      name={field.name}
+                      className="ml-auto shrink-0"
+                      checked={field.value}
+                      onCheckedChange={(checked) =>
+                        field.onChange(checked === true)
+                      }
+                    />
+                  </Field>
+                )}
+              />
+            </FieldGroup>
           </FieldSet>
 
           <FieldSet>
@@ -243,6 +243,7 @@ export function RequirementSheet({
                       <Switch
                         id={`requirement-upload-${index}`}
                         name={field.name}
+                        className="ml-auto shrink-0"
                         checked={field.value}
                         onCheckedChange={(checked) =>
                           field.onChange(checked === true)
@@ -258,46 +259,33 @@ export function RequirementSheet({
                       control={form.control}
                       name={`requirements.${index}.upload_scope`}
                       render={({ field }) => (
-                        <Field>
-                          <FieldLabel
-                            htmlFor={`requirement-upload-scope-${index}`}
-                          >
+                        <FieldSet>
+                          <FieldLegend variant="label" className="mb-2">
                             Who Must Upload
-                          </FieldLabel>
-                          <Select
-                            name={field.name}
-                            value={field.value}
-                            onValueChange={field.onChange}
+                          </FieldLegend>
+                          <ToggleGroup
+                            aria-label="Who must upload"
+                            variant="outline"
+                            spacing={2}
+                            value={[field.value ?? "request"]}
+                            // A pressed toggle can be pressed again to clear
+                            // it; a scope is always one of the three.
+                            onValueChange={(next) => {
+                              if (next[0]) field.onChange(next[0]);
+                            }}
+                            className="grid w-full grid-cols-[repeat(auto-fit,minmax(9rem,1fr))]"
                           >
-                            <SelectTrigger
-                              id={`requirement-upload-scope-${index}`}
-                              className="w-full"
-                            >
-                              <SelectValue>
-                                {(scopeValue) =>
-                                  scopeValue === "each_subject"
-                                    ? "Every person"
-                                    : scopeValue === "specific_subject"
-                                      ? "One specific person"
-                                      : "Once per request"
-                                }
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectGroup>
-                                <SelectItem value="request">
-                                  Once per request
-                                </SelectItem>
-                                <SelectItem value="each_subject">
-                                  Every person
-                                </SelectItem>
-                                <SelectItem value="specific_subject">
-                                  One specific person
-                                </SelectItem>
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
-                        </Field>
+                            {UPLOAD_SCOPES.map((scope) => (
+                              <ToggleGroupItem
+                                key={scope.value}
+                                value={scope.value}
+                                className="min-h-11 bg-background aria-pressed:border-primary/40 aria-pressed:bg-primary-soft aria-pressed:text-primary"
+                              >
+                                {scope.label}
+                              </ToggleGroupItem>
+                            ))}
+                          </ToggleGroup>
+                        </FieldSet>
                       )}
                     />
 

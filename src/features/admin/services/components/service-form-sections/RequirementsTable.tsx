@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, type Ref } from "react";
 import {
   Check,
   Copy,
@@ -42,6 +42,8 @@ export interface RequirementEntry {
 }
 
 interface RequirementsTableProps {
+  /** The table wrapper, so the section can find a row's button by index. */
+  ref?: Ref<HTMLDivElement>;
   entries: RequirementEntry[];
   /** True for kinds that cannot be edited until the group is unlocked. */
   locked: (kind: RequirementScopeKind) => boolean;
@@ -129,6 +131,7 @@ function RequirementTableRow({
           <button
             ref={openerRef}
             type="button"
+            data-requirement-opener={index}
             title={fullName}
             onClick={(event) => onOpen(index, event.currentTarget)}
             className="group/req -mx-2 block min-h-11 w-[calc(100%+1rem)] min-w-0 rounded-md px-2 py-1 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -237,6 +240,7 @@ function RequirementTableRow({
 }
 
 export function RequirementsTable({
+  ref,
   entries,
   locked,
   onOpen,
@@ -245,7 +249,10 @@ export function RequirementsTable({
   conditionSources,
 }: RequirementsTableProps) {
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-background">
+    <div
+      ref={ref}
+      className="overflow-hidden rounded-lg border border-border bg-background"
+    >
       <Table className="min-w-[40rem] table-fixed">
         <TableHeader>
           <TableRow className="bg-surface-subtle hover:bg-surface-subtle">
