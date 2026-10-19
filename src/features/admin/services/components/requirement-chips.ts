@@ -38,9 +38,9 @@ function shortCondition(
   // Conditions store the option value, never its label, so a renamed label
   // still renders; an option that no longer exists falls back to the raw value.
   const label =
-    source?.options?.find((o) => o.value === condition.value)?.label ??
+    source?.options?.find((o) => o.value === condition.value)?.label ||
     condition.value;
-  const text = /age$/i.test(source?.label ?? "")
+  const text = /\bage$/i.test(source?.label ?? "")
     ? `Age ${label.replace(/ years old$/i, "")}`
     : label;
   return condition.operator === "not_equals" ? `Not ${text}` : text;

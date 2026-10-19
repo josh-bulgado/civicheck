@@ -106,6 +106,46 @@ describe("requirementChips condition", () => {
     );
   });
 
+  it("does not treat a source ending in 'age' as an age source", () => {
+    const marriage: ConditionSource[] = [
+      {
+        key: "marriage",
+        label: "Marriage",
+        options: [{ value: "civil", label: "Civil" }],
+      },
+    ];
+    const result = requirementChips(
+      {
+        appliesWhen: rule("all", [equals("marriage", "civil")]),
+        uploadScope: "request",
+        subjectRole: null,
+      },
+      marriage,
+    );
+    expect(result.condition).toBe("Civil");
+    expect(result.condition).not.toMatch(/^Age /);
+  });
+
+  it("falls back to the raw value when an option label is empty", () => {
+    const blank: ConditionSource[] = [
+      {
+        key: "nationality",
+        label: "Nationality",
+        options: [{ value: "filipino", label: "" }],
+      },
+    ];
+    expect(
+      requirementChips(
+        {
+          appliesWhen: rule("all", [equals("nationality", "filipino")]),
+          uploadScope: "request",
+          subjectRole: null,
+        },
+        blank,
+      ).condition,
+    ).toBe("filipino");
+  });
+
   it("shortens an age source", () => {
     expect(chips(rule("all", [equals("applicant_age", "18_20")])).condition).toBe(
       "Age 18–20",
