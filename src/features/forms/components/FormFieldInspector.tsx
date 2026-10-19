@@ -52,11 +52,22 @@ interface FormFieldInspectorProps {
   onUpdate: (patch: Partial<FormFieldDefinition>) => void;
   onDetach: (blockKey: string) => void;
   /**
+   * Puts a removed dropdown option back into the field with this key. Returns
+   * the index it landed at, or null when the field no longer exists.
+   */
+  onRestoreOption: RestoreOption;
+  /**
    * Where a dropdown option is relied on (conditions, routing, requirements),
    * as short descriptions. Empty means unused. Defaults to "never in use".
    */
   optionUsageFor?: OptionUsageFor;
 }
+
+type RestoreOption = (
+  fieldKey: string,
+  index: number,
+  option: FormOption,
+) => number | null;
 
 type OptionUsageFor = (fieldKey: string, value: string) => string[];
 
@@ -87,6 +98,7 @@ export function FormFieldInspector({
   blockNameByKey,
   onUpdate,
   onDetach,
+  onRestoreOption,
   optionUsageFor = NEVER_IN_USE,
 }: FormFieldInspectorProps) {
   return (
@@ -120,6 +132,7 @@ export function FormFieldInspector({
                   fieldTypes={fieldTypes}
                   immutableKeys={immutableKeys}
                   onUpdate={onUpdate}
+                  onRestoreOption={onRestoreOption}
                   optionUsageFor={optionUsageFor}
                 />
               )}
@@ -183,6 +196,7 @@ function FieldEditor({
   fieldTypes,
   immutableKeys,
   onUpdate,
+  onRestoreOption,
   optionUsageFor,
 }: {
   field: FormFieldDefinition;
@@ -191,6 +205,7 @@ function FieldEditor({
   fieldTypes: FormFieldTypeOption[];
   immutableKeys: Set<string>;
   onUpdate: (patch: Partial<FormFieldDefinition>) => void;
+  onRestoreOption: RestoreOption;
   optionUsageFor: OptionUsageFor;
 }) {
   const hasOtherPersonGroup = fields.some(
@@ -202,6 +217,13 @@ function FieldEditor({
       field.type === "person_group" ||
       !hasOtherPersonGroup,
   );
+  // Leaving "dropdown" drops its options, which would strand any condition,
+  // route or requirement that still points at one of them.
+  const typeLockedByUsage =
+    field.type === "select" &&
+    (field.options ?? []).some(
+      (option) => optionUsageFor(field.key, option.value).length > 0,
+    );
   const earlierSelects = fields
     .slice(0, index)
     .filter((candidate) => candidate.type === "select");
@@ -247,6 +269,7 @@ function FieldEditor({
         <Select
           items={typeOptions}
           value={field.type}
+          disabled={typeLockedByUsage}
           onValueChange={(value) =>
             onUpdate({
               type: value as FormFieldType,
@@ -272,6 +295,12 @@ function FieldEditor({
             </SelectGroup>
           </SelectContent>
         </Select>
+        {typeLockedByUsage ? (
+          <FieldDescription>
+            Locked because a condition or requirement depends on one of the
+            dropdown options.
+          </FieldDescription>
+        ) : null}
       </Field>
 
       <Field>
@@ -328,10 +357,11 @@ function FieldEditor({
 
       {field.type === "select" ? (
         <DropdownOptionsEditor
-          key={index}
+          key={`${field.key}-${index}`}
           field={field}
           usageFor={optionUsageFor}
           onUpdate={onUpdate}
+          onRestoreOption={onRestoreOption}
         />
       ) : null}
 
@@ -376,10 +406,12 @@ function DropdownOptionsEditor({
   field,
   usageFor,
   onUpdate,
+  onRestoreOption,
 }: {
   field: FormFieldDefinition;
   usageFor: OptionUsageFor;
   onUpdate: (patch: Partial<FormFieldDefinition>) => void;
+  onRestoreOption: RestoreOption;
 }) {
   const options = field.options ?? [];
   // Options have no id and the saved shape must not gain one, so rows that are
@@ -418,19 +450,20 @@ function DropdownOptionsEditor({
     const wasAuto = autoRows.has(optionIndex);
     setAutoRows((rows) => shiftRows(rows, optionIndex, -1));
     onUpdate({ options: options.filter((_, item) => item !== optionIndex) });
+    // Undo goes through the builder, which resolves this field by key in its
+    // latest definition. Nothing here is replayed from a stale render.
+    const fieldKey = field.key;
     toast(`Removed \u201c${removed.label}\u201d`, {
       action: {
         label: "Undo",
         onClick: () => {
-          const current = latestOptions.current;
-          const at = Math.min(optionIndex, current.length);
+          const at = onRestoreOption(fieldKey, optionIndex, removed);
+          if (at === null) return;
+          // No-op if this editor has since unmounted.
           setAutoRows((rows) => {
             const shifted = shiftRows(rows, at, 1);
             if (wasAuto) shifted.add(at);
             return shifted;
-          });
-          onUpdate({
-            options: [...current.slice(0, at), removed, ...current.slice(at)],
           });
         },
       },
@@ -451,10 +484,15 @@ function DropdownOptionsEditor({
             <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
               <Input
                 value={option.value}
-                disabled={inUse}
+                readOnly={inUse}
+                aria-readonly={inUse || undefined}
                 autoComplete="off"
                 spellCheck={false}
-                className="font-mono"
+                className={
+                  inUse
+                    ? "bg-muted/50 font-mono text-muted-foreground"
+                    : "font-mono"
+                }
                 aria-label={`Option ${optionIndex + 1} value`}
                 aria-describedby={inUse ? usageId : undefined}
                 onChange={(event) => {

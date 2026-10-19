@@ -64,10 +64,11 @@ import {
 import { detachBlock, insertBlock } from "../form-field-block.utils";
 import type {
   FormFieldDefinition,
+  FormOption,
   FormStep,
   FormTemplateDefinition,
 } from "../form-template.types";
-import { optionUsage, type ConditionRef } from "../form-option-usage";
+import { optionUsage, restoreOption, type ConditionRef } from "../form-option-usage";
 import { FormFieldInspector } from "./FormFieldInspector";
 import {
   FIELD_TYPES,
@@ -277,9 +278,41 @@ export function FormTemplateBuilder({
     index: number,
     patch: Partial<FormFieldDefinition>,
   ) {
-    const fields = fieldsInStep(definition, step);
+    // Always build from the latest definition: this also runs from toast
+    // actions that were created before later edits.
+    const current = latestDefinition.current;
+    const fields = fieldsInStep(current, step);
     fields[index] = { ...fields[index], ...patch };
-    onChange(withStepFields(definition, step, fields));
+    onChange(withStepFields(current, step, fields));
+  }
+
+  /**
+   * Undo for a removed dropdown option. The field is found by its key in the
+   * latest definition, never by the sheet's selection, so this cannot write
+   * into another field or revert other edits. Returns where the option landed,
+   * or null when the field is gone or is no longer a dropdown.
+   */
+  function restoreDropdownOption(
+    fieldKey: string,
+    index: number,
+    option: FormOption,
+  ): number | null {
+    const current = latestDefinition.current;
+    const target = current.sections
+      .flatMap((section) => section.fields)
+      .find((field) => field.key === fieldKey);
+    if (!target || target.type !== "select") return null;
+    const result = restoreOption(target.options ?? [], index, option);
+    onChange({
+      ...current,
+      sections: current.sections.map((section) => ({
+        ...section,
+        fields: section.fields.map((field) =>
+          field.key === fieldKey ? { ...field, options: result.options } : field,
+        ),
+      })),
+    });
+    return result.index;
   }
 
   function removeField(step: FormStep, index: number) {
@@ -557,6 +590,7 @@ export function FormTemplateBuilder({
           }
         }}
         onDetach={detach}
+        onRestoreOption={restoreDropdownOption}
         optionUsageFor={(fieldKey, value) =>
           optionUsage(definition, fieldKey, value, externalConditions)
         }
