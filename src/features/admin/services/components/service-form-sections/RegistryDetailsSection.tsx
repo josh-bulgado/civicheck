@@ -1,4 +1,3 @@
-import { useId } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { FileText, Lock, PhilippinePeso } from "lucide-react";
 import type { Department } from "~/features/admin/departments.queries";
@@ -28,6 +27,7 @@ import {
 import { Switch } from "~/components/ui/switch";
 import type { Service } from "../../services.types";
 import { FeeBreakdownFields } from "./FeeBreakdownFields";
+import { SettingGroup } from "./SettingGroup";
 import {
   SERVICE_CLASSIFICATIONS,
   UNASSIGNED_DEPARTMENT_VALUE,
@@ -45,32 +45,6 @@ interface RegistryDetailsSectionProps {
 
 /** The filled cell at the start of an input group (currency sign, lock). */
 const PREFIX_CELL = "self-stretch border-r bg-muted/60 px-3.5 py-0";
-
-function SettingGroup({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  const headingId = useId();
-  return (
-    // Bleeds past the card's side padding (px-6, sm:px-8) so the band and the
-    // row dividers run edge to edge.
-    <section
-      aria-labelledby={headingId}
-      className="-mx-6 flex flex-col not-first:border-t sm:-mx-8"
-    >
-      <h3
-        id={headingId}
-        className="border-b bg-surface-subtle px-6 py-3 text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase sm:px-8"
-      >
-        {title}
-      </h3>
-      <div className="flex flex-col divide-y divide-border">{children}</div>
-    </section>
-  );
-}
 
 interface SettingRowProps {
   label: React.ReactNode;

@@ -1,6 +1,7 @@
 import { Controller, useFieldArray, useFormContext } from "react-hook-form";
 import { Copy, Plus, Route as RouteIcon, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -15,12 +16,26 @@ import {
   FieldLabel,
 } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import { InputGroup, InputGroupTextarea } from "~/components/ui/input-group";
 import { Switch } from "~/components/ui/switch";
+import { Textarea } from "~/components/ui/textarea";
+import { SettingGroup } from "./SettingGroup";
 import {
   STEP_PLACEHOLDERS,
   type ServiceFormValues,
 } from "../service-form.config";
+
+/** A soft row holding a numbered item: step, role. */
+const LIST_ROW =
+  "flex items-start gap-3.5 rounded-2xl bg-surface-subtle p-3.5 pl-4 ring-1 ring-border ring-inset";
+/** A step: badge and label on the first line, the textarea under it. */
+const STEP_ROW =
+  "grid grid-cols-[30px_minmax(0,1fr)_auto] gap-x-3.5 gap-y-2 rounded-2xl bg-surface-subtle p-3.5 pl-4 ring-1 ring-border ring-inset";
+const NUMBER_BADGE =
+  "flex size-[30px] shrink-0 items-center justify-center rounded-full bg-primary-soft text-[13px] font-bold text-primary";
+const TOUCH_TEXTAREA =
+  "min-h-[84px] rounded-xl bg-card px-3.5 py-3 leading-snug focus-visible:ring-4 focus-visible:ring-ring/25";
+const ADD_ROW =
+  "w-full rounded-[14px] border-[1.5px] border-dashed border-foreground/20 bg-transparent text-body shadow-none hover:border-primary hover:bg-primary/5 hover:text-primary";
 
 export function CitizenJourneySection({
   embedded = false,
@@ -56,7 +71,9 @@ export function CitizenJourneySection({
     <Card
       id={embedded ? undefined : "citizen-journey"}
       variant={embedded ? "embedded" : "default"}
-      className={embedded ? undefined : "scroll-mt-6"}
+      // Embedded, -mt-6 cancels the section card's top padding so the first band
+      // meets the header. It sits on this card because the card clips overflow.
+      className={embedded ? "-mt-6" : "scroll-mt-6"}
     >
       {!embedded ? (
         <CardHeader className="border-b">
@@ -72,63 +89,51 @@ export function CitizenJourneySection({
           </div>
         </CardHeader>
       ) : null}
-      <CardContent className="flex flex-col gap-7">
-        <section
-          className="flex flex-col gap-3"
-          aria-labelledby="client-steps-heading"
+      <CardContent className="flex flex-col">
+        <SettingGroup
+          title="Client Steps"
+          headingId="client-steps-heading"
+          aside="Follow the charter’s SUBMIT / PAY / CLAIM sequence."
+          padded
         >
-          <div>
-            <h3
-              id="client-steps-heading"
-              className="text-sm font-medium text-foreground"
-            >
-              Client Steps
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              Follow the charter&rsquo;s SUBMIT / PAY / CLAIM sequence.
-            </p>
-          </div>
-
-          <ol className="flex flex-col gap-3">
+          <ol className="flex flex-col gap-2.5">
             {stepFields.fields.map((stepField, index) => (
-              <li
-                key={stepField.id}
-                className="flex items-start gap-3 rounded-lg border border-border bg-card p-4"
-              >
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary">
+              <li key={stepField.id} className={STEP_ROW}>
+                <span className={cn(NUMBER_BADGE, "col-start-1 row-start-1 self-center")}>
                   {index + 1}
                 </span>
-                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                  <label
-                    htmlFor={`service-step-${index}`}
-                    className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                  >
-                    Step {index + 1}
-                  </label>
-                  <Controller
-                    control={form.control}
-                    name={`steps.${index}.value`}
-                    render={({ field }) => (
-                      <InputGroup>
-                        <InputGroupTextarea
-                          {...field}
-                          id={`service-step-${index}`}
-                          rows={2}
-                          autoComplete="off"
-                          placeholder={`${
-                            STEP_PLACEHOLDERS[index] ??
-                            "Describe this step for the applicant"
-                          }…`}
-                        />
-                      </InputGroup>
-                    )}
-                  />
-                </div>
-                <div className="flex shrink-0 items-center">
+                <label
+                  htmlFor={`service-step-${index}`}
+                  className="col-start-2 row-start-1 self-center text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase"
+                >
+                  Step {index + 1}
+                </label>
+                <Controller
+                  control={form.control}
+                  name={`steps.${index}.value`}
+                  render={({ field }) => (
+                    <Textarea
+                      {...field}
+                      id={`service-step-${index}`}
+                      rows={2}
+                      autoComplete="off"
+                      className={cn(
+                        TOUCH_TEXTAREA,
+                        "col-span-3 row-start-2 sm:col-span-1 sm:col-start-2",
+                      )}
+                      placeholder={`${
+                        STEP_PLACEHOLDERS[index] ??
+                        "Describe this step for the applicant"
+                      }…`}
+                    />
+                  )}
+                />
+                {/* Beside the label on a phone so the textarea keeps the full width. */}
+                <div className="col-start-3 row-start-1 flex items-center self-center sm:row-span-2 sm:self-start">
                   <Button
                     type="button"
                     variant="ghost"
-                    size="icon"
+                    size="icon-lg"
                     className="text-muted-foreground"
                     onClick={() =>
                       stepFields.insert(index + 1, {
@@ -142,7 +147,7 @@ export function CitizenJourneySection({
                   <Button
                     type="button"
                     variant="ghost"
-                    size="icon"
+                    size="icon-lg"
                     className="text-muted-foreground hover:text-destructive"
                     onClick={() => removeStep(index)}
                     aria-label={`Remove step ${index + 1}`}
@@ -157,46 +162,33 @@ export function CitizenJourneySection({
           <Button
             type="button"
             variant="outline"
-            size="sm"
-            className="border-dashed"
+            size="touch"
+            className={ADD_ROW}
             onClick={() => stepFields.append({ value: "" })}
           >
             <Plus aria-hidden="true" data-icon="inline-start" />
             Add Step
           </Button>
-        </section>
+        </SettingGroup>
 
-        <section
-          className="flex flex-col gap-3 border-t border-border pt-6"
-          aria-labelledby="person-roles-heading"
+        <SettingGroup
+          title="Person Roles"
+          headingId="person-roles-heading"
+          aside="Who the application is about. Most services need one; Marriage License needs two."
+          padded
         >
-          <div>
-            <h3
-              id="person-roles-heading"
-              className="text-sm font-medium text-foreground"
-            >
-              Person Roles
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              Who the application is about. Most services need one; Marriage License needs two.
-            </p>
-          </div>
-
-          <ul className="grid gap-3 ">
+          <ul className="flex flex-col gap-2.5">
             {partyRoleFields.fields.map((roleField, index) => (
-              <li
-                key={roleField.id}
-                className="flex items-center gap-3 rounded-lg border border-border bg-card p-3"
-              >
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary">
-                  {index + 1}
-                </span>
+              <li key={roleField.id} className={cn(LIST_ROW, "items-center")}>
+                <span className={NUMBER_BADGE}>{index + 1}</span>
                 <Controller
                   control={form.control}
                   name={`party_roles.${index}.value`}
                   render={({ field }) => (
                     <Input
                       {...field}
+                      fieldSize="touch"
+                      className="bg-card"
                       placeholder="Subject…"
                       aria-label={`Person role ${index + 1}`}
                       autoComplete="off"
@@ -206,7 +198,7 @@ export function CitizenJourneySection({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon"
+                  size="icon-lg"
                   className="shrink-0 text-muted-foreground hover:text-destructive"
                   disabled={partyRoleFields.fields.length <= 1}
                   onClick={() => partyRoleFields.remove(index)}
@@ -221,37 +213,25 @@ export function CitizenJourneySection({
           <Button
             type="button"
             variant="outline"
-            size="sm"
-            className="border-dashed"
+            size="touch"
+            className={ADD_ROW}
             onClick={() => partyRoleFields.append({ value: "" })}
           >
             <Plus aria-hidden="true" data-icon="inline-start" />
             Add Person Role
           </Button>
-        </section>
+        </SettingGroup>
 
-        <section
-          className="flex flex-col gap-3 border-t border-border pt-6"
-          aria-labelledby="request-messages-heading"
-        >
-          <div>
-            <h3
-              id="request-messages-heading"
-              className="text-sm font-medium text-foreground"
-            >
-              Messages
-            </h3>
-          </div>
-
+        <SettingGroup title="Messages" headingId="request-messages-heading">
           <Controller
             control={form.control}
             name="allows_messages"
             render={({ field }) => (
               <Field
                 orientation="horizontal"
-                className="items-start gap-4 rounded-lg border border-border bg-card p-4 sm:items-center"
+                className="gap-6 px-6 py-5 has-[>[data-slot=field-content]]:items-start sm:px-8 sm:has-[>[data-slot=field-content]]:items-center"
               >
-                <FieldContent className="min-w-0 gap-1.5">
+                <FieldContent className="min-w-0 max-w-[66ch]">
                   <FieldLabel htmlFor="service-allows-messages">
                     Allow messages on requests
                   </FieldLabel>
@@ -262,6 +242,7 @@ export function CitizenJourneySection({
                 <Switch
                   id="service-allows-messages"
                   name={field.name}
+                  size="touch"
                   className="ml-auto shrink-0"
                   aria-describedby="service-allows-messages-help"
                   checked={field.value}
@@ -272,7 +253,7 @@ export function CitizenJourneySection({
               </Field>
             )}
           />
-        </section>
+        </SettingGroup>
       </CardContent>
     </Card>
   );

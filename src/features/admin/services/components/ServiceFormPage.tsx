@@ -978,7 +978,7 @@ export function ServiceFormPage({
                   id="citizen-journey"
                   icon={RouteIcon}
                   title="Citizen Journey"
-                  summary={journeySummary}
+                  description="What applicants are told to do, and who the application is about."
                   hasError={invalidSections.has("citizen-journey")}
                 >
                   <CitizenJourneySection embedded />
