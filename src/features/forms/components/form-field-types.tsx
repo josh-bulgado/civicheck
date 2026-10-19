@@ -3,7 +3,7 @@ import {
   CalendarDays,
   ListFilter,
   Phone,
-  TextCursorInput,
+  Type,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -16,7 +16,7 @@ export interface FormFieldTypeOption {
 }
 
 export const FIELD_TYPES: FormFieldTypeOption[] = [
-  { value: "text", label: "Short text", icon: TextCursorInput },
+  { value: "text", label: "Short text", icon: Type },
   { value: "textarea", label: "Long text", icon: AlignLeft },
   { value: "date", label: "Date", icon: CalendarDays },
   { value: "phone", label: "Philippine mobile number", icon: Phone },
@@ -30,6 +30,6 @@ export function fieldTypeLabel(type: FormFieldType) {
 
 export function FormFieldIcon({ type }: { type: FormFieldType }) {
   const Icon =
-    FIELD_TYPES.find((item) => item.value === type)?.icon ?? TextCursorInput;
+    FIELD_TYPES.find((item) => item.value === type)?.icon ?? Type;
   return <Icon aria-hidden="true" className="size-4" />;
 }

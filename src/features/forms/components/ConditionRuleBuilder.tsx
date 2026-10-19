@@ -30,6 +30,10 @@ export interface ConditionSource {
 const POPUP_CLASS =
   "w-auto min-w-(--anchor-width) max-w-[min(28rem,var(--available-width))]";
 
+/** The dashed "add" pill: Add Condition here, Add Option in the field sheet. */
+export const ADD_PILL =
+  "h-9 gap-1.5 self-start rounded-full border-[1.5px] border-dashed border-primary bg-transparent px-3.5 text-[13.5px] font-semibold text-primary shadow-none hover:bg-primary/5 hover:text-primary";
+
 function initialCondition(source: ConditionSource): FormCondition {
   return {
     field: source.key,
@@ -77,8 +81,7 @@ export function ConditionRuleBuilder({
         <Button
           type="button"
           variant="outline"
-          size="sm"
-          className="self-start"
+          className={ADD_PILL}
           disabled={sources.length === 0}
           onClick={() =>
             onChange({
@@ -266,8 +269,7 @@ export function ConditionRuleBuilder({
         <Button
           type="button"
           variant="outline"
-          size="sm"
-          className="self-start rounded-full border-dashed border-primary/40 text-primary"
+          className={ADD_PILL}
           disabled={sources.length === 0 || rule.conditions.length >= 20}
           onClick={() =>
             onChange({

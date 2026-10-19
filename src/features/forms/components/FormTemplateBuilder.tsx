@@ -23,7 +23,6 @@ import {
   Blocks,
   Copy,
   Eye,
-  GitBranch,
   GripVertical,
   MoreHorizontal,
   Pencil,
@@ -31,13 +30,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "~/components/ui/collapsible";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -70,22 +63,27 @@ import type {
 } from "../form-template.types";
 import { optionUsage, restoreOption, type ConditionRef } from "../form-option-usage";
 import { FormFieldInspector } from "./FormFieldInspector";
+import { FIELD_TYPES, FormFieldIcon } from "./form-field-types";
 import {
-  FIELD_TYPES,
-  FormFieldIcon,
-  fieldTypeLabel,
-} from "./form-field-types";
+  FieldRequiredChip,
+  FieldTypeChip,
+  describeVisibility,
+  fieldsInStep,
+} from "./form-field-summary";
+import { PublishedFormPreviewSheet } from "./PublishedFormPreviewSheet";
 
 const STEPS: Array<{ value: FormStep; label: string }> = [
   { value: "case", label: "Case details" },
   { value: "details", label: "Personal details" },
 ];
 
-function fieldsInStep(definition: FormTemplateDefinition, step: FormStep) {
-  return definition.sections
-    .filter((section) => section.step === step)
-    .flatMap((section) => section.fields);
-}
+const TOOLBAR_BUTTON = "h-9 gap-2 rounded-[10px] px-3.5 text-[13.5px]";
+// One row of the Insert Shared Block and row action menus.
+const MENU_CONTENT = "min-w-[200px] rounded-[14px] p-1.5";
+const MENU_ITEM = "min-h-10 gap-2.5 rounded-[9px] px-3 text-sm font-medium";
+const HEAD_CELL =
+  "h-auto px-3 py-[11px] text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase";
+const BODY_CELL = "p-2.5";
 
 function withStepFields(
   definition: FormTemplateDefinition,
@@ -151,24 +149,6 @@ function misorderedKeys(fields: FormFieldDefinition[]) {
   return keys;
 }
 
-function describeVisibility(
-  field: FormFieldDefinition,
-  fields: FormFieldDefinition[],
-  index: number,
-) {
-  if (!field.visibleWhen) return null;
-  const { field: sourceKey, operator, value } = field.visibleWhen;
-  const sourceIndex = fields.findIndex((candidate) => candidate.key === sourceKey);
-  const source = fields[sourceIndex];
-  const answer =
-    source?.options?.find((option) => option.value === value)?.label ?? value;
-
-  return {
-    text: `${source?.label ?? sourceKey} ${operator === "equals" ? "is" : "is not"} ${answer}`,
-    misordered: sourceIndex > index,
-  };
-}
-
 export function FormTemplateBuilder({
   definition,
   onChange,
@@ -177,6 +157,8 @@ export function FormTemplateBuilder({
   allowPersonGroup = true,
   allowSharedBlocks = true,
   externalConditions,
+  edgeToEdge = false,
+  version = 0,
 }: {
   definition: FormTemplateDefinition;
   onChange: (definition: FormTemplateDefinition) => void;
@@ -189,6 +171,13 @@ export function FormTemplateBuilder({
   allowSharedBlocks?: boolean;
   /** Conditions outside this form (requirements) that point at its dropdown options. */
   externalConditions?: readonly ConditionRef[];
+  /**
+   * Each step becomes a divided band that bleeds past the card's side padding
+   * (px-6, sm:px-8), like the service editor's other sections.
+   */
+  edgeToEdge?: boolean;
+  /** The live version, shown in the preview sheet. 0 when unpublished. */
+  version?: number;
 }) {
   const immutableKeySet = new Set(immutableKeys);
   const fieldTypes = FIELD_TYPES.filter(
@@ -203,6 +192,7 @@ export function FormTemplateBuilder({
     id: string;
   } | null>(null);
   const [liveMessage, setLiveMessage] = useState("");
+  const [previewOpen, setPreviewOpen] = useState(false);
   // The control that opened the inspector sheet, so closing it can hand focus
   // back there. Null when the sheet opened some other way (Add Field).
   const openerRef = useRef<HTMLElement | null>(null);
@@ -468,7 +458,7 @@ export function FormTemplateBuilder({
     selectedIndex >= 0 ? (selectedFields[selectedIndex] ?? null) : null;
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className={cn("flex flex-col", !edgeToEdge && "gap-5")}>
       <p role="status" aria-live="polite" className="sr-only">
         {liveMessage}
       </p>
@@ -484,54 +474,64 @@ export function FormTemplateBuilder({
           <section
             key={step.value}
             aria-labelledby={`${step.value}-step-heading`}
-            className="flex flex-col gap-3"
+            className={cn(
+              "flex flex-col gap-3.5",
+              edgeToEdge &&
+                "-mx-6 border-t px-6 pt-[22px] pb-6 sm:-mx-8 sm:px-8",
+            )}
           >
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-col gap-1">
+            <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2.5">
+              <div className="flex flex-col">
                 <h3
                   id={`${step.value}-step-heading`}
-                  className="text-sm font-semibold text-foreground"
+                  className="text-base font-semibold tracking-tight text-foreground"
                 >
                   {step.label}
                 </h3>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[13px] text-muted-foreground">
                   {fields.length} {fields.length === 1 ? "field" : "fields"}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {stepBlocks.length > 0 ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger
                       nativeButton
                       render={
-                        <Button type="button" variant="outline" size="sm" />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={TOOLBAR_BUTTON}
+                        />
                       }
                     >
                       <Blocks data-icon="inline-start" />
                       Insert Shared Block
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="min-w-64">
+                    <DropdownMenuContent align="end" className={MENU_CONTENT}>
                       <DropdownMenuGroup>
-                        <DropdownMenuLabel>
-                          Shared question blocks
+                        <DropdownMenuLabel className="px-3 pt-2 pb-1 text-xs font-semibold tracking-[0.06em] uppercase">
+                          Shared blocks
                         </DropdownMenuLabel>
-                        <DropdownMenuSeparator />
                         {stepBlocks.map((block) => {
                           const included = includedBlockKeys.has(block.blockKey);
                           return (
                             <DropdownMenuItem
                               key={block.blockKey}
                               disabled={included}
+                              className={MENU_ITEM}
                               onClick={() => addBlock(block)}
                             >
-                              <span className="flex flex-col gap-0.5">
-                                <span>{block.name}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {included
-                                    ? "Already in this form"
-                                    : `${block.fields.length} ${block.fields.length === 1 ? "question" : "questions"}`}
+                              <Blocks
+                                aria-hidden="true"
+                                className="text-muted-foreground"
+                              />
+                              {block.name}
+                              {included ? (
+                                <span className="ml-auto pl-3 text-xs font-normal text-muted-foreground">
+                                  Already added
                                 </span>
-                              </span>
+                              ) : null}
                             </DropdownMenuItem>
                           );
                         })}
@@ -542,7 +542,7 @@ export function FormTemplateBuilder({
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
+                  className={TOOLBAR_BUTTON}
                   onClick={(event) => addField(step.value, event.currentTarget)}
                 >
                   <Plus data-icon="inline-start" />
@@ -599,34 +599,29 @@ export function FormTemplateBuilder({
         }
       />
 
-      <Collapsible>
-        <CollapsibleTrigger className="flex items-center gap-2 text-sm font-semibold text-primary">
-          <Eye aria-hidden="true" /> Preview Published Form Structure
-        </CollapsibleTrigger>
-        <CollapsibleContent className="pt-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {stepsToShow.map((step) => (
-              <div
-                key={step.value}
-                className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-4"
-              >
-                <p className="text-sm font-semibold">{step.label}</p>
-                {fieldsInStep(definition, step.value).map((field) => (
-                  <div
-                    key={field.key}
-                    className="flex items-center justify-between gap-2 text-xs"
-                  >
-                    <span>{field.label}</span>
-                    <span className="text-muted-foreground">
-                      {field.required ? "Required" : "Optional"}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
+      <div
+        className={cn(
+          "flex",
+          edgeToEdge && "-mx-6 border-t px-6 pt-[22px] sm:-mx-8 sm:px-8",
+        )}
+      >
+        <button
+          type="button"
+          onClick={() => setPreviewOpen(true)}
+          className="flex min-h-10 items-center gap-2 rounded-[10px] px-1 font-semibold text-primary outline-none hover:underline hover:underline-offset-4 focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <Eye aria-hidden="true" className="size-[18px]" />
+          Preview Published Form Structure
+        </button>
+      </div>
+
+      <PublishedFormPreviewSheet
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        definition={definition}
+        steps={stepsToShow}
+        version={version}
+      />
     </div>
   );
 }
@@ -693,21 +688,25 @@ function StepFieldTable({
       accessibility={{ announcements }}
     >
       <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-        <div className="rounded-lg border border-border">
+        <div className="overflow-hidden rounded-2xl border border-border-strong">
           <Table aria-label={`${stepLabel} questions`}>
-            <TableHeader className="bg-muted/50">
+            <TableHeader className="bg-surface-subtle">
               <TableRow className="hover:bg-transparent">
-                <TableHead className="w-10">
+                <TableHead className={cn(HEAD_CELL, "w-9 pr-0")}>
                   <span className="sr-only">Reorder</span>
                 </TableHead>
-                <TableHead>Question</TableHead>
-                <TableHead className="hidden md:table-cell">Key</TableHead>
-                <TableHead className="hidden sm:table-cell">Type</TableHead>
-                <TableHead>Required</TableHead>
-                <TableHead className="hidden lg:table-cell">
+                <TableHead className={HEAD_CELL}>Question</TableHead>
+                <TableHead className={cn(HEAD_CELL, "hidden md:table-cell")}>
+                  Key
+                </TableHead>
+                <TableHead className={cn(HEAD_CELL, "hidden sm:table-cell")}>
+                  Type
+                </TableHead>
+                <TableHead className={HEAD_CELL}>Required</TableHead>
+                <TableHead className={cn(HEAD_CELL, "hidden lg:table-cell")}>
                   Visibility
                 </TableHead>
-                <TableHead className="w-12">
+                <TableHead className={cn(HEAD_CELL, "w-[52px]")}>
                   <span className="sr-only">Actions</span>
                 </TableHead>
               </TableRow>
@@ -789,43 +788,45 @@ function FieldRow({
         ),
         transition,
       }}
-      className={cn(isDragging && "relative z-10 bg-background shadow-md")}
+      className={cn(
+        "hover:bg-surface-subtle",
+        isDragging && "relative z-10 bg-background shadow-md",
+      )}
     >
-      <TableCell className="w-10 pr-0">
+      <TableCell className={cn(BODY_CELL, "w-9 pr-0")}>
         <Button
           type="button"
           variant="ghost"
-          size="icon"
           ref={setActivatorNodeRef}
           disabled={locked}
           title={locked ? "Part of a shared block" : undefined}
           aria-label={`Reorder ${field.label}`}
-          className="relative size-9 touch-none cursor-grab text-muted-foreground after:absolute after:-inset-1 active:cursor-grabbing"
+          className="relative h-8 w-6 touch-none cursor-grab rounded-md p-0 text-muted-foreground opacity-55 after:absolute after:-inset-1 hover:bg-transparent hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing"
           {...attributes}
           {...listeners}
         >
-          <GripVertical aria-hidden="true" />
+          <GripVertical aria-hidden="true" className="fill-current" />
         </Button>
       </TableCell>
 
-      <TableCell className="whitespace-normal">
+      <TableCell className={cn(BODY_CELL, "p-0 whitespace-normal")}>
         <button
           type="button"
           ref={nameButtonRef}
           aria-current={selected ? "true" : undefined}
           onClick={(event) => onOpen(event.currentTarget)}
-          className="group/name -mx-1 flex min-h-11 w-full items-center gap-3 rounded-md px-1 py-1 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="group/name flex min-h-11 w-full items-center gap-3 rounded-xl p-2.5 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
         >
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-[11px] bg-primary-soft text-primary">
             <FormFieldIcon type={field.type} />
           </span>
-          <span className="flex min-w-0 flex-col gap-0.5">
-            <span className="text-sm font-medium break-words text-foreground underline-offset-4 group-hover/name:underline">
+          <span className="flex min-w-0 flex-col">
+            <span className="text-[14.5px] font-semibold break-words text-foreground underline-offset-[3px] group-hover/name:text-primary group-hover/name:underline">
               {field.label}
             </span>
             {blockName ? (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Blocks aria-hidden="true" className="size-3" />
+              <span className="flex items-center gap-1.5 text-[12.5px] text-muted-foreground">
+                <Blocks aria-hidden="true" className="size-[13px]" />
                 Shared · {blockName}
               </span>
             ) : null}
@@ -833,50 +834,43 @@ function FieldRow({
         </button>
       </TableCell>
 
-      <TableCell className="hidden md:table-cell">
+      <TableCell className={cn(BODY_CELL, "hidden md:table-cell")}>
         <span
           translate="no"
-          className="font-mono text-xs text-muted-foreground"
+          className="font-mono text-[12.5px] text-muted-foreground"
         >
           {field.key}
         </span>
       </TableCell>
 
-      <TableCell className="hidden sm:table-cell">
-        <Badge variant="secondary">{fieldTypeLabel(field.type)}</Badge>
+      <TableCell className={cn(BODY_CELL, "hidden sm:table-cell")}>
+        <FieldTypeChip type={field.type} />
       </TableCell>
 
-      <TableCell>
-        {field.required ? (
-          <Badge>Required</Badge>
-        ) : (
-          <span className="text-xs text-muted-foreground">Optional</span>
-        )}
+      <TableCell className={BODY_CELL}>
+        <FieldRequiredChip required={field.required} />
       </TableCell>
 
-      <TableCell className="hidden max-w-64 whitespace-normal lg:table-cell">
-        {visibility ? (
+      <TableCell className={cn(BODY_CELL, "hidden whitespace-normal lg:table-cell")}>
+        {visibility?.misordered ? (
+          <span className="block max-w-64 text-[13px] break-words text-destructive">
+            Depends on a question below: {visibility.text}
+          </span>
+        ) : visibility ? (
           <span
-            className={cn(
-              "flex items-start gap-1.5 text-xs",
-              visibility.misordered
-                ? "text-destructive"
-                : "text-muted-foreground",
-            )}
+            title={`Shown when ${visibility.text}`}
+            className="inline-block max-w-[220px] truncate align-middle text-[13px] font-medium text-primary"
           >
-            <GitBranch aria-hidden="true" className="mt-0.5 size-3 shrink-0" />
-            <span className="min-w-0 break-words">
-              {visibility.misordered
-                ? `Depends on a question below: ${visibility.text}`
-                : `Shown when ${visibility.text}`}
-            </span>
+            Shown when {visibility.text}
           </span>
         ) : (
-          <span className="text-xs text-muted-foreground">Always shown</span>
+          <span className="text-[13px] whitespace-nowrap text-muted-foreground">
+            Always shown
+          </span>
         )}
       </TableCell>
 
-      <TableCell>
+      <TableCell className={cn(BODY_CELL, "text-right")}>
         <DropdownMenu>
           <DropdownMenuTrigger
             nativeButton
@@ -884,48 +878,53 @@ function FieldRow({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon"
-                className="relative size-9 text-muted-foreground after:absolute after:-inset-1"
+                className="size-10 rounded-[10px] text-muted-foreground"
                 aria-label={`Actions for ${field.label}`}
               />
             }
           >
-            <MoreHorizontal aria-hidden="true" />
+            <MoreHorizontal aria-hidden="true" className="fill-current" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-44">
-            <DropdownMenuItem onClick={() => onOpen(nameButtonRef.current)}>
-              <Pencil aria-hidden="true" />
-              Edit Field
+          <DropdownMenuContent align="end" className={MENU_CONTENT}>
+            <DropdownMenuItem
+              className={MENU_ITEM}
+              onClick={() => onOpen(nameButtonRef.current)}
+            >
+              <Pencil aria-hidden="true" className="text-muted-foreground" />
+              Edit Question
             </DropdownMenuItem>
             <DropdownMenuItem
               disabled={locked || index === 0}
+              className={MENU_ITEM}
               onClick={() => onMoveBy(-1)}
             >
-              <ArrowUp aria-hidden="true" />
+              <ArrowUp aria-hidden="true" className="text-muted-foreground" />
               Move Up
             </DropdownMenuItem>
             <DropdownMenuItem
               disabled={locked || index === fields.length - 1}
+              className={MENU_ITEM}
               onClick={() => onMoveBy(1)}
             >
-              <ArrowDown aria-hidden="true" />
+              <ArrowDown aria-hidden="true" className="text-muted-foreground" />
               Move Down
             </DropdownMenuItem>
             <DropdownMenuItem
               disabled={locked || field.type === "person_group"}
+              className={MENU_ITEM}
               onClick={onDuplicate}
             >
-              <Copy aria-hidden="true" />
+              <Copy aria-hidden="true" className="text-muted-foreground" />
               Duplicate
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="mx-1.5 my-1" />
             <DropdownMenuItem
               disabled={locked || field.type === "person_group"}
-              className="text-destructive focus:text-destructive"
+              className={cn(MENU_ITEM, "text-destructive focus:text-destructive")}
               onClick={onRemove}
             >
               <Trash2 aria-hidden="true" />
-              Remove Field
+              Remove
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -1034,7 +1034,8 @@ export function ServiceFormPage({
                     id="application-form"
                     icon={SlidersHorizontal}
                     title="Application Form"
-                    description="Questions applicants answer, including follow-ups and shared blocks."
+                    description={`Add the questions applicants answer, and show follow-up questions based on earlier answers. Each save publishes a new version, and published versions can’t be edited${templateVersion > 0 ? ` after version ${templateVersion}` : ""}.`}
+                    headerDivider={false}
                     summary={applicationSummary}
                     hasError={invalidSections.has("application-form")}
                   >

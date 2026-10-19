@@ -127,6 +127,8 @@ interface ServiceEditorSectionProps {
   hasError?: boolean;
   /** Sits at the right of the card header, for an action on the whole section. */
   action?: ReactNode;
+  /** Off when the body opens with its own block (a field) rather than a divided band. */
+  headerDivider?: boolean;
   children: ReactNode;
 }
 
@@ -138,6 +140,7 @@ export function ServiceEditorSection({
   summary,
   hasError = false,
   action,
+  headerDivider = true,
   children,
 }: ServiceEditorSectionProps) {
   return (
@@ -147,7 +150,9 @@ export function ServiceEditorSection({
       className="min-w-0 data-[hidden]:hidden"
     >
       <Card id={id} variant="soft" className="min-w-0 gap-0 py-0">
-        <CardHeader className="border-b py-6 sm:px-8">
+        <CardHeader
+          className={cn("py-6 sm:px-8", headerDivider ? "border-b" : "pb-5")}
+        >
           <div className="flex flex-wrap items-start gap-3">
             <span
               aria-hidden="true"
@@ -166,7 +171,11 @@ export function ServiceEditorSection({
                   <Badge variant="neutral">{summary}</Badge>
                 ) : null}
               </div>
-              {description ? <CardDescription>{description}</CardDescription> : null}
+              {description ? (
+                <CardDescription className="max-w-[62ch]">
+                  {description}
+                </CardDescription>
+              ) : null}
             </div>
             {/* Under the title on a phone, aligned with it (icon 44px + gap 12px). */}
             {action ? (
