@@ -52,6 +52,10 @@ const pesoFormatter = new Intl.NumberFormat("en-PH", {
   currency: "PHP",
 });
 
+/** Table cells read as plain text until hovered or focused. */
+const QUIET =
+  "border-transparent bg-transparent shadow-none hover:border-input hover:bg-background focus-visible:bg-background disabled:bg-transparent disabled:opacity-60";
+
 const FEE_UNIT_OPTIONS: ("" | FeeUnit)[] = ["", "page", "copy", "document"];
 
 /**
@@ -104,52 +108,49 @@ export function FeeBreakdownFields() {
       : `${components.length} line ${components.length === 1 ? "item" : "items"} · ${pesoFormatter.format(includedTotal)} in total`;
 
   return (
+    // Bleeds past the card's side padding (px-6, sm:px-8), like the setting groups above.
     <section
-      className="flex flex-col gap-3 border-t border-border pt-5"
+      className="-mx-6 flex flex-col border-t sm:-mx-8"
       aria-labelledby="fee-breakdown-heading"
     >
-      <Collapsible
-        open={open}
-        onOpenChange={setOpen}
-        className="flex flex-col gap-3"
-      >
+      <Collapsible open={open} onOpenChange={setOpen} className="flex flex-col">
         <h3
           id="fee-breakdown-heading"
-          className="text-sm font-medium text-foreground"
+          className="border-b bg-surface-subtle text-xs font-semibold tracking-wider text-muted-foreground uppercase"
         >
-          <CollapsibleTrigger className="group flex min-h-11 w-full items-center justify-between gap-3 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            <span className="flex min-w-0 flex-col gap-0.5">
-              <span>
-                Fee Breakdown{" "}
-                <span className="font-normal text-muted-foreground">
-                  (optional)
-                </span>
+          <CollapsibleTrigger className="group flex min-h-12 w-full items-center justify-between gap-3 px-6 py-3 text-left uppercase focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset sm:px-8">
+            <span>
+              Fee Breakdown{" "}
+              <span className="font-normal tracking-normal normal-case">
+                (optional)
               </span>
+            </span>
+            <span className="flex items-center gap-3">
               <span
                 className={cn(
-                  "text-xs font-normal",
+                  "text-[13px] font-medium tracking-normal normal-case",
                   issue ? "text-destructive" : "text-muted-foreground",
                 )}
               >
                 {issue ? "Doesn’t match the total fee" : summary}
               </span>
+              <ChevronDown
+                aria-hidden="true"
+                className="size-4 shrink-0 transition-transform group-data-[panel-open]:rotate-180"
+              />
             </span>
-            <ChevronDown
-              aria-hidden="true"
-              className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[panel-open]:rotate-180"
-            />
           </CollapsibleTrigger>
         </h3>
 
-        <CollapsibleContent className="flex flex-col gap-3">
+        <CollapsibleContent className="flex flex-col gap-4 px-6 py-5 sm:px-8">
           <FieldDescription>
             Rows marked &ldquo;In total&rdquo; must add up to the total fee. Other rows show as also payable.
           </FieldDescription>
 
           {rows.fields.length > 0 ? (
-            <div className="rounded-lg border border-border">
+            <div className="overflow-hidden rounded-2xl border border-border">
               <Table className="min-w-[52rem]">
-                <TableHeader className="bg-muted/50">
+                <TableHeader className="bg-surface-subtle [&_th]:text-xs [&_th]:font-semibold [&_th]:tracking-wider [&_th]:text-muted-foreground [&_th]:uppercase">
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="min-w-48">Charge</TableHead>
                     <TableHead className="w-32 text-right">
@@ -167,7 +168,7 @@ export function FeeBreakdownFields() {
                   {rows.fields.map((row, index) => {
                     const isIncluded = watched?.[index]?.included ?? true;
                     return (
-                      <TableRow key={row.id} className="hover:bg-transparent">
+                      <TableRow key={row.id} className="hover:bg-surface-subtle">
                         <TableCell className="align-top whitespace-normal">
                           <Controller
                             control={form.control}
@@ -176,6 +177,7 @@ export function FeeBreakdownFields() {
                               <Field data-invalid={fieldState.invalid}>
                                 <Input
                                   {...field}
+                                  className={QUIET}
                                   placeholder="Solemnization fee…"
                                   aria-label={`Charge ${index + 1} description`}
                                   aria-invalid={fieldState.invalid}
@@ -199,7 +201,7 @@ export function FeeBreakdownFields() {
                                   type="number"
                                   inputMode="decimal"
                                   placeholder="0.00…"
-                                  className="text-right tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                  className={cn(QUIET, "text-right tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none")}
                                   aria-label={`Charge ${index + 1} amount in pesos`}
                                   aria-invalid={fieldState.invalid}
                                   autoComplete="off"
@@ -225,7 +227,7 @@ export function FeeBreakdownFields() {
                                 disabled={isIncluded}
                               >
                                 <SelectTrigger
-                                  className="w-full data-placeholder:text-foreground disabled:bg-muted/50"
+                                  className={cn(QUIET, "w-full data-placeholder:text-foreground")}
                                   aria-label={`How charge ${index + 1} is charged`}
                                 >
                                   <SelectValue>
@@ -289,7 +291,7 @@ export function FeeBreakdownFields() {
                                   {...field}
                                   maxLength={120}
                                   disabled={isIncluded}
-                                  className="disabled:bg-muted/50"
+                                  className={QUIET}
                                   placeholder={isIncluded ? "—" : "Add when it applies…"}
                                   aria-label={`When charge ${index + 1} applies`}
                                   aria-invalid={fieldState.invalid}
@@ -331,7 +333,7 @@ export function FeeBreakdownFields() {
                     </TableCell>
                     <TableCell colSpan={4}>
                       {state === "match" ? (
-                        <Badge variant="success">Matches</Badge>
+                        <Badge variant="success">Matches the total fee</Badge>
                       ) : state === "short" ? (
                         <Badge variant="destructive">
                           {pesoFormatter.format(difference)} short
@@ -395,15 +397,15 @@ export function FeeBreakdownFields() {
           </div>
 
           {named.length > 0 ? (
-            <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-3">
+            <div className="flex flex-col gap-2 rounded-2xl border border-border bg-surface-subtle p-4">
               <h4 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                 What Applicants See
               </h4>
               <div className="flex items-baseline justify-between gap-3 text-sm font-medium">
-                <span>
+                <span className="font-semibold">
                   {feePerCopy ? "Fee per copy" : "Total fee at the cashier"}
                 </span>
-                <span className="tabular-nums">
+                <span className="text-2xl font-semibold tracking-tight tabular-nums">
                   {pesoFormatter.format(feeAmount)}
                 </span>
               </div>
@@ -431,7 +433,7 @@ export function FeeBreakdownFields() {
               ) : null}
               {!feePerCopy && receiptAlsoPayable.length > 0 ? (
                 <div className="flex flex-col gap-1 border-t border-border pt-2">
-                  <p className="text-xs font-medium text-muted-foreground">
+                  <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                     Also payable, depending on your request
                   </p>
                   <ul className="flex flex-col gap-1 text-sm">

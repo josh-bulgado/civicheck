@@ -43,6 +43,9 @@ interface RegistryDetailsSectionProps {
   embedded?: boolean;
 }
 
+/** The filled cell at the start of an input group (currency sign, lock). */
+const PREFIX_CELL = "self-stretch border-r bg-muted/60 px-3.5 py-0";
+
 function SettingGroup({
   title,
   children,
@@ -73,6 +76,8 @@ interface SettingRowProps {
   label: React.ReactNode;
   htmlFor: string;
   help?: React.ReactNode;
+  /** Small note under the control, for text that depends on its current value. */
+  hint?: React.ReactNode;
   error?: { message?: string };
   children: React.ReactNode;
 }
@@ -82,6 +87,7 @@ function SettingRow({
   label,
   htmlFor,
   help,
+  hint,
   error,
   children,
 }: SettingRowProps) {
@@ -96,6 +102,7 @@ function SettingRow({
       </FieldContent>
       <div className="flex min-w-0 flex-col gap-2">
         {children}
+        {hint ? <p className="text-sm text-muted-foreground">{hint}</p> : null}
         {error ? <FieldError errors={[error]} /> : null}
       </div>
     </Field>
@@ -216,9 +223,9 @@ export function RegistryDetailsSection({
                   }
                   error={fieldState.invalid ? fieldState.error : undefined}
                 >
-                  <InputGroup size="touch">
+                  <InputGroup size="touch" className={isEdit ? "bg-muted/40" : undefined}>
                     {isEdit ? (
-                      <InputGroupAddon>
+                      <InputGroupAddon className={PREFIX_CELL}>
                         <Lock aria-hidden="true" />
                       </InputGroupAddon>
                     ) : null}
@@ -226,7 +233,7 @@ export function RegistryDetailsSection({
                       {...field}
                       id="service-code"
                       placeholder="CTC-LOCAL…"
-                      className="font-mono uppercase"
+                      className="font-mono uppercase disabled:opacity-100 disabled:text-foreground"
                       disabled={isEdit}
                       autoComplete="off"
                       spellCheck={false}
@@ -239,66 +246,6 @@ export function RegistryDetailsSection({
                 </SettingRow>
               )}
             />
-          </SettingGroup>
-
-          <SettingGroup title="Fees & Processing">
-            <Controller
-              control={form.control}
-              name="fee"
-              render={({ field, fieldState }) => (
-                <SettingRow
-                  label={feePerCopy ? "Fee per Copy" : "Total Fee"}
-                  htmlFor="service-fee"
-                  help={feePerCopy ? "Charged for each copy requested." : null}
-                  error={fieldState.invalid ? fieldState.error : undefined}
-                >
-                  <InputGroup size="touch">
-                    <InputGroupAddon>
-                      <PhilippinePeso size={16} />
-                    </InputGroupAddon>
-                    <InputGroupInput
-                      {...field}
-                      id="service-fee"
-                      type="number"
-                      inputMode="decimal"
-                      placeholder="100.00…"
-                      autoComplete="off"
-                      aria-invalid={fieldState.invalid}
-                    />
-                  </InputGroup>
-                </SettingRow>
-              )}
-            />
-
-            <Controller
-              control={form.control}
-              name="fee_per_copy"
-              render={({ field }) => (
-                <Field
-                  orientation="horizontal"
-                  className="gap-6 px-6 py-5 has-[>[data-slot=field-content]]:items-start sm:px-8 sm:has-[>[data-slot=field-content]]:items-center"
-                >
-                  <FieldContent className="min-w-0 max-w-[66ch]">
-                    <FieldLabel htmlFor="service-fee-per-copy">
-                      Allow multiple copies
-                    </FieldLabel>
-                    <FieldDescription>
-                      Applicants choose how many copies to request. The fee is
-                      charged for each, and the fee breakdown is hidden.
-                    </FieldDescription>
-                  </FieldContent>
-                  <Switch
-                    id="service-fee-per-copy"
-                    name={field.name}
-                    className="ml-auto shrink-0"
-                    checked={field.value}
-                    onCheckedChange={(checked) =>
-                      field.onChange(checked === true)
-                    }
-                  />
-                </Field>
-              )}
-            />
 
             <Controller
               control={form.control}
@@ -307,7 +254,8 @@ export function RegistryDetailsSection({
                 <SettingRow
                   label="Classification"
                   htmlFor="service-classification"
-                  help={
+                  help="Sets how long the office has to resolve a request."
+                  hint={
                     SERVICE_CLASSIFICATIONS.find(
                       (classification) => classification.value === field.value,
                     )?.hint
@@ -346,28 +294,6 @@ export function RegistryDetailsSection({
                       </SelectGroup>
                     </SelectContent>
                   </Select>
-                </SettingRow>
-              )}
-            />
-
-            <Controller
-              control={form.control}
-              name="processing_time"
-              render={({ field, fieldState }) => (
-                <SettingRow
-                  label="Processing Time"
-                  htmlFor="service-processing-time"
-                  help="Include any posting or publication wait."
-                  error={fieldState.invalid ? fieldState.error : undefined}
-                >
-                  <Input
-                    {...field}
-                    id="service-processing-time"
-                    fieldSize="touch"
-                    placeholder="2 hours…"
-                    autoComplete="off"
-                    aria-invalid={fieldState.invalid}
-                  />
                 </SettingRow>
               )}
             />
@@ -414,6 +340,94 @@ export function RegistryDetailsSection({
                       </SelectGroup>
                     </SelectContent>
                   </Select>
+                </SettingRow>
+              )}
+            />
+          </SettingGroup>
+
+          <SettingGroup title="Fees & Processing">
+            <Controller
+              control={form.control}
+              name="fee"
+              render={({ field, fieldState }) => (
+                <SettingRow
+                  label={feePerCopy ? "Fee per Copy" : "Total Fee"}
+                  htmlFor="service-fee"
+                  help={
+                    feePerCopy
+                      ? "Charged for each copy requested."
+                      : "What the cashier collects."
+                  }
+                  error={fieldState.invalid ? fieldState.error : undefined}
+                >
+                  <InputGroup size="touch">
+                    <InputGroupAddon className={PREFIX_CELL}>
+                      <PhilippinePeso aria-hidden="true" />
+                    </InputGroupAddon>
+                    <InputGroupInput
+                      {...field}
+                      id="service-fee"
+                      className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                      type="number"
+                      inputMode="decimal"
+                      placeholder="100.00…"
+                      autoComplete="off"
+                      aria-invalid={fieldState.invalid}
+                    />
+                  </InputGroup>
+                </SettingRow>
+              )}
+            />
+
+            <Controller
+              control={form.control}
+              name="fee_per_copy"
+              render={({ field }) => (
+                <Field
+                  orientation="horizontal"
+                  className="gap-6 px-6 py-5 has-[>[data-slot=field-content]]:items-start sm:px-8 sm:has-[>[data-slot=field-content]]:items-center"
+                >
+                  <FieldContent className="min-w-0 max-w-[66ch]">
+                    <FieldLabel htmlFor="service-fee-per-copy">
+                      Allow Multiple Copies
+                    </FieldLabel>
+                    <FieldDescription>
+                      Applicants choose how many copies to request. The fee is
+                      charged for each, and the fee breakdown is hidden.
+                    </FieldDescription>
+                  </FieldContent>
+                  <Switch
+                    id="service-fee-per-copy"
+                    size="touch"
+                    name={field.name}
+                    className="ml-auto shrink-0"
+                    checked={field.value}
+                    onCheckedChange={(checked) =>
+                      field.onChange(checked === true)
+                    }
+                  />
+                </Field>
+              )}
+            />
+
+            <Controller
+              control={form.control}
+              name="processing_time"
+              render={({ field, fieldState }) => (
+                <SettingRow
+                  label="Processing Time"
+                  htmlFor="service-processing-time"
+                  help="Include any posting or publication wait."
+                  error={fieldState.invalid ? fieldState.error : undefined}
+                >
+                  <Input
+                    {...field}
+                    id="service-processing-time"
+                    fieldSize="touch"
+                    placeholder="2 hours…"
+                    autoComplete="off"
+                    aria-invalid={fieldState.invalid}
+                  />
                 </SettingRow>
               )}
             />

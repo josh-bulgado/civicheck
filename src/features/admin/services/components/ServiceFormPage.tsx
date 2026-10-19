@@ -57,7 +57,6 @@ import { RelationshipsSection } from "./service-form-sections/RelationshipsSecti
 import { RequirementsSection } from "./service-form-sections/RequirementsSection";
 import {
   UNASSIGNED_DEPARTMENT_VALUE,
-  SERVICE_CLASSIFICATIONS,
   buildServiceFormSchema,
   defaultPartyRoles,
   emptyServiceFormDefaults,
@@ -299,7 +298,6 @@ export function ServiceFormPage({
   }, [activeSection]);
   const [
     fee,
-    classification,
     steps,
     partyRoles,
     requirements,
@@ -309,7 +307,6 @@ export function ServiceFormPage({
     control: form.control,
     name: [
       "fee",
-      "classification",
       "steps",
       "party_roles",
       "requirements",
@@ -793,10 +790,6 @@ export function ServiceFormPage({
     });
   }, [form.formState.errors, submitted]);
   const invalidSections = new Set(errorSummary.map(({ section }) => section));
-  const classificationLabel =
-    SERVICE_CLASSIFICATIONS.find((option) => option.value === classification)
-      ?.label ?? "Unclassified";
-  const registrySummary = `${pesoFormatter.format(Number(fee) || 0)} · ${classificationLabel}`;
   const journeySummary = `${steps?.filter((step) => step.value.trim()).length ?? 0} steps · ${partyRoles?.filter((role) => role.value.trim()).length ?? 0} roles`;
   const caseRuleCount =
     Number(Boolean(formDefinition.caseSelector)) +
@@ -968,7 +961,7 @@ export function ServiceFormPage({
                   id="registry-details"
                   icon={FileText}
                   title="Registry & Fees"
-                  summary={registrySummary}
+                  description="What applicants and the cashier see for this service."
                   hasError={invalidSections.has("registry-details")}
                 >
                   <RegistryDetailsSection
