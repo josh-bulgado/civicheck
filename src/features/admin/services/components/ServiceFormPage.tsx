@@ -158,6 +158,11 @@ const FIELD_ERROR_DESTINATIONS: Partial<
     anchor: "service-display-name",
     label: "Display Name",
   },
+  short_name: {
+    section: "relationships",
+    anchor: "service-short-name",
+    label: "Short Name",
+  },
   requirement_group: {
     section: "relationships",
     anchor: "service-requirement-group",
