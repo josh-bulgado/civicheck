@@ -35,7 +35,7 @@ const tabsListVariants = cva(
         pill: "gap-1 rounded-full bg-muted p-1 group-data-horizontal/tabs:h-auto",
         // The service editor's section bar: a rounded track, the active tab a raised white tile.
         segmented:
-          "max-w-full gap-0.5 overflow-x-auto rounded-2xl bg-muted p-1 group-data-horizontal/tabs:h-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          "max-w-full justify-start gap-0.5 overflow-x-auto rounded-2xl bg-muted p-1 group-data-horizontal/tabs:h-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         // Bare track for a settings sidebar: each tab is its own soft pill.
         sidebar: "w-full gap-1 rounded-none bg-transparent p-0 group-data-horizontal/tabs:h-auto",
         // Equal-width tabs on a hairline, the active one underlined. Settings on a phone.

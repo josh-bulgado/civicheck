@@ -46,11 +46,11 @@ export function ServiceDossierHeader({
   const isGroup = mode === "group";
   const backClassName = cn(
     buttonVariants({ variant: "outline", size: "icon" }),
-    "size-11 shrink-0",
+    "size-11 shrink-0 rounded-full",
   );
 
   return (
-    <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-border bg-background px-4 py-4 sm:px-8">
+    <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 bg-background px-4 pt-5 pb-3 sm:px-8">
       <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
         {(isVariant || isGroup) && displayGroup ? (
           <Link
@@ -195,8 +195,7 @@ export function ServiceFormActionBar({
   const isVariant = mode === "variant";
   const isGroup = mode === "group";
   const cancelClassName = cn(
-    buttonVariants({ variant: "outline" }),
-    "min-h-11",
+    buttonVariants({ variant: "outline", size: "touch" }),
   );
 
   return (
@@ -240,7 +239,12 @@ export function ServiceFormActionBar({
           Cancel
         </Link>
       )}
-      <Button type="submit" className="min-h-11" disabled={isDisabled}>
+      <Button
+        type="submit"
+        variant="raised"
+        size="touch"
+        disabled={isDisabled}
+      >
         {isSaving ? (
           <Spinner data-icon="inline-start" />
         ) : (

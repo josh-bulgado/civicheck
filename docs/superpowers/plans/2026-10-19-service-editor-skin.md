@@ -15,7 +15,7 @@
 - No existing variant, size or default changes; every addition is opt-in.
 - Existing tokens only (`--radius-*`, `--shadow-portal-*`, `primary`, `card`, `muted`); no new colors.
 - Light and dark must both work.
-- Dialogs, sheets, menus and selects portal outside the editor wrapper; re-apply `.service-editor` where they need the editor's tokens.
+- Dialogs, sheets, menus and selects portal outside the editor wrapper; re-apply the editor scope where they need the editor's tokens.
 - `FormTemplateBuilder` is shared with the shared-blocks editor; restyle it through props or the scope class, never its defaults.
 - Commit only the files each task names. `src/components/ui/attachment.tsx` and `sites/` are unrelated untracked files.
 - Verification: `npx tsc --noEmit`, `npx eslint <paths>`, `npx vitest run`, then browser checks at 1280px and 390px, light and dark, and WebKit where possible.
@@ -44,23 +44,21 @@
 - [x] Add the variants; `tsc` and `eslint` clean; built CSS contains each new class.
 - [x] Commit `feat(ui): additive touch, raised, soft and segmented variants`.
 
-### Task 2: Editor scope class
+### Task 2: Editor scope (no new class needed yet)
 
-**Files:** Modify `src/styles/app.css`
+The editor already carries `data-service-editor` (set in `ServiceFormPage` and `ServiceGroupApplicationPage`, styled in `app.css`). Use that hook instead of adding `.service-editor`; add scoped tokens (for example the portal's `--muted-foreground`) only when a tinted row needs them.
 
-- [ ] Add `.service-editor` under `@layer components` beside `.apply-wizard`: portal-style focus outline, `--muted-foreground: #5f6b7c`, and an `isolation: isolate` ground layer using the existing `--portal-ground`.
-- [ ] Browser check: with the class on the wrapper nothing outside the editor changes.
-- [ ] Commit `feat(services): editor scope class`.
+- [x] Decision recorded; nothing to commit.
 
 ### Task 3: Shell
 
 **Files:** Modify `src/features/admin/services/components/ServiceFormPage.tsx`
 
-- [ ] Put `.service-editor` on the outer wrapper (line ~836).
-- [ ] Header: round back button, title, status chip; Cancel `size="touch"`, Save & Publish `variant="raised" size="touch"`.
-- [ ] Tab bar: `TabsList variant="segmented"`; counts visible only on the active tab. Keep tab ids, hash handling and `variantOnly` as they are.
-- [ ] Verify the error-summary anchors still resolve and the leave-guard dialog still appears.
-- [ ] Commit `feat(services): editor shell skin`.
+- [x] Wrapper already has `data-service-editor`.
+- [x] Header: round back button, title, status chip; Cancel `size="touch"`, Save & Publish `variant="raised" size="touch"`.
+- [x] Tab bar: `TabsList variant="segmented"`; counts visible only on the active tab. Keep tab ids, hash handling and `variantOnly` as they are.
+- [ ] Verify in the browser (needs an admin session): error-summary anchors still resolve, leave-guard dialog appears, tab bar scrolls on a 390px screen.
+- [x] Commit `feat(services): editor shell skin`. The header, action bar and tab bar are shared with the shared-application editor (`ServiceGroupApplicationPage`), so it changes too.
 
 ### Task 4: Registry & Fees and the other tabs
 
@@ -72,7 +70,7 @@
 
 ### Task 5: Overlays
 
-- [ ] Re-apply `.service-editor` on the requirement sheet, field inspector and any dialog opened from the editor; check select popups.
+- [ ] Re-apply the editor scope on the requirement sheet, field inspector and any dialog opened from the editor; check select popups.
 
 ### Task 6: QA
 

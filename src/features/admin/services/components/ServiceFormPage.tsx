@@ -867,19 +867,14 @@ export function ServiceFormPage({
             }}
             className="min-h-0 min-w-0 flex-1 gap-0"
           >
-            <div className="shrink-0 overflow-x-auto border-b border-border bg-background px-4 sm:px-8">
+            <div className="shrink-0 border-b border-border bg-background px-4 pb-3 sm:px-8">
               <TabsList
                 ref={tabListRef}
-                variant="editor"
+                variant="segmented"
                 aria-label="Service configuration"
-                className="w-full min-w-max justify-start gap-2 p-0 group-data-horizontal/tabs:h-auto"
               >
                 {availableTabs.map(({ id, label, icon: Icon }) => (
-                  <TabsTrigger
-                    key={id}
-                    value={id}
-                    className="group/tab min-h-14 gap-2 px-3 py-3 after:bottom-0"
-                  >
+                  <TabsTrigger key={id} value={id} className="group/tab gap-2">
                     <Icon aria-hidden="true" />
                     <span>{label}</span>
                     {invalidSections.has(id) ? (
