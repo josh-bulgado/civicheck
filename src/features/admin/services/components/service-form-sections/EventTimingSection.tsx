@@ -1,12 +1,6 @@
-import { useRef, useState } from "react";
-import { CalendarClock, Trash2, TriangleAlert } from "lucide-react";
-import { toast } from "sonner";
+import { useState } from "react";
+import { GitBranch, TriangleAlert, Zap } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "~/components/ui/alert";
 import {
   Field,
   FieldContent,
@@ -28,6 +22,9 @@ import {
 } from "~/components/ui/select";
 import { Switch } from "~/components/ui/switch";
 import { Textarea } from "~/components/ui/textarea";
+import { EventTimingNotice } from "~/features/forms/components/EventTimingNotice";
+import { TIMING_NOTICE } from "~/features/forms/event-timing-tone";
+import { RemoveWindowRuleButton } from "./RemoveWindowRuleButton";
 import type {
   EventTimingBehavior,
   EventTimingMismatch,
@@ -82,9 +79,6 @@ const ROUTING_BEHAVIORS: EventTimingBehavior[] = [
   "auto_route",
 ];
 
-/** Behaviors whose applicant alert carries the action button. */
-const CTA_BEHAVIORS: EventTimingBehavior[] = ["redirect_confirm", "warn_allow"];
-
 const PREVIEW_CAPTIONS: Record<EventTimingBehavior, string> = {
   redirect_confirm: "Applicants choose whether to switch.",
   warn_allow: "Applicants can keep going on this service.",
@@ -95,13 +89,25 @@ const PREVIEW_CAPTIONS: Record<EventTimingBehavior, string> = {
 /**
  * Inline controls in the rule sentence: a soft primary pill, not an outlined
  * field, so the rule reads as a sentence. Widths are set where each is used.
+ * `data-inline-control` lets the editor's type rules size them for the sentence.
  */
 const INLINE_CONTROL =
-  "h-10 border-transparent bg-primary-soft font-semibold text-primary shadow-none hover:border-primary/40 aria-invalid:bg-destructive/10 aria-invalid:text-destructive";
+  "h-10 rounded-xl border-transparent bg-primary-soft font-semibold text-primary shadow-none hover:border-primary/40 data-[size=default]:h-10 aria-invalid:bg-destructive/10 aria-invalid:text-destructive [&_svg]:text-primary";
+
+/** Hides the number input's spinner; the pill is typed into, not stepped. */
+const NO_SPINNER =
+  "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
 /** The small "When" / "Then" tag at the start of each sentence row. */
 const LEAD_CLASS =
-  "w-fit rounded-full bg-primary-soft px-3 py-1 text-xs font-bold tracking-widest text-primary uppercase sm:mt-2";
+  "w-fit self-start rounded-full bg-primary-soft px-3 py-1 text-xs font-bold tracking-[0.08em] text-primary uppercase sm:mt-1.5";
+
+/** One sentence row: the tag, then the clause. */
+const RULE_ROW = "grid gap-2 sm:grid-cols-[4.75rem_minmax(0,1fr)] sm:gap-x-[18px]";
+
+/** A sentence of pills and plain words. */
+const CLAUSE =
+  "flex min-w-0 flex-wrap items-center gap-x-3 gap-y-3 text-lg tracking-[-0.01em] text-body";
 
 function isValidTimeZone(zone: string) {
   try {
@@ -123,6 +129,10 @@ interface EventTimingSectionProps {
   formDefinition: FormTemplateDefinition;
   targetOptions: { value: string; label: string }[];
   onFormDefinitionChange: (definition: FormTemplateDefinition) => void;
+  /** Hide the heading and description when the card header already says it. */
+  hideIntro?: boolean;
+  /** Hide Remove Rule when the host puts it elsewhere, such as the card header. */
+  hideRemove?: boolean;
 }
 
 /**
@@ -137,6 +147,8 @@ export function EventTimingSection({
   formDefinition,
   targetOptions,
   onFormDefinitionChange,
+  hideIntro = false,
+  hideRemove = false,
 }: EventTimingSectionProps) {
   const caseDateFields = formDefinition.sections
     .filter((section) => section.step === "case")
@@ -144,8 +156,6 @@ export function EventTimingSection({
     .filter((field) => field.type === "date");
   const timing = formDefinition.eventTiming;
 
-  const latestDefinition = useRef(formDefinition);
-  latestDefinition.current = formDefinition;
   // Typing a number or a timezone passes through invalid states (empty, half a
   // zone name). These drafts hold the text; only a valid value reaches the rule.
   const [daysDraft, setDaysDraft] = useState<string | null>(null);
@@ -179,20 +189,7 @@ export function EventTimingSection({
 
   function removeTiming() {
     if (!timing) return;
-    const removed = timing;
     onFormDefinitionChange({ ...formDefinition, eventTiming: undefined });
-    toast("Window rule removed", {
-      action: {
-        label: "Undo",
-        // Restore into whatever the definition is by then, not the snapshot
-        // taken at removal, so edits made in between are not lost.
-        onClick: () =>
-          onFormDefinitionChange({
-            ...latestDefinition.current,
-            eventTiming: removed,
-          }),
-      },
-    });
   }
 
   const activeBehavior = timing
@@ -211,14 +208,16 @@ export function EventTimingSection({
     routes &&
     Boolean(currentServiceCode) &&
     timing?.targetServiceCode === currentServiceCode;
-  const showsCta = timing ? CTA_BEHAVIORS.includes(timing.behavior) : false;
+  const showsCta = timing ? TIMING_NOTICE[timing.behavior].cta : false;
+  const targetLabel =
+    targetOptions.find((option) => option.value === timing?.targetServiceCode)
+      ?.label ?? "the alternate track";
 
   return (
-    <FieldSet
-      id={id}
-      className="scroll-mt-6 gap-5 rounded-lg border border-border p-4"
-    >
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <FieldSet id={id} className="scroll-mt-6 gap-6">
+      {hideIntro ? (
+        <FieldLegend className="sr-only">Registration window and routing</FieldLegend>
+      ) : (
         <div className="min-w-0">
           <FieldLegend variant="label" className="mb-0">
             Registration Window &amp; Routing
@@ -228,36 +227,46 @@ export function EventTimingSection({
             outside the on-time window.
           </FieldDescription>
         </div>
-        {!timing ? (
+      )}
+
+      {!timing ? (
+        <div className="flex flex-col items-center gap-3 px-4 pt-8 pb-10 text-center">
+          <span className="flex size-[52px] items-center justify-center rounded-2xl bg-primary-soft text-primary">
+            <GitBranch aria-hidden="true" className="size-[22px]" />
+          </span>
+          <h3 className="text-lg font-bold tracking-tight">No Window Rule Yet</h3>
+          <p className="mb-2 max-w-[48ch] text-body">
+            {caseDateFields.length === 0
+              ? "Add a date field to the Application Form before setting a window rule."
+              : "Applicants see no track prompt for this service. Add a rule to route them when their event date falls outside the on-time window."}
+          </p>
           <Button
             type="button"
-            variant="outline"
-            size="sm"
+            variant="raised"
+            size="touch"
             disabled={caseDateFields.length === 0}
             onClick={enableTiming}
           >
             Add Window Rule
           </Button>
-        ) : null}
-      </div>
-
-      {!timing ? (
-        <FieldDescription>
-          {caseDateFields.length === 0
-            ? "Add a date field to the Application Form before setting a window rule."
-            : "No window rule yet. Applicants see no track prompt for this service."}
-        </FieldDescription>
+        </div>
       ) : (
-        <FieldGroup className="gap-6">
+        <FieldGroup className="gap-7">
+          {hideRemove ? null : (
+            <div className="-mb-2 flex justify-end">
+              <RemoveWindowRuleButton onRemove={removeTiming} />
+            </div>
+          )}
+
           <div
             role="group"
             aria-label="Registration window rule"
-            className="flex flex-col gap-6"
+            className="flex flex-col gap-7"
           >
-            <div className="grid gap-2 sm:grid-cols-[4.5rem_minmax(0,1fr)] sm:gap-x-4">
+            <div className={RULE_ROW}>
               <span className={LEAD_CLASS}>When</span>
-              <div className="flex min-w-0 flex-col gap-3">
-                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-2 text-base">
+              <div className="flex min-w-0 flex-col gap-3.5">
+                <div className={CLAUSE}>
                   <Select
                     value={timing.triggerField}
                     onValueChange={(value) =>
@@ -267,7 +276,8 @@ export function EventTimingSection({
                     <SelectTrigger
                       id="timing-trigger-field"
                       aria-label="Trigger date"
-                      className={`${INLINE_CONTROL} w-56 max-w-full`}
+                      data-inline-control=""
+                      className={`${INLINE_CONTROL} max-w-full`}
                     >
                       <SelectValue>
                         {(value) =>
@@ -297,7 +307,9 @@ export function EventTimingSection({
                     <SelectTrigger
                       id="timing-mismatch"
                       aria-label="Which side of the window the date falls on"
-                      className={`${INLINE_CONTROL} w-28`}
+                      aria-describedby="timing-mismatch-help"
+                      data-inline-control=""
+                      className={INLINE_CONTROL}
                     >
                       <SelectValue>
                         {(value) =>
@@ -317,7 +329,7 @@ export function EventTimingSection({
                     </SelectContent>
                   </Select>
                   <span>the</span>
-                  <span className="inline-flex items-center gap-0.5 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1 whitespace-nowrap">
                     <Input
                       id="timing-window-days"
                       name="window_days"
@@ -327,7 +339,8 @@ export function EventTimingSection({
                       inputMode="numeric"
                       autoComplete="off"
                       aria-label="On-time window length in days"
-                      className={`${INLINE_CONTROL} w-20 text-center tabular-nums`}
+                      data-inline-control=""
+                      className={`${INLINE_CONTROL} ${NO_SPINNER} w-[4.5rem] px-2 text-center tabular-nums`}
                       value={daysDraft ?? String(timing.windowDays)}
                       onChange={(event) => {
                         const text = event.target.value;
@@ -346,9 +359,9 @@ export function EventTimingSection({
                     />
                     <span>-day</span>
                   </span>
-                  <span>on-time window.</span>
+                  <span>on-time window</span>
                 </div>
-                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-2 text-base">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 text-[15px] text-body">
                   <span>Days are counted in</span>
                   <Input
                     id="timing-timezone"
@@ -357,7 +370,8 @@ export function EventTimingSection({
                     aria-describedby={
                       zoneInvalid ? "timing-timezone-error" : undefined
                     }
-                    className={`${INLINE_CONTROL} w-44 max-w-full`}
+                    data-inline-control="small"
+                    className={`${INLINE_CONTROL} h-9 w-40 max-w-full`}
                     value={zone}
                     onChange={(event) => {
                       const text = event.target.value;
@@ -372,7 +386,7 @@ export function EventTimingSection({
                     spellCheck={false}
                     aria-invalid={zoneInvalid}
                   />
-                  <span>.</span>
+                  <span>time.</span>
                 </div>
                 {zoneInvalid ? (
                   <FieldError
@@ -382,17 +396,17 @@ export function EventTimingSection({
                     ]}
                   />
                 ) : null}
-                <FieldDescription>
+                <span id="timing-mismatch-help" className="sr-only">
                   Choose “outside” for an on-time service and “inside” for its
                   delayed counterpart.
-                </FieldDescription>
+                </span>
               </div>
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-[4.5rem_minmax(0,1fr)] sm:gap-x-4">
+            <div className={RULE_ROW}>
               <span className={LEAD_CLASS}>Then</span>
-              <div className="flex min-w-0 flex-col gap-3">
-                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-2 text-base">
+              <div className="flex min-w-0 flex-col gap-3.5">
+                <div className={CLAUSE}>
                   <Select
                     value={timing.behavior}
                     onValueChange={(value) =>
@@ -403,7 +417,8 @@ export function EventTimingSection({
                     <SelectTrigger
                       id="timing-behavior"
                       aria-label="What happens then"
-                      className={`${INLINE_CONTROL} w-64 max-w-full`}
+                      data-inline-control=""
+                      className={`${INLINE_CONTROL} min-w-56 max-w-full`}
                     >
                       <SelectValue>
                         {(value) =>
@@ -423,14 +438,14 @@ export function EventTimingSection({
                     </SelectContent>
                   </Select>
                 </div>
-                <FieldDescription aria-live="polite">
+                <FieldDescription aria-live="polite" className="-mt-1">
                   {activeBehavior?.hint}
                 </FieldDescription>
 
                 {showTarget ? (
-                  <Field className="max-w-sm">
-                    <FieldLabel htmlFor="timing-target">
-                      Alternate Service Track
+                  <Field>
+                    <FieldLabel htmlFor="timing-target" data-compact="">
+                      {routes ? "Switch applicants to" : "Alternate Service Track"}
                     </FieldLabel>
                     <Select
                       value={timing.targetServiceCode}
@@ -440,6 +455,7 @@ export function EventTimingSection({
                     >
                       <SelectTrigger
                         id="timing-target"
+                        size="touch"
                         className="w-full"
                         aria-describedby={
                           routesToSelf
@@ -476,18 +492,23 @@ export function EventTimingSection({
                       </FieldDescription>
                     ) : null}
                     {routesToSelf ? (
-                      <Alert
+                      <div
                         id="timing-target-self"
-                        variant="warning"
                         role="status"
+                        className="flex items-start gap-2.5 rounded-xl bg-warning-soft px-3 py-2.5 text-[13px] text-warning-strong ring-1 ring-warning-border ring-inset"
                       >
-                        <TriangleAlert aria-hidden="true" />
-                        <AlertTitle>This rule would route to itself</AlertTitle>
-                        <AlertDescription>
+                        <TriangleAlert
+                          aria-hidden="true"
+                          className="mt-px size-4 shrink-0"
+                        />
+                        <p>
+                          <span className="sr-only">
+                            This rule would route to itself.{" "}
+                          </span>
                           This is the service you’re editing. Pick a different
                           track so applicants have somewhere to go.
-                        </AlertDescription>
-                      </Alert>
+                        </p>
+                      </div>
                     ) : null}
                   </Field>
                 ) : null}
@@ -497,9 +518,9 @@ export function EventTimingSection({
 
           <Field
             orientation="horizontal"
-            className="items-start gap-4 rounded-lg border border-border bg-card p-4 sm:items-center"
+            className="items-start gap-6 border-y py-5 sm:items-center"
           >
-            <FieldContent className="min-w-0 gap-1.5">
+            <FieldContent className="min-w-0 max-w-[66ch]">
               <FieldLabel htmlFor="timing-require-document">
                 Require the supporting document before the date check
               </FieldLabel>
@@ -509,6 +530,7 @@ export function EventTimingSection({
             </FieldContent>
             <Switch
               id="timing-require-document"
+              size="touch"
               className="ml-auto shrink-0"
               aria-describedby="timing-require-document-help"
               checked={timing.requireDocumentFirst}
@@ -518,17 +540,25 @@ export function EventTimingSection({
             />
           </Field>
 
-          <FieldSet className="gap-3">
-            <FieldLegend variant="label" className="mb-0">
-              What Applicants See
-            </FieldLegend>
-            <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-              <FieldGroup className="min-w-0 gap-4">
+          <FieldSet className="gap-4">
+            <div>
+              <FieldLegend variant="label" className="mb-0 !text-base !font-semibold">
+                What Applicants See
+              </FieldLegend>
+              <FieldDescription>
+                Edit the message and watch it update.
+              </FieldDescription>
+            </div>
+            <div className="grid min-w-0 gap-7 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+              <FieldGroup className="min-w-0 gap-5">
                 <Field>
-                  <FieldLabel htmlFor="timing-title">Alert Title</FieldLabel>
+                  <FieldLabel htmlFor="timing-title" data-compact="">
+                    Alert Title
+                  </FieldLabel>
                   <Input
                     id="timing-title"
                     name="timing_title"
+                    fieldSize="touch"
                     maxLength={160}
                     value={timing.title}
                     onChange={(event) =>
@@ -537,11 +567,16 @@ export function EventTimingSection({
                     autoComplete="off"
                   />
                 </Field>
+                {/* Saving needs a label, so a blank one stays editable even where no button shows. */}
+                {showsCta || !timing.ctaLabel.trim() ? (
                 <Field>
-                  <FieldLabel htmlFor="timing-cta">Button Label</FieldLabel>
+                  <FieldLabel htmlFor="timing-cta" data-compact="">
+                    Button Label
+                  </FieldLabel>
                   <Input
                     id="timing-cta"
                     name="timing_cta"
+                    fieldSize="touch"
                     maxLength={80}
                     value={timing.ctaLabel}
                     onChange={(event) =>
@@ -550,8 +585,9 @@ export function EventTimingSection({
                     autoComplete="off"
                   />
                 </Field>
+                ) : null}
                 <Field>
-                  <FieldLabel htmlFor="timing-description">
+                  <FieldLabel htmlFor="timing-description" data-compact="">
                     Alert Description
                   </FieldLabel>
                   <Textarea
@@ -559,6 +595,7 @@ export function EventTimingSection({
                     name="timing_description"
                     rows={3}
                     maxLength={500}
+                    className="min-h-[84px] rounded-xl px-3.5 py-3 leading-snug focus-visible:ring-4 focus-visible:ring-ring/25"
                     value={timing.description}
                     onChange={(event) =>
                       updateTiming({ description: event.target.value })
@@ -567,55 +604,40 @@ export function EventTimingSection({
                 </Field>
               </FieldGroup>
 
-              <div className="flex min-w-0 flex-col gap-3 self-start rounded-lg border border-border bg-muted/40 p-4">
-                <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+              <div className="flex min-w-0 flex-col gap-3 self-start rounded-2xl bg-surface-subtle p-[18px] ring-1 ring-border ring-inset">
+                <span className="text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
                   Preview
                 </span>
-                <Alert
-                  variant="warning"
-                  role="group"
-                  aria-label="Preview of the alert applicants see"
-                >
-                  <CalendarClock aria-hidden="true" />
-                  <AlertTitle className="break-words">
-                    {timing.title.trim() || (
-                      <span className="font-normal text-muted-foreground italic">
-                        Add an alert title
-                      </span>
-                    )}
-                  </AlertTitle>
-                  <AlertDescription className="min-w-0 break-words">
-                    {timing.description.trim() || (
-                      <span className="italic">Add a short description</span>
-                    )}
-                    {showsCta && timing.ctaLabel.trim() ? (
-                      <span className="mt-3 flex">
-                        <span className="inline-flex min-h-9 items-center rounded-full border border-warning-border bg-background/70 px-4 text-sm font-semibold break-words text-warning-strong">
-                          {timing.ctaLabel}
-                        </span>
-                      </span>
-                    ) : null}
-                  </AlertDescription>
-                </Alert>
-                <p className="text-sm text-muted-foreground">
+                {timing.behavior === "auto_route" ? (
+                  <div className="flex items-start gap-3 rounded-[14px] bg-card p-4 text-[15px] text-body ring-1 ring-border ring-inset">
+                    <Zap
+                      aria-hidden="true"
+                      className="mt-0.5 size-4 shrink-0 text-primary"
+                    />
+                    <p>
+                      Applicants are sent to <b>{targetLabel}</b> as soon as they
+                      pick the date, so they don’t see this message.
+                    </p>
+                  </div>
+                ) : (
+                  <div aria-label="Preview of the alert applicants see" role="group">
+                    <EventTimingNotice
+                      behavior={timing.behavior}
+                      role="group"
+                      title={timing.title.trim() || "Add an alert title"}
+                      description={
+                        timing.description.trim() || "Add a short description"
+                      }
+                      ctaLabel={timing.ctaLabel}
+                    />
+                  </div>
+                )}
+                <p className="text-[13px] text-muted-foreground">
                   {PREVIEW_CAPTIONS[timing.behavior]}
                 </p>
               </div>
             </div>
           </FieldSet>
-
-          <div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-destructive hover:text-destructive"
-              onClick={removeTiming}
-            >
-              <Trash2 aria-hidden="true" data-icon="inline-start" />
-              Remove Rule
-            </Button>
-          </div>
         </FieldGroup>
       )}
     </FieldSet>

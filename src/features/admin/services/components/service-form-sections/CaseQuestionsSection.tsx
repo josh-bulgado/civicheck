@@ -58,6 +58,8 @@ export function CaseQuestionsSection({
         <FieldGroup>
           <EventTimingSection
             id="timing-routing"
+            hideIntro
+            hideRemove
             formDefinition={formDefinition}
             targetOptions={targetOptions}
             currentServiceCode={currentServiceCode}

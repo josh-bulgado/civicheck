@@ -125,6 +125,8 @@ interface ServiceEditorSectionProps {
     description?: string;
   summary?: string;
   hasError?: boolean;
+  /** Sits at the right of the card header, for an action on the whole section. */
+  action?: ReactNode;
   children: ReactNode;
 }
 
@@ -135,6 +137,7 @@ export function ServiceEditorSection({
   description,
   summary,
   hasError = false,
+  action,
   children,
 }: ServiceEditorSectionProps) {
   return (
@@ -145,14 +148,14 @@ export function ServiceEditorSection({
     >
       <Card id={id} variant="soft" className="min-w-0 gap-0 py-0">
         <CardHeader className="border-b py-6 sm:px-8">
-          <div className="flex items-start gap-3">
+          <div className="flex flex-wrap items-start gap-3">
             <span
               aria-hidden="true"
               className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary"
             >
               <Icon className="size-[22px]" />
             </span>
-            <div className="flex min-w-0 flex-col gap-1.5">
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
               <div className="flex flex-wrap items-center gap-2">
                 <CardTitle className="text-xl font-semibold tracking-tight">
                   <h2 className="text-pretty">{title}</h2>
@@ -165,6 +168,12 @@ export function ServiceEditorSection({
               </div>
               {description ? <CardDescription>{description}</CardDescription> : null}
             </div>
+            {/* Under the title on a phone, aligned with it (icon 44px + gap 12px). */}
+            {action ? (
+              <div className="shrink-0 max-sm:basis-full max-sm:pl-14">
+                {action}
+              </div>
+            ) : null}
           </div>
         </CardHeader>
         <CardContent className="px-0 py-6 [&>[data-slot=card]]:py-0 [&>[data-slot=card]>[data-slot=card-content]]:sm:px-8">

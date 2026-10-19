@@ -53,6 +53,7 @@ import { ApplicationFormSection } from "./service-form-sections/ApplicationFormS
 import { CaseQuestionsSection } from "./service-form-sections/CaseQuestionsSection";
 import { CitizenJourneySection } from "./service-form-sections/CitizenJourneySection";
 import { RegistryDetailsSection } from "./service-form-sections/RegistryDetailsSection";
+import { RemoveWindowRuleButton } from "./service-form-sections/RemoveWindowRuleButton";
 import { RelationshipsSection } from "./service-form-sections/RelationshipsSection";
 import { RequirementsSection } from "./service-form-sections/RequirementsSection";
 import {
@@ -805,7 +806,7 @@ export function ServiceFormPage({
   const caseSummary =
     caseRuleCount > 0
       ? `${caseRuleCount} rule ${caseRuleCount === 1 ? "set" : "sets"}`
-      : "Optional rules";
+      : "No rules";
   const applicationSummary = `${applicationFieldCount} ${applicationFieldCount === 1 ? "field" : "fields"}`;
   const requirementsSummary = `${requirementCount} ${requirementCount === 1 ? "requirement" : "requirements"}`;
   const relationshipsSummary =
@@ -818,7 +819,10 @@ export function ServiceFormPage({
   const tabCounts: Record<EditorSectionId, string | null> = {
     "registry-details": pesoFormatter.format(Number(fee) || 0),
     "citizen-journey": journeySummary,
-    "case-questions": caseRuleCount > 0 ? caseSummary : null,
+    "case-questions":
+      caseRuleCount > 0
+        ? `${caseRuleCount} ${caseRuleCount === 1 ? "rule" : "rules"}`
+        : null,
     "application-form": applicationSummary,
     requirements: String(requirementCount),
     relationships: relationshipCount > 0 ? relationshipsSummary : null,
@@ -989,8 +993,22 @@ export function ServiceFormPage({
                     id="case-questions"
                     icon={GitBranch}
                     title="Timing & Routing"
+                    description="Send applicants to the right track when their event date falls outside the on-time window."
                     summary={caseSummary}
                     hasError={invalidSections.has("case-questions")}
+                    action={
+                      formDefinition.eventTiming ? (
+                        <RemoveWindowRuleButton
+                          onRemove={() => {
+                            setFormDefinition({
+                              ...formDefinition,
+                              eventTiming: undefined,
+                            });
+                            setTemplateDirty(true);
+                          }}
+                        />
+                      ) : undefined
+                    }
                   >
                     <CaseQuestionsSection
                       embedded

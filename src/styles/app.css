@@ -1381,6 +1381,20 @@ input[aria-hidden="true"][tabindex="-1"] {
     font-size: 15px;
   }
 
+  /* Pills inside the Timing & Routing sentence read at sentence size. */
+  [data-service-editor] [data-inline-control] {
+    font-size: 17px;
+  }
+
+  [data-service-editor] [data-inline-control="small"] {
+    font-size: 15px;
+  }
+
+  /* Labels stacked over a field (not in a settings row) are one step smaller. */
+  [data-service-editor] [data-slot="field-label"][data-compact] {
+    font-size: 13.5px;
+  }
+
   @media (pointer: coarse) {
     /* 16px keeps iOS from zooming into a focused field. */
     [data-service-editor] [data-slot="input"],
