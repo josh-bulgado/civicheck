@@ -6,8 +6,12 @@ import { CiviCheckIdentity } from "~/components/brand/civic-identity";
 import { Button } from "~/components/ui/button";
 import { Kbd } from "~/components/ui/kbd";
 import { SidebarHeader, useSidebar } from "~/components/ui/sidebar";
+import { useHotkeyLabel } from "~/hooks/useHotkeyLabel";
 import { cn } from "~/lib/utils";
-import { openCommandPalette } from "~/components/sidebar-01/command-palette";
+import {
+  openCommandPalette,
+  PALETTE_HOTKEY,
+} from "~/components/sidebar-01/command-palette";
 import type { WorkspaceDetails } from "~/components/sidebar-01/workspace";
 
 interface NavHeaderProps {
@@ -18,6 +22,7 @@ interface NavHeaderProps {
 
 export function NavHeader({ workspace, citizen = false }: NavHeaderProps) {
   const { state } = useSidebar();
+  const hotkeyLabel = useHotkeyLabel();
   const isCollapsed = state === "collapsed";
 
   if (citizen) {
@@ -85,7 +90,7 @@ export function NavHeader({ workspace, citizen = false }: NavHeaderProps) {
           )}
         </div>
         {!isCollapsed && (
-          <Kbd>⌘K</Kbd>
+          <Kbd>{hotkeyLabel(PALETTE_HOTKEY)}</Kbd>
         )}
       </Button>
     </SidebarHeader>

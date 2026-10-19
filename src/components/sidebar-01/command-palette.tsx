@@ -3,6 +3,7 @@
 import { ClipboardList, FileText, Loader2 } from "lucide-react";
 import * as React from "react";
 import { useEffect } from "react";
+import { useHotkey, type HotkeyChord } from "@tanstack/react-hotkeys";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 
 import {
@@ -30,6 +31,9 @@ import { buildNavGroups } from "./nav-config";
 import { PortalCommandPalette } from "./portal-command-palette";
 
 const OPEN_EVENT = "civicheck:open-command-palette";
+
+/** Opens and closes the palette; the sidebar search shows the same key. */
+export const PALETTE_HOTKEY: HotkeyChord = "Mod+K";
 
 const EMPTY_RESULTS: SearchResults = { services: [], requests: [] };
 const MIN_QUERY_LENGTH = 2;
@@ -81,20 +85,12 @@ export function CommandPalette({ userId = "" }: { userId?: string }) {
   const isApplicant = role === "applicant";
   const defaults = usePaletteDefaults(userId, open && isApplicant);
 
+  useHotkey(PALETTE_HOTKEY, () => setOpen((open) => !open));
+
   useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setOpen((open) => !open);
-      }
-    };
     const show = () => setOpen(true);
-    document.addEventListener("keydown", down);
     window.addEventListener(OPEN_EVENT, show);
-    return () => {
-      document.removeEventListener("keydown", down);
-      window.removeEventListener(OPEN_EVENT, show);
-    };
+    return () => window.removeEventListener(OPEN_EVENT, show);
   }, []);
 
   // The palette lives in the layout, which stays mounted across navigation, so
