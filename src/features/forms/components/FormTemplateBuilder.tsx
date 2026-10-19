@@ -61,7 +61,11 @@ import type {
   FormStep,
   FormTemplateDefinition,
 } from "../form-template.types";
-import { optionUsage, restoreOption, type ConditionRef } from "../form-option-usage";
+import {
+  optionUsage,
+  restoreOption,
+  type ConditionRef,
+} from "../form-option-usage";
 import {
   EDITOR_MENU_CONTENT as MENU_CONTENT,
   EDITOR_MENU_ITEM as MENU_ITEM,
@@ -300,7 +304,9 @@ export function FormTemplateBuilder({
       sections: current.sections.map((section) => ({
         ...section,
         fields: section.fields.map((field) =>
-          field.key === fieldKey ? { ...field, options: result.options } : field,
+          field.key === fieldKey
+            ? { ...field, options: result.options }
+            : field,
         ),
       })),
     });
@@ -425,11 +431,7 @@ export function FormTemplateBuilder({
     );
   }
 
-  function openField(
-    step: FormStep,
-    id: string,
-    opener: HTMLElement | null,
-  ) {
+  function openField(step: FormStep, id: string, opener: HTMLElement | null) {
     openerRef.current = opener;
     setSelected({ step, id });
   }
@@ -516,7 +518,9 @@ export function FormTemplateBuilder({
                           Shared blocks
                         </DropdownMenuLabel>
                         {stepBlocks.map((block) => {
-                          const included = includedBlockKeys.has(block.blockKey);
+                          const included = includedBlockKeys.has(
+                            block.blockKey,
+                          );
                           return (
                             <DropdownMenuItem
                               key={block.blockKey}
@@ -543,7 +547,7 @@ export function FormTemplateBuilder({
                 ) : null}
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="raised"
                   className={TOOLBAR_BUTTON}
                   onClick={(event) => addField(step.value, event.currentTarget)}
                 >
@@ -565,9 +569,7 @@ export function FormTemplateBuilder({
                 step={step.value}
                 fields={fields}
                 ids={ids}
-                selectedId={
-                  selected?.step === step.value ? selected.id : null
-                }
+                selectedId={selected?.step === step.value ? selected.id : null}
                 blockNameByKey={blockNameByKey}
                 onOpen={(id, opener) => openField(step.value, id, opener)}
                 onReorder={(from, to) => reorderField(step.value, from, to)}
@@ -728,9 +730,7 @@ function StepFieldTable({
                       : null
                   }
                   onOpen={(opener) => onOpen(ids[index], opener)}
-                  onMoveBy={(direction) =>
-                    onReorder(index, index + direction)
-                  }
+                  onMoveBy={(direction) => onReorder(index, index + direction)}
                   onDuplicate={() => onDuplicate(index)}
                   onRemove={() => onRemove(index)}
                 />
@@ -853,7 +853,9 @@ function FieldRow({
         <FieldRequiredChip required={field.required} />
       </TableCell>
 
-      <TableCell className={cn(BODY_CELL, "hidden whitespace-normal lg:table-cell")}>
+      <TableCell
+        className={cn(BODY_CELL, "hidden whitespace-normal lg:table-cell")}
+      >
         {visibility?.misordered ? (
           <span className="block max-w-64 text-[13px] break-words text-destructive">
             Depends on a question below: {visibility.text}
@@ -922,7 +924,10 @@ function FieldRow({
             <DropdownMenuSeparator className="mx-1.5 my-1" />
             <DropdownMenuItem
               disabled={locked || field.type === "person_group"}
-              className={cn(MENU_ITEM, "text-destructive focus:text-destructive")}
+              className={cn(
+                MENU_ITEM,
+                "text-destructive focus:text-destructive",
+              )}
               onClick={onRemove}
             >
               <Trash2 aria-hidden="true" />
