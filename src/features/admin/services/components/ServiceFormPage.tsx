@@ -1026,6 +1026,7 @@ export function ServiceFormPage({
                   id="requirements"
                   icon={ClipboardCheck}
                   title="Requirements"
+                  description="What applicants must bring or upload for this service, including anything they need from another office first."
                   summary={requirementsSummary}
                   hasError={invalidSections.has("requirements")}
                 >
