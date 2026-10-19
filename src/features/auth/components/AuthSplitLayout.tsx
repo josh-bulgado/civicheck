@@ -27,7 +27,7 @@ export function AuthSplitLayout({
   className?: string;
 }) {
   return (
-    <div className="flex min-h-dvh bg-card">
+    <div className="auth-scope flex min-h-dvh bg-(--auth-bg)">
       <div className="flex flex-1 flex-col px-5 py-8 sm:px-10">
         <div className="civic-enter-fade flex items-center justify-between">
           <Link to="/" className="w-fit">
@@ -73,7 +73,7 @@ export function AuthCenteredLayout({
   className?: string;
 }) {
   return (
-    <div className="flex min-h-dvh flex-col bg-card px-5 py-8 sm:px-10">
+    <div className="auth-scope flex min-h-dvh flex-col bg-(--auth-bg) px-5 py-8 sm:px-10">
       <div className="civic-enter-fade flex items-center justify-between">
         <Link to="/" className="w-fit">
           <CiviCheckIdentity compact />

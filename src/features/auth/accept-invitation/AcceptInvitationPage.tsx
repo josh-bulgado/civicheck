@@ -2,22 +2,13 @@ import { ThemeSwitch } from "~/components/theme-switch";
 import { Link } from "@tanstack/react-router";
 import { ShieldCheck } from "lucide-react";
 import { CiviCheckIdentity } from "~/components/brand/civic-identity";
-import { AuthBrandPanel } from "../components/AuthBrandPanel";
+import { AuthBadgePanel } from "../components/AuthSidePanel";
+import { enterDelay } from "~/components/motion/stagger";
 import { AcceptInvitationForm } from "./components/AcceptInvitationForm";
 
 export function AcceptInvitationPage() {
   return (
-    <div className="auth-page flex min-h-dvh bg-background">
-      <AuthBrandPanel
-        title="Secure access for public service."
-        description="Complete your account setup to access the CiviCheck staff workspace and serve civil registry requests securely."
-        benefits={[
-          "Your invitation has been verified",
-          "Create a password for protected access",
-          "Continue to your assigned workspace",
-        ]}
-      />
-
+    <div className="auth-page auth-scope flex min-h-dvh bg-(--auth-bg)">
       <main className="relative flex min-h-dvh flex-1 flex-col">
         <div className="absolute top-3 right-5 z-10 sm:right-8 lg:top-6">
           <ThemeSwitch />
@@ -60,6 +51,13 @@ export function AcceptInvitationPage() {
           Authorized access only · CiviCheck Staff Services
         </footer>
       </main>
+
+      <div
+        className="civic-enter-fade hidden shrink-0 lg:block lg:w-[42%] lg:max-w-190 xl:w-[45%]"
+        style={enterDelay(120)}
+      >
+        <AuthBadgePanel />
+      </div>
     </div>
   );
 }

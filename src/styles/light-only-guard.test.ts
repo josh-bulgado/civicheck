@@ -14,9 +14,7 @@ function walk(dir: string): string[] {
 // Pages that never go dark, and documents that stay light, may use literal
 // light colours freely.
 const LIGHT_ONLY = [
-  // White-on-blue copy on the invitation page's brand panel, and the Google
-  // logo keeps its brand colours.
-  "features/auth/components/AuthBrandPanel",
+  // The Google logo keeps its brand colours.
   "features/auth/components/GoogleIcon",
   "features/requests/pdf/",
   "components/blocks/",

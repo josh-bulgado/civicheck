@@ -170,8 +170,6 @@
   --color-border-lighter: var(--border-lighter);
   --color-disabled: var(--disabled);
 
-  --color-auth-panel: var(--auth-panel);
-  --color-auth-panel-tint: var(--auth-panel-tint);
 
   --color-panel-dark: var(--panel-dark);
   --color-panel-dark-row: var(--panel-dark-row);
@@ -301,10 +299,9 @@
   --tone-danger-soft: #fde8e8;
 
   --disabled: #8794a5;
-  --auth-panel: #0b3f86;
-  /* Quiet counterpart to the solid panel, for the screens that don't sell. */
-  --auth-panel-tint: #dbe6f4;
   /* The sign-in and sign-up side panel: a stack of request sheets on soft blue. */
+  /* Page colour of the sign-in and sign-up forms. White in light; near-black blue in dark. */
+  --auth-bg: var(--card);
   --docket-bg: radial-gradient(120% 80% at 30% 20%, #eef4fc 0%, #d4e2f5 70%);
   --docket-sheet: #ffffff;
   --docket-sheet-line: #c4d3ea;
@@ -565,6 +562,9 @@
   --surface-shadow: 0 0 #0000;
   --surface-shadow-raised: 0 0 #0000;
 
+  --auth-bg: #0d1117;
+  /* Quiet outline for fields on that page: soft on purpose, about 1.9:1. */
+  --auth-edge: #3d444d;
   --docket-bg: radial-gradient(120% 80% at 30% 20%, #14305a 0%, #0b1a33 60%, #091426 100%);
   --docket-sheet: rgba(255, 255, 255, 0.05);
   --docket-sheet-line: rgba(255, 255, 255, 0.16);
@@ -961,9 +961,13 @@
     background-color: var(--card);
   }
 
-  /* Landing and auth only, which never go dark: the same blue and white in both themes. */
-  .civic-auth-panel {
-    @apply bg-auth-panel text-white;
+  /* Dark sign-in and sign-up: fields are an outline on the page's own colour.
+     The components read these tokens, so the override stays on variables and
+     keeps their hover, focus and error states. */
+  .dark .auth-scope {
+    --input: var(--auth-edge);
+    --border-light: var(--auth-edge);
+    --surface-subtle: var(--auth-bg);
   }
 
   /* Every authed page wraps itself in this, and route components remount on
@@ -1082,6 +1086,54 @@
   .docket-panel[data-variant="tracker"] .docket-sheet[data-layer="3"] {
     gap: calc(5.6cqw * var(--docket-scale));
     padding: calc(6cqw * var(--docket-scale));
+  }
+
+  .docket-panel[data-variant="badge"] .docket-group {
+    width: calc(56cqw * var(--docket-scale));
+    height: calc(66cqw * var(--docket-scale));
+  }
+
+  .docket-badge {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(3.6cqw * var(--docket-scale));
+    padding: calc(7cqw * var(--docket-scale)) calc(5cqw * var(--docket-scale))
+      calc(5cqw * var(--docket-scale));
+    border-radius: calc(4.4cqw * var(--docket-scale));
+    background: var(--docket-sheet);
+    border: 1px solid var(--docket-sheet-line);
+    transform: rotate(2deg);
+    box-shadow: 0 calc(3cqw * var(--docket-scale)) calc(6cqw * var(--docket-scale))
+      calc(-3cqw * var(--docket-scale)) var(--docket-shadow-color);
+  }
+
+  .docket-slot {
+    width: calc(10cqw * var(--docket-scale));
+    height: calc(2cqw * var(--docket-scale));
+    border-radius: 99px;
+    background: var(--docket-skel);
+  }
+
+  .docket-avatar {
+    display: grid;
+    place-items: center;
+    width: calc(20cqw * var(--docket-scale));
+    height: calc(20cqw * var(--docket-scale));
+    margin-top: calc(1cqw * var(--docket-scale));
+    border-radius: 50%;
+    border: calc(0.6cqw * var(--docket-scale)) solid var(--primary);
+    color: var(--primary);
+    font-size: calc(4.4cqw * var(--docket-scale));
+    font-weight: 800;
+  }
+
+  .docket-badge .docket-pill--pending {
+    align-self: center;
+    background: var(--tone-warning-soft);
+    color: var(--tone-warning);
   }
 
   .docket-stamp {

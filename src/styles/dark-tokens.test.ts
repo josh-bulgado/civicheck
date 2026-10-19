@@ -60,15 +60,12 @@ function contrast(fg: string, bg: string): number {
 }
 
 // Colours that are the same in both themes on purpose: brand marks, the
-// landing/auth panels (those pages never go dark), the always-dark panel
-// tokens, and white labels that sit on a fill.
+// always-dark panel tokens, and white labels that sit on a fill.
 const SAME_IN_BOTH = new Set([
   "--brand-red",
   "--brand-gold",
   "--primary-foreground",
   "--sidebar-primary-foreground",
-  "--auth-panel",
-  "--auth-panel-tint",
   "--panel-dark",
   "--panel-dark-row",
   "--panel-dark-divider",
@@ -228,5 +225,28 @@ describe("dark tokens: contrast", () => {
   it("keeps skeletons visible on cards and the workspace", () => {
     expect(contrast(dk("--skeleton"), dk("--card"))).toBeGreaterThanOrEqual(1.2);
     expect(contrast(dk("--skeleton"), dk("--workspace"))).toBeGreaterThanOrEqual(1.2);
+  });
+});
+
+// The sign-in and sign-up pages sit on a near-black blue page with fields drawn
+// as a quiet outline on the same colour (the GitHub dark look). The edge is
+// deliberately soft, so only a visibility floor is asserted for it, not 3:1.
+describe("auth page surface (dark)", () => {
+  it.each([
+    "--foreground",
+    "--muted-foreground",
+    "--primary",
+    "--destructive",
+    "--body-2",
+  ])("%s is AA on the auth page", (token) => {
+    expect(contrast(dk(token), dk("--auth-bg"))).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("keeps the quiet field edge visible (at least 1.8:1)", () => {
+    expect(contrast(dk("--auth-edge"), dk("--auth-bg"))).toBeGreaterThanOrEqual(1.8);
+  });
+
+  it("is the same page colour as the card in light", () => {
+    expect(root["--auth-bg"]).toBe("var(--card)");
   });
 });

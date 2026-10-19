@@ -103,3 +103,36 @@ export function AuthProgressPanel() {
     </aside>
   );
 }
+
+/**
+ * Panel for the staff invitation page: a staff ID card on the same stack of
+ * sheets, marked "Access pending" until the password is set. The card carries
+ * no name, so it fits every invitation without personal data.
+ *
+ * Decorative, so it stays out of the accessibility tree. Placeholder only: the
+ * mark is text until the real CCRO seal is cleared for use.
+ */
+export function AuthBadgePanel() {
+  return (
+    <aside className="docket-panel" data-variant="badge">
+      <div className="docket-stage" aria-hidden="true">
+        <div className="docket-group">
+          <div className="docket-sheet" data-layer="1" />
+          <div className="docket-sheet" data-layer="2" />
+          <div className="docket-badge civic-enter-scale" style={enterDelay(140)}>
+            <div className="docket-slot" />
+            <div className="docket-avatar">CCRO</div>
+            <div className="docket-skel w-[62%]" />
+            <div className="docket-skel w-[42%]" />
+            <div className="docket-pill docket-pill--pending">Access pending</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="docket-caption civic-enter-sm" style={enterDelay(420)}>
+        <h2>Welcome to the CCRO team.</h2>
+        Your access starts when you finish setup.
+      </div>
+    </aside>
+  );
+}
