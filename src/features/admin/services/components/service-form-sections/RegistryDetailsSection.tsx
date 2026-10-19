@@ -63,7 +63,7 @@ function SettingGroup({
     >
       <h3
         id={headingId}
-        className="border-b bg-surface-subtle px-6 py-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase sm:px-8"
+        className="border-b bg-surface-subtle px-6 py-3 text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase sm:px-8"
       >
         {title}
       </h3>

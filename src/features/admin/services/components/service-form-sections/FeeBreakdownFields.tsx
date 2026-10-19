@@ -116,7 +116,7 @@ export function FeeBreakdownFields() {
       <Collapsible open={open} onOpenChange={setOpen} className="flex flex-col">
         <h3
           id="fee-breakdown-heading"
-          className="border-b bg-surface-subtle text-xs font-semibold tracking-wider text-muted-foreground uppercase"
+          className="border-b bg-surface-subtle text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase"
         >
           <CollapsibleTrigger className="group flex min-h-12 w-full items-center justify-between gap-3 px-6 py-3 text-left uppercase focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset sm:px-8">
             <span>
@@ -150,7 +150,7 @@ export function FeeBreakdownFields() {
           {rows.fields.length > 0 ? (
             <div className="overflow-hidden rounded-2xl border border-border">
               <Table className="min-w-[52rem]">
-                <TableHeader className="bg-surface-subtle [&_th]:text-xs [&_th]:font-semibold [&_th]:tracking-wider [&_th]:text-muted-foreground [&_th]:uppercase">
+                <TableHeader className="bg-surface-subtle [&_th]:text-xs [&_th]:font-semibold [&_th]:tracking-[0.06em] [&_th]:text-muted-foreground [&_th]:uppercase">
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="min-w-48">Charge</TableHead>
                     <TableHead className="w-32 text-right">
@@ -405,7 +405,7 @@ export function FeeBreakdownFields() {
                 <span className="font-semibold">
                   {feePerCopy ? "Fee per copy" : "Total fee at the cashier"}
                 </span>
-                <span className="text-2xl font-semibold tracking-tight tabular-nums">
+                <span className="text-[22px] font-bold tracking-[-0.03em] tabular-nums">
                   {pesoFormatter.format(feeAmount)}
                 </span>
               </div>

@@ -2,6 +2,8 @@
 @source "../";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
 
 /* Screens too short for the desktop shell's full spacing. A page that is meant
    to fit one screen (the applicant dashboard) tightens up under this instead of
@@ -1305,5 +1307,86 @@ input[aria-hidden="true"][tabindex="-1"] {
   .wizard-skeleton {
     animation: none;
     background: #e8ecf3;
+  }
+}
+
+/* The service editor sets its type in Geist; the rest of the app keeps Helvetica
+   Neue. This is a utilities-layer rule so it beats `font-heading`, `font-sans`
+   and `font-mono`, which components apply directly. Dialogs, sheets and select
+   popups portal out of the editor and keep the app font. */
+@layer utilities {
+  [data-service-editor],
+  [data-service-editor] .font-sans,
+  [data-service-editor] .font-heading,
+  [data-service-editor] .font-display {
+    font-family:
+      "Geist Variable", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+
+  [data-service-editor] .font-mono {
+    font-family:
+      "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  /* Weights and sizes from the approved prototype: bolder titles and labels, a
+     15px base for text people read or type. Scoped here so the shared Field,
+     Button, Badge and Input keep their defaults everywhere else. */
+  [data-service-editor] header h1,
+  [data-service-editor] [data-slot="card-title"] {
+    font-weight: 700;
+  }
+
+  [data-service-editor] [data-slot="card-title"] {
+    letter-spacing: -0.02em;
+  }
+
+  [data-service-editor] [data-slot="card-description"] {
+    font-size: 15px;
+  }
+
+  [data-service-editor] [data-slot="field-label"] {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  [data-service-editor] [data-slot="field-description"] {
+    font-size: 13px;
+  }
+
+  [data-service-editor] [data-slot="button"],
+  [data-service-editor] [role="region"][aria-label="Service editor actions"] a {
+    font-weight: 600;
+  }
+
+  [data-service-editor] [role="region"][aria-label="Service editor actions"] :is(a, button) {
+    font-size: 15px;
+  }
+
+  [data-service-editor] [role="region"][aria-label="Service editor actions"] p {
+    font-size: 13px;
+  }
+
+  [data-service-editor] header .text-xs {
+    font-size: 12.5px;
+  }
+
+  [data-service-editor] [data-slot="badge"] {
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+
+  [data-service-editor] [data-slot="input"],
+  [data-service-editor] [data-slot="select-trigger"],
+  [data-service-editor] textarea {
+    font-size: 15px;
+  }
+
+  @media (pointer: coarse) {
+    /* 16px keeps iOS from zooming into a focused field. */
+    [data-service-editor] [data-slot="input"],
+    [data-service-editor] [data-slot="select-trigger"],
+    [data-service-editor] textarea {
+      font-size: 16px;
+    }
   }
 }
