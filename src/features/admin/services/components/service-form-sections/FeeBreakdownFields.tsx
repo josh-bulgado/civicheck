@@ -148,7 +148,7 @@ export function FeeBreakdownFields() {
 
           {rows.fields.length > 0 ? (
             <div className="rounded-lg border border-border">
-              <Table className="min-w-[56rem]">
+              <Table className="min-w-[52rem]">
                 <TableHeader className="bg-muted/50">
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="min-w-48">Charge</TableHead>
@@ -407,7 +407,12 @@ export function FeeBreakdownFields() {
                   {pesoFormatter.format(feeAmount)}
                 </span>
               </div>
-              {receiptIncluded.length > 0 ? (
+              {feePerCopy ? (
+                <p className="border-t border-border pt-2 text-xs text-muted-foreground">
+                  Breakdown isn&rsquo;t shown to applicants for per-copy services.
+                </p>
+              ) : null}
+              {!feePerCopy && receiptIncluded.length > 0 ? (
                 <ul className="flex flex-col gap-1 border-t border-border pt-2 text-sm">
                   {receiptIncluded.map((component, index) => (
                     <li
@@ -424,7 +429,7 @@ export function FeeBreakdownFields() {
                   ))}
                 </ul>
               ) : null}
-              {receiptAlsoPayable.length > 0 ? (
+              {!feePerCopy && receiptAlsoPayable.length > 0 ? (
                 <div className="flex flex-col gap-1 border-t border-border pt-2">
                   <p className="text-xs font-medium text-muted-foreground">
                     Also payable, depending on your request
