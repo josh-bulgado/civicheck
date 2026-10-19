@@ -1,5 +1,7 @@
 import { Link } from "@tanstack/react-router";
+import { useRef, useState } from "react";
 import { Blocks, Plus, Trash2, Unlink } from "lucide-react";
+import { toast } from "sonner";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import {
@@ -27,9 +29,11 @@ import {
   SheetHeader,
   SheetTitle,
 } from "~/components/ui/sheet";
+import { deriveOptionValue } from "../form-option-usage";
 import type {
   FormFieldDefinition,
   FormFieldType,
+  FormOption,
 } from "../form-template.types";
 import { ConditionRuleBuilder } from "./ConditionRuleBuilder";
 import { fieldTypeLabel, type FormFieldTypeOption } from "./form-field-types";
@@ -47,7 +51,16 @@ interface FormFieldInspectorProps {
   blockNameByKey: Map<string, string>;
   onUpdate: (patch: Partial<FormFieldDefinition>) => void;
   onDetach: (blockKey: string) => void;
+  /**
+   * Where a dropdown option is relied on (conditions, routing, requirements),
+   * as short descriptions. Empty means unused. Defaults to "never in use".
+   */
+  optionUsageFor?: OptionUsageFor;
 }
+
+type OptionUsageFor = (fieldKey: string, value: string) => string[];
+
+const NEVER_IN_USE: OptionUsageFor = () => [];
 
 const DATE_DIRECTIONS = [
   { value: "past", label: "Past dates only" },
@@ -74,6 +87,7 @@ export function FormFieldInspector({
   blockNameByKey,
   onUpdate,
   onDetach,
+  optionUsageFor = NEVER_IN_USE,
 }: FormFieldInspectorProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -106,6 +120,7 @@ export function FormFieldInspector({
                   fieldTypes={fieldTypes}
                   immutableKeys={immutableKeys}
                   onUpdate={onUpdate}
+                  optionUsageFor={optionUsageFor}
                 />
               )}
             </div>
@@ -168,6 +183,7 @@ function FieldEditor({
   fieldTypes,
   immutableKeys,
   onUpdate,
+  optionUsageFor,
 }: {
   field: FormFieldDefinition;
   fields: FormFieldDefinition[];
@@ -175,6 +191,7 @@ function FieldEditor({
   fieldTypes: FormFieldTypeOption[];
   immutableKeys: Set<string>;
   onUpdate: (patch: Partial<FormFieldDefinition>) => void;
+  optionUsageFor: OptionUsageFor;
 }) {
   const hasOtherPersonGroup = fields.some(
     (candidate) => candidate !== field && candidate.type === "person_group",
@@ -310,80 +327,12 @@ function FieldEditor({
       ) : null}
 
       {field.type === "select" ? (
-        <FieldSet className="gap-2">
-          <FieldLegend variant="label" className="mb-1">
-            Dropdown Options
-          </FieldLegend>
-          {(field.options ?? []).map((option, optionIndex) => (
-            <div
-              key={optionIndex}
-              className="grid grid-cols-[1fr_1fr_auto] gap-2"
-            >
-              <Input
-                value={option.value}
-                autoComplete="off"
-                spellCheck={false}
-                aria-label={`Option ${optionIndex + 1} value`}
-                onChange={(event) => {
-                  const options = [...(field.options ?? [])];
-                  options[optionIndex] = {
-                    ...option,
-                    value: event.target.value,
-                  };
-                  onUpdate({ options });
-                }}
-              />
-              <Input
-                value={option.label}
-                autoComplete="off"
-                aria-label={`Option ${optionIndex + 1} label`}
-                onChange={(event) => {
-                  const options = [...(field.options ?? [])];
-                  options[optionIndex] = {
-                    ...option,
-                    label: event.target.value,
-                  };
-                  onUpdate({ options });
-                }}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                onClick={() =>
-                  onUpdate({
-                    options: (field.options ?? []).filter(
-                      (_, itemIndex) => itemIndex !== optionIndex,
-                    ),
-                  })
-                }
-                aria-label={`Remove option ${optionIndex + 1}`}
-              >
-                <Trash2 aria-hidden="true" />
-              </Button>
-            </div>
-          ))}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="self-start"
-            onClick={() =>
-              onUpdate({
-                options: [
-                  ...(field.options ?? []),
-                  {
-                    value: `option_${(field.options?.length ?? 0) + 1}`,
-                    label: `Option ${(field.options?.length ?? 0) + 1}`,
-                  },
-                ],
-              })
-            }
-          >
-            <Plus aria-hidden="true" data-icon="inline-start" />
-            Add Option
-          </Button>
-        </FieldSet>
+        <DropdownOptionsEditor
+          key={index}
+          field={field}
+          usageFor={optionUsageFor}
+          onUpdate={onUpdate}
+        />
       ) : null}
 
       {field.visibleWhen ||
@@ -415,4 +364,178 @@ function FieldEditor({
       ) : null}
     </FieldGroup>
   );
+}
+
+/**
+ * The dropdown's choices. A choice that a condition, route or requirement relies
+ * on keeps its stored value and cannot be removed (conditions store the value,
+ * never the label, so the label stays freely editable). A choice added here
+ * follows its label until the admin edits the value by hand.
+ */
+function DropdownOptionsEditor({
+  field,
+  usageFor,
+  onUpdate,
+}: {
+  field: FormFieldDefinition;
+  usageFor: OptionUsageFor;
+  onUpdate: (patch: Partial<FormFieldDefinition>) => void;
+}) {
+  const options = field.options ?? [];
+  // Options have no id and the saved shape must not gain one, so rows that are
+  // still "auto-valued" are tracked by index and shifted on remove/restore.
+  // Choices that came from saved data are never in this set.
+  const [autoRows, setAutoRows] = useState<ReadonlySet<number>>(new Set());
+  const latestOptions = useRef(options);
+  latestOptions.current = options;
+
+  function takenValues(skip: number) {
+    return new Set(
+      latestOptions.current
+        .filter((_, itemIndex) => itemIndex !== skip)
+        .map((option) => option.value),
+    );
+  }
+
+  function replaceOption(optionIndex: number, patch: Partial<FormOption>) {
+    const next = [...options];
+    next[optionIndex] = { ...options[optionIndex], ...patch };
+    onUpdate({ options: next });
+  }
+
+  function addOption() {
+    const label = `Option ${options.length + 1}`;
+    const value = deriveOptionValue(
+      label,
+      new Set(options.map((option) => option.value)),
+    );
+    setAutoRows((rows) => new Set(rows).add(options.length));
+    onUpdate({ options: [...options, { value, label }] });
+  }
+
+  function removeOption(optionIndex: number) {
+    const removed = options[optionIndex];
+    const wasAuto = autoRows.has(optionIndex);
+    setAutoRows((rows) => shiftRows(rows, optionIndex, -1));
+    onUpdate({ options: options.filter((_, item) => item !== optionIndex) });
+    toast(`Removed \u201c${removed.label}\u201d`, {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          const current = latestOptions.current;
+          const at = Math.min(optionIndex, current.length);
+          setAutoRows((rows) => {
+            const shifted = shiftRows(rows, at, 1);
+            if (wasAuto) shifted.add(at);
+            return shifted;
+          });
+          onUpdate({
+            options: [...current.slice(0, at), removed, ...current.slice(at)],
+          });
+        },
+      },
+    });
+  }
+
+  return (
+    <FieldSet className="gap-2">
+      <FieldLegend variant="label" className="mb-1">
+        Dropdown Options
+      </FieldLegend>
+      {options.map((option, optionIndex) => {
+        const usage = usageFor(field.key, option.value);
+        const inUse = usage.length > 0;
+        const usageId = `inspector-option-${optionIndex}-usage`;
+        return (
+          <div key={optionIndex} className="flex flex-col gap-1">
+            <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
+              <Input
+                value={option.value}
+                disabled={inUse}
+                autoComplete="off"
+                spellCheck={false}
+                className="font-mono"
+                aria-label={`Option ${optionIndex + 1} value`}
+                aria-describedby={inUse ? usageId : undefined}
+                onChange={(event) => {
+                  setAutoRows((rows) => shiftRows(rows, optionIndex, 0));
+                  replaceOption(optionIndex, { value: event.target.value });
+                }}
+              />
+              <Input
+                value={option.label}
+                autoComplete="off"
+                aria-label={`Option ${optionIndex + 1} label`}
+                onChange={(event) => {
+                  const label = event.target.value;
+                  replaceOption(
+                    optionIndex,
+                    !inUse && autoRows.has(optionIndex)
+                      ? {
+                          label,
+                          value: deriveOptionValue(
+                            label,
+                            takenValues(optionIndex),
+                          ),
+                        }
+                      : { label },
+                  );
+                }}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                disabled={inUse}
+                onClick={() => removeOption(optionIndex)}
+                aria-label={`Remove option ${optionIndex + 1}`}
+                aria-describedby={inUse ? usageId : undefined}
+              >
+                <Trash2 aria-hidden="true" />
+              </Button>
+            </div>
+            {inUse ? (
+              <p id={usageId} className="text-xs text-muted-foreground">
+                Used by: {usage.join("; ")}
+              </p>
+            ) : null}
+          </div>
+        );
+      })}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="self-start"
+        onClick={addOption}
+      >
+        <Plus aria-hidden="true" data-icon="inline-start" />
+        Add Option
+      </Button>
+    </FieldSet>
+  );
+}
+
+/**
+ * Re-indexes the auto-valued rows after a row at `at` is removed (`delta` -1:
+ * rows after it move up, `at` itself is dropped), inserted (`delta` 1: rows from
+ * `at` move down), or its value is touched by hand (`delta` 0: `at` is dropped).
+ */
+function shiftRows(
+  rows: ReadonlySet<number>,
+  at: number,
+  delta: -1 | 0 | 1,
+): Set<number> {
+  const next = new Set<number>();
+  for (const row of rows) {
+    if (delta === 0) {
+      if (row !== at) next.add(row);
+    } else if (delta === -1) {
+      if (row < at) next.add(row);
+      else if (row > at) next.add(row - 1);
+    } else {
+      next.add(row >= at ? row + 1 : row);
+    }
+  }
+  return next;
 }

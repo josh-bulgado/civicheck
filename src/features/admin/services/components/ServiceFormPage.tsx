@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog";
 import type { Department } from "~/features/admin/departments.queries";
+import type { ConditionRef } from "~/features/forms/form-option-usage";
 import { getServiceFormTemplateFn } from "~/features/forms/form-template.functions";
 import { formTemplateDefinitionSchema } from "~/features/forms/form-template.types";
 import type { FormTemplateDefinition } from "~/features/forms/form-template.types";
@@ -311,6 +312,20 @@ export function ServiceFormPage({
       "requirement_group",
     ],
   });
+
+  // Requirement rules point at dropdown options by value; the form editor uses
+  // these to lock options that a requirement still depends on.
+  const requirementConditions = useMemo<ConditionRef[]>(
+    () =>
+      (requirements ?? []).flatMap((requirement) =>
+        (requirement.applies_when?.conditions ?? []).map((condition) => ({
+          field: condition.field,
+          value: condition.value,
+          where: `Requirement: ${requirement.requirement_name || "Untitled requirement"}`,
+        })),
+      ),
+    [requirements],
+  );
 
   useEffect(() => {
     if (!service) {
@@ -1016,6 +1031,7 @@ export function ServiceFormPage({
                       templateSharedCodes={templateSharedCodes}
                       publishedFieldKeys={publishedFieldKeys}
                       formDefinition={formDefinition}
+                      externalConditions={requirementConditions}
                       isLoading={templateLoading}
                       onTemplateNameChange={(name) => {
                         setTemplateName(name);

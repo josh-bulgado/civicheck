@@ -67,6 +67,7 @@ import type {
   FormStep,
   FormTemplateDefinition,
 } from "../form-template.types";
+import { optionUsage, type ConditionRef } from "../form-option-usage";
 import { FormFieldInspector } from "./FormFieldInspector";
 import {
   FIELD_TYPES,
@@ -174,6 +175,7 @@ export function FormTemplateBuilder({
   steps: visibleSteps,
   allowPersonGroup = true,
   allowSharedBlocks = true,
+  externalConditions,
 }: {
   definition: FormTemplateDefinition;
   onChange: (definition: FormTemplateDefinition) => void;
@@ -184,6 +186,8 @@ export function FormTemplateBuilder({
   allowPersonGroup?: boolean;
   /** Hide shared-block insertion (a block can't include other blocks). */
   allowSharedBlocks?: boolean;
+  /** Conditions outside this form (requirements) that point at its dropdown options. */
+  externalConditions?: readonly ConditionRef[];
 }) {
   const immutableKeySet = new Set(immutableKeys);
   const fieldTypes = FIELD_TYPES.filter(
@@ -553,6 +557,9 @@ export function FormTemplateBuilder({
           }
         }}
         onDetach={detach}
+        optionUsageFor={(fieldKey, value) =>
+          optionUsage(definition, fieldKey, value, externalConditions)
+        }
       />
 
       <Collapsible>

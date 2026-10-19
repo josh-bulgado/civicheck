@@ -5,6 +5,7 @@ import { Field, FieldDescription, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
 import { FormTemplateBuilder } from "~/features/forms/components/FormTemplateBuilder";
+import type { ConditionRef } from "~/features/forms/form-option-usage";
 import type { FormTemplateDefinition } from "~/features/forms/form-template.types";
 
 interface ApplicationFormSectionProps {
@@ -17,6 +18,8 @@ interface ApplicationFormSectionProps {
   onTemplateNameChange: (name: string) => void;
   onFormDefinitionChange: (definition: FormTemplateDefinition) => void;
   embedded?: boolean;
+  /** Requirement conditions that point at dropdown options in this form. */
+  externalConditions?: readonly ConditionRef[];
 }
 
 export function ApplicationFormSection({
@@ -29,6 +32,7 @@ export function ApplicationFormSection({
   onTemplateNameChange,
   onFormDefinitionChange,
   embedded = false,
+  externalConditions,
 }: ApplicationFormSectionProps) {
   return (
     <Card
@@ -97,6 +101,7 @@ export function ApplicationFormSection({
             definition={formDefinition}
             onChange={onFormDefinitionChange}
             immutableKeys={publishedFieldKeys}
+            externalConditions={externalConditions}
           />
         )}
       </CardContent>
