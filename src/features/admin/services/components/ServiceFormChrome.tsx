@@ -143,18 +143,18 @@ export function ServiceEditorSection({
       keepMounted
       className="min-w-0 data-[hidden]:hidden"
     >
-      <Card id={id} className="min-w-0 gap-0 py-0">
+      <Card id={id} variant="soft" className="min-w-0 gap-0 py-0">
         <CardHeader className="border-b py-6 sm:px-8">
           <div className="flex items-start gap-3">
             <span
               aria-hidden="true"
-              className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary"
+              className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary"
             >
-              <Icon className="size-5" />
+              <Icon className="size-[22px]" />
             </span>
             <div className="flex min-w-0 flex-col gap-1.5">
               <div className="flex flex-wrap items-center gap-2">
-                <CardTitle>
+                <CardTitle className="text-xl font-semibold tracking-tight">
                   <h2 className="text-pretty">{title}</h2>
                 </CardTitle>
                 {hasError ? (

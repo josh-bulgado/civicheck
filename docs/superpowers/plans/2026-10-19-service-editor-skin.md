@@ -14,18 +14,17 @@
 
 - No existing variant, size or default changes; every addition is opt-in.
 - Existing tokens only (`--radius-*`, `--shadow-portal-*`, `primary`, `card`, `muted`); no new colors.
-- Light and dark must both work.
+- The app has no global dark theme (only a scoped `.dark` rule on the system-health page), so there is no dark mode to verify.
 - Dialogs, sheets, menus and selects portal outside the editor wrapper; re-apply the editor scope where they need the editor's tokens.
 - `FormTemplateBuilder` is shared with the shared-blocks editor; restyle it through props or the scope class, never its defaults.
 - Commit only the files each task names. `src/components/ui/attachment.tsx` and `sites/` are unrelated untracked files.
-- Verification: `npx tsc --noEmit`, `npx eslint <paths>`, `npx vitest run`, then browser checks at 1280px and 390px, light and dark, and WebKit where possible.
+- Verification: `npx tsc --noEmit`, `npx eslint <paths>`, `npx vitest run`, then browser checks at 1280px and 390px and WebKit where possible.
 
 ## Review Focus
 
 - An unrelated screen (staff dashboard, a data table, a dialog) looks identical after each task.
 - Select, sheet and dialog content opened from the editor matches the editor, not the default look.
 - The fee table stays compact; `touch` heights are not applied inside it.
-- Dark mode: raised button, segmented tabs and soft card keep contrast.
 - Safari: segmented tab track scrolls horizontally on a narrow bar without a visible scrollbar.
 
 ---
@@ -64,7 +63,7 @@ The editor already carries `data-service-editor` (set in `ServiceFormPage` and `
 
 **Files:** the `service-form-sections/*` components
 
-- [ ] `Card variant="soft"` for each tab card; group-header bands; `fieldSize="touch"` / `size="touch"` on inputs and selects; lock-prefix input for the read-only Service Code; help text under the control where it reads better.
+- [x] (done for the shared section card and Registry & Fees; verified at 1440px and 390px) `Card variant="soft"` for each tab card; group-header bands; `fieldSize="touch"` / `size="touch"` on inputs and selects; lock-prefix input for the read-only Service Code; help text under the control where it reads better.
 - [ ] Leave the fee table, requirements table and field table on their compact controls.
 - [ ] Commit per tab.
 

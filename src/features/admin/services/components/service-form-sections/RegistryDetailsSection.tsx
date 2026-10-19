@@ -1,6 +1,6 @@
 import { useId } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
-import { FileText, PhilippinePeso } from "lucide-react";
+import { FileText, Lock, PhilippinePeso } from "lucide-react";
 import type { Department } from "~/features/admin/departments.queries";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import {
@@ -52,16 +52,19 @@ function SettingGroup({
 }) {
   const headingId = useId();
   return (
-    <section aria-labelledby={headingId} className="flex flex-col">
+    // Bleeds past the card's side padding (px-6, sm:px-8) so the band and the
+    // row dividers run edge to edge.
+    <section
+      aria-labelledby={headingId}
+      className="-mx-6 flex flex-col not-first:border-t sm:-mx-8"
+    >
       <h3
         id={headingId}
-        className="pb-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase"
+        className="border-b bg-surface-subtle px-6 py-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase sm:px-8"
       >
         {title}
       </h3>
-      <div className="flex flex-col divide-y divide-border border-t">
-        {children}
-      </div>
+      <div className="flex flex-col divide-y divide-border">{children}</div>
     </section>
   );
 }
@@ -85,7 +88,7 @@ function SettingRow({
   return (
     <Field
       data-invalid={Boolean(error)}
-      className="grid gap-3 py-5 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] sm:items-start sm:gap-x-8"
+      className="grid gap-3 px-6 py-5 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] sm:items-start sm:gap-x-8 sm:px-8"
     >
       <FieldContent className="min-w-0">
         <FieldLabel htmlFor={htmlFor}>{label}</FieldLabel>
@@ -114,7 +117,9 @@ export function RegistryDetailsSection({
     <Card
       id={embedded ? undefined : "registry-details"}
       variant={embedded ? "embedded" : "default"}
-      className={embedded ? undefined : "scroll-mt-6"}
+      // Embedded, -mt-6 cancels the section card's top padding so the first band
+      // meets the header. It sits on this card because the card clips overflow.
+      className={embedded ? "-mt-6" : "scroll-mt-6"}
     >
       {!embedded ? (
         <CardHeader className="border-b">
@@ -131,7 +136,7 @@ export function RegistryDetailsSection({
         </CardHeader>
       ) : null}
       <CardContent>
-        <FieldGroup className="gap-8">
+        <FieldGroup className="gap-0">
           <SettingGroup title="Service">
             {!isEdit ? (
               <SettingRow
@@ -151,7 +156,7 @@ export function RegistryDetailsSection({
                   value={presetCode}
                   onValueChange={onPresetChange}
                 >
-                  <SelectTrigger id="service-preset" className="w-full">
+                  <SelectTrigger id="service-preset" size="touch" className="w-full">
                     <SelectValue placeholder="Copy fields from a charter service…">
                       {(value) =>
                         services.find((entry) => entry.service_code === value)
@@ -188,6 +193,7 @@ export function RegistryDetailsSection({
                   <Input
                     {...field}
                     id="service-name"
+                    fieldSize="touch"
                     placeholder="Issuance of Certified True Copies of Civil Registry Records…"
                     autoComplete="off"
                     aria-invalid={fieldState.invalid}
@@ -210,19 +216,26 @@ export function RegistryDetailsSection({
                   }
                   error={fieldState.invalid ? fieldState.error : undefined}
                 >
-                  <Input
-                    {...field}
-                    id="service-code"
-                    placeholder="CTC-LOCAL…"
-                    className="font-mono uppercase"
-                    disabled={isEdit}
-                    autoComplete="off"
-                    spellCheck={false}
-                    aria-invalid={fieldState.invalid}
-                    onChange={(event) =>
-                      field.onChange(event.target.value.toUpperCase())
-                    }
-                  />
+                  <InputGroup size="touch">
+                    {isEdit ? (
+                      <InputGroupAddon>
+                        <Lock aria-hidden="true" />
+                      </InputGroupAddon>
+                    ) : null}
+                    <InputGroupInput
+                      {...field}
+                      id="service-code"
+                      placeholder="CTC-LOCAL…"
+                      className="font-mono uppercase"
+                      disabled={isEdit}
+                      autoComplete="off"
+                      spellCheck={false}
+                      aria-invalid={fieldState.invalid}
+                      onChange={(event) =>
+                        field.onChange(event.target.value.toUpperCase())
+                      }
+                    />
+                  </InputGroup>
                 </SettingRow>
               )}
             />
@@ -239,7 +252,7 @@ export function RegistryDetailsSection({
                   help={feePerCopy ? "Charged for each copy requested." : null}
                   error={fieldState.invalid ? fieldState.error : undefined}
                 >
-                  <InputGroup>
+                  <InputGroup size="touch">
                     <InputGroupAddon>
                       <PhilippinePeso size={16} />
                     </InputGroupAddon>
@@ -263,7 +276,7 @@ export function RegistryDetailsSection({
               render={({ field }) => (
                 <Field
                   orientation="horizontal"
-                  className="gap-6 py-5 has-[>[data-slot=field-content]]:items-start sm:has-[>[data-slot=field-content]]:items-center"
+                  className="gap-6 px-6 py-5 has-[>[data-slot=field-content]]:items-start sm:px-8 sm:has-[>[data-slot=field-content]]:items-center"
                 >
                   <FieldContent className="min-w-0 max-w-[66ch]">
                     <FieldLabel htmlFor="service-fee-per-copy">
@@ -308,6 +321,7 @@ export function RegistryDetailsSection({
                   >
                     <SelectTrigger
                       id="service-classification"
+                      size="touch"
                       className="w-full"
                       aria-invalid={fieldState.invalid}
                     >
@@ -349,6 +363,7 @@ export function RegistryDetailsSection({
                   <Input
                     {...field}
                     id="service-processing-time"
+                    fieldSize="touch"
                     placeholder="2 hours…"
                     autoComplete="off"
                     aria-invalid={fieldState.invalid}
@@ -374,6 +389,7 @@ export function RegistryDetailsSection({
                   >
                     <SelectTrigger
                       id="service-department"
+                      size="touch"
                       className="w-full"
                       aria-invalid={fieldState.invalid}
                     >
