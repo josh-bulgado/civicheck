@@ -19,6 +19,7 @@ const alertVariants = cva(
           "border-success/40 bg-success-soft text-success *:data-[slot=alert-description]:text-foreground *:[svg]:text-success",
         warning:
           "border-warning-border bg-warning-soft text-warning-strong *:data-[slot=alert-description]:text-foreground *:[svg]:text-warning-strong",
+        info: "border-tone-review/25 bg-tone-review-soft text-tone-review *:data-[slot=alert-description]:text-foreground *:[svg]:text-tone-review",
       },
     },
     defaultVariants: {
