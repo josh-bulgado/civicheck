@@ -62,6 +62,11 @@ import type {
   FormTemplateDefinition,
 } from "../form-template.types";
 import { optionUsage, restoreOption, type ConditionRef } from "../form-option-usage";
+import {
+  EDITOR_MENU_CONTENT as MENU_CONTENT,
+  EDITOR_MENU_ITEM as MENU_ITEM,
+  EDITOR_ROW_MENU_TRIGGER,
+} from "./EditorSheetParts";
 import { FormFieldInspector } from "./FormFieldInspector";
 import { FIELD_TYPES, FormFieldIcon } from "./form-field-types";
 import {
@@ -78,9 +83,6 @@ const STEPS: Array<{ value: FormStep; label: string }> = [
 ];
 
 const TOOLBAR_BUTTON = "h-9 gap-2 rounded-[10px] px-3.5 text-[13.5px]";
-// One row of the Insert Shared Block and row action menus.
-const MENU_CONTENT = "min-w-[200px] rounded-[14px] p-1.5";
-const MENU_ITEM = "min-h-10 gap-2.5 rounded-[9px] px-3 text-sm font-medium";
 const HEAD_CELL =
   "h-auto px-3 py-[11px] text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase";
 const BODY_CELL = "p-2.5";
@@ -878,7 +880,7 @@ function FieldRow({
               <Button
                 type="button"
                 variant="ghost"
-                className="size-10 rounded-[10px] text-muted-foreground"
+                className={EDITOR_ROW_MENU_TRIGGER}
                 aria-label={`Actions for ${field.label}`}
               />
             }

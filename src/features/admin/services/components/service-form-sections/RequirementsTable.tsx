@@ -25,6 +25,11 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import type { ConditionSource } from "~/features/forms/components/ConditionRuleBuilder";
+import {
+  EDITOR_MENU_CONTENT,
+  EDITOR_MENU_ITEM,
+  EDITOR_ROW_MENU_TRIGGER,
+} from "~/features/forms/components/EditorSheetParts";
 import { requirementChips, splitRequirementTitle } from "../requirement-chips";
 import type {
   RequirementScope,
@@ -192,36 +197,50 @@ function RequirementTableRow({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="relative size-9 text-muted-foreground after:absolute after:-inset-1"
+                      className={EDITOR_ROW_MENU_TRIGGER}
                       aria-label={`Actions for ${fullName}`}
                     />
                   }
                 >
-                  <MoreHorizontal aria-hidden="true" />
+                  <MoreHorizontal aria-hidden="true" className="fill-current" />
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-52">
+                <DropdownMenuContent align="end" className={EDITOR_MENU_CONTENT}>
                   {!isLocked ? (
                     <DropdownMenuItem
+                      className={EDITOR_MENU_ITEM}
                       onClick={() => {
                         const opener = openerRef.current;
                         if (opener) onOpen(index, opener);
                       }}
                     >
-                      <SlidersHorizontal aria-hidden="true" />
+                      <SlidersHorizontal
+                        aria-hidden="true"
+                        className="text-muted-foreground"
+                      />
                       Configure
                     </DropdownMenuItem>
                   ) : null}
-                  {canOverride && onOverride ? (
-                    <DropdownMenuItem onClick={() => onOverride(index)}>
-                      <Copy aria-hidden="true" />
+                  {/* Only Shared rows can be overridden; the item stays, dimmed,
+                      on the others so the menu reads the same on every row. */}
+                  {onOverride ? (
+                    <DropdownMenuItem
+                      disabled={!canOverride}
+                      className={EDITOR_MENU_ITEM}
+                      onClick={() => onOverride(index)}
+                    >
+                      <Copy
+                        aria-hidden="true"
+                        className="text-muted-foreground"
+                      />
                       Override for this variant
                     </DropdownMenuItem>
                   ) : null}
                   {!isLocked ? (
                     <>
-                      <DropdownMenuSeparator />
+                      <DropdownMenuSeparator className="mx-1.5 my-1" />
                       <DropdownMenuItem
                         variant="destructive"
+                        className={EDITOR_MENU_ITEM}
                         onClick={() => onRemove(index)}
                       >
                         <Trash2 aria-hidden="true" />
@@ -251,7 +270,7 @@ export function RequirementsTable({
   return (
     <div
       ref={ref}
-      className="overflow-hidden rounded-lg border border-border bg-background"
+      className="overflow-hidden rounded-xl border border-border bg-background"
     >
       <Table className="min-w-[40rem] table-fixed">
         <TableHeader>

@@ -40,7 +40,7 @@ function shortCondition(
   const label =
     source?.options?.find((o) => o.value === condition.value)?.label ||
     condition.value;
-  const text = /\bage$/i.test(source?.label ?? "")
+  const text = /\bage\b/i.test(source?.label ?? "")
     ? `Age ${label.replace(/ years old$/i, "")}`
     : label;
   return condition.operator === "not_equals" ? `Not ${text}` : text;

@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useFieldArray, useFormContext } from "react-hook-form";
 import {
   AlertTriangle,
-  ChevronDown,
   ClipboardCheck,
   GitBranch,
   Lock,
@@ -11,6 +10,7 @@ import {
   Unlock,
 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "~/lib/utils";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -38,6 +38,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import {
   type ConditionSource,
 } from "~/features/forms/components/ConditionRuleBuilder";
+import {
+  EDITOR_MENU_CONTENT,
+  EDITOR_MENU_ITEM,
+} from "~/features/forms/components/EditorSheetParts";
 import type { FormTemplateDefinition } from "~/features/forms/form-template.types";
 import type { Service } from "../../services.types";
 import {
@@ -195,9 +199,12 @@ export function RequirementsSection({
 
   const normalizedQuery = query.trim().toLowerCase();
   const selectedTab = tab ?? defaultRequirementTab(counts);
-  // "Other" only exists as a tab while it has rows.
+  // "This variant" and "Other" only exist as tabs while they have rows.
   const resolvedTab: RequirementTab =
-    selectedTab === "other" && counts.other === 0 ? "all" : selectedTab;
+    (selectedTab === "other" || selectedTab === "variant") &&
+    counts[selectedTab] === 0
+      ? "all"
+      : selectedTab;
   // A search spans every group, so the strip shows All while one is active.
   const activeTab: RequirementTab = normalizedQuery ? "all" : resolvedTab;
 
@@ -227,7 +234,9 @@ export function RequirementsSection({
   const variantCount = counts.variant;
   const inheritedCount = counts.inherited;
   const visibleTabs = TAB_ORDER.filter(
-    (candidate) => candidate !== "other" || counts.other > 0,
+    (candidate) =>
+      !(candidate === "other" || candidate === "variant") ||
+      counts[candidate] > 0,
   );
   const hasLockableRows =
     isShared &&
@@ -408,21 +417,22 @@ export function RequirementsSection({
           </div>
         ) : (
           <>
-            <div className="sticky top-2 z-10 flex flex-col gap-3 rounded-lg border border-border bg-card/95 p-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
-              <div className="relative sm:max-w-xs sm:flex-1">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative sm:max-w-sm sm:flex-1">
                 <Search
                   aria-hidden="true"
-                  className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+                  className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
                 />
                 <Input
                   type="search"
                   name="requirements_search"
                   autoComplete="off"
+                  fieldSize="touch"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Search requirements…"
                   aria-label="Search requirements"
-                  className="pl-8"
+                  className="bg-background data-[field-size=touch]:pl-10"
                 />
               </div>
               <DropdownMenu>
@@ -432,25 +442,34 @@ export function RequirementsSection({
                     <Button
                       ref={addButtonRef}
                       type="button"
-                      variant="outline"
-                      className="min-h-11"
+                      variant="raised"
+                      size="touch"
                     />
                   }
                 >
                   <Plus aria-hidden="true" data-icon="inline-start" />
                   Add
-                  <ChevronDown aria-hidden="true" data-icon="inline-end" />
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-64">
-                  <DropdownMenuItem onClick={addBlank}>
-                    <Plus aria-hidden="true" />
+                <DropdownMenuContent
+                  align="end"
+                  className={cn(EDITOR_MENU_CONTENT, "min-w-64")}
+                >
+                  <DropdownMenuItem
+                    className={EDITOR_MENU_ITEM}
+                    onClick={addBlank}
+                  >
+                    <Plus aria-hidden="true" className="text-muted-foreground" />
                     Add Requirement
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     disabled={!canOverride}
+                    className={cn(EDITOR_MENU_ITEM, "items-start py-2")}
                     onClick={addVariantSpecific}
                   >
-                    <GitBranch aria-hidden="true" />
+                    <GitBranch
+                      aria-hidden="true"
+                      className="mt-0.5 text-muted-foreground"
+                    />
                     <span className="flex flex-col gap-0.5">
                       Add Variant-Specific
                       {canOverride ? null : (
@@ -488,17 +507,17 @@ export function RequirementsSection({
                 <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
                   <div className="max-w-full overflow-x-auto">
                     <TabsList
+                      variant="segmented"
                       aria-label="Requirement groups"
-                      className="group-data-horizontal/tabs:h-11"
                     >
                       {visibleTabs.map((candidate) => (
                         <TabsTrigger
                           key={candidate}
                           value={candidate}
-                          className="flex-none gap-2 px-3"
+                          className="gap-2 px-3.5"
                         >
                           {TAB_LABELS[candidate]}
-                          <span className="text-xs text-muted-foreground tabular-nums">
+                          <span className="font-mono text-xs text-muted-foreground tabular-nums">
                             {tabCount(candidate)}
                           </span>
                         </TabsTrigger>

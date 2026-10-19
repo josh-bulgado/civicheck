@@ -152,6 +152,26 @@ describe("requirementChips condition", () => {
     );
   });
 
+  it("shortens an age source whose label continues past 'age'", () => {
+    const bride: ConditionSource[] = [
+      {
+        key: "bride_age",
+        label: "Bride’s age on the intended marriage date",
+        options: [{ value: "18_20", label: "18–20 years old" }],
+      },
+    ];
+    expect(
+      requirementChips(
+        {
+          appliesWhen: rule("all", [equals("bride_age", "18_20")]),
+          uploadScope: "request",
+          subjectRole: null,
+        },
+        bride,
+      ).condition,
+    ).toBe("Age 18–20");
+  });
+
   it("prefixes not_equals with Not", () => {
     const r = rule("all", [
       { field: "nationality", operator: "not_equals", value: "filipino" },
