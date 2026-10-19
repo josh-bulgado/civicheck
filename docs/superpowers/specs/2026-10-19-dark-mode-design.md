@@ -16,7 +16,7 @@ Success looks like this: a person flips one switch in the header, the whole sign
 
 ## Non-goals
 
-- Landing page, sign-in, register, forgot/reset password: they stay light for now. Going dark there is a possible later step and must not be blocked by this design.
+- (Changed 2026-10-19 at the user's request: the public pages are themed too. Landing, requirements, track, privacy and terms have the switch in the site header; sign-in, register, forgot/reset password, email verification and invitation have it beside the logo. They read the same saved choice and are still light on a first visit. The forbidden and not-found pages follow the theme but have no switch.)
 - A third "follow my device" setting.
 - Saving the choice to the user's account so it follows them across devices.
 - Printed and downloaded documents (PDFs, acknowledgments, verification forms): they stay light.
