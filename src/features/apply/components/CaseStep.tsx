@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { CalendarClock } from "lucide-react";
+import { EventTimingNotice } from "~/features/forms/components/EventTimingNotice";
 import { NoticeAlert } from "~/features/forms/components/NoticeAlert";
 import { TrackRedirectDialog } from "~/features/apply/components/TrackRedirectDialog";
 import { WizardShell } from "~/features/apply/components/WizardShell";
@@ -385,26 +386,13 @@ export function CaseStep({
         ) : null}
 
         {timingMismatch && timingRule ? (
-          <NoticeAlert
-            variant="warning"
-            role="status"
-            icon={CalendarClock}
+          <EventTimingNotice
+            behavior={timingRule.behavior}
             title={timingRule.title}
-          >
-            <span className="flex flex-wrap items-center gap-x-4 gap-y-3">
-              {timingRule.description}
-              {timingMismatch.behavior === "redirect_confirm" ||
-              timingMismatch.behavior === "warn_allow" ? (
-                <button
-                  type="button"
-                  onClick={() => setRedirectOpen(true)}
-                  className="civic-press h-11 rounded-full border border-[#e0bd5c] bg-white/70 px-5 text-[15px] font-semibold text-[#5c3a00] hover:bg-white"
-                >
-                  {timingRule.ctaLabel}
-                </button>
-              ) : null}
-            </span>
-          </NoticeAlert>
+            description={timingRule.description}
+            ctaLabel={timingRule.ctaLabel}
+            onCta={() => setRedirectOpen(true)}
+          />
         ) : null}
 
         {timingDeferredNotice ? (

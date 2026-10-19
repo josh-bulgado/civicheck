@@ -1,0 +1,1657 @@
+<title>Edit Service Redesign</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500&display=swap">
+<style>
+/* Layout concept: the real editor shell (fixed header + section tabs, scrolling workspace, one
+   global save) with every tab on one pattern family. Field-heavy tabs use settings rows (E), the
+   Timing rule reads as a sentence (A) with a timeline strip, the Application Form keeps its table,
+   and Requirements keeps its grouped checklist with a side sheet. Brand colors come from
+   CiviCheck's app.css. */
+:root {
+  --page: #eef1f6;
+  --glow: rgba(11, 77, 162, 0.1);
+  --bg: #f6f8fc;
+  --surface: #ffffff;
+  --surface-2: #f9fafc;
+  --fg: #0b1526;
+  --body: #445064;
+  --muted: #5b6678;
+  --line: rgba(11, 21, 38, 0.09);
+  --line-2: rgba(11, 21, 38, 0.17);
+  --fill: rgba(11, 21, 38, 0.045);
+  --fill-2: rgba(11, 21, 38, 0.1);
+  --primary: #0b4da2;
+  --primary-2: #1860c2;
+  --primary-hover: #093a7a;
+  --on-primary: #ffffff;
+  --primary-ink: #0b4da2;
+  --primary-soft: rgba(11, 77, 162, 0.1);
+  --primary-tint: rgba(11, 77, 162, 0.045);
+  --focus: rgba(11, 77, 162, 0.2);
+  --ok-ink: #14633f;
+  --ok-soft: rgba(31, 138, 91, 0.12);
+  --ok-line: rgba(31, 138, 91, 0.32);
+  --warn-ink: #7a5208;
+  --warn-soft: rgba(230, 170, 40, 0.14);
+  --warn-line: rgba(200, 140, 20, 0.38);
+  --bad-ink: #b3261e;
+  --bad-soft: rgba(179, 38, 30, 0.07);
+  --bad-line: rgba(179, 38, 30, 0.28);
+  --toast-bg: #0b1526;
+  --toast-fg: #ffffff;
+  --scrim: rgba(6, 11, 19, 0.45);
+  --sh: 0 1px 2px rgba(11, 21, 38, 0.04), 0 14px 36px -14px rgba(11, 21, 38, 0.14);
+  --sh-sm: 0 1px 2px rgba(11, 21, 38, 0.06);
+  --font: "Geist", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #060b13; --glow: rgba(47, 111, 208, 0.2); --bg: #0a111c; --surface: #101a29; --surface-2: #0d1623;
+    --fg: #e9eff8; --body: #b3bfd0; --muted: #93a1b5;
+    --line: rgba(255, 255, 255, 0.09); --line-2: rgba(255, 255, 255, 0.18);
+    --fill: rgba(255, 255, 255, 0.055); --fill-2: rgba(255, 255, 255, 0.1);
+    --primary: #2f6fd0; --primary-2: #3b7ee0; --primary-hover: #4a8aea; --on-primary: #ffffff;
+    --primary-ink: #8fb9f7; --primary-soft: rgba(95, 150, 240, 0.2); --primary-tint: rgba(95, 150, 240, 0.08); --focus: rgba(143, 185, 247, 0.3);
+    --ok-ink: #6fd3a0; --ok-soft: rgba(80, 200, 140, 0.14); --ok-line: rgba(80, 200, 140, 0.34);
+    --warn-ink: #e5be6a; --warn-soft: rgba(230, 180, 70, 0.14); --warn-line: rgba(230, 180, 70, 0.34);
+    --bad-ink: #f2958f; --bad-soft: rgba(242, 120, 110, 0.12); --bad-line: rgba(242, 120, 110, 0.34);
+    --toast-bg: #e9eff8; --toast-fg: #0b1526; --scrim: rgba(0, 0, 0, 0.6);
+    --sh: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 36px -14px rgba(0, 0, 0, 0.7);
+    --sh-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --page: #060b13; --glow: rgba(47, 111, 208, 0.2); --bg: #0a111c; --surface: #101a29; --surface-2: #0d1623;
+  --fg: #e9eff8; --body: #b3bfd0; --muted: #93a1b5;
+  --line: rgba(255, 255, 255, 0.09); --line-2: rgba(255, 255, 255, 0.18);
+  --fill: rgba(255, 255, 255, 0.055); --fill-2: rgba(255, 255, 255, 0.1);
+  --primary: #2f6fd0; --primary-2: #3b7ee0; --primary-hover: #4a8aea; --on-primary: #ffffff;
+  --primary-ink: #8fb9f7; --primary-soft: rgba(95, 150, 240, 0.2); --primary-tint: rgba(95, 150, 240, 0.08); --focus: rgba(143, 185, 247, 0.3);
+  --ok-ink: #6fd3a0; --ok-soft: rgba(80, 200, 140, 0.14); --ok-line: rgba(80, 200, 140, 0.34);
+  --warn-ink: #e5be6a; --warn-soft: rgba(230, 180, 70, 0.14); --warn-line: rgba(230, 180, 70, 0.34);
+  --bad-ink: #f2958f; --bad-soft: rgba(242, 120, 110, 0.12); --bad-line: rgba(242, 120, 110, 0.34);
+  --toast-bg: #e9eff8; --toast-fg: #0b1526; --scrim: rgba(0, 0, 0, 0.6);
+  --sh: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 36px -14px rgba(0, 0, 0, 0.7);
+  --sh-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background-color: var(--page);
+  background-image: radial-gradient(900px 340px at 50% -140px, var(--glow), transparent);
+  background-repeat: no-repeat;
+  color: var(--fg);
+  font: 15px/1.5 var(--font);
+  padding-block: 32px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1200px; margin: 0 auto; }
+h1, h2, h3, h4, p, ul, ol { margin: 0; }
+ul, ol { padding: 0; list-style: none; }
+h1, h2, h3, h4 { text-wrap: balance; letter-spacing: -0.02em; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; touch-action: manipulation; }
+:focus-visible { outline: 3px solid var(--primary-ink); outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.i.fill { fill: currentColor; stroke: none; }
+
+/* ---------- Proposal bar (not part of the mock) ---------- */
+.bar { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; margin-bottom: 24px; }
+.bar-top { display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: flex-end; justify-content: space-between; }
+.bar h1 { font-size: clamp(26px, 4vw, 34px); letter-spacing: -0.035em; line-height: 1.1; }
+.bar .sub { color: var(--body); max-width: 66ch; margin-top: 8px; }
+.bar-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.bar-ctl .lbl { color: var(--muted); }
+.hintline { color: var(--muted); font-size: 13px; }
+a.btn { text-decoration: none; }
+
+/* ---------- App frame ---------- */
+.app { background: var(--bg); border-radius: 24px; box-shadow: var(--sh), 0 0 0 1px var(--line); overflow: hidden; }
+.frame { display: flex; flex-direction: column; height: clamp(640px, 88vh, 1000px); }
+.app-head { flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 20px; padding: 22px 28px 14px; }
+.app-id { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.crumbs { font-size: 12.5px; color: var(--muted); }
+.crumbs .mono { font-family: var(--mono); font-size: 12px; }
+.app-id h1 { font-size: 20px; letter-spacing: -0.025em; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 2px; }
+.app-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dirty { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; margin-right: 4px; }
+.dirty i { width: 7px; height: 7px; border-radius: 50%; background: var(--fill-2); }
+.dirty.on i { background: var(--warn-ink); box-shadow: 0 0 0 4px var(--warn-soft); }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 600; background: var(--fill); color: var(--body); white-space: nowrap; letter-spacing: 0; }
+.chip-live { background: var(--ok-soft); color: var(--ok-ink); }
+.chip-live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.tabs-wrap { flex: none; padding: 0 28px 14px; }
+.tabs { display: flex; gap: 2px; padding: 4px; border-radius: 14px; background: var(--fill); overflow-x: auto; width: max-content; max-width: 100%; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { display: flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 10px; font-size: 14px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font-weight: 500; white-space: nowrap; transition: color 0.15s, background-color 0.15s; }
+.tab:hover { color: var(--fg); }
+.tab small { font-size: 12px; font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tab .bad { color: var(--bad-ink); }
+.tabs.compact .tab[aria-selected="false"] small { display: none; }
+.tab[aria-selected="true"] { background: var(--surface); color: var(--fg); font-weight: 600; box-shadow: var(--sh-sm), 0 0 0 1px var(--line); }
+.tab[aria-selected="true"] > .i:first-child { color: var(--primary-ink); }
+.ws { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px 28px 32px; }
+.ws-in { max-width: 920px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; min-width: 0; }
+.ws-nav { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 13px; }
+.ws-nav div { display: flex; gap: 8px; margin-left: auto; }
+
+/* ---------- Buttons ---------- */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--surface); color: var(--fg); font-weight: 600; box-shadow: var(--sh-sm); transition: background-color 0.15s, border-color 0.15s, color 0.15s; white-space: nowrap; }
+.btn:hover { background: var(--surface-2); border-color: var(--muted); }
+.btn-sm { min-height: 36px; padding: 0 14px; font-size: 13.5px; border-radius: 10px; }
+.btn-primary { background-color: var(--primary); background-image: linear-gradient(180deg, var(--primary-2), var(--primary)); border-color: var(--primary); color: var(--on-primary); box-shadow: 0 1px 2px rgba(11, 77, 162, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.18); }
+.btn-primary:hover { background-image: none; background-color: var(--primary-hover); border-color: var(--primary-hover); }
+.btn-bad { background: var(--bad-ink); border-color: var(--bad-ink); color: var(--surface); }
+.btn-bad:hover { background: var(--bad-ink); opacity: 0.9; border-color: var(--bad-ink); }
+.btn-ghost-bad { border-color: transparent; background: transparent; color: var(--bad-ink); box-shadow: none; }
+.btn-ghost-bad:hover { background: var(--bad-soft); border-color: transparent; }
+.btn-quiet { border-color: transparent; background: transparent; box-shadow: none; color: var(--body); }
+.btn-quiet:hover { background: var(--fill); border-color: transparent; }
+.btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+.icon-btn { width: 44px; padding: 0; border-radius: 999px; }
+.ib { width: 40px; height: 40px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); display: grid; place-items: center; flex: none; transition: background-color 0.15s, color 0.15s; }
+.ib:hover { background: var(--fill); color: var(--fg); }
+.ib.bad:hover { background: var(--bad-soft); color: var(--bad-ink); }
+.ib[disabled] { opacity: 0.35; cursor: not-allowed; }
+.add-dash { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; border-radius: 14px; border: 1.5px dashed var(--line-2); background: transparent; color: var(--body); font-weight: 600; transition: background-color 0.15s, border-color 0.15s, color 0.15s; }
+.add-dash:hover { background: var(--primary-tint); border-color: var(--primary-ink); color: var(--primary-ink); }
+
+/* ---------- Fields ---------- */
+.field { display: grid; gap: 8px; min-width: 0; align-content: start; }
+.lbl { font-weight: 600; font-size: 13.5px; }
+.help { color: var(--muted); font-size: 13px; }
+.err { color: var(--bad-ink); font-size: 13px; font-weight: 500; }
+.micro { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.warnline { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; font-size: 13px; background: var(--warn-soft); box-shadow: 0 0 0 1px var(--warn-line) inset; color: var(--warn-ink); }
+.warnline .i { margin-top: 1px; width: 16px; height: 16px; }
+.ctl { width: 100%; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--surface); color: var(--fg); transition: border-color 0.15s, box-shadow 0.15s; }
+.ctl:hover { border-color: var(--muted); }
+.ctl:focus, .ctl:focus-visible { outline: 0; border-color: var(--primary-ink); box-shadow: 0 0 0 4px var(--focus); }
+.ctl[aria-invalid="true"] { border-color: var(--bad-ink); }
+.ctl:disabled { background: var(--fill); color: var(--muted); cursor: not-allowed; }
+.mono-in { font-family: var(--mono); font-size: 14px; }
+textarea.ctl { padding: 12px 14px; resize: vertical; min-height: 84px; line-height: 1.45; }
+select { appearance: none; -webkit-appearance: none; }
+select.ctl { padding-right: 40px; text-overflow: ellipsis; }
+select option { background: var(--surface); color: var(--fg); }
+.sel { position: relative; min-width: 0; }
+.sel .i { position: absolute; right: 14px; top: 50%; margin-top: -8px; width: 16px; height: 16px; color: var(--muted); pointer-events: none; }
+.ig, .stepper { display: flex; align-items: stretch; border: 1px solid var(--line-2); border-radius: 12px; background: var(--surface); overflow: hidden; transition: border-color 0.15s, box-shadow 0.15s; }
+.ig:hover, .stepper:hover { border-color: var(--muted); }
+.ig:focus-within, .stepper:focus-within { border-color: var(--primary-ink); box-shadow: 0 0 0 4px var(--focus); }
+.ig.bad, .stepper.bad { border-color: var(--bad-ink); }
+.ig .pre { display: grid; place-items: center; padding: 0 14px; color: var(--muted); background: var(--fill); font-weight: 600; }
+.ig input { flex: 1; min-width: 0; border: 0; background: transparent; padding: 0 14px; min-height: 42px; outline: 0; font-variant-numeric: tabular-nums; }
+.ig .cnt { display: grid; place-items: center; padding: 0 12px; color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.sw-i { appearance: none; -webkit-appearance: none; width: 46px; height: 28px; border-radius: 999px; background: var(--fill-2); border: 1px solid var(--line-2); position: relative; cursor: pointer; flex: none; margin: 0; transition: background-color 0.2s, border-color 0.2s; }
+.sw-i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%; background: #ffffff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); transition: transform 0.2s; }
+.sw-i:checked { background: var(--primary); border-color: var(--primary); }
+.sw-i:checked::after { transform: translateX(18px); }
+.sw-i:disabled { opacity: 0.5; cursor: not-allowed; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.seg { display: inline-flex; padding: 4px; gap: 2px; border-radius: 14px; background: var(--fill); max-width: 100%; }
+.seg-b { min-height: 38px; padding: 0 16px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font-weight: 600; font-size: 14px; transition: background-color 0.15s, color 0.15s; }
+.seg-b:hover { color: var(--fg); }
+.seg-b[aria-checked="true"] { background: var(--surface); color: var(--fg); box-shadow: var(--sh-sm), 0 0 0 1px var(--line); }
+.srow { display: flex; gap: 20px; align-items: center; justify-content: space-between; }
+.srow label { display: grid; gap: 2px; cursor: pointer; min-width: 0; }
+.srow .lbl { font-size: 14.5px; }
+
+/* ---------- Cards, rows, alerts ---------- */
+.card { background: var(--surface); border-radius: 20px; box-shadow: var(--sh), 0 0 0 1px var(--line); }
+.pad { padding: 28px; }
+.ecard { overflow: hidden; }
+.e-top { padding: 28px 28px 24px; display: grid; gap: 20px; }
+.ph { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.ph-i { width: 44px; height: 44px; border-radius: 14px; background: var(--primary-soft); color: var(--primary-ink); display: grid; place-items: center; flex: none; }
+.ph-i .i { width: 22px; height: 22px; }
+.ph-t { flex: 1 1 280px; min-width: 0; }
+.ph-t h2 { font-size: 20px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ph-t p { color: var(--body); margin-top: 4px; max-width: 62ch; }
+.e-group { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 10px 28px; min-height: 48px; background: var(--surface-2); border-top: 1px solid var(--line); font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.e-group .gs { text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 13px; }
+.e-group .gs.bad { color: var(--bad-ink); }
+.e-row { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 12px 32px; padding: 20px 28px; border-top: 1px solid var(--line); align-items: start; }
+.e-l { display: grid; gap: 2px; align-content: start; }
+.e-l b { font-weight: 600; }
+.e-l small { color: var(--muted); font-size: 13px; }
+.e-r { display: grid; gap: 10px; min-width: 0; }
+.e-sw { display: flex; gap: 24px; align-items: center; justify-content: space-between; padding: 20px 28px; border-top: 1px solid var(--line); }
+.e-sw label { display: grid; gap: 2px; cursor: pointer; min-width: 0; max-width: 66ch; }
+.e-sw b { font-weight: 600; }
+.e-sw small { color: var(--muted); font-size: 13px; }
+.e-pad { padding: 20px 28px 24px; border-top: 1px solid var(--line); display: grid; gap: 14px; }
+.alert { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 12px; padding: 14px 16px; border-radius: 16px; font-size: 14px; }
+.alert .i { margin-top: 1px; }
+.alert b { font-weight: 600; color: var(--fg); }
+.alert ul { display: grid; gap: 4px; margin-top: 6px; padding-left: 18px; list-style: disc; }
+.alert a { font-weight: 600; text-underline-offset: 3px; cursor: pointer; }
+.alert-bad { background: var(--bad-soft); box-shadow: 0 0 0 1px var(--bad-line) inset; color: var(--bad-ink); }
+.alert-bad a { color: var(--bad-ink); }
+.alert-warn { background: var(--warn-soft); box-shadow: 0 0 0 1px var(--warn-line) inset; color: var(--warn-ink); }
+.alert-info { background: var(--primary-soft); color: var(--primary-ink); }
+.alert-ok { background: var(--ok-soft); box-shadow: 0 0 0 1px var(--ok-line) inset; color: var(--ok-ink); }
+.alert p { color: var(--body); }
+.alert-bad p { color: var(--bad-ink); }
+.alert-warn p { color: var(--warn-ink); }
+.alert-ok p { color: var(--body); }
+.rm { display: flex; align-items: center; }
+.rm-ask { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13.5px; font-weight: 600; }
+.empty { display: grid; justify-items: center; gap: 12px; text-align: center; padding: 40px 16px 48px; }
+.empty .ph-i { width: 52px; height: 52px; }
+.empty h3 { font-size: 18px; }
+.empty p { color: var(--body); max-width: 48ch; margin-bottom: 8px; }
+
+/* ---------- Lists (steps, roles) ---------- */
+.lrow { display: flex; align-items: flex-start; gap: 14px; padding: 14px 14px 14px 16px; border-radius: 16px; background: var(--surface-2); box-shadow: 0 0 0 1px var(--line) inset; }
+.lr-b { flex: 1; min-width: 0; display: grid; gap: 8px; }
+.lr-a { display: flex; align-items: center; flex: none; }
+.lr-c { flex: 1; min-width: 0; display: flex; align-items: center; }
+.num2 { width: 30px; height: 30px; border-radius: 50%; background: var(--primary-soft); color: var(--primary-ink); display: grid; place-items: center; font-size: 13px; font-weight: 700; flex: none; margin-top: 2px; }
+.lrow.center { align-items: center; }
+.lrow.center .num2 { margin-top: 0; }
+.stack-list { display: grid; gap: 10px; }
+
+/* ---------- Fee breakdown (compact table) ---------- */
+.ftb { width: 100%; border-collapse: collapse; min-width: 640px; }
+.ftb th { padding: 10px 8px; text-align: left; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border-bottom: 1px solid var(--line); white-space: nowrap; }
+.ftb th.r, .ftb td.r { text-align: right; }
+.ftb th.c, .ftb td.c { text-align: center; }
+.ftb td { padding: 3px 4px; border-bottom: 1px solid var(--line); }
+.ftb td:first-child { min-width: 200px; }
+.ftb td:nth-child(5) { min-width: 240px; }
+.ftb tbody tr:hover { background: var(--surface-2); }
+.ftb tbody tr.ex td:first-child .ft-bare { font-weight: 500; }
+.ftb tfoot td { padding: 10px 8px; background: var(--surface-2); font-weight: 600; border-bottom: 0; }
+.ftb td.act { width: 44px; }
+.ftb .w-amt { width: 112px; } .ftb .w-unit { width: 112px; } .ftb .w-ck { width: 70px; }
+.ft-bare { width: 100%; min-height: 36px; padding: 0 8px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--fg); transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s; }
+.ft-bare:hover { border-color: var(--line-2); background: var(--surface); }
+.ft-bare:focus, .ft-bare:focus-visible { outline: 0; border-color: var(--primary-ink); box-shadow: 0 0 0 4px var(--focus); background: var(--surface); }
+.ft-bare:disabled { color: var(--muted); opacity: 0.55; cursor: default; border-color: transparent; background: transparent; }
+.ft-bare.amt { text-align: right; font-variant-numeric: tabular-nums; }
+select.ft-bare { appearance: none; -webkit-appearance: none; cursor: pointer; color: var(--body); }
+select.ft-bare:disabled { cursor: default; }
+.ft-cb { width: 20px; height: 20px; accent-color: var(--primary); margin: 0; cursor: pointer; }
+.chip-s { display: inline-flex; align-items: center; gap: 6px; padding: 3px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; background: var(--fill); color: var(--body); white-space: nowrap; }
+[data-fm][data-state="ok"] .chip-s { background: var(--ok-soft); color: var(--ok-ink); }
+[data-fm][data-state="under"] .chip-s, [data-fm][data-state="over"] .chip-s { background: var(--bad-soft); color: var(--bad-ink); }
+.fix { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 10px 12px 10px 14px; border-radius: 12px; background: var(--bad-soft); box-shadow: 0 0 0 1px var(--bad-line) inset; color: var(--bad-ink); font-size: 13.5px; font-weight: 500; }
+.fix[hidden] { display: none; }
+.ghost-add { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: var(--primary-ink); font-weight: 600; transition: background-color 0.15s; }
+.ghost-add:hover { background: var(--primary-tint); }
+.pf { display: grid; gap: 10px; }
+.pf-t { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line-2); }
+.pf-t span { font-weight: 600; }
+.pf-t b { font-size: 22px; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.pf-h { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+.pf-l { display: grid; gap: 8px; }
+.pf-l li { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; font-size: 14px; }
+.pf-l li > span:first-child { display: grid; min-width: 0; }
+.pf-l li > span:last-child { white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 500; }
+.pf-l small { color: var(--muted); font-size: 12.5px; }
+
+/* ---------- Application Form table ---------- */
+.fsec { border-top: 1px solid var(--line); padding: 22px 28px 24px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.fsec-h { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px 16px; }
+.fsec-h h3 { font-size: 16px; }
+.fsec-a { display: flex; flex-wrap: wrap; gap: 8px; }
+.tblw { position: relative; overflow-x: auto; border-radius: 16px; box-shadow: 0 0 0 1px var(--line-2) inset; }
+table.tbl { width: 100%; border-collapse: collapse; min-width: 780px; }
+.tbl th { padding: 11px 12px; text-align: left; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border-bottom: 1px solid var(--line); white-space: nowrap; }
+.tbl td { padding: 10px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; font-size: 14px; }
+.tbl th:nth-child(2), .tbl td:nth-child(2) { min-width: 250px; }
+.tbl tbody tr:last-child td { border-bottom: 0; }
+.tbl tbody tr { transition: background-color 0.15s; }
+.tbl tbody tr:hover { background: var(--surface-2); }
+.tbl tr.dragging { opacity: 0.45; }
+.tbl tr.over td { box-shadow: inset 0 2px 0 var(--primary-ink); }
+.c-grip { width: 34px; padding-right: 0 !important; }
+.grip { display: grid; place-items: center; width: 24px; height: 32px; color: var(--muted); cursor: grab; opacity: 0.55; }
+.tbl tr:hover .grip { opacity: 1; }
+.c-act { width: 52px; text-align: right; }
+.q { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.ti { width: 36px; height: 36px; border-radius: 11px; background: var(--primary-soft); color: var(--primary-ink); display: grid; place-items: center; flex: none; }
+.ti .i { width: 17px; height: 17px; }
+.q-t { display: grid; min-width: 0; }
+.q-l { font-weight: 600; font-size: 14.5px; }
+.g2 td.cb, .tbl td.cb { padding: 0; }
+.cbtn { display: block; width: 100%; min-width: 0; text-align: left; border: 0; background: transparent; padding: 10px 14px; font: inherit; color: inherit; cursor: pointer; }
+.tbl td.cb .cbtn { padding: 10px; }
+.cbtn.static { cursor: default; }
+.cbtn:hover .tt, .cbtn:hover .q-l { color: var(--primary-ink); text-decoration: underline; text-underline-offset: 3px; }
+.cbtn:focus-visible { outline: 3px solid var(--primary-ink); outline-offset: -3px; border-radius: 12px; }
+.q-t small { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 12.5px; }
+.q-t small .i { width: 13px; height: 13px; }
+.kcell { font-family: var(--mono); font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.tchip { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; background: var(--fill); color: var(--body); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.rqb { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: var(--primary-soft); color: var(--primary-ink); font-size: 12.5px; font-weight: 600; }
+.rqb::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.opt { color: var(--muted); font-size: 13px; }
+.vis { color: var(--muted); font-size: 13px; white-space: nowrap; }
+.vis.cond { display: inline-block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; color: var(--primary-ink); font-weight: 500; }
+.plink { display: inline-flex; align-items: center; gap: 8px; justify-self: start; min-height: 40px; padding: 0 4px; border: 0; background: transparent; color: var(--primary-ink); font-weight: 600; border-radius: 10px; }
+.plink:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+/* ---------- Menu ---------- */
+.menu { position: fixed; z-index: 35; min-width: 200px; padding: 6px; border-radius: 14px; background: var(--surface); box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.35), 0 0 0 1px var(--line-2); display: grid; gap: 2px; }
+.mi { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; text-align: left; font-size: 14px; font-weight: 500; color: var(--fg); }
+.mi:hover:not([disabled]), .mi:focus-visible { background: var(--fill); }
+.mi.bad { color: var(--bad-ink); }
+.mi[disabled] { opacity: 0.4; cursor: not-allowed; }
+.mi .i { color: var(--muted); width: 16px; height: 16px; }
+.mi.bad .i { color: var(--bad-ink); }
+.mdiv { height: 1px; background: var(--line); margin: 4px 6px; }
+.mtit { padding: 8px 12px 4px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+
+/* ---------- Requirements ---------- */
+.rq-bar { position: sticky; top: -8px; z-index: 5; display: flex; flex-wrap: wrap; gap: 10px 12px; align-items: center; justify-content: space-between; padding: 12px 14px; margin: 0 -14px; border-radius: 16px; background: color-mix(in srgb, var(--bg) 88%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.search { position: relative; flex: 1 1 240px; max-width: 360px; }
+.search .i { position: absolute; left: 14px; top: 50%; margin-top: -8px; width: 16px; height: 16px; color: var(--muted); pointer-events: none; }
+.search input { padding-left: 40px; }
+.rq-btns { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.chip.when { background: var(--primary-soft); color: var(--primary-ink); }
+.chip.who { background: var(--fill); color: var(--body); }
+.chip.warn { background: var(--warn-soft); color: var(--warn-ink); }
+.rq-sum { color: var(--muted); font-size: 13px; }
+.rq-tr { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.rtabs { display: flex; gap: 2px; padding: 4px; border-radius: 14px; background: var(--fill); overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+.rtabs::-webkit-scrollbar { display: none; }
+.rtab { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font-weight: 500; font-size: 14px; white-space: nowrap; transition: color 0.15s, background-color 0.15s; }
+.rtab:hover { color: var(--fg); }
+.rtab small { font-size: 12px; font-variant-numeric: tabular-nums; }
+.rtab[aria-selected="true"] { background: var(--surface); color: var(--fg); font-weight: 600; box-shadow: var(--sh-sm), 0 0 0 1px var(--line); }
+.rq-lock { display: flex; align-items: center; gap: 12px; }
+.rcard { overflow: hidden; }
+.rtw { position: relative; overflow-x: auto; }
+table.g2 { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 640px; }
+.g2 th { padding: 11px 14px; text-align: left; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border-bottom: 1px solid var(--line); white-space: nowrap; }
+.g2 td { padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.g2 tbody tr:last-child td { border-bottom: 0; }
+.g2 tbody tr:hover, .g2 tbody tr:focus-within { background: var(--surface-2); }
+.g2 col.c-when { width: 260px; } .g2 col.c-req { width: 156px; }
+.g2-cell { min-width: 0; overflow: hidden; }
+.g2-t { display: flex; align-items: baseline; gap: 10px; min-width: 0; font-size: 14.5px; }
+.g2-t .lnk, .g2-t .tt { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.lnk { border: 0; background: transparent; padding: 0; text-align: left; border-radius: 6px; color: var(--fg); }
+.lnk:hover { color: var(--primary-ink); }
+.nofile { color: var(--muted); font-size: 12.5px; flex: none; }
+.g2-d { display: block; color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+.g2-ap { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; min-width: 0; }
+.g2-e { color: var(--muted); font-size: 13.5px; }
+.g2-rw { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.g2 .ib { opacity: 0.7; }
+.g2 tr:hover .ib, .g2 .ib:focus-visible { opacity: 1; }
+.actw { display: flex; align-items: center; justify-content: flex-end; }
+.lockmark { color: var(--muted); display: grid; place-items: center; width: 36px; height: 36px; }
+.yes { color: var(--ok-ink); display: inline-grid; }
+.dash { color: var(--muted); opacity: 0.6; }
+.nores { padding: 28px 16px; text-align: center; color: var(--muted); border-radius: 16px; box-shadow: 0 0 0 1.5px var(--line-2) inset; }
+
+/* ---------- Side sheet ---------- */
+.sh-back { position: fixed; inset: 0; z-index: 30; background: var(--scrim); }
+.sh { position: fixed; top: 0; right: 0; bottom: 0; z-index: 31; width: min(600px, 100%); display: flex; flex-direction: column; background: var(--surface); box-shadow: -24px 0 60px -20px rgba(0, 0, 0, 0.35); animation: slidein 0.22s ease-out; }
+@keyframes slidein { from { transform: translateX(28px); opacity: 0; } to { transform: none; opacity: 1; } }
+.sh-h { display: flex; align-items: flex-start; gap: 14px; padding: 22px 24px; border-bottom: 1px solid var(--line); }
+.sh-h h2 { font-size: 18px; }
+.sh-h p { color: var(--muted); font-size: 13.5px; overflow-wrap: anywhere; }
+.sh-b { flex: 1; min-height: 0; overflow-y: auto; padding: 24px; }
+.sh-g { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; align-content: start; }
+.shs { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.upl, .upl-b, .cbx, .cb0 { grid-template-columns: minmax(0, 1fr); }
+.upl { display: grid; gap: 16px; padding: 16px; border-radius: 16px; background: var(--surface-2); box-shadow: 0 0 0 1px var(--line) inset; }
+.upl-b { display: grid; gap: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+.rolebtns { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: 10px; }
+.rolebtn { min-height: 44px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--surface); font-weight: 600; transition: background-color 0.15s, border-color 0.15s, color 0.15s; }
+.rolebtn:hover { border-color: var(--muted); }
+.rolebtn[aria-checked="true"] { background: var(--primary-soft); border-color: var(--primary-ink); color: var(--primary-ink); }
+.sh-f { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; padding: 16px 24px max(16px, env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); }
+.sh-f .btn-primary { margin-left: auto; }
+.optchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.oed { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.orow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 40px; gap: 8px; align-items: center; }
+.orow .ctl { min-height: 40px; }
+.orow.oh { margin-bottom: -4px; }
+.orow .ou { grid-column: 1 / -1; margin-top: -2px; }
+.oed .addc { justify-self: start; }
+.pvlist { display: grid; gap: 20px; }
+.pvlist h4 { font-size: 14px; margin-bottom: 8px; }
+.pvlist ol { display: grid; gap: 6px; }
+.pvlist li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); box-shadow: 0 0 0 1px var(--line) inset; font-size: 14px; }
+.pvlist li b { font-weight: 600; }
+
+/* Condition builder (carried over from the current Configure sheet) */
+.cbx { display: grid; gap: 12px; padding: 14px; border-radius: 16px; background: var(--surface-2); box-shadow: 0 0 0 1px var(--line) inset; }
+.cb0 { display: grid; gap: 10px; justify-items: start; }
+.cr { display: flex; align-items: flex-start; gap: 8px; }
+.cr-m { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.cr-lead { min-width: 76px; color: var(--muted); font-size: 14px; }
+.andor { min-width: 76px; min-height: 34px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--fill-2); color: var(--body); font-weight: 700; letter-spacing: 0.06em; font-size: 12.5px; transition: background-color 0.15s; }
+.andor:hover { background: var(--primary-soft); color: var(--primary-ink); }
+.sel.pill-w { display: inline-block; max-width: 100%; }
+.sel.pill-w .i { right: 12px; color: var(--primary-ink); }
+select.pill { min-height: 36px; padding: 0 34px 0 14px; border-radius: 999px; border: 1px solid transparent; background: var(--primary-soft); color: var(--primary-ink); font-weight: 600; font-size: 14px; max-width: 100%; text-overflow: ellipsis; transition: box-shadow 0.15s; }
+select.pill:hover { box-shadow: 0 0 0 1px var(--primary-ink) inset; }
+select.pill:focus, select.pill:focus-visible { outline: 0; box-shadow: 0 0 0 4px var(--focus), 0 0 0 1px var(--primary-ink) inset; }
+.addc { display: inline-flex; align-items: center; gap: 6px; justify-self: start; min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1.5px dashed var(--primary-ink); background: transparent; color: var(--primary-ink); font-weight: 600; font-size: 13.5px; transition: background-color 0.15s; }
+.addc:hover { background: var(--primary-tint); }
+.addc[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+/* ---------- Timing & Routing (A + timeline strip) ---------- */
+.row { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 18px; align-items: start; }
+.lead { justify-self: start; margin-top: 6px; padding: 4px 12px; border-radius: 999px; background: var(--primary-soft); color: var(--primary-ink); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.clause { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; font-size: 18px; letter-spacing: -0.01em; color: var(--body); min-width: 0; }
+.rowbody { display: grid; gap: 14px; min-width: 0; }
+.nw { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+.inl { min-height: 40px; padding: 0 14px; border-radius: 12px; border: 1px solid transparent; background: var(--primary-soft); color: var(--primary-ink); font-weight: 600; font-size: 17px; max-width: 100%; transition: background-color 0.15s, box-shadow 0.15s; }
+.inl:hover { box-shadow: 0 0 0 1px var(--primary-ink) inset; }
+.inl:focus, .inl:focus-visible { outline: 0; box-shadow: 0 0 0 4px var(--focus), 0 0 0 1px var(--primary-ink) inset; }
+select.inl { padding-right: 36px; text-overflow: ellipsis; }
+.sel.inl-w { display: inline-block; max-width: 100%; }
+.sel.inl-w .i { right: 12px; color: var(--primary-ink); }
+input.inl.n { width: 72px; text-align: center; font-variant-numeric: tabular-nums; }
+input.inl.tz { width: 160px; font-size: 15px; min-height: 36px; }
+input.inl[aria-invalid="true"] { background: var(--bad-soft); color: var(--bad-ink); box-shadow: 0 0 0 1px var(--bad-ink) inset; }
+.a-msg { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+.stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+.stack-lg { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; }
+.sec { display: grid; gap: 18px; padding-top: 28px; border-top: 1px solid var(--line); }
+.sec-h h3 { font-size: 16px; }
+.sec-h p { color: var(--muted); font-size: 13.5px; margin-top: 2px; }
+.well { background: var(--bg); border-radius: 16px; padding: 18px; display: grid; gap: 12px; align-content: start; min-width: 0; box-shadow: 0 0 0 1px var(--line) inset; }
+.well-t { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.pv-alert { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 12px; padding: 14px 16px; border-radius: 14px; }
+.pv-alert .i { margin-top: 1px; }
+.pv-alert.is-info { background: var(--primary-soft); color: var(--primary-ink); }
+.pv-alert.is-warn { background: var(--warn-soft); color: var(--warn-ink); box-shadow: 0 0 0 1px var(--warn-line) inset; }
+.pv-alert.is-bad { background: var(--bad-soft); color: var(--bad-ink); box-shadow: 0 0 0 1px var(--bad-line) inset; }
+.pv-t { font-weight: 600; color: var(--fg); overflow-wrap: anywhere; }
+.pv-d { color: var(--body); font-size: 13.5px; margin-top: 2px; overflow-wrap: anywhere; }
+.pv-empty { color: var(--muted); font-weight: 400; font-style: italic; }
+.fakebtn { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; min-height: 34px; padding: 0 14px; border-radius: 10px; background: var(--primary); color: var(--on-primary); font-weight: 600; font-size: 13.5px; }
+.pv-toast { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border-radius: 14px; background: var(--toast-bg); color: var(--toast-fg); font-size: 13.5px; box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.4); }
+.pv-toast span:nth-child(2) { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.pv-undo { font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.pv-cap { color: var(--muted); font-size: 13px; }
+
+/* ---------- Notes below the frame ---------- */
+.maps-h { margin: 40px 0 16px; font-size: 22px; letter-spacing: -0.03em; }
+.maps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.mp { padding: 20px; display: grid; gap: 8px; align-content: start; }
+.mp h3 { font-size: 16px; }
+.mp p { color: var(--body); font-size: 14px; }
+.mp .chip { justify-self: start; background: var(--primary-soft); color: var(--primary-ink); }
+
+/* ---------- Toast ---------- */
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 8px); z-index: 40; display: flex; align-items: center; gap: 16px; padding: 13px 18px; border-radius: 14px; background: var(--toast-bg); color: var(--toast-fg); box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.4); opacity: 0; visibility: hidden; max-width: calc(100% - 32px); transition: opacity 0.2s, transform 0.2s, visibility 0s 0.2s; }
+.toast.on { opacity: 1; visibility: visible; transform: translate(-50%, 0); transition: opacity 0.2s, transform 0.2s; }
+.toast-a { border: 0; background: transparent; color: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; padding: 4px; }
+
+@media (max-width: 960px) {
+  .maps { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .frame { height: auto; }
+  .ws { overflow: visible; padding: 8px 12px 24px; }
+  .rq-bar { position: static; margin: 0; padding: 0; background: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .e-row { grid-template-columns: minmax(0, 1fr); padding: 18px; }
+  .e-top, .e-pad, .e-group, .e-sw, .fsec { padding-left: 18px; padding-right: 18px; }
+  .e-sw { align-items: flex-start; }
+  .grid2, .a-msg { grid-template-columns: minmax(0, 1fr); }
+  .row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .lead { margin-top: 0; }
+  .app-head { padding: 18px 16px 12px; }
+  .tabs-wrap { padding: 0 16px 12px; }
+  .pad { padding: 20px 18px; }
+  .clause { font-size: 17px; }
+}
+@media (pointer: coarse) {
+  .btn-sm, .seg-b { min-height: 44px; }
+  .ib { width: 44px; height: 44px; }
+  input, select, textarea { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></symbol>
+    <symbol id="i-arrow-r" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></symbol>
+    <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></symbol>
+    <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></symbol>
+    <symbol id="i-chev-r" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-chev-d" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-branch" viewBox="0 0 24 24"><path d="M6 3v12"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></symbol>
+    <symbol id="i-switch" viewBox="0 0 24 24"><path d="m16 3 4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-circle-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></symbol>
+    <symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></symbol>
+    <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2zM17 21v-8H7v8M7 3v5h8"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-circle-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5zM14 2v6h6M16 13H8M16 17H8M10 9H8"/></symbol>
+    <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-text" viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></symbol>
+    <symbol id="i-filter" viewBox="0 0 24 24"><path d="M3 6h18M7 12h10M10 18h4"/></symbol>
+    <symbol id="i-hash" viewBox="0 0 24 24"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18"/><rect width="18" height="18" x="3" y="4" rx="2"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/><circle cx="9" cy="7" r="4"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-blocks" viewBox="0 0 24 24"><path d="M10 22V7a1 1 0 0 0-1-1H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5a1 1 0 0 0-1-1H2"/><rect x="14" y="2" width="8" height="8" rx="1"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></symbol>
+    <symbol id="i-grip" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <section class="bar" aria-label="Prototype controls">
+    <div class="bar-top">
+      <div>
+        <h1>Edit Service, full redesign</h1>
+        <p class="sub">All six tabs on one system. Everything is editable, and nothing is saved.</p>
+      </div>
+      <a class="btn" href="variants.html">Compare the five Timing &amp; Routing layouts</a>
+    </div>
+    <div class="bar-ctl">
+      <span class="lbl">Editing</span>
+      <div class="seg" role="radiogroup" aria-label="Editing mode">
+        <button type="button" role="radio" class="seg-b" data-pick="mode:full" aria-checked="true" tabindex="0">Whole service</button>
+        <button type="button" role="radio" class="seg-b" data-pick="mode:variant" aria-checked="false" tabindex="-1">One variant only</button>
+      </div>
+      <span class="hintline">Try clearing the Service Name or changing a fee, then press Save &amp; Publish.</span>
+    </div>
+  </section>
+
+  <div class="app frame" id="frame">
+    <header class="app-head">
+      <div class="app-id">
+        <button type="button" class="btn icon-btn" aria-label="Back to Services Registry"><svg class="i" aria-hidden="true"><use href="#i-back"/></svg></button>
+        <div>
+          <p class="crumbs">Services Registry / Edit Service · <span class="mono">Marriage License</span></p>
+          <h1>Application and Issuance of Marriage License <span class="chip chip-live" data-when="fullMode">Application v9 Live</span><span class="chip" data-when="variantMode">Editing one variant</span></h1>
+        </div>
+      </div>
+      <div class="app-actions">
+        <span class="dirty" id="dirty" role="status"><i aria-hidden="true"></i><span data-out="dirtyText"></span></span>
+        <button type="button" class="btn" data-act="cancel">Cancel</button>
+        <button type="button" class="btn btn-primary" data-act="save"><svg class="i" aria-hidden="true"><use href="#i-save"/></svg>Save &amp; Publish</button>
+      </div>
+    </header>
+    <div class="tabs-wrap"><div class="tabs" role="tablist" aria-label="Service configuration" id="tablist"></div></div>
+    <div class="ws" id="ws"><div class="ws-in" id="ws-in"></div></div>
+  </div>
+
+  <h2 class="maps-h">How each tab was redesigned</h2>
+  <div class="maps" id="maps"></div>
+</div>
+
+<div class="menu" id="menu" role="menu" hidden></div>
+<div class="sh-back" id="sh-back" hidden></div>
+<aside class="sh" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-title" hidden>
+  <div class="sh-h">
+    <span class="ph-i"><svg class="i" aria-hidden="true"><use href="#i-list"/></svg></span>
+    <div style="flex:1;min-width:0"><h2 id="sh-title" data-out="sheetTitle"></h2><p data-out="sheetName"></p></div>
+    <button type="button" class="ib" data-act="sheet-close" aria-label="Close"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
+  </div>
+  <div class="sh-b">
+    <div class="sh-g" data-when="kindReq">
+      <section class="shs">
+        <h3 class="micro">Requirement</h3>
+        <div class="field"><label class="lbl" for="sh-name">Title</label><input class="ctl" id="sh-name" name="requirement_name" data-sheet="name" autocomplete="off" placeholder="Valid ID, 1 photocopy with signature…"><span class="help">Shown on the applicant’s checklist.</span></div>
+        <div class="field"><label class="lbl" for="sh-source">Where to Secure</label><input class="ctl" id="sh-source" name="where_to_secure" data-sheet="source" autocomplete="off" placeholder="Government / private sector…"></div>
+      </section>
+      <div class="srow"><label for="sh-mand"><span class="lbl">Required</span><span class="help">Turn off for items that only apply if the applicant has them.</span></label><input class="sw-i" type="checkbox" role="switch" id="sh-mand" name="is_mandatory" data-sheet="mandatory"></div>
+      <section class="shs">
+        <h3 class="micro">File Upload</h3>
+        <div class="upl">
+          <div class="srow"><label for="sh-up"><span class="lbl">Applicant must upload a file</span><span class="help">Turn this off for an in-person action or reminder.</span></label><input class="sw-i" type="checkbox" role="switch" id="sh-up" name="requires_upload" data-sheet="upload"></div>
+          <div class="upl-b" data-when="sheetUpload">
+            <div class="field"><label class="lbl" for="sh-scope">Who Must Upload</label>
+              <div class="sel"><select class="ctl" id="sh-scope" name="upload_scope" data-sheet="uploadScope"><option value="request">Once per request</option><option value="each_subject">Every person</option><option value="specific_subject">One specific person</option></select><svg class="i" aria-hidden="true"><use href="#i-chev-d"/></svg></div></div>
+            <div class="field" data-when="sheetSpecific"><span class="lbl" id="sh-subj-l">Which Person</span><div data-render="subject"></div></div>
+          </div>
+        </div>
+      </section>
+      <section class="shs">
+        <h3 class="micro">When It Applies</h3>
+        <div data-render="cond-req"></div>
+      </section>
+    </div>
+    <div class="sh-g" data-when="kindField">
+      <p class="alert alert-info" data-when="sheetShared">This question comes from the shared block <b data-out="sheetSharedName"></b>. Edit it in Shared Blocks to change it everywhere.</p>
+      <section class="shs">
+        <h3 class="micro">Question</h3>
+        <div class="field"><label class="lbl" for="shf-label">Label</label><input class="ctl" id="shf-label" name="question_label" data-sheetf="label" autocomplete="off" placeholder="What applicants see…"></div>
+        <div class="field"><label class="lbl" for="shf-key">Stable Field Key</label><input class="ctl mono-in" id="shf-key" name="question_key" data-sheetf="key" autocomplete="off" spellcheck="false"><span class="help" data-out="sheetKeyHelp"></span></div>
+        <div class="field"><label class="lbl" for="shf-type">Field Type</label>
+          <div class="sel"><select class="ctl" id="shf-type" name="question_type" data-sheetf="type"></select><svg class="i" aria-hidden="true"><use href="#i-chev-d"/></svg></div></div>
+        <div class="field" data-when="fieldPlaceholder"><label class="lbl" for="shf-ph">Placeholder</label><input class="ctl" id="shf-ph" name="question_placeholder" data-sheetf="placeholder" autocomplete="off" placeholder="Shown in the empty field…"></div>
+        <div class="field" data-when="fieldDropdown"><span class="lbl">Dropdown Options</span><span class="help">Applicants see the label. The value is what’s stored, and conditions use it, so renaming a label is safe.</span><div class="oed" data-render="opts"></div></div>
+      </section>
+      <div class="srow"><label for="shf-req"><span class="lbl">Applicant must answer this field</span><span class="help">Applicants can’t submit without answering.</span></label><input class="sw-i" type="checkbox" role="switch" id="shf-req" name="question_required" data-sheetf="required"></div>
+      <section class="shs">
+        <h3 class="micro">Visibility</h3>
+        <div data-render="cond-field"></div>
+      </section>
+    </div>
+    <div data-when="kindPreview"><div class="pvlist" data-render="preview"></div></div>
+  </div>
+  <div class="sh-f"><button type="button" class="btn btn-ghost-bad" data-act="sheet-discard" data-when="sheetEditing">Discard Changes</button><button type="button" class="btn btn-primary" data-act="sheet-close">Done</button></div>
+</aside>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  var CODE = "MARRIAGE-LICENSE";
+  var CURRENT = "Application and Issuance of Marriage License";
+  var TARGETS = [CURRENT, "Delayed Registration of Marriage", "Late Application for Marriage License"];
+  var CLASSES = [
+    { v: "simple", l: "Simple", h: "Resolved within 3 working days" },
+    { v: "complex", l: "Complex", h: "Resolved within 7 working days" },
+    { v: "highly_technical", l: "Highly Technical", h: "Resolved within 20 working days" }
+  ];
+  var DEPTS = ["City Civil Registrar Office", "Unassigned"];
+  var TYPES = ["Short text", "Long text", "Date", "Dropdown", "Yes / No", "Number", "Person name group", "Philippine mobile number"];
+  var TYPE_ICON = { "Short text": "text", "Long text": "text", "Date": "cal", "Dropdown": "filter", "Yes / No": "check", "Number": "hash", "Person name group": "users", "Philippine mobile number": "phone" };
+  var SHARED_BLOCKS = [
+    { name: "Contact number", key: "contact_number", type: "Philippine mobile number", required: false },
+    { name: "Email address", key: "email_address", type: "Short text", required: false },
+    { name: "Mailing address", key: "mailing_address", type: "Long text", required: false }
+  ];
+  var STEP_PH = [
+    "SUBMIT — what the applicant hands over, and what CCRO checks or signs.",
+    "PAY — what the cashier collects and issues.",
+    "CLAIM — what the applicant receives, and when."
+  ];
+  var BEH = {
+    redirect_confirm: { label: "Offer switch", hint: "Applicants are offered a switch to the alternate track.", cap: "Applicants choose whether to switch.", icon: "switch", target: true, cta: true, alert: true },
+    warn_allow: { label: "Warn only", hint: "Applicant sees a warning and may continue on this service.", cap: "Applicants can keep going on this service.", icon: "alert", target: false, cta: false, alert: true },
+    block: { label: "Block entry", hint: "Applicants can’t continue, and no switch is offered.", cap: "Applicants can’t continue past this step.", icon: "ban", target: false, cta: false, alert: true },
+    auto_route: { label: "Switch automatically", hint: "Applicants move to the alternate track as soon as they pick the date.", cap: "Applicants are moved right away and can undo.", icon: "zap", target: true, cta: false, alert: false }
+  };
+  var ORDER = ["redirect_confirm", "warn_allow", "block", "auto_route"];
+  var GROUPS = {
+    variant: { t: "Variant-specific", d: "Requirements that apply only to this variant, scoped by the routing answers.", badge: "This variant" },
+    conditional: { t: "Conditional", d: "Requirements revealed by a condition that can apply to more than one variant.", badge: "Conditional" },
+    inherited: { t: "Inherited from group", d: "Shared by every variant that uses this checklist.", badge: "Shared" },
+    other: { t: "Applies to other variants", d: "Scoped by a condition that excludes this variant. Edit it from the variant it applies to.", badge: "Other variant" }
+  };
+  var GORDER = ["variant", "conditional", "inherited", "other"];
+  var TABS = [
+    { id: "registry-details", label: "Registry & Fees", icon: "file" },
+    { id: "citizen-journey", label: "Citizen Journey", icon: "route" },
+    { id: "case-questions", label: "Timing & Routing", icon: "branch", full: true },
+    { id: "application-form", label: "Application Form", icon: "sliders", full: true },
+    { id: "requirements", label: "Requirements", icon: "list" },
+    { id: "relationships", label: "Relationships", icon: "link" }
+  ];
+  var O = function (pairs) { return pairs.map(function (p) { return { value: p[0], label: p[1] }; }); };
+  var cpo = function (list) { return list.map(function (o) { return Object.assign({}, o); }); };
+  var OPT = {
+    nationality: O([["filipino", "Filipino"], ["foreign", "Foreign national"]]),
+    civil: O([["single", "Single"], ["widowed", "Widowed"], ["annulled_divorced", "Annulled or divorced"]]),
+    age: O([["18_20", "18–20 years old"], ["21_24", "21–24 years old"], ["25_up", "25 years old and above"]]),
+    marriage: O([["regular", "Regular marriage"], ["exempt", "Exempt from a license"]])
+  };
+
+  var rule = function (field, value, op) { return { match: "all", conditions: [{ field: field, op: op || "equals", value: value }] }; };
+  var F = function (label, key, type, required, extra) {
+    return Object.assign({ label: label, key: key, type: type, required: required, showWhen: null, published: true }, extra || {});
+  };
+  var R = function (name, source, scope, ruleObj, extra) {
+    return Object.assign({ name: name, source: source, scope: scope, rule: ruleObj || null, mandatory: true, upload: true, uploadScope: "request", subject: "", legacy: false }, extra || {});
+  };
+  function reqSeeds() {
+    var out = [];
+    [["Bride", "bride"], ["Groom", "groom"]].forEach(function (p) {
+      var sp = { subject: p[0], uploadScope: "specific_subject" };
+      out.push(R("Consent, for applicants 18–20 years old, 1 original + 1 photocopy of parent’s ID", "Parents", "conditional", rule(p[1] + "_age", "18_20"), Object.assign({ legacy: p[1] === "bride" }, sp)));
+      out.push(R("Parental advice, for applicants 21–24 years old, 1 original + 1 photocopy of parent’s ID", "Parents", "conditional", rule(p[1] + "_age", "21_24"), Object.assign({ mandatory: false }, sp)));
+      out.push(R("Death certificate of spouse, for a widow or widower, 1 certified photocopy", "PSA or Local Civil Registrar", "conditional", rule(p[1] + "_civil_status", "widowed"), sp));
+      out.push(R("Legal capacity to marry, for a foreign national applicant, 1 original", "Applicant’s embassy or consulate", "conditional", rule(p[1] + "_nationality", "foreign"), sp));
+      out.push(R("Judicial decree of divorce or nullity of marriage, for an annulled or divorced applicant, 1 certified photocopy", "Regional Trial Court", "conditional", rule(p[1] + "_civil_status", "annulled_divorced"), sp));
+    });
+    out.push(R("PSA birth certificate (bride), 1 certified photocopy", "Philippine Statistics Authority", "inherited", null, { subject: "Bride", uploadScope: "specific_subject" }));
+    out.push(R("PSA birth certificate (groom), 1 certified photocopy", "Philippine Statistics Authority", "inherited", null, { subject: "Groom", uploadScope: "specific_subject" }));
+    out.push(R("Barangay certificate of residency, 1 original", "Barangay hall", "inherited", null, { upload: false }));
+    out.push(R("Affidavit of cohabitation, 1 notarized original", "Notary public", "other", rule("marriage_type", "exempt")));
+    return out;
+  }
+  var DATA0 = {
+    name: CURRENT, fee: "1100.00", feePerCopy: false, classification: "simple",
+    processing: "Ready after the 10-day posting period", dept: DEPTS[0],
+    feeRows: [
+      { label: "Application and issuance fee", amount: "1000.00", included: true, unit: "", note: "" },
+      { label: "Certification fee", amount: "100.00", included: true, unit: "", note: "" },
+      { label: "Endorsement fee", amount: "250.00", included: false, unit: "", note: "Only if the request is endorsed" },
+      { label: "Mail fee", amount: "155.00", included: false, unit: "", note: "Only if the document is mailed" },
+      { label: "Certified copy by the LCR", amount: "5.00", included: false, unit: "page", note: "" }
+    ],
+    steps: [
+      "SUBMIT — Present the accomplished application form and requirements at the CCRO window. Staff check and sign the form.",
+      "PAY — Pay the license fee at the City Treasurer’s cashier and keep the official receipt.",
+      "CLAIM — Return after the 10-day posting period to claim the marriage license."
+    ],
+    roles: ["Bride", "Groom"], allowsMessages: false,
+    enabled: true, trigger: "Intended date of marriage", days: 30, tz: "Asia/Manila", target: CURRENT,
+    behavior: "redirect_confirm", mismatch: "outside", requireDoc: false,
+    title: "This date is outside the on-time window",
+    desc: "Use the registration track that matches the event date.",
+    cta: "Switch registration track",
+    templateName: "Application and Issuance of Marriage License application",
+    sections: [
+      { title: "Case details", fields: [
+        F("Bride’s nationality", "bride_nationality", "Dropdown", true, { options: cpo(OPT.nationality) }),
+        F("Groom’s nationality", "groom_nationality", "Dropdown", true, { options: cpo(OPT.nationality) }),
+        F("Bride’s current civil status", "bride_civil_status", "Dropdown", true, { options: cpo(OPT.civil) }),
+        F("Groom’s current civil status", "groom_civil_status", "Dropdown", true, { options: cpo(OPT.civil) }),
+        F("Intended date of marriage", "event_date", "Date", true),
+        F("Intended place of marriage", "event_place", "Short text", true),
+        F("Bride’s date of birth", "bride_date_of_birth", "Date", true),
+        F("Groom’s date of birth", "groom_date_of_birth", "Date", true)
+      ] },
+      { title: "Personal details", fields: [
+        F("Person named on the record", "subjects", "Person name group", true),
+        F("Contact number", "contact_number", "Philippine mobile number", false, { shared: "Contact number" })
+      ] }
+    ],
+    reqs: reqSeeds(),
+    displayGroup: "marriage_license", displayName: "Marriage License", shortName: "Marriage License", requirementGroup: ""
+  };
+  var clone = function (o) { return JSON.parse(JSON.stringify(o)); };
+  var S = clone(DATA0);
+  var U = { newReq: -1, rtab: "conditional", tab: "case-questions", mode: "full", dirty: false, submitted: false, errors: [], rmAsk: false, query: "", open: { variant: true, conditional: true, inherited: false, other: false }, unlocked: false, sheet: -1, fref: null, sheetKind: "", snap: null, undo: null, opener: null, menuOpener: null, drag: null, refocus: "" };
+
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var ic = function (n, c) { return '<svg class="i ' + (c || "") + '" aria-hidden="true" focusable="false"><use href="#i-' + n + '"/></svg>'; };
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
+  var peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
+  var plural = function (n, one, many) { return n + " " + (n === 1 ? one : many); };
+  var slug = function (s) { return s.toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, ""); };
+
+  /* ---------- derived values ---------- */
+  function allFields() { var out = []; S.sections.forEach(function (sec, si) { sec.fields.forEach(function (f, fi) { out.push({ f: f, s: si, i: fi }); }); }); return out; }
+  function dateFields() { return allFields().filter(function (x) { return x.f.type === "Date" && x.f.label.trim(); }).map(function (x) { return x.f.label.trim(); }); }
+  function feeInfo() {
+    var inc = 0;
+    S.feeRows.forEach(function (r) { if (r.included) inc += parseFloat(r.amount) || 0; });
+    var fee = parseFloat(S.fee) || 0, diff = inc - fee, n = S.feeRows.length;
+    var matches = Math.abs(diff) <= 0.004;
+    var state = !n ? "none" : matches ? "ok" : diff < 0 ? "under" : "over";
+    return {
+      inc: inc, fee: fee, diff: diff, n: n, state: state,
+      pct: fee > 0 ? Math.min(100, Math.max(0, (inc / fee) * 100)) : (inc > 0 ? 100 : 0),
+      issue: n > 0 && !S.feePerCopy && !matches ? "Included charges add up to " + peso.format(inc) + ", but the total fee is " + peso.format(fee) + "." : ""
+    };
+  }
+  var feeBad = function () { var f = parseFloat(S.fee); return !(f >= 0) || S.fee.trim() === ""; };
+  var fieldCount = function () { return allFields().length; };
+  var relCount = function () { return (S.displayGroup.trim() ? 1 : 0) + (S.requirementGroup.trim() ? 1 : 0); };
+  var reqCount = function (k) { return S.reqs.filter(function (r) { return r.scope === k; }).length; };
+
+  function condSources() {
+    var out = [
+      { key: "bride_age", label: "Bride’s age on the intended marriage date", options: OPT.age },
+      { key: "groom_age", label: "Groom’s age on the intended marriage date", options: OPT.age },
+      { key: "marriage_type", label: "Type of marriage", options: OPT.marriage }
+    ];
+    allFields().forEach(function (x) { if (x.f.type === "Dropdown" && x.f.key) out.push({ key: x.f.key, label: x.f.label || x.f.key, options: x.f.options || O([["option_1", "Option 1"], ["option_2", "Option 2"]]) }); });
+    return out;
+  }
+  function summarize(r) {
+    var src = condSources();
+    return r.conditions.map(function (c) {
+      var s = src.filter(function (x) { return x.key === c.field; })[0];
+      var o = s ? s.options.filter(function (x) { return x.value === c.value; })[0] : null;
+      return (s ? s.label : c.field) + " " + (c.op === "not_equals" ? "is not" : "is") + " " + (o ? o.label : c.value);
+    }).join(r.match === "all" ? " and " : " or ");
+  }
+
+  function validate() {
+    var e = [];
+    if (!S.name.trim()) e.push({ tab: "registry-details", id: "f-name", label: "Service Name", msg: "Enter a service name." });
+    if (feeBad()) e.push({ tab: "registry-details", id: "f-fee", label: S.feePerCopy ? "Fee per Copy" : "Total Fee", msg: "Enter an amount, such as 100.00." });
+    if (feeInfo().issue) e.push({ tab: "registry-details", id: "fee-breakdown-h", label: "Fee Breakdown", msg: "Charges don’t match the total fee." });
+    if (U.mode === "full") {
+      if (S.enabled && S.daysBad) e.push({ tab: "case-questions", id: "a-days", label: "On-Time Limit", msg: "Enter a whole number from 1 to 365." });
+      var unnamed = allFields().filter(function (x) { return !x.f.label.trim(); }).length;
+      if (unnamed) e.push({ tab: "application-form", id: "form-top", label: "Application Form", msg: plural(unnamed, "question needs", "questions need") + " a label." });
+    }
+    return e;
+  }
+
+  /* ---------- builders ---------- */
+  var plain = function (list) { return list.map(function (v) { return '<option value="' + esc(v) + '">' + esc(v) + "</option>"; }).join(""); };
+  var selWrap = function (id, bind, name, options, cls, wrap) {
+    return '<div class="sel ' + (wrap || "") + '"><select class="' + cls + '" id="' + id + '" name="' + name + '" data-bind="' + bind + '" autocomplete="off">' + options + "</select>" + ic("chev-d") + "</div>";
+  };
+  var eRow = function (title, sub, ctl, when) {
+    return '<div class="e-row"' + (when ? ' data-when="' + when + '"' : "") + '><div class="e-l"><b>' + title + "</b><small>" + sub + '</small></div><div class="e-r">' + ctl + "</div></div>";
+  };
+  var swRow = function (id, title, desc, ctl) {
+    return '<div class="e-sw"><label for="' + id + '"><b>' + title + "</b><small>" + desc + "</small></label>" + ctl + "</div>";
+  };
+  var lab = function (id, t) { return '<label for="' + id + '">' + t + "</label>"; };
+  var head = function (icon, title, desc, right, extra) {
+    return '<div class="ph"><span class="ph-i">' + ic(icon) + '</span><div class="ph-t"><h2>' + title + (extra || "") + "</h2><p>" + desc + "</p></div>" + (right || "") + "</div>";
+  };
+  var switchIn = function (id, bind, name, aria) {
+    return '<input class="sw-i" type="checkbox" role="switch" id="' + id + '" name="' + name + '" data-bind="' + bind + '"' + (aria ? ' aria-label="' + aria + '"' : "") + ">";
+  };
+  var daysInput = function (id, cls) { return '<input class="' + cls + '" id="' + id + '" name="on_time_limit" data-bind="days" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" aria-describedby="' + id + '-err">'; };
+  var daysErr = function (id) { return '<p class="err" id="' + id + '-err" data-when="daysBad" role="alert">Enter a whole number from 1 to 365.</p>'; };
+  var rm = function () {
+    return '<div class="rm"><button type="button" class="btn btn-sm btn-ghost-bad" data-act="remove-ask" data-when="!rmAsk">' + ic("trash") + "Remove Rule</button>" +
+      '<div class="rm-ask" data-when="rmAsk" role="group" aria-label="Confirm removing the rule"><span>Remove this rule?</span><button type="button" class="btn btn-sm btn-bad" data-act="remove-yes">Remove</button><button type="button" class="btn btn-sm" data-act="remove-no">Keep</button></div></div>';
+  };
+
+  function Registry() {
+    return '<section class="card ecard" id="panel-registry-details">' +
+      '<div class="e-top">' + head("file", "Registry &amp; Fees", "What applicants and the cashier see for this service.") + "</div>" +
+      '<div class="e-group">Service</div>' +
+      eRow(lab("f-name", "Service Name"), "The full official name of the service.",
+        '<input class="ctl" id="f-name" name="name" data-bind="name" autocomplete="off" placeholder="Issuance of Certified True Copies of Civil Registry Records…" aria-describedby="f-name-err"><p class="err" id="f-name-err" data-when="nameBad" role="alert">Enter a service name.</p>') +
+      eRow(lab("f-code", "Service Code"), "Can’t be changed. Requests use this code.",
+        '<div class="ig"><span class="pre">' + ic("lock") + '</span><input id="f-code" class="mono-in" name="service_code" value="' + CODE + '" disabled style="text-transform:uppercase"></div>') +
+      eRow(lab("f-class", "Classification"), "Sets how long the office has to resolve a request.",
+        selWrap("f-class", "classification", "classification", CLASSES.map(function (c) { return '<option value="' + c.v + '">' + c.l + "</option>"; }).join(""), "ctl") + '<p class="help" data-out="classHint"></p>') +
+      eRow(lab("f-dept", "Handling Department"), "The office that processes requests for this service.", selWrap("f-dept", "dept", "department_id", plain(DEPTS), "ctl")) +
+      '<div class="e-group">Fees &amp; Processing</div>' +
+      eRow(lab("f-fee", '<span data-out="feeLabel"></span>'), '<span data-out="feeHelp"></span>',
+        '<div class="ig" id="f-fee-ig"><span class="pre">₱</span><input id="f-fee" name="fee" data-bind="fee" inputmode="decimal" autocomplete="off" placeholder="100.00…" aria-describedby="f-fee-err"></div><p class="err" id="f-fee-err" data-when="feeBadShown" role="alert">Enter an amount, such as 100.00.</p>') +
+      swRow("f-copies", "Allow Multiple Copies", "Applicants choose how many copies to request. The fee is charged for each, and the fee breakdown is hidden.", switchIn("f-copies", "feePerCopy", "fee_per_copy")) +
+      eRow(lab("f-proc", "Processing Time"), "Include any posting or publication wait.", '<input class="ctl" id="f-proc" name="processing_time" data-bind="processing" autocomplete="off" placeholder="2 hours…">') +
+      '<div class="e-group" data-when="showBreakdown"><span id="fee-breakdown-h" tabindex="-1">Fee Breakdown (optional)</span><span class="gs" data-out="feeSummary"></span></div>' +
+      '<div class="e-pad" data-when="showBreakdown"><p class="help">Charges ticked “In total” must add up to the total fee. Unticked charges are shown to applicants as “also payable” and never counted.</p><div class="stack" style="gap:12px" data-render="fees"></div>' +
+      '<div class="well"><span class="well-t">What Applicants See</span><div data-feepreview></div></div></div>' +
+      '<div class="e-pad" data-when="!showBreakdown"><p class="help">The fee breakdown is hidden while applicants choose how many copies they need.</p></div>' +
+      "</section>";
+  }
+
+  function Journey() {
+    return '<section class="card ecard" id="panel-citizen-journey">' +
+      '<div class="e-top">' + head("route", "Citizen Journey", "What applicants are told to do, and who the application is about.") + "</div>" +
+      '<div class="e-group">Client Steps<span class="gs">Follow the charter’s SUBMIT / PAY / CLAIM sequence.</span></div>' +
+      '<div class="e-pad"><ol class="stack-list" data-render="steps"></ol><button type="button" class="add-dash" data-act="add-step">' + ic("plus") + "Add Step</button></div>" +
+      '<div class="e-group">Person Roles<span class="gs">Who the application is about. Most services need one; Marriage License needs two.</span></div>' +
+      '<div class="e-pad"><ul class="stack-list" data-render="roles"></ul><button type="button" class="add-dash" data-act="add-role">' + ic("plus") + "Add Person Role</button></div>" +
+      '<div class="e-group">Messages</div>' +
+      swRow("j-msg", "Allow messages on requests", "Applicants and staff can exchange short messages inside a request, for question-and-answer services such as an online inquiry. Not available for walk-ins.", switchIn("j-msg", "allowsMessages", "allows_messages")) +
+      "</section>";
+  }
+
+  var msgFields = function () {
+    return '<div class="stack" data-when="showsAlert">' +
+      '<div class="field"><label class="lbl" for="a-title">Alert Title</label><input class="ctl" id="a-title" name="timing_title" data-bind="title" autocomplete="off" placeholder="Title shown to applicants…"></div>' +
+      '<div class="field" data-when="usesCta"><label class="lbl" for="a-cta">Button Label</label><input class="ctl" id="a-cta" name="timing_cta" data-bind="cta" autocomplete="off" placeholder="Button text…"></div>' +
+      '<div class="field"><label class="lbl" for="a-desc">Alert Description</label><textarea class="ctl" id="a-desc" name="timing_description" data-bind="desc" rows="3" autocomplete="off" placeholder="What should the applicant do next…"></textarea></div></div>' +
+      '<p class="help" data-when="isAuto">Applicants see a short notice with Undo instead of an alert, so there’s no message to write.</p>';
+  };
+  function Timing() {
+    return '<section class="card pad stack-lg" id="panel-case-questions">' +
+      head("branch", "Timing &amp; Routing", "Send applicants to the right track when their event date falls outside the on-time window.", '<div data-when="enabled">' + rm() + "</div>", ' <span class="chip" data-out="ruleCount"></span>') +
+      '<div class="empty" data-when="!enabled"><span class="ph-i">' + ic("branch") + "</span><h3>No Window Rule Yet</h3>" +
+      '<p data-when="hasDates">Applicants see no track prompt for this service. Add a rule to route them when their event date falls outside the on-time window.</p>' +
+      '<p data-when="noDates">Add a date field to the Application Form before setting a window rule.</p>' +
+      '<button type="button" class="btn btn-primary" data-act="add" id="add-rule">Add Window Rule</button></div>' +
+      '<div class="stack-lg" data-when="enabled">' +
+      '<div class="stack" style="gap:28px">' +
+      '<div class="row"><span class="lead">When</span><div class="rowbody">' +
+      '<div class="clause"><label class="sr" for="a-trigger">Trigger Date</label>' + selWrap("a-trigger", "trigger", "trigger_date", "", "inl", "inl-w") +
+      '<span>falls</span><label class="sr" for="a-side">Which side of the window</label>' +
+      selWrap("a-side", "mismatch", "mismatch", '<option value="outside">outside</option><option value="inside">inside</option>', "inl", "inl-w") +
+      '<span>the</span><span class="nw"><label class="sr" for="a-days">On-Time Limit in days</label>' + daysInput("a-days", "inl n") + "<span>-day</span></span><span>on-time window</span></div>" +
+      daysErr("a-days") +
+      '<p class="clause" style="font-size:14.5px">Days are counted in <label class="sr" for="a-tz">Timezone</label><input class="inl tz" id="a-tz" name="timezone" data-bind="tz" autocomplete="off" spellcheck="false" placeholder="Asia/Manila…"> time.</p>' +
+      "</div></div>" +
+      '<div class="row"><span class="lead">Then</span><div class="rowbody">' +
+      '<div class="clause"><label class="sr" for="a-beh">Response</label>' + selWrap("a-beh", "behavior", "behavior", ORDER.map(function (v) { return '<option value="' + v + '">' + BEH[v].label + "</option>"; }).join(""), "inl", "inl-w") + "</div>" +
+      '<p class="help" aria-live="polite" data-out="behHint"></p>' +
+      '<div class="field" data-when="usesTarget"><label class="lbl" for="a-target">Switch applicants to</label>' + selWrap("a-target", "target", "alternate_track", plain(TARGETS), "ctl") +
+      '<p class="warnline" data-when="sameTrack" role="status">' + ic("alert") + "<span>This is the service you’re editing. Pick a different track so applicants have somewhere to go.</span></p></div>" +
+      "</div></div></div>" +
+      '<div class="sec"><div class="srow"><label for="a-req"><span class="lbl">Require the supporting document before the date check</span><span class="help">Applicants upload it first, then the date is checked.</span></label>' + switchIn("a-req", "requireDoc", "require_document_first") + "</div></div>" +
+      '<div class="sec"><div class="sec-h"><h3>What Applicants See</h3><p>Edit the message and watch it update.</p></div><div class="a-msg"><div class="stack">' + msgFields() +
+      '</div><div class="well"><span class="well-t">Preview</span><div data-preview></div><p class="pv-cap" data-out="previewCap"></p></div></div></div>' +
+      "</div></section>";
+  }
+
+  function FormTab() {
+    return '<section class="card ecard" id="panel-application-form">' +
+      '<div class="e-top" id="form-top" tabindex="-1">' + head("sliders", "Application Form", "Add the questions applicants answer, and show follow-up questions based on earlier answers. Each save publishes a new version, and published versions can’t be edited after version 9.", "", ' <span class="chip" data-out="fieldCount"></span>') +
+      '<div class="field"><label class="lbl" for="t-name">Template Name</label><input class="ctl" id="t-name" name="template_name" data-bind="templateName" autocomplete="off" placeholder="Birth registration application…"><span class="help">For staff only. Applicants don’t see this name.</span></div></div>' +
+      '<div data-render="form"></div>' +
+      '<div class="fsec"><div class="fsec-a" style="justify-content:space-between"><button type="button" class="plink" data-act="preview-form">' + ic("eye") + 'Preview Published Form Structure</button><button type="button" class="btn btn-sm" data-act="add-section">' + ic("plus") + "Add Section</button></div></div></section>";
+  }
+
+  function Reqs() {
+    return '<section id="panel-requirements" class="stack">' +
+      '<div class="rq-bar"><div class="search">' + ic("search") + '<input class="ctl" type="search" id="rq-q" name="requirements_search" autocomplete="off" placeholder="Search requirements…" aria-label="Search requirements"></div>' +
+      '<div class="rq-btns"><span class="rq-sum" data-out="reqSummary"></span><button type="button" class="btn btn-primary" data-act="add-menu" aria-haspopup="menu">' + ic("plus") + "Add</button></div></div>" +
+      '<div class="rq-tr" data-render="req-tabs"></div><div data-render="reqs"></div></section>';
+  }
+
+  function Rel() {
+    return '<section class="card ecard" id="panel-relationships">' +
+      '<div class="e-top">' + head("link", "Relationships", "Only for services shown to applicants as one card with several variants. Leave blank for a standalone service.", "", ' <span class="chip" data-out="relSummary"></span>') + "</div>" +
+      eRow(lab("r-group", "Display Group"), "Services with the same group appear as one card.", '<input class="ctl mono-in" id="r-group" name="display_group" data-bind="displayGroup" autocomplete="off" spellcheck="false" placeholder="birth_ontime…">') +
+      eRow(lab("r-dname", "Display Name"), "The name on the combined card.", '<input class="ctl" id="r-dname" name="display_name" data-bind="displayName" autocomplete="off" placeholder="Birth Certificate…">') +
+      eRow(lab("r-short", "Short Name"), "Shown on applicants’ service cards. Leave empty to use the display name.", '<div class="ig"><input id="r-short" name="short_name" data-bind="shortName" maxlength="40" autocomplete="off" placeholder="Marriage License…" aria-describedby="r-short-cnt"><span class="cnt" id="r-short-cnt" data-out="shortCount"></span></div>') +
+      eRow(lab("r-req", "Requirement Group"), "Services with the same group share one checklist.", '<input class="ctl mono-in" id="r-req" name="requirement_group" data-bind="requirementGroup" autocomplete="off" spellcheck="false" placeholder="birth_ontime…">') +
+      "</section>";
+  }
+
+  /* ---------- dynamic lists ---------- */
+  function renderSteps() {
+    $('[data-render="steps"]').innerHTML = S.steps.map(function (v, i) {
+      return '<li class="lrow"><span class="num2">' + (i + 1) + '</span><div class="lr-b"><label class="micro" for="step-' + i + '">Step ' + (i + 1) + '</label><textarea class="ctl" id="step-' + i + '" rows="2" name="step_' + i + '" data-path="steps.' + i + '" autocomplete="off" placeholder="' + esc(STEP_PH[i] || "Describe this step for the applicant") + '…">' + esc(v) + "</textarea></div>" +
+        '<div class="lr-a"><button type="button" class="ib" data-act="dup" data-list="steps" data-i="' + i + '" aria-label="Duplicate step ' + (i + 1) + '">' + ic("copy") + '</button><button type="button" class="ib bad" data-act="rm" data-list="steps" data-i="' + i + '" aria-label="Remove step ' + (i + 1) + '">' + ic("trash") + "</button></div></li>";
+    }).join("");
+  }
+  function renderRoles() {
+    $('[data-render="roles"]').innerHTML = S.roles.map(function (v, i) {
+      return '<li class="lrow center"><span class="num2">' + (i + 1) + '</span><div class="lr-c"><input class="ctl" name="role_' + i + '" data-path="roles.' + i + '" value="' + esc(v) + '" placeholder="Subject…" aria-label="Person role ' + (i + 1) + '" autocomplete="off"></div>' +
+        '<button type="button" class="ib bad" data-act="rm" data-list="roles" data-i="' + i + '"' + (S.roles.length <= 1 ? " disabled" : "") + ' aria-label="Remove person role ' + (i + 1) + '">' + ic("trash") + "</button></li>";
+    }).join("");
+  }
+  var UNITS = [["", "Flat"], ["page", "per page"], ["copy", "per copy"], ["document", "per document"]];
+  function renderFees() {
+    var n = function (i) { return i + 1; };
+    var rows = S.feeRows.map(function (r, i) {
+      var dis = r.included ? " disabled" : "";
+      return '<tr class="' + (r.included ? "" : "ex") + '"><td><input class="ft-bare" name="charge_' + i + '" data-path="feeRows.' + i + '.label" value="' + esc(r.label) + '" placeholder="Solemnization fee…" aria-label="Charge ' + n(i) + ' description" autocomplete="off"></td>' +
+        '<td class="r"><input class="ft-bare amt" name="amount_' + i + '" data-path="feeRows.' + i + '.amount" value="' + esc(r.amount) + '" inputmode="decimal" placeholder="0.00…" aria-label="Charge ' + n(i) + ' amount in pesos" autocomplete="off"></td>' +
+        '<td><select class="ft-bare" name="unit_' + i + '" data-path="feeRows.' + i + '.unit" aria-label="How charge ' + n(i) + ' is charged"' + dis + ">" + UNITS.map(function (u) { return '<option value="' + u[0] + '"' + (u[0] === r.unit ? " selected" : "") + ">" + u[1] + "</option>"; }).join("") + "</select></td>" +
+        '<td class="c"><input class="ft-cb" type="checkbox" data-path="feeRows.' + i + '.included"' + (r.included ? " checked" : "") + ' aria-label="Charge ' + n(i) + ' counts toward the total fee"></td>' +
+        '<td><input class="ft-bare" name="note_' + i + '" data-path="feeRows.' + i + '.note" value="' + esc(r.note || "") + '" placeholder="Add when it applies…" aria-label="When charge ' + n(i) + ' applies"' + dis + ' autocomplete="off"></td>' +
+        '<td class="act"><button type="button" class="ib bad" data-act="rm" data-list="feeRows" data-i="' + i + '" aria-label="Remove charge ' + n(i) + '">' + ic("trash") + "</button></td></tr>";
+    }).join("");
+    $('[data-render="fees"]').innerHTML =
+      '<div class="tblw"><table class="ftb"><thead><tr><th>Charge</th><th class="r w-amt">Amount</th><th class="w-unit">Charged</th><th class="c w-ck">In total</th><th>When it applies</th><th class="act"><span class="sr">Remove</span></th></tr></thead>' +
+      "<tbody>" + (rows || '<tr><td colspan="6" style="padding:14px 12px;color:var(--muted)">No itemized charges yet.</td></tr>') + '</tbody><tfoot data-fm data-state="ok"><tr><td>Included total</td><td class="r" data-out="feeIncluded"></td><td colspan="4"><span class="chip-s" data-out="feeStatus"></span></td></tr></tfoot></table></div>' +
+      '<div><button type="button" class="ghost-add" data-act="add-fee">' + ic("plus") + "Add charge</button></div>" +
+      '<div class="fix" data-when="feeIssue" role="alert"><span data-out="feeIssue"></span><button type="button" class="btn btn-sm" data-act="fee-match">Set Total Fee to <span data-out="feeIncluded"></span></button></div>';
+  }
+  function pvFees() {
+    var money = function (r) { return peso.format(parseFloat(r.amount) || 0); };
+    var inc = S.feeRows.filter(function (r) { return r.included && r.label.trim(); });
+    var ex = S.feeRows.filter(function (r) { return !r.included && r.label.trim(); });
+    var html = '<div class="pf"><div class="pf-t"><span>' + (S.feePerCopy ? "Fee per copy" : "Total fee at the cashier") + "</span><b>" + peso.format(parseFloat(S.fee) || 0) + "</b></div>";
+    if (!S.feePerCopy && inc.length) html += '<ul class="pf-l">' + inc.map(function (r) { return "<li><span>" + esc(r.label) + "</span><span>" + money(r) + "</span></li>"; }).join("") + "</ul>";
+    if (!S.feePerCopy && ex.length) html += '<p class="pf-h">Also payable, depending on your request</p><ul class="pf-l">' + ex.map(function (r) {
+      return "<li><span>" + esc(r.label) + (r.note && r.note.trim() ? "<small>" + esc(r.note) + "</small>" : "") + "</span><span>" + money(r) + (r.unit ? " per " + esc(r.unit) : "") + "</span></li>";
+    }).join("") + "</ul>";
+    return html + "</div>";
+  }
+  function renderForm() {
+    $('[data-render="form"]').innerHTML = S.sections.map(function (sec, si) {
+      var body = sec.fields.map(function (f, fi) {
+        var nm = f.label.trim() || "Untitled question";
+        var vis = f.showWhen ? '<span class="vis cond" title="' + esc("Shown when " + summarize(f.showWhen)) + '">Shown when ' + esc(summarize(f.showWhen)) + "</span>" : '<span class="vis">Always shown</span>';
+        return '<tr data-s="' + si + '" data-i="' + fi + '"><td class="c-grip"><span class="grip" aria-hidden="true" title="Drag to reorder">' + ic("grip", "fill") + "</span></td>" +
+          '<td class="cb"><button type="button" class="cbtn" data-act="edit-field" data-s="' + si + '" data-i="' + fi + '"><span class="q"><span class="ti">' + ic(TYPE_ICON[f.type] || "text") + '</span><span class="q-t"><span class="q-l">' + esc(nm) + "</span>" +
+          (f.shared ? "<small>" + ic("blocks") + "Shared · " + esc(f.shared) + "</small>" : "") + "</span></span></button></td>" +
+          '<td class="kcell">' + esc(f.key || "—") + '</td><td><span class="tchip">' + esc(f.type) + "</span></td>" +
+          "<td>" + (f.required ? '<span class="rqb">Required</span>' : '<span class="opt">Optional</span>') + "</td><td>" + vis + "</td>" +
+          '<td class="c-act"><button type="button" class="ib" data-act="row-menu" data-s="' + si + '" data-i="' + fi + '" aria-haspopup="menu" aria-label="Actions for ' + esc(nm) + '">' + ic("more", "fill") + "</button></td></tr>";
+      }).join("");
+      return '<div class="fsec"><div class="fsec-h"><div><h3>' + esc(sec.title) + '</h3><span class="help">' + plural(sec.fields.length, "field", "fields") + '</span></div><div class="fsec-a"><button type="button" class="btn btn-sm" data-act="insert-shared" data-s="' + si + '" aria-haspopup="menu">' + ic("blocks") + 'Insert Shared Block</button><button type="button" class="btn btn-sm" data-act="add-field" data-s="' + si + '">' + ic("plus") + "Add Field</button></div></div>" +
+        '<div class="tblw"><table class="tbl"><thead><tr><th class="c-grip"><span class="sr">Reorder</span></th><th>Question</th><th>Key</th><th>Type</th><th>Required</th><th>Visibility</th><th class="c-act"><span class="sr">Actions</span></th></tr></thead><tbody>' + body + "</tbody></table></div></div>";
+    }).join("");
+  }
+  function reqLine(r) { return r.rule ? summarize(r.rule) : (r.scope === "other" ? "Does not apply to this variant" : "Applies to every applicant"); }
+  var RTABS = [["all", "All"], ["variant", "This variant"], ["conditional", "Conditional"], ["inherited", "Shared"], ["other", "Other"]];
+  var isLockedReq = function (r) { return (r.scope === "inherited" || r.scope === "other") && !U.unlocked; };
+  function shortOne(c) {
+    var sr = condSources().filter(function (x) { return x.key === c.field; })[0];
+    var so = sr ? sr.options.filter(function (x) { return x.value === c.value; })[0] : null;
+    var v = so ? so.label : c.value, t = v;
+    if (/age$/.test(c.field)) { var m = v.match(/^(\d+)(?:–(\d+))?/); t = "Age " + (v.indexOf("above") > 0 || !m[2] ? m[1] + "+" : m[1] + "–" + m[2]); }
+    else if (/marriage_type$|^marr$/.test(c.field)) t = v.replace(" a license", " license");
+    return (c.op === "not_equals" ? "Not " : "") + t;
+  }
+  function whenShort(r) {
+    if (!r.rule || !r.rule.conditions.length) return "";
+    var parts = r.rule.conditions.map(shortOne);
+    return parts.length > 2 ? parts[0] + " +" + (parts.length - 1) : parts.join(r.rule.match === "all" ? " + " : " or ");
+  }
+  function whoOf(r) { return r.uploadScope === "specific_subject" && r.subject ? r.subject : r.uploadScope === "each_subject" ? "Each person" : ""; }
+  function renderReqs() {
+    var q = U.query.trim().toLowerCase();
+    var tabs = RTABS.filter(function (t) { return t[0] === "all" || reqCount(t[0]) > 0; });
+    if (!tabs.some(function (t) { return t[0] === U.rtab; })) U.rtab = "all";
+    var eff = q ? "all" : U.rtab;
+    $('[data-render="req-tabs"]').innerHTML = '<div class="rtabs" role="tablist" aria-label="Requirement groups">' + tabs.map(function (t) {
+      var n = t[0] === "all" ? S.reqs.length : reqCount(t[0]);
+      return '<button type="button" role="tab" class="rtab" data-act="req-tab" data-k="' + t[0] + '" aria-selected="' + (eff === t[0]) + '">' + t[1] + " <small>" + n + "</small></button>";
+    }).join("") + "</div>" + (eff === "inherited" ? '<div class="rq-lock"><span class="help">Shared with 3 services</span><button type="button" class="btn btn-sm" data-act="toggle-lock">' + ic(U.unlocked ? "lock" : "unlock") + (U.unlocked ? "Lock Again" : "Unlock to Edit") + "</button></div>" : "");
+    var host = $('[data-render="reqs"]');
+    if (!S.reqs.length) { host.innerHTML = '<div class="nores">No requirements yet. Add the first item applicants must bring for this service.</div>'; return; }
+    var shown = S.reqs.map(function (r, i) { return { r: r, i: i }; }).filter(function (x) {
+      return (eff === "all" || x.r.scope === eff) && (!q || (x.r.name + " " + x.r.source + " " + reqLine(x.r)).toLowerCase().indexOf(q) >= 0);
+    });
+    if (!shown.length) { host.innerHTML = '<div class="nores">No requirements match “' + esc(U.query) + "”.</div>"; return; }
+    var rows = shown.map(function (x) {
+      var r = x.r, lk = isLockedReq(r), nm = r.name.trim() || "Untitled requirement";
+      var i0 = nm.indexOf(","), title = i0 > 0 ? nm.slice(0, i0) : nm, detail = i0 > 0 ? nm.slice(i0 + 1).trim() : "";
+      var inner = '<span class="g2-t"><span class="tt">' + esc(title) + "</span>" + (r.upload ? "" : '<span class="nofile">No file</span>') + "</span>" + (detail ? '<span class="g2-d">' + esc(detail) + "</span>" : "");
+      var cell = lk ? '<div class="cbtn static" title="' + esc(nm) + '">' + inner + "</div>" : '<button type="button" class="cbtn rq-lnk" data-act="req-open" data-i="' + x.i + '" title="' + esc(nm) + '">' + inner + "</button>";
+      var chips = (whenShort(r) ? '<span class="chip when">' + esc(whenShort(r)) + "</span>" : "") + (whoOf(r) ? '<span class="chip who">' + esc(whoOf(r)) + "</span>" : "");
+      return '<tr class="g2r" data-i="' + x.i + '"><td class="cb">' + cell + "</td>" +
+        '<td><div class="g2-ap">' + (chips || '<span class="g2-e">Everyone</span>') + '</div></td><td><div class="g2-rw">' +
+        (r.mandatory ? '<span class="yes" role="img" aria-label="Required">' + ic("check") + "</span>" : '<span class="chip warn">Optional</span>') + '<div class="actw">' +
+        (lk ? '<span class="lockmark" role="img" aria-label="Shared. Unlock to edit.">' + ic("lock") + "</span>" : "") +
+        '<button type="button" class="ib" data-act="req-menu" data-i="' + x.i + '" aria-haspopup="menu" aria-label="Actions for ' + esc(title) + '">' + ic("more", "fill") + "</button></div></div></td></tr>";
+    }).join("");
+    host.innerHTML = '<div class="card rcard"><div class="rtw"><table class="g2"><colgroup><col><col class="c-when"><col class="c-req"></colgroup><thead><tr><th>Requirement</th><th>Applies to</th><th>Required</th></tr></thead><tbody>' + rows + "</tbody></table></div></div>";
+  }
+  function renderLists() { renderSteps(); renderRoles(); renderFees(); renderForm(); renderReqs(); }
+
+  /* ---------- sheet: shared selectors, condition builder, subject picker ---------- */
+  var reqSel = function () { return U.sheetKind === "req" && U.sheet >= 0 ? S.reqs[U.sheet] : null; };
+  var fieldSel = function () { return U.sheetKind === "field" && U.fref ? S.sections[U.fref.s].fields[U.fref.i] : null; };
+  function curRule() { var r = reqSel(), f = fieldSel(); return r ? r.rule : f ? f.showWhen : null; }
+  function curSources() { var s = condSources(), f = fieldSel(); return f ? s.filter(function (x) { return x.key !== f.key; }) : s; }
+  function setRule(next) {
+    var r = reqSel(), f = fieldSel();
+    if (r) { r.rule = next; if (next && r.scope === "inherited") r.scope = "conditional"; if (!next && r.scope === "conditional") r.scope = "inherited"; }
+    else if (f) f.showWhen = next;
+    U.dirty = true; renderCond(); sync();
+  }
+  function initialCondition(src) { return { field: src.key, op: "equals", value: src.options[0] ? src.options[0].value : "" }; }
+  function renderCond() {
+    var host = $(U.sheetKind === "req" ? '[data-render="cond-req"]' : '[data-render="cond-field"]');
+    if (!host) return;
+    var rl = curRule(), src = curSources(), isReq = U.sheetKind === "req";
+    var lead = isReq ? "Applies when" : "Show when";
+    var html;
+    if (!rl) {
+      html = '<div class="cb0"><p class="help">' + (isReq ? "Applies to every applicant for the selected service." : "Always shown.") + '</p><button type="button" class="addc" data-act="cond-add"' + (src.length ? "" : " disabled") + ">" + ic("plus") + "Add Condition</button></div>";
+    } else {
+      html = '<div class="cbx" role="group" aria-label="Conditions">' + rl.conditions.map(function (c, i) {
+        var s = src.filter(function (x) { return x.key === c.field; })[0];
+        var opts = s ? s.options : [{ value: c.value, label: c.value }];
+        var head2 = i === 0 ? '<span class="cr-lead">' + lead + "</span>" :
+          '<button type="button" class="andor" data-act="cond-match" title="Switch between AND and OR for the whole rule" aria-label="' + (rl.match === "all" ? "All conditions must match. Switch to any." : "Any condition can match. Switch to all.") + '">' + (rl.match === "all" ? "AND" : "OR") + "</button>";
+        return '<div class="cr"><div class="cr-m">' + head2 +
+          '<div class="sel pill-w"><select class="pill" id="cond-' + i + '-field" data-cond="field" data-ci="' + i + '" aria-label="Condition ' + (i + 1) + ': question">' + src.map(function (x) { return '<option value="' + esc(x.key) + '"' + (x.key === c.field ? " selected" : "") + ">" + esc(x.label) + "</option>"; }).join("") + (s ? "" : '<option value="' + esc(c.field) + '" selected>' + esc(c.field) + "</option>") + "</select>" + ic("chev-d") + "</div>" +
+          '<div class="sel pill-w"><select class="pill" id="cond-' + i + '-op" data-cond="op" data-ci="' + i + '" aria-label="Condition ' + (i + 1) + ': comparison"><option value="equals"' + (c.op === "equals" ? " selected" : "") + '>is</option><option value="not_equals"' + (c.op === "not_equals" ? " selected" : "") + ">is not</option></select>" + ic("chev-d") + "</div>" +
+          '<div class="sel pill-w"><select class="pill" id="cond-' + i + '-value" data-cond="value" data-ci="' + i + '" aria-label="Condition ' + (i + 1) + ': answer">' + opts.map(function (o) { return '<option value="' + esc(o.value) + '"' + (o.value === c.value ? " selected" : "") + ">" + esc(o.label) + "</option>"; }).join("") + "</select>" + ic("chev-d") + "</div></div>" +
+          '<button type="button" class="ib bad" data-act="cond-rm" data-ci="' + i + '" aria-label="Remove condition ' + (i + 1) + '">' + ic("trash") + "</button></div>";
+      }).join("") +
+        (rl.conditions.length > 1 ? '<p class="help">' + (rl.match === "all" ? "Every condition above must match." : "Any one of the conditions above is enough.") + "</p>" : "") +
+        '<button type="button" class="addc" data-act="cond-add"' + (rl.conditions.length >= 20 || !src.length ? " disabled" : "") + ">" + ic("plus") + "Add Condition</button></div>";
+    }
+    if (isReq) {
+      html += '<div class="alert alert-ok" aria-live="polite" style="margin-top:12px">' + ic("circle-check") + "<div><p><b>What applicants see:</b> " +
+        (rl ? "Applicants will see this requirement when " + esc(summarize(rl)) + "." : "Every applicant for this service will see this requirement.") + "</p></div></div>";
+      if (rl && reqSel().legacy) html += '<p class="help" style="margin-top:10px">This row also carries a legacy case tag. The condition above takes precedence.</p>';
+    }
+    host.innerHTML = html;
+    if (U.refocus) { var el = document.getElementById(U.refocus); if (el) el.focus(); U.refocus = ""; }
+  }
+  function renderSubject() {
+    var host = $('[data-render="subject"]'), r = reqSel();
+    if (!host || !r) return;
+    var roles = S.roles.map(function (x) { return x.trim(); }).filter(Boolean);
+    if (!roles.length) { host.innerHTML = '<p class="help">Add a person role in Citizen Journey first.</p>'; return; }
+    if (roles.length <= 4) {
+      host.innerHTML = '<div class="rolebtns" role="radiogroup" aria-labelledby="sh-subj-l">' + roles.map(function (x) {
+        return '<button type="button" role="radio" class="rolebtn" data-subj="' + esc(x) + '" aria-checked="' + (r.subject === x) + '" tabindex="' + (r.subject === x || (!r.subject && x === roles[0]) ? 0 : -1) + '">' + esc(x) + "</button>";
+      }).join("") + "</div>";
+    } else {
+      host.innerHTML = '<div class="sel"><select class="ctl" data-subjsel aria-labelledby="sh-subj-l"><option value="">Select a role…</option>' + roles.map(function (x) { return '<option' + (r.subject === x ? " selected" : "") + ">" + esc(x) + "</option>"; }).join("") + "</select>" + ic("chev-d") + "</div>";
+    }
+  }
+  function optUsage(key, value) {
+    var n = 0;
+    S.reqs.forEach(function (r) { if (r.rule) r.rule.conditions.forEach(function (c) { if (c.field === key && c.value === value) n++; }); });
+    allFields().forEach(function (x) { if (x.f.showWhen) x.f.showWhen.conditions.forEach(function (c) { if (c.field === key && c.value === value) n++; }); });
+    return n;
+  }
+  function renderOpts() {
+    var f = fieldSel(), host = $('[data-render="opts"]');
+    if (!host || !f) return;
+    var opts = f.options || [];
+    host.innerHTML = (opts.length ? '<div class="orow oh"><span class="micro">Value</span><span class="micro">Label</span><span></span></div>' : "") + opts.map(function (o, i) {
+      var used = optUsage(f.key, o.value);
+      return '<div class="orow"><input class="ctl mono-in" name="option_value_' + i + '" data-opt="value" data-oi="' + i + '" value="' + esc(o.value) + '" autocomplete="off" spellcheck="false" aria-label="Option ' + (i + 1) + ' value"' + (used ? ' disabled title="Used by a condition, so its value can’t change."' : "") + ">" +
+        '<input class="ctl" name="option_label_' + i + '" data-opt="label" data-oi="' + i + '" value="' + esc(o.label) + '" autocomplete="off" aria-label="Option ' + (i + 1) + ' label">' +
+        '<button type="button" class="ib bad" data-act="opt-rm" data-oi="' + i + '" aria-label="Remove option ' + (i + 1) + '"' + (used ? " disabled" : "") + ">" + ic("trash") + "</button>" +
+        (used ? '<span class="help ou">Used by ' + plural(used, "condition", "conditions") + ", so it can’t be removed or re-keyed.</span>" : "") + "</div>";
+    }).join("") + '<button type="button" class="addc" data-act="opt-add">' + ic("plus") + "Add Option</button>" + (opts.length ? "" : '<p class="help">No options yet. Applicants need at least one to choose from.</p>');
+  }
+  function renderPreview() {
+    $('[data-render="preview"]').innerHTML = S.sections.map(function (sec) {
+      return "<div><h4>" + esc(sec.title) + "</h4><ol>" + sec.fields.map(function (f) {
+        return "<li><b>" + esc(f.label.trim() || "Untitled question") + '</b><span class="tchip">' + esc(f.type) + "</span>" + (f.required ? '<span class="rqb">Required</span>' : '<span class="opt">Optional</span>') +
+          '<span class="vis">' + (f.showWhen ? "Shown when " + esc(summarize(f.showWhen)) : "Always shown") + "</span></li>";
+      }).join("") + "</ol></div>";
+    }).join("");
+  }
+
+  function openSheet(kind, opener) {
+    U.sheetKind = kind; U.opener = opener || null;
+    var focusId = "sh-name";
+    if (kind === "req") {
+      var r = S.reqs[U.sheet]; U.snap = clone(r);
+      $('[data-sheet="name"]').value = r.name; $('[data-sheet="source"]').value = r.source;
+      $('[data-sheet="mandatory"]').checked = r.mandatory; $('[data-sheet="upload"]').checked = r.upload; $('[data-sheet="uploadScope"]').value = r.uploadScope;
+      renderCond(); renderSubject();
+    } else if (kind === "field") {
+      var f = fieldSel(); U.snap = clone(f); focusId = "shf-label";
+      $("#shf-type").innerHTML = plain(TYPES);
+      $("#shf-label").value = f.label; $("#shf-key").value = f.key; $("#shf-type").value = f.type; $("#shf-req").checked = f.required; $("#shf-ph").value = f.placeholder || "";
+      var lock = !!f.shared;
+      $("#shf-label").disabled = lock; $("#shf-ph").disabled = lock; $("#shf-type").disabled = lock; $("#shf-req").disabled = lock; $("#shf-key").disabled = lock || f.published;
+      renderCond(); renderOpts();
+    } else { renderPreview(); focusId = ""; }
+    $("#sheet").hidden = false; $("#sh-back").hidden = false;
+    sync();
+    var first = focusId ? document.getElementById(focusId) : $("#sheet .ib");
+    if (first) first.focus();
+  }
+  function closeSheet() {
+    $("#sheet").hidden = true; $("#sh-back").hidden = true;
+    var op = U.opener, ridx = U.sheetKind === "req" ? U.sheet : -1;
+    U.newReq = -1; U.sheet = -1; U.fref = null; U.sheetKind = "";
+    renderLists(); sync();
+    if (op && document.body.contains(op)) op.focus();
+    else if (op && op.dataset && op.dataset.s !== undefined && op.dataset.act !== "req-open") { var b = $('[data-act="edit-field"][data-s="' + op.dataset.s + '"][data-i="' + op.dataset.i + '"]'); if (b) b.focus(); }
+    else if (ridx >= 0) { var again = $('.rq-lnk[data-i="' + ridx + '"]'); if (again) again.focus(); }
+  }
+
+  /* ---------- menu ---------- */
+  function openMenu(btn, items, title) {
+    var m = $("#menu");
+    m.innerHTML = (title ? '<div class="mtit">' + title + "</div>" : "") + items.map(function (it) {
+      if (it.div) return '<div class="mdiv" role="separator"></div>';
+      var d = Object.keys(it.data || {}).map(function (k) { return " data-" + k + '="' + esc(it.data[k]) + '"'; }).join("");
+      return '<button type="button" role="menuitem" class="mi' + (it.bad ? " bad" : "") + '" data-act="' + it.act + '"' + d + (it.disabled ? " disabled" : "") + ">" + (it.icon ? ic(it.icon) : "") + it.label + "</button>";
+    }).join("");
+    m.hidden = false; U.menuOpener = btn;
+    var r = btn.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight;
+    var left = Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w));
+    var top = r.bottom + 6; if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
+    m.style.left = left + "px"; m.style.top = top + "px";
+    var first = $(".mi:not([disabled])", m); if (first) first.focus();
+  }
+  function closeMenu(restore) { var m = $("#menu"); if (m.hidden) return; m.hidden = true; if (restore && U.menuOpener && document.body.contains(U.menuOpener)) U.menuOpener.focus(); }
+
+  /* ---------- state -> DOM ---------- */
+  var P = {
+    enabled: function () { return S.enabled; },
+    rmAsk: function () { return U.rmAsk; },
+    daysBad: function () { return !!S.daysBad; },
+    usesTarget: function () { return BEH[S.behavior].target; },
+    usesCta: function () { return BEH[S.behavior].cta; },
+    showsAlert: function () { return BEH[S.behavior].alert; },
+    isAuto: function () { return S.behavior === "auto_route"; },
+    sameTrack: function () { return BEH[S.behavior].target && S.target === CURRENT; },
+    fullMode: function () { return U.mode === "full"; },
+    variantMode: function () { return U.mode === "variant"; },
+    nameBad: function () { return U.submitted && !S.name.trim(); },
+    feeBadShown: function () { return U.submitted && feeBad(); },
+    showBreakdown: function () { return !S.feePerCopy; },
+    feeIssue: function () { return !!feeInfo().issue; },
+    hasDates: function () { return dateFields().length > 0; },
+    noDates: function () { return dateFields().length === 0; },
+    kindReq: function () { return U.sheetKind === "req"; },
+    kindField: function () { return U.sheetKind === "field"; },
+    kindPreview: function () { return U.sheetKind === "preview"; },
+    sheetEditing: function () { return U.sheetKind === "req" || U.sheetKind === "field"; },
+    sheetUpload: function () { var r = reqSel(); return !!(r && r.upload); },
+    sheetSpecific: function () { var r = reqSel(); return !!(r && r.upload && r.uploadScope === "specific_subject"); },
+    sheetShared: function () { var f = fieldSel(); return !!(f && f.shared); },
+    fieldDropdown: function () { var f = fieldSel(); return !!(f && f.type === "Dropdown"); },
+    fieldPlaceholder: function () { var f = fieldSel(); return !!(f && ["Short text", "Long text", "Dropdown", "Number"].indexOf(f.type) >= 0); }
+  };
+  var test = function (expr) { return expr.split(" ").every(function (n) { return n.charAt(0) === "!" ? !P[n.slice(1)]() : P[n](); }); };
+
+  var OUT = {
+    ruleCount: function () { return S.enabled ? "1 rule set" : "No rules"; },
+    behHint: function () { return BEH[S.behavior].hint; },
+    previewCap: function () { return BEH[S.behavior].cap; },
+    dirtyText: function () { return U.dirty ? "Unsaved changes" : "No changes yet"; },
+    classHint: function () { return CLASSES.filter(function (c) { return c.v === S.classification; })[0].h; },
+    feeLabel: function () { return S.feePerCopy ? "Fee per Copy" : "Total Fee"; },
+    feeHelp: function () { return S.feePerCopy ? "Charged for each copy requested." : "What the cashier collects."; },
+    feeSummary: function () { var fi = feeInfo(); if (fi.issue) return "Doesn’t match the total fee"; return fi.n ? plural(fi.n, "line item", "line items") + " · " + peso.format(fi.inc) + " in total" : "No itemized charges"; },
+    feeIncluded: function () { return peso.format(feeInfo().inc); },
+    feeTotalTxt: function () { return peso.format(feeInfo().fee); },
+    feeStatus: function () { var fi = feeInfo(); return fi.state === "ok" ? "Matches the total fee" : fi.state === "under" ? peso.format(-fi.diff) + " short of the total" : fi.state === "over" ? peso.format(fi.diff) + " over the total" : "No charges yet"; },
+    feeIssue: function () { return feeInfo().issue; },
+    fieldCount: function () { return plural(fieldCount(), "field", "fields"); },
+    relSummary: function () { var n = relCount(); return n ? plural(n, "link", "links") : "Standalone service"; },
+    shortCount: function () { return S.shortName.length + "/40"; },
+    reqSummary: function () { return S.reqs.length + " requirements"; },
+    sheetTitle: function () { return U.sheetKind === "field" ? "Configure Question" : U.sheetKind === "preview" ? "Published Form Structure" : "Configure Requirement"; },
+    sheetName: function () { var r = reqSel(), f = fieldSel(); return r ? (r.name.trim() || "Untitled requirement") : f ? (f.label.trim() || "Untitled question") : U.sheetKind === "preview" ? "Version 9 · what applicants answer, in order" : ""; },
+    sheetSharedName: function () { var f = fieldSel(); return f && f.shared ? "“" + f.shared + "”" : ""; },
+    sheetKeyHelp: function () { var f = fieldSel(); return !f ? "" : f.shared ? "Set by the shared block." : f.published ? "Locked because this key exists in a published version." : "Made from the label, and fixed once published."; }
+  };
+  var tabCount = {
+    "registry-details": function () { return peso.format(parseFloat(S.fee) || 0); },
+    "citizen-journey": function () { return plural(S.steps.length, "step", "steps"); },
+    "case-questions": function () { return S.enabled ? "1 rule" : ""; },
+    "application-form": function () { return plural(fieldCount(), "field", "fields"); },
+    requirements: function () { return String(S.reqs.length); },
+    relationships: function () { var n = relCount(); return n ? plural(n, "link", "links") : ""; }
+  };
+
+  function pvAlert() {
+    var b = BEH[S.behavior];
+    if (S.behavior === "auto_route") return '<div class="pv-toast" role="group" aria-label="Preview of the notice applicants see">' + ic("zap") + "<span>Switched to <b>" + esc(S.target) + '</b></span><span class="pv-undo">Undo</span></div>';
+    var tone = { redirect_confirm: "info", warn_allow: "warn", block: "bad" }[S.behavior];
+    var t = S.title.trim() ? esc(S.title) : '<span class="pv-empty">Add an alert title</span>';
+    var d = S.desc.trim() ? esc(S.desc) : '<span class="pv-empty">Add a short description</span>';
+    var cta = S.behavior === "redirect_confirm" && S.cta.trim() ? '<span class="fakebtn">' + esc(S.cta) + ic("arrow-r") + "</span>" : "";
+    return '<div class="pv-alert is-' + tone + '" role="group" aria-label="Preview of the alert applicants see">' + ic(b.icon) + '<div><p class="pv-t">' + t + '</p><p class="pv-d">' + d + "</p>" + cta + "</div></div>";
+  }
+
+  var trigSig = "";
+  function refreshTriggers() {
+    var dates = dateFields(), sig = dates.join("|");
+    if (dates.length && dates.indexOf(S.trigger) < 0) S.trigger = dates[0];
+    if (sig !== trigSig) {
+      trigSig = sig;
+      $$('select[data-bind="trigger"]').forEach(function (sel) { sel.innerHTML = plain(dates); sel.value = S.trigger; });
+    }
+    var add = $("#add-rule"); if (add) add.disabled = dates.length === 0;
+  }
+
+  function renderErrors() {
+    var box = $("#err-box");
+    if (!U.errors.length) { if (box) box.remove(); return; }
+    var html = '<div class="alert alert-bad" role="alert">' + ic("circle-alert") + "<div><b>Fix " + plural(U.errors.length, "Field", "Fields") + " Before Saving</b><ul>" +
+      U.errors.map(function (e) { return '<li><a data-goto-field="' + e.id + '" data-tab="' + e.tab + '" tabindex="0" role="link">' + esc(e.label) + ": " + esc(e.msg) + "</a></li>"; }).join("") + "</ul></div></div>";
+    if (!box) { box = document.createElement("div"); box.id = "err-box"; box.tabIndex = -1; $("#ws-in").insertBefore(box, $("#ws-in").firstChild); }
+    box.innerHTML = html;
+  }
+  function renderTabs() {
+    var tl = $("#tablist"), badTabs = {};
+    U.errors.forEach(function (e) { badTabs[e.tab] = true; });
+    tl.innerHTML = TABS.filter(function (t) { return !(t.full && U.mode === "variant"); }).map(function (t) {
+      var on = t.id === U.tab, c = tabCount[t.id]();
+      return '<button type="button" role="tab" class="tab" id="tab-' + t.id + '" aria-selected="' + on + '" aria-controls="panel-' + t.id + '" tabindex="' + (on ? 0 : -1) + '" data-tab="' + t.id + '">' + ic(t.icon) + "<span>" + t.label + "</span>" +
+        (badTabs[t.id] ? '<svg class="i bad" role="img" aria-label="Needs attention"><use href="#i-circle-alert"/></svg>' : (c ? "<small>" + esc(c) + "</small>" : "")) + "</button>";
+    }).join("");
+    tl.classList.remove("compact");
+    if (tl.scrollWidth > tl.clientWidth + 1) tl.classList.add("compact");
+  }
+  window.addEventListener("resize", function () { renderTabs(); });
+
+  function sync(src) {
+    $$("[data-bind]").forEach(function (el) {
+      if (el === src) return;
+      var k = el.dataset.bind;
+      if (el.type === "checkbox") el.checked = !!S[k];
+      else if (el.value !== String(S[k])) el.value = S[k];
+    });
+    $$('[data-bind="days"]').forEach(function (el) { el.setAttribute("aria-invalid", S.daysBad ? "true" : "false"); });
+    $$("[data-out]").forEach(function (el) { el.textContent = OUT[el.dataset.out](); });
+    $$("[data-when]").forEach(function (el) { el.hidden = !test(el.dataset.when); });
+    $$("[data-pick]").forEach(function (el) {
+      var p = el.dataset.pick.split(":"), on = (p[0] === "mode" ? U.mode : S[p[0]]) === p[1];
+      el.setAttribute("aria-checked", on ? "true" : "false"); el.tabIndex = on ? 0 : -1;
+    });
+    $$("[data-preview]").forEach(function (el) { el.innerHTML = pvAlert(); });
+    $$("[data-feepreview]").forEach(function (el) { el.innerHTML = pvFees(); });
+    var fi = feeInfo();
+    $$("[data-fm]").forEach(function (el) { el.dataset.state = fi.state; });
+    $("#f-fee-ig").classList.toggle("bad", test("feeBadShown"));
+    $("#dirty").classList.toggle("on", U.dirty);
+    if (U.submitted) { U.errors = validate(); renderErrors(); }
+    refreshTriggers();
+    renderTabs();
+  }
+
+  function showTab(id, focusTab) {
+    var t = TABS.filter(function (x) { return x.id === id; })[0];
+    if (!t || (t.full && U.mode === "variant")) id = "registry-details";
+    U.tab = id;
+    TABS.forEach(function (x) { var p = $("#panel-" + x.id); if (p) p.hidden = x.id !== id; });
+    renderTabs();
+    $("#ws").scrollTop = 0;
+    if (focusTab) { var b = $("#tab-" + id); if (b) b.focus(); }
+    try { history.replaceState(null, "", "#" + id); } catch (err) { /* hash is optional */ }
+    renderNav();
+  }
+  function visibleTabs() { return TABS.filter(function (t) { return !(t.full && U.mode === "variant"); }); }
+  function renderNav() {
+    var tabs = visibleTabs(), i = tabs.map(function (t) { return t.id; }).indexOf(U.tab);
+    var prev = tabs[i - 1], next = tabs[i + 1];
+    $("#ws-nav").innerHTML = "<span>Section " + (i + 1) + " of " + tabs.length + "</span><div>" +
+      (prev ? '<button type="button" class="btn" data-tab="' + prev.id + '" data-nav>' + ic("back") + "Previous</button>" : "") +
+      (next ? '<button type="button" class="btn" data-tab="' + next.id + '" data-nav>' + next.label + ic("arrow-r") + "</button>" : "") + "</div>";
+  }
+  function setMode(m) {
+    U.mode = m;
+    $("#variant-alert").hidden = m !== "variant";
+    if (m === "variant") $("#variant-alert-code").textContent = CODE;
+    var cur = TABS.filter(function (x) { return x.id === U.tab; })[0];
+    if (cur && cur.full && m === "variant") U.tab = "registry-details";
+    sync(); showTab(U.tab);
+  }
+
+  /* ---------- toast + focus helpers ---------- */
+  var tt;
+  function toast(msg, action) {
+    var t = $("#toast");
+    U.undo = action ? action.fn : null;
+    t.innerHTML = "<span>" + esc(msg) + "</span>" + (action ? '<button type="button" class="toast-a" data-act="undo">' + action.label + "</button>" : "");
+    t.classList.add("on");
+    clearTimeout(tt);
+    tt = setTimeout(function () { t.classList.remove("on"); }, action ? 6500 : 2800);
+  }
+  function focusField(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ block: "center", behavior: "auto" });
+    el.focus({ preventScroll: true });
+  }
+  function setPath(path, val) { var p = path.split("."), o = S; for (var i = 0; i < p.length - 1; i++) o = o[p[i]]; o[p[p.length - 1]] = val; }
+  function removeFrom(list, i, label) {
+    var item = list[i];
+    list.splice(i, 1);
+    U.dirty = true;
+    renderLists(); sync();
+    toast("Removed " + label + ".", { label: "Undo", fn: function () { list.splice(Math.min(i, list.length), 0, item); renderLists(); sync(); } });
+  }
+  function moveField(s, i, d) {
+    var list = S.sections[s].fields, j = i + d;
+    if (j < 0 || j >= list.length) return;
+    var it = list.splice(i, 1)[0]; list.splice(j, 0, it);
+    U.dirty = true; renderForm(); sync();
+    toast("Moved “" + (it.label.trim() || "Untitled question") + "” " + (d < 0 ? "up" : "down") + ".");
+    var b = $('[data-act="row-menu"][data-s="' + s + '"][data-i="' + j + '"]'); if (b) b.focus();
+  }
+
+  /* ---------- events ---------- */
+  document.addEventListener("input", function (e) {
+    var t = e.target, el;
+    if ((el = t.closest("[data-sheet]"))) {
+      var r = reqSel(); if (!r) return;
+      var k = el.dataset.sheet;
+      r[k] = el.type === "checkbox" ? el.checked : el.value;
+      if (k === "uploadScope" && r.uploadScope === "specific_subject" && !r.subject) { var roles = S.roles.map(function (x) { return x.trim(); }).filter(Boolean); r.subject = roles[0] || ""; }
+      U.dirty = true; if (k === "uploadScope" || k === "upload") renderSubject(); sync(); return;
+    }
+    if ((el = t.closest("[data-opt]"))) {
+      var of = fieldSel(); if (!of) return;
+      var oi = Number(el.dataset.oi), ok = el.dataset.opt, op = of.options[oi];
+      op[ok] = el.value;
+      if (ok === "value") op.autoValue = false;
+      if (ok === "label" && op.autoValue === true && optUsage(of.key, op.value) === 0) {
+        var base = slug(op.label) || "", cand = base, n = 2;
+        while (base && of.options.some(function (x, xi) { return xi !== oi && x.value === cand; })) cand = base + "_" + n++;
+        op.value = cand; var vi = $('[data-opt="value"][data-oi="' + oi + '"]'); if (vi) vi.value = cand;
+      }
+      U.dirty = true; sync(); return;
+    }
+    if ((el = t.closest("[data-sheetf]"))) {
+      var f = fieldSel(); if (!f) return;
+      var fk = el.dataset.sheetf;
+      f[fk] = el.type === "checkbox" ? el.checked : el.value;
+      if (fk === "label" && !f.published && !f.shared && f.autoKey !== false) { f.key = slug(f.label); $("#shf-key").value = f.key; }
+      if (fk === "key") f.autoKey = false;
+      if (fk === "type") { if (f.type === "Dropdown" && !f.options) f.options = [{ value: "option_1", label: "Option 1", autoValue: true }, { value: "option_2", label: "Option 2", autoValue: true }]; renderOpts(); }
+      U.dirty = true; sync(); return;
+    }
+    if (t.id === "rq-q") { U.query = t.value; renderReqs(); return; }
+    if ((el = t.closest("[data-path]"))) {
+      setPath(el.dataset.path, el.type === "checkbox" ? el.checked : el.value);
+      if (/\.included$/.test(el.dataset.path)) {
+        var ftr = el.closest("tr"), fidx = Number(el.dataset.path.split(".")[1]);
+        if (el.checked) S.feeRows[fidx].unit = "";
+        if (ftr) { ftr.classList.toggle("ex", !el.checked); var us = $("select", ftr), un = $('input[data-path$=".note"]', ftr); us.disabled = el.checked; un.disabled = el.checked; if (el.checked) us.value = ""; }
+      }
+      U.dirty = true; sync(el); return;
+    }
+    if ((el = t.closest("[data-bind]"))) {
+      var key = el.dataset.bind;
+      if (el.type === "checkbox") S[key] = el.checked;
+      else if (key === "days") {
+        var n = parseInt(el.value, 10);
+        S.daysBad = !(n >= 1 && n <= 365) || !/^\d+$/.test(el.value.trim());
+        if (!S.daysBad) S.days = n;
+      } else S[key] = el.value;
+      U.dirty = true;
+      sync(el);
+    }
+  });
+  document.addEventListener("change", function (e) {
+    var c = e.target.closest("[data-cond]");
+    if (c) {
+      var rl = curRule(); if (!rl) return;
+      var ci = Number(c.dataset.ci), cond = rl.conditions[ci], kind = c.dataset.cond;
+      if (kind === "field") { var s = curSources().filter(function (x) { return x.key === c.value; })[0]; if (s) rl.conditions[ci] = initialCondition(s); }
+      else if (kind === "op") cond.op = c.value === "not_equals" ? "not_equals" : "equals";
+      else cond.value = c.value;
+      U.refocus = c.id; setRule(rl); return;
+    }
+    var ss = e.target.closest("[data-subjsel]");
+    if (ss) { var rq1 = reqSel(); if (rq1) { rq1.subject = ss.value; U.dirty = true; sync(); } return; }
+    var el = e.target.closest("[data-bind]");
+    if (el && el.dataset.bind === "days") { S.daysBad = false; sync(); }
+    if (el && el.dataset.bind === "fee") { var fv = parseFloat(S.fee); if (fv >= 0) { S.fee = fv.toFixed(2); sync(); } }
+  });
+
+  function pick(el) {
+    var p = el.dataset.pick.split(":");
+    if (p[0] === "mode") { setMode(p[1]); return; }
+    S[p[0]] = p[1]; U.dirty = true; sync();
+  }
+  document.addEventListener("click", function (e) {
+    var t = e.target, el;
+    if (!t.closest("#menu") && !t.closest('[data-act="row-menu"]') && !t.closest('[data-act="insert-shared"]')) closeMenu(false);
+    if ((el = t.closest("[data-pick]"))) { pick(el); return; }
+    if ((el = t.closest("[data-subj]"))) { var rr = reqSel(); if (rr) { rr.subject = el.dataset.subj; U.dirty = true; renderSubject(); sync(); var nb = $('[data-subj="' + el.dataset.subj + '"]'); if (nb) nb.focus(); } return; }
+    if ((el = t.closest("[data-tab]")) && (el.classList.contains("tab") || el.hasAttribute("data-nav"))) { showTab(el.dataset.tab); if (el.hasAttribute("data-nav")) $("#ws").scrollTop = 0; return; }
+    if ((el = t.closest("[data-goto-field]"))) { showTab(el.dataset.tab); focusField(el.dataset.gotoField); return; }
+    if (t.id === "sh-back") { closeSheet(); return; }
+    var act = t.closest("[data-act]");
+    if (!act) return;
+    var k = act.dataset.act, i = Number(act.dataset.i), si = Number(act.dataset.s), box = act.closest(".rm");
+    if (act.closest("#menu")) closeMenu(false);
+    switch (k) {
+      case "remove-ask": U.rmAsk = true; sync(); { var no = $('[data-act="remove-no"]', box); if (no) no.focus(); } break;
+      case "remove-no": U.rmAsk = false; sync(); { var ask = $('[data-act="remove-ask"]', box); if (ask) ask.focus(); } break;
+      case "remove-yes":
+        S.enabled = false; U.rmAsk = false; U.dirty = true; sync();
+        toast("Window rule removed.", { label: "Undo", fn: function () { S.enabled = true; sync(); } });
+        { var add = $("#add-rule"); if (add) add.focus(); } break;
+      case "add": S.enabled = true; U.dirty = true; sync(); break;
+      case "undo": if (U.undo) { U.undo(); U.undo = null; } $("#toast").classList.remove("on"); break;
+      case "cancel": Object.assign(S, clone(DATA0), { daysBad: false }); U.dirty = false; U.submitted = false; U.errors = []; renderErrors(); renderLists(); trigSig = ""; sync(); toast("Changes discarded."); break;
+      case "save": U.submitted = true; U.errors = validate(); sync(); renderErrors(); if (U.errors.length) { var bx = $("#err-box"); $("#ws").scrollTop = 0; if (bx) bx.focus(); } else toast("Prototype only. Nothing was saved."); break;
+      case "add-step": S.steps.push(""); U.dirty = true; renderSteps(); sync(); focusField("step-" + (S.steps.length - 1)); break;
+      case "add-role": S.roles.push(""); U.dirty = true; renderRoles(); sync(); { var ri = $$('[data-path^="roles."]'); if (ri.length) ri[ri.length - 1].focus(); } break;
+      case "dup": S[act.dataset.list].splice(i + 1, 0, S[act.dataset.list][i]); U.dirty = true; renderLists(); sync(); break;
+      case "rm": removeFrom(S[act.dataset.list], i, act.dataset.list === "steps" ? "step " + (i + 1) : act.dataset.list === "roles" ? "person role " + (i + 1) : "charge " + (i + 1)); break;
+      case "add-fee": S.feeRows.push({ label: "", amount: "", included: true, unit: "", note: "" }); U.dirty = true; renderFees(); sync(); { var fl = $$('[data-path^="feeRows."][data-path$=".label"]'); if (fl.length) fl[fl.length - 1].focus(); } break;
+      case "fee-match": S.fee = feeInfo().inc.toFixed(2); U.dirty = true; sync(); toast("Total fee set to " + peso.format(feeInfo().inc) + "."); break;
+      case "add-section": S.sections.push({ title: "New section", fields: [] }); U.dirty = true; renderForm(); sync(); break;
+      case "add-field": {
+        S.sections[si].fields.push({ label: "", key: "", type: "Short text", required: false, showWhen: null, published: false });
+        U.dirty = true; renderForm(); U.fref = { s: si, i: S.sections[si].fields.length - 1 }; openSheet("field", act);
+      } break;
+      case "insert-shared": {
+        var used = allFields().map(function (x) { return x.f.shared; });
+        openMenu(act, SHARED_BLOCKS.map(function (b, bi) { return { act: "insert-block", icon: "blocks", label: b.name, disabled: used.indexOf(b.name) >= 0, data: { s: si, b: bi } }; }), "Shared blocks");
+      } break;
+      case "insert-block": {
+        var blk = SHARED_BLOCKS[Number(act.dataset.b)];
+        S.sections[si].fields.push(F(blk.name, blk.key, blk.type, blk.required, { shared: blk.name }));
+        U.dirty = true; renderForm(); sync(); toast("Inserted the shared block “" + blk.name + "”.");
+      } break;
+      case "row-menu": {
+        var fld = S.sections[si].fields[i], len = S.sections[si].fields.length;
+        openMenu(act, [
+          { act: "edit-field", icon: "pencil", label: "Edit Question", data: { s: si, i: i } },
+          { act: "move-up", icon: "arrow-up", label: "Move Up", disabled: i === 0, data: { s: si, i: i } },
+          { act: "move-down", icon: "arrow-down", label: "Move Down", disabled: i === len - 1, data: { s: si, i: i } },
+          { act: "dup-field", icon: "copy", label: "Duplicate", disabled: !!fld.shared, data: { s: si, i: i } },
+          { div: true },
+          { act: "rm-field", icon: "trash", label: "Remove", bad: true, data: { s: si, i: i } }
+        ]);
+      } break;
+      case "edit-field": U.fref = { s: si, i: i }; openSheet("field", act.closest("#menu") ? U.menuOpener : act); break;
+      case "move-up": moveField(si, i, -1); break;
+      case "move-down": moveField(si, i, 1); break;
+      case "dup-field": { var cp = clone(S.sections[si].fields[i]); cp.key = ""; cp.published = false; cp.label = cp.label + " (copy)"; cp.autoKey = true; cp.key = slug(cp.label); S.sections[si].fields.splice(i + 1, 0, cp); U.dirty = true; renderForm(); sync(); } break;
+      case "rm-field": removeFrom(S.sections[si].fields, i, "“" + (S.sections[si].fields[i].label.trim() || "Untitled question") + "”"); break;
+      case "opt-add": { var fo = fieldSel(); if (fo) { fo.options = fo.options || []; fo.options.push({ value: "", label: "", autoValue: true }); U.dirty = true; renderOpts(); var ol = $$('[data-opt="label"]'); if (ol.length) ol[ol.length - 1].focus(); } } break;
+      case "opt-rm": { var fr = fieldSel(), oidx = Number(act.dataset.oi); if (fr) { var oitem = fr.options.splice(oidx, 1)[0]; U.dirty = true; renderOpts(); toast("Removed the option “" + (oitem.label || oitem.value || "untitled") + "”.", { label: "Undo", fn: function () { fr.options.splice(Math.min(oidx, fr.options.length), 0, oitem); renderOpts(); } }); } } break;
+      case "preview-form": openSheet("preview", act); break;
+      case "req-tab": U.rtab = act.dataset.k; renderReqs(); { var rt = $('[data-act="req-tab"][data-k="' + act.dataset.k + '"]'); if (rt) rt.focus(); } break;
+      case "add-menu": openMenu(act, [{ act: "add-req", icon: "plus", label: "Add Requirement" }, { act: "add-variant-req", icon: "branch", label: "Add Variant-Specific" }]); break;
+      case "req-menu": {
+        var rq0 = S.reqs[i], lk0 = isLockedReq(rq0);
+        openMenu(act, [
+          { act: "req-open", icon: "sliders", label: "Configure", disabled: lk0, data: { i: i } },
+          { act: "req-override", icon: "copy", label: "Override for this variant", disabled: rq0.scope !== "inherited", data: { i: i } },
+          { div: true },
+          { act: "req-rm", icon: "trash", label: "Remove", bad: true, disabled: lk0 || S.reqs.length < 2, data: { i: i } }
+        ]);
+      } break;
+      case "toggle-group": U.open[act.dataset.k] = !U.open[act.dataset.k]; renderReqs(); { var nb2 = $('[data-act="toggle-group"][data-k="' + act.dataset.k + '"]'); if (nb2) nb2.focus(); } break;
+      case "toggle-lock": U.unlocked = !U.unlocked; if (U.unlocked) U.open.inherited = true; renderReqs(); { var lb = $('[data-act="toggle-lock"]'); if (lb) lb.focus(); } break;
+      case "add-req": case "add-variant-req": {
+        var vs = k === "add-variant-req";
+        S.reqs.push(R("", "", vs ? "variant" : "inherited", null));
+        U.rtab = vs ? "variant" : "inherited"; if (!vs) U.unlocked = true;
+        U.dirty = true; U.query = ""; $("#rq-q").value = ""; renderReqs(); U.sheet = S.reqs.length - 1; U.newReq = U.sheet; openSheet("req", act);
+      } break;
+      case "req-override": {
+        var src = clone(S.reqs[i]); src.scope = "variant";
+        S.reqs.push(src); U.rtab = "variant"; U.dirty = true; renderReqs(); U.sheet = S.reqs.length - 1; openSheet("req", act);
+      } break;
+      case "req-rm": removeFrom(S.reqs, i, "“" + (S.reqs[i].name.trim() || "Untitled requirement") + "”"); break;
+      case "req-open": U.sheet = i; openSheet("req", act.closest("#menu") ? U.menuOpener : act); break;
+      case "cond-add": { var rl = curRule(), srcs = curSources(); if (!srcs.length) break; U.refocus = ""; setRule(rl ? { match: rl.match, conditions: rl.conditions.concat([initialCondition(srcs[0])]) } : { match: "all", conditions: [initialCondition(srcs[0])] }); } break;
+      case "cond-rm": { var rl2 = curRule(); var left = rl2.conditions.filter(function (_, n) { return n !== Number(act.dataset.ci); }); setRule(left.length ? { match: rl2.match, conditions: left } : null); } break;
+      case "cond-match": { var rl3 = curRule(); U.refocus = ""; setRule({ match: rl3.match === "all" ? "any" : "all", conditions: rl3.conditions }); } break;
+      case "sheet-close": closeSheet(); break;
+      case "sheet-discard":
+        if (U.sheetKind === "req") { if (U.newReq === U.sheet) { S.reqs.splice(U.sheet, 1); U.sheet = -1; } else S.reqs[U.sheet] = U.snap; } else if (U.sheetKind === "field") S.sections[U.fref.s].fields[U.fref.i] = U.snap;
+        closeSheet(); break;
+    }
+  });
+
+  /* drag to reorder inside a section */
+  document.addEventListener("mousedown", function (e) {
+    var g = e.target.closest && e.target.closest(".grip");
+    if (g) { var gtr = g.closest("tr[data-s]"); if (gtr) gtr.draggable = true; }
+  });
+  document.addEventListener("mouseup", function () { $$("tr[data-s]").forEach(function (tr) { tr.draggable = false; }); });
+  document.addEventListener("dragstart", function (e) {
+    var tr = e.target.closest && e.target.closest("tr[data-s]");
+    if (!tr) return;
+    U.drag = { s: Number(tr.dataset.s), i: Number(tr.dataset.i) };
+    e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", "row");
+    tr.classList.add("dragging");
+  });
+  document.addEventListener("dragover", function (e) {
+    var tr = e.target.closest && e.target.closest("tr[data-s]");
+    if (!U.drag || !tr || Number(tr.dataset.s) !== U.drag.s) return;
+    e.preventDefault();
+    $$("tr.over").forEach(function (x) { x.classList.remove("over"); });
+    tr.classList.add("over");
+  });
+  document.addEventListener("drop", function (e) {
+    var tr = e.target.closest && e.target.closest("tr[data-s]");
+    if (!U.drag || !tr || Number(tr.dataset.s) !== U.drag.s) return;
+    e.preventDefault();
+    var list = S.sections[U.drag.s].fields, to = Number(tr.dataset.i), from = U.drag.i;
+    if (to !== from) { var it = list.splice(from, 1)[0]; list.splice(to, 0, it); U.dirty = true; renderForm(); sync(); }
+    U.drag = null;
+  });
+  document.addEventListener("dragend", function () { U.drag = null; $$("tr[data-s]").forEach(function (tr) { tr.draggable = false; }); $$("tr.over, tr.dragging").forEach(function (x) { x.classList.remove("over"); x.classList.remove("dragging"); }); });
+
+  document.addEventListener("keydown", function (e) {
+    var menu = $("#menu");
+    if (!menu.hidden) {
+      if (e.key === "Escape") { e.preventDefault(); closeMenu(true); return; }
+      if (e.key === "Tab") { closeMenu(false); return; }
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        var items = $$(".mi:not([disabled])", menu), idx = items.indexOf(document.activeElement);
+        idx = e.key === "ArrowDown" ? (idx + 1) % items.length : (idx - 1 + items.length) % items.length;
+        items[idx].focus(); return;
+      }
+    }
+    if (!$("#sheet").hidden) {
+      if (e.key === "Escape") { e.preventDefault(); closeSheet(); return; }
+      if (e.key === "Tab") {
+        var f = $$("#sheet button, #sheet input, #sheet textarea, #sheet select").filter(function (x) { return !x.disabled && x.offsetParent !== null; });
+        var first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+      return;
+    }
+    var gf = e.target.closest && e.target.closest("[data-goto-field]");
+    if (gf && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); showTab(gf.dataset.tab); focusField(gf.dataset.gotoField); return; }
+    var r = e.target.closest && e.target.closest('[role="radio"][data-pick]');
+    if (r && ["ArrowDown", "ArrowRight", "ArrowUp", "ArrowLeft"].indexOf(e.key) >= 0) {
+      e.preventDefault();
+      var radios = $$('[role="radio"]', r.parentNode), i = radios.indexOf(r) + (e.key === "ArrowDown" || e.key === "ArrowRight" ? 1 : -1);
+      var next = radios[(i + radios.length) % radios.length]; pick(next); next.focus(); return;
+    }
+    var tb = e.target.closest && e.target.closest(".tab");
+    if (tb && ["ArrowRight", "ArrowLeft", "Home", "End"].indexOf(e.key) >= 0) {
+      e.preventDefault();
+      var vt = visibleTabs(), idx2 = vt.map(function (x) { return x.id; }).indexOf(tb.dataset.tab);
+      if (e.key === "ArrowRight") idx2 = (idx2 + 1) % vt.length;
+      else if (e.key === "ArrowLeft") idx2 = (idx2 + vt.length - 1) % vt.length;
+      else if (e.key === "Home") idx2 = 0; else idx2 = vt.length - 1;
+      showTab(vt[idx2].id, true);
+    }
+  });
+  $("#ws").addEventListener("scroll", function () { closeMenu(false); });
+
+  /* ---------- notes below the frame ---------- */
+  $("#maps").innerHTML = [
+    ["Registry & Fees", "Settings rows (E) + compact fee table", "Label and help on the left, control on the right. The fee breakdown is one compact table with unit and “when it applies” columns, an included total, and the receipt applicants will see under it."],
+    ["Citizen Journey", "Soft list rows", "Steps and roles are numbered rows you can duplicate or remove, with Undo. The Messages switch spans the full width so its description reads on one or two lines."],
+    ["Timing & Routing", "Sentence rule (A)", "The rule reads as When / Then, with the response and its message below. Trigger dates come from the date questions in the Application Form."],
+    ["Application Form", "The current table, refined", "Same columns you have now: question, key, type, required, visibility. Click a question to edit it, drag the grip or use the row menu to reorder, and keep Insert Shared Block and Preview Published Form Structure."],
+    ["Requirements", "Two-line table + familiar sheet", "Group tabs with counts, then one table: the title with its definition under it, who and when it applies, and whether it is required. Click a requirement to open Configure, with the same When It Applies builder as today."],
+    ["Relationships", "Settings rows (E)", "The four fields show directly instead of behind “Configure Relationships”, with a Standalone or link count up top and a 40-character counter on Short Name."]
+  ].map(function (m) { return '<div class="card mp"><span class="chip">' + m[1] + "</span><h3>" + m[0] + "</h3><p>" + m[2] + "</p></div>"; }).join("");
+
+  /* ---------- boot ---------- */
+  $("#ws-in").innerHTML = '<div class="alert alert-info" id="variant-alert" hidden>' + ic("alert") + "<div><p>You are editing only <b id=\"variant-alert-code\"></b>. Registry changes stay on this variant; Requirements identifies shared checklist items. Applicant questions and routing remain at the service-group level.</p></div></div>" +
+    Registry() + Journey() + Timing() + FormTab() + Reqs() + Rel() + '<div class="ws-nav" id="ws-nav"></div>';
+  TABS.forEach(function (t) { var p = $("#panel-" + t.id); p.setAttribute("role", "tabpanel"); p.setAttribute("aria-labelledby", "tab-" + t.id); });
+  renderLists();
+  sync();
+  var h = (location.hash || "").replace("#", "");
+  showTab(TABS.some(function (t) { return t.id === h; }) ? h : U.tab);
+})();
+</script>

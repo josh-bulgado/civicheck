@@ -1,10 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import {
-  ArrowLeft,
-  Save,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowLeft, Save, type LucideIcon } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Button, buttonVariants } from "~/components/ui/button";
 import {
@@ -14,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
+import { IconTile } from "~/components/ui/icon-tile";
 import { Spinner } from "~/components/ui/spinner";
 import { TabsContent } from "~/components/ui/tabs";
 import { formatServiceCode } from "~/features/services/service-utils";
@@ -46,11 +43,11 @@ export function ServiceDossierHeader({
   const isGroup = mode === "group";
   const backClassName = cn(
     buttonVariants({ variant: "outline", size: "icon" }),
-    "size-11 shrink-0",
+    "size-11 shrink-0 rounded-full",
   );
 
   return (
-    <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-border bg-background px-4 py-4 sm:px-8">
+    <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 bg-background px-4 pt-5 pb-3 sm:px-8">
       <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
         {(isVariant || isGroup) && displayGroup ? (
           <Link
@@ -122,9 +119,13 @@ interface ServiceEditorSectionProps {
   id: string;
   icon: LucideIcon;
   title: string;
-    description?: string;
+  description?: string;
   summary?: string;
   hasError?: boolean;
+  /** Sits at the right of the card header, for an action on the whole section. */
+  action?: ReactNode;
+  /** Off when the body opens with its own block (a field) rather than a divided band. */
+  headerDivider?: boolean;
   children: ReactNode;
 }
 
@@ -135,6 +136,8 @@ export function ServiceEditorSection({
   description,
   summary,
   hasError = false,
+  action,
+  headerDivider = true,
   children,
 }: ServiceEditorSectionProps) {
   return (
@@ -143,18 +146,15 @@ export function ServiceEditorSection({
       keepMounted
       className="min-w-0 data-[hidden]:hidden"
     >
-      <Card id={id} className="min-w-0 gap-0 py-0">
-        <CardHeader className="border-b py-6 sm:px-8">
-          <div className="flex items-start gap-3">
-            <span
-              aria-hidden="true"
-              className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary"
-            >
-              <Icon className="size-5" />
-            </span>
-            <div className="flex min-w-0 flex-col gap-1.5">
+      <Card id={id} variant="soft" className="min-w-0 gap-0 py-0">
+        <CardHeader
+          className={cn("py-6 sm:px-8", headerDivider ? "border-b" : "pb-5")}
+        >
+          <div className="flex flex-wrap items-start gap-3">
+            <IconTile icon={Icon} />
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
               <div className="flex flex-wrap items-center gap-2">
-                <CardTitle>
+                <CardTitle className="text-xl font-semibold tracking-tight">
                   <h2 className="text-pretty">{title}</h2>
                 </CardTitle>
                 {hasError ? (
@@ -163,8 +163,18 @@ export function ServiceEditorSection({
                   <Badge variant="neutral">{summary}</Badge>
                 ) : null}
               </div>
-              {description ? <CardDescription>{description}</CardDescription> : null}
+              {description ? (
+                <CardDescription className="max-w-[62ch]">
+                  {description}
+                </CardDescription>
+              ) : null}
             </div>
+            {/* Under the title on a phone, aligned with it (icon 44px + gap 12px). */}
+            {action ? (
+              <div className="shrink-0 max-sm:basis-full max-sm:pl-14">
+                {action}
+              </div>
+            ) : null}
           </div>
         </CardHeader>
         <CardContent className="px-0 py-6 [&>[data-slot=card]]:py-0 [&>[data-slot=card]>[data-slot=card-content]]:sm:px-8">
@@ -195,8 +205,7 @@ export function ServiceFormActionBar({
   const isVariant = mode === "variant";
   const isGroup = mode === "group";
   const cancelClassName = cn(
-    buttonVariants({ variant: "outline" }),
-    "min-h-11",
+    buttonVariants({ variant: "outline", size: "touch" }),
   );
 
   return (
@@ -240,7 +249,7 @@ export function ServiceFormActionBar({
           Cancel
         </Link>
       )}
-      <Button type="submit" className="min-h-11" disabled={isDisabled}>
+      <Button type="submit" variant="raised" size="touch" disabled={isDisabled}>
         {isSaving ? (
           <Spinner data-icon="inline-start" />
         ) : (

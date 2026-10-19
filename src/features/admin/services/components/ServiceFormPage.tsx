@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog";
 import type { Department } from "~/features/admin/departments.queries";
+import type { ConditionRef } from "~/features/forms/form-option-usage";
 import { getServiceFormTemplateFn } from "~/features/forms/form-template.functions";
 import { formTemplateDefinitionSchema } from "~/features/forms/form-template.types";
 import type { FormTemplateDefinition } from "~/features/forms/form-template.types";
@@ -52,11 +53,11 @@ import { ApplicationFormSection } from "./service-form-sections/ApplicationFormS
 import { CaseQuestionsSection } from "./service-form-sections/CaseQuestionsSection";
 import { CitizenJourneySection } from "./service-form-sections/CitizenJourneySection";
 import { RegistryDetailsSection } from "./service-form-sections/RegistryDetailsSection";
+import { RemoveWindowRuleButton } from "./service-form-sections/RemoveWindowRuleButton";
 import { RelationshipsSection } from "./service-form-sections/RelationshipsSection";
 import { RequirementsSection } from "./service-form-sections/RequirementsSection";
 import {
   UNASSIGNED_DEPARTMENT_VALUE,
-  SERVICE_CLASSIFICATIONS,
   buildServiceFormSchema,
   defaultPartyRoles,
   emptyServiceFormDefaults,
@@ -157,17 +158,17 @@ const FIELD_ERROR_DESTINATIONS: Partial<
     anchor: "service-display-name",
     label: "Display Name",
   },
+  short_name: {
+    section: "relationships",
+    anchor: "service-short-name",
+    label: "Short Name",
+  },
   requirement_group: {
     section: "relationships",
     anchor: "service-requirement-group",
     label: "Requirement Group",
   },
 };
-
-const pesoFormatter = new Intl.NumberFormat("en-PH", {
-  style: "currency",
-  currency: "PHP",
-});
 
 function firstErrorMessage(value: unknown): string | null {
   if (!value || typeof value !== "object") return null;
@@ -291,26 +292,24 @@ export function ServiceFormPage({
     window.addEventListener("resize", keepActiveTabVisible);
     return () => window.removeEventListener("resize", keepActiveTabVisible);
   }, [activeSection]);
-  const [
-    fee,
-    classification,
-    steps,
-    partyRoles,
-    requirements,
-    displayGroup,
-    requirementGroup,
-  ] = useWatch({
+  const [requirements, displayGroup, requirementGroup] = useWatch({
     control: form.control,
-    name: [
-      "fee",
-      "classification",
-      "steps",
-      "party_roles",
-      "requirements",
-      "display_group",
-      "requirement_group",
-    ],
+    name: ["requirements", "display_group", "requirement_group"],
   });
+
+  // Requirement rules point at dropdown options by value; the form editor uses
+  // these to lock options that a requirement still depends on.
+  const requirementConditions = useMemo<ConditionRef[]>(
+    () =>
+      (requirements ?? []).flatMap((requirement) =>
+        (requirement.applies_when?.conditions ?? []).map((condition) => ({
+          field: condition.field,
+          value: condition.value,
+          where: `Requirement: ${requirement.requirement_name || "Untitled requirement"}`,
+        })),
+      ),
+    [requirements],
+  );
 
   useEffect(() => {
     if (!service) {
@@ -349,7 +348,9 @@ export function ServiceFormPage({
       })
       .catch(() => {
         if (!cancelled) {
-          toast.error("Couldn't load this service's checklist. Reload the page to try again.");
+          toast.error(
+            "Couldn't load this service's checklist. Reload the page to try again.",
+          );
         }
       })
       .finally(() => {
@@ -387,7 +388,9 @@ export function ServiceFormPage({
         if (cancelled) return;
         setFormDefinition(buildLegacyFormDefinition(service));
         setPublishedFieldKeys([]);
-        toast.error("Couldn't load this service's application form. Reload the page to try again.");
+        toast.error(
+          "Couldn't load this service's application form. Reload the page to try again.",
+        );
       })
       .finally(() => {
         if (!cancelled) setTemplateLoading(false);
@@ -510,6 +513,8 @@ export function ServiceFormPage({
         label: component.label,
         amount: String(component.amount),
         included: component.included,
+        unit: component.unit ?? "",
+        note: component.note ?? "",
       })),
     );
     form.setValue("processing_time", source.processing_time ?? "");
@@ -623,9 +628,7 @@ export function ServiceFormPage({
       );
       if (!targetExists) {
         revealSection("case-questions");
-        toast.error(
-          "Choose an Alternate Service Track for the window rule.",
-        );
+        toast.error("Choose an Alternate Service Track for the window rule.");
         return;
       }
     }
@@ -771,11 +774,6 @@ export function ServiceFormPage({
     });
   }, [form.formState.errors, submitted]);
   const invalidSections = new Set(errorSummary.map(({ section }) => section));
-  const classificationLabel =
-    SERVICE_CLASSIFICATIONS.find((option) => option.value === classification)
-      ?.label ?? "Unclassified";
-  const registrySummary = `${pesoFormatter.format(Number(fee) || 0)} · ${classificationLabel}`;
-  const journeySummary = `${steps?.filter((step) => step.value.trim()).length ?? 0} steps · ${partyRoles?.filter((role) => role.value.trim()).length ?? 0} roles`;
   const caseRuleCount =
     Number(Boolean(formDefinition.caseSelector)) +
     Number(Boolean(formDefinition.eventTiming));
@@ -790,24 +788,13 @@ export function ServiceFormPage({
   const caseSummary =
     caseRuleCount > 0
       ? `${caseRuleCount} rule ${caseRuleCount === 1 ? "set" : "sets"}`
-      : "Optional rules";
+      : "No rules";
   const applicationSummary = `${applicationFieldCount} ${applicationFieldCount === 1 ? "field" : "fields"}`;
   const requirementsSummary = `${requirementCount} ${requirementCount === 1 ? "requirement" : "requirements"}`;
   const relationshipsSummary =
     relationshipCount > 0
       ? `${relationshipCount} ${relationshipCount === 1 ? "link" : "links"}`
       : "Standalone service";
-
-  // Short per-tab counts. Optional sections stay blank until they hold
-  // something, so an empty tab is not made to look like missing work.
-  const tabCounts: Record<EditorSectionId, string | null> = {
-    "registry-details": pesoFormatter.format(Number(fee) || 0),
-    "citizen-journey": journeySummary,
-    "case-questions": caseRuleCount > 0 ? caseSummary : null,
-    "application-form": applicationSummary,
-    requirements: String(requirementCount),
-    relationships: relationshipCount > 0 ? relationshipsSummary : null,
-  };
 
   return (
     <div
@@ -845,19 +832,15 @@ export function ServiceFormPage({
             }}
             className="min-h-0 min-w-0 flex-1 gap-0"
           >
-            <div className="shrink-0 overflow-x-auto border-b border-border bg-background px-4 sm:px-8">
+            <div className="shrink-0 border-b border-border bg-background px-4 pb-3 sm:px-8">
               <TabsList
                 ref={tabListRef}
                 variant="editor"
+                className="w-full"
                 aria-label="Service configuration"
-                className="w-full min-w-max justify-start gap-2 p-0 group-data-horizontal/tabs:h-auto"
               >
                 {availableTabs.map(({ id, label, icon: Icon }) => (
-                  <TabsTrigger
-                    key={id}
-                    value={id}
-                    className="min-h-14 gap-2 px-3 py-3 after:bottom-0"
-                  >
+                  <TabsTrigger key={id} value={id} className="gap-2">
                     <Icon aria-hidden="true" />
                     <span>{label}</span>
                     {invalidSections.has(id) ? (
@@ -865,10 +848,6 @@ export function ServiceFormPage({
                         aria-label="Needs attention"
                         className="text-destructive"
                       />
-                    ) : tabCounts[id] ? (
-                      <span className="hidden text-xs font-normal tabular-nums text-muted-foreground sm:inline">
-                        {tabCounts[id]}
-                      </span>
                     ) : null}
                   </TabsTrigger>
                 ))}
@@ -881,7 +860,7 @@ export function ServiceFormPage({
             >
               {/* One width for every section, so the card does not resize as
                   you move between steps. */}
-              <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-6">
+              <div className="mx-auto flex w-full min-w-0 max-w-240 flex-col gap-6">
                 {submitted && mutation.error ? (
                   <Alert variant="destructive" role="alert">
                     <AlertTitle>Service Not Saved</AlertTitle>
@@ -948,7 +927,7 @@ export function ServiceFormPage({
                   id="registry-details"
                   icon={FileText}
                   title="Registry & Fees"
-                  summary={registrySummary}
+                  description="What applicants and the cashier see for this service."
                   hasError={invalidSections.has("registry-details")}
                 >
                   <RegistryDetailsSection
@@ -965,7 +944,7 @@ export function ServiceFormPage({
                   id="citizen-journey"
                   icon={RouteIcon}
                   title="Citizen Journey"
-                  summary={journeySummary}
+                  description="What applicants are told to do, and who the application is about."
                   hasError={invalidSections.has("citizen-journey")}
                 >
                   <CitizenJourneySection embedded />
@@ -976,8 +955,22 @@ export function ServiceFormPage({
                     id="case-questions"
                     icon={GitBranch}
                     title="Timing & Routing"
+                    description="Send applicants to the right track when their event date falls outside the on-time window."
                     summary={caseSummary}
                     hasError={invalidSections.has("case-questions")}
+                    action={
+                      formDefinition.eventTiming ? (
+                        <RemoveWindowRuleButton
+                          onRemove={() => {
+                            setFormDefinition({
+                              ...formDefinition,
+                              eventTiming: undefined,
+                            });
+                            setTemplateDirty(true);
+                          }}
+                        />
+                      ) : undefined
+                    }
                   >
                     <CaseQuestionsSection
                       embedded
@@ -985,6 +978,11 @@ export function ServiceFormPage({
                       formDefinition={formDefinition}
                       publishedFieldKeys={publishedFieldKeys}
                       targetOptions={timingTargetOptions}
+                      currentServiceCode={
+                        service
+                          ? (service.display_group ?? service.service_code)
+                          : null
+                      }
                       onFormDefinitionChange={(definition) => {
                         setFormDefinition(definition);
                         setTemplateDirty(true);
@@ -998,7 +996,8 @@ export function ServiceFormPage({
                     id="application-form"
                     icon={SlidersHorizontal}
                     title="Application Form"
-                    description="Questions applicants answer, including follow-ups and shared blocks."
+                    description={`Add the questions applicants answer, and show follow-up questions based on earlier answers. Each save publishes a new version, and published versions can’t be edited${templateVersion > 0 ? ` after version ${templateVersion}` : ""}.`}
+                    headerDivider={false}
                     summary={applicationSummary}
                     hasError={invalidSections.has("application-form")}
                   >
@@ -1009,6 +1008,7 @@ export function ServiceFormPage({
                       templateSharedCodes={templateSharedCodes}
                       publishedFieldKeys={publishedFieldKeys}
                       formDefinition={formDefinition}
+                      externalConditions={requirementConditions}
                       isLoading={templateLoading}
                       onTemplateNameChange={(name) => {
                         setTemplateName(name);
@@ -1026,12 +1026,13 @@ export function ServiceFormPage({
                   id="requirements"
                   icon={ClipboardCheck}
                   title="Requirements"
+                  description="What applicants must bring or upload for this service, including anything they need from another office first."
                   summary={requirementsSummary}
                   hasError={invalidSections.has("requirements")}
                 >
                   <RequirementsSection
                     embedded
-                    isLoading={checklistLoading}
+                    isLoading={checklistLoading || templateLoading}
                     sharedWith={sharedWith}
                     formDefinition={formDefinition}
                     currentServiceCode={service?.service_code ?? null}
@@ -1045,6 +1046,7 @@ export function ServiceFormPage({
                   id="relationships"
                   icon={Link2}
                   title="Relationships"
+                  description="Only for services shown to applicants as one card with several variants. Leave blank for a standalone service."
                   summary={relationshipsSummary}
                   hasError={invalidSections.has("relationships")}
                 >
@@ -1059,7 +1061,7 @@ export function ServiceFormPage({
                       <Button
                         type="button"
                         variant="outline"
-                        className="min-h-11"
+                        size="touch"
                         onClick={() => void revealSection(previousTab.id)}
                       >
                         <ArrowLeft
@@ -1073,7 +1075,7 @@ export function ServiceFormPage({
                       <Button
                         type="button"
                         variant="outline"
-                        className="min-h-11"
+                        size="touch"
                         onClick={() => void revealSection(nextTab.id)}
                       >
                         <span className="sm:hidden">Next section</span>

@@ -1,23 +1,28 @@
-import { useState } from "react";
 import { Controller, useFormContext } from "react-hook-form";
-import { ChevronDown, Settings2 } from "lucide-react";
+import { Settings2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "~/components/ui/collapsible";
-import { Field, FieldDescription, FieldLabel } from "~/components/ui/field";
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "~/components/ui/input-group";
 import { cn } from "~/lib/utils";
 import type { ServiceFormValues } from "../service-form.config";
+
+const SHORT_NAME_MAX = 40;
 
 export function RelationshipsSection({
   embedded = false,
 }: {
   embedded?: boolean;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
   const form = useFormContext<ServiceFormValues>();
 
   return (
@@ -40,111 +45,118 @@ export function RelationshipsSection({
           </div>
         </CardHeader>
       ) : null}
-      <CardContent>
-        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-          <CollapsibleTrigger className="flex w-full cursor-pointer select-none items-center justify-between rounded-md border border-border bg-surface-subtle px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted">
-            {isOpen ? "Hide Relationship Fields" : "Configure Relationships"}
-            <ChevronDown
-              aria-hidden="true"
-              className={cn(
-                "size-4 transition-transform duration-200 motion-reduce:transition-none",
-                isOpen && "rotate-180",
-              )}
-            />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="flex flex-col gap-4 pt-4">
-            <p className="text-xs text-muted-foreground">
-              Only for services shown to applicants as one card with several variants. Leave blank for a standalone service.
-            </p>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Controller
-                control={form.control}
-                name="display_group"
-                render={({ field }) => (
-                  <Field>
-                    <FieldLabel htmlFor="service-display-group">
-                      Display Group
-                    </FieldLabel>
-                    <Input
-                      {...field}
-                      id="service-display-group"
-                      placeholder="birth_ontime…"
-                      className="font-mono"
-                      autoComplete="off"
-                      spellCheck={false}
-                    />
-                  </Field>
-                )}
+      {/* Two columns from `sm` up; the help sits under each control, where the eye already is. */}
+      <CardContent className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
+        <Controller
+          control={form.control}
+          name="display_group"
+          render={({ field }) => (
+            <Field>
+              <FieldLabel htmlFor="service-display-group">
+                Display Group
+              </FieldLabel>
+              <Input
+                {...field}
+                id="service-display-group"
+                fieldSize="touch"
+                placeholder="birth_ontime…"
+                className="font-mono"
+                autoComplete="off"
+                spellCheck={false}
+                aria-describedby="service-display-group-hint"
               />
+              <FieldDescription id="service-display-group-hint">
+                Services with the same group appear as one card.
+              </FieldDescription>
+            </Field>
+          )}
+        />
 
-              <Controller
-                control={form.control}
-                name="display_name"
-                render={({ field }) => (
-                  <Field>
-                    <FieldLabel htmlFor="service-display-name">
-                      Display Name
-                    </FieldLabel>
-                    <Input
-                      {...field}
-                      id="service-display-name"
-                      placeholder="Birth Certificate…"
-                      autoComplete="off"
-                    />
-                  </Field>
-                )}
+        <Controller
+          control={form.control}
+          name="display_name"
+          render={({ field }) => (
+            <Field>
+              <FieldLabel htmlFor="service-display-name">
+                Display Name
+              </FieldLabel>
+              <Input
+                {...field}
+                id="service-display-name"
+                fieldSize="touch"
+                placeholder="Birth Certificate…"
+                autoComplete="off"
               />
+            </Field>
+          )}
+        />
 
-              <Controller
-                control={form.control}
-                name="short_name"
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="service-short-name">
-                      Short Name
-                    </FieldLabel>
-                    <Input
-                      {...field}
-                      id="service-short-name"
-                      placeholder="Marriage License…"
-                      maxLength={40}
-                      autoComplete="off"
-                      aria-invalid={fieldState.invalid}
-                    />
-                    <FieldDescription>
-                      Shown on applicants' service cards. Leave empty to use the
-                      display name.
-                    </FieldDescription>
-                  </Field>
-                )}
+        <Controller
+          control={form.control}
+          name="short_name"
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="service-short-name">Short Name</FieldLabel>
+              <InputGroup size="touch">
+                <InputGroupInput
+                  {...field}
+                  id="service-short-name"
+                  placeholder="Marriage License…"
+                  maxLength={SHORT_NAME_MAX}
+                  autoComplete="off"
+                  aria-invalid={fieldState.invalid}
+                  aria-describedby={cn(
+                    "service-short-name-count service-short-name-hint",
+                    fieldState.invalid && "service-short-name-error",
+                  )}
+                />
+                <InputGroupAddon align="inline-end">
+                  <span
+                    id="service-short-name-count"
+                    className="text-xs tabular-nums"
+                  >
+                    {(field.value ?? "").length}/{SHORT_NAME_MAX}
+                  </span>
+                </InputGroupAddon>
+              </InputGroup>
+              {fieldState.invalid ? (
+                <FieldError
+                  id="service-short-name-error"
+                  errors={[fieldState.error]}
+                />
+              ) : null}
+              <FieldDescription id="service-short-name-hint">
+                Shown on applicants' service cards. Leave empty to use the
+                display name.
+              </FieldDescription>
+            </Field>
+          )}
+        />
+
+        <Controller
+          control={form.control}
+          name="requirement_group"
+          render={({ field }) => (
+            <Field>
+              <FieldLabel htmlFor="service-requirement-group">
+                Requirement Group
+              </FieldLabel>
+              <Input
+                {...field}
+                id="service-requirement-group"
+                fieldSize="touch"
+                placeholder="birth_ontime…"
+                className="font-mono"
+                autoComplete="off"
+                spellCheck={false}
+                aria-describedby="service-requirement-group-hint"
               />
-            </div>
-
-            <Controller
-              control={form.control}
-              name="requirement_group"
-              render={({ field }) => (
-                <Field>
-                  <FieldLabel htmlFor="service-requirement-group">
-                    Requirement Group
-                  </FieldLabel>
-                  <Input
-                    {...field}
-                    id="service-requirement-group"
-                    placeholder="birth_ontime…"
-                    className="font-mono"
-                    autoComplete="off"
-                    spellCheck={false}
-                  />
-                  <FieldDescription>
-                    Services with the same group share one checklist.
-                  </FieldDescription>
-                </Field>
-              )}
-            />
-          </CollapsibleContent>
-        </Collapsible>
+              <FieldDescription id="service-requirement-group-hint">
+                Services with the same group share one checklist.
+              </FieldDescription>
+            </Field>
+          )}
+        />
       </CardContent>
     </Card>
   );

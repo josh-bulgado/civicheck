@@ -5,6 +5,7 @@ import { Field, FieldDescription, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
 import { FormTemplateBuilder } from "~/features/forms/components/FormTemplateBuilder";
+import type { ConditionRef } from "~/features/forms/form-option-usage";
 import type { FormTemplateDefinition } from "~/features/forms/form-template.types";
 
 interface ApplicationFormSectionProps {
@@ -17,6 +18,8 @@ interface ApplicationFormSectionProps {
   onTemplateNameChange: (name: string) => void;
   onFormDefinitionChange: (definition: FormTemplateDefinition) => void;
   embedded?: boolean;
+  /** Requirement conditions that point at dropdown options in this form. */
+  externalConditions?: readonly ConditionRef[];
 }
 
 export function ApplicationFormSection({
@@ -29,12 +32,16 @@ export function ApplicationFormSection({
   onTemplateNameChange,
   onFormDefinitionChange,
   embedded = false,
+  externalConditions,
 }: ApplicationFormSectionProps) {
   return (
     <Card
       id={embedded ? undefined : "application-form"}
       variant={embedded ? "embedded" : "default"}
-      className={embedded ? undefined : "scroll-mt-6"}
+      // Embedded, -mt-6 cancels the section card's top padding so the Template
+      // Name sits right under the header. It sits on this card because the card
+      // clips overflow.
+      className={embedded ? "-mt-6" : "scroll-mt-6"}
     >
       {!embedded ? (
         <CardHeader className="border-b">
@@ -54,34 +61,37 @@ export function ApplicationFormSection({
           </div>
         </CardHeader>
       ) : null}
-      <CardContent className="flex flex-col gap-4">
-        <Field>
-          <FieldLabel htmlFor="service-form-template-name">
-            Template Name
-          </FieldLabel>
-          <Input
-            id="service-form-template-name"
-            name="template_name"
-            value={templateName}
-            onChange={(event) => onTemplateNameChange(event.target.value)}
-            placeholder="Birth registration application…"
-            autoComplete="off"
-          />
-          <FieldDescription>
-            For staff only. Applicants don’t see this name.
-          </FieldDescription>
-        </Field>
+      <CardContent className="flex flex-col">
+        <div className="flex flex-col gap-4 pb-6">
+          <Field>
+            <FieldLabel htmlFor="service-form-template-name" data-compact>
+              Template Name
+            </FieldLabel>
+            <Input
+              id="service-form-template-name"
+              name="template_name"
+              fieldSize="touch"
+              value={templateName}
+              onChange={(event) => onTemplateNameChange(event.target.value)}
+              placeholder="Birth registration application…"
+              autoComplete="off"
+            />
+            <FieldDescription>
+              For staff only. Applicants don’t see this name.
+            </FieldDescription>
+          </Field>
 
-        {templateSharedCodes.length > 1 ? (
-          <Alert variant="warning">
-            <AlertTriangle aria-hidden="true" />
-            <AlertDescription>
-              This form template is shared by {templateSharedCodes.length}{" "}
-              service variants: {templateSharedCodes.join(", ")}. Publishing
-              changes the active form for all of them.
-            </AlertDescription>
-          </Alert>
-        ) : null}
+          {templateSharedCodes.length > 1 ? (
+            <Alert variant="warning">
+              <AlertTriangle aria-hidden="true" />
+              <AlertDescription>
+                This form template is shared by {templateSharedCodes.length}{" "}
+                service variants: {templateSharedCodes.join(", ")}. Publishing
+                changes the active form for all of them.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+        </div>
 
         {isLoading ? (
           <div
@@ -97,6 +107,9 @@ export function ApplicationFormSection({
             definition={formDefinition}
             onChange={onFormDefinitionChange}
             immutableKeys={publishedFieldKeys}
+            externalConditions={externalConditions}
+            edgeToEdge
+            version={templateVersion}
           />
         )}
       </CardContent>

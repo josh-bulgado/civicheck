@@ -21,8 +21,8 @@ import {
   ArrowDown,
   ArrowUp,
   Blocks,
+  Copy,
   Eye,
-  GitBranch,
   GripVertical,
   MoreHorizontal,
   Pencil,
@@ -30,13 +30,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "~/components/ui/collapsible";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,26 +57,39 @@ import {
 import { detachBlock, insertBlock } from "../form-field-block.utils";
 import type {
   FormFieldDefinition,
+  FormOption,
   FormStep,
   FormTemplateDefinition,
 } from "../form-template.types";
-import { FormFieldInspector } from "./FormFieldInspector";
 import {
-  FIELD_TYPES,
-  FormFieldIcon,
-  fieldTypeLabel,
-} from "./form-field-types";
+  optionUsage,
+  restoreOption,
+  type ConditionRef,
+} from "../form-option-usage";
+import {
+  EDITOR_MENU_CONTENT as MENU_CONTENT,
+  EDITOR_MENU_ITEM as MENU_ITEM,
+  EDITOR_ROW_MENU_TRIGGER,
+} from "./EditorSheetParts";
+import { FormFieldInspector } from "./FormFieldInspector";
+import { FIELD_TYPES, FormFieldIcon } from "./form-field-types";
+import {
+  FieldRequiredChip,
+  FieldTypeChip,
+  describeVisibility,
+  fieldsInStep,
+} from "./form-field-summary";
+import { PublishedFormPreviewSheet } from "./PublishedFormPreviewSheet";
 
 const STEPS: Array<{ value: FormStep; label: string }> = [
   { value: "case", label: "Case details" },
   { value: "details", label: "Personal details" },
 ];
 
-function fieldsInStep(definition: FormTemplateDefinition, step: FormStep) {
-  return definition.sections
-    .filter((section) => section.step === step)
-    .flatMap((section) => section.fields);
-}
+const TOOLBAR_BUTTON = "h-9 gap-2 rounded-[10px] px-3.5 text-[13.5px]";
+const HEAD_CELL =
+  "h-auto px-3 py-[11px] text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase";
+const BODY_CELL = "p-2.5";
 
 function withStepFields(
   definition: FormTemplateDefinition,
@@ -119,6 +126,8 @@ function withStepFields(
   };
 }
 
+const COPY_SUFFIX = " (copy)";
+
 function nextFieldKey(definition: FormTemplateDefinition) {
   const used = new Set(
     definition.sections.flatMap((section) =>
@@ -146,24 +155,6 @@ function misorderedKeys(fields: FormFieldDefinition[]) {
   return keys;
 }
 
-function describeVisibility(
-  field: FormFieldDefinition,
-  fields: FormFieldDefinition[],
-  index: number,
-) {
-  if (!field.visibleWhen) return null;
-  const { field: sourceKey, operator, value } = field.visibleWhen;
-  const sourceIndex = fields.findIndex((candidate) => candidate.key === sourceKey);
-  const source = fields[sourceIndex];
-  const answer =
-    source?.options?.find((option) => option.value === value)?.label ?? value;
-
-  return {
-    text: `${source?.label ?? sourceKey} ${operator === "equals" ? "is" : "is not"} ${answer}`,
-    misordered: sourceIndex > index,
-  };
-}
-
 export function FormTemplateBuilder({
   definition,
   onChange,
@@ -171,6 +162,9 @@ export function FormTemplateBuilder({
   steps: visibleSteps,
   allowPersonGroup = true,
   allowSharedBlocks = true,
+  externalConditions,
+  edgeToEdge = false,
+  version = 0,
 }: {
   definition: FormTemplateDefinition;
   onChange: (definition: FormTemplateDefinition) => void;
@@ -181,6 +175,15 @@ export function FormTemplateBuilder({
   allowPersonGroup?: boolean;
   /** Hide shared-block insertion (a block can't include other blocks). */
   allowSharedBlocks?: boolean;
+  /** Conditions outside this form (requirements) that point at its dropdown options. */
+  externalConditions?: readonly ConditionRef[];
+  /**
+   * Each step becomes a divided band that bleeds past the card's side padding
+   * (px-6, sm:px-8), like the service editor's other sections.
+   */
+  edgeToEdge?: boolean;
+  /** The live version, shown in the preview sheet. 0 when unpublished. */
+  version?: number;
 }) {
   const immutableKeySet = new Set(immutableKeys);
   const fieldTypes = FIELD_TYPES.filter(
@@ -195,6 +198,10 @@ export function FormTemplateBuilder({
     id: string;
   } | null>(null);
   const [liveMessage, setLiveMessage] = useState("");
+  const [previewOpen, setPreviewOpen] = useState(false);
+  // The control that opened the inspector sheet, so closing it can hand focus
+  // back there. Null when the sheet opened some other way (Add Field).
+  const openerRef = useRef<HTMLElement | null>(null);
 
   // Questions have no id of their own and their key is editable, so rows get a
   // client-only id. It keeps a row's identity (and focus) through key edits and
@@ -267,9 +274,43 @@ export function FormTemplateBuilder({
     index: number,
     patch: Partial<FormFieldDefinition>,
   ) {
-    const fields = fieldsInStep(definition, step);
+    // Always build from the latest definition: this also runs from toast
+    // actions that were created before later edits.
+    const current = latestDefinition.current;
+    const fields = fieldsInStep(current, step);
     fields[index] = { ...fields[index], ...patch };
-    onChange(withStepFields(definition, step, fields));
+    onChange(withStepFields(current, step, fields));
+  }
+
+  /**
+   * Undo for a removed dropdown option. The field is found by its key in the
+   * latest definition, never by the sheet's selection, so this cannot write
+   * into another field or revert other edits. Returns where the option landed,
+   * or null when the field is gone or is no longer a dropdown.
+   */
+  function restoreDropdownOption(
+    fieldKey: string,
+    index: number,
+    option: FormOption,
+  ): number | null {
+    const current = latestDefinition.current;
+    const target = current.sections
+      .flatMap((section) => section.fields)
+      .find((field) => field.key === fieldKey);
+    if (!target || target.type !== "select") return null;
+    const result = restoreOption(target.options ?? [], index, option);
+    onChange({
+      ...current,
+      sections: current.sections.map((section) => ({
+        ...section,
+        fields: section.fields.map((field) =>
+          field.key === fieldKey
+            ? { ...field, options: result.options }
+            : field,
+        ),
+      })),
+    });
+    return result.index;
   }
 
   function removeField(step: FormStep, index: number) {
@@ -338,7 +379,7 @@ export function FormTemplateBuilder({
     );
   }
 
-  function addField(step: FormStep) {
+  function addField(step: FormStep, opener: HTMLElement | null) {
     const fields = fieldsInStep(definition, step);
     const id = mintId(step);
     idsByStep.current[step] = [...rowIdsFor(step, fields.length), id];
@@ -353,7 +394,62 @@ export function FormTemplateBuilder({
         },
       ]),
     );
+    // Closing returns focus to the Add Field button; Safari does not focus a
+    // button on click, so the library would otherwise drop focus to <body>.
+    openerRef.current = opener;
     setSelected({ step, id });
+  }
+
+  function duplicateField(step: FormStep, index: number) {
+    const current = latestDefinition.current;
+    const fields = fieldsInStep(current, step);
+    const source = fields[index];
+    if (!source || source.blockKey || source.type === "person_group") return;
+
+    // Deep copy so editing the copy (options, visibility) never touches the
+    // original. A copy is always a local question, never a shared-block member.
+    const copy = structuredClone(source);
+    delete copy.blockKey;
+    copy.key = nextFieldKey(current);
+    copy.label = `${source.label.slice(0, 160 - COPY_SUFFIX.length)}${COPY_SUFFIX}`;
+
+    const ids = rowIdsFor(step, fields.length);
+    idsByStep.current[step] = [
+      ...ids.slice(0, index + 1),
+      mintId(step),
+      ...ids.slice(index + 1),
+    ];
+    onChange(
+      withStepFields(current, step, [
+        ...fields.slice(0, index + 1),
+        copy,
+        ...fields.slice(index + 1),
+      ]),
+    );
+    setLiveMessage(
+      `Duplicated ${source.label}. The copy is at position ${index + 2} of ${fields.length + 1}.`,
+    );
+  }
+
+  function openField(step: FormStep, id: string, opener: HTMLElement | null) {
+    openerRef.current = opener;
+    setSelected({ step, id });
+  }
+
+  function handleInspectorOpenChange(open: boolean) {
+    if (open) return;
+    setSelected(null);
+    const opener = openerRef.current;
+    openerRef.current = null;
+    if (!opener) return;
+    // Base UI only returns focus to whatever was focused when the sheet
+    // mounted. That is wrong for the row menu (the menu item is gone by then)
+    // and for Safari, which does not focus a button on click. Wait a frame so
+    // we run after the close has been committed; the library then sees focus
+    // already outside the sheet and leaves it alone.
+    requestAnimationFrame(() => {
+      if (opener.isConnected) opener.focus({ preventScroll: true });
+    });
   }
 
   const selectedFields = selected
@@ -366,7 +462,7 @@ export function FormTemplateBuilder({
     selectedIndex >= 0 ? (selectedFields[selectedIndex] ?? null) : null;
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className={cn("flex flex-col", !edgeToEdge && "gap-5")}>
       <p role="status" aria-live="polite" className="sr-only">
         {liveMessage}
       </p>
@@ -382,54 +478,66 @@ export function FormTemplateBuilder({
           <section
             key={step.value}
             aria-labelledby={`${step.value}-step-heading`}
-            className="flex flex-col gap-3"
+            className={cn(
+              "flex flex-col gap-3.5",
+              edgeToEdge &&
+                "-mx-6 border-t px-6 pt-[22px] pb-6 sm:-mx-8 sm:px-8",
+            )}
           >
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-col gap-1">
+            <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2.5">
+              <div className="flex flex-col">
                 <h3
                   id={`${step.value}-step-heading`}
-                  className="text-sm font-semibold text-foreground"
+                  className="text-base font-semibold tracking-tight text-foreground"
                 >
                   {step.label}
                 </h3>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[13px] text-muted-foreground">
                   {fields.length} {fields.length === 1 ? "field" : "fields"}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {stepBlocks.length > 0 ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger
                       nativeButton
                       render={
-                        <Button type="button" variant="outline" size="sm" />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={TOOLBAR_BUTTON}
+                        />
                       }
                     >
                       <Blocks data-icon="inline-start" />
                       Insert Shared Block
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="min-w-64">
+                    <DropdownMenuContent align="end" className={MENU_CONTENT}>
                       <DropdownMenuGroup>
-                        <DropdownMenuLabel>
-                          Shared question blocks
+                        <DropdownMenuLabel className="px-3 pt-2 pb-1 text-xs font-semibold tracking-[0.06em] uppercase">
+                          Shared blocks
                         </DropdownMenuLabel>
-                        <DropdownMenuSeparator />
                         {stepBlocks.map((block) => {
-                          const included = includedBlockKeys.has(block.blockKey);
+                          const included = includedBlockKeys.has(
+                            block.blockKey,
+                          );
                           return (
                             <DropdownMenuItem
                               key={block.blockKey}
                               disabled={included}
+                              className={MENU_ITEM}
                               onClick={() => addBlock(block)}
                             >
-                              <span className="flex flex-col gap-0.5">
-                                <span>{block.name}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {included
-                                    ? "Already in this form"
-                                    : `${block.fields.length} ${block.fields.length === 1 ? "question" : "questions"}`}
+                              <Blocks
+                                aria-hidden="true"
+                                className="text-muted-foreground"
+                              />
+                              {block.name}
+                              {included ? (
+                                <span className="ml-auto pl-3 text-xs font-normal text-muted-foreground">
+                                  Already added
                                 </span>
-                              </span>
+                              ) : null}
                             </DropdownMenuItem>
                           );
                         })}
@@ -439,9 +547,9 @@ export function FormTemplateBuilder({
                 ) : null}
                 <Button
                   type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => addField(step.value)}
+                  variant="raised"
+                  className={TOOLBAR_BUTTON}
+                  onClick={(event) => addField(step.value, event.currentTarget)}
                 >
                   <Plus data-icon="inline-start" />
                   Add Field
@@ -461,12 +569,11 @@ export function FormTemplateBuilder({
                 step={step.value}
                 fields={fields}
                 ids={ids}
-                selectedId={
-                  selected?.step === step.value ? selected.id : null
-                }
+                selectedId={selected?.step === step.value ? selected.id : null}
                 blockNameByKey={blockNameByKey}
-                onOpen={(id) => setSelected({ step: step.value, id })}
+                onOpen={(id, opener) => openField(step.value, id, opener)}
                 onReorder={(from, to) => reorderField(step.value, from, to)}
+                onDuplicate={(index) => duplicateField(step.value, index)}
                 onRemove={(index) => removeField(step.value, index)}
               />
             )}
@@ -476,10 +583,9 @@ export function FormTemplateBuilder({
 
       <FormFieldInspector
         open={selectedField !== null}
-        onOpenChange={(open) => {
-          if (!open) setSelected(null);
-        }}
+        onOpenChange={handleInspectorOpenChange}
         field={selectedField}
+        fieldId={selected?.id}
         fields={selectedFields}
         index={selectedIndex}
         fieldTypes={fieldTypes}
@@ -491,36 +597,35 @@ export function FormTemplateBuilder({
           }
         }}
         onDetach={detach}
+        onRestoreOption={restoreDropdownOption}
+        optionUsageFor={(fieldKey, value) =>
+          optionUsage(definition, fieldKey, value, externalConditions)
+        }
       />
 
-      <Collapsible>
-        <CollapsibleTrigger className="flex items-center gap-2 text-sm font-semibold text-primary">
-          <Eye aria-hidden="true" /> Preview Published Form Structure
-        </CollapsibleTrigger>
-        <CollapsibleContent className="pt-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {stepsToShow.map((step) => (
-              <div
-                key={step.value}
-                className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-4"
-              >
-                <p className="text-sm font-semibold">{step.label}</p>
-                {fieldsInStep(definition, step.value).map((field) => (
-                  <div
-                    key={field.key}
-                    className="flex items-center justify-between gap-2 text-xs"
-                  >
-                    <span>{field.label}</span>
-                    <span className="text-muted-foreground">
-                      {field.required ? "Required" : "Optional"}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
+      <div
+        className={cn(
+          "flex",
+          edgeToEdge && "-mx-6 border-t px-6 pt-[22px] sm:-mx-8 sm:px-8",
+        )}
+      >
+        <button
+          type="button"
+          onClick={() => setPreviewOpen(true)}
+          className="flex min-h-10 items-center gap-2 rounded-[10px] px-1 font-semibold text-primary outline-none hover:underline hover:underline-offset-4 focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <Eye aria-hidden="true" className="size-[18px]" />
+          Preview Published Form Structure
+        </button>
+      </div>
+
+      <PublishedFormPreviewSheet
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        definition={definition}
+        steps={stepsToShow}
+        version={version}
+      />
     </div>
   );
 }
@@ -534,6 +639,7 @@ function StepFieldTable({
   blockNameByKey,
   onOpen,
   onReorder,
+  onDuplicate,
   onRemove,
 }: {
   stepLabel: string;
@@ -542,8 +648,9 @@ function StepFieldTable({
   ids: string[];
   selectedId: string | null;
   blockNameByKey: Map<string, string>;
-  onOpen: (id: string) => void;
+  onOpen: (id: string, opener: HTMLElement | null) => void;
   onReorder: (from: number, to: number) => void;
+  onDuplicate: (index: number) => void;
   onRemove: (index: number) => void;
 }) {
   const sensors = useSensors(
@@ -585,21 +692,25 @@ function StepFieldTable({
       accessibility={{ announcements }}
     >
       <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-        <div className="rounded-lg border border-border">
+        <div className="overflow-hidden rounded-2xl border border-border-strong">
           <Table aria-label={`${stepLabel} questions`}>
-            <TableHeader className="bg-muted/50">
+            <TableHeader className="bg-surface-subtle">
               <TableRow className="hover:bg-transparent">
-                <TableHead className="w-10">
+                <TableHead className={cn(HEAD_CELL, "w-9 pr-0")}>
                   <span className="sr-only">Reorder</span>
                 </TableHead>
-                <TableHead>Question</TableHead>
-                <TableHead className="hidden md:table-cell">Key</TableHead>
-                <TableHead className="hidden sm:table-cell">Type</TableHead>
-                <TableHead>Required</TableHead>
-                <TableHead className="hidden lg:table-cell">
+                <TableHead className={HEAD_CELL}>Question</TableHead>
+                <TableHead className={cn(HEAD_CELL, "hidden md:table-cell")}>
+                  Key
+                </TableHead>
+                <TableHead className={cn(HEAD_CELL, "hidden sm:table-cell")}>
+                  Type
+                </TableHead>
+                <TableHead className={HEAD_CELL}>Required</TableHead>
+                <TableHead className={cn(HEAD_CELL, "hidden lg:table-cell")}>
                   Visibility
                 </TableHead>
-                <TableHead className="w-12">
+                <TableHead className={cn(HEAD_CELL, "w-[52px]")}>
                   <span className="sr-only">Actions</span>
                 </TableHead>
               </TableRow>
@@ -618,10 +729,9 @@ function StepFieldTable({
                       ? (blockNameByKey.get(field.blockKey) ?? field.blockKey)
                       : null
                   }
-                  onOpen={() => onOpen(ids[index])}
-                  onMoveBy={(direction) =>
-                    onReorder(index, index + direction)
-                  }
+                  onOpen={(opener) => onOpen(ids[index], opener)}
+                  onMoveBy={(direction) => onReorder(index, index + direction)}
+                  onDuplicate={() => onDuplicate(index)}
                   onRemove={() => onRemove(index)}
                 />
               ))}
@@ -642,6 +752,7 @@ function FieldRow({
   blockName,
   onOpen,
   onMoveBy,
+  onDuplicate,
   onRemove,
 }: {
   id: string;
@@ -650,10 +761,12 @@ function FieldRow({
   index: number;
   selected: boolean;
   blockName: string | null;
-  onOpen: () => void;
+  onOpen: (opener: HTMLElement | null) => void;
   onMoveBy: (direction: -1 | 1) => void;
+  onDuplicate: () => void;
   onRemove: () => void;
 }) {
+  const nameButtonRef = useRef<HTMLButtonElement>(null);
   const locked = Boolean(field.blockKey);
   const {
     attributes,
@@ -678,99 +791,90 @@ function FieldRow({
         transition,
       }}
       className={cn(
-        "cursor-pointer",
+        "hover:bg-surface-subtle",
         isDragging && "relative z-10 bg-background shadow-md",
       )}
-      onClick={onOpen}
     >
-      <TableCell
-        className="w-10 pr-0"
-        onClick={(event) => event.stopPropagation()}
-      >
+      <TableCell className={cn(BODY_CELL, "w-9 pr-0")}>
         <Button
           type="button"
           variant="ghost"
-          size="icon"
           ref={setActivatorNodeRef}
           disabled={locked}
           title={locked ? "Part of a shared block" : undefined}
           aria-label={`Reorder ${field.label}`}
-          className="relative size-9 touch-none cursor-grab text-muted-foreground after:absolute after:-inset-1 active:cursor-grabbing"
+          className="relative h-8 w-6 touch-none cursor-grab rounded-md p-0 text-muted-foreground opacity-55 after:absolute after:-inset-1 hover:bg-transparent hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing"
           {...attributes}
           {...listeners}
         >
-          <GripVertical aria-hidden="true" />
+          <GripVertical aria-hidden="true" className="fill-current" />
         </Button>
       </TableCell>
 
-      <TableCell className="whitespace-normal">
-        <div className="flex items-center gap-3">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+      <TableCell className={cn(BODY_CELL, "p-0 whitespace-normal")}>
+        <button
+          type="button"
+          ref={nameButtonRef}
+          aria-current={selected ? "true" : undefined}
+          onClick={(event) => onOpen(event.currentTarget)}
+          className="group/name flex min-h-11 w-full items-center gap-3 rounded-xl p-2.5 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-[11px] bg-primary-soft text-primary">
             <FormFieldIcon type={field.type} />
           </span>
-          <span className="flex min-w-0 flex-col gap-0.5">
-            <Button
-              type="button"
-              variant="link"
-              aria-current={selected ? "true" : undefined}
-              className="h-auto min-h-11 justify-start p-0 text-left font-medium break-words whitespace-normal text-foreground"
-            >
+          <span className="flex min-w-0 flex-col">
+            <span className="text-[14.5px] font-semibold break-words text-foreground underline-offset-[3px] group-hover/name:text-primary group-hover/name:underline">
               {field.label}
-            </Button>
+            </span>
             {blockName ? (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Blocks aria-hidden="true" className="size-3" />
+              <span className="flex items-center gap-1.5 text-[12.5px] text-muted-foreground">
+                <Blocks aria-hidden="true" className="size-[13px]" />
                 Shared · {blockName}
               </span>
             ) : null}
           </span>
-        </div>
+        </button>
       </TableCell>
 
-      <TableCell className="hidden md:table-cell">
+      <TableCell className={cn(BODY_CELL, "hidden md:table-cell")}>
         <span
           translate="no"
-          className="font-mono text-xs text-muted-foreground"
+          className="font-mono text-[12.5px] text-muted-foreground"
         >
           {field.key}
         </span>
       </TableCell>
 
-      <TableCell className="hidden sm:table-cell">
-        <Badge variant="secondary">{fieldTypeLabel(field.type)}</Badge>
+      <TableCell className={cn(BODY_CELL, "hidden sm:table-cell")}>
+        <FieldTypeChip type={field.type} />
       </TableCell>
 
-      <TableCell>
-        {field.required ? (
-          <Badge>Required</Badge>
-        ) : (
-          <span className="text-xs text-muted-foreground">Optional</span>
-        )}
+      <TableCell className={BODY_CELL}>
+        <FieldRequiredChip required={field.required} />
       </TableCell>
 
-      <TableCell className="hidden max-w-64 whitespace-normal lg:table-cell">
-        {visibility ? (
+      <TableCell
+        className={cn(BODY_CELL, "hidden whitespace-normal lg:table-cell")}
+      >
+        {visibility?.misordered ? (
+          <span className="block max-w-64 text-[13px] break-words text-destructive">
+            Depends on a question below: {visibility.text}
+          </span>
+        ) : visibility ? (
           <span
-            className={cn(
-              "flex items-start gap-1.5 text-xs",
-              visibility.misordered
-                ? "text-destructive"
-                : "text-muted-foreground",
-            )}
+            title={`Shown when ${visibility.text}`}
+            className="inline-block max-w-[220px] truncate align-middle text-[13px] font-medium text-primary"
           >
-            <GitBranch aria-hidden="true" className="mt-0.5 size-3 shrink-0" />
-            <span className="min-w-0 break-words">
-              {visibility.misordered
-                ? `Depends on a question below: ${visibility.text}`
-                : `Only if ${visibility.text}`}
-            </span>
+            Shown when {visibility.text}
           </span>
         ) : (
-          <span className="text-xs text-muted-foreground">Always shown</span>
+          <span className="text-[13px] whitespace-nowrap text-muted-foreground">
+            Always shown
+          </span>
         )}
       </TableCell>
 
-      <TableCell onClick={(event) => event.stopPropagation()}>
+      <TableCell className={cn(BODY_CELL, "text-right")}>
         <DropdownMenu>
           <DropdownMenuTrigger
             nativeButton
@@ -778,41 +882,56 @@ function FieldRow({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon"
-                className="relative size-9 text-muted-foreground after:absolute after:-inset-1"
+                className={EDITOR_ROW_MENU_TRIGGER}
                 aria-label={`Actions for ${field.label}`}
               />
             }
           >
-            <MoreHorizontal aria-hidden="true" />
+            <MoreHorizontal aria-hidden="true" className="fill-current" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-44">
-            <DropdownMenuItem onClick={onOpen}>
-              <Pencil aria-hidden="true" />
-              Edit Field
+          <DropdownMenuContent align="end" className={MENU_CONTENT}>
+            <DropdownMenuItem
+              className={MENU_ITEM}
+              onClick={() => onOpen(nameButtonRef.current)}
+            >
+              <Pencil aria-hidden="true" className="text-muted-foreground" />
+              Edit Question
             </DropdownMenuItem>
             <DropdownMenuItem
               disabled={locked || index === 0}
+              className={MENU_ITEM}
               onClick={() => onMoveBy(-1)}
             >
-              <ArrowUp aria-hidden="true" />
+              <ArrowUp aria-hidden="true" className="text-muted-foreground" />
               Move Up
             </DropdownMenuItem>
             <DropdownMenuItem
               disabled={locked || index === fields.length - 1}
+              className={MENU_ITEM}
               onClick={() => onMoveBy(1)}
             >
-              <ArrowDown aria-hidden="true" />
+              <ArrowDown aria-hidden="true" className="text-muted-foreground" />
               Move Down
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
             <DropdownMenuItem
               disabled={locked || field.type === "person_group"}
-              className="text-destructive focus:text-destructive"
+              className={MENU_ITEM}
+              onClick={onDuplicate}
+            >
+              <Copy aria-hidden="true" className="text-muted-foreground" />
+              Duplicate
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="mx-1.5 my-1" />
+            <DropdownMenuItem
+              disabled={locked || field.type === "person_group"}
+              className={cn(
+                MENU_ITEM,
+                "text-destructive focus:text-destructive",
+              )}
               onClick={onRemove}
             >
               <Trash2 aria-hidden="true" />
-              Remove Field
+              Remove
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

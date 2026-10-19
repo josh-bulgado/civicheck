@@ -19,6 +19,9 @@ const buttonVariants = cva(
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20",
         success:
           "bg-success/10 text-success hover:bg-success/20 focus-visible:border-success/40 focus-visible:ring-success/20",
+        // The service editor's primary: a lit top edge on the brand blue.
+        raised:
+          "border-primary bg-primary bg-linear-to-b from-[color-mix(in_oklch,var(--primary),white_12%)] to-primary text-primary-foreground shadow-[0_1px_2px_color-mix(in_srgb,var(--primary)_35%,transparent),inset_0_1px_0_rgb(255_255_255/0.18)] hover:border-primary-hover hover:bg-primary-hover hover:bg-none",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
@@ -27,6 +30,9 @@ const buttonVariants = cva(
         xs: "h-6 gap-1 rounded-[min(var(--radius-md),8px)] px-2 text-xs in-data-[slot=button-group]:rounded-md has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
         sm: "h-8 gap-1 rounded-[min(var(--radius-md),10px)] px-2.5 in-data-[slot=button-group]:rounded-md has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5",
         lg: "h-10 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
+        // 44px target with the editor's 12px corner. Existing sizes are unchanged.
+        touch:
+          "h-11 gap-2 rounded-xl px-4 in-data-[slot=button-group]:rounded-xl has-data-[icon=inline-end]:pr-3.5 has-data-[icon=inline-start]:pl-3.5",
         icon: "size-9",
         "icon-xs":
           "size-6 rounded-[min(var(--radius-md),8px)] in-data-[slot=button-group]:rounded-md [&_svg:not([class*='size-'])]:size-3",

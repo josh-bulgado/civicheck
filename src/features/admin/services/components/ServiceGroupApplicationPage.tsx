@@ -279,18 +279,13 @@ export function ServiceGroupApplicationPage({
           onValueChange={(value) => showSection(value as SectionId)}
           className="min-h-0 min-w-0 flex-1 gap-0"
         >
-          <div className="shrink-0 overflow-x-auto border-b border-border bg-background px-4 sm:px-8">
+          <div className="shrink-0 border-b border-border bg-background px-4 pb-3 sm:px-8">
             <TabsList
-              variant="editor"
+              variant="segmented"
               aria-label="Shared application configuration"
-              className="w-full min-w-max justify-start gap-2 p-0 group-data-horizontal/tabs:h-auto"
             >
               {SECTIONS.map(({ id, label, icon: Icon }) => (
-                <TabsTrigger
-                  key={id}
-                  value={id}
-                  className="min-h-14 gap-2 px-3 py-3 after:bottom-0"
-                >
+                <TabsTrigger key={id} value={id} className="gap-2">
                   <Icon aria-hidden="true" />
                   <span>{label}</span>
                   {tabCounts[id] ? (
@@ -368,6 +363,7 @@ export function ServiceGroupApplicationPage({
                           id="timing-routing"
                           formDefinition={definition}
                           targetOptions={targetOptions}
+                          currentServiceCode={groupKey}
                           onFormDefinitionChange={updateDefinition}
                         />
                       </FieldGroup>
@@ -407,7 +403,7 @@ export function ServiceGroupApplicationPage({
                     <Button
                       type="button"
                       variant="outline"
-                      className="min-h-11"
+                      size="touch"
                       onClick={() => showSection(previousSection.id)}
                     >
                       <ArrowLeft aria-hidden="true" data-icon="inline-start" />
@@ -418,7 +414,7 @@ export function ServiceGroupApplicationPage({
                     <Button
                       type="button"
                       variant="outline"
-                      className="min-h-11"
+                      size="touch"
                       onClick={() => showSection(nextSection.id)}
                     >
                       {nextSection.label}

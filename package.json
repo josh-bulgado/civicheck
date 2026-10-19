@@ -11,6 +11,7 @@
     "dev": "vite dev",
     "build": "vite build && tsc --noEmit",
     "preview": "vite preview",
+    "test": "vitest run",
     "lint": "eslint .",
     "start": "pnpx srvx --prod -s ../client dist/server/server.js"
   },
@@ -22,6 +23,8 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/geist-mono": "^5.3.0",
     "@hookform/resolvers": "^5.4.0",
     "@react-pdf/renderer": "^4.9.0",
     "@supabase/ssr": "^0.12.0",
@@ -72,6 +75,7 @@
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.2",
     "typescript-eslint": "^8.71.2",
-    "vite": "^8.0.14"
+    "vite": "^8.0.14",
+    "vitest": "^5.0.5"
   }
 }
