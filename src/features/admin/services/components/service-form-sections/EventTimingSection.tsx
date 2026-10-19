@@ -449,10 +449,13 @@ export function EventTimingSection({
                               : undefined
                         }
                       >
-                        <SelectValue placeholder="Choose a track">
+                        <SelectValue>
                           {(value) =>
-                            targetOptions.find((option) => option.value === value)
-                              ?.label ?? value
+                            value
+                              ? (targetOptions.find(
+                                  (option) => option.value === value,
+                                )?.label ?? String(value))
+                              : "Choose a track"
                           }
                         </SelectValue>
                       </SelectTrigger>

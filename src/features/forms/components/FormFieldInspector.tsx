@@ -42,6 +42,11 @@ interface FormFieldInspectorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   field: FormFieldDefinition | null;
+  /**
+   * Stable id of the opened row. It does not change while the admin edits the
+   * field key, so editor state is scoped to the opened field, not its key.
+   */
+  fieldId?: string;
   /** Every field of the same step, in order. */
   fields: FormFieldDefinition[];
   /** Position of `field` within `fields`. */
@@ -91,6 +96,7 @@ export function FormFieldInspector({
   open,
   onOpenChange,
   field,
+  fieldId,
   fields,
   index,
   fieldTypes,
@@ -127,6 +133,7 @@ export function FormFieldInspector({
               ) : (
                 <FieldEditor
                   field={field}
+                  fieldId={fieldId}
                   fields={fields}
                   index={index}
                   fieldTypes={fieldTypes}
@@ -191,6 +198,7 @@ function SharedBlockNotice({
 
 function FieldEditor({
   field,
+  fieldId,
   fields,
   index,
   fieldTypes,
@@ -200,6 +208,7 @@ function FieldEditor({
   optionUsageFor,
 }: {
   field: FormFieldDefinition;
+  fieldId: string | undefined;
   fields: FormFieldDefinition[];
   index: number;
   fieldTypes: FormFieldTypeOption[];
@@ -282,7 +291,11 @@ function FieldEditor({
             })
           }
         >
-          <SelectTrigger id="inspector-type" className="w-full">
+          <SelectTrigger
+            id="inspector-type"
+            className="w-full"
+            aria-describedby={typeLockedByUsage ? "inspector-type-lock" : undefined}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -296,8 +309,8 @@ function FieldEditor({
           </SelectContent>
         </Select>
         {typeLockedByUsage ? (
-          <FieldDescription>
-            Locked because a condition or requirement depends on one of the
+          <FieldDescription id="inspector-type-lock">
+            Locked because a condition, route or requirement uses one of the
             dropdown options.
           </FieldDescription>
         ) : null}
@@ -357,7 +370,7 @@ function FieldEditor({
 
       {field.type === "select" ? (
         <DropdownOptionsEditor
-          key={`${field.key}-${index}`}
+          key={fieldId ?? index}
           field={field}
           usageFor={optionUsageFor}
           onUpdate={onUpdate}

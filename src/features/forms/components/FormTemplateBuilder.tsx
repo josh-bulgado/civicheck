@@ -381,7 +381,7 @@ export function FormTemplateBuilder({
     );
   }
 
-  function addField(step: FormStep) {
+  function addField(step: FormStep, opener: HTMLElement | null) {
     const fields = fieldsInStep(definition, step);
     const id = mintId(step);
     idsByStep.current[step] = [...rowIdsFor(step, fields.length), id];
@@ -396,7 +396,9 @@ export function FormTemplateBuilder({
         },
       ]),
     );
-    openerRef.current = null;
+    // Closing returns focus to the Add Field button; Safari does not focus a
+    // button on click, so the library would otherwise drop focus to <body>.
+    openerRef.current = opener;
     setSelected({ step, id });
   }
 
@@ -541,7 +543,7 @@ export function FormTemplateBuilder({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => addField(step.value)}
+                  onClick={(event) => addField(step.value, event.currentTarget)}
                 >
                   <Plus data-icon="inline-start" />
                   Add Field
@@ -579,6 +581,7 @@ export function FormTemplateBuilder({
         open={selectedField !== null}
         onOpenChange={handleInspectorOpenChange}
         field={selectedField}
+        fieldId={selected?.id}
         fields={selectedFields}
         index={selectedIndex}
         fieldTypes={fieldTypes}
