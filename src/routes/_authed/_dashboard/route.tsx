@@ -20,6 +20,11 @@ import { getWorkspaceDetails } from "~/components/sidebar-01/workspace";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { getUnreadNotificationSummaryFn } from "~/features/notifications/notifications.queries";
 import { invalidateNotificationPreview } from "~/features/notifications/notification-preview-cache";
+import {
+  announceNotification,
+  isNewArrival,
+} from "~/features/notifications/new-notification-toasts";
+import { NewNotificationToasts } from "~/features/notifications/components/NewNotificationToasts";
 import { invalidatePaletteDefaults } from "~/features/search/palette-defaults";
 import { getNotificationAudience } from "~/features/notifications/notification-audience";
 import { WelcomeTutorial } from "~/features/onboarding/components/WelcomeTutorial";
@@ -89,6 +94,10 @@ function DashboardLayout() {
     // list to keep honest. A request moving on always posts a notification, so
     // this one table is enough to know when either has gone stale.
     onChange: audience === "applicant" ? refreshPortalCaches : undefined,
+    // A notification that has just arrived also pops up at the bottom right.
+    onRow: (event) => {
+      if (user && isNewArrival(event)) announceNotification(user.id, String(event.row.id));
+    },
   });
 
   return (
@@ -173,6 +182,7 @@ function DashboardLayout() {
         </SidebarInset>
       )}
       {isCitizen && <CitizenBottomBar unreadNotifications={unreadNotifications} />}
+      {user && audience && <NewNotificationToasts userId={user.id} lifted={isCitizen} />}
       <CommandPalette userId={user?.id} />
       {/* Lives here rather than on the dashboard page so a control anywhere in
           this layout can open it with `openWelcomeTutorial()`. */}

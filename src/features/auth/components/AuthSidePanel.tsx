@@ -1,5 +1,5 @@
 import { CheckIcon } from "lucide-react";
-import { enterDelay, staggerStyle } from "~/components/motion/stagger";
+import { enterDelay } from "~/components/motion/stagger";
 
 /** The four points of the workflow an applicant actually watches for. */
 const trackedSteps = [
@@ -62,23 +62,18 @@ export function AuthProgressPanel() {
         <div className="docket-group">
           <div className="docket-sheet" data-layer="1" />
           <div className="docket-sheet" data-layer="2" />
-          <div
-            className="docket-sheet civic-enter-scale"
-            data-layer="3"
-            style={enterDelay(140)}
-          >
+          <div className="docket-sheet" data-layer="3">
             <div className="docket-track-head">
               Request status
               <span className="docket-pill">On track</span>
             </div>
 
-            <div className="civic-stagger contents">
-              {trackedSteps.map((step, index) => (
+            <div className="contents">
+              {trackedSteps.map((step) => (
                 <div
                   key={step.label}
                   className="docket-step"
                   data-state={step.state}
-                  style={staggerStyle(index, 340)}
                 >
                   <span className="docket-dot">
                     {step.state === "done" ? (
@@ -96,7 +91,7 @@ export function AuthProgressPanel() {
         </div>
       </div>
 
-      <div className="docket-caption civic-enter-sm" style={enterDelay(420)}>
+      <div className="docket-caption">
         <h2>One account, every CCRO request.</h2>
         File online, follow each step, and visit once to pay and claim.
       </div>

@@ -2,7 +2,7 @@ import { useRouter } from "@tanstack/react-router";
 
 import { useMutation } from "~/hooks/useMutation";
 import { verifySignupOtpFn } from "../auth.mutations";
-import { clearCurrentUser } from "../current-user";
+import { startFreshSession } from "../start-fresh-session";
 import { toast } from "sonner";
 
 export function useVerifySignupOtp() {
@@ -16,7 +16,7 @@ export function useVerifySignupOtp() {
         return;
       }
 
-      clearCurrentUser();
+      startFreshSession(router);
       await router.invalidate();
       await router.navigate({ to: "/dashboard" });
     },

@@ -84,7 +84,7 @@ export function OtpCodeForm({
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (isVerifying || code.length < MIN_CODE_LENGTH) return;
+    if (isVerifying || isResending || code.length < MIN_CODE_LENGTH) return;
     setSubmittedCode(code);
     onVerify(code);
   }
@@ -146,7 +146,7 @@ export function OtpCodeForm({
           !isVerifying &&
             "disabled:bg-border-light disabled:text-disabled disabled:opacity-100",
         )}
-        disabled={isVerifying || code.length < MIN_CODE_LENGTH}
+        disabled={isVerifying || isResending || code.length < MIN_CODE_LENGTH}
       >
         {isVerifying ? (
           <>

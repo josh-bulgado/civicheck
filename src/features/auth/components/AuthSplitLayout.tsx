@@ -46,11 +46,10 @@ export function AuthSplitLayout({
         </div>
       </div>
 
-      {/* Proportional rather than fixed: the panel holds a little under half the
-          screen at every width, which is the balance the form column is sized
-          against. Capped so it stops growing on very wide monitors. */}
+      {/* Keep the panel within the viewport while the longer form scrolls.
+          Its width stays proportional and is capped on very wide monitors. */}
       <div
-        className="civic-enter-fade hidden shrink-0 lg:block lg:w-[42%] lg:max-w-190 xl:w-[45%]"
+        className="civic-enter-fade hidden shrink-0 lg:sticky lg:top-0 lg:block lg:h-dvh lg:w-[42%] lg:max-w-190 lg:self-start xl:w-[45%]"
         style={enterDelay(120)}
       >
         {panel}

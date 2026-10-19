@@ -67,6 +67,9 @@
   --font-display: "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-heading: "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  /* Geist is already bundled (imported above); this lets a single card opt in
+     without changing the app font. */
+  --font-geist: "Geist Variable", "Helvetica Neue", Helvetica, Arial, sans-serif;
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -635,6 +638,30 @@
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+/* The pop-up for a new notification: rises out of its corner, and on dismissal
+   settles back down as it fades. Ends on `transform: none` for the reason above. */
+@keyframes civic-toast-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes civic-toast-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0) scale(0.97);
   }
 }
 
@@ -1420,6 +1447,14 @@
     animation-delay: var(--enter-delay, 0ms);
   }
 
+  .civic-toast-in {
+    animation: civic-toast-in var(--duration-slow) var(--ease-civic-emphasized) both;
+  }
+
+  .civic-toast-out {
+    animation: civic-toast-out 150ms var(--ease-civic) both;
+  }
+
   /* Real content taking the place of its skeleton: a short fade, no movement,
      so the swap reads as the same page filling in. */
   .civic-content-in {
@@ -1520,6 +1555,76 @@
 
   .civic-lift:active {
     transform: translate3d(0, -1px, 0);
+  }
+
+  /* The dashboard's lead card: the hero gradient with a picture over it (set
+     per state through `--banner` and its measurements, see
+     features/dashboard/banners.ts). Tablet width and up only (a phone's card is
+     too narrow for it), and light theme only: the dark gradient carries light
+     text.
+
+     The picture is sized by the card's width (a share of it, `--banner-scale`),
+     so its art keeps the same proportions however tall the card grows; sizing
+     by height made it swell behind the headline. It sits against the right
+     edge, and its own margin (a pale frame with rounded corners) falls outside
+     the card on the right and is masked out on the other sides. Where the
+     picture does not reach (left, and above and below on a tall card) there is
+     a plain fill in the picture's own edge colours, and the picture fades into
+     that; a card shorter than the picture crops it evenly. */
+  .portal-banner {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background-image: var(--portal-hero);
+  }
+
+  @media (min-width: 48rem) {
+    .portal-banner {
+      background-image: linear-gradient(to bottom, var(--banner-top), var(--banner-bottom));
+    }
+
+    .portal-banner::before {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      top: 50%;
+      left: calc(100% - var(--banner-shift) * 100%);
+      width: calc(100% / (1 - 2 * var(--banner-mx)) * var(--banner-scale));
+      aspect-ratio: var(--banner-ratio);
+      /* Against the card's right edge (or `--banner-shift` in from it), with
+         the picture's own margin past it. */
+      transform: translate(calc(-100% * (1 - var(--banner-mx))), -50%);
+      background-image: var(--banner);
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: cover;
+      filter: var(--banner-filter);
+      opacity: var(--banner-opacity, 1);
+      mask-image:
+        linear-gradient(
+          to bottom,
+          transparent calc(var(--banner-my) * 100%),
+          #000 calc(var(--banner-my) * 100% + 8%),
+          #000 calc(100% - var(--banner-my) * 100% - 8%),
+          transparent calc(100% - var(--banner-my) * 100%)
+        ),
+        linear-gradient(
+          to right,
+          transparent calc(var(--banner-mx) * 100%),
+          #000 calc(var(--banner-mx) * 100% + 14%),
+          #000 calc(100% - var(--banner-mx) * 100% - var(--banner-fade-right)),
+          transparent calc(100% - var(--banner-mx) * 100%)
+        );
+      mask-composite: intersect;
+    }
+  }
+
+  .dark .portal-banner {
+    background-image: var(--portal-hero);
+  }
+
+  .dark .portal-banner::before {
+    display: none;
   }
 
   /* Buttons and other press targets acknowledge the press itself. */
@@ -1623,6 +1728,8 @@
   .civic-enter-fade,
   .civic-enter-scale,
   .civic-enter-left,
+  .civic-toast-in,
+  .civic-toast-out,
   .civic-content-in,
   .civic-upload-land,
   .civic-upload-check,

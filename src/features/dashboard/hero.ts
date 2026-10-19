@@ -7,6 +7,7 @@ import {
   type RequestStatus,
   type WorkflowStage,
 } from "~/features/requests/request-workflow";
+import { formatServiceCode } from "~/features/services/service-utils";
 import { formatShortDate } from "~/lib/date";
 import type { CitizenDashboardRequest } from "./types";
 
@@ -51,13 +52,40 @@ export function heroHeadlineWord(status: string): string {
 }
 
 /**
- * The tail of "Your {service} … ": the verb, then the words set in a heavier
- * weight. An incomplete request says what is wanted, not just that it is
- * incomplete.
+ * The tail of "Your {service} … ": the verb, then the words set in blue. An
+ * incomplete request says what is wanted, not just that it is incomplete. A
+ * submitted or processing request does not use this: see `heroLead`.
  */
-export function heroHeadline(status: string): { verb: "is" | "needs"; emphasis: string } {
+export function heroHeadline(status: string): {
+  verb: "is" | "needs";
+  emphasis: string;
+} {
   if (status === "incomplete") return { verb: "needs", emphasis: "one more document" };
   return { verb: "is", emphasis: heroHeadlineWord(status) };
+}
+
+/**
+ * For the states that say where the request stands outright, in a short plain
+ * headline, and name the document on the line under it, in place of "Your
+ * {service} is …". Null for the rest. `serviceLabel` is already cut to length.
+ */
+export function heroLead(
+  status: string,
+  serviceLabel: string,
+): { headline: string; line: string } | null {
+  if (status === "submitted") {
+    return {
+      headline: "Your request has been submitted",
+      line: `${serviceLabel} application is in review.`,
+    };
+  }
+  if (status === "processing") {
+    return {
+      headline: "Your request is being processed",
+      line: `${serviceLabel} application is being prepared.`,
+    };
+  }
+  return null;
 }
 
 /** The hero's button: what the applicant can do about it right here. */
@@ -67,21 +95,19 @@ export function heroActionLabel(status: string): string {
 
 /**
  * What the headline calls the service: the short name when an admin set one,
- * else the display name ("Marriage License"), else the registry name. It reads mid-sentence, so
- * every Title Case word drops to lowercase, hyphenated and slashed parts
- * included; acronyms such as "BRAP" or "PSA" stay as typed.
+ * else the display name ("Marriage License"), else the registry name. It keeps
+ * its own capitals ("Your On-Time Registration of Certificate of Live Birth
+ * is ready"): it is a document's name, not a common noun. A bare request type
+ * is a code ("MARRIAGE_LICENSE"), so that one is humanized.
  */
 export function heroServiceLabel(request: CitizenDashboardRequest): string {
   const service = request.services_registry;
-  const name: string =
+  return (
     request.short_name ||
     service?.display_name ||
     service?.name ||
-    request.request_type ||
-    "request";
-
-  return name.replace(/[A-Za-z]+/g, (word) =>
-    /^[A-Z][a-z]+$/.test(word) ? word.toLowerCase() : word,
+    (request.request_type ? formatServiceCode(request.request_type) : "") ||
+    "request"
   );
 }
 
@@ -146,6 +172,24 @@ function trackerTag(request: CitizenDashboardRequest): TrackerDetails["tag"] {
     return { label: "Pay at cashier", tone: "info" };
   }
   return null;
+}
+
+/**
+ * The line under each stage's label on the hero's tracker. A just submitted
+ * request says what happened; a later one gives the date each finished stage
+ * was completed, and the note for the stage it is in.
+ */
+export function leadCaptions(
+  request: CitizenDashboardRequest,
+  details: TrackerDetails = trackerDetails(request),
+): Partial<Record<WorkflowStage, string>> {
+  if (request.status === "submitted") return { 1: "Application received" };
+
+  const { dates, note } = details;
+  const captions: Partial<Record<WorkflowStage, string>> = { ...dates };
+  const stage = stageOf(request.status);
+  if (stage && note) captions[stage] = note;
+  return captions;
 }
 
 export function trackerDetails(request: CitizenDashboardRequest): TrackerDetails {

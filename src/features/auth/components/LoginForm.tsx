@@ -10,7 +10,6 @@ import { Controller, useForm } from "react-hook-form";
 import { staggerStyle } from "~/components/motion/stagger";
 import { useLogin } from "~/features/auth/hooks/useLogin";
 import { useOAuthLogin } from "~/features/auth/hooks/useOAuthLogin";
-import { useResendSignupOtp } from "~/features/auth/hooks/useResendSignupOtp";
 import { setPendingVerification } from "~/features/auth/pending-verification";
 import {
   Field,
@@ -48,7 +47,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 const INVALID_CREDENTIALS = "Wrong Email and Password";
 
-/** Keeps the applicant on this page with a readable reason for every failure. */
+/** Only actual sign-in failures belong on this page; verification has its own step. */
 function describeSignInError(
   result: { error?: boolean; message?: string } | undefined,
   requestFailed: boolean,
@@ -65,7 +64,7 @@ function describeSignInError(
     return INVALID_CREDENTIALS;
   }
   if (/email not confirmed/i.test(message)) {
-    return "Please confirm your email address first — check your inbox for the verification code.";
+    return null;
   }
   return message;
 }
@@ -84,7 +83,6 @@ export function LoginForm({
   const navigate = useNavigate();
   const loginMutation = useLogin(redirectTo);
   const oauthLoginMutation = useOAuthLogin();
-  const resendOtpMutation = useResendSignupOtp();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -99,22 +97,19 @@ export function LoginForm({
     const result = await loginMutation.mutate({
       data: { ...data, keepSignedIn },
     });
-    // The sign-in failed only because the account was never confirmed — the
-    // credentials themselves were correct, so this skips straight to a fresh
-    // code instead of sending the applicant back to their inbox to dig up (or
-    // request again) whatever the signup flow originally sent. The page only
-    // opens once that code is actually on its way.
+    // Open code entry as soon as the credentials identify an unconfirmed
+    // account. The verification page sends the code without delaying navigation.
     if (result?.error && /email not confirmed/i.test(result.message ?? "")) {
-      const resent = await resendOtpMutation.mutate({ data });
-      if (resent && !resent.error) {
-        setPendingVerification({ email: data.email, password: data.password });
-        await navigate({ to: "/verify-email" });
-      }
+      setPendingVerification({
+        email: data.email,
+        password: data.password,
+        sendCodeOnArrival: true,
+      });
+      await navigate({ to: "/verify-email" });
     }
   }
 
-  const isSigningIn =
-    loginMutation.status === "pending" || resendOtpMutation.status === "pending";
+  const isSigningIn = form.formState.isSubmitting;
 
   const signInError = describeSignInError(
     loginMutation.data,

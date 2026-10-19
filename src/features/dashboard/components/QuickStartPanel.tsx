@@ -1,7 +1,9 @@
+import { ArrowRight } from "lucide-react";
 import { QuietLink } from "~/components/quiet-link";
 import { pillButton } from "~/components/portal/styles";
 import { cn } from "~/lib/utils";
 import { openWelcomeTutorial } from "~/features/onboarding/components/WelcomeTutorial";
+import { bannerStyle } from "../banners";
 import { CertificateTiles } from "./CertificateTiles";
 
 interface QuickStartPanelProps {
@@ -23,23 +25,35 @@ export function QuickStartPanel({ prominent = false }: QuickStartPanelProps) {
   if (prominent) {
     return (
       <>
-        <section className="flex flex-col items-start gap-6 rounded-hero bg-(image:--portal-hero) px-5 py-7 md:flex-row md:items-center md:gap-8 md:px-10 md:py-9">
+        <section
+          style={bannerStyle("none")}
+          className="portal-banner font-geist flex flex-col items-start gap-6 rounded-hero px-5 py-7 md:flex-row md:items-center md:gap-8 md:px-10 md:py-9"
+        >
           <div className="min-w-0 flex-1">
-            <h2 className="text-[30px] leading-[1.08] font-normal tracking-[-0.03em] text-foreground md:text-[48px]">
-              What do you need <em className="font-medium">today</em>?
+            <h2 className="text-[28px] leading-[1.15] font-bold tracking-normal text-foreground md:text-[42px]">
+              What do you need today?
             </h2>
-            <p className="mt-3.5 text-[17px] leading-[normal] text-body-strong md:text-[19px]">
+            <p className="mt-3.5 text-[17px] leading-[normal] text-body-2 md:text-[19px]">
               Pick a document. You'll see what to bring first.
             </p>
-            <button type="button" onClick={openWelcomeTutorial} className={cn(HOW_IT_WORKS, "mt-4")}>
+            <button
+              type="button"
+              onClick={openWelcomeTutorial}
+              className={cn(
+                HOW_IT_WORKS,
+                "civic-nudge mt-4 inline-flex items-center gap-1.5 text-[17px] font-bold md:text-lg",
+              )}
+            >
               How it works
+              <ArrowRight className="size-4.5" aria-hidden="true" />
             </button>
           </div>
           <QuietLink
             to="/services"
-            className="civic-press inline-flex h-13.5 max-md:w-full shrink-0 items-center justify-center rounded-full bg-card/78 px-7.5 text-[17px] font-semibold whitespace-nowrap text-foreground hover:bg-card md:h-13"
+            className="civic-press civic-nudge inline-flex h-13.5 max-md:w-full shrink-0 items-center justify-center gap-2.5 rounded-full bg-card/78 px-7.5 text-[17px] font-semibold whitespace-nowrap text-foreground hover:bg-card md:h-13"
           >
             See all services
+            <ArrowRight className="size-5" aria-hidden="true" />
           </QuietLink>
         </section>
         <CertificateTiles />

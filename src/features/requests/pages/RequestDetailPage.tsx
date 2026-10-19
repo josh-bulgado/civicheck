@@ -48,8 +48,8 @@ import {
 import { PaymentVerificationPanel } from "~/features/requests/components/PaymentVerificationPanel";
 import {
   REASON_REQUIRED,
-  TRANSITION_LABELS,
   getStatusDetails,
+  getTransitionLabel,
   isPaymentSettled,
   nextStatuses,
   type RequestStatus,
@@ -175,7 +175,11 @@ export default function RequestDetailPage({
       toast.error(res.message);
       return false;
     }
-    toast.success("Decision reopened — the document is pending review again.");
+    toast.success(
+      res.returnedToValidation
+        ? "Decision reopened — the request is back under validation."
+        : "Decision reopened — the document is pending review again.",
+    );
     onUpdated();
     return true;
   }
@@ -320,7 +324,7 @@ export default function RequestDetailPage({
                                 : () => handleTransition(next)
                             }
                           >
-                            {TRANSITION_LABELS[next]}
+                            {getTransitionLabel(request.status, next)}
                           </Button>
                         );
                       })}

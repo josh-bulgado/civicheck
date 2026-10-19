@@ -14,10 +14,7 @@ export const Route = createFileRoute("/verify-email")({
     if (!getPendingVerification()) {
       throw redirect({
         to: "/login",
-        search: {
-          error:
-            "Sign in to continue confirming your email — we'll send you a new code.",
-        },
+        search: {},
       });
     }
   },

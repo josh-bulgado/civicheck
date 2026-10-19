@@ -1,13 +1,16 @@
 import { QuietLink } from "~/components/quiet-link";
 import { cn } from "~/lib/utils";
+import { bannerStyle } from "../banners";
 import {
   heroActionLabel,
   heroHeadline,
+  heroLead,
   heroServiceLabel,
+  leadCaptions,
   trackerDetails,
 } from "../hero";
 import type { CitizenDashboardRequest } from "../types";
-import { StageTracker } from "./StageTracker";
+import { LeadTracker } from "./LeadTracker";
 
 interface HeroRequestCardProps {
   request: CitizenDashboardRequest;
@@ -37,42 +40,70 @@ export function HeroRequestCard({ request, compact = false }: HeroRequestCardPro
   // "needs one more document" is the longest ending, so it takes the smaller
   // size to stay on as few lines as it can.
   const long = request.status === "incomplete";
+  // Submitted and processing: the card says where the request stands outright
+  // and names the document under it, rather than describing the document's
+  // state.
+  const lead = heroLead(request.status, limitLabel(label));
+  const trackerClassName = cn(
+    "mt-5.5",
+    compact
+      ? "md:mt-[clamp(0.875rem,2.6vh,2rem)]"
+      : "md:mt-[clamp(1rem,3.6vh,2.75rem)]",
+  );
 
   return (
     <section
       aria-labelledby="hero-headline"
-      // On desktop the card is what the page does not need for anything else:
-      // it grows to the bottom of the screen, and what is in it (headline,
-      // button, tracker) scales up with the height and sits in the middle.
+      style={bannerStyle(request.status)}
+      // On desktop the card is as tall as what is in it (headline, button,
+      // tracker, which scale with the window's height) plus its padding. It
+      // does not stretch to the bottom of the screen: that left the content
+      // floating in empty blue.
       className={cn(
-        "flex flex-col rounded-[28px] bg-(image:--portal-hero) p-5.5 md:flex-1 md:justify-center md:rounded-hero md:px-12",
+        "portal-banner font-geist flex flex-col rounded-[28px] p-5.5 md:rounded-hero md:px-12",
         compact
-          ? "md:py-[clamp(1.25rem,2.6vh,2.25rem)]"
-          : "md:py-[clamp(1.5rem,3.4vh,3rem)]",
+          ? "md:py-[clamp(1.5rem,3.4vh,2.5rem)]"
+          : "md:py-[clamp(1.75rem,4vh,3rem)]",
       )}
     >
-      {/* Size first, line-height after: tailwind-merge drops a `leading-*`
+      {/* Bold at its natural letter spacing, the same as the "What do you need
+          today?" card. Bold runs wider, so the sizes sit about 15% under the
+          light ones they replaced: a long service name still wraps to two lines
+          and the dashboard stays on one screen.
+          Size first, line-height after: tailwind-merge drops a `leading-*`
           that comes before a `text-[…]` size. */}
       <h2
         id="hero-headline"
         className={cn(
           long
-            ? "text-[28px] md:text-[clamp(2.25rem,5.6vh,3.375rem)]"
-            : "text-[30px] md:text-[clamp(2.5rem,6.4vh,3.75rem)]",
-          "min-w-0 leading-[1.08] font-normal tracking-[-0.03em] text-foreground md:max-w-275",
+            ? "text-[26px] md:text-[clamp(1.875rem,4.8vh,2.875rem)]"
+            : "text-[28px] md:text-[clamp(2.125rem,5.4vh,3.25rem)]",
+          "min-w-0 leading-[1.15] font-bold tracking-normal text-foreground md:max-w-[min(var(--banner-text),68.75rem)]",
         )}
       >
-        {/* One run of text, so "is ready" follows the name on its last line
-            when there is room, instead of dropping under a name that already
-            wrapped. The state is nowrap, so when there is no room it moves
-            down as a unit and never splits. A registry name with no short name
-            can run to a sentence, so it is cut short rather than pushing the
-            state off the end. */}
-        Your {limitLabel(label)}{" "}
-        <span className="whitespace-nowrap">
-          {verb} <em className="font-medium">{emphasis}</em>
-        </span>
+        {lead ? (
+          lead.headline
+        ) : (
+          <>
+            {/* One run of text, so "is ready" follows the name on its last line
+                when there is room, instead of dropping under a name that
+                already wrapped. The state is nowrap, so when there is no room
+                it moves down as a unit and never splits. A registry name with
+                no short name can run to a sentence, so it is cut short rather
+                than pushing the state off the end. */}
+            Your {limitLabel(label)}{" "}
+            <span className="whitespace-nowrap">
+              {verb} <em className="text-primary not-italic">{emphasis}</em>
+            </span>
+          </>
+        )}
       </h2>
+
+      {lead ? (
+        <p className="mt-2 text-base leading-[1.35] text-body-2 md:mt-[clamp(0.375rem,1vh,0.75rem)] md:max-w-[min(var(--banner-text),68.75rem)] md:text-[clamp(1.0625rem,2.4vh,1.5rem)]">
+          {lead.line}
+        </p>
+      ) : null}
 
       {/* Under the sentence it answers, at its left edge. On a phone the
           tracker and its note come first and this closes the card. */}
@@ -84,19 +115,20 @@ export function HeroRequestCard({ request, compact = false }: HeroRequestCardPro
         {heroActionLabel(request.status)}
       </QuietLink>
 
-      <StageTracker
+      {/* The tracker ends 70% of the way across the card, short of the art at
+          the right edge. The art is sized by the card's width, so its parts
+          stay at the same share of it: this is "70% of the card" written
+          against the tracker's own width (the card less its 3rem of padding
+          each side). */}
+      <LeadTracker
         status={request.status}
-        details={details}
-        fluid
-        className={cn(
-          "mt-5.5",
-          compact
-            ? "md:mt-[clamp(0.875rem,2.6vh,2rem)]"
-            : "md:mt-[clamp(1rem,3.6vh,2.75rem)]",
-        )}
+        captions={leadCaptions(request, details)}
+        tag={details.tag}
+        className={cn(trackerClassName, "md:max-w-[calc(70%+1.2rem)]")}
       />
-      {/* The columns are too narrow for the note on a phone. */}
-      {details.note ? (
+      {/* The columns are too narrow for the note on a phone. A submitted or
+          processing request has said all this under its headline. */}
+      {details.note && !lead ? (
         <p className="mt-4.5 text-[15px] leading-[1.4] font-semibold text-portal-ink-2 md:hidden">
           {details.note}
         </p>

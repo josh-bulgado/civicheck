@@ -6,7 +6,7 @@ import { cn } from "~/lib/utils";
  * real content uses so the swap moves nothing.
  *
  * `prominent` is the applicant with no requests yet: the blue "what do you
- * need" card and four tall document tiles that fill the rest of the page.
+ * need" card and four document tiles with bounded artwork panels.
  * Otherwise it is the hero card with the slim tile row under it.
  */
 export function CitizenDashboardBodySkeleton({
@@ -23,13 +23,16 @@ export function CitizenDashboardBodySkeleton({
       </span>
       {prominent ? (
         <>
-          <Skeleton className="h-72 rounded-hero md:h-56" />
-          <div className="flex gap-3 overflow-hidden max-md:-mx-5 max-md:px-5 md:grid md:flex-1 md:auto-rows-[minmax(7rem,1fr)] md:grid-cols-2 md:gap-5 xl:auto-rows-[minmax(12.5rem,1fr)] xl:grid-cols-4">
+          <Skeleton className="h-72 shrink-0 rounded-hero md:h-60" />
+          <div className="flex shrink-0 gap-3 overflow-hidden max-md:-mx-5 max-md:px-5 md:grid md:grid-cols-2 md:gap-5 xl:grid-cols-4">
             {[0, 1, 2, 3].map((tile) => (
               <Skeleton
                 key={tile}
                 className="rounded-[28px] max-md:h-47.5 max-md:w-39.5 max-md:shrink-0 max-md:rounded-4xl"
-              />
+              >
+                <span className="hidden aspect-[6/5] max-h-72 w-full md:block" />
+                <span className="hidden h-32 md:block" />
+              </Skeleton>
             ))}
           </div>
         </>

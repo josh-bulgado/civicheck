@@ -25,6 +25,8 @@ export type PendingSignup = {
 export type PendingVerification = {
   email: string;
   password: string;
+  /** Sign-in opens code entry immediately, then requests a fresh code there. */
+  sendCodeOnArrival?: boolean;
   /** Set when the account was only just created. A resend re-runs this signup,
    * which is what mints a fresh code; without it the account already exists
    * and the resend goes through the sign-in credentials instead. */

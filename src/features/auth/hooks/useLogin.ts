@@ -2,7 +2,7 @@ import { useRouter } from "@tanstack/react-router";
 
 import { useMutation } from "~/hooks/useMutation";
 import { loginWithEmailFn } from "../auth.mutations";
-import { clearCurrentUser } from "../current-user";
+import { startFreshSession } from "../start-fresh-session";
 import { toast } from "sonner";
 
 export function useLogin(redirectTo?: string) {
@@ -12,7 +12,7 @@ export function useLogin(redirectTo?: string) {
     fn: loginWithEmailFn,
     onSuccess: async (ctx) => {
       if (!ctx.data?.error) {
-        clearCurrentUser();
+        startFreshSession(router);
         await router.invalidate();
         await router.navigate({ to: redirectTo || "/dashboard" });
         return;

@@ -4,6 +4,10 @@ import { Upload } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import {
+  prepareUploadFile,
+  uploadTypeOf,
+} from "~/features/apply/upload-image.utils";
+import {
   getMyAttachmentSignedUrlFn,
   resubmitOwnAttachmentFn,
 } from "~/features/requests/applicant-requests.mutations";
@@ -117,19 +121,21 @@ function AttachmentRow({
   }
 
   async function handleFile(file: File) {
-    if (!file.type || !ACCEPT.split(",").includes(file.type)) {
+    if (!ACCEPT.split(",").includes(uploadTypeOf(file))) {
       toast.error("Only JPG, PNG, or PDF files are accepted.");
-      return;
-    }
-    if (file.size > MAX_SIZE) {
-      toast.error("Files must be 10 MB or smaller.");
       return;
     }
 
     setSubmitting(true);
     try {
+      const preparedFile = await prepareUploadFile(file);
+      if (preparedFile.size > MAX_SIZE) {
+        toast.error("Files must be 10 MB or smaller.");
+        return;
+      }
+
       const formData = new FormData();
-      formData.set("file", file);
+      formData.set("file", preparedFile);
       formData.set("attachmentId", doc.id);
 
       const res = await resubmitOwnAttachmentFn({ data: formData });

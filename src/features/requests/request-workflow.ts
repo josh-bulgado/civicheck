@@ -48,13 +48,27 @@ export const ALLOWED_TRANSITIONS: Record<RequestStatus, RequestStatus[]> = {
   incomplete: ["under_validation", "rejected"],
   // No registrar sign-off step: whoever prepares the record marks it ready.
   // Rejection stays reachable here so an in-processing request isn't trapped.
-  processing: ["ready_for_release", "rejected"],
+  // Processing and release both assume every uploaded requirement is accepted,
+  // so reopening a document decision sends the request back to validation (done
+  // automatically by the attachment mutations; also offered as a manual
+  // "Return to validation"). See RETURNABLE_TO_VALIDATION.
+  processing: ["ready_for_release", "under_validation", "rejected"],
   // Payment is verified by the cashier before the document is handed over;
   // the released hop is guarded on payment_status in advanceRequestStatusFn.
-  ready_for_release: ["released"],
+  // A payment already verified stays verified if the request is sent back.
+  ready_for_release: ["released", "under_validation"],
   rejected: [],
   released: [],
 };
+
+/**
+ * Statuses that presuppose every uploaded requirement is accepted. A request in
+ * one of these goes back to validation when a document stops being accepted.
+ */
+export const RETURNABLE_TO_VALIDATION: RequestStatus[] = [
+  "processing",
+  "ready_for_release",
+];
 
 /** Statuses that end the request's life — nothing transitions out of these. */
 export const TERMINAL_STATUSES: RequestStatus[] = ["rejected", "released"];
@@ -89,6 +103,24 @@ export const TRANSITION_LABELS: Record<RequestStatus, string> = {
   ready_for_release: "Mark ready for release",
   released: "Mark released",
 };
+
+/**
+ * The button text for a specific hop. Most hops read the same wherever they
+ * start, but going back from processing or release is a return, not a first
+ * validation.
+ */
+export function getTransitionLabel(
+  from: string | null,
+  to: RequestStatus,
+): string {
+  if (
+    to === "under_validation" &&
+    RETURNABLE_TO_VALIDATION.includes(from as RequestStatus)
+  ) {
+    return "Return to validation";
+  }
+  return TRANSITION_LABELS[to];
+}
 
 /** Transitions that shouldn't be one click away — they need a reason. */
 export const REASON_REQUIRED: RequestStatus[] = ["incomplete", "rejected"];

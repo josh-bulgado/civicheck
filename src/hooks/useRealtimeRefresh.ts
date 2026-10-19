@@ -1,9 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
-import type { RealtimeChannel } from "@supabase/supabase-js";
+import type {
+  RealtimeChannel,
+  RealtimePostgresChangesPayload,
+} from "@supabase/supabase-js";
 import { getSupabaseBrowserClient } from "~/utils/supabase-browser";
 
 export type RealtimeStatus = "connecting" | "live" | "offline";
+
+/** One row change, as the channel delivered it. */
+export interface RealtimeRowEvent {
+  table: string;
+  eventType: "INSERT" | "UPDATE" | "DELETE";
+  /** The row as it now stands. Empty for a delete. */
+  row: Record<string, unknown>;
+}
 
 /** Collapses a burst of row changes into one refetch. */
 const REFRESH_DEBOUNCE_MS = 250;
@@ -37,6 +48,7 @@ export function useRealtimeRefresh({
   schema = "public",
   enabled = true,
   onChange,
+  onRow,
 }: {
   tables: string[];
   schema?: string;
@@ -47,6 +59,12 @@ export function useRealtimeRefresh({
    * fallback — a cache has its own expiry for that.
    */
   onChange?: () => void;
+  /**
+   * Same moment as `onChange`, but with the row itself, for a caller that needs
+   * to know *what* changed (a pop-up for a new notification) rather than only
+   * that something did.
+   */
+  onRow?: (event: RealtimeRowEvent) => void;
 }): RealtimeStatus {
   const router = useRouter();
   const [status, setStatus] = useState<RealtimeStatus>(
@@ -57,6 +75,8 @@ export function useRealtimeRefresh({
   routerRef.current = router;
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const onRowRef = useRef(onRow);
+  onRowRef.current = onRow;
   // Arrays are a fresh reference each render, so the effect keys off the names.
   const tableKey = tables.join(",");
 
@@ -82,8 +102,15 @@ export function useRealtimeRefresh({
       debounce = setTimeout(refreshNow, REFRESH_DEBOUNCE_MS);
     };
 
-    const handleChange = () => {
+    const handleChange = (
+      payload: RealtimePostgresChangesPayload<Record<string, unknown>>,
+    ) => {
       onChangeRef.current?.();
+      onRowRef.current?.({
+        table: payload.table,
+        eventType: payload.eventType,
+        row: payload.new,
+      });
       scheduleRefresh();
     };
 

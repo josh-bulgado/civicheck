@@ -10,7 +10,6 @@ import {
   FieldError,
   FieldLabel,
 } from "~/components/ui/field";
-import { staggerStyle } from "~/components/motion/stagger";
 import {
   InputGroup,
   InputGroupAddon,
@@ -66,6 +65,17 @@ const formSchema = signupFieldsSchema
 
 type FormValues = z.infer<typeof formSchema>;
 
+/** Empty fields should not leave blank validation rows in the form. */
+function SignupFieldError({
+  error,
+}: {
+  error?: { message?: string };
+}) {
+  return (
+    <FieldError errors={[error]} className="text-[13px] leading-5" />
+  );
+}
+
 const RegisterForm = () => {
   const navigate = useNavigate();
   const signupMutation = useSignUp();
@@ -120,12 +130,15 @@ const RegisterForm = () => {
   }
 
   return (
-    <AuthSplitLayout panel={<AuthProgressPanel />} className="max-w-85">
-      <div className="flex flex-col gap-6.5">
+    <AuthSplitLayout
+      panel={<AuthProgressPanel />}
+      className="max-w-85 animate-none justify-start py-6"
+    >
+      <div className="flex flex-col gap-5">
         <AuthFormHeading title="Create an account" />
 
         {signupMutation.data?.error && (
-          <Alert variant="destructive" className="civic-enter-sm">
+          <Alert variant="destructive">
             <AlertCircleIcon />
             <AlertTitle>Account not created</AlertTitle>
             <AlertDescription>{signupMutation.data.message}</AlertDescription>
@@ -134,7 +147,7 @@ const RegisterForm = () => {
 
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className="civic-stagger flex flex-col gap-3.5"
+          className="flex flex-col gap-3.5"
         >
           <Controller
             control={form.control}
@@ -142,7 +155,6 @@ const RegisterForm = () => {
             render={({ field, fieldState }) => (
               <Field
                 data-invalid={fieldState.invalid}
-                style={staggerStyle(0)}
                 className="gap-1.5"
               >
                 <FieldLabel htmlFor="firstName" className={authLabelClass}>
@@ -158,15 +170,13 @@ const RegisterForm = () => {
                   autoComplete="given-name"
                   fieldSize="touch"
                 />
-                {fieldState.invalid && (
-                  <FieldError errors={[fieldState.error]} />
-                )}
+                <SignupFieldError error={fieldState.error} />
               </Field>
             )}
           />
 
           {/* Suffix modifies the surname, so it shares a row with it. */}
-          <div style={staggerStyle(1)} className="flex items-start gap-2.5">
+          <div className="flex items-start gap-2.5">
             <Controller
               control={form.control}
               name="lastName"
@@ -186,9 +196,7 @@ const RegisterForm = () => {
                     aria-invalid={fieldState.invalid}
                     autoComplete="family-name"
                   />
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
-                  )}
+                  <SignupFieldError error={fieldState.error} />
                 </Field>
               )}
             />
@@ -233,7 +241,6 @@ const RegisterForm = () => {
               the database can tell "has none" from "left empty". */}
           <Field
             data-invalid={!!form.formState.errors.middleName}
-            style={staggerStyle(2)}
             className="gap-1.5"
           >
             <Controller
@@ -254,9 +261,7 @@ const RegisterForm = () => {
                     aria-invalid={fieldState.invalid}
                     autoComplete="additional-name"
                   />
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
-                  )}
+                  <SignupFieldError error={fieldState.error} />
                 </>
               )}
             />
@@ -293,7 +298,6 @@ const RegisterForm = () => {
             render={({ field, fieldState }) => (
               <Field
                 data-invalid={fieldState.invalid}
-                style={staggerStyle(3)}
                 className="gap-1.5"
               >
                 <FieldLabel htmlFor="email" className={authLabelClass}>
@@ -312,9 +316,7 @@ const RegisterForm = () => {
                     autoComplete="email"
                   />
                 </InputGroup>
-                {fieldState.invalid && (
-                  <FieldError errors={[fieldState.error]} />
-                )}
+                <SignupFieldError error={fieldState.error} />
               </Field>
             )}
           />
@@ -325,7 +327,6 @@ const RegisterForm = () => {
             render={({ field, fieldState }) => (
               <Field
                 data-invalid={fieldState.invalid}
-                style={staggerStyle(4)}
                 className="gap-1.5"
               >
                 <FieldLabel htmlFor="password" className={authLabelClass}>
@@ -349,12 +350,18 @@ const RegisterForm = () => {
                     onToggle={() => setShowPassword(!showPassword)}
                   />
                 </InputGroup>
-                <FieldDescription id="password-help" className="text-[13px]">
-                  At least 8 characters, including one number.
-                </FieldDescription>
-                {fieldState.invalid && (
-                  <FieldError errors={[fieldState.error]} />
-                )}
+                <div id="password-help">
+                  {fieldState.invalid ? (
+                    <FieldError
+                      errors={[fieldState.error]}
+                      className="text-[13px] leading-5"
+                    />
+                  ) : (
+                    <FieldDescription className="text-[13px] leading-5">
+                      At least 8 characters, including one number.
+                    </FieldDescription>
+                  )}
+                </div>
               </Field>
             )}
           />
@@ -365,7 +372,6 @@ const RegisterForm = () => {
             render={({ field, fieldState }) => (
               <Field
                 data-invalid={fieldState.invalid}
-                style={staggerStyle(5)}
                 className="gap-1.5 pt-1 pb-1.5"
               >
                 <Field orientation="horizontal">
@@ -395,14 +401,12 @@ const RegisterForm = () => {
                     .
                   </FieldLabel>
                 </Field>
-                {fieldState.invalid && (
-                  <FieldError errors={[fieldState.error]} />
-                )}
+                <SignupFieldError error={fieldState.error} />
               </Field>
             )}
           />
 
-          <div style={staggerStyle(6)} className="flex flex-col gap-3.5">
+          <div className="flex flex-col gap-3.5">
             <Button
               type="submit"
               className={authButtonClass}

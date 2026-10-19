@@ -1,52 +1,51 @@
 import { useState, type CSSProperties } from "react";
+import { ArrowRight } from "lucide-react";
 import { QuietLink } from "~/components/quiet-link";
 import { staggerStyle } from "~/components/motion/stagger";
 import { cn } from "~/lib/utils";
 
-// The four documents residents mostly come for, as the certificate itself.
-// Colours are the category tints the services page uses: `from`/`to` is the
-// tile's own wash (also the fallback when there is no photo), `scrim` its
-// rgb triple for the fade that sits under the label.
+// The four things residents mostly come for. Each tile is its illustration over
+// a tint, with the name and one line about it underneath. `from`/`to` is the
+// tint behind the illustration (also what shows if the file is missing);
+// `fromDark`/`toDark` is the same tint in dark mode. They are handed to the
+// `tile-wash` class as CSS variables because inline style cannot switch on
+// `.dark`.
 const TILES = [
   {
     label: "Birth Certificate",
-    photo: "/services/cert-birth.webp",
-    from: "#dbe7fa",
-    to: "#bfd3f2",
-    scrim: "191 211 242",
+    blurb: "Register a new birth, on time or late.",
+    photo: "/services/cert-birth-clean.webp",
+    from: "#e6effc",
+    to: "#d3e2f8",
     fromDark: "#1c2b45",
     toDark: "#172338",
-    scrimDark: "23 35 56",
   },
   {
     label: "Marriage Certificate",
-    photo: "/services/cert-marriage.webp",
-    from: "#e9e6fa",
-    to: "#d4cff2",
-    scrim: "212 207 242",
-    fromDark: "#261f3d",
-    toDark: "#1f1a33",
-    scrimDark: "31 26 51",
+    blurb: "Register a marriage, on time or late.",
+    photo: "/services/cert-marriage-clean.webp",
+    from: "#fdf1f2",
+    to: "#fadde1",
+    fromDark: "#3a2230",
+    toDark: "#2e1a26",
   },
   {
     label: "Death Certificate",
-    photo: "/services/cert-death.webp",
-    from: "#e6ebf4",
-    to: "#cfd8e8",
-    scrim: "207 216 232",
-    fromDark: "#23272e",
-    toDark: "#1c2026",
-    scrimDark: "28 32 38",
+    blurb: "Register a death, on time or late.",
+    photo: "/services/cert-death-clean.webp",
+    from: "#efecfa",
+    to: "#ddd8f4",
+    fromDark: "#27233d",
+    toDark: "#201d33",
   },
   {
     label: "Marriage License",
-    photo: "/services/cert-license.webp",
-    from: "#dcf0e5",
-    to: "#bfe3cf",
-    scrim: "191 227 207",
+    blurb: "Apply for a marriage license at the CCRO.",
+    photo: "/services/cert-license-clean.webp",
+    from: "#e8f6ee",
+    to: "#d2eddc",
     fromDark: "#14291f",
     toDark: "#10221a",
-    scrimDark: "16 34 26",
   },
 ] as const;
 
@@ -67,19 +66,19 @@ function Photo({ src }: { src: string }) {
         missingPhotos.add(src);
         setMissing(true);
       }}
-      className="absolute inset-0 size-full object-cover object-top transition-transform duration-300 ease-(--ease-civic) group-hover/tile:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover/tile:scale-100"
+      className="absolute inset-0 size-full object-contain transition-transform duration-300 ease-(--ease-civic) group-hover/tile:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover/tile:scale-100"
     />
   );
 }
 
 /**
- * Four tiles, each the certificate's own photo with its name across the foot.
- * Every tile opens the service catalogue.
+ * Four tiles, each the illustration on a tint with its name and a line about it
+ * underneath. Every tile opens the service catalogue.
  *
  * Two sizes. `strip` is for an applicant who already has a request: starting
- * another is not what they came for, so it is one slim row and the page
- * belongs to the tracker. Without it the tiles are the page, and fill whatever
- * height is left.
+ * another is not what they came for, so it is one slim row (a small
+ * illustration beside the name) and the page belongs to the tracker. Without it
+ * the tiles use bounded artwork panels so taller screens do not enlarge them.
  */
 export function CertificateTiles({
   strip = false,
@@ -98,7 +97,7 @@ export function CertificateTiles({
         "civic-stagger max-md:-mx-5 max-md:flex max-md:snap-x max-md:gap-3 max-md:overflow-x-auto max-md:px-5 max-md:pb-1 max-md:[scrollbar-width:none] md:grid md:grid-cols-2",
         strip
           ? "auto-rows-[5rem] gap-3 md:auto-rows-[6rem] md:grid-cols-4 md:gap-4"
-          : "flex-1 auto-rows-[minmax(7rem,1fr)] gap-4 max-md:flex-none md:gap-5 xl:auto-rows-[minmax(12.5rem,1fr)] xl:grid-cols-4",
+          : "shrink-0 gap-4 md:gap-5 xl:grid-cols-4",
         className,
       )}
     >
@@ -113,33 +112,61 @@ export function CertificateTiles({
               "--tile-to": tile.to,
               "--tile-from-dark": tile.fromDark,
               "--tile-to-dark": tile.toDark,
-              "--tile-scrim": tile.scrim,
-              "--tile-scrim-dark": tile.scrimDark,
             } as CSSProperties
           }
           className={cn(
-            "tile-wash group/tile relative flex flex-col justify-end overflow-hidden text-foreground max-md:h-47.5 max-md:w-39.5 max-md:shrink-0 max-md:snap-start max-md:rounded-4xl shadow-[0_1px_2px_rgba(15,27,45,0.05)] transition-[transform,box-shadow] duration-200 ease-(--ease-civic) motion-reduce:transition-none motion-reduce:hover:translate-y-0",
+            "group/tile relative flex flex-col overflow-hidden bg-card text-foreground max-md:h-47.5 max-md:w-39.5 max-md:shrink-0 max-md:snap-start max-md:rounded-4xl shadow-[0_1px_2px_rgba(15,27,45,0.05)] transition-[transform,box-shadow] duration-200 ease-(--ease-civic) motion-reduce:transition-none motion-reduce:hover:translate-y-0",
             strip
-              ? "rounded-4xl hover:-translate-y-0.75 hover:shadow-[0_12px_28px_rgba(11,77,162,0.18)]"
+              ? "rounded-4xl md:flex-row md:items-center hover:-translate-y-0.75 hover:shadow-[0_12px_28px_rgba(11,77,162,0.18)]"
               : "rounded-[28px] hover:-translate-y-1.25 hover:shadow-[0_20px_44px_rgba(11,77,162,0.2)]",
           )}
         >
-          <Photo src={tile.photo} />
-          {/* Tint only on the lower part, so most of the certificate stays
-              readable and the label always has something to sit on. */}
           <span
             aria-hidden="true"
-            className="tile-scrim pointer-events-none absolute inset-0"
-          />
-          <span
             className={cn(
-              "relative leading-[1.2] font-semibold tracking-[-0.015em] max-md:px-3.5 max-md:pb-4 max-md:text-lg",
+              "tile-wash relative min-h-24 flex-1 overflow-hidden",
               strip
-                ? "px-4 pb-3 text-base md:text-[17px]"
-                : "px-5 pt-4 pb-4.5 text-xl xl:px-6 xl:pb-5 xl:text-[24px]",
+                ? "md:h-full md:min-h-0 md:w-24 md:flex-none"
+                : "md:aspect-[6/5] md:max-h-72 md:w-full md:flex-none md:rounded-[24px]",
             )}
           >
-            {tile.label}
+            <Photo src={tile.photo} />
+          </span>
+          <span
+            className={cn(
+              "flex items-start justify-between gap-3 px-3.5 pt-3 pb-3.5",
+              strip
+                ? "md:flex-1 md:items-center md:p-0 md:pr-4 md:pl-4"
+                : "md:min-h-32 md:px-5 md:pt-4 md:pb-5 xl:px-6 xl:pb-6",
+            )}
+          >
+            <span className="min-w-0">
+              <span
+                className={cn(
+                  "block leading-[1.2] font-semibold tracking-[-0.015em] max-md:text-base",
+                  strip ? "md:line-clamp-2 md:text-[17px]" : "text-xl xl:text-[22px]",
+                )}
+              >
+                {tile.label}
+              </span>
+              <span
+                className={cn(
+                  "mt-1.5 line-clamp-2 text-[15px] leading-snug text-muted-foreground max-md:hidden",
+                  strip && "md:hidden",
+                )}
+              >
+                {tile.blurb}
+              </span>
+            </span>
+            <span
+              aria-hidden="true"
+              className={cn(
+                "grid size-10 shrink-0 place-items-center rounded-full border border-border bg-card text-foreground transition-colors duration-200 group-hover/tile:border-primary group-hover/tile:bg-primary group-hover/tile:text-primary-foreground max-md:hidden",
+                strip && "md:hidden",
+              )}
+            >
+              <ArrowRight className="size-4.5" />
+            </span>
           </span>
         </QuietLink>
       ))}
