@@ -16,7 +16,7 @@ import { CitizenTopBar } from "~/components/sidebar-01/citizen-top-bar";
 import { CommandPalette } from "~/components/sidebar-01/command-palette";
 import { CityGovernmentIdentity } from "~/components/brand/civic-identity";
 import { ThemeSwitch } from "~/components/theme-switch";
-import { getWorkspaceDetails } from "~/components/sidebar-01/workspace";
+import { DashboardBreadcrumbs } from "~/components/sidebar-01/dashboard-breadcrumbs";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { getUnreadNotificationSummaryFn } from "~/features/notifications/notifications.queries";
 import { invalidateNotificationPreview } from "~/features/notifications/notification-preview-cache";
@@ -30,11 +30,14 @@ import { getNotificationAudience } from "~/features/notifications/notification-a
 import { WelcomeTutorial } from "~/features/onboarding/components/WelcomeTutorial";
 import type { Role } from "~/lib/permissions";
 
-// The citizen sidebar's column: its own width, the 10px of frame to its left and
-// the 6px gap before the panel. The panel's other three sides get their 10px of
-// frame from the main column's padding.
-const CITIZEN_SIDEBAR_STYLE = {
+// The sidebar's column, for every role: its own width, the 10px of frame to its
+// left and the 6px gap before the panel. The panel's other three sides get their
+// 10px of frame from the main column's padding. Folded, the column is the icon
+// width plus the same 16px of frame: wide enough for a 54px pill circle with room
+// to spare.
+const SIDEBAR_STYLE = {
   "--sidebar-width": "calc(clamp(220px, 20vw, 248px) + 1rem)",
+  "--sidebar-width-icon": "4.5rem",
 } as CSSProperties;
 
 // Dashboard-shell layer: sidebar + top bar, for the browse/manage pages that
@@ -82,7 +85,6 @@ function DashboardLayout() {
   });
   const { user } = Route.useRouteContext();
   const { unreadNotifications } = Route.useLoaderData();
-  const workspace = getWorkspaceDetails((user?.role ?? "applicant") as Role);
   const isCitizen = user?.role === "applicant";
   // Sidebar badge tracks new notifications live, from wherever the reader
   // happens to be — not just while they're on the notifications page itself.
@@ -102,8 +104,12 @@ function DashboardLayout() {
 
   return (
     <SidebarProvider
-      className={isCitizen ? "citizen-portal" : undefined}
-      style={isCitizen ? CITIZEN_SIDEBAR_STYLE : undefined}
+      // Both shells are a ground, a sidebar on it and one floating panel. The
+      // service editor is full screen, so it keeps the plain page.
+      className={
+        isCitizen ? "citizen-portal" : isServiceEditor ? undefined : "workspace-frame"
+      }
+      style={isServiceEditor ? undefined : SIDEBAR_STYLE}
     >
       <a
         href="#main-content"
@@ -124,9 +130,9 @@ function DashboardLayout() {
         </main>
       ) : isCitizen ? (
         // 10px of frame on every side; on desktop the sidebar column already
-        // carries the left one (and the 6px gap), so it is dropped while the
-        // sidebar is open and comes back when Ctrl+B tucks it away.
-        <SidebarInset className="min-w-0 bg-transparent p-0 md:p-2.5 md:peer-data-[state=expanded]:pl-0">
+        // carries the left one (and the 6px gap), open or folded to icons, so it
+        // is dropped.
+        <SidebarInset className="min-w-0 bg-transparent p-0 md:p-2.5 md:pl-0">
           {/* From md: one panel, top bar first, filling the space beside the
               sidebar. No max-width: a cap leaves dead ground on wide screens.
               On a phone there is no panel: the page sits on the ground with 20px
@@ -151,34 +157,34 @@ function DashboardLayout() {
           </div>
         </SidebarInset>
       ) : (
-        <SidebarInset>
-          <header className="flex h-[4.5rem] shrink-0 items-center justify-between border-b border-border-strong bg-card px-4 transition-[width,height] ease-linear sm:px-6">
-            <div className="flex items-center gap-3">
-              <SidebarTrigger className="size-10 rounded-lg border border-border-strong bg-card shadow-xs hover:bg-surface-subtle" />
-              <div className="hidden sm:block">
-                <p className="text-sm font-bold text-foreground">
-                  {workspace.label}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {workspace.description}
-                </p>
+        // The same frame as the applicant's: the sidebar column carries the left
+        // 10px, the panel floats on the ground from `md`, and on a phone the page
+        // fills the screen.
+        <SidebarInset className="min-w-0 bg-transparent p-0 md:p-2.5 md:pl-0">
+          <div className="flex w-full flex-1 flex-col bg-workspace md:rounded-panel md:shadow-portal-panel">
+            <header className="flex h-16 shrink-0 items-center justify-between px-4 sm:px-6 lg:px-8">
+              <div className="flex min-w-0 items-center gap-3">
+                {/* From md the toggle lives in the sidebar, as in the applicant
+                    shell; here it only opens the sheet on a phone. */}
+                <SidebarTrigger className="size-10 shrink-0 rounded-lg border border-border-strong bg-card shadow-xs hover:bg-surface-subtle md:hidden" />
+                <DashboardBreadcrumbs role={(user?.role ?? "applicant") as Role} />
               </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <ThemeSwitch />
-              <CityGovernmentIdentity
-                compact
-                className="[&>span:first-child]:size-8"
-              />
-            </div>
-          </header>
-          <main
-            id="main-content"
-            tabIndex={-1}
-            className="civic-workspace flex flex-1 flex-col bg-workspace p-4 text-foreground sm:p-6 lg:p-8"
-          >
-            <Outlet />
-          </main>
+              <div className="flex shrink-0 items-center gap-4">
+                <ThemeSwitch />
+                <CityGovernmentIdentity
+                  compact
+                  className="[&>span:first-child]:size-8 max-sm:[&>span:last-child]:hidden"
+                />
+              </div>
+            </header>
+            <main
+              id="main-content"
+              tabIndex={-1}
+              className="civic-workspace flex flex-1 flex-col px-4 pt-1 pb-4 text-foreground sm:px-6 sm:pb-6 lg:px-8 lg:pb-8"
+            >
+              <Outlet />
+            </main>
+          </div>
         </SidebarInset>
       )}
       {isCitizen && <CitizenBottomBar unreadNotifications={unreadNotifications} />}

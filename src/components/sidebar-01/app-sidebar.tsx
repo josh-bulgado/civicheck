@@ -14,9 +14,10 @@ import { getWorkspaceDetails } from "./workspace";
  * What goes in the sidebar, and how it's grouped, lives in `nav-config.ts`.
  * To add a link or move one between sections, edit that file.
  *
- * Applicants get the citizen portal's calm sidebar: no box, sitting directly on
- * the gradient ground (always open on desktop, a sheet below `md`). Everyone
- * else keeps the icon-collapsible workspace rail.
+ * Every role gets the same frame: no box, the sidebar sitting directly on the
+ * page's ground (a sheet below `md`), folding to an icon rail on desktop.
+ * Applicants get the portal's calm markup inside it; everyone else the
+ * workspace's, with section labels and search.
  */
 export function AppSidebar({
   user,
@@ -48,12 +49,12 @@ export function AppSidebar({
 
   return (
     <Sidebar
-      collapsible={citizen ? "offcanvas" : "icon"}
-      variant={citizen ? "floating" : "sidebar"}
+      collapsible="icon"
+      variant="floating"
       // The frame: 10px of ground above, below and to the left, and the 6px
       // gap before the panel on the right. Together they make up the
       // `--sidebar-width` the route sets.
-      className={citizen ? "p-2.5 pr-1.5" : undefined}
+      className="p-2.5 pr-1.5"
       {...props}
     >
       {citizen ? (
