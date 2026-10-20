@@ -27,7 +27,7 @@ export function QuickStartPanel({ prominent = false }: QuickStartPanelProps) {
       <>
         <section
           style={bannerStyle("none")}
-          className="portal-banner font-geist flex flex-col items-start gap-6 rounded-hero px-5 py-7 md:flex-row md:items-center md:gap-8 md:px-10 md:py-9"
+          className="portal-banner flex flex-col items-start gap-6 rounded-hero px-5 py-7 md:flex-row md:items-center md:gap-8 md:px-10 md:py-9"
         >
           <div className="min-w-0 flex-1">
             <h2 className="text-[28px] leading-[1.15] font-bold tracking-normal text-foreground md:text-[42px]">

@@ -64,12 +64,10 @@
 }
 
 @theme inline {
-  --font-display: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-heading: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  /* Geist is already bundled (imported above); this lets a single card opt in
-     without changing the app font. */
-  --font-geist: "Geist Variable", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-display: "Geist Variable", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-heading: "Geist Variable", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-sans: "Geist Variable", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -1907,24 +1905,9 @@ input[aria-hidden="true"][tabindex="-1"] {
   }
 }
 
-/* The service editor sets its type in Geist; the rest of the app keeps Helvetica
-   Neue. This is a utilities-layer rule so it beats `font-heading`, `font-sans`
-   and `font-mono`, which components apply directly. Dialogs, sheets and select
-   popups portal out of the editor and keep the app font. */
+/* Type tuning for the service editor. The app font is Geist everywhere; these
+   weights and sizes apply only inside the editor. */
 @layer utilities {
-  [data-service-editor],
-  [data-service-editor] .font-sans,
-  [data-service-editor] .font-heading,
-  [data-service-editor] .font-display {
-    font-family:
-      "Geist Variable", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  }
-
-  [data-service-editor] .font-mono {
-    font-family:
-      "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
-  }
-
   /* Weights and sizes from the approved prototype: bolder titles and labels, a
      15px base for text people read or type. Scoped here so the shared Field,
      Button, Badge and Input keep their defaults everywhere else. */
