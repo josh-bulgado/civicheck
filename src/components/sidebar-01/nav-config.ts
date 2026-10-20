@@ -157,6 +157,15 @@ const NAV_ENTRIES = {
 
 export type NavItemId = keyof typeof NAV_ENTRIES;
 
+/** A nav link's title and URL for `role`, for anything that names a page the way the sidebar does. */
+export function navLink(id: NavItemId, role: Role): { title: string; url: string } {
+  const entry: NavEntry = NAV_ENTRIES[id];
+  return {
+    title: typeof entry.title === "function" ? entry.title(role) : entry.title,
+    url: entry.url,
+  };
+}
+
 interface GroupLayout {
   id: string;
   /** Omit for the unlabelled home group at the top. */
