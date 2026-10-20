@@ -1,4 +1,13 @@
 import type { CSSProperties } from "react";
+import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
 import {
   ServiceEntryDialogs,
   useServiceEntry,
@@ -67,6 +76,11 @@ const CATEGORY_TINT: Record<ServiceCategory, Tint> = {
   },
 };
 
+// The card's two pills: full-round, 44px on touch, and no focus ring of their
+// own (the card shows one for both).
+const BUTTON_PILL =
+  "civic-press rounded-full px-3 font-semibold max-md:h-11 focus-visible:border-transparent focus-visible:ring-0";
+
 /**
  * The applicant's service card: a category tag, the service's short name, what
  * it costs and how long it takes, and two ways forward. The whole card opens the
@@ -87,7 +101,8 @@ export function PortalServiceCard(
       {/* The dialogs sit beside the card, not inside it: React events from a
           portal bubble up the React tree, and a click in a dialog must not
           count as a click on the card behind it. */}
-      <article
+      <Card
+        variant="quiet"
         onClick={entry.openRequirements}
         style={
           {
@@ -101,30 +116,37 @@ export function PortalServiceCard(
           } as CSSProperties
         }
         className={cn(
-          "tile-wash group/card relative flex min-h-59.5 cursor-pointer flex-col rounded-[20px] border border-border-light p-5 text-foreground max-md:min-h-0",
+          "tile-wash relative min-h-59.5 cursor-pointer gap-0 text-foreground [--card-spacing:--spacing(5)] max-md:min-h-0",
           "transition-[transform,box-shadow] duration-180 ease-(--ease-civic)",
-          "hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(15,27,45,0.09)]",
+          "hover:-translate-y-0.5 data-[variant=quiet]:hover:shadow-portal-hairline-hover",
           // The two buttons are what take keyboard focus; the card wears the ring.
           "has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary",
           "motion-reduce:transition-none motion-reduce:hover:translate-y-0",
         )}
       >
-        {category && (
-          <span className="tile-ink inline-flex h-6.5 w-fit items-center rounded-full bg-card/70 px-2.5 text-xs font-semibold">
-            {SERVICE_CATEGORY_LABELS[category]}
-          </span>
-        )}
-
-        <h2
-          title={entry.shortTitle === entry.title ? undefined : entry.title}
-          className="mt-3.5 line-clamp-2 text-[19px] leading-[1.25] font-semibold tracking-[-0.012em] text-pretty text-foreground"
-        >
-          {entry.shortTitle}
-        </h2>
+        <CardHeader className="gap-3.5">
+          {category && (
+            <Badge
+              variant="secondary"
+              className="h-6.5 bg-card/70 px-2.5 font-semibold text-(--tile-ink) dark:text-(--tile-ink-dark)"
+            >
+              {SERVICE_CATEGORY_LABELS[category]}
+            </Badge>
+          )}
+          {/* CardTitle is a div, so the heading role carries the h2 it replaces. */}
+          <CardTitle
+            role="heading"
+            aria-level={2}
+            title={entry.shortTitle === entry.title ? undefined : entry.title}
+            className="text-[19px] leading-[1.25] font-semibold tracking-[-0.012em] text-pretty text-foreground"
+          >
+            {entry.shortTitle}
+          </CardTitle>
+        </CardHeader>
 
         {/* Takes the slack, so the fee and the actions sit at the foot of every
             card whatever its title does. */}
-        <div className="mt-auto pt-5">
+        <CardContent className="mt-auto pt-5">
           <p className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
             <span
               className={cn(
@@ -141,29 +163,37 @@ export function PortalServiceCard(
               {entry.portalWaitLabel}
             </span>
           </p>
+        </CardContent>
 
-          <div className="mt-3.5 flex items-center gap-2">
-            {/* No handler of its own: its click reaches the card's, so a mouse
-                anywhere on the card and Enter on this button do the same thing. */}
-            <button
-              type="button"
-              className="civic-press h-10 min-w-0 flex-1 rounded-full bg-primary-fill px-3 text-sm font-semibold text-white transition-colors duration-150 outline-none hover:bg-primary-fill-hover max-md:h-11"
-            >
-              Check requirements
-            </button>
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                entry.startApply();
-              }}
-              className="civic-press h-10 shrink-0 rounded-full px-3 text-sm font-semibold text-body-strong transition-colors duration-150 outline-none hover:bg-card/70 hover:text-primary max-md:h-11"
-            >
-              Apply
-            </button>
-          </div>
-        </div>
-      </article>
+        <CardFooter className="mt-3.5 gap-2">
+          {/* No handler of its own: its click reaches the card's, so a mouse
+              anywhere on the card and Enter on this button do the same thing.
+              Both drop the button's own focus ring for the card's. */}
+          <Button
+            size="lg"
+            className={cn(
+              BUTTON_PILL,
+              "min-w-0 flex-1 hover:bg-primary-fill-hover",
+            )}
+          >
+            Check requirements
+          </Button>
+          <Button
+            variant="ghost"
+            size="lg"
+            onClick={(event) => {
+              event.stopPropagation();
+              entry.startApply();
+            }}
+            className={cn(
+              BUTTON_PILL,
+              "shrink-0 text-body-strong hover:bg-card/70 hover:text-primary",
+            )}
+          >
+            Apply
+          </Button>
+        </CardFooter>
+      </Card>
 
       <ServiceEntryDialogs entry={entry} variant="portal" />
     </>

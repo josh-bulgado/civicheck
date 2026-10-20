@@ -52,3 +52,34 @@ describe("every ToggleGroup variant has item styles", () => {
     expect(items).toMatch(new RegExp(`^\\s{8}${key}:`, "m"));
   });
 });
+
+// Card surfaces. Each variant is a name in the prop type, a block of
+// `data-[variant=...]` classes, and (for the portal ones) a shadow token that
+// has to exist in both themes or the card has no edge in one of them.
+describe("every Card variant styles itself", () => {
+  const source = read("card.tsx");
+  const css = readFileSync(
+    new URL("../../styles/app.css", import.meta.url),
+    "utf8",
+  );
+  const surfaces = ["embedded", "soft", "quiet", "lifted", "tonal", "reveal"];
+
+  it.each(surfaces)("%s", (key) => {
+    expect(source).toContain(`"${key}"`);
+    expect(source).toContain(`data-[variant=${key}]:`);
+  });
+
+  it("row orientation has its styles", () => {
+    expect(source).toContain('orientation?: "column" | "row"');
+    expect(source).toContain("data-[orientation=row]:grid");
+  });
+
+  it.each(["hairline", "hairline-hover", "lifted"])(
+    "shadow token %s is mapped and set in light and dark",
+    (name) => {
+      expect(css).toContain(`--shadow-portal-${name}: var(--portal-shadow-${name})`);
+      const declared = css.match(new RegExp(`^\\s*--portal-shadow-${name}:`, "gm"));
+      expect(declared?.length).toBeGreaterThanOrEqual(2);
+    },
+  );
+});
