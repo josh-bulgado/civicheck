@@ -50,11 +50,11 @@ interface Slide {
 }
 
 const SLIDES: Slide[] = [
-  { kicker: "Welcome", title: "Welcome to CiviCheck", body: "Request your civil registry documents from the City Civil Registrar Office. This short guide shows you how, in 4 easy steps.", icon: HandHeart, hue: 255 },
-  { kicker: "Step 1 of 4", title: "Check the requirements", body: "Choose the document you need. We show you the list of papers to bring, the fee, and how long it takes.", icon: ListChecks, hue: 160 },
-  { kicker: "Step 2 of 4", title: "Submit your request online", body: "Fill in a simple form from your phone or computer. Attaching photos of your papers is optional.", icon: Send, hue: 245 },
-  { kicker: "Step 3 of 4", title: "Track your request", body: "CCRO staff check your papers. You can see your status anytime, and we will notify you if something is missing.", icon: BellRing, hue: 295 },
-  { kicker: "Step 4 of 4", title: "Pay and claim at the CCRO", body: "When your document is ready, go to the CCRO cashier, pay the fee, and take home your document.", icon: BadgeCheck, hue: 70 },
+  { kicker: "Welcome", title: "Welcome to CiviCheck", body: "Know what to bring before you go to the City Civil Registrar Office. Here is how it works, in 4 short steps.", icon: HandHeart, hue: 255 },
+  { kicker: "Step 1 of 4", title: "Check the requirements", body: "Pick the document you want. You will see the papers to prepare, the fee, and how long it takes before you start.", icon: ListChecks, hue: 160 },
+  { kicker: "Step 2 of 4", title: "Send your request online", body: "Fill in the form from your phone or computer. You can also upload photos of your papers so staff can check them early. It is optional, but it helps you avoid a repeat trip.", icon: Send, hue: 245 },
+  { kicker: "Step 3 of 4", title: "Follow your request", body: "Use your tracking number to see where it stands. If something is missing, we will tell you by email and in the app.", icon: BellRing, hue: 295 },
+  { kicker: "Step 4 of 4", title: "Bring your originals and claim", body: "When it is ready, visit the CCRO with your tracking number and the original copies of your documents, including any you uploaded. Pay the fee at the counter if there is one, then take your document home.", icon: BadgeCheck, hue: 70 },
 ];
 
 // Each slide's colours as CSS variables, with a dark twin for each: inline
