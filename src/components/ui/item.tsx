@@ -42,6 +42,10 @@ const itemVariants = cva(
         default: "border-transparent",
         outline: "border-border",
         muted: "border-transparent bg-muted/50",
+        // A pickable row in a list; render it as a button and set
+        // aria-current="true" on the chosen one.
+        selectable:
+          "border-transparent text-left hover:bg-card aria-[current=true]:border-primary aria-[current=true]:bg-card aria-[current=true]:shadow-xs",
       },
       size: {
         default: "gap-3.5 px-4 py-3.5",

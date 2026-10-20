@@ -212,6 +212,10 @@
 :root {
   --background: #f5f7fb;
   --workspace: #eef1f6;
+  /* Ground behind the staff/admin workspace's floating panel: the portal's
+     gradient turned down to a quiet tint, so the dense pages inside stay the
+     loudest thing on screen. */
+  --workspace-ground: linear-gradient(160deg, #d9e4f4 0%, #e3eaf5 55%, #e1e7f1 100%);
   /* Page ground behind the citizen portal's floating cards. */
   --ground: #e9edf3;
   --foreground: #0f1b2d;
@@ -328,13 +332,17 @@
   --chart-4: #9a6c10;
   --chart-5: #b3261e;
 
-  --sidebar: #ffffff;
+  /* Tinted, like the portal's ground, so the active item's white pill reads on
+     it. The sidebar itself is transparent on desktop (it sits on
+     --workspace-ground), so the muted ink has to clear 4.5:1 on that ground, which
+     the old #6b7787 does not. */
+  --sidebar: #f0f5fc;
   --sidebar-foreground: #0f1b2d;
   --sidebar-primary: #0b4da2;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #e7eefa;
   --sidebar-accent-foreground: #093a7a;
-  --sidebar-muted: #6b7787;
+  --sidebar-muted: #505c6e;
   --sidebar-border: #d7dee9;
   --sidebar-ring: #0b4da2;
 
@@ -438,6 +446,7 @@
 .dark {
   --background: #101216;
   --workspace: #121419;
+  --workspace-ground: linear-gradient(160deg, #0b0e13 0%, #0d1117 55%, #0e1116 100%);
   --ground: #0d0f13;
   --foreground: #e8eaee;
   --card: #181b21;
@@ -920,10 +929,27 @@
    nav and the user card sit straight on the gradient ground. Unlayered on
    purpose: the variant sets its background, radius and ring with utilities,
    which a rule inside `@layer components` cannot override. */
-.citizen-portal [data-slot="sidebar-inner"] {
+.citizen-portal [data-slot="sidebar-inner"],
+.workspace-frame [data-slot="sidebar-inner"] {
   background-color: transparent;
   border-radius: 0;
   box-shadow: none;
+}
+
+/* The staff/admin shell uses the portal's frame (a ground, the sidebar sitting on
+   it, one floating panel) with a quieter ground. A fixed layer for the same
+   reasons as `.citizen-portal::before`. */
+.workspace-frame {
+  isolation: isolate;
+}
+
+.workspace-frame::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--workspace-ground);
+  pointer-events: none;
 }
 
 /* Shared civic layout primitives. */

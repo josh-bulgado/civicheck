@@ -1,22 +1,11 @@
 "use client";
 
-import { ClipboardList, FileText, Loader2 } from "lucide-react";
 import * as React from "react";
 import { useEffect } from "react";
 import { useHotkey, type HotkeyChord } from "@tanstack/react-hotkeys";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 
-import {
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "~/components/ui/command";
-import { cn } from "~/lib/utils";
 import { usePermissions } from "~/hooks/usePermissions";
-import { getStatusDetails } from "~/features/services/request-status";
 import {
   formatFee,
   summarizeWait,
@@ -28,7 +17,9 @@ import {
 } from "~/features/search/search.queries";
 import { usePaletteDefaults } from "~/features/search/palette-defaults";
 import { buildNavGroups } from "./nav-config";
+import { type PaletteSearchStatus } from "./palette-sheet";
 import { PortalCommandPalette } from "./portal-command-palette";
+import { StaffCommandPalette } from "./staff-command-palette";
 
 const OPEN_EVENT = "civicheck:open-command-palette";
 
@@ -38,8 +29,6 @@ export const PALETTE_HOTKEY: HotkeyChord = "Mod+K";
 const EMPTY_RESULTS: SearchResults = { services: [], requests: [] };
 const MIN_QUERY_LENGTH = 2;
 const SEARCH_DEBOUNCE_MS = 250;
-
-type SearchStatus = "idle" | "loading" | "ready" | "error";
 
 /** Call from anywhere (a search button, a search pill) to open the palette. */
 export function openCommandPalette() {
@@ -70,14 +59,15 @@ function serviceMeta(service: ServiceSearchHit): string {
  * its mobile sheet is closed, and the palette has to stay reachable from the
  * top bar either way.
  *
- * Applicants get the portal's rounded sheet (see PortalCommandPalette); CCRO
- * personnel keep the compact list below. Both share this state and search.
+ * Both roles get the same rounded sheet (see `PaletteSheet`): applicants their
+ * requests and services (`PortalCommandPalette`), CCRO personnel services,
+ * requests and pages (`StaffCommandPalette`). They share this state and search.
  */
 export function CommandPalette({ userId = "" }: { userId?: string }) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [results, setResults] = React.useState<SearchResults>(EMPTY_RESULTS);
-  const [status, setStatus] = React.useState<SearchStatus>("idle");
+  const [status, setStatus] = React.useState<PaletteSearchStatus>("idle");
   const { can, role } = usePermissions();
   const navigate = useNavigate();
   const canViewAllRequests = can("requests:view_all");
@@ -165,10 +155,6 @@ export function CommandPalette({ userId = "" }: { userId?: string }) {
     });
   }
 
-  const isSearching = open && query.trim().length >= MIN_QUERY_LENGTH;
-  const hasDataMatches =
-    results.services.length > 0 || results.requests.length > 0;
-
   if (isApplicant) {
     return (
       <PortalCommandPalette
@@ -187,117 +173,18 @@ export function CommandPalette({ userId = "" }: { userId?: string }) {
   }
 
   return (
-    <CommandDialog
+    <StaffCommandPalette
       open={open}
       onOpenChange={handleOpenChange}
-      className="top-[10%] translate-y-0 sm:max-w-3xl"
-    >
-      <CommandInput
-        placeholder="Search services, requests, pages..."
-        value={query}
-        onValueChange={setQuery}
-      />
-
-      {isSearching && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground"
-        >
-          {status === "loading" && (
-            <>
-              <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-              Searching services and requests...
-            </>
-          )}
-          {status === "error" && "Search is unavailable right now."}
-          {status === "ready" && !hasDataMatches &&
-            `No services or requests match "${query.trim()}".`}
-        </div>
-      )}
-
-      <CommandList className="max-h-[min(62vh,34rem)] scroll-py-2">
-        <CommandEmpty>No results found.</CommandEmpty>
-
-        {results.services.length > 0 && (
-          <CommandGroup heading="Services">
-            {results.services.map((service) => (
-              <CommandItem
-                className="items-start py-2.5!"
-                key={service.serviceCode}
-                value={`service ${service.serviceCode} ${service.keywords}`}
-                onSelect={() => selectService(service.routeCode)}
-              >
-                <div className="flex min-w-0 flex-1 items-start gap-3">
-                  <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="text-sm font-semibold leading-snug text-foreground">
-                      {service.title}
-                    </span>
-                    <span className="text-xs leading-snug text-muted-foreground">
-                      {serviceMeta(service)}
-                    </span>
-                  </div>
-                </div>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        )}
-
-        {results.requests.length > 0 && (
-          <CommandGroup heading="Requests">
-            {results.requests.map((request) => {
-              const status = getStatusDetails(request.status);
-              return (
-                <CommandItem
-                  className="items-start py-2.5!"
-                  key={request.id}
-                  value={`request ${request.id} ${request.keywords}`}
-                  onSelect={() => selectRequest(request.id)}
-                >
-                  <div className="flex min-w-0 flex-1 items-start gap-3">
-                    <ClipboardList className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span className="text-sm font-semibold leading-snug text-foreground">
-                        {request.trackingNumber}
-                      </span>
-                      <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs leading-snug text-muted-foreground">
-                        <span className="inline-flex items-center gap-1.5">
-                          <span
-                            className={cn(
-                              "size-1.5 shrink-0 rounded-full",
-                              status.dot,
-                            )}
-                            aria-hidden="true"
-                          />
-                          {status.label}
-                        </span>
-                        <span aria-hidden="true">·</span>
-                        <span>
-                          {request.applicantName} · {request.serviceName}
-                        </span>
-                      </span>
-                    </div>
-                  </div>
-                </CommandItem>
-              );
-            })}
-          </CommandGroup>
-        )}
-
-        <CommandGroup heading="Navigation">
-          {items.map((item) => (
-            <CommandItem
-              className="py-2.5!"
-              key={item.id}
-              onSelect={() => selectRoute(item.url)}
-            >
-              <item.icon className="mr-2 h-4 w-4" />
-              <span className="text-sm">{item.title}</span>
-            </CommandItem>
-          ))}
-        </CommandGroup>
-      </CommandList>
-    </CommandDialog>
+      query={query}
+      onQueryChange={setQuery}
+      minQueryLength={MIN_QUERY_LENGTH}
+      search={{ status, results }}
+      pages={items}
+      describeService={serviceMeta}
+      onSelectRoute={selectRoute}
+      onSelectService={selectService}
+      onSelectRequest={selectRequest}
+    />
   );
 }

@@ -18,6 +18,11 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "~/components/ui/sidebar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 import { ChevronsUpDown, Lock, LogOut, Settings, User } from "lucide-react";
 import { QuietLink } from "~/components/quiet-link";
 import { SettingsDialog } from "~/features/account/components/SettingsDialog";
@@ -35,7 +40,7 @@ interface NavFooterProps {
 }
 
 export function NavFooter({ account, citizen = false }: NavFooterProps) {
-  const { state } = useSidebar();
+  const { state, isMobile } = useSidebar();
   const isCollapsed = state === "collapsed";
   // Every entry opens the same settings dialog; null means closed.
   const [settingsTab, setSettingsTab] = React.useState<SettingsTab | null>(
@@ -63,32 +68,47 @@ export function NavFooter({ account, citizen = false }: NavFooterProps) {
     // The whole card is the menu's trigger. The menu opens upward and is as
     // wide as the card, so the two read as one piece. Its items sit in the
     // popup's own portal, outside `.citizen-portal`, so they use explicit
-    // colours rather than the portal's remapped tokens.
+    // colours rather than the portal's remapped tokens. Folded to the icon rail
+    // the card keeps its place and loses its fill, the name fades, and a tooltip
+    // carries it instead.
     return (
       <SidebarFooter className="gap-0 p-0 pb-1.5">
         <DropdownMenu>
-          <DropdownMenuTrigger
-            nativeButton
-            disabled={!account}
-            aria-label={`${name}, account menu`}
-            className="civic-press flex w-full items-center gap-3 rounded-[22px] bg-card/78 py-2.5 pr-3.5 pl-3 text-left shadow-[0_1px_2px_rgba(15,27,45,0.05),0_8px_24px_rgba(11,77,162,0.07)] hover:bg-card/90 data-popup-open:bg-card"
-          >
-            <Avatar className="size-10.5" aria-hidden="true">
-              {account?.avatarUrl ? (
-                <AvatarImage src={account.avatarUrl} alt="" />
-              ) : null}
-              <AvatarFallback className="bg-primary-soft text-sm font-bold text-primary">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-            <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-sidebar-foreground">
-              {firstName}
-            </span>
-            <ChevronsUpDown
-              className="size-5 shrink-0 text-muted-foreground"
-              aria-hidden="true"
-            />
-          </DropdownMenuTrigger>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <DropdownMenuTrigger
+                  nativeButton
+                  disabled={!account}
+                  aria-label={`${name}, account menu`}
+                  className="civic-press flex w-full items-center gap-3 rounded-[22px] bg-card/78 py-2.5 pr-3.5 pl-3 text-left shadow-[0_1px_2px_rgba(15,27,45,0.05),0_8px_24px_rgba(11,77,162,0.07)] hover:bg-card/90 data-popup-open:bg-card group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:shadow-none group-data-[collapsible=icon]:hover:bg-card/60"
+                />
+              }
+            >
+              <Avatar className="size-10.5" aria-hidden="true">
+                {account?.avatarUrl ? (
+                  <AvatarImage src={account.avatarUrl} alt="" />
+                ) : null}
+                <AvatarFallback className="bg-primary-soft text-sm font-bold text-primary">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-sidebar-foreground transition-opacity duration-150 group-data-[collapsible=icon]:text-clip group-data-[collapsible=icon]:opacity-0">
+                {firstName}
+              </span>
+              <ChevronsUpDown
+                className="size-5 shrink-0 text-muted-foreground transition-opacity duration-150 group-data-[collapsible=icon]:opacity-0"
+                aria-hidden="true"
+              />
+            </TooltipTrigger>
+            <TooltipContent
+              side="right"
+              sideOffset={12}
+              hidden={!isCollapsed || isMobile}
+            >
+              {name}
+            </TooltipContent>
+          </Tooltip>
           <DropdownMenuContent
             side="top"
             align="start"
@@ -121,7 +141,7 @@ export function NavFooter({ account, citizen = false }: NavFooterProps) {
   }
 
   return (
-    <SidebarFooter className="border-t border-sidebar-border p-2.5 group-data-[collapsible=icon]:p-2">
+    <SidebarFooter className="p-2.5">
       <SidebarMenu>
         <SidebarMenuItem>
           <DropdownMenu>
@@ -130,7 +150,7 @@ export function NavFooter({ account, citizen = false }: NavFooterProps) {
               render={
                 <SidebarMenuButton
                   size="lg"
-                  className="h-12 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:justify-center"
+                  className="h-12 pl-[11px] text-sidebar-foreground hover:bg-card/60 hover:text-foreground data-[state=open]:bg-card data-[state=open]:text-foreground"
                   tooltip={isCollapsed ? name : undefined}
                 />
               }
@@ -146,16 +166,14 @@ export function NavFooter({ account, citizen = false }: NavFooterProps) {
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              {!isCollapsed && (
-                <div className="flex flex-col min-w-0 text-left">
-                  <span className="truncate text-sm font-medium leading-tight">
-                    {name}
-                  </span>
-                  <span className="truncate text-xs text-sidebar-muted">
-                    {email}
-                  </span>
-                </div>
-              )}
+              <div className="flex min-w-0 flex-col text-left transition-opacity duration-150 group-data-[collapsible=icon]:opacity-0">
+                <span className="truncate text-sm font-medium leading-tight">
+                  {name}
+                </span>
+                <span className="truncate text-xs text-sidebar-muted">
+                  {email}
+                </span>
+              </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="start" className="w-52 m-2">
               <DropdownMenuGroup>
