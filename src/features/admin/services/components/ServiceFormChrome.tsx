@@ -137,7 +137,7 @@ export function ServiceEditorTabBar({
   listRef,
 }: ServiceEditorTabBarProps) {
   return (
-    <div className="shrink-0 border-b border-border bg-background px-4 pb-3 sm:px-8">
+    <div className="shrink-0 border-b border-border bg-background px-4 sm:px-8">
       <TabsList
         ref={listRef}
         variant="editor"
