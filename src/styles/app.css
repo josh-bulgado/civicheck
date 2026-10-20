@@ -1030,6 +1030,15 @@
     );
   }
 
+  /* The category tag on a service card: --tile-ink with a -dark twin. */
+  .tile-ink {
+    color: var(--tile-ink);
+  }
+
+  .dark .tile-ink {
+    color: var(--tile-ink-dark);
+  }
+
   .tile-scrim {
     background-image: linear-gradient(
       0deg,
