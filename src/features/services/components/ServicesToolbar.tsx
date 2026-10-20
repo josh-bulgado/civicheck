@@ -15,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import {
   SERVICE_CATEGORY_LABELS,
   type ServiceCategory,
@@ -145,32 +144,28 @@ export function PortalServicesToolbar({
 
       {/* A phone's pills scroll sideways, out to the edge of the screen; a
           desktop's wrap, so every category is on screen at once. */}
-      <div
-        role="group"
+      <ToggleGroup
         aria-label="Filter services by category"
-        className="flex gap-2 max-md:-mx-5 max-md:overflow-x-auto max-md:px-5 max-md:[scrollbar-width:none] md:flex-wrap md:gap-2.5"
+        value={[category]}
+        onValueChange={(values: string[]) => {
+          // Pressing the active pill would clear the group; a category is always chosen.
+          const next = values[0] as CategoryFilter | undefined;
+          if (next) onCategoryChange(next);
+        }}
+        variant="chips"
+        className="[--tg-h:calc(var(--spacing)*10.5)] max-md:-mx-5 max-md:w-auto max-md:flex-nowrap max-md:overflow-x-auto max-md:px-5 max-md:[scrollbar-width:none] md:gap-2.5 md:[--tg-h:calc(var(--spacing)*12)]"
       >
-        {PORTAL_CATEGORY_FILTERS.map((filter) => {
-          const isActive = category === filter.value;
-          return (
-            <button
-              key={filter.value}
-              type="button"
-              aria-pressed={isActive}
-              onClick={() => onCategoryChange(filter.value)}
-              className={cn(
-                "civic-press h-10.5 shrink-0 rounded-full px-4.5 text-[15px] font-semibold whitespace-nowrap transition-colors md:h-12 md:px-5.5 md:text-base",
-                isActive
-                  ? "bg-primary-fill text-white shadow-[0_6px_16px_rgba(11,77,162,0.25)]"
-                  : "bg-card text-portal-ink-2 shadow-portal-card hover:bg-primary-tint",
-              )}
-            >
-              <span className="sm:hidden">{filter.shortLabel}</span>
-              <span className="hidden sm:inline">{filter.label}</span>
-            </button>
-          );
-        })}
-      </div>
+        {PORTAL_CATEGORY_FILTERS.map((filter) => (
+          <ToggleGroupItem
+            key={filter.value}
+            value={filter.value}
+            className="civic-press border-transparent bg-card px-4.5 text-[15px] font-semibold text-portal-ink-2 shadow-portal-card not-data-pressed:hover:bg-primary-tint data-pressed:border-transparent data-pressed:bg-primary-fill data-pressed:text-white data-pressed:shadow-[0_6px_16px_rgba(11,77,162,0.25)] md:px-5.5 md:text-base"
+          >
+            <span className="sm:hidden">{filter.shortLabel}</span>
+            <span className="hidden sm:inline">{filter.label}</span>
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
 
       <Select
         items={PORTAL_SORT_OPTIONS}
@@ -282,45 +277,38 @@ export function ServicesToolbar({
       </div>
 
       {/* Chips wrap rather than scroll, so every category is on screen at once. */}
-      <Tabs
-        value={category}
-        onValueChange={(value) => onCategoryChange(value as CategoryFilter)}
+      <ToggleGroup
+        aria-label="Filter services by category"
+        value={[category]}
+        onValueChange={(values: string[]) => {
+          // Pressing the active chip would clear the group; a category is always chosen.
+          const next = values[0] as CategoryFilter | undefined;
+          if (next) onCategoryChange(next);
+        }}
+        variant="chips"
+        // Chip height: 44px touch target on a phone, 36px from sm up.
+        className="w-full [--tg-h:calc(var(--spacing)*11)] sm:[--tg-h:calc(var(--spacing)*9)]"
       >
-        <TabsList
-          variant="pill"
-          aria-label="Filter services by category"
-          className="w-full flex-wrap justify-start gap-2 rounded-none bg-transparent p-0"
-        >
-          {CATEGORY_FILTERS.map((filter) => {
-            const isActive = category === filter.value;
-            const count = categoryCounts[filter.value];
-            const showCount = filter.value === "all" || count > 0;
-            return (
-              <TabsTrigger
-                key={filter.value}
-                value={filter.value}
-                className={cn(
-                  "h-11 flex-none gap-2 border-border bg-card pl-3.5 text-[13px] data-active:border-foreground sm:h-9",
-                  showCount ? "pr-1.5" : "pr-3.5",
-                )}
-              >
-                <span className="sm:hidden">{filter.shortLabel}</span>
-                <span className="hidden sm:inline">{filter.label}</span>
-                {showCount && (
-                  <span
-                    className={cn(
-                      "flex h-6 min-w-6 items-center justify-center rounded-full px-1.75 text-xs",
-                      isActive ? "bg-white/15 text-white dark:bg-black/10 dark:text-card" : "bg-muted text-body-2",
-                    )}
-                  >
-                    {count}
-                  </span>
-                )}
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
-      </Tabs>
+        {CATEGORY_FILTERS.map((filter) => {
+          const count = categoryCounts[filter.value];
+          const showCount = filter.value === "all" || count > 0;
+          return (
+            <ToggleGroupItem
+              key={filter.value}
+              value={filter.value}
+              className={cn("text-[13px]", showCount ? "pr-1.5" : "pr-3.5")}
+            >
+              <span className="sm:hidden">{filter.shortLabel}</span>
+              <span className="hidden sm:inline">{filter.label}</span>
+              {showCount && (
+                <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-muted px-1.75 text-xs text-body-2 transition-colors group-data-pressed/tg-item:bg-primary/15 group-data-pressed/tg-item:text-primary">
+                  {count}
+                </span>
+              )}
+            </ToggleGroupItem>
+          );
+        })}
+      </ToggleGroup>
     </div>
   );
 }
