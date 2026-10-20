@@ -4,6 +4,10 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "~/lib/utils";
 
+// Shared by the service-class variants: the dot is a ::before, tinted per variant.
+const CLASS_DOT =
+  "gap-1.5 pl-2 before:size-1.5 before:shrink-0 before:rounded-full before:content-['']";
+
 const badgeVariants = cva(
   "group/badge inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive aria-invalid:ring-destructive/20 [&>svg]:pointer-events-none [&>svg]:size-3!",
   {
@@ -27,11 +31,11 @@ const badgeVariants = cva(
         warning: "bg-tone-warning-soft text-tone-warning",
         neutral: "bg-tone-neutral-soft text-tone-neutral",
 
-        // Case Complexity
-        simple: "bg-success-soft text-success ring-1 ring-inset ring-success/15",
-        complex: "bg-warning-soft text-warning ring-1 ring-inset ring-warning/20",
-        highly_technical:
-          "bg-destructive/10 text-destructive ring-1 ring-inset ring-destructive/15",
+        // Service class — soft tint with a leading status dot
+        simple: `${CLASS_DOT} bg-tone-success-soft text-tone-success before:bg-health-success-dot`,
+        complex: `${CLASS_DOT} bg-tone-warning-soft text-tone-warning before:bg-health-warning-dot`,
+        highly_technical: `${CLASS_DOT} bg-tone-danger-soft text-tone-danger before:bg-health-error-dot`,
+        unclassified: `${CLASS_DOT} bg-tone-neutral-soft text-tone-neutral before:bg-transparent before:ring-[1.5px] before:ring-inset before:ring-health-neutral-dot`,
       },
     },
     defaultVariants: {

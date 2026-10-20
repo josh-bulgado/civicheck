@@ -24,9 +24,10 @@ const SEGMENT_STYLES = [
 ] as const;
 
 /**
- * A single stacked bar plus a legend, following the Classification Mix pattern
- * in ServicesStatsCards. Used for the categorical splits that would be wasted
- * on a full chart — sex, purpose, intake channel.
+ * A single stacked bar plus a legend, the pattern the Services Registry's
+ * Classification Mix card used before its counts moved into the filter chips.
+ * Used for the categorical splits that would be wasted on a full chart — sex,
+ * purpose, intake channel.
  *
  * Segments render at zero width and grow once mounted, so the mix reads as
  * filling in rather than appearing pre-drawn.
