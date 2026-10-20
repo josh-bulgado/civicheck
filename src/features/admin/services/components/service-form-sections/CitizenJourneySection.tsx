@@ -158,7 +158,7 @@ export function CitizenJourneySection({
           <Button
             type="button"
             variant="outline"
-            size="touch"
+            size="lg"
             className={ADD_ROW}
             onClick={() => stepFields.append({ value: "" })}
           >
@@ -183,7 +183,7 @@ export function CitizenJourneySection({
                   render={({ field }) => (
                     <Input
                       {...field}
-                      fieldSize="touch"
+                      fieldSize="lg"
                       className="bg-card"
                       placeholder="Subject…"
                       aria-label={`Person role ${index + 1}`}
@@ -209,7 +209,7 @@ export function CitizenJourneySection({
           <Button
             type="button"
             variant="outline"
-            size="touch"
+            size="lg"
             className={ADD_ROW}
             onClick={() => partyRoleFields.append({ value: "" })}
           >

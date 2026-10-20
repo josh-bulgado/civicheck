@@ -77,7 +77,7 @@ export function ApplicationFormSection({
             <Input
               id="service-form-template-name"
               name="template_name"
-              fieldSize="touch"
+              fieldSize="lg"
               value={templateName}
               onChange={(event) => onTemplateNameChange(event.target.value)}
               placeholder="Birth registration application…"

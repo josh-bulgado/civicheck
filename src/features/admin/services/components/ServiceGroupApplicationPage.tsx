@@ -350,7 +350,7 @@ export function ServiceGroupApplicationPage({
                     <Button
                       type="button"
                       variant="outline"
-                      size="touch"
+                      size="lg"
                       onClick={() => showSection(previousSection.id)}
                     >
                       <ArrowLeft aria-hidden="true" data-icon="inline-start" />
@@ -361,7 +361,7 @@ export function ServiceGroupApplicationPage({
                     <Button
                       type="button"
                       variant="outline"
-                      size="touch"
+                      size="lg"
                       onClick={() => showSection(nextSection.id)}
                     >
                       {nextSection.label}

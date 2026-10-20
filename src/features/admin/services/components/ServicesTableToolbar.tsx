@@ -2,7 +2,11 @@ import { useRef } from "react";
 import { useHotkey, type HotkeyChord } from "@tanstack/react-hotkeys";
 import { Building2, Search } from "lucide-react";
 import { cn } from "~/lib/utils";
-import { Input } from "~/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "~/components/ui/input-group";
 import { Kbd } from "~/components/ui/kbd";
 import { useHotkeyLabel } from "~/hooks/useHotkeyLabel";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
@@ -76,17 +80,17 @@ export function ServicesTableToolbar({
 
   // "Unclassified" only earns a chip when something is actually unclassified.
   const visibleFilters = CLASSIFICATION_FILTERS.filter(
-    (filter) => filter !== "unclassified" || classificationCounts.unclassified > 0,
+    (filter) =>
+      filter !== "unclassified" || classificationCounts.unclassified > 0,
   );
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <div className="relative min-w-56 max-w-md flex-1">
-        <Search
-          aria-hidden="true"
-          className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-        />
-        <Input
+      <InputGroup size="lg" className="min-w-56 max-w-md flex-1">
+        <InputGroupAddon>
+          <Search aria-hidden="true" />
+        </InputGroupAddon>
+        <InputGroupInput
           ref={searchRef}
           placeholder="Search by service name or code..."
           aria-label="Search services"
@@ -99,17 +103,13 @@ export function ServicesTableToolbar({
             if (globalFilter) onGlobalFilterChange("");
             else e.currentTarget.blur();
           }}
-          className="h-10 rounded-lg border-border pr-10 pl-10 text-sm focus-visible:border-primary focus-visible:ring-primary"
         />
         {globalFilter ? null : (
-          <Kbd
-            aria-hidden="true"
-            className="absolute right-3 top-1/2 -translate-y-1/2"
-          >
-            {hotkeyLabel(SEARCH_HOTKEY)}
-          </Kbd>
+          <InputGroupAddon align="inline-end">
+            <Kbd aria-hidden="true">{hotkeyLabel(SEARCH_HOTKEY)}</Kbd>
+          </InputGroupAddon>
         )}
-      </div>
+      </InputGroup>
 
       <ToggleGroup
         aria-label="Filter by classification"
@@ -119,13 +119,15 @@ export function ServicesTableToolbar({
           const next = values[values.length - 1] as ClassificationFilter;
           if (next) onClassificationFilterChange(next);
         }}
-        className="flex-wrap rounded-lg border border-border-strong bg-surface-subtle p-0.5"
+        // lg height: a 1px border and 2px padding around 34px items make the
+        // track 40px, level with the search box and the department select.
+        className="min-h-10 flex-wrap rounded-md border border-border-strong bg-surface-subtle p-0.5"
       >
         {visibleFilters.map((filter) => (
           <ToggleGroupItem
             key={filter}
             value={filter}
-            className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground data-pressed:bg-primary-soft data-pressed:text-primary data-pressed:ring-1 data-pressed:ring-inset data-pressed:ring-primary/15"
+            className="inline-flex h-8.5 items-center gap-2 rounded-sm px-3 text-sm font-medium text-muted-foreground data-pressed:bg-primary-soft data-pressed:text-primary data-pressed:ring-1 data-pressed:ring-inset data-pressed:ring-primary/15"
           >
             {filter !== "all" && (
               <span
@@ -157,15 +159,13 @@ export function ServicesTableToolbar({
         >
           <SelectTrigger
             id="services-department-filter"
-            className="h-10 w-48"
+            className="w-48"
             aria-label="Filter by department"
+            size="lg"
           >
-            <SelectValue
-              placeholder="All departments"
-              className="capitalize"
-            />
+            <SelectValue placeholder="All departments" className="capitalize" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent variant="roomy">
             <SelectGroup>
               <SelectItem value={ALL_DEPARTMENTS}>All departments</SelectItem>
               {departments.map((department) => (

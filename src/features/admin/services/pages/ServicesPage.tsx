@@ -49,12 +49,15 @@ const ServicesPage = ({ services, departments }: ServicesPageProps) => {
           <Link
             to="/admin/services/blocks"
             search={{ block: undefined }}
-            className={buttonVariants({ variant: "ghost" })}
+            className={buttonVariants({ variant: "ghost", size: "lg" })}
           >
             <Blocks aria-hidden="true" data-icon="inline-start" />
             Shared Question Blocks
           </Link>
-          <Link to="/admin/services/new" className={buttonVariants()}>
+          <Link
+            to="/admin/services/new"
+            className={buttonVariants({ variant: "raised", size: "lg" })}
+          >
             <Plus aria-hidden="true" data-icon="inline-start" />
             Add Service
           </Link>

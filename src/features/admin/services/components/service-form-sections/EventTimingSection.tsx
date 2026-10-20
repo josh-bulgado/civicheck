@@ -218,7 +218,7 @@ export function EventTimingSection({
           <Button
             type="button"
             variant="raised"
-            size="touch"
+            size="lg"
             disabled={caseDateFields.length === 0}
             onClick={enableTiming}
           >
@@ -255,7 +255,7 @@ export function EventTimingSection({
                         }
                       </SelectValue>
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent variant="roomy">
                       <SelectGroup>
                         {caseDateFields.map((field) => (
                           <SelectItem key={field.key} value={field.key}>
@@ -287,7 +287,7 @@ export function EventTimingSection({
                         }
                       </SelectValue>
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent variant="roomy">
                       <SelectGroup>
                         {SENTENCE_SIDES.map((item) => (
                           <SelectItem key={item.value} value={item.value}>
@@ -396,7 +396,7 @@ export function EventTimingSection({
                         }
                       </SelectValue>
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent variant="roomy">
                       <SelectGroup>
                         {TIMING_BEHAVIORS.map((item) => (
                           <SelectItem key={item.value} value={item.value}>
@@ -424,7 +424,7 @@ export function EventTimingSection({
                     >
                       <SelectTrigger
                         id="timing-target"
-                        size="touch"
+                        size="lg"
                         className="w-full"
                         aria-describedby={
                           routesToSelf
@@ -444,7 +444,7 @@ export function EventTimingSection({
                           }
                         </SelectValue>
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent variant="roomy">
                         <SelectGroup>
                           {targetOptions.map((option) => (
                             <SelectItem key={option.value} value={option.value}>
@@ -527,7 +527,7 @@ export function EventTimingSection({
                   <Input
                     id="timing-title"
                     name="timing_title"
-                    fieldSize="touch"
+                    fieldSize="lg"
                     maxLength={160}
                     value={timing.title}
                     onChange={(event) =>
@@ -545,7 +545,7 @@ export function EventTimingSection({
                   <Input
                     id="timing-cta"
                     name="timing_cta"
-                    fieldSize="touch"
+                    fieldSize="lg"
                     maxLength={80}
                     value={timing.ctaLabel}
                     onChange={(event) =>

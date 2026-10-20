@@ -13,10 +13,6 @@ import {
  */
 export const EDITOR_SHEET_PROPS = { "data-service-editor": "" } as const;
 
-/** The editor's row action and Add menus: a roomy panel with tall, rounded items. */
-export const EDITOR_MENU_CONTENT = "min-w-[200px] rounded-[14px] p-1.5";
-export const EDITOR_MENU_ITEM =
-  "min-h-10 gap-2.5 rounded-[9px] px-3 text-sm font-medium";
 /** The "..." button that opens a row's actions. */
 export const EDITOR_ROW_MENU_TRIGGER =
   "size-10 rounded-[10px] text-muted-foreground";

@@ -238,7 +238,7 @@ export function FeeBreakdownFields() {
                                     }
                                   </SelectValue>
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent variant="roomy">
                                   <SelectGroup>
                                     {FEE_UNIT_OPTIONS.map((unit) => (
                                       <SelectItem key={unit} value={unit}>

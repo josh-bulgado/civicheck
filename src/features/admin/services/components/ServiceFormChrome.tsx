@@ -242,7 +242,7 @@ export function ServiceFormActionBar({
   const isVariant = mode === "variant";
   const isGroup = mode === "group";
   const cancelClassName = cn(
-    buttonVariants({ variant: "outline", size: "touch" }),
+    buttonVariants({ variant: "outline", size: "lg" }),
   );
 
   return (
@@ -286,7 +286,7 @@ export function ServiceFormActionBar({
           Cancel
         </Link>
       )}
-      <Button type="submit" variant="raised" size="touch" disabled={isDisabled}>
+      <Button type="submit" variant="raised" size="lg" disabled={isDisabled}>
         {isSaving ? (
           <Spinner data-icon="inline-start" />
         ) : (

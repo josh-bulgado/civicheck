@@ -5,7 +5,7 @@ import { cn } from "~/lib/utils";
 import type { FormOption } from "../form-template.types";
 import { ADD_PILL } from "./ConditionRuleBuilder";
 
-const ROW = "grid grid-cols-[1fr_1fr_44px] gap-2";
+const ROW = "grid grid-cols-[1fr_1fr_40px] gap-2";
 
 interface OptionRowsEditorProps {
   /** Prefix for the ids that tie a row to its "Used by" note. */
@@ -76,7 +76,7 @@ export function OptionRowsEditor({
                     ? "Used by a condition, so its value can’t change."
                     : undefined
                 }
-                fieldSize="touch"
+                fieldSize="lg"
                 className={cn(
                   "font-mono text-sm",
                   inUse && "bg-muted/60 text-muted-foreground",
@@ -88,7 +88,7 @@ export function OptionRowsEditor({
               <Input
                 value={option.label}
                 autoComplete="off"
-                fieldSize="touch"
+                fieldSize="lg"
                 className="text-[15px]"
                 aria-label={`${noun} ${index + 1} label`}
                 onChange={(event) => onLabelChange(index, event.target.value)}
@@ -97,7 +97,7 @@ export function OptionRowsEditor({
                 type="button"
                 variant="ghost"
                 disabled={inUse || options.length <= minOptions}
-                className="size-11 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                className="size-10 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                 onClick={() => onRemove(index)}
                 aria-label={`Remove ${noun.toLowerCase()} ${index + 1}`}
                 aria-describedby={inUse ? usageId : undefined}

@@ -12,6 +12,11 @@ import {
 import { Badge } from "~/components/ui/badge";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "~/components/ui/input-group";
 import { Label } from "~/components/ui/label";
 import { formatServiceCode } from "~/features/services/service-utils";
 import { cn } from "~/lib/utils";
@@ -119,6 +124,7 @@ export function ServiceGroupInspector({
           <Label htmlFor={`${ids}-name`}>Internal name</Label>
           <Input
             id={`${ids}-name`}
+            fieldSize="lg"
             value={draft?.name ?? variant.name}
             onChange={(event) => onDraftChange({ name: event.target.value })}
             aria-invalid={nameError ? true : undefined}
@@ -134,18 +140,13 @@ export function ServiceGroupInspector({
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor={`${ids}-fee`}>Fee</Label>
-            <div className="relative">
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-sm text-muted-foreground"
-              >
-                ₱
-              </span>
-              <Input
+            <InputGroup size="lg">
+              <InputGroupAddon aria-hidden="true">₱</InputGroupAddon>
+              <InputGroupInput
                 id={`${ids}-fee`}
                 ref={feeInputRef}
                 inputMode="decimal"
-                className="pl-7 tabular-nums"
+                className="tabular-nums"
                 value={draft?.fee ?? Number(variant.fee).toFixed(2)}
                 onChange={(event) => onDraftChange({ fee: event.target.value })}
                 onFocus={(event) => event.currentTarget.select()}
@@ -153,7 +154,7 @@ export function ServiceGroupInspector({
                 aria-invalid={feeError ? true : undefined}
                 aria-describedby={`${ids}-fee-hint`}
               />
-            </div>
+            </InputGroup>
             <p
               id={`${ids}-fee-hint`}
               className={cn(
@@ -187,6 +188,7 @@ export function ServiceGroupInspector({
             <Label htmlFor={`${ids}-time`}>Processing time</Label>
             <Input
               id={`${ids}-time`}
+              fieldSize="lg"
               value={draft?.processing_time ?? variant.processing_time}
               onChange={(event) =>
                 onDraftChange({ processing_time: event.target.value })

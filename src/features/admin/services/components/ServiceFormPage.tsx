@@ -1029,7 +1029,7 @@ export function ServiceFormPage({
                       <Button
                         type="button"
                         variant="outline"
-                        size="touch"
+                        size="lg"
                         onClick={() => void revealSection(previousTab.id)}
                       >
                         <ArrowLeft
@@ -1043,7 +1043,7 @@ export function ServiceFormPage({
                       <Button
                         type="button"
                         variant="outline"
-                        size="touch"
+                        size="lg"
                         onClick={() => void revealSection(nextTab.id)}
                       >
                         <span className="sm:hidden">Next section</span>

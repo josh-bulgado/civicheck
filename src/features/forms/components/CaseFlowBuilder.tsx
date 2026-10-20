@@ -292,7 +292,7 @@ export function CaseFlowBuilder({
               onChange={(event) =>
                 onChange({ ...caseFlow, title: event.target.value })
               }
-              fieldSize="touch"
+              fieldSize="lg"
               autoComplete="off"
             />
           </Field>
@@ -310,7 +310,7 @@ export function CaseFlowBuilder({
         <Field>
           <FieldLabel htmlFor="case-flow-description">Instructions</FieldLabel>
           <Input
-            fieldSize="touch"
+            fieldSize="lg"
             id="case-flow-description"
             value={caseFlow.description ?? ""}
             onChange={(event) =>
@@ -389,7 +389,7 @@ export function CaseFlowBuilder({
                           Question
                         </FieldLabel>
                         <Input
-                          fieldSize="touch"
+                          fieldSize="lg"
                           id={`case-question-${questionIndex}-label`}
                           value={question.label}
                           onChange={(event) =>
@@ -407,7 +407,7 @@ export function CaseFlowBuilder({
                           Stable key
                         </FieldLabel>
                         <Input
-                          fieldSize="touch"
+                          fieldSize="lg"
                           id={`case-question-${questionIndex}-key`}
                           value={question.key}
                           disabled={immutableQuestionKeys.includes(

@@ -161,7 +161,7 @@ export function ConditionRuleBuilder({
                 >
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className={POPUP_CLASS}>
+                <SelectContent variant="roomy" className={POPUP_CLASS}>
                   <SelectGroup>
                     {sources.map((candidate) => (
                       <SelectItem key={candidate.key} value={candidate.key}>
@@ -189,7 +189,7 @@ export function ConditionRuleBuilder({
                     {(operator) => (operator === "not_equals" ? "is not" : "is")}
                   </SelectValue>
                 </SelectTrigger>
-                <SelectContent className={POPUP_CLASS}>
+                <SelectContent variant="roomy" className={POPUP_CLASS}>
                   <SelectGroup>
                     <SelectItem value="equals">is</SelectItem>
                     <SelectItem value="not_equals">is not</SelectItem>
@@ -212,7 +212,7 @@ export function ConditionRuleBuilder({
                   >
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className={POPUP_CLASS}>
+                  <SelectContent variant="roomy" className={POPUP_CLASS}>
                     <SelectGroup>
                       {source.options.map((option) => (
                         <SelectItem key={option.value} value={option.value}>

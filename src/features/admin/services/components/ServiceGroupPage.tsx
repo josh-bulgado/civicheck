@@ -4,7 +4,11 @@ import { useHotkeys } from "@tanstack/react-hotkeys";
 import { ArrowLeft, ArrowRight, FileSliders, Search } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { buttonVariants } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "~/components/ui/input-group";
 import { Kbd } from "~/components/ui/kbd";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import {
@@ -80,7 +84,8 @@ export function ServiceGroupPage({ variants }: { variants: Service[] }) {
     {
       hotkey: NEXT_SERVICE_HOTKEY,
       callback: () =>
-        selected && select(neighbourCode(visibleCodes, selected.service_code, 1)),
+        selected &&
+        select(neighbourCode(visibleCodes, selected.service_code, 1)),
     },
     {
       hotkey: PREVIOUS_SERVICE_HOTKEY,
@@ -91,7 +96,8 @@ export function ServiceGroupPage({ variants }: { variants: Service[] }) {
     {
       hotkey: "ArrowDown",
       callback: () =>
-        selected && select(neighbourCode(visibleCodes, selected.service_code, 1)),
+        selected &&
+        select(neighbourCode(visibleCodes, selected.service_code, 1)),
     },
     {
       hotkey: "ArrowUp",
@@ -194,7 +200,7 @@ export function ServiceGroupPage({ variants }: { variants: Service[] }) {
             to="/admin/services/groups/$displayGroup"
             params={{ displayGroup: groupKey }}
             search={{ scope: "application" }}
-            className={buttonVariants()}
+            className={buttonVariants({ size: "lg" })}
           >
             Edit shared application
             <ArrowRight aria-hidden="true" data-icon="inline-end" />
@@ -207,24 +213,24 @@ export function ServiceGroupPage({ variants }: { variants: Service[] }) {
             className="min-w-0 overflow-hidden rounded-xl border border-border-strong bg-card"
           >
             <div className="flex flex-wrap items-center gap-3 border-b border-border-light px-4 py-3">
-              <div className="relative min-w-48 max-w-80 flex-1">
-                <Search
-                  aria-hidden="true"
-                  className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
-                />
-                <Input
+              <InputGroup size="lg" className="min-w-48 max-w-80 flex-1">
+                <InputGroupAddon>
+                  <Search aria-hidden="true" />
+                </InputGroupAddon>
+                <InputGroupInput
                   ref={searchRef}
                   type="search"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Search variants"
                   aria-label="Search variants"
-                  className="pr-9 pl-8"
                 />
-                <Kbd className="absolute top-1/2 right-2 -translate-y-1/2">
-                  {SEARCH_HOTKEY}
-                </Kbd>
-              </div>
+                {query ? null : (
+                  <InputGroupAddon align="inline-end">
+                    <Kbd aria-hidden="true">{SEARCH_HOTKEY}</Kbd>
+                  </InputGroupAddon>
+                )}
+              </InputGroup>
               <ToggleGroup
                 value={[feeFilter]}
                 onValueChange={(next) => {
@@ -233,11 +239,15 @@ export function ServiceGroupPage({ variants }: { variants: Service[] }) {
                   if (value) setFeeFilter(value);
                 }}
                 variant="outline"
-                size="sm"
+                size="lg"
                 aria-label="Filter by fee"
               >
-                <ToggleGroupItem value="all">All {summary.count}</ToggleGroupItem>
-                <ToggleGroupItem value="free">Free {summary.freeCount}</ToggleGroupItem>
+                <ToggleGroupItem value="all">
+                  All {summary.count}
+                </ToggleGroupItem>
+                <ToggleGroupItem value="free">
+                  Free {summary.freeCount}
+                </ToggleGroupItem>
                 <ToggleGroupItem value="paid">
                   Paid {summary.count - summary.freeCount}
                 </ToggleGroupItem>
@@ -267,7 +277,9 @@ export function ServiceGroupPage({ variants }: { variants: Service[] }) {
                       >
                         <span className="flex items-center gap-2 font-mono text-xs font-semibold text-primary">
                           {formatServiceCode(variant.service_code)}
-                          {edited ? <Badge variant="warning">Edited</Badge> : null}
+                          {edited ? (
+                            <Badge variant="warning">Edited</Badge>
+                          ) : null}
                         </span>
                         <span className="row-span-2 col-start-2 row-start-1 text-right text-sm font-semibold tabular-nums">
                           {Number(variant.fee) === 0 ? (

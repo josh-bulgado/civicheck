@@ -172,7 +172,7 @@ export function FormFieldInspector({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="touch"
+                  size="lg"
                   className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                   onClick={discard}
                 >
@@ -182,7 +182,7 @@ export function FormFieldInspector({
               <Button
                 type="button"
                 variant="raised"
-                size="touch"
+                size="lg"
                 className="ml-auto"
                 onClick={() => onOpenChange(false)}
               >
@@ -294,7 +294,7 @@ function FieldEditor({
           <Input
             id="inspector-label"
             name="field_label"
-            fieldSize="touch"
+            fieldSize="lg"
             className={SHEET_INPUT}
             value={field.label}
             placeholder="What applicants see…"
@@ -310,7 +310,7 @@ function FieldEditor({
           <Input
             id="inspector-key"
             name="field_key"
-            fieldSize="touch"
+            fieldSize="lg"
             value={field.key}
             disabled={immutableKeys.has(field.key)}
             autoComplete="off"
@@ -351,13 +351,13 @@ function FieldEditor({
           >
             <SelectTrigger
               id="inspector-type"
-              size="touch"
+              size="lg"
               className="w-full"
               aria-describedby={typeLockedByUsage ? "inspector-type-lock" : undefined}
             >
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent variant="roomy">
               <SelectGroup>
                 {typeOptions.map((type) => (
                   <SelectItem key={type.value} value={type.value}>
@@ -382,7 +382,7 @@ function FieldEditor({
           <Input
             id="inspector-placeholder"
             name="field_placeholder"
-            fieldSize="touch"
+            fieldSize="lg"
             className={SHEET_INPUT}
             value={field.placeholder ?? ""}
             placeholder="Shown in the empty field…"
@@ -407,12 +407,12 @@ function FieldEditor({
             >
               <SelectTrigger
                 id="inspector-date-direction"
-                size="touch"
+                size="lg"
                 className="w-full"
               >
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent variant="roomy">
                 <SelectGroup>
                   {DATE_DIRECTIONS.map((direction) => (
                     <SelectItem key={direction.value} value={direction.value}>

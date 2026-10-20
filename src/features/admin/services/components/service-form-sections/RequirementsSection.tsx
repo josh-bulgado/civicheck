@@ -10,7 +10,6 @@ import {
   Unlock,
 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "~/lib/utils";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -38,10 +37,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import {
   type ConditionSource,
 } from "~/features/forms/components/ConditionRuleBuilder";
-import {
-  EDITOR_MENU_CONTENT,
-  EDITOR_MENU_ITEM,
-} from "~/features/forms/components/EditorSheetParts";
 import type { FormTemplateDefinition } from "~/features/forms/form-template.types";
 import type { Service } from "../../services.types";
 import {
@@ -427,12 +422,12 @@ export function RequirementsSection({
                   type="search"
                   name="requirements_search"
                   autoComplete="off"
-                  fieldSize="touch"
+                  fieldSize="lg"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Search requirements…"
                   aria-label="Search requirements"
-                  className="bg-background data-[field-size=touch]:pl-10"
+                  className="bg-background data-[field-size=lg]:pl-10"
                 />
               </div>
               <DropdownMenu>
@@ -443,19 +438,15 @@ export function RequirementsSection({
                       ref={addButtonRef}
                       type="button"
                       variant="raised"
-                      size="touch"
+                      size="lg"
                     />
                   }
                 >
                   <Plus aria-hidden="true" data-icon="inline-start" />
                   Add
                 </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className={cn(EDITOR_MENU_CONTENT, "min-w-64")}
-                >
+                <DropdownMenuContent align="end" variant="roomy" className="min-w-64">
                   <DropdownMenuItem
-                    className={EDITOR_MENU_ITEM}
                     onClick={addBlank}
                   >
                     <Plus aria-hidden="true" className="text-muted-foreground" />
@@ -463,7 +454,7 @@ export function RequirementsSection({
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     disabled={!canOverride}
-                    className={cn(EDITOR_MENU_ITEM, "items-start py-2")}
+                    className="items-start py-2"
                     onClick={addVariantSpecific}
                   >
                     <GitBranch
