@@ -318,19 +318,17 @@ export function RequirementSheet({
                                 </FieldLegend>
                                 <ToggleGroup
                                   aria-label="Which person"
-                                  variant="outline"
-                                  spacing={2}
+                                  variant="chips"
+                                  size="lg"
                                   value={field.value ? [field.value] : []}
                                   onValueChange={(next) => {
                                     if (next[0]) field.onChange(next[0]);
                                   }}
-                                  className="grid w-full grid-cols-[repeat(auto-fit,minmax(7rem,1fr))]"
                                 >
                                   {partyRoles.map((role) => (
                                     <ToggleGroupItem
                                       key={role}
                                       value={role}
-                                      className="min-h-10 bg-background aria-pressed:border-primary/40 aria-pressed:bg-primary-soft aria-pressed:text-primary"
                                     >
                                       {role}
                                     </ToggleGroupItem>

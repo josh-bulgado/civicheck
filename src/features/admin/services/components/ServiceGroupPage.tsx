@@ -238,7 +238,7 @@ export function ServiceGroupPage({ variants }: { variants: Service[] }) {
                   const value = next[0] as FeeFilter | undefined;
                   if (value) setFeeFilter(value);
                 }}
-                variant="outline"
+                variant="pill"
                 size="lg"
                 aria-label="Filter by fee"
               >

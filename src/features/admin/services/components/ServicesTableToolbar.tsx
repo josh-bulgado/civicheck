@@ -119,16 +119,14 @@ export function ServicesTableToolbar({
           const next = values[values.length - 1] as ClassificationFilter;
           if (next) onClassificationFilterChange(next);
         }}
-        // lg height: a 1px border and 2px padding around 34px items make the
-        // track 40px, level with the search box and the department select.
-        className="min-h-10 flex-wrap rounded-md border border-border-strong bg-surface-subtle p-0.5"
+        // lg height: the track is 40px, level with the search box and the
+        // department select.
+        variant="pill"
+        size="lg"
+        className="flex-wrap"
       >
         {visibleFilters.map((filter) => (
-          <ToggleGroupItem
-            key={filter}
-            value={filter}
-            className="inline-flex h-8.5 items-center gap-2 rounded-sm px-3 text-sm font-medium text-muted-foreground data-pressed:bg-primary-soft data-pressed:text-primary data-pressed:ring-1 data-pressed:ring-inset data-pressed:ring-primary/15"
-          >
+          <ToggleGroupItem key={filter} value={filter}>
             {filter !== "all" && (
               <span
                 aria-hidden="true"
