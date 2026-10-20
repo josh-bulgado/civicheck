@@ -54,6 +54,14 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "~/components/ui/input-group";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from "~/components/ui/item";
 import { Kbd } from "~/components/ui/kbd";
 import { Spinner } from "~/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
@@ -427,30 +435,30 @@ export function FormBlocksPage({
             )}
           </InputGroup>
           {visibleBlocks.map(({ block, usage: blockUsage }) => (
-            <button
+            <Item
               key={block.blockKey}
-              type="button"
+              render={<button type="button" />}
+              variant="selectable"
+              size="sm"
+              className="flex-nowrap rounded-xl"
               onClick={() => selectBlock(block.blockKey)}
               aria-current={selectedKey === block.blockKey ? "true" : undefined}
-              className={cn(
-                "flex items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left transition-colors hover:bg-card",
-                selectedKey === block.blockKey &&
-                  "border-primary bg-card shadow-xs",
-              )}
             >
-              <IconTile
-                icon={Blocks}
-                className="size-9 rounded-xl [&_svg]:size-4"
-              />
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-sm font-semibold">
-                  {block.name}
-                </span>
-                <span className="text-xs text-muted-foreground">
+              <ItemMedia>
+                <IconTile
+                  icon={Blocks}
+                  className="size-9 rounded-xl [&_svg]:size-4"
+                />
+              </ItemMedia>
+              <ItemContent className="min-w-0 gap-0">
+                <ItemTitle className="max-w-full font-semibold">
+                  <span className="truncate">{block.name}</span>
+                </ItemTitle>
+                <ItemDescription className="text-xs">
                   {block.fields.length}{" "}
                   {block.fields.length === 1 ? "question" : "questions"}
-                </span>
-              </span>
+                </ItemDescription>
+              </ItemContent>
               {selectedKey === block.blockKey && isDirty ? (
                 <span
                   role="img"
@@ -458,7 +466,7 @@ export function FormBlocksPage({
                   className="size-2 shrink-0 rounded-full bg-warning"
                 />
               ) : null}
-              <span className="flex shrink-0 flex-col items-end text-right text-xs text-muted-foreground tabular-nums">
+              <ItemActions className="shrink-0 flex-col items-end gap-0 text-right text-xs text-muted-foreground tabular-nums">
                 {blockUsage.length === 0 ? (
                   "Unused"
                 ) : (
@@ -469,8 +477,8 @@ export function FormBlocksPage({
                     {blockUsage.length === 1 ? "form" : "forms"}
                   </>
                 )}
-              </span>
-            </button>
+              </ItemActions>
+            </Item>
           ))}
           {blocks.length === 0 ? (
             <p className="px-1 text-sm text-muted-foreground">
