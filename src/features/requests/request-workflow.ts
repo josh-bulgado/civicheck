@@ -141,4 +141,6 @@ export {
   getPaymentDetails,
   getCurrentDotClass,
   getLogNote,
+  getRejectionNotice,
+  getRejectionReason,
 } from "~/features/services/request-status";

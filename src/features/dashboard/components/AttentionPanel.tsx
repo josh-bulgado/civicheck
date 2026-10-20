@@ -2,10 +2,13 @@ import { QuietLink } from "~/components/quiet-link";
 import { CircleCheckBig, FileWarning } from "lucide-react";
 import { cn } from "~/lib/utils";
 import type { AttentionItem } from "../types";
+import { SeeAllRequestsLink } from "./SeeAllRequestsLink";
 
 interface AttentionPanelProps {
   /** Never empty: the dashboard leaves this card out when nothing needs input. */
   items: AttentionItem[];
+  /** The card had no room for every request it should name, and nothing below it points to the list. */
+  seeAll?: boolean;
 }
 
 // Red is for what the applicant must act on; green is for what is ready.
@@ -14,10 +17,13 @@ const TILE_TONE: Record<AttentionItem["tone"], string> = {
   success: "bg-tone-success-soft text-tone-success",
 };
 
-export function AttentionPanel({ items }: AttentionPanelProps) {
+export function AttentionPanel({ items, seeAll = false }: AttentionPanelProps) {
   return (
     <section className="rounded-[28px] bg-card px-5 pt-5 pb-2 shadow-portal-card md:px-7 md:pt-5 md:pb-2">
-      <h2 className="portal-heading">Needs your attention</h2>
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="portal-heading">Needs your attention</h2>
+        {seeAll && <SeeAllRequestsLink />}
+      </div>
       <ul className="mt-2 flex flex-col divide-y divide-border-lighter">
         {items.map(({ request, tone, message, action }) => {
           const Icon = tone === "warning" ? FileWarning : CircleCheckBig;

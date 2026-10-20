@@ -9,17 +9,17 @@ const steps = [
   {
     number: "2",
     title: "Apply online",
-    desc: "Sign in (or create a free account), then file your request online and upload documents for pre-validation, so nothing gets rejected at the counter.",
+    desc: "Sign in (or create a free account) and send your request. You can also upload photos of your papers so staff can check them early. It's optional, but it helps you avoid a repeat trip.",
   },
   {
     number: "3",
-    title: "Visit the CCRO",
-    desc: "Bring your tracking number and original documents to the counter — no appointment needed.",
+    title: "Follow your request",
+    desc: "Use your tracking number to see where it stands. If something is missing, we'll tell you by email and in the app.",
   },
   {
     number: "4",
-    title: "Pay and claim on site",
-    desc: "Pay at the CCRO cashier and claim your document once it's ready for release.",
+    title: "Bring your originals and claim",
+    desc: "When it's ready, visit the CCRO with your tracking number and the original copies of your documents, including any you uploaded. No appointment needed. Pay the fee at the counter if there is one, then claim your document.",
   },
 ];
 

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   RETURNABLE_TO_VALIDATION,
   canTransition,
+  getRejectionNotice,
+  getRejectionReason,
   getTransitionLabel,
   nextStatuses,
 } from "./request-workflow";
@@ -36,5 +38,49 @@ describe("returning a request to validation", () => {
     expect(getTransitionLabel("incomplete", "under_validation")).toBe(
       "Start validation",
     );
+  });
+});
+
+describe("the reason a request was rejected", () => {
+  const rejected = (remarks: string | null) => ({ actionStatus: "rejected", remarks });
+  const generic = "Your request could not be accepted.";
+
+  it("is the newest rejection's remark, as staff typed it", () => {
+    const reason = "No matching record could be found at the CCRO.";
+
+    expect(
+      getRejectionReason([
+        { actionStatus: "submitted", remarks: "Request submitted online." },
+        rejected("An older reason."),
+        rejected(reason),
+      ]),
+    ).toBe(reason);
+  });
+
+  it("is null when the rejection carries no reason of its own", () => {
+    for (const remarks of [
+      null,
+      "",
+      'Advanced from "Under Validation".',
+      "Moved from under_validation to rejected.",
+      generic,
+    ]) {
+      expect(getRejectionReason([rejected(remarks)])).toBeNull();
+    }
+  });
+
+  it("ignores the notes on every other status change, and a request never rejected", () => {
+    expect(
+      getRejectionReason([{ actionStatus: "incomplete", remarks: "Bring a valid ID." }]),
+    ).toBeNull();
+    expect(getRejectionReason([])).toBeNull();
+  });
+
+  it("is told as the plain statement, then the reason when there is one", () => {
+    expect(getRejectionNotice([rejected("The details do not match.")])).toBe(
+      `${generic} The details do not match.`,
+    );
+    expect(getRejectionNotice([rejected(null)])).toBe(generic);
+    expect(getRejectionNotice([])).toBe(generic);
   });
 });

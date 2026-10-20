@@ -14,7 +14,9 @@ export interface CitizenDashboardRequest {
   /** The service's short name, when an admin set one. */
   short_name?: string | null;
   /** Every status change on the request, in no particular order. */
-  application_logs?: { action_status: string; created_at: string }[] | null;
+  application_logs?:
+    | { action_status: string; created_at: string; remarks?: string | null }[]
+    | null;
 }
 
 export interface AttentionItem {

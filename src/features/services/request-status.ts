@@ -131,6 +131,34 @@ export function getLogNote(
   return remarks;
 }
 
+interface RejectionLog {
+  actionStatus: string;
+  remarks: string | null;
+}
+
+/**
+ * Why staff rejected a request, in the words they gave: the newest rejection in
+ * `logs` (oldest first, as the detail query returns them). Null when it carries
+ * no reason of its own: `getLogNote` is what tells a typed remark from an
+ * auto-generated one, so this agrees with the timeline on which is which.
+ */
+export function getRejectionReason(logs: RejectionLog[]): string | null {
+  const latest = [...logs].reverse().find((log) => log.actionStatus === "rejected");
+  if (!latest) return null;
+  const note = getLogNote("rejected", latest.remarks, "applicant");
+  return note && note !== getLogNote("rejected", null, "applicant") ? note : null;
+}
+
+/**
+ * What an applicant is told about a rejected request, on the dashboard and on
+ * the request's own page: the plain statement, then staff's reason if there is one.
+ */
+export function getRejectionNotice(logs: RejectionLog[]): string {
+  return [getLogNote("rejected", null, "applicant"), getRejectionReason(logs)]
+    .filter(Boolean)
+    .join(" ");
+}
+
 interface PaymentDetails {
   label: string;
   styles: string;

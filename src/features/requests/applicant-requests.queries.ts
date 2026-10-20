@@ -41,7 +41,7 @@ export const getMyRequestsFn = createServerFn({ method: "GET" }).handler(async (
     .select(
       `id, tracking_number, request_type, status, payment_status, created_at,
        fees_due, form_data, services_registry(name, display_name),
-       application_logs(action_status, created_at)`,
+       application_logs(action_status, created_at, remarks)`,
     )
     .eq("applicant_id", user.id)
     .order("created_at", { ascending: false });

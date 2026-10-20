@@ -1,4 +1,5 @@
 import { getLogNote } from "~/features/requests/request-workflow";
+import { formatPesoFee } from "~/features/services/service-utils";
 
 /** What the applicant is told to do next on their request page. */
 export type NextStepsView =
@@ -40,12 +41,17 @@ export function nextSteps(input: NextStepsInput): NextStepsView | null {
     if (input.feesDue <= 0) {
       return { kind: "steps", steps: [ORIGINALS, "Claim your document at the CCRO"] };
     }
+    // Already paid: nothing more to say about money.
     if (input.paymentStatus === "verified") {
       return { kind: "steps", steps: [ORIGINALS, "Claim your document"] };
     }
     return {
       kind: "steps",
-      steps: [ORIGINALS, "Pay at the cashier", "Claim your document"],
+      steps: [
+        ORIGINALS,
+        `Bring ${formatPesoFee(input.feesDue)} to pay at the counter`,
+        "Claim your document",
+      ],
     };
   }
 
