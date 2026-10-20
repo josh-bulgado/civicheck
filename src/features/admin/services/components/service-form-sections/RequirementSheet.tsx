@@ -147,7 +147,7 @@ export function RequirementSheet({
                       </FieldLabel>
                       <Input
                         {...field}
-                        fieldSize="touch"
+                        fieldSize="lg"
                         id={`requirement-name-${index}`}
                         placeholder="Valid ID, 1 photocopy with signature…"
                         autoComplete="off"
@@ -177,7 +177,7 @@ export function RequirementSheet({
                       </FieldLabel>
                       <Input
                         {...field}
-                        fieldSize="touch"
+                        fieldSize="lg"
                         value={field.value ?? ""}
                         id={`requirement-source-${index}`}
                         placeholder="Government / private sector…"
@@ -280,12 +280,12 @@ export function RequirementSheet({
                             >
                               <SelectTrigger
                                 id={`requirement-scope-${index}`}
-                                size="touch"
+                                size="lg"
                                 className="w-full bg-background"
                               >
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent variant="roomy">
                                 <SelectGroup>
                                   {UPLOAD_SCOPES.map((scope) => (
                                     <SelectItem
@@ -318,19 +318,17 @@ export function RequirementSheet({
                                 </FieldLegend>
                                 <ToggleGroup
                                   aria-label="Which person"
-                                  variant="outline"
-                                  spacing={2}
+                                  variant="chips"
+                                  size="lg"
                                   value={field.value ? [field.value] : []}
                                   onValueChange={(next) => {
                                     if (next[0]) field.onChange(next[0]);
                                   }}
-                                  className="grid w-full grid-cols-[repeat(auto-fit,minmax(7rem,1fr))]"
                                 >
                                   {partyRoles.map((role) => (
                                     <ToggleGroupItem
                                       key={role}
                                       value={role}
-                                      className="min-h-11 bg-background aria-pressed:border-primary/40 aria-pressed:bg-primary-soft aria-pressed:text-primary"
                                     >
                                       {role}
                                     </ToggleGroupItem>
@@ -356,12 +354,13 @@ export function RequirementSheet({
                                 >
                                   <SelectTrigger
                                     id={`requirement-subject-role-${index}`}
+                                    size="lg"
                                     className="w-full"
                                     aria-invalid={fieldState.invalid}
                                   >
                                     <SelectValue placeholder="Select a role…" />
                                   </SelectTrigger>
-                                  <SelectContent>
+                                  <SelectContent variant="roomy">
                                     <SelectGroup>
                                       {partyRoles.map((role) => (
                                         <SelectItem key={role} value={role}>
@@ -434,7 +433,7 @@ export function RequirementSheet({
             <Button
               type="button"
               variant="ghost"
-              size="touch"
+              size="lg"
               className="text-destructive hover:bg-destructive/10 hover:text-destructive"
               onClick={discardChanges}
             >
@@ -444,7 +443,7 @@ export function RequirementSheet({
           <Button
             type="button"
             variant="raised"
-            size="touch"
+            size="lg"
             className="ml-auto"
             onClick={() => onOpenChange(false)}
           >

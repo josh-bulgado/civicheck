@@ -18,7 +18,7 @@ import {
 import { Input } from "~/components/ui/input";
 import { Switch } from "~/components/ui/switch";
 import { Textarea } from "~/components/ui/textarea";
-import { SettingGroup } from "./SettingGroup";
+import { SettingGroup } from "~/components/ui/setting-group";
 import {
   STEP_PLACEHOLDERS,
   type ServiceFormValues,
@@ -158,7 +158,7 @@ export function CitizenJourneySection({
           <Button
             type="button"
             variant="outline"
-            size="touch"
+            size="lg"
             className={ADD_ROW}
             onClick={() => stepFields.append({ value: "" })}
           >
@@ -183,7 +183,7 @@ export function CitizenJourneySection({
                   render={({ field }) => (
                     <Input
                       {...field}
-                      fieldSize="touch"
+                      fieldSize="lg"
                       className="bg-card"
                       placeholder="Subject…"
                       aria-label={`Person role ${index + 1}`}
@@ -209,7 +209,7 @@ export function CitizenJourneySection({
           <Button
             type="button"
             variant="outline"
-            size="touch"
+            size="lg"
             className={ADD_ROW}
             onClick={() => partyRoleFields.append({ value: "" })}
           >

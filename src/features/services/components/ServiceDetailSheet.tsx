@@ -29,6 +29,7 @@ import {
   ArrowRight,
   FileText,
   ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
   cleanStepText,
@@ -47,6 +48,17 @@ interface ServiceDetailSheetProps {
   onOpenChange: (open: boolean) => void;
   onEdit?: (service: ServiceDossier) => void;
   editLabel?: string;
+  /**
+   * Steps through the list the sheet was opened from, so an admin can review
+   * services one after another without closing and reopening it. A missing
+   * handler disables that button (first or last item).
+   */
+  navigation?: {
+    position: number;
+    total: number;
+    onPrevious?: () => void;
+    onNext?: () => void;
+  };
 }
 
 export function ServiceDetailSheet({
@@ -55,6 +67,7 @@ export function ServiceDetailSheet({
   onOpenChange,
   onEdit,
   editLabel = "Edit Service",
+  navigation,
 }: ServiceDetailSheetProps) {
   const [requirements, setRequirements] = useState<ServiceRequirement[]>([]);
   const [loading, setLoading] = useState(false);
@@ -116,6 +129,38 @@ export function ServiceDetailSheet({
         {/* Header Section - clean and neutral */}
         <div className="relative p-6 bg-card border-b border-border">
           <div className="space-y-2 pr-8">
+            {navigation && (
+              <div className="flex items-center gap-1.5 pb-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  onClick={navigation.onPrevious}
+                  disabled={!navigation.onPrevious}
+                  aria-label="Previous service"
+                  title="Previous service"
+                >
+                  <ChevronUp aria-hidden="true" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  onClick={navigation.onNext}
+                  disabled={!navigation.onNext}
+                  aria-label="Next service"
+                  title="Next service"
+                >
+                  <ChevronDown aria-hidden="true" />
+                </Button>
+                <span
+                  className="ml-1 text-xs tabular-nums text-muted-foreground"
+                  aria-live="polite"
+                >
+                  {navigation.position} of {navigation.total}
+                </span>
+              </div>
+            )}
             {service.variant_count <= 1 && (
               <div className="flex flex-wrap items-center gap-2">
                 <ClassificationBadge classification={service.classification} />

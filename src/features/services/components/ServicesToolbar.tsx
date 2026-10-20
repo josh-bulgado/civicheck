@@ -241,15 +241,16 @@ export function ServicesToolbar({
             const nextView = values[0] as ServiceView | undefined;
             if (nextView) onViewChange(nextView);
           }}
-          spacing={1}
-          className="rounded-full bg-muted p-1"
+          variant="pill"
+          // Track is 50px on a phone (44px touch targets), 44px from sm up,
+          // level with the search box.
+          className="[--tg-h:calc(var(--spacing)*12.5)] sm:[--tg-h:calc(var(--spacing)*11)]"
         >
           {VIEW_OPTIONS.map((option) => (
             <ToggleGroupItem
               key={option.value}
               value={option.value}
               title={option.hint}
-              className="h-11 gap-2 rounded-full px-3.5 font-semibold text-body-2 aria-pressed:bg-foreground aria-pressed:text-card aria-pressed:hover:bg-foreground aria-pressed:hover:text-card sm:h-9"
             >
               <option.icon data-icon="inline-start" aria-hidden="true" />
               {option.label}

@@ -27,7 +27,7 @@ import {
 import { Switch } from "~/components/ui/switch";
 import type { Service } from "../../services.types";
 import { FeeBreakdownFields } from "./FeeBreakdownFields";
-import { SettingGroup } from "./SettingGroup";
+import { SettingGroup } from "~/components/ui/setting-group";
 import {
   SERVICE_CLASSIFICATIONS,
   UNASSIGNED_DEPARTMENT_VALUE,
@@ -137,7 +137,11 @@ export function RegistryDetailsSection({
                   value={presetCode}
                   onValueChange={onPresetChange}
                 >
-                  <SelectTrigger id="service-preset" size="touch" className="w-full">
+                  <SelectTrigger
+                    id="service-preset"
+                    size="lg"
+                    className="w-full"
+                  >
                     <SelectValue placeholder="Copy fields from a charter service…">
                       {(value) =>
                         services.find((entry) => entry.service_code === value)
@@ -145,7 +149,7 @@ export function RegistryDetailsSection({
                       }
                     </SelectValue>
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent variant="roomy">
                     <SelectGroup>
                       {services.map((entry) => (
                         <SelectItem
@@ -174,7 +178,7 @@ export function RegistryDetailsSection({
                   <Input
                     {...field}
                     id="service-name"
-                    fieldSize="touch"
+                    fieldSize="lg"
                     placeholder="Issuance of Certified True Copies of Civil Registry Records…"
                     autoComplete="off"
                     aria-invalid={fieldState.invalid}
@@ -197,7 +201,10 @@ export function RegistryDetailsSection({
                   }
                   error={fieldState.invalid ? fieldState.error : undefined}
                 >
-                  <InputGroup size="touch" className={isEdit ? "bg-muted/40" : undefined}>
+                  <InputGroup
+                    size="lg"
+                    className={isEdit ? "bg-muted/40" : undefined}
+                  >
                     {isEdit ? (
                       <InputGroupAddon className={PREFIX_CELL}>
                         <Lock aria-hidden="true" />
@@ -243,7 +250,7 @@ export function RegistryDetailsSection({
                   >
                     <SelectTrigger
                       id="service-classification"
-                      size="touch"
+                      size="lg"
                       className="w-full"
                       aria-invalid={fieldState.invalid}
                     >
@@ -255,7 +262,7 @@ export function RegistryDetailsSection({
                         }
                       </SelectValue>
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent variant="roomy">
                       <SelectGroup>
                         {SERVICE_CLASSIFICATIONS.map((classification) => (
                           <SelectItem
@@ -289,7 +296,7 @@ export function RegistryDetailsSection({
                   >
                     <SelectTrigger
                       id="service-department"
-                      size="touch"
+                      size="lg"
                       className="w-full"
                       aria-invalid={fieldState.invalid}
                     >
@@ -301,7 +308,7 @@ export function RegistryDetailsSection({
                         }
                       </SelectValue>
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent variant="roomy">
                       <SelectGroup>
                         {departments.map((department) => (
                           <SelectItem key={department.id} value={department.id}>
@@ -334,7 +341,7 @@ export function RegistryDetailsSection({
                   }
                   error={fieldState.invalid ? fieldState.error : undefined}
                 >
-                  <InputGroup size="touch">
+                  <InputGroup size="lg">
                     <InputGroupAddon className={PREFIX_CELL}>
                       <PhilippinePeso aria-hidden="true" />
                     </InputGroupAddon>
@@ -397,7 +404,7 @@ export function RegistryDetailsSection({
                   <Input
                     {...field}
                     id="service-processing-time"
-                    fieldSize="touch"
+                    fieldSize="lg"
                     placeholder="2 hours…"
                     autoComplete="off"
                     aria-invalid={fieldState.invalid}

@@ -71,7 +71,7 @@ export function PublishedFormPreviewSheet({
 
         <div className="flex justify-end border-t px-6 py-4">
           <SheetClose
-            render={<Button type="button" variant="raised" size="touch" />}
+            render={<Button type="button" variant="raised" size="lg" />}
           >
             Done
           </SheetClose>

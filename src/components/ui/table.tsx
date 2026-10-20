@@ -55,7 +55,11 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
     <tr
       data-slot="table-row"
       className={cn(
-        "border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted",
+        // Only the background transitions. `transition-colors` also animates
+        // border-color, and Safari does not repaint a color transition on a
+        // collapsed table border, so after a dark/light switch the row dividers
+        // stayed stuck in the previous theme's color.
+        "border-b transition-[background-color] hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted",
         className
       )}
       {...props}

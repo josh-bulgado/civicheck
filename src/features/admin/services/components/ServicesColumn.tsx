@@ -1,24 +1,32 @@
-import { ColumnDef } from "@tanstack/react-table";
+import type { Column, ColumnDef } from "@tanstack/react-table";
+import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowUpDown, Eye, Pencil } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Button, buttonVariants } from "~/components/ui/button";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "~/components/ui/hover-card";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "~/components/ui/tooltip";
-import { formatServiceCode } from "~/features/services/service-utils";
 import { cn } from "~/lib/utils";
 import { Service, ServiceClassification } from "../services.types";
+import {
+  matchesClassification,
+  type ClassificationFilter,
+} from "../services-table.utils";
 
 /** Department filter value meaning "services with no department assigned". */
 export const UNASSIGNED_DEPARTMENT_FILTER = "unassigned";
+
+/** Department filter value meaning "no department filter". */
+const ALL_DEPARTMENTS_FILTER = "all";
+
+/** Shared by the department column filter and the classification chip counts. */
+export function matchesDepartment(
+  service: { department_id: string | null },
+  filter: string,
+): boolean {
+  if (filter === ALL_DEPARTMENTS_FILTER) return true;
+  return filter === UNASSIGNED_DEPARTMENT_FILTER
+    ? service.department_id == null
+    : service.department_id === filter;
+}
 
 export interface ServiceDossierVariant {
   service_code: string;
@@ -51,30 +59,23 @@ export function formatFeeRange(minimumFee: number, maximumFee: number): string {
     : `${formatFee(minimumFee)}–${formatFee(maximumFee)}`;
 }
 
+const CLASSIFICATION_LABEL: Record<ServiceClassification, string> = {
+  simple: "Simple",
+  complex: "Complex",
+  highly_technical: "Highly Technical",
+};
+
 export function ClassificationBadge({
   classification,
 }: {
   classification: ServiceClassification | null;
 }) {
-  if (!classification) {
-    return (
-      <Badge variant="neutral" className="font-semibold text-[10px]">
-        Unclassified
-      </Badge>
-    );
-  }
   return (
     <Badge
-      variant={
-        classification === "simple"
-          ? "simple"
-          : classification === "complex"
-            ? "complex"
-            : "highly_technical"
-      }
-      className="capitalize font-semibold text-[10px]"
+      variant={classification ?? "unclassified"}
+      className="h-[22px]"
     >
-      {classification.replace("_", " ")}
+      {classification ? CLASSIFICATION_LABEL[classification] : "Unclassified"}
     </Badge>
   );
 }
@@ -113,214 +114,152 @@ export function buildServiceDossiers(services: Service[]): ServiceDossier[] {
   });
 }
 
+type ServicesTableMeta = {
+  onView?: (service: ServiceDossier) => void;
+};
+
+function SortHeader({
+  column,
+  children,
+  align = "start",
+}: {
+  column: Column<ServiceDossier, unknown>;
+  children: ReactNode;
+  align?: "start" | "end";
+}) {
+  return (
+    <div className={cn("flex", align === "end" && "justify-end")}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="px-0 text-xs font-semibold text-muted-foreground hover:bg-transparent hover:text-foreground"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        {children}
+        <ArrowUpDown aria-hidden="true" data-icon="inline-end" />
+      </Button>
+    </div>
+  );
+}
+
 export const columns: ColumnDef<ServiceDossier>[] = [
   {
-    accessorKey: "service_code",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        size="sm"
-        className="px-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:bg-transparent"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Service Code
-        <ArrowUpDown aria-hidden="true" data-icon="inline-end" />
-      </Button>
-    ),
-    cell: ({ row }) => (
-      <div className="flex flex-col gap-1">
-        <span className="text-xs font-bold text-foreground">
-          {formatServiceCode(row.original.dossier_key)}
-        </span>
-        {row.original.variant_count > 1 ? (
-          <HoverCard>
-            <HoverCardTrigger
-              render={
-                <Badge
-                  variant="secondary"
-                  className="w-fit cursor-default text-[10px]"
-                >
-                  {row.original.variant_count} internal variants
-                </Badge>
-              }
-            />
-            <HoverCardContent className="w-auto min-w-56 p-2">
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Internal variants
-              </p>
-              <ul className="flex flex-col gap-1.5">
-                {row.original.variants.map((variant) => (
-                  <li
-                    key={variant.service_code}
-                    className="flex items-center justify-between gap-3"
-                  >
-                    <span className="text-xs font-medium text-foreground">
-                      {formatServiceCode(variant.service_code)}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="text-xs font-semibold text-foreground">
-                        {formatFee(variant.fee)}
-                      </span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </HoverCardContent>
-          </HoverCard>
-        ) : null}
-      </div>
-    ),
-  },
-  {
+    // Title and code share one column: the title is what people read, the code
+    // is what staff search for, so it sits under the title instead of taking a
+    // column of its own.
     accessorKey: "name",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        size="sm"
-        className="px-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:bg-transparent"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Service Title
-        <ArrowUpDown aria-hidden="true" data-icon="inline-end" />
-      </Button>
-    ),
-    cell: ({ row }) => {
+    id: "name",
+    header: ({ column }) => <SortHeader column={column}>Service</SortHeader>,
+    cell: ({ row, table }) => {
       const service = row.original;
       const title = service.display_name ?? service.name;
+      const meta = table.options.meta as ServicesTableMeta | undefined;
       return (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <div className="max-w-[220px] truncate text-sm font-medium text-foreground">
-                {title}
-              </div>
-            }
-          />
-          <TooltipContent>{title}</TooltipContent>
-        </Tooltip>
+        // The title is the most important text in the row: one line, never cut
+        // off, and it alone sets how wide this block is (w-fit), with at least
+        // min-w-64 so a short title still leaves the codes some room. pr-6 keeps
+        // a clear gap before the Department column. On a narrow window the table
+        // scrolls sideways instead of wrapping or trimming the title.
+        <div className="flex w-fit min-w-64 flex-col gap-0.5 pr-6">
+          <button
+            type="button"
+            onClick={() => meta?.onView?.(service)}
+            className="w-fit whitespace-nowrap rounded-sm text-left text-sm font-medium text-foreground hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            {title}
+          </button>
+          {/* w-0 min-w-full: this line is exactly as wide as the block above and
+              truncates inside it, so a long list of variant codes can never
+              widen the column or run up against the next one. */}
+          <span className="flex w-0 min-w-full items-center gap-2 text-xs text-muted-foreground">
+            {/* The stored service codes, as written: one for a single service,
+                every variant's code for a group. Not humanized, because the
+                title already reads naturally and the raw code is what appears
+                in URLs, the database and audit logs. */}
+            <span
+              className="min-w-0 truncate font-mono"
+              title={service.variant_codes.join(", ")}
+            >
+              {service.variant_codes.join(", ")}
+            </span>
+            {service.variant_count > 1 ? (
+              <Badge variant="secondary" className="shrink-0 text-[10px]">
+                {service.variant_count} variants
+              </Badge>
+            ) : null}
+          </span>
+        </div>
       );
     },
   },
   {
     id: "department",
     accessorKey: "department_name",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        size="sm"
-        className="px-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:bg-transparent"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Department
-        <ArrowUpDown aria-hidden="true" data-icon="inline-end" />
-      </Button>
-    ),
+    header: ({ column }) => <SortHeader column={column}>Department</SortHeader>,
     cell: ({ row }) => (
       <span className="text-sm text-foreground">
         {row.original.department_name ?? "Unassigned"}
       </span>
     ),
     filterFn: (row, _columnId, filterValue: string) =>
-      filterValue === UNASSIGNED_DEPARTMENT_FILTER
-        ? row.original.department_id == null
-        : row.original.department_id === filterValue,
+      matchesDepartment(row.original, filterValue),
   },
   {
     accessorKey: "classification",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        size="sm"
-        className="px-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:bg-transparent"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Complexity
-        <ArrowUpDown aria-hidden="true" data-icon="inline-end" />
-      </Button>
-    ),
+    header: ({ column }) => <SortHeader column={column}>Class</SortHeader>,
+    // Nullable in the DB, so "unclassified" is a filter value of its own.
+    filterFn: (row, _columnId, filterValue: ClassificationFilter) =>
+      matchesClassification(row.original.classification, filterValue),
     cell: ({ row }) => (
-      // Nullable in the DB — ServicesStatsCards counts these as "unclassified".
       <ClassificationBadge classification={row.original.classification} />
     ),
   },
   {
     accessorKey: "fee",
     header: ({ column }) => (
-      <Button
-        variant="ghost"
-        size="sm"
-        className="px-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:bg-transparent"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Standard Fee
-        <ArrowUpDown className="ml-1 w-3 h-3" />
-      </Button>
+      <SortHeader column={column} align="end">
+        Fee
+      </SortHeader>
     ),
     cell: ({ row }) => (
-      <span className="text-sm font-semibold text-foreground">
+      <div className="text-right font-mono text-[13px] font-semibold tabular-nums text-foreground">
         {formatFeeRange(row.original.minimum_fee, row.original.maximum_fee)}
-      </span>
-    ),
-  },
-  {
-    accessorKey: "processing_time",
-    header: () => (
-      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Processing Time
-      </span>
-    ),
-    cell: ({ row }) => (
-      <span
-        className="block max-w-[150px] truncate text-xs text-muted-foreground"
-        title={
-          row.original.processing_varies
-            ? "Processing time varies by internal case"
-            : row.original.processing_time
-        }
-      >
-        {row.original.processing_varies
-          ? "Varies by case"
-          : row.original.processing_time || "N/A"}
-      </span>
+      </div>
     ),
   },
   {
     id: "actions",
-    header: () => (
-      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Actions
-      </span>
-    ),
+    header: () => <span className="sr-only">Actions</span>,
     cell: ({ row, table }) => {
-      const meta = table.options.meta as
-        | {
-            onView?: (service: ServiceDossier) => void;
-          }
-        | undefined;
+      const meta = table.options.meta as ServicesTableMeta | undefined;
+      const service = row.original;
+      const editClassName = cn(
+        buttonVariants({ variant: "ghost", size: "icon-sm" }),
+      );
       return (
-        <div className="flex items-center gap-1.5">
+        // -mr-1.5 pulls the icon's visible edge flush with the table's right
+        // inset (the button has padding around the glyph).
+        <div className="-mr-1.5 flex items-center justify-end gap-1">
           <Button
-            variant="outline"
-            size="icon"
+            variant="ghost"
+            size="icon-sm"
             onClick={(e) => {
               e.stopPropagation();
-              meta?.onView?.(row.original);
+              meta?.onView?.(service);
             }}
-            aria-label={`View ${row.original.name}`}
+            aria-label={`View ${service.name}`}
             title="View Service Details"
           >
             <Eye aria-hidden="true" />
           </Button>
-          {row.original.variant_count > 1 ? (
+          {service.variant_count > 1 ? (
             <Link
               to="/admin/services/groups/$displayGroup"
-              params={{ displayGroup: row.original.dossier_key }}
+              params={{ displayGroup: service.dossier_key }}
               search={{ scope: undefined }}
               onClick={(event) => event.stopPropagation()}
-              className={cn(
-                buttonVariants({ variant: "outline", size: "icon" }),
-              )}
-              aria-label={`Manage ${row.original.name} group`}
+              className={editClassName}
+              aria-label={`Manage ${service.name} group`}
               title="Manage Service Group"
             >
               <Pencil aria-hidden="true" />
@@ -328,12 +267,10 @@ export const columns: ColumnDef<ServiceDossier>[] = [
           ) : (
             <Link
               to="/admin/services/$serviceCode/edit"
-              params={{ serviceCode: row.original.service_code }}
+              params={{ serviceCode: service.service_code }}
               onClick={(event) => event.stopPropagation()}
-              className={cn(
-                buttonVariants({ variant: "outline", size: "icon" }),
-              )}
-              aria-label={`Edit ${row.original.name}`}
+              className={editClassName}
+              aria-label={`Edit ${service.name}`}
               title="Edit Service"
             >
               <Pencil aria-hidden="true" />

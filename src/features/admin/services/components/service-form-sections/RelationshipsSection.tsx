@@ -58,7 +58,7 @@ export function RelationshipsSection({
               <Input
                 {...field}
                 id="service-display-group"
-                fieldSize="touch"
+                fieldSize="lg"
                 placeholder="birth_ontime…"
                 className="font-mono"
                 autoComplete="off"
@@ -83,7 +83,7 @@ export function RelationshipsSection({
               <Input
                 {...field}
                 id="service-display-name"
-                fieldSize="touch"
+                fieldSize="lg"
                 placeholder="Birth Certificate…"
                 autoComplete="off"
               />
@@ -97,7 +97,7 @@ export function RelationshipsSection({
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
               <FieldLabel htmlFor="service-short-name">Short Name</FieldLabel>
-              <InputGroup size="touch">
+              <InputGroup size="lg">
                 <InputGroupInput
                   {...field}
                   id="service-short-name"
@@ -144,7 +144,7 @@ export function RelationshipsSection({
               <Input
                 {...field}
                 id="service-requirement-group"
-                fieldSize="touch"
+                fieldSize="lg"
                 placeholder="birth_ontime…"
                 className="font-mono"
                 autoComplete="off"

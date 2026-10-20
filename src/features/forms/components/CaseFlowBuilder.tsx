@@ -15,6 +15,7 @@ import {
   FieldLabel,
 } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
+import { SettingGroup } from "~/components/ui/setting-group";
 import { formatServiceCode } from "~/features/services/service-utils";
 import { cn } from "~/lib/utils";
 import type {
@@ -26,6 +27,7 @@ import {
   ConditionRuleBuilder,
   type ConditionSource,
 } from "./ConditionRuleBuilder";
+import { OptionRowsEditor } from "./OptionRowsEditor";
 
 interface VariantOption {
   service_code: string;
@@ -65,15 +67,12 @@ export function CaseFlowBuilder({
 }) {
   if (!definition) {
     return (
-      <FieldGroup className="gap-3 rounded-lg border border-dashed border-border p-4">
-        <Field>
-          <FieldLabel>Variant Routing</FieldLabel>
-          <FieldDescription>
-            {variants.length > 1
-              ? `This dossier has ${variants.length} internal variants. Add database-backed questions that resolve an applicant to the correct one.`
-              : "This is a standalone service. Add conditional application fields below instead of creating a routing flow."}
-          </FieldDescription>
-        </Field>
+      <SettingGroup title="Routing questions" padded>
+        <FieldDescription>
+          {variants.length > 1
+            ? `This dossier has ${variants.length} internal variants. Add database-backed questions that resolve an applicant to the correct one.`
+            : "This is a standalone service. Add conditional application fields below instead of creating a routing flow."}
+        </FieldDescription>
         {variants.length > 1 ? (
           <Button
             type="button"
@@ -103,15 +102,12 @@ export function CaseFlowBuilder({
             Configure variant routing
           </Button>
         ) : null}
-      </FieldGroup>
+      </SettingGroup>
     );
   }
   const caseFlow = definition;
 
-  function updateQuestion(
-    index: number,
-    patch: Partial<CaseSelectorQuestion>,
-  ) {
+  function updateQuestion(index: number, patch: Partial<CaseSelectorQuestion>) {
     const questions = [...caseFlow.questions];
     const previousKey = questions[index].key;
     questions[index] = { ...questions[index], ...patch };
@@ -195,14 +191,15 @@ export function CaseFlowBuilder({
   function removeQuestionOption(questionIndex: number, optionIndex: number) {
     const question = caseFlow.questions[questionIndex];
     const removedValue = question.options[optionIndex].value;
-    const options = question.options.filter((_, index) => index !== optionIndex);
+    const options = question.options.filter(
+      (_, index) => index !== optionIndex,
+    );
 
     const questions = caseFlow.questions.map((candidate, index) => {
       const conditions = candidate.visibleWhen?.conditions.filter(
         (condition) =>
           !(
-            condition.field === question.key &&
-            condition.value === removedValue
+            condition.field === question.key && condition.value === removedValue
           ),
       );
       return {
@@ -218,8 +215,7 @@ export function CaseFlowBuilder({
       const conditions = outcome.when.conditions.filter(
         (condition) =>
           !(
-            condition.field === question.key &&
-            condition.value === removedValue
+            condition.field === question.key && condition.value === removedValue
           ),
       );
       return conditions.length
@@ -266,9 +262,7 @@ export function CaseFlowBuilder({
     );
     onChange({
       ...caseFlow,
-      outcomes: rule
-        ? [...remaining, { serviceCode, when: rule }]
-        : remaining,
+      outcomes: rule ? [...remaining, { serviceCode, when: rule }] : remaining,
     });
   }
 
@@ -276,315 +270,314 @@ export function CaseFlowBuilder({
     ...derivedSources,
     ...sourcesForQuestions(caseFlow.questions),
   ];
+  const mappedCount = variants.filter((variant) =>
+    caseFlow.outcomes.some(
+      (outcome) => outcome.serviceCode === variant.service_code,
+    ),
+  ).length;
 
   return (
-    <FieldGroup className="gap-5 rounded-lg border border-border p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <Field className="min-w-0 flex-1">
-          <FieldLabel htmlFor="case-flow-title">Selector Title</FieldLabel>
+    <>
+      <SettingGroup
+        title="Routing questions"
+        aside="Applicants see one service. Their answers pick the variant."
+        padded
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <Field className="min-w-0 flex-1">
+            <FieldLabel htmlFor="case-flow-title">Selector Title</FieldLabel>
+            <Input
+              id="case-flow-title"
+              value={caseFlow.title}
+              onChange={(event) =>
+                onChange({ ...caseFlow, title: event.target.value })
+              }
+              fieldSize="lg"
+              autoComplete="off"
+            />
+          </Field>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onChange(undefined)}
+          >
+            <Trash2 aria-hidden="true" data-icon="inline-start" />
+            Remove routing flow
+          </Button>
+        </div>
+
+        <Field>
+          <FieldLabel htmlFor="case-flow-description">Instructions</FieldLabel>
           <Input
-            id="case-flow-title"
-            value={caseFlow.title}
+            fieldSize="lg"
+            id="case-flow-description"
+            value={caseFlow.description ?? ""}
             onChange={(event) =>
-              onChange({ ...caseFlow, title: event.target.value })
+              onChange({ ...caseFlow, description: event.target.value })
             }
             autoComplete="off"
           />
         </Field>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => onChange(undefined)}
-        >
-          <Trash2 aria-hidden="true" data-icon="inline-start" />
-          Remove routing flow
-        </Button>
-      </div>
 
-      <Field>
-        <FieldLabel htmlFor="case-flow-description">Instructions</FieldLabel>
-        <Input
-          id="case-flow-description"
-          value={caseFlow.description ?? ""}
-          onChange={(event) =>
-            onChange({ ...caseFlow, description: event.target.value })
-          }
-          autoComplete="off"
-        />
-      </Field>
-
-      <FieldGroup className="gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-foreground">Questions</p>
-            <p className="text-xs text-muted-foreground">
-              Later questions can depend on answers to earlier questions.
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              onChange({
-                ...caseFlow,
-                questions: [
-                  ...caseFlow.questions,
-                  {
-                    key: nextQuestionKey(caseFlow),
-                    label: "New case question",
-                    options: [
-                      { value: "option_1", label: "Option 1" },
-                      { value: "option_2", label: "Option 2" },
-                    ],
-                  },
-                ],
-              })
-            }
-          >
-            <Plus aria-hidden="true" data-icon="inline-start" />
-            Add question
-          </Button>
-        </div>
-
-        {caseFlow.questions.map((question, questionIndex) => (
-          <Collapsible key={`${question.key}-${questionIndex}`}>
-            <div className="rounded-lg border border-border bg-background">
-              <div className="flex items-center gap-2 p-3">
-                <CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-2 text-left">
-                  <ChevronDown aria-hidden="true" />
-                  <span className="truncate text-sm font-medium">
-                    {question.label}
-                  </span>
-                  <Badge variant="secondary">
-                    {question.options.length} choices
-                  </Badge>
-                </CollapsibleTrigger>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  disabled={caseFlow.questions.length === 1}
-                  onClick={() => removeQuestion(questionIndex)}
-                  aria-label={`Remove ${question.label}`}
-                >
-                  <Trash2 aria-hidden="true" />
-                </Button>
-              </div>
-
-              <CollapsibleContent className="border-t border-border p-4">
-                <FieldGroup>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <Field>
-                      <FieldLabel htmlFor={`case-question-${questionIndex}-label`}>
-                        Question
-                      </FieldLabel>
-                      <Input
-                        id={`case-question-${questionIndex}-label`}
-                        value={question.label}
-                        onChange={(event) =>
-                          updateQuestion(questionIndex, {
-                            label: event.target.value,
-                          })
-                        }
-                        autoComplete="off"
-                      />
-                    </Field>
-                    <Field>
-                      <FieldLabel htmlFor={`case-question-${questionIndex}-key`}>
-                        Stable key
-                      </FieldLabel>
-                      <Input
-                        id={`case-question-${questionIndex}-key`}
-                        value={question.key}
-                        disabled={immutableQuestionKeys.includes(question.key)}
-                        onChange={(event) =>
-                          updateQuestion(questionIndex, {
-                            key: event.target.value
-                              .toLowerCase()
-                              .replace(/[^a-z0-9_]/g, "_"),
-                          })
-                        }
-                        autoComplete="off"
-                      />
-                      <FieldDescription>
-                        {immutableQuestionKeys.includes(question.key)
-                          ? "Locked because this identifier has already been published."
-                          : "Used internally by saved rules; publish it before relying on it externally."}
-                      </FieldDescription>
-                    </Field>
-                  </div>
-
-                  <FieldGroup className="gap-2">
-                    <FieldLabel>Choices</FieldLabel>
-                    {question.options.map((option, optionIndex) => (
-                      <div
-                        key={`${option.value}-${optionIndex}`}
-                        className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2"
-                      >
-                        <Input
-                          value={option.label}
-                          aria-label={`Choice ${optionIndex + 1} label`}
-                          onChange={(event) => {
-                            const options = [...question.options];
-                            options[optionIndex] = {
-                              ...option,
-                              label: event.target.value,
-                            };
-                            updateQuestion(questionIndex, { options });
-                          }}
-                          autoComplete="off"
-                        />
-                        <Input
-                          value={option.value}
-                          aria-label={`Choice ${optionIndex + 1} value`}
-                          onChange={(event) =>
-                            updateQuestionOptionValue(
-                              questionIndex,
-                              optionIndex,
-                              event.target.value,
-                            )
-                          }
-                          className="font-mono text-xs"
-                          autoComplete="off"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          disabled={question.options.length <= 2}
-                          onClick={() =>
-                            removeQuestionOption(questionIndex, optionIndex)
-                          }
-                          aria-label={`Remove choice ${optionIndex + 1}`}
-                        >
-                          <Trash2 aria-hidden="true" />
-                        </Button>
-                      </div>
-                    ))}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="self-start"
-                      onClick={() => {
-                        const next = question.options.length + 1;
-                        updateQuestion(questionIndex, {
-                          options: [
-                            ...question.options,
-                            {
-                              value: `option_${next}`,
-                              label: `Option ${next}`,
-                            },
-                          ],
-                        });
-                      }}
-                    >
-                      <Plus aria-hidden="true" data-icon="inline-start" />
-                      Add choice
-                    </Button>
-                  </FieldGroup>
-
-                  <Field>
-                    <FieldLabel>Question visibility</FieldLabel>
-                    <ConditionRuleBuilder
-                      idPrefix={`case-question-${questionIndex}-visibility`}
-                      lead="Show when"
-                      rule={question.visibleWhen ?? null}
-                      sources={sourcesForQuestions(
-                        caseFlow.questions.slice(0, questionIndex),
-                      ).concat(derivedSources)}
-                      emptyLabel="Always shown"
-                      onChange={(visibleWhen) =>
-                        updateQuestion(questionIndex, {
-                          visibleWhen: visibleWhen ?? undefined,
-                        })
-                      }
-                    />
-                  </Field>
-                </FieldGroup>
-              </CollapsibleContent>
+        <FieldGroup className="gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Questions</p>
+              <p className="text-xs text-muted-foreground">
+                Later questions can depend on answers to earlier questions.
+              </p>
             </div>
-          </Collapsible>
-        ))}
-      </FieldGroup>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                onChange({
+                  ...caseFlow,
+                  questions: [
+                    ...caseFlow.questions,
+                    {
+                      key: nextQuestionKey(caseFlow),
+                      label: "New case question",
+                      options: [
+                        { value: "option_1", label: "Option 1" },
+                        { value: "option_2", label: "Option 2" },
+                      ],
+                    },
+                  ],
+                })
+              }
+            >
+              <Plus aria-hidden="true" data-icon="inline-start" />
+              Add question
+            </Button>
+          </div>
 
-      <FieldGroup className="gap-3">
-        <div>
-          <p className="text-sm font-semibold text-foreground">
-            Variant outcomes
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Define the answer combination that selects each internal service.
-          </p>
-        </div>
-
-        {variants.map((variant) => {
-          const outcome = caseFlow.outcomes.find(
-            (candidate) => candidate.serviceCode === variant.service_code,
-          );
-          return (
-            <Collapsible key={variant.service_code}>
+          {caseFlow.questions.map((question, questionIndex) => (
+            <Collapsible key={`${question.key}-${questionIndex}`}>
               <div className="rounded-lg border border-border bg-background">
-                <CollapsibleTrigger className="flex w-full items-center gap-2 p-3 text-left">
-                  <ChevronDown aria-hidden="true" />
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                    {variant.name}
-                  </span>
-                  <Badge variant={outcome ? "default" : "secondary"}>
-                    {outcome ? "Mapped" : "Not mapped"}
-                  </Badge>
-                </CollapsibleTrigger>
+                <div className="flex items-center gap-2 p-3">
+                  <CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                    <ChevronDown aria-hidden="true" />
+                    <span className="truncate text-sm font-medium">
+                      {question.label}
+                    </span>
+                    <Badge variant="secondary">
+                      {question.options.length} choices
+                    </Badge>
+                  </CollapsibleTrigger>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled={caseFlow.questions.length === 1}
+                    onClick={() => removeQuestion(questionIndex)}
+                    aria-label={`Remove ${question.label}`}
+                  >
+                    <Trash2 aria-hidden="true" />
+                  </Button>
+                </div>
+
                 <CollapsibleContent className="border-t border-border p-4">
                   <FieldGroup>
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-xs text-muted-foreground">
-                        {formatServiceCode(variant.service_code)}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-foreground">
-                          {Number(variant.fee) === 0
-                            ? "Free"
-                            : `₱${Number(variant.fee).toLocaleString()}`}
-                        </span>
-                        <Link
-                          to="/admin/services/$serviceCode/edit"
-                          params={{ serviceCode: variant.service_code }}
-                          className={cn(
-                            buttonVariants({ variant: "outline", size: "sm" }),
-                          )}
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <Field>
+                        <FieldLabel
+                          htmlFor={`case-question-${questionIndex}-label`}
                         >
-                          <Pencil aria-hidden="true" data-icon="inline-start" />
-                          Edit variant
-                        </Link>
-                      </div>
+                          Question
+                        </FieldLabel>
+                        <Input
+                          fieldSize="lg"
+                          id={`case-question-${questionIndex}-label`}
+                          value={question.label}
+                          onChange={(event) =>
+                            updateQuestion(questionIndex, {
+                              label: event.target.value,
+                            })
+                          }
+                          autoComplete="off"
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel
+                          htmlFor={`case-question-${questionIndex}-key`}
+                        >
+                          Stable key
+                        </FieldLabel>
+                        <Input
+                          fieldSize="lg"
+                          id={`case-question-${questionIndex}-key`}
+                          value={question.key}
+                          disabled={immutableQuestionKeys.includes(
+                            question.key,
+                          )}
+                          onChange={(event) =>
+                            updateQuestion(questionIndex, {
+                              key: event.target.value
+                                .toLowerCase()
+                                .replace(/[^a-z0-9_]/g, "_"),
+                            })
+                          }
+                          autoComplete="off"
+                        />
+                        <FieldDescription>
+                          {immutableQuestionKeys.includes(question.key)
+                            ? "Locked because this identifier has already been published."
+                            : "Used internally by saved rules; publish it before relying on it externally."}
+                        </FieldDescription>
+                      </Field>
                     </div>
-                    <ConditionRuleBuilder
-                      idPrefix={`case-outcome-${variant.service_code}`}
-                      lead="Choose when"
-                      rule={outcome?.when ?? null}
-                      sources={allSources}
-                      emptyLabel="No answer combination is mapped to this variant yet."
-                      onChange={(rule) =>
-                        updateOutcome(variant.service_code, rule)
-                      }
-                    />
+
+                    <FieldGroup className="gap-2.5">
+                      <FieldLabel>Choices</FieldLabel>
+                      <OptionRowsEditor
+                        idPrefix={`case-question-${questionIndex}-choice`}
+                        noun="Choice"
+                        addLabel="Add Choice"
+                        options={question.options}
+                        minOptions={2}
+                        onValueChange={(optionIndex, value) =>
+                          updateQuestionOptionValue(
+                            questionIndex,
+                            optionIndex,
+                            value,
+                          )
+                        }
+                        onLabelChange={(optionIndex, label) => {
+                          const options = [...question.options];
+                          options[optionIndex] = {
+                            ...options[optionIndex],
+                            label,
+                          };
+                          updateQuestion(questionIndex, { options });
+                        }}
+                        onRemove={(optionIndex) =>
+                          removeQuestionOption(questionIndex, optionIndex)
+                        }
+                        onAdd={() => {
+                          const next = question.options.length + 1;
+                          updateQuestion(questionIndex, {
+                            options: [
+                              ...question.options,
+                              {
+                                value: `option_${next}`,
+                                label: `Option ${next}`,
+                              },
+                            ],
+                          });
+                        }}
+                      />
+                    </FieldGroup>
+
+                    <Field>
+                      <FieldLabel>Question visibility</FieldLabel>
+                      <ConditionRuleBuilder
+                        idPrefix={`case-question-${questionIndex}-visibility`}
+                        lead="Show when"
+                        rule={question.visibleWhen ?? null}
+                        sources={sourcesForQuestions(
+                          caseFlow.questions.slice(0, questionIndex),
+                        ).concat(derivedSources)}
+                        emptyLabel="Always shown"
+                        onChange={(visibleWhen) =>
+                          updateQuestion(questionIndex, {
+                            visibleWhen: visibleWhen ?? undefined,
+                          })
+                        }
+                      />
+                    </Field>
                   </FieldGroup>
                 </CollapsibleContent>
               </div>
             </Collapsible>
-          );
-        })}
-      </FieldGroup>
+          ))}
+        </FieldGroup>
+      </SettingGroup>
 
-      {caseFlow.outcomes.length !== variants.length ? (
-        <Alert variant="warning">
-          <AlertDescription>
-            Map every internal variant before publishing this case flow.
-          </AlertDescription>
-        </Alert>
-      ) : null}
-    </FieldGroup>
+      <SettingGroup
+        title="Variant outcomes"
+        aside={`${mappedCount} of ${variants.length} mapped`}
+        padded
+      >
+        <FieldGroup className="gap-3">
+          <p className="text-sm text-muted-foreground">
+            Define the answer combination that selects each internal service.
+          </p>
+
+          {variants.map((variant) => {
+            const outcome = caseFlow.outcomes.find(
+              (candidate) => candidate.serviceCode === variant.service_code,
+            );
+            return (
+              <Collapsible key={variant.service_code}>
+                <div className="rounded-lg border border-border bg-background">
+                  <CollapsibleTrigger className="flex w-full items-center gap-2 p-3 text-left">
+                    <ChevronDown aria-hidden="true" />
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                      {variant.name}
+                    </span>
+                    <Badge variant={outcome ? "default" : "secondary"}>
+                      {outcome ? "Mapped" : "Not mapped"}
+                    </Badge>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="border-t border-border p-4">
+                    <FieldGroup>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {formatServiceCode(variant.service_code)}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-foreground">
+                            {Number(variant.fee) === 0
+                              ? "Free"
+                              : `₱${Number(variant.fee).toLocaleString()}`}
+                          </span>
+                          <Link
+                            to="/admin/services/$serviceCode/edit"
+                            params={{ serviceCode: variant.service_code }}
+                            className={cn(
+                              buttonVariants({
+                                variant: "outline",
+                                size: "sm",
+                              }),
+                            )}
+                          >
+                            <Pencil
+                              aria-hidden="true"
+                              data-icon="inline-start"
+                            />
+                            Edit variant
+                          </Link>
+                        </div>
+                      </div>
+                      <ConditionRuleBuilder
+                        idPrefix={`case-outcome-${variant.service_code}`}
+                        lead="Choose when"
+                        rule={outcome?.when ?? null}
+                        sources={allSources}
+                        emptyLabel="No answer combination is mapped to this variant yet."
+                        onChange={(rule) =>
+                          updateOutcome(variant.service_code, rule)
+                        }
+                      />
+                    </FieldGroup>
+                  </CollapsibleContent>
+                </div>
+              </Collapsible>
+            );
+          })}
+        </FieldGroup>
+
+        {caseFlow.outcomes.length !== variants.length ? (
+          <Alert variant="warning">
+            <AlertDescription>
+              Map every internal variant before publishing this case flow.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+      </SettingGroup>
+    </>
   );
 }

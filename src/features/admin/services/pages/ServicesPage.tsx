@@ -1,8 +1,13 @@
+import { useMemo } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { Blocks, Plus } from "lucide-react";
+import { buttonVariants } from "~/components/ui/button";
 import type { Service } from "../services.types";
-import { ServicesPageHeader } from "../components/ServicesPageHeader";
-import { ServicesStatsCards } from "../components/ServicesStatsCards";
-import { ServicesTableSection } from "../components/ServicesTableSection";
-import { buildServiceDossiers } from "../components/ServicesColumn";
+import { ServicesDataTable } from "../components/ServicesDataTable";
+import {
+  buildServiceDossiers,
+  type ServiceDossier,
+} from "../components/ServicesColumn";
 import type { Department } from "~/features/admin/departments.queries";
 
 interface ServicesPageProps {
@@ -11,12 +16,58 @@ interface ServicesPageProps {
 }
 
 const ServicesPage = ({ services, departments }: ServicesPageProps) => {
-  const dossiers = buildServiceDossiers(services);
+  const navigate = useNavigate();
+  const dossiers = useMemo(() => buildServiceDossiers(services), [services]);
+
+  const openEditor = (service: ServiceDossier) => {
+    if (service.variant_count > 1) {
+      navigate({
+        to: "/admin/services/groups/$displayGroup",
+        params: { displayGroup: service.dossier_key },
+        search: { scope: undefined },
+      });
+    } else {
+      navigate({
+        to: "/admin/services/$serviceCode/edit",
+        params: { serviceCode: service.service_code },
+      });
+    }
+  };
+
   return (
     <div className="dashboard-page">
-      <ServicesPageHeader />
-      <ServicesStatsCards data={dossiers} />
-      <ServicesTableSection services={dossiers} departments={departments} />
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 rounded-xl border border-border-strong bg-card px-5 py-4">
+        <div className="min-w-0">
+          <h1 className="text-lg font-bold tracking-tight text-foreground">
+            Services
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            CCRO Administration, {dossiers.length} services
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/admin/services/blocks"
+            search={{ block: undefined }}
+            className={buttonVariants({ variant: "ghost", size: "lg" })}
+          >
+            <Blocks aria-hidden="true" data-icon="inline-start" />
+            Shared Question Blocks
+          </Link>
+          <Link
+            to="/admin/services/new"
+            className={buttonVariants({ variant: "raised", size: "lg" })}
+          >
+            <Plus aria-hidden="true" data-icon="inline-start" />
+            Add Service
+          </Link>
+        </div>
+      </header>
+      <ServicesDataTable
+        data={dossiers}
+        departments={departments}
+        onEdit={openEditor}
+      />
     </div>
   );
 };

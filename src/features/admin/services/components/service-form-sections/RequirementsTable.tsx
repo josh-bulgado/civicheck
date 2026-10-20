@@ -26,8 +26,6 @@ import {
 } from "~/components/ui/table";
 import type { ConditionSource } from "~/features/forms/components/ConditionRuleBuilder";
 import {
-  EDITOR_MENU_CONTENT,
-  EDITOR_MENU_ITEM,
   EDITOR_ROW_MENU_TRIGGER,
 } from "~/features/forms/components/EditorSheetParts";
 import { requirementChips, splitRequirementTitle } from "../requirement-chips";
@@ -204,10 +202,9 @@ function RequirementTableRow({
                 >
                   <MoreHorizontal aria-hidden="true" className="fill-current" />
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className={EDITOR_MENU_CONTENT}>
+                <DropdownMenuContent align="end" variant="roomy">
                   {!isLocked ? (
                     <DropdownMenuItem
-                      className={EDITOR_MENU_ITEM}
                       onClick={() => {
                         const opener = openerRef.current;
                         if (opener) onOpen(index, opener);
@@ -225,7 +222,6 @@ function RequirementTableRow({
                   {onOverride ? (
                     <DropdownMenuItem
                       disabled={!canOverride}
-                      className={EDITOR_MENU_ITEM}
                       onClick={() => onOverride(index)}
                     >
                       <Copy
@@ -237,10 +233,9 @@ function RequirementTableRow({
                   ) : null}
                   {!isLocked ? (
                     <>
-                      <DropdownMenuSeparator className="mx-1.5 my-1" />
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem
                         variant="destructive"
-                        className={EDITOR_MENU_ITEM}
                         onClick={() => onRemove(index)}
                       >
                         <Trash2 aria-hidden="true" />

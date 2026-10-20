@@ -406,7 +406,7 @@ export function FormBlocksPage({
             !railOpen && "lg:hidden",
           )}
         >
-          <InputGroup size="touch">
+          <InputGroup size="lg">
             <InputGroupAddon>
               <Search aria-hidden="true" />
             </InputGroupAddon>
@@ -519,7 +519,7 @@ export function FormBlocksPage({
                       // The group is the inline surface (borderless until hovered
                       // or focused) so the pencil addon shares the input's fill.
                       <InputGroup
-                        size="touch"
+                        size="lg"
                         className="border-transparent shadow-none hover:border-input has-[[data-slot=input-group-control]:focus-visible]:bg-background"
                       >
                         <InputGroupInput
@@ -661,7 +661,7 @@ export function FormBlocksPage({
                         control={control}
                         name="blockKey"
                         render={({ field, fieldState }) => (
-                          <InputGroup size="touch">
+                          <InputGroup size="lg">
                             {!isNew ? (
                               <InputGroupAddon className={PREFIX_CELL}>
                                 <Lock aria-hidden="true" />
@@ -670,7 +670,7 @@ export function FormBlocksPage({
                             <InputGroupInput
                               {...field}
                               id="block-key"
-                              fieldSize="touch"
+                              fieldSize="lg"
                               disabled={!isNew}
                               autoComplete="off"
                               aria-invalid={fieldState.invalid}
@@ -743,7 +743,7 @@ export function FormBlocksPage({
                       <Input
                         {...form.register("description")}
                         id="block-description"
-                        fieldSize="touch"
+                        fieldSize="lg"
                         autoComplete="off"
                         placeholder="Shown only to administrators"
                       />

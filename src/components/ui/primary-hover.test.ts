@@ -10,14 +10,14 @@ const read = (name: string) =>
 // so that behaviour must not change.
 describe("default primary hover keeps its light behaviour", () => {
   it("Button default lightens with an 80% fill", () => {
-    const line = read("button.tsx").match(/default: "([^"]*)"/)?.[1] ?? "";
+    const line = read("button.tsx").match(/default:\s*"([^"]*)"/)?.[1] ?? "";
     expect(line).toContain("bg-primary-fill");
     expect(line).toContain("hover:bg-primary-fill/80");
     expect(line).not.toContain("hover:bg-primary-fill-hover");
   });
 
   it("Badge default link lightens with an 80% fill", () => {
-    const line = read("badge.tsx").match(/default: "([^"]*)"/)?.[1] ?? "";
+    const line = read("badge.tsx").match(/default:\s*"([^"]*)"/)?.[1] ?? "";
     expect(line).toContain("[a]:hover:bg-primary-fill/80");
   });
 });

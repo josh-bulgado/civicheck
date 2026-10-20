@@ -67,8 +67,6 @@ import {
   type ConditionRef,
 } from "../form-option-usage";
 import {
-  EDITOR_MENU_CONTENT as MENU_CONTENT,
-  EDITOR_MENU_ITEM as MENU_ITEM,
   EDITOR_ROW_MENU_TRIGGER,
 } from "./EditorSheetParts";
 import { FormFieldInspector } from "./FormFieldInspector";
@@ -512,7 +510,7 @@ export function FormTemplateBuilder({
                       <Blocks data-icon="inline-start" />
                       Insert Shared Block
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className={MENU_CONTENT}>
+                    <DropdownMenuContent align="end" variant="roomy">
                       <DropdownMenuGroup>
                         <DropdownMenuLabel className="px-3 pt-2 pb-1 text-xs font-semibold tracking-[0.06em] uppercase">
                           Shared blocks
@@ -525,7 +523,6 @@ export function FormTemplateBuilder({
                             <DropdownMenuItem
                               key={block.blockKey}
                               disabled={included}
-                              className={MENU_ITEM}
                               onClick={() => addBlock(block)}
                             >
                               <Blocks
@@ -889,9 +886,8 @@ function FieldRow({
           >
             <MoreHorizontal aria-hidden="true" className="fill-current" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className={MENU_CONTENT}>
+          <DropdownMenuContent align="end" variant="roomy">
             <DropdownMenuItem
-              className={MENU_ITEM}
               onClick={() => onOpen(nameButtonRef.current)}
             >
               <Pencil aria-hidden="true" className="text-muted-foreground" />
@@ -899,7 +895,6 @@ function FieldRow({
             </DropdownMenuItem>
             <DropdownMenuItem
               disabled={locked || index === 0}
-              className={MENU_ITEM}
               onClick={() => onMoveBy(-1)}
             >
               <ArrowUp aria-hidden="true" className="text-muted-foreground" />
@@ -907,7 +902,6 @@ function FieldRow({
             </DropdownMenuItem>
             <DropdownMenuItem
               disabled={locked || index === fields.length - 1}
-              className={MENU_ITEM}
               onClick={() => onMoveBy(1)}
             >
               <ArrowDown aria-hidden="true" className="text-muted-foreground" />
@@ -915,19 +909,15 @@ function FieldRow({
             </DropdownMenuItem>
             <DropdownMenuItem
               disabled={locked || field.type === "person_group"}
-              className={MENU_ITEM}
               onClick={onDuplicate}
             >
               <Copy aria-hidden="true" className="text-muted-foreground" />
               Duplicate
             </DropdownMenuItem>
-            <DropdownMenuSeparator className="mx-1.5 my-1" />
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               disabled={locked || field.type === "person_group"}
-              className={cn(
-                MENU_ITEM,
-                "text-destructive focus:text-destructive",
-              )}
+              className="text-destructive focus:text-destructive"
               onClick={onRemove}
             >
               <Trash2 aria-hidden="true" />
