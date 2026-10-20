@@ -27,7 +27,7 @@ import {
 import { Switch } from "~/components/ui/switch";
 import type { Service } from "../../services.types";
 import { FeeBreakdownFields } from "./FeeBreakdownFields";
-import { SettingGroup } from "./SettingGroup";
+import { SettingGroup } from "~/components/ui/setting-group";
 import {
   SERVICE_CLASSIFICATIONS,
   UNASSIGNED_DEPARTMENT_VALUE,

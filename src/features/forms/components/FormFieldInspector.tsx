@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
-import { Blocks, Plus, Trash2, Unlink } from "lucide-react";
+import { Blocks, Unlink } from "lucide-react";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "~/components/ui/button";
 import {
@@ -27,7 +27,8 @@ import type {
   FormFieldType,
   FormOption,
 } from "../form-template.types";
-import { ADD_PILL, ConditionRuleBuilder } from "./ConditionRuleBuilder";
+import { ConditionRuleBuilder } from "./ConditionRuleBuilder";
+import { OptionRowsEditor } from "./OptionRowsEditor";
 import { EDITOR_SHEET_PROPS, EditorSheetHeader } from "./EditorSheetParts";
 import type { FormFieldTypeOption } from "./form-field-types";
 
@@ -569,88 +570,31 @@ function DropdownOptionsEditor({
           use it, so renaming a label is safe.
         </p>
       </div>
-      {options.length > 0 ? (
-        <div className="grid grid-cols-[1fr_1fr_40px] gap-2 text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
-          <span>Value</span>
-          <span>Label</span>
-          <span />
-        </div>
-      ) : null}
-      {options.map((option, optionIndex) => {
-        const usage = usageFor(field.key, option.value);
-        const inUse = usage.length > 0;
-        const usageId = `inspector-option-${optionIndex}-usage`;
-        return (
-          <div key={optionIndex} className="flex flex-col gap-1">
-            <div className="grid grid-cols-[1fr_1fr_40px] items-center gap-2">
-              <Input
-                value={option.value}
-                readOnly={inUse}
-                aria-readonly={inUse || undefined}
-                autoComplete="off"
-                spellCheck={false}
-                title={inUse ? "Used by a condition, so its value can’t change." : undefined}
-                className={cn(
-                  "h-10 rounded-xl font-mono text-sm",
-                  inUse && "bg-muted/60 text-muted-foreground",
-                )}
-                aria-label={`Option ${optionIndex + 1} value`}
-                aria-describedby={inUse ? usageId : undefined}
-                onChange={(event) => {
-                  setAutoRows((rows) => shiftRows(rows, optionIndex, 0));
-                  replaceOption(optionIndex, { value: event.target.value });
-                }}
-              />
-              <Input
-                value={option.label}
-                autoComplete="off"
-                className={cn("h-10 rounded-xl", SHEET_INPUT)}
-                aria-label={`Option ${optionIndex + 1} label`}
-                onChange={(event) => {
-                  const label = event.target.value;
-                  replaceOption(
-                    optionIndex,
-                    !inUse && autoRows.has(optionIndex)
-                      ? {
-                          label,
-                          value: deriveOptionValue(
-                            label,
-                            takenValues(optionIndex),
-                          ),
-                        }
-                      : { label },
-                  );
-                }}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                disabled={inUse}
-                className="size-10 rounded-[10px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                onClick={() => removeOption(optionIndex)}
-                aria-label={`Remove option ${optionIndex + 1}`}
-                aria-describedby={inUse ? usageId : undefined}
-              >
-                <Trash2 aria-hidden="true" />
-              </Button>
-            </div>
-            {inUse ? (
-              <p id={usageId} className={cn(HELP, "text-muted-foreground")}>
-                Used by: {usage.join("; ")}. It can’t be removed or re-keyed.
-              </p>
-            ) : null}
-          </div>
-        );
-      })}
-      <Button
-        type="button"
-        variant="outline"
-        className={ADD_PILL}
-        onClick={addOption}
-      >
-        <Plus aria-hidden="true" data-icon="inline-start" />
-        Add Option
-      </Button>
+      <OptionRowsEditor
+        idPrefix="inspector-option"
+        options={options}
+        usageFor={(optionIndex) =>
+          usageFor(field.key, options[optionIndex].value)
+        }
+        onValueChange={(optionIndex, value) => {
+          setAutoRows((rows) => shiftRows(rows, optionIndex, 0));
+          replaceOption(optionIndex, { value });
+        }}
+        onLabelChange={(optionIndex, label) =>
+          replaceOption(
+            optionIndex,
+            !usageFor(field.key, options[optionIndex].value).length &&
+              autoRows.has(optionIndex)
+              ? {
+                  label,
+                  value: deriveOptionValue(label, takenValues(optionIndex)),
+                }
+              : { label },
+          )
+        }
+        onRemove={removeOption}
+        onAdd={addOption}
+      />
       {options.length === 0 ? (
         <p className={cn(HELP, "text-muted-foreground")}>
           No options yet. Applicants need at least one to choose from.

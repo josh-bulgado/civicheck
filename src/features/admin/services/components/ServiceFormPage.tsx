@@ -11,7 +11,6 @@ import {
   ClipboardCheck,
   ArrowLeft,
   ArrowRight,
-  CircleAlert,
   FileText,
   GitBranch,
   Link2,
@@ -21,19 +20,9 @@ import {
 import { toast } from "sonner";
 import { parseFeeComponents } from "~/features/services/fee-components";
 import { formatServiceCode } from "~/features/services/service-utils";
-import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { Tabs } from "~/components/ui/tabs";
 import { Button } from "~/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "~/components/ui/alert-dialog";
 import type { Department } from "~/features/admin/departments.queries";
 import type { ConditionRef } from "~/features/forms/form-option-usage";
 import { getServiceFormTemplateFn } from "~/features/forms/form-template.functions";
@@ -45,15 +34,22 @@ import { findRequirementIssue } from "../service-configuration.schema";
 import { getServiceChecklist } from "../services.queries";
 import type { Service } from "../services.types";
 import {
+  DiscardChangesDialog,
   ServiceDossierHeader,
   ServiceEditorSection,
+  ServiceEditorTabBar,
   ServiceFormActionBar,
 } from "./ServiceFormChrome";
-import { ApplicationFormSection } from "./service-form-sections/ApplicationFormSection";
-import { CaseQuestionsSection } from "./service-form-sections/CaseQuestionsSection";
+import {
+  ApplicationFormSection,
+  applicationFormDescription,
+} from "./service-form-sections/ApplicationFormSection";
+import {
+  CaseQuestionsSection,
+  timingRoutingDescription,
+} from "./service-form-sections/CaseQuestionsSection";
 import { CitizenJourneySection } from "./service-form-sections/CitizenJourneySection";
 import { RegistryDetailsSection } from "./service-form-sections/RegistryDetailsSection";
-import { RemoveWindowRuleButton } from "./service-form-sections/RemoveWindowRuleButton";
 import { RelationshipsSection } from "./service-form-sections/RelationshipsSection";
 import { RequirementsSection } from "./service-form-sections/RequirementsSection";
 import {
@@ -832,27 +828,12 @@ export function ServiceFormPage({
             }}
             className="min-h-0 min-w-0 flex-1 gap-0"
           >
-            <div className="shrink-0 border-b border-border bg-background px-4 pb-3 sm:px-8">
-              <TabsList
-                ref={tabListRef}
-                variant="editor"
-                className="w-full"
-                aria-label="Service configuration"
-              >
-                {availableTabs.map(({ id, label, icon: Icon }) => (
-                  <TabsTrigger key={id} value={id} className="gap-2">
-                    <Icon aria-hidden="true" />
-                    <span>{label}</span>
-                    {invalidSections.has(id) ? (
-                      <CircleAlert
-                        aria-label="Needs attention"
-                        className="text-destructive"
-                      />
-                    ) : null}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </div>
+            <ServiceEditorTabBar
+              tabs={availableTabs}
+              label="Service configuration"
+              invalidIds={invalidSections}
+              listRef={tabListRef}
+            />
             <div
               ref={workspaceRef}
               className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-8"
@@ -955,22 +936,9 @@ export function ServiceFormPage({
                     id="case-questions"
                     icon={GitBranch}
                     title="Timing & Routing"
-                    description="Send applicants to the right track when their event date falls outside the on-time window."
+                    description={timingRoutingDescription(caseVariants.length > 1)}
                     summary={caseSummary}
                     hasError={invalidSections.has("case-questions")}
-                    action={
-                      formDefinition.eventTiming ? (
-                        <RemoveWindowRuleButton
-                          onRemove={() => {
-                            setFormDefinition({
-                              ...formDefinition,
-                              eventTiming: undefined,
-                            });
-                            setTemplateDirty(true);
-                          }}
-                        />
-                      ) : undefined
-                    }
                   >
                     <CaseQuestionsSection
                       embedded
@@ -996,7 +964,7 @@ export function ServiceFormPage({
                     id="application-form"
                     icon={SlidersHorizontal}
                     title="Application Form"
-                    description={`Add the questions applicants answer, and show follow-up questions based on earlier answers. Each save publishes a new version, and published versions can’t be edited${templateVersion > 0 ? ` after version ${templateVersion}` : ""}.`}
+                    description={applicationFormDescription(templateVersion)}
                     headerDivider={false}
                     summary={applicationSummary}
                     hasError={invalidSections.has("application-form")}
@@ -1093,28 +1061,12 @@ export function ServiceFormPage({
         </form>
       </FormProvider>
 
-      <AlertDialog
+      <DiscardChangesDialog
         open={blocker.status === "blocked"}
-        onOpenChange={(open) => {
-          if (!open && blocker.status === "blocked") blocker.reset();
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
-            <AlertDialogDescription>
-              If you leave the service editor now, your unsaved changes will be
-              lost.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Keep editing</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={blocker.proceed}>
-              Discard and leave
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        subject="the service editor"
+        onKeepEditing={() => blocker.status === "blocked" && blocker.reset()}
+        onDiscard={() => blocker.status === "blocked" && blocker.proceed()}
+      />
     </div>
   );
 }

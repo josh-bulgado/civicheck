@@ -5,17 +5,26 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import {
-  FieldDescription,
-  FieldGroup,
-  FieldLegend,
-  FieldSet,
-} from "~/components/ui/field";
+import { FieldGroup } from "~/components/ui/field";
+import { SettingGroup } from "~/components/ui/setting-group";
 import { CaseFlowBuilder } from "~/features/forms/components/CaseFlowBuilder";
 import type { FormTemplateDefinition } from "~/features/forms/form-template.types";
 import { EventTimingSection } from "./EventTimingSection";
+import { RemoveWindowRuleButton } from "./RemoveWindowRuleButton";
 import type { Service } from "../../services.types";
 
+/** The section description; grouped services also pick a variant here. */
+export function timingRoutingDescription(hasVariants: boolean) {
+  return hasVariants
+    ? "Which internal variant an applicant lands on, and what happens when their event date falls outside the on-time window."
+    : "Send applicants to the right track when their event date falls outside the on-time window.";
+}
+
+/**
+ * Timing & Routing, shared by the service editor and the group's shared
+ * application editor: variant routing first (only for services with several
+ * internal codes), then the optional registration window rule.
+ */
 export function CaseQuestionsSection({
   variants,
   formDefinition,
@@ -38,7 +47,9 @@ export function CaseQuestionsSection({
     <Card
       id={embedded ? undefined : "case-questions"}
       variant={embedded ? "embedded" : "default"}
-      className={embedded ? undefined : "scroll-mt-6"}
+      // Embedded, -mt-6 cancels the section card's top padding so the first band
+      // meets the header. It sits on this card because the card clips overflow.
+      className={embedded ? "-mt-6" : "scroll-mt-6"}
     >
       {!embedded ? (
         <CardHeader className="border-b">
@@ -55,48 +66,57 @@ export function CaseQuestionsSection({
         </CardHeader>
       ) : null}
       <CardContent>
-        <FieldGroup>
-          <EventTimingSection
-            id="timing-routing"
-            hideIntro
-            hideRemove
-            formDefinition={formDefinition}
-            targetOptions={targetOptions}
-            currentServiceCode={currentServiceCode}
-            onFormDefinitionChange={onFormDefinitionChange}
-          />
-
+        <FieldGroup className="gap-0">
           {variants.length > 1 ? (
-            <FieldSet className="gap-4">
-              <FieldLegend variant="label" className="mb-0">
-                Internal variant routing
-              </FieldLegend>
-              <FieldDescription>
-                Only for services with several internal codes. Applicants see one service, and their answers pick the variant.
-              </FieldDescription>
-              <CaseFlowBuilder
-                definition={formDefinition.caseSelector}
-                variants={variants}
-                derivedSources={(formDefinition.derivedAnswers ?? []).map(
-                  (derived) => ({
-                    key: derived.key,
-                    label: derived.label,
-                    options: derived.bands.map((band) => ({
-                      value: band.value,
-                      label: band.label,
-                    })),
-                  }),
-                )}
-                immutableQuestionKeys={publishedFieldKeys}
-                onChange={(caseSelector) =>
-                  onFormDefinitionChange({
-                    ...formDefinition,
-                    caseSelector,
-                  })
-                }
-              />
-            </FieldSet>
+            <CaseFlowBuilder
+              definition={formDefinition.caseSelector}
+              variants={variants}
+              derivedSources={(formDefinition.derivedAnswers ?? []).map(
+                (derived) => ({
+                  key: derived.key,
+                  label: derived.label,
+                  options: derived.bands.map((band) => ({
+                    value: band.value,
+                    label: band.label,
+                  })),
+                }),
+              )}
+              immutableQuestionKeys={publishedFieldKeys}
+              onChange={(caseSelector) =>
+                onFormDefinitionChange({
+                  ...formDefinition,
+                  caseSelector,
+                })
+              }
+            />
           ) : null}
+
+          <SettingGroup
+            title="Registration window"
+            aside={
+              formDefinition.eventTiming ? (
+                <RemoveWindowRuleButton
+                  onRemove={() =>
+                    onFormDefinitionChange({
+                      ...formDefinition,
+                      eventTiming: undefined,
+                    })
+                  }
+                />
+              ) : (
+                "Optional"
+              )
+            }
+            padded
+          >
+            <EventTimingSection
+              id="timing-routing"
+              formDefinition={formDefinition}
+              targetOptions={targetOptions}
+              currentServiceCode={currentServiceCode}
+              onFormDefinitionChange={onFormDefinitionChange}
+            />
+          </SettingGroup>
         </FieldGroup>
       </CardContent>
     </Card>

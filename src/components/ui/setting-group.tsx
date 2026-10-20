@@ -39,9 +39,9 @@ export function SettingGroup({
           {title}
         </h3>
         {aside ? (
-          <p className="text-[13px] font-medium text-muted-foreground sm:text-right">
+          <div className="text-[13px] font-medium text-muted-foreground sm:text-right">
             {aside}
-          </p>
+          </div>
         ) : null}
       </div>
       <div

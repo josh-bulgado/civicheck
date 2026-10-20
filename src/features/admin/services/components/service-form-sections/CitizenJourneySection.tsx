@@ -18,7 +18,7 @@ import {
 import { Input } from "~/components/ui/input";
 import { Switch } from "~/components/ui/switch";
 import { Textarea } from "~/components/ui/textarea";
-import { SettingGroup } from "./SettingGroup";
+import { SettingGroup } from "~/components/ui/setting-group";
 import {
   STEP_PLACEHOLDERS,
   type ServiceFormValues,

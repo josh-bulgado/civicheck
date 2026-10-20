@@ -3,34 +3,24 @@ import { useBlocker, useRouter } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight, GitBranch, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "~/components/ui/alert-dialog";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent } from "~/components/ui/card";
-import {
-  FieldDescription,
-  FieldGroup,
-  FieldLegend,
-  FieldSet,
-} from "~/components/ui/field";
 import { Spinner } from "~/components/ui/spinner";
-import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { Tabs } from "~/components/ui/tabs";
 import {
+  DiscardChangesDialog,
   ServiceDossierHeader,
   ServiceEditorSection,
+  ServiceEditorTabBar,
   ServiceFormActionBar,
 } from "./ServiceFormChrome";
-import { ApplicationFormSection } from "./service-form-sections/ApplicationFormSection";
-import { EventTimingSection } from "./service-form-sections/EventTimingSection";
-import { CaseFlowBuilder } from "~/features/forms/components/CaseFlowBuilder";
+import {
+  ApplicationFormSection,
+  applicationFormDescription,
+} from "./service-form-sections/ApplicationFormSection";
+import {
+  CaseQuestionsSection,
+  timingRoutingDescription,
+} from "./service-form-sections/CaseQuestionsSection";
 import {
   getServiceFormTemplateFn,
   publishServiceFormTemplateFn,
@@ -239,10 +229,6 @@ export function ServiceGroupApplicationPage({
     0,
   );
   const applicationSummary = `${fieldCount} ${fieldCount === 1 ? "field" : "fields"}`;
-  const tabCounts: Record<SectionId, string> = {
-    "variant-routing": ruleCount > 0 ? routingSummary : "",
-    "application-form": applicationSummary,
-  };
 
   return (
     <div
@@ -279,24 +265,10 @@ export function ServiceGroupApplicationPage({
           onValueChange={(value) => showSection(value as SectionId)}
           className="min-h-0 min-w-0 flex-1 gap-0"
         >
-          <div className="shrink-0 border-b border-border bg-background px-4 pb-3 sm:px-8">
-            <TabsList
-              variant="segmented"
-              aria-label="Shared application configuration"
-            >
-              {SECTIONS.map(({ id, label, icon: Icon }) => (
-                <TabsTrigger key={id} value={id} className="gap-2">
-                  <Icon aria-hidden="true" />
-                  <span>{label}</span>
-                  {tabCounts[id] ? (
-                    <span className="hidden text-xs font-normal tabular-nums text-muted-foreground sm:inline">
-                      {tabCounts[id]}
-                    </span>
-                  ) : null}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
+          <ServiceEditorTabBar
+            tabs={SECTIONS}
+            label="Shared application configuration"
+          />
           <div
             ref={workspaceRef}
             className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-8"
@@ -321,65 +293,40 @@ export function ServiceGroupApplicationPage({
                 id="variant-routing"
                 icon={GitBranch}
                 title="Timing & Routing"
+                description={timingRoutingDescription(true)}
                 summary={routingSummary}
               >
-                <Card variant="embedded">
-                  <CardContent>
-                    {isLoading ? (
-                      <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-                        <Spinner /> Loading routing configuration&hellip;
-                      </div>
-                    ) : (
-                      <FieldGroup>
-                        <FieldSet className="gap-4">
-                          <FieldLegend variant="label" className="mb-0">
-                            Variant routing
-                          </FieldLegend>
-                          <FieldDescription>
-                            Applicants see one service. Their answers pick the
-                            internal variant.
-                          </FieldDescription>
-                          <CaseFlowBuilder
-                            definition={definition.caseSelector}
-                            variants={orderedVariants}
-                            derivedSources={(definition.derivedAnswers ?? []).map(
-                              (derived) => ({
-                                key: derived.key,
-                                label: derived.label,
-                                options: derived.bands.map((band) => ({
-                                  value: band.value,
-                                  label: band.label,
-                                })),
-                              }),
-                            )}
-                            immutableQuestionKeys={immutableKeys}
-                            onChange={(caseSelector) =>
-                              updateDefinition({ ...definition, caseSelector })
-                            }
-                          />
-                        </FieldSet>
-
-                        <EventTimingSection
-                          id="timing-routing"
-                          formDefinition={definition}
-                          targetOptions={targetOptions}
-                          currentServiceCode={groupKey}
-                          onFormDefinitionChange={updateDefinition}
-                        />
-                      </FieldGroup>
-                    )}
-                  </CardContent>
-                </Card>
+                {isLoading ? (
+                  <div
+                    role="status"
+                    className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground"
+                  >
+                    <Spinner /> Loading routing configuration&hellip;
+                  </div>
+                ) : (
+                  <CaseQuestionsSection
+                    embedded
+                    variants={orderedVariants}
+                    formDefinition={definition}
+                    publishedFieldKeys={immutableKeys}
+                    targetOptions={targetOptions}
+                    currentServiceCode={groupKey}
+                    onFormDefinitionChange={updateDefinition}
+                  />
+                )}
               </ServiceEditorSection>
 
               <ServiceEditorSection
                 id="application-form"
                 icon={SlidersHorizontal}
                 title="Application Form"
+                description={applicationFormDescription(templateVersion)}
+                headerDivider={false}
                 summary={applicationSummary}
               >
                 <ApplicationFormSection
                   embedded
+                  showSharedNotice={false}
                   templateName={templateName}
                   templateVersion={templateVersion}
                   templateSharedCodes={templateSharedCodes}
@@ -428,28 +375,12 @@ export function ServiceGroupApplicationPage({
         </Tabs>
       </form>
 
-      <AlertDialog
+      <DiscardChangesDialog
         open={blocker.status === "blocked"}
-        onOpenChange={(open) => {
-          if (!open && blocker.status === "blocked") blocker.reset();
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
-            <AlertDialogDescription>
-              If you leave the shared application now, your unsaved changes
-              will be lost.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Keep editing</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={blocker.proceed}>
-              Discard and leave
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        subject="the shared application"
+        onKeepEditing={() => blocker.status === "blocked" && blocker.reset()}
+        onDiscard={() => blocker.status === "blocked" && blocker.proceed()}
+      />
     </div>
   );
 }

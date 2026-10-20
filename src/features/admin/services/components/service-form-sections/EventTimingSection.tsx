@@ -25,7 +25,6 @@ import { Switch } from "~/components/ui/switch";
 import { Textarea } from "~/components/ui/textarea";
 import { EventTimingNotice } from "~/features/forms/components/EventTimingNotice";
 import { TIMING_NOTICE } from "~/features/forms/event-timing-tone";
-import { RemoveWindowRuleButton } from "./RemoveWindowRuleButton";
 import type {
   EventTimingBehavior,
   EventTimingMismatch,
@@ -130,17 +129,13 @@ interface EventTimingSectionProps {
   formDefinition: FormTemplateDefinition;
   targetOptions: { value: string; label: string }[];
   onFormDefinitionChange: (definition: FormTemplateDefinition) => void;
-  /** Hide the heading and description when the card header already says it. */
-  hideIntro?: boolean;
-  /** Hide Remove Rule when the host puts it elsewhere, such as the card header. */
-  hideRemove?: boolean;
 }
 
 /**
- * Shared editor for a service form's data-driven on-time window. Used by both
- * the full service dossier (via Case Questions) and the group-wide shared
- * application editor, so grouped and standalone services configure it the same
- * way. The rule is stored in the versioned form template definition.
+ * Editor for a service form's data-driven on-time window. It sits in the
+ * Registration Window band of Timing & Routing, whose title and Remove Rule
+ * button belong to the band. The rule is stored in the versioned form template
+ * definition.
  */
 export function EventTimingSection({
   id,
@@ -148,8 +143,6 @@ export function EventTimingSection({
   formDefinition,
   targetOptions,
   onFormDefinitionChange,
-  hideIntro = false,
-  hideRemove = false,
 }: EventTimingSectionProps) {
   const caseDateFields = formDefinition.sections
     .filter((section) => section.step === "case")
@@ -188,11 +181,6 @@ export function EventTimingSection({
     });
   }
 
-  function removeTiming() {
-    if (!timing) return;
-    onFormDefinitionChange({ ...formDefinition, eventTiming: undefined });
-  }
-
   const activeBehavior = timing
     ? TIMING_BEHAVIORS.find((item) => item.value === timing.behavior)
     : undefined;
@@ -216,19 +204,7 @@ export function EventTimingSection({
 
   return (
     <FieldSet id={id} className="scroll-mt-6 gap-6">
-      {hideIntro ? (
-        <FieldLegend className="sr-only">Registration window and routing</FieldLegend>
-      ) : (
-        <div className="min-w-0">
-          <FieldLegend variant="label" className="mb-0">
-            Registration Window &amp; Routing
-          </FieldLegend>
-          <FieldDescription>
-            Route applicants to the right track when their event date falls
-            outside the on-time window.
-          </FieldDescription>
-        </div>
-      )}
+      <FieldLegend className="sr-only">Registration window and routing</FieldLegend>
 
       {!timing ? (
         <div className="flex flex-col items-center gap-3 px-4 pt-8 pb-10 text-center">
@@ -251,12 +227,6 @@ export function EventTimingSection({
         </div>
       ) : (
         <FieldGroup className="gap-7">
-          {hideRemove ? null : (
-            <div className="-mb-2 flex justify-end">
-              <RemoveWindowRuleButton onRemove={removeTiming} />
-            </div>
-          )}
-
           <div
             role="group"
             aria-label="Registration window rule"

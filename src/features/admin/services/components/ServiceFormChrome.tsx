@@ -1,6 +1,16 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Save, type LucideIcon } from "lucide-react";
+import { ArrowLeft, CircleAlert, Save, type LucideIcon } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "~/components/ui/alert-dialog";
 import { Badge } from "~/components/ui/badge";
 import { Button, buttonVariants } from "~/components/ui/button";
 import {
@@ -12,7 +22,7 @@ import {
 } from "~/components/ui/card";
 import { IconTile } from "~/components/ui/icon-tile";
 import { Spinner } from "~/components/ui/spinner";
-import { TabsContent } from "~/components/ui/tabs";
+import { TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { formatServiceCode } from "~/features/services/service-utils";
 import { cn } from "~/lib/utils";
 
@@ -81,16 +91,12 @@ export function ServiceDossierHeader({
                     ? "Edit Service"
                     : "New Service"}
             </span>
-            {isGroup ? null : (
-              <>
-                <span aria-hidden="true" className="hidden sm:inline">
-                  ·
-                </span>
-                <span translate="no" className="hidden font-mono sm:inline">
-                  {formatServiceCode(serviceCode)}
-                </span>
-              </>
-            )}
+            <span aria-hidden="true" className="hidden sm:inline">
+              ·
+            </span>
+            <span translate="no" className="hidden font-mono sm:inline">
+              {isGroup ? displayGroup : formatServiceCode(serviceCode)}
+            </span>
           </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <h1 className="text-pretty text-lg font-semibold tracking-tight sm:text-xl">
@@ -115,6 +121,46 @@ export function ServiceDossierHeader({
   );
 }
 
+interface ServiceEditorTabBarProps {
+  tabs: readonly { id: string; label: string; icon: LucideIcon }[];
+  label: string;
+  /** Tabs whose section has errors get a "Needs attention" mark. */
+  invalidIds?: ReadonlySet<string>;
+  listRef?: Ref<HTMLDivElement>;
+}
+
+/** The underline section bar under the header; render it inside `<Tabs>`. */
+export function ServiceEditorTabBar({
+  tabs,
+  label,
+  invalidIds,
+  listRef,
+}: ServiceEditorTabBarProps) {
+  return (
+    <div className="shrink-0 border-b border-border bg-background px-4 pb-3 sm:px-8">
+      <TabsList
+        ref={listRef}
+        variant="editor"
+        className="w-full"
+        aria-label={label}
+      >
+        {tabs.map(({ id, label: tabLabel, icon: Icon }) => (
+          <TabsTrigger key={id} value={id} className="gap-2">
+            <Icon aria-hidden="true" />
+            <span>{tabLabel}</span>
+            {invalidIds?.has(id) ? (
+              <CircleAlert
+                aria-label="Needs attention"
+                className="text-destructive"
+              />
+            ) : null}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </div>
+  );
+}
+
 interface ServiceEditorSectionProps {
   id: string;
   icon: LucideIcon;
@@ -122,8 +168,6 @@ interface ServiceEditorSectionProps {
   description?: string;
   summary?: string;
   hasError?: boolean;
-  /** Sits at the right of the card header, for an action on the whole section. */
-  action?: ReactNode;
   /** Off when the body opens with its own block (a field) rather than a divided band. */
   headerDivider?: boolean;
   children: ReactNode;
@@ -136,7 +180,6 @@ export function ServiceEditorSection({
   description,
   summary,
   hasError = false,
-  action,
   headerDivider = true,
   children,
 }: ServiceEditorSectionProps) {
@@ -169,12 +212,6 @@ export function ServiceEditorSection({
                 </CardDescription>
               ) : null}
             </div>
-            {/* Under the title on a phone, aligned with it (icon 44px + gap 12px). */}
-            {action ? (
-              <div className="shrink-0 max-sm:basis-full max-sm:pl-14">
-                {action}
-              </div>
-            ) : null}
           </div>
         </CardHeader>
         <CardContent className="px-0 py-6 [&>[data-slot=card]]:py-0 [&>[data-slot=card]>[data-slot=card-content]]:sm:px-8">
@@ -256,17 +293,53 @@ export function ServiceFormActionBar({
           <Save aria-hidden="true" data-icon="inline-start" />
         )}
         {isSaving
-          ? isGroup
-            ? "Publishing…"
-            : "Saving…"
-          : isGroup
-            ? "Publish Changes"
-            : isVariant
-              ? "Save Variant"
-              : isEdit
-                ? "Save & Publish"
-                : "Create & Publish"}
+          ? "Saving…"
+          : isVariant
+            ? "Save Variant"
+            : isEdit
+              ? "Save & Publish"
+              : "Create & Publish"}
       </Button>
     </div>
+  );
+}
+
+interface DiscardChangesDialogProps {
+  open: boolean;
+  /** What the admin is leaving, such as "the service editor". */
+  subject: string;
+  onKeepEditing: () => void;
+  onDiscard: () => void;
+}
+
+/** Asks before navigation drops an editor's unsaved changes. */
+export function DiscardChangesDialog({
+  open,
+  subject,
+  onKeepEditing,
+  onDiscard,
+}: DiscardChangesDialogProps) {
+  return (
+    <AlertDialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && open) onKeepEditing();
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+          <AlertDialogDescription>
+            If you leave {subject} now, your unsaved changes will be lost.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Keep editing</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" onClick={onDiscard}>
+            Discard and leave
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

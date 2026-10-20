@@ -8,6 +8,11 @@ import { FormTemplateBuilder } from "~/features/forms/components/FormTemplateBui
 import type { ConditionRef } from "~/features/forms/form-option-usage";
 import type { FormTemplateDefinition } from "~/features/forms/form-template.types";
 
+/** The section description; published versions lock once one exists. */
+export function applicationFormDescription(templateVersion: number) {
+  return `Add the questions applicants answer, and show follow-up questions based on earlier answers. Each save publishes a new version, and published versions can’t be edited${templateVersion > 0 ? ` after version ${templateVersion}` : ""}.`;
+}
+
 interface ApplicationFormSectionProps {
   templateName: string;
   templateVersion: number;
@@ -18,6 +23,8 @@ interface ApplicationFormSectionProps {
   onTemplateNameChange: (name: string) => void;
   onFormDefinitionChange: (definition: FormTemplateDefinition) => void;
   embedded?: boolean;
+  /** Off where the page already says the template is shared, such as a group's banner. */
+  showSharedNotice?: boolean;
   /** Requirement conditions that point at dropdown options in this form. */
   externalConditions?: readonly ConditionRef[];
 }
@@ -32,6 +39,7 @@ export function ApplicationFormSection({
   onTemplateNameChange,
   onFormDefinitionChange,
   embedded = false,
+  showSharedNotice = true,
   externalConditions,
 }: ApplicationFormSectionProps) {
   return (
@@ -54,8 +62,7 @@ export function ApplicationFormSection({
                 <h2>Application Form</h2>
               </CardTitle>
               <CardDescription>
-                Add the questions applicants answer, and show follow-up questions based on earlier answers. Each save publishes a new version, and published versions can’t be edited
-                {templateVersion > 0 ? ` after version ${templateVersion}` : ""}.
+                {applicationFormDescription(templateVersion)}
               </CardDescription>
             </div>
           </div>
@@ -81,7 +88,7 @@ export function ApplicationFormSection({
             </FieldDescription>
           </Field>
 
-          {templateSharedCodes.length > 1 ? (
+          {showSharedNotice && templateSharedCodes.length > 1 ? (
             <Alert variant="warning">
               <AlertTriangle aria-hidden="true" />
               <AlertDescription>
