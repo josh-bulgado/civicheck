@@ -98,8 +98,41 @@ const BANNERS: Record<string, Banner> = {
     top: "#b5d0fa",
     bottom: "#d5e7fe",
   },
-  under_validation: { file: "banner-under-validation.webp", ...UNMEASURED },
-  incomplete: { file: "banner-incomplete.webp", ...UNMEASURED },
+  under_validation: {
+    file: "banner-under-validation.webp",
+    ratio: 2172 / 724,
+    // No pale frame: the picture runs to its edges, so a few pixels are enough
+    // to hide the edge row. Its rounded corners came out white, repainted in the
+    // picture's own colours before it was converted, so none of it can show.
+    marginX: 0.002,
+    marginY: 0.007,
+    // The plain fill above and below the picture meets its left edge at about
+    // 8% and 90% down (#e9f4fe and #dceefd).
+    top: "#e9f4fe",
+    bottom: "#dceefd",
+    // The same size as the processing and release banners, which this picture
+    // matches in shape, so the art stays clear of the headline and the tracker.
+    scale: 0.75,
+    opacity: 0.8,
+  },
+  incomplete: {
+    file: "banner-incomplete.webp",
+    ratio: 2172 / 724,
+    // A thin frame (about 11px at the sides, 20px at the top, 26px at the
+    // bottom). It came with black outside its rounded corners, repainted pale
+    // like the others before it was converted, so none of it can show at the
+    // edges.
+    marginX: 0.0051,
+    marginY: 0.0318,
+    // The plain fill above and below the picture meets its left edge at about
+    // 8% and 90% down (#e7f2fd and #dde9fc).
+    top: "#e7f2fd",
+    bottom: "#dde9fc",
+    // The same size as the release banner, whose layout this picture follows,
+    // to keep the art clear of the tracker's Release node.
+    scale: 0.75,
+    opacity: 0.8,
+  },
   processing: {
     file: "banner-processing.webp",
     ratio: 2172 / 724,

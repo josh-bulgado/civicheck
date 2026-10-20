@@ -6,26 +6,26 @@ import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { useContinuableApplication } from "~/features/apply/hooks/useApplyDraft";
 import { useWelcomeTutorialAutoOpen } from "~/features/onboarding/components/WelcomeTutorial";
 import { StatusPill } from "~/features/requests/components/StatusPill";
-import { formatPesoFee } from "~/features/services/service-utils";
 import { CitizenDashboardBodySkeleton } from "../CitizenDashboardSkeleton";
 import { AttentionPanel } from "../components/AttentionPanel";
 import { ContinueApplicationCard } from "../components/ContinueApplicationCard";
 import { HeroRequestCard } from "../components/HeroRequestCard";
 import { QuickStartPanel } from "../components/QuickStartPanel";
-import { heroNote, pickHeroRequest } from "../hero";
-import type { AttentionItem, CitizenDashboardRequest } from "../types";
+import { SeeAllRequestsLink } from "../components/SeeAllRequestsLink";
+import { dashboardPlan } from "../hero";
+import type { CitizenDashboardRequest } from "../types";
 
 interface CitizenDashboardProps {
   requests: CitizenDashboardRequest[];
+  /** Requests with an update the applicant has not read: the sidebar badge's own source. */
+  unreadRequestIds: string[];
   firstName: string;
   welcomeTutorialSeen: boolean;
 }
 
-/** Two sit beside the hero at most; "All requests" in the title row has the rest. */
-const OTHER_REQUESTS_SHOWN = 2;
-
 const CitizenDashboard = ({
   requests,
+  unreadRequestIds,
   firstName,
   welcomeTutorialSeen,
 }: CitizenDashboardProps) => {
@@ -38,39 +38,10 @@ const CitizenDashboard = ({
   const { application, ready } = useContinuableApplication();
 
   const hasRequests = requests.length > 0;
-  const hero = pickHeroRequest(requests);
-
-  // The hero already speaks for its own request, so only the others are listed.
-  const others = requests.filter((request) => request.id !== hero?.id);
-  const incomplete = others.filter((r) => r.status === "incomplete");
-  const paymentDue = others.filter(
-    (r) => r.status === "ready_for_release" && r.payment_status !== "verified",
+  const { hero, attention, rows, rowsHeading, hasMore } = dashboardPlan(
+    requests,
+    new Set(unreadRequestIds),
   );
-
-  const attentionItems: AttentionItem[] = [
-    ...incomplete.map((request) => ({
-      request,
-      tone: "warning" as const,
-      message: "Missing requirements. Resubmit so validation can continue.",
-      action: "Upload docs",
-    })),
-    ...paymentDue.map((request) => ({
-      request,
-      tone: "success" as const,
-      // A fee-free request has nothing to pay, only a visit to confirm.
-      message:
-        Number(request.fees_due ?? 0) > 0
-          ? `${formatPesoFee(request.fees_due)} due. Pay and claim at the CCRO cashier.`
-          : heroNote(request),
-      action: "View details",
-    })),
-  ];
-
-  // Anything the attention card already names is not listed a second time.
-  const attentionIds = new Set(attentionItems.map((item) => item.request.id));
-  const otherRequests = others
-    .filter((request) => !attentionIds.has(request.id))
-    .slice(0, OTHER_REQUESTS_SHOWN);
 
   return (
     <div className="portal-page flex-1 gap-4.5 md:gap-5" aria-busy={!ready}>
@@ -103,15 +74,19 @@ const CitizenDashboard = ({
           ) : (
             <>
               {hero ? (
-                <HeroRequestCard request={hero} compact={otherRequests.length > 0} />
+                <HeroRequestCard request={hero} compact={rows.length > 0} />
               ) : (
                 <p className="rounded-[28px] bg-card px-5 py-7 text-[17px] text-body-strong shadow-portal-card md:px-8">
-                  Nothing in progress — everything you've submitted has been released or
-                  resolved.
+                  Nothing in progress right now.
                 </p>
               )}
-              {attentionItems.length > 0 && <AttentionPanel items={attentionItems} />}
-              {otherRequests.length > 0 && <OtherRequests requests={otherRequests} />}
+              {attention.length > 0 && (
+                // With no rows under it, the card is the last place to point at the list.
+                <AttentionPanel items={attention} seeAll={hasMore && rows.length === 0} />
+              )}
+              {rows.length > 0 && (
+                <OtherRequests heading={rowsHeading} requests={rows} seeAll={hasMore} />
+              )}
               <ContinueApplicationCard application={application} />
               <QuickStartPanel />
             </>
@@ -123,15 +98,26 @@ const CitizenDashboard = ({
 };
 
 /** A quiet second row under the hero: name, status, and a way in. */
-function OtherRequests({ requests }: { requests: CitizenDashboardRequest[] }) {
+function OtherRequests({
+  heading,
+  requests,
+  seeAll,
+}: {
+  heading: string;
+  requests: CitizenDashboardRequest[];
+  seeAll: boolean;
+}) {
   return (
     <section aria-labelledby="other-requests-heading">
-      <h2
-        id="other-requests-heading"
-        className="mb-2 px-1.5 text-[15px] leading-[normal] font-semibold text-muted-foreground"
-      >
-        Your other requests
-      </h2>
+      <div className="mb-2 flex items-center justify-between gap-4">
+        <h2
+          id="other-requests-heading"
+          className="px-1.5 text-[15px] leading-[normal] font-semibold text-muted-foreground"
+        >
+          {heading}
+        </h2>
+        {seeAll && <SeeAllRequestsLink />}
+      </div>
       <ul className="civic-stagger grid gap-3 md:grid-cols-2 md:gap-4">
         {requests.map((request) => {
           const service =

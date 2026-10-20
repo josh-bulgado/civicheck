@@ -12,6 +12,7 @@ import { RequestStatusHistory } from "~/features/requests/components/RequestStat
 import { SubmittedDetailsCard } from "~/features/requests/components/SubmittedDetailsCard";
 import { VerificationFormCard } from "~/features/requests/components/VerificationFormCard";
 import { nextSteps } from "~/features/requests/next-steps";
+import { getRejectionNotice } from "~/features/requests/request-workflow";
 
 interface MyRequestDetailPageProps {
   request: MyRequestDetail;
@@ -54,6 +55,7 @@ export default function MyRequestDetailPage({
         serviceName={request.serviceName}
         trackingNumber={request.trackingNumber}
         status={request.status}
+        note={request.status === "rejected" ? getRejectionNotice(request.logs) : null}
       />
 
       <div className="civic-stagger grid grid-cols-1 items-start gap-6 md:gap-7 lg:grid-cols-[minmax(0,1fr)_30rem]">

@@ -4,16 +4,20 @@ import { StatusPill } from "~/features/requests/components/StatusPill";
 
 /**
  * The top of an applicant's request page: the way back, then what it is for
- * (the service, with the tracking number under it) and where it stands.
+ * (the service, with the tracking number under it) and where it stands. A
+ * `note` is one muted line under the tracking number: for a rejected request,
+ * why, since the page has no other place that says.
  */
 export function MyRequestHeader({
   serviceName,
   trackingNumber,
   status,
+  note,
 }: {
   serviceName: string;
   trackingNumber: string;
   status: string;
+  note?: string | null;
 }) {
   return (
     <header>
@@ -34,6 +38,11 @@ export function MyRequestHeader({
           <p className="mt-2 font-mono text-[15px] leading-[normal] text-muted-foreground">
             {trackingNumber}
           </p>
+          {note && (
+            <p className="mt-3 max-w-prose text-[17px] leading-snug text-body-2 text-pretty">
+              {note}
+            </p>
+          )}
         </div>
         <StatusPill status={status} className="h-10 shrink-0 text-base md:mt-1" />
       </div>
