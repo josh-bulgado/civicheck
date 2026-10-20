@@ -117,15 +117,15 @@ export function SubmittedDetailsCard({
             </h3>
             <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
               {group.rows.map(({ key, label, value }) => (
-                <div key={key}>
+                <div key={key} className="min-w-0">
                   <dt className="text-xs uppercase tracking-wide text-muted-foreground">
                     {label}
                   </dt>
                   <dd
                     className={
                       portal
-                        ? "text-[17px] text-foreground capitalize"
-                        : "text-sm text-foreground capitalize"
+                        ? "text-[17px] text-foreground capitalize break-words"
+                        : "text-sm text-foreground capitalize break-words"
                     }
                   >
                     {formatValue(key, value)}
