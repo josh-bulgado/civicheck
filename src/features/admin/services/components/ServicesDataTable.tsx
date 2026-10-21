@@ -3,30 +3,20 @@ import {
   ColumnFiltersState,
   SortingState,
   VisibilityState,
-  flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/components/ui/table";
-import { SlidersHorizontal } from "lucide-react";
+import { DataTableCard } from "~/components/ui/data-table-card";
 import {
   columns,
   matchesDepartment,
   type ServiceDossier,
 } from "./ServicesColumn";
-import { ALL_DEPARTMENTS, ServicesTableToolbar } from "./ServicesTableToolbar";
-import { Button } from "~/components/ui/button";
-import { DataTablePagination } from "~/components/ui/data-table-pagination";
+import { ServicesTableToolbar } from "./ServicesTableToolbar";
+import { ALL_DEPARTMENTS } from "~/features/admin/department-filter";
 import {
   EDIT_SERVICE_HOTKEY,
   NEXT_SERVICE_HOTKEY,
@@ -200,9 +190,10 @@ export function ServicesDataTable({
 
   return (
     <div className="flex items-start gap-4">
-      {/* One card: filters, table, pagination. */}
-      <div className="min-w-0 flex-1 overflow-hidden rounded-xl border border-border-strong bg-card">
-        <div className="border-b border-border px-5 py-4">
+      <DataTableCard
+        table={table}
+        className="min-w-0 flex-1"
+        toolbar={
           <ServicesTableToolbar
             globalFilter={globalFilter}
             onGlobalFilterChange={setGlobalFilter}
@@ -213,90 +204,21 @@ export function ServicesDataTable({
             departmentFilter={departmentFilter}
             onDepartmentFilterChange={handleDepartmentFilter}
           />
-        </div>
-
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="border-b border-border bg-surface-subtle">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow
-                  key={headerGroup.id}
-                  className="[&>:first-child]:pl-5 [&>:last-child]:pr-5"
-                >
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody className="civic-stagger-auto">
-              {table.getRowModel().rows.length > 0 ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    // The service title is the keyboard-reachable control; this
-                    // lets a mouse click anywhere on the row do the same.
-                    onClick={() => onView(row.original)}
-                    data-dossier-key={row.original.dossier_key}
-                    data-state={
-                      row.original.dossier_key === selectedKey
-                        ? "selected"
-                        : undefined
-                    }
-                    className="cursor-pointer transition-[background-color] hover:bg-surface-subtle data-[state=selected]:bg-primary-soft data-[state=selected]:shadow-[inset_3px_0_0_var(--primary)] [&>:first-child]:pl-5 [&>:last-child]:pr-5"
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-32 text-center text-muted-foreground"
-                  >
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <SlidersHorizontal
-                        aria-hidden="true"
-                        className="size-8 text-muted-foreground/50"
-                      />
-                      <p className="text-sm font-medium">
-                        No services found matching your filters.
-                      </p>
-                      <Button
-                        variant="link"
-                        size="sm"
-                        onClick={handleClearFilters}
-                        className="text-xs h-auto p-0"
-                      >
-                        Clear Filters
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Footer */}
-        <div className="border-t border-border px-5 py-4">
-          <DataTablePagination table={table} />
-        </div>
-      </div>
+        }
+        label="Services"
+        emptyLabel="No services found matching your filters."
+        onClearFilters={handleClearFilters}
+        getRowProps={(row) => ({
+          // The service title is the keyboard-reachable control; this lets a
+          // mouse click anywhere on the row do the same.
+          onClick: () => onView(row.original),
+          "data-dossier-key": row.original.dossier_key,
+          "data-state":
+            row.original.dossier_key === selectedKey ? "selected" : undefined,
+          className:
+            "cursor-pointer transition-[background-color] data-[state=selected]:bg-primary-soft data-[state=selected]:shadow-[inset_3px_0_0_var(--primary)]",
+        })}
+      />
 
       <ServiceInspector
         service={selected}

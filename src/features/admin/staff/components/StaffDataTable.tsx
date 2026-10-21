@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
 import {
-  flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
@@ -10,18 +9,8 @@ import {
   type ColumnFiltersState,
   type SortingState,
 } from "@tanstack/react-table";
-import { SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "~/components/ui/button";
-import { DataTablePagination } from "~/components/ui/data-table-pagination";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/components/ui/table";
+import { DataTableCard } from "~/components/ui/data-table-card";
 import type { Department, StaffMember } from "../staff.types";
 import {
   useCancelStaffInvitation,
@@ -202,9 +191,10 @@ export function StaffDataTable({
 
   return (
     <>
-      {/* One card: filters, table, pagination. */}
-      <div className="overflow-hidden rounded-xl border border-border-strong bg-card">
-        <div className="border-b border-border px-5 py-4">
+      <DataTableCard
+        table={table}
+        cellClassName="py-3"
+        toolbar={
           <StaffTableToolbar
             globalFilter={globalFilter}
             onGlobalFilterChange={setGlobalFilter}
@@ -214,81 +204,11 @@ export function StaffDataTable({
             statusFilter={statusFilter}
             onStatusFilterChange={setStatusFilter}
           />
-        </div>
-
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="border-b border-border bg-surface-subtle">
-              {table.getHeaderGroups().map((group) => (
-                <TableRow
-                  key={group.id}
-                  className="hover:bg-transparent [&>:first-child]:pl-5 [&>:last-child]:pr-5"
-                >
-                  {group.headers.map((header) => (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody className="civic-stagger-auto">
-              {table.getRowModel().rows.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    className="hover:bg-surface-subtle [&>:first-child]:pl-5 [&>:last-child]:pr-5"
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="py-3">
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-32 text-center text-muted-foreground"
-                  >
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <SlidersHorizontal
-                        aria-hidden="true"
-                        className="size-8 text-muted-foreground/50"
-                      />
-                      <p className="text-sm font-medium">
-                        No staff members found matching your filters.
-                      </p>
-                      <Button
-                        variant="link"
-                        size="sm"
-                        onClick={handleClearFilters}
-                        className="h-auto p-0 text-xs"
-                      >
-                        Clear Filters
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Footer */}
-        <div className="border-t border-border px-5 py-4">
-          <DataTablePagination table={table} />
-        </div>
-      </div>
+        }
+        label="Staff members"
+        emptyLabel="No staff members found matching your filters."
+        onClearFilters={handleClearFilters}
+      />
 
       <ManageStaffAccessDialog
         staffMember={manageTarget}
