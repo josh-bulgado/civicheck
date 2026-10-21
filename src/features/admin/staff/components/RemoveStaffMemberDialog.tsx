@@ -39,6 +39,7 @@ export function RemoveStaffMemberDialog({
           <Button
             type="button"
             variant="outline"
+            size="lg"
             disabled={isPending}
             onClick={() => onOpenChange(false)}
           >
@@ -47,6 +48,7 @@ export function RemoveStaffMemberDialog({
           <Button
             type="button"
             variant="destructive"
+            size="lg"
             disabled={isPending}
             onClick={onConfirm}
           >

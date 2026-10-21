@@ -1,29 +1,27 @@
-import { ShieldCheck, UserRoundCog } from "lucide-react";
+import { UserPlus } from "lucide-react";
+import { Button } from "~/components/ui/button";
 
-export function StaffPageHeader() {
+export function StaffPageHeader({
+  count,
+  onInvite,
+}: {
+  count: number;
+  onInvite: () => void;
+}) {
   return (
-    <header className="dashboard-hero">
-      <div className="relative z-10 flex flex-col justify-between gap-6 md:flex-row md:items-center">
-        <div>
-          <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-brand-gold">
-            <ShieldCheck className="size-4" aria-hidden="true" />
-            Authorized administration
-          </div>
-          <div className="flex items-center gap-3">
-            <UserRoundCog
-              className="hidden size-8 text-white/85 sm:block"
-              aria-hidden="true"
-            />
-            <h1 className="text-3xl font-extrabold tracking-[-0.03em] text-white sm:text-4xl">
-              Staff Management
-            </h1>
-          </div>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/75">
-            Assign roles, departments, and employment types, invite new staff,
-            and suspend accounts across the office.
-          </p>
-        </div>
+    <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 rounded-xl border border-border-strong bg-card px-5 py-4">
+      <div className="min-w-0">
+        <h1 className="text-lg font-bold tracking-tight text-foreground">
+          Staff Management
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          CCRO Administration, {count} {count === 1 ? "member" : "members"}
+        </p>
       </div>
+      <Button variant="raised" size="lg" onClick={onInvite}>
+        <UserPlus aria-hidden="true" data-icon="inline-start" />
+        Invite Staff
+      </Button>
     </header>
   );
 }

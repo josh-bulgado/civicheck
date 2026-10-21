@@ -38,12 +38,12 @@ export function StaffRowActions({
     <div className="flex items-center justify-end gap-2">
       <Button
         variant="outline"
-        size="sm"
+        size="lg"
         onClick={() => onManage(staffMember)}
         disabled={staffMember.status !== "active"}
         className="whitespace-nowrap"
       >
-        <ShieldCheck />
+        <ShieldCheck aria-hidden="true" data-icon="inline-start" />
         Manage Access
       </Button>
       <DropdownMenu>
@@ -52,17 +52,23 @@ export function StaffRowActions({
           render={
             <Button
               variant="ghost"
-              size="icon-sm"
+              size="icon-lg"
               className="text-muted-foreground data-open:bg-muted"
             />
           }
         >
-          <MoreHorizontal />
+          <MoreHorizontal aria-hidden="true" />
           <span className="sr-only">
             Actions for {staffMember.firstName} {staffMember.lastName}
           </span>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-52">
+        {/* The menu defaults to the trigger's width, which is the icon button
+            here, so it sizes to its longest item instead. */}
+        <DropdownMenuContent
+          align="end"
+          variant="roomy"
+          className="w-max whitespace-nowrap"
+        >
           {staffMember.status !== "active" ? (
             <DropdownMenuItem onClick={() => onReactivate(staffMember)}>
               <RotateCcw />
