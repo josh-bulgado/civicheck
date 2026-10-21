@@ -1,178 +1,177 @@
-import { useState } from "react";
-import { Building2, QrCode, Search } from "lucide-react";
+import { Building2, FilterX } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import { QrScannerDialog } from "~/features/requests/components/QrScannerDialog";
-import { cn } from "~/lib/utils";
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
+  FilterChips,
+  FilterSelect,
+  TableSearch,
+} from "~/components/ui/data-table-toolbar";
+import { Toggle } from "~/components/ui/toggle";
+import { ALL_DEPARTMENTS, departmentFilterOptions } from "~/features/admin/department-filter";
 import type { Department } from "~/features/admin/departments.queries";
-import { STAGE_LABELS, type WorkflowStage } from "../request-workflow";
 import {
   STAGES,
   UNASSIGNED_DEPARTMENT_FILTER,
+  parseRequestStatus,
   parseWorkflowStage,
+  type PaymentFilter,
+  type RequestQueueFilters,
 } from "../request-queue";
+import {
+  REQUEST_STATUSES,
+  STAGE_LABELS,
+  getStatusDetails,
+  type WorkflowStage,
+} from "../request-workflow";
+import type { StageCounts } from "../requests-table.utils";
 
-export const ALL_DEPARTMENTS = "all";
+const ALL = "all";
+
+// The stage dots carry the colours of the statuses inside each stage.
+const STAGE_DOT: Record<WorkflowStage, string> = {
+  1: "bg-health-warning-dot",
+  2: "bg-health-info-dot",
+  3: "bg-tone-progress",
+  4: "bg-health-success-dot",
+};
+
+const STATUS_OPTIONS = [
+  { value: ALL, label: "All statuses" },
+  ...REQUEST_STATUSES.map((status) => ({
+    value: status,
+    label: getStatusDetails(status).label,
+  })),
+];
+
+const PAYMENT_OPTIONS: Array<{ value: PaymentFilter | typeof ALL; label: string }> = [
+  { value: ALL, label: "All payments" },
+  { value: "unpaid", label: "Unpaid" },
+  { value: "verified", label: "Verified" },
+];
 
 interface RequestsTableToolbarProps {
-  globalFilter: string;
-  onGlobalFilterChange: (value: string) => void;
-  stage: WorkflowStage | undefined;
-  onStageChange: (stage: WorkflowStage | undefined) => void;
-  stageCounts: Record<"all" | WorkflowStage, number>;
+  search: string;
+  onSearchChange: (value: string) => void;
+  filters: RequestQueueFilters;
+  onFilterChange: (patch: Partial<RequestQueueFilters>) => void;
+  /** Counts for every stage chip. They are the queue overview as well as the filter. */
+  stageCounts: StageCounts;
+  /** How many requests waiting on staff the other filters leave. */
+  needsCount: number;
   departments: Department[];
-  departmentFilter: string;
-  onDepartmentFilterChange: (value: string) => void;
-  /** Staff/supervisor only ever see one department — show it, not a picker. */
+  /** Staff and supervisors only ever see one department: show it, not a picker. */
   scopedDepartmentName?: string | null;
+  hasActiveFilters: boolean;
+  onClear: () => void;
 }
 
 export function RequestsTableToolbar({
-  globalFilter,
-  onGlobalFilterChange,
-  stage,
-  onStageChange,
+  search,
+  onSearchChange,
+  filters,
+  onFilterChange,
   stageCounts,
+  needsCount,
   departments,
-  departmentFilter,
-  onDepartmentFilterChange,
   scopedDepartmentName,
+  hasActiveFilters,
+  onClear,
 }: RequestsTableToolbarProps) {
-  const [scannerOpen, setScannerOpen] = useState(false);
+  const stageChips = [
+    { value: ALL, label: "All", count: stageCounts.all },
+    ...STAGES.map((stage) => ({
+      value: String(stage),
+      label: STAGE_LABELS[stage],
+      count: stageCounts[stage],
+      dotClassName: STAGE_DOT[stage],
+    })),
+  ];
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-center">
-        <div className="flex flex-1 items-center gap-2">
-          <div className="relative max-w-md flex-1">
-            <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search by tracking number, applicant, or service..."
-              value={globalFilter}
-              onChange={(e) => onGlobalFilterChange(e.target.value)}
-              className="h-10 rounded-lg border-border pl-10 text-sm focus-visible:border-primary focus-visible:ring-primary"
-            />
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="h-10 w-10 shrink-0"
-            aria-label="Scan tracking QR"
-            onClick={() => setScannerOpen(true)}
-          >
-            <QrCode className="size-4" />
-          </Button>
-          <QrScannerDialog
-            open={scannerOpen}
-            onOpenChange={setScannerOpen}
-            onDecode={onGlobalFilterChange}
-          />
-        </div>
+    <div className="flex flex-wrap items-center gap-3">
+      <TableSearch
+        value={search}
+        onChange={onSearchChange}
+        placeholder="Search by tracking number, applicant or service…"
+        label="Search requests"
+      />
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-            <Building2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Department:</span>
-          </div>
-          {scopedDepartmentName ? (
-            <Badge
-              variant="neutral"
-              className="h-10 px-3 text-sm font-semibold"
-            >
-              {scopedDepartmentName}
-            </Badge>
-          ) : (
-            <Select
-              value={departmentFilter}
-              onValueChange={(value) =>
-                onDepartmentFilterChange(value ?? ALL_DEPARTMENTS)
-              }
-            >
-              <SelectTrigger
-                id="requests-department-filter"
-                className="h-10 w-48"
-                aria-label="Filter by department"
-              >
-                <SelectValue
-                  placeholder="All departments"
-                  className="capitalize"
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value={ALL_DEPARTMENTS}>
-                    All departments
-                  </SelectItem>
-                  {departments.map((department) => (
-                    <SelectItem key={department.id} value={department.id}>
-                      {department.name}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value={UNASSIGNED_DEPARTMENT_FILTER}>
-                    Unassigned
-                  </SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-      </div>
-
-      <Tabs
-        value={stage ? String(stage) : "all"}
+      <FilterChips
+        label="Filter by stage"
+        value={filters.stage ? String(filters.stage) : ALL}
         onValueChange={(value) =>
-          onStageChange(
-            value === "all" ? undefined : parseWorkflowStage(Number(value)),
-          )
+          onFilterChange({
+            stage: value === ALL ? undefined : parseWorkflowStage(Number(value)),
+          })
         }
-        className="min-w-0 "
+        options={stageChips}
+      />
+
+      {/* Combines with any stage, so it is a toggle rather than another chip. */}
+      <Toggle
+        size="lg"
+        pressed={filters.needs === true}
+        onPressedChange={(pressed) =>
+          onFilterChange({ needs: pressed ? true : undefined })
+        }
+        className="rounded-full border border-border-strong px-3.5 font-semibold text-body-2 aria-pressed:border-primary aria-pressed:bg-primary-soft aria-pressed:text-primary"
       >
-        <TabsList
-          variant="accent"
-          className="max-w-full overflow-x-auto overflow-hidden"
-        >
-          <TabsTrigger value="all">
-            All
-            <Badge
-              variant="secondary"
-              className={cn(
-                "ml-2",
-                !stage && "bg-white/20 text-primary-foreground",
-              )}
-            >
-              {stageCounts.all}
-            </Badge>
-          </TabsTrigger>
-          {STAGES.map((workflowStage) => (
-            <TabsTrigger key={workflowStage} value={String(workflowStage)}>
-              {STAGE_LABELS[workflowStage]}
-              {stageCounts[workflowStage] > 0 && (
-                <Badge
-                  variant="info"
-                  className={cn(
-                    "ml-2",
-                    stage === workflowStage &&
-                      "bg-white/20 text-primary-foreground ring-0",
-                  )}
-                >
-                  {stageCounts[workflowStage]}
-                </Badge>
-              )}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+        Needs You
+        <span className="tabular-nums opacity-70">{needsCount}</span>
+      </Toggle>
+
+      <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
+        <FilterSelect
+          id="requests-status-filter"
+          label="Status"
+          value={filters.status ?? ALL}
+          onValueChange={(value) =>
+            onFilterChange({
+              status: value === ALL ? undefined : parseRequestStatus(value),
+            })
+          }
+          options={STATUS_OPTIONS}
+        />
+        <FilterSelect
+          id="requests-payment-filter"
+          label="Payment"
+          triggerClassName="w-44"
+          value={filters.payment ?? ALL}
+          onValueChange={(value) =>
+            onFilterChange({
+              payment: value === "unpaid" || value === "verified" ? value : undefined,
+            })
+          }
+          options={PAYMENT_OPTIONS}
+        />
+        {scopedDepartmentName ? (
+          <Badge variant="neutral" className="h-10 gap-1.5 px-3 text-sm font-semibold">
+            <Building2 aria-hidden="true" className="size-3.5" />
+            {scopedDepartmentName}
+          </Badge>
+        ) : (
+          <FilterSelect
+            id="requests-department-filter"
+            label="Department"
+            value={filters.department ?? ALL_DEPARTMENTS}
+            onValueChange={(value) =>
+              onFilterChange({
+                department: value === ALL_DEPARTMENTS ? undefined : value,
+              })
+            }
+            options={departmentFilterOptions(
+              departments,
+              UNASSIGNED_DEPARTMENT_FILTER,
+            )}
+          />
+        )}
+        {hasActiveFilters ? (
+          <Button variant="ghost" size="lg" onClick={onClear}>
+            <FilterX aria-hidden="true" data-icon="inline-start" />
+            Clear Filters
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }
