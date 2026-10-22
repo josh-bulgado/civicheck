@@ -27,8 +27,11 @@ interface RequestMessagesCardProps {
   viewer: MessageSenderRole;
   /** Called after a message is sent, so the route can re-run its loader. */
   onSent: () => void;
-  /** The applicant page's softer card; staff keep the default. */
-  variant?: "dashboard" | "portal";
+  /**
+   * The applicant page's softer card; staff keep the default. `bare` drops the
+   * card and its heading, for a drawer or tab that already has its own title.
+   */
+  variant?: "dashboard" | "portal" | "bare";
 }
 
 function senderLabel(message: RequestMessage, viewer: MessageSenderRole) {
@@ -50,6 +53,7 @@ export function RequestMessagesCard({
   variant = "dashboard",
 }: RequestMessagesCardProps) {
   const portal = variant === "portal";
+  const bare = variant === "bare";
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -88,19 +92,23 @@ export function RequestMessagesCard({
       className={
         portal
           ? "min-w-0 rounded-[28px] bg-card p-6 shadow-portal-card md:p-7"
-          : "dashboard-panel min-w-0 p-5"
+          : bare
+            ? "min-w-0"
+            : "dashboard-panel min-w-0 p-5"
       }
     >
-      <h2
-        className={
-          portal
-            ? "text-[22px] leading-[normal] font-semibold text-foreground"
-            : "text-lg font-bold text-foreground"
-        }
-      >
-        {viewer === "applicant" ? "Messages with CCRO" : "Messages with the applicant"}
-      </h2>
-      <p className="mb-3 mt-1 text-xs text-muted-foreground">
+      {!bare && (
+        <h2
+          className={
+            portal
+              ? "text-[22px] leading-[normal] font-semibold text-foreground"
+              : "text-lg font-bold text-foreground"
+          }
+        >
+          {viewer === "applicant" ? "Messages with CCRO" : "Messages with the applicant"}
+        </h2>
+      )}
+      <p className={bare ? "mb-3 text-xs text-muted-foreground" : "mb-3 mt-1 text-xs text-muted-foreground"}>
         Don't send passwords or payment details here.
       </p>
 
@@ -118,7 +126,7 @@ export function RequestMessagesCard({
           role="log"
           aria-label="Messages"
           tabIndex={0}
-          className="mb-3 max-h-72 overflow-y-auto overscroll-contain rounded-md pr-1 outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          className={`mb-3 overflow-y-auto overscroll-contain rounded-md pr-1 outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${bare ? "max-h-[55vh]" : "max-h-72"}`}
         >
           <ol className="flex flex-col gap-2">
             {messages.map((message) => {

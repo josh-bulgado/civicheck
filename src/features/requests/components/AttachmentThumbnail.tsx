@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Eye, FileText } from "lucide-react";
 import { preloadPdfjs } from "~/components/pdf/PdfViewer";
 import { getMyAttachmentSignedUrlFn } from "~/features/requests/applicant-requests.mutations";
-import { getFileKind } from "~/features/requests/components/AttachmentViewerDialog";
+import { getFileKind } from "~/features/requests/components/AttachmentPreview";
 import { loadFile } from "~/lib/file-preview-cache";
 import { useCachedFileUrl } from "~/lib/use-cached-file-url";
 

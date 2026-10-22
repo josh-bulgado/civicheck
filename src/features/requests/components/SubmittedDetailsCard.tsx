@@ -66,11 +66,13 @@ export function SubmittedDetailsCard({
   request,
   showEmpty = false,
   variant = "dashboard",
+  bare = false,
   children,
 }: {
   request: DetailsSource;
   showEmpty?: boolean;
   variant?: "dashboard" | "portal";
+  bare?: boolean;
   children?: ReactNode;
 }) {
   const portal = variant === "portal";
@@ -79,6 +81,51 @@ export function SubmittedDetailsCard({
     (key) => formDataLabel(key, request),
     { includeEmpty: showEmpty },
   );
+
+  const list = (
+  <div
+    className={
+      portal
+        ? "flex flex-col divide-y divide-border-lighter"
+        : "flex flex-col divide-y divide-border"
+    }
+  >
+    {groups.map((group) => (
+      <div key={group.id} className="py-4 first:pt-0 last:pb-0">
+        <h3
+          className={
+            portal
+              ? "mb-3 text-base font-semibold text-foreground"
+              : "mb-3 text-sm font-semibold text-foreground"
+          }
+        >
+          {group.title}
+        </h3>
+        <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+          {group.rows.map(({ key, label, value }) => (
+            <div key={key} className="min-w-0">
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                {label}
+              </dt>
+              <dd
+                className={
+                  portal
+                    ? "text-[17px] text-foreground capitalize break-words"
+                    : "text-sm text-foreground capitalize break-words"
+                }
+              >
+                {formatValue(key, value)}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    ))}
+  </div>
+  );
+
+  // `bare` is just the grouped answers, for a panel that has its own heading.
+  if (bare) return list;
 
   return (
     <section
@@ -97,45 +144,7 @@ export function SubmittedDetailsCard({
       >
         Submitted details
       </h2>
-      <div
-        className={
-          portal
-            ? "flex flex-col divide-y divide-border-lighter"
-            : "flex flex-col divide-y divide-border"
-        }
-      >
-        {groups.map((group) => (
-          <div key={group.id} className="py-4 first:pt-0 last:pb-0">
-            <h3
-              className={
-                portal
-                  ? "mb-3 text-base font-semibold text-foreground"
-                  : "mb-3 text-sm font-semibold text-foreground"
-              }
-            >
-              {group.title}
-            </h3>
-            <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-              {group.rows.map(({ key, label, value }) => (
-                <div key={key} className="min-w-0">
-                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                    {label}
-                  </dt>
-                  <dd
-                    className={
-                      portal
-                        ? "text-[17px] text-foreground capitalize break-words"
-                        : "text-sm text-foreground capitalize break-words"
-                    }
-                  >
-                    {formatValue(key, value)}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-        ))}
-      </div>
+      {list}
       {children}
     </section>
   );
