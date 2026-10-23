@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
 import { CountUp } from "~/components/motion/count-up";
 import { staggerStyle } from "~/components/motion/stagger";
+import { useGrown } from "~/features/admin/reports/use-grown";
 import { cn } from "~/lib/utils";
 
 const percentageFormatter = new Intl.NumberFormat("en-PH", {
@@ -12,6 +12,11 @@ export interface ProportionSegment {
   key: string;
   label: string;
   count: number;
+  /**
+   * Whole class names for the bar and the legend's edge, when the segment means
+   * something (released is green) rather than just being the next in line.
+   */
+  tone?: { bar: string; border: string };
 }
 
 const SEGMENT_STYLES = [
@@ -27,21 +32,19 @@ const SEGMENT_STYLES = [
  * A single stacked bar plus a legend, the pattern the Services Registry's
  * Classification Mix card used before its counts moved into the filter chips.
  * Used for the categorical splits that would be wasted on a full chart — sex,
- * purpose, intake channel.
+ * purpose, intake channel, how requests ended.
  *
- * Segments render at zero width and grow once mounted, so the mix reads as
- * filling in rather than appearing pre-drawn.
+ * Every segment is named and counted in the legend, so the bar's colours only
+ * repeat what is written beside it.
  */
 export function ProportionBar({ segments }: { segments: ProportionSegment[] }) {
   const total = segments.reduce((sum, segment) => sum + segment.count, 0);
-
-  const [grown, setGrown] = useState(false);
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setGrown(true));
-    return () => cancelAnimationFrame(frame);
-  }, []);
+  const grown = useGrown();
 
   if (total === 0) return null;
+
+  const toneOf = (segment: ProportionSegment, index: number) =>
+    segment.tone ?? SEGMENT_STYLES[index % SEGMENT_STYLES.length];
 
   return (
     <div className="flex flex-col gap-5">
@@ -53,8 +56,8 @@ export function ProportionBar({ segments }: { segments: ProportionSegment[] }) {
           <div
             key={segment.key}
             className={cn(
-              "h-full transition-[width] duration-700 ease-out",
-              SEGMENT_STYLES[index % SEGMENT_STYLES.length].bar,
+              "h-full transition-[width] duration-700 ease-out motion-reduce:transition-none",
+              toneOf(segment, index).bar,
             )}
             style={{
               width: grown ? `${(segment.count / total) * 100}%` : "0%",
@@ -69,10 +72,7 @@ export function ProportionBar({ segments }: { segments: ProportionSegment[] }) {
           <div
             key={segment.key}
             style={staggerStyle(index)}
-            className={cn(
-              "min-w-0 border-l-2 pl-3",
-              SEGMENT_STYLES[index % SEGMENT_STYLES.length].border,
-            )}
+            className={cn("min-w-0 border-l-2 pl-3", toneOf(segment, index).border)}
           >
             <dt className="text-sm font-semibold text-foreground">{segment.label}</dt>
             <dd className="mt-1 flex flex-wrap items-baseline gap-x-2">

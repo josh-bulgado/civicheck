@@ -28,7 +28,13 @@ const LIGHT_ONLY = [
 ];
 
 // One-off signed-in lines that are light on purpose, by `file: text`.
-const ALLOWED: Array<[file: string, includes: string, why: string]> = [];
+const ALLOWED: Array<[file: string, includes: string, why: string]> = [
+  [
+    "features/admin/reports/components/ReportSheet.tsx",
+    "bg-white",
+    "The report sheet is paper: white in either theme, so it looks the way it prints.",
+  ],
+];
 
 const files = walk(SRC)
   // Class strings also live in plain .ts files (shared style sets), so look there too.

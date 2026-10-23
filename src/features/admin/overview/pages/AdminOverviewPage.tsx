@@ -16,6 +16,7 @@ import type {
   TeamSummary,
 } from "~/features/admin/overview/overview-metrics";
 import type { AdminOverviewData } from "~/features/admin/overview/overview.types";
+import { DEFAULT_REPORT_VIEW } from "~/features/admin/reports/reports.types";
 import { DEFAULT_REPORT_MONTHS } from "~/features/admin/reports/service-report";
 
 function pluralize(count: number, one: string, many: string) {
@@ -109,7 +110,7 @@ export function AdminOverviewPage({ data }: { data: AdminOverviewData }) {
           >
             <Link
               to="/admin/reports"
-              search={{ months: DEFAULT_REPORT_MONTHS, service: undefined }}
+              search={{ months: DEFAULT_REPORT_MONTHS, service: undefined, view: DEFAULT_REPORT_VIEW }}
               className={laneLinkClassName("insight")}
             >
               <LaneLinkBody
