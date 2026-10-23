@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   CheckCircle2,
@@ -12,7 +13,6 @@ import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
@@ -31,16 +31,16 @@ import { cn } from "~/lib/utils";
 // proportions, not pixels. The four labels under it are a 4-column grid, so
 // each bubble sits at the centre of its column.
 const VIEW_WIDTH = 1200;
-const VIEW_HEIGHT = 320;
+const VIEW_HEIGHT = 190;
 /** Each bubble's height, so the path rises and dips between the stages. */
 const BUBBLE_CENTER_Y: Record<WorkflowStage, number> = {
-  1: 170,
-  2: 130,
-  3: 180,
-  4: 140,
+  1: 105,
+  2: 85,
+  3: 110,
+  4: 90,
 };
 const JOURNEY_PATH =
-  "M0 170 C 250 170, 260 130, 450 130 S 620 180, 750 180 S 900 140, 1050 140 L 1200 140";
+  "M0 105 C 250 105, 260 85, 450 85 S 620 110, 750 110 S 900 90, 1050 90 L 1200 90";
 
 const STAGE_ICONS: Record<WorkflowStage, LucideIcon> = {
   1: FileClock,
@@ -66,6 +66,9 @@ export function JourneyCard({ requests }: { requests: RequestOverview }) {
   const fullest = Math.max(0, ...requests.stages.map((stage) => stage.count));
   const spacing = VIEW_WIDTH / requests.stages.length;
   const isClear = requests.openTotal === 0;
+  // A stage's bubble and its label are one control: pointing at either one
+  // lights up both.
+  const [active, setActive] = useState<WorkflowStage | null>(null);
 
   return (
     <Card>
@@ -103,6 +106,8 @@ export function JourneyCard({ requests }: { requests: RequestOverview }) {
                 summary={summary}
                 cx={spacing * index + spacing / 2}
                 radius={bubbleRadius(summary.count, fullest)}
+                active={active === summary.stage}
+                onActiveChange={(on) => setActive(on ? summary.stage : null)}
               />
             ))}
           </svg>
@@ -114,7 +119,11 @@ export function JourneyCard({ requests }: { requests: RequestOverview }) {
         >
           {requests.stages.map((summary) => (
             <li key={summary.stage} className="min-w-0">
-              <StageLink summary={summary} />
+              <StageLink
+                summary={summary}
+                active={active === summary.stage}
+                onActiveChange={(on) => setActive(on ? summary.stage : null)}
+              />
             </li>
           ))}
         </ol>
@@ -123,31 +132,51 @@ export function JourneyCard({ requests }: { requests: RequestOverview }) {
   );
 }
 
-/** One stage: a bubble with its icon, and a red ring and count if any wait is long. */
+/**
+ * One stage: a bubble with its icon, and a red ring and count if any wait is
+ * long. It opens the same filtered queue as the label under it, so it is kept
+ * out of the tab order and the accessibility tree: the label is the one link.
+ */
 function StageBubble({
   summary,
   cx,
   radius,
+  active,
+  onActiveChange,
 }: {
   summary: StageSummary;
   cx: number;
   radius: number;
+  active: boolean;
+  onActiveChange: (active: boolean) => void;
 }) {
   const tones = STAGE_TONES[summary.stage];
   const Icon = STAGE_ICONS[summary.stage];
   const cy = BUBBLE_CENTER_Y[summary.stage];
-  const iconSize = Math.max(29, Math.round(radius * 0.86));
+  const iconSize = Math.max(24, Math.round(radius * 0.86));
   // The badge sits on the bubble's upper right, wide enough for its digits.
-  const badgeRadius = Math.max(19, 9 + 7 * String(summary.longWaits).length);
-  const badgeOffset = radius * 0.72 + 6;
+  const badgeRadius = Math.max(16, 8 + 6 * String(summary.longWaits).length);
+  const badgeOffset = radius * 0.72 + 4;
 
   return (
-    <g>
+    <Link
+      to="/requests"
+      search={{ stage: summary.stage }}
+      aria-hidden="true"
+      tabIndex={-1}
+      className="cursor-pointer outline-none"
+      onMouseEnter={() => onActiveChange(true)}
+      onMouseLeave={() => onActiveChange(false)}
+    >
       <circle
         cx={cx}
         cy={cy}
-        r={radius + 12}
-        className={cn(tones.fill, "opacity-20")}
+        r={radius + 8}
+        className={cn(
+          tones.fill,
+          "transition-opacity duration-200",
+          active ? "opacity-40" : "opacity-20",
+        )}
       />
       <circle cx={cx} cy={cy} r={radius} className={tones.fill} />
       <Icon
@@ -162,8 +191,8 @@ function StageBubble({
           <circle
             cx={cx}
             cy={cy}
-            r={radius + 18}
-            className="fill-none stroke-destructive stroke-[5px] [stroke-dasharray:3_9] [stroke-linecap:round]"
+            r={radius + 13}
+            className="fill-none stroke-destructive stroke-4 [stroke-dasharray:3_8] [stroke-linecap:round]"
           />
           <circle
             cx={cx + badgeOffset}
@@ -173,25 +202,40 @@ function StageBubble({
           />
           <text
             x={cx + badgeOffset}
-            y={cy - badgeOffset + 8}
+            y={cy - badgeOffset + 7}
             textAnchor="middle"
-            className="fill-background text-[22px] font-bold"
+            className="fill-background text-[19px] font-bold"
           >
             {formatCount(summary.longWaits)}
           </text>
         </>
       ) : null}
-    </g>
+    </Link>
   );
 }
 
-function StageLink({ summary }: { summary: StageSummary }) {
+function StageLink({
+  summary,
+  active,
+  onActiveChange,
+}: {
+  summary: StageSummary;
+  active: boolean;
+  onActiveChange: (active: boolean) => void;
+}) {
   const tones = STAGE_TONES[summary.stage];
   return (
     <Link
       to="/requests"
       search={{ stage: summary.stage }}
-      className="civic-interactive flex h-full flex-col items-center gap-0.5 rounded-xl px-2 py-3 text-center outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+      onMouseEnter={() => onActiveChange(true)}
+      onMouseLeave={() => onActiveChange(false)}
+      onFocus={() => onActiveChange(true)}
+      onBlur={() => onActiveChange(false)}
+      className={cn(
+        "civic-interactive flex h-full flex-col items-center gap-0.5 rounded-xl px-2 py-2 text-center outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        active && "bg-muted",
+      )}
     >
       <span className="text-sm text-muted-foreground">
         Stage {summary.stage} of 4
@@ -199,7 +243,7 @@ function StageLink({ summary }: { summary: StageSummary }) {
       <span className="text-lg font-bold text-balance">{summary.label}</span>
       <span
         className={cn(
-          "text-4xl leading-tight font-extrabold tracking-tight tabular-nums",
+          "text-3xl leading-tight font-extrabold tracking-tight tabular-nums",
           tones.text,
         )}
       >

@@ -131,8 +131,8 @@ export function summarizeOpenRequests(
 // ─── Journey bubbles ─────────────────────────────────────────────────────────
 
 /** Radius, in drawing units, of an empty stage's bubble and of the fullest one's. */
-export const BUBBLE_MIN_RADIUS = 26;
-export const BUBBLE_MAX_RADIUS = 92;
+export const BUBBLE_MIN_RADIUS = 22;
+export const BUBBLE_MAX_RADIUS = 60;
 
 /**
  * A stage's bubble radius, sized against the fullest stage. Area follows the
