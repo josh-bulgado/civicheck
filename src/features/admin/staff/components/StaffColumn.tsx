@@ -143,7 +143,8 @@ export function createStaffColumns({
     },
     {
       id: "employment",
-      accessorFn: (staffMember) => EMPLOYMENT_LABELS[staffMember.employmentType],
+      accessorFn: (staffMember) =>
+        EMPLOYMENT_LABELS[staffMember.employmentType],
       header: ({ column }) => (
         <SortHeader column={column}>Employment</SortHeader>
       ),
