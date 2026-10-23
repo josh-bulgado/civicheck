@@ -4,6 +4,7 @@ import { QuietLink } from "~/components/quiet-link";
 import { staggerStyle } from "~/components/motion/stagger";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { FilterChips, TableSearch } from "~/components/ui/data-table-toolbar";
+import { PageHeaderCard } from "~/components/ui/page-header-card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -249,14 +250,12 @@ export function StaffNotifications({
 
   return (
     <div className="dashboard-page">
-      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 rounded-xl border border-border-strong bg-card px-5 py-4">
-        <div className="min-w-0">
-          <h1 className="text-lg font-bold tracking-tight text-foreground">Notifications</h1>
-          <p className="text-sm text-muted-foreground">
-            CCRO Administration, {counts.all} {counts.all === 1 ? "notification" : "notifications"}
-            {counts.needs > 0 ? `, ${counts.needs} need action` : ""}
-          </p>
-        </div>
+      <PageHeaderCard
+        title="Notifications"
+        description={`CCRO Administration, ${counts.all} ${counts.all === 1 ? "notification" : "notifications"}${
+          counts.needs > 0 ? `, ${counts.needs} need action` : ""
+        }`}
+      >
         <Button
           variant={counts.unread > 0 ? "raised" : "ghost"}
           size="lg"
@@ -270,7 +269,7 @@ export function StaffNotifications({
           )}
           {isMarkingAll ? "Marking as read…" : "Mark all as read"}
         </Button>
-      </header>
+      </PageHeaderCard>
 
       {notifications.length === 0 ? (
         <Empty className="dashboard-panel civic-enter-scale mx-auto mt-8 max-w-lg border-0 px-6 py-16">

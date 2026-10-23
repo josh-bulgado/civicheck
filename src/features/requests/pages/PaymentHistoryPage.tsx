@@ -2,6 +2,7 @@ import { Download } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { DatePicker } from "~/components/ui/date-picker";
 import { Field, FieldLabel } from "~/components/ui/field";
+import { downloadCsv } from "~/lib/csv";
 import { formatDateKey } from "~/lib/date";
 import type { PaymentHistoryRow } from "~/features/requests/requests.queries";
 import { PaymentHistoryDataTable } from "~/features/requests/components/PaymentHistoryDataTable";
@@ -24,14 +25,11 @@ function describeRange({ from, to }: PaymentRange) {
     : `${formatDateKey(from)} – ${formatDateKey(to)}`;
 }
 
-function downloadCsv(payments: PaymentHistoryRow[], { from, to }: PaymentRange) {
-  const blob = new Blob([paymentsToCsv(payments)], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `payments-${from}${from === to ? "" : `-to-${to}`}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
+function exportPayments(payments: PaymentHistoryRow[], { from, to }: PaymentRange) {
+  downloadCsv(
+    paymentsToCsv(payments),
+    `payments-${from}${from === to ? "" : `-to-${to}`}.csv`,
+  );
 }
 
 export default function PaymentHistoryPage({
@@ -105,7 +103,7 @@ export default function PaymentHistoryPage({
             </Button>
             <Button
               disabled={payments.length === 0}
-              onClick={() => downloadCsv(payments, range)}
+              onClick={() => exportPayments(payments, range)}
             >
               <Download data-icon="inline-start" />
               Export CSV

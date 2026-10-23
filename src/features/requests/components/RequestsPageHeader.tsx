@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { QrCode } from "lucide-react";
 import { Button } from "~/components/ui/button";
+import { PageHeaderCard } from "~/components/ui/page-header-card";
 import { QrScannerDialog } from "./QrScannerDialog";
 import { WalkInIntakeDialog } from "./WalkInIntakeDialog";
 import type { EncodableService } from "../walk-in-intake.queries";
@@ -29,17 +30,12 @@ export function RequestsPageHeader({
   const [scannerOpen, setScannerOpen] = useState(false);
 
   return (
-    <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 rounded-xl border border-border-strong bg-card px-5 py-4">
-      <div className="min-w-0">
-        <h1 className="text-lg font-bold tracking-tight text-foreground">
-          Request Queue
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {departmentName ? `${departmentName} department` : "CCRO Administration"},{" "}
-          {requestCount} {requestCount === 1 ? "request" : "requests"},{" "}
-          {waitingCount} waiting on staff
-        </p>
-      </div>
+    <PageHeaderCard
+      title="Request Queue"
+      description={`${departmentName ? `${departmentName} department` : "CCRO Administration"}, ${requestCount} ${
+        requestCount === 1 ? "request" : "requests"
+      }, ${waitingCount} waiting on staff`}
+    >
 
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="ghost" size="lg" onClick={() => setScannerOpen(true)}>
@@ -59,6 +55,6 @@ export function RequestsPageHeader({
         onOpenChange={setScannerOpen}
         onDecode={onScan}
       />
-    </header>
+    </PageHeaderCard>
   );
 }

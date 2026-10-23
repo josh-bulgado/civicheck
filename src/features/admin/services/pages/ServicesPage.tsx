@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Blocks, Plus } from "lucide-react";
 import { buttonVariants } from "~/components/ui/button";
+import { PageHeaderCard } from "~/components/ui/page-header-card";
 import type { Service } from "../services.types";
 import { ServicesDataTable } from "../components/ServicesDataTable";
 import {
@@ -36,15 +37,10 @@ const ServicesPage = ({ services, departments }: ServicesPageProps) => {
 
   return (
     <div className="dashboard-page">
-      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 rounded-xl border border-border-strong bg-card px-5 py-4">
-        <div className="min-w-0">
-          <h1 className="text-lg font-bold tracking-tight text-foreground">
-            Services
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            CCRO Administration, {dossiers.length} services
-          </p>
-        </div>
+      <PageHeaderCard
+        title="Services"
+        description={`CCRO Administration, ${dossiers.length} services`}
+      >
         <div className="flex flex-wrap items-center gap-2">
           <Link
             to="/admin/services/blocks"
@@ -62,7 +58,7 @@ const ServicesPage = ({ services, departments }: ServicesPageProps) => {
             Add Service
           </Link>
         </div>
-      </header>
+      </PageHeaderCard>
       <ServicesDataTable
         data={dossiers}
         departments={departments}

@@ -2,6 +2,7 @@
 // (client or server), the server function, and the page all agree on what
 // "today" and a valid range mean.
 
+import { toCsv } from "~/lib/csv";
 import { OFFICE_TIME_ZONE, diffInDays, fromDateKey } from "~/lib/date";
 import type { PaymentHistoryRow } from "./requests.queries";
 
@@ -81,26 +82,18 @@ function formatOfficeDateTime(value: string) {
   }).replace(",", "");
 }
 
-// Names are applicant-typed, so a leading = + - @ would run as a formula when
-// the file is opened in Excel. Prefixing a quote keeps it as text.
-function csvCell(value: string | number) {
-  let text = String(value);
-  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
-  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-}
-
 export function paymentsToCsv(rows: PaymentHistoryRow[]): string {
-  const header = [
-    "Tracking No.",
-    "Applicant",
-    "Service",
-    "OR No.",
-    "Fee (PHP)",
-    "Verified At",
-    "Verified By",
-  ];
-  const lines = rows.map((row) =>
+  return toCsv(
     [
+      "Tracking No.",
+      "Applicant",
+      "Service",
+      "OR No.",
+      "Fee (PHP)",
+      "Verified At",
+      "Verified By",
+    ],
+    rows.map((row) => [
       row.trackingNumber,
       row.applicantName,
       row.serviceName,
@@ -108,10 +101,7 @@ export function paymentsToCsv(rows: PaymentHistoryRow[]): string {
       row.feesDue.toFixed(2),
       formatOfficeDateTime(row.verifiedAt),
       row.verifiedBy,
-    ]
-      .map(csvCell)
-      .join(","),
+    ]),
   );
-  // BOM so Excel reads the file as UTF-8 (names with ñ, etc.).
-  return `\uFEFF${[header.map(csvCell).join(","), ...lines].join("\r\n")}`;
 }
+
