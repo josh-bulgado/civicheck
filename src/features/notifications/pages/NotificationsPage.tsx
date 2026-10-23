@@ -1,14 +1,6 @@
 import { useState, useTransition } from "react";
 import { QuietLink } from "~/components/quiet-link";
-import {
-  Archive,
-  ArchiveRestore,
-  Bell,
-  Check,
-  MailWarning,
-  MoreHorizontal,
-  Undo2,
-} from "lucide-react";
+import { Bell, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { staggerStyle } from "~/components/motion/stagger";
 import { pillButton } from "~/components/portal/styles";
@@ -16,8 +8,6 @@ import { Button, buttonVariants } from "~/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import {
@@ -28,15 +18,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "~/components/ui/empty";
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemMedia,
-  ItemTitle,
-} from "~/components/ui/item";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { cn } from "~/lib/utils";
 import {
   markAllNotificationsReadFn,
@@ -44,64 +25,26 @@ import {
   type NotificationAction,
 } from "~/features/notifications/notifications.mutations";
 import { MarkAllReadButton } from "~/features/notifications/components/MarkAllReadButton";
+import {
+  NotificationMenuItems,
+  type RowHandlers,
+} from "~/features/notifications/components/NotificationMenuItems";
+import { StaffNotifications } from "~/features/notifications/components/StaffNotifications";
 import type { NotificationRow } from "~/features/notifications/notifications.queries";
 import type { NotificationAudience } from "~/features/notifications/notification-audience";
 import {
-  DAY_MS,
-  TIME_ZONE,
   TYPE_STYLE,
-  dayKeyFormat,
   feedDetail,
   feedTitle,
   feedWhen,
   linkFor,
-  timeFormat,
 } from "~/features/notifications/notification-display";
 import { invalidateNotificationPreview } from "~/features/notifications/notification-preview-cache";
-import { usePermissions } from "~/hooks/usePermissions";
-
-const dayLabelFormat = new Intl.DateTimeFormat("en-US", {
-  timeZone: TIME_ZONE,
-  weekday: "long",
-  month: "long",
-  day: "numeric",
-  year: "numeric",
-});
-
-type Filter = "all" | "unread" | "archived";
 
 const UPDATE_FAILED = "We couldn't update your notifications. Please try again.";
 
 function failureMessage(result: { error: boolean; message?: string }) {
   return result.message ?? UPDATE_FAILED;
-}
-
-interface DayGroup {
-  key: string;
-  label: string;
-  items: NotificationRow[];
-}
-
-/** Items arrive newest-first, so a single pass yields correctly ordered groups. */
-function groupByDay(items: NotificationRow[], now: number): DayGroup[] {
-  const today = dayKeyFormat.format(now);
-  const yesterday = dayKeyFormat.format(now - DAY_MS);
-  const groups: DayGroup[] = [];
-  for (const item of items) {
-    const sent = new Date(item.sentAt);
-    const key = dayKeyFormat.format(sent);
-    let group = groups[groups.length - 1];
-    if (group?.key !== key) {
-      group = {
-        key,
-        label: key === today ? "Today" : key === yesterday ? "Yesterday" : dayLabelFormat.format(sent),
-        items: [],
-      };
-      groups.push(group);
-    }
-    group.items.push(item);
-  }
-  return groups;
 }
 
 interface NotificationsPageProps {
@@ -120,48 +63,6 @@ interface NotificationsPageProps {
    * and the bell dot show, so the three always agree.
    */
   unreadTotal?: number;
-}
-
-interface RowHandlers {
-  onOpen: (notification: NotificationRow) => void;
-  onAction: (notification: NotificationRow, action: NotificationAction) => void;
-}
-
-/** The read/unread and archive choices, shared by both audiences' row menus. */
-function NotificationMenuItems({
-  notification,
-  onAction,
-}: {
-  notification: NotificationRow;
-  onAction: RowHandlers["onAction"];
-}) {
-  return (
-    <>
-      {notification.isRead ? (
-        <DropdownMenuItem onClick={() => onAction(notification, "unread")}>
-          <Undo2 />
-          Mark as unread
-        </DropdownMenuItem>
-      ) : (
-        <DropdownMenuItem onClick={() => onAction(notification, "read")}>
-          <Check />
-          Mark as read
-        </DropdownMenuItem>
-      )}
-      <DropdownMenuSeparator />
-      {notification.archivedAt !== null ? (
-        <DropdownMenuItem onClick={() => onAction(notification, "unarchive")}>
-          <ArchiveRestore />
-          Restore to inbox
-        </DropdownMenuItem>
-      ) : (
-        <DropdownMenuItem onClick={() => onAction(notification, "archive")}>
-          <Archive />
-          Archive
-        </DropdownMenuItem>
-      )}
-    </>
-  );
 }
 
 // ─── Applicant portal ───────────────────────────────────────────────────────
@@ -464,136 +365,6 @@ function PortalNotifications({
   );
 }
 
-// ─── CCRO staff / admin / cashier ───────────────────────────────────────────
-
-function NotificationItem({
-  notification,
-  onOpen,
-  onAction,
-}: { notification: NotificationRow } & RowHandlers) {
-  const { icon: TypeIcon, unreadClass } = TYPE_STYLE[notification.type] ?? TYPE_STYLE.status_change;
-
-  return (
-    <div className={cn("flex items-stretch", !notification.isRead && "bg-primary-soft/40")}>
-      <Item
-        render={linkFor(notification.target, () => onOpen(notification))}
-        className="min-w-0 flex-1 flex-nowrap items-start gap-4 rounded-none px-5 py-5 sm:px-6"
-      >
-        <ItemMedia
-          variant="icon"
-          className={cn(
-            "size-10 rounded-xl",
-            notification.isRead ? "bg-muted text-muted-foreground" : unreadClass,
-          )}
-        >
-          <TypeIcon className="size-4.5" aria-hidden="true" />
-        </ItemMedia>
-        <ItemContent className="min-w-0">
-          <ItemTitle
-            className={cn(
-              "line-clamp-none text-[15px] text-foreground",
-              notification.isRead ? "font-medium" : "font-bold",
-            )}
-          >
-            {notification.subject}
-            {notification.isRead ? null : (
-              <>
-                <span className="size-2 shrink-0 rounded-full bg-primary" aria-hidden="true" />
-                <span className="sr-only">Unread</span>
-              </>
-            )}
-          </ItemTitle>
-          <ItemDescription className="line-clamp-none whitespace-pre-line text-body-2 text-pretty">
-            {notification.body}
-          </ItemDescription>
-          {notification.status === "failed" ? (
-            <p className="mt-1 flex items-center gap-1.5 text-xs text-destructive">
-              <MailWarning className="size-3.5 shrink-0" aria-hidden="true" />
-              We couldn't email you this update, but it's saved here.
-            </p>
-          ) : null}
-          <p className="mt-1 font-mono text-xs text-muted-foreground">
-            {notification.trackingNumber} · {timeFormat.format(new Date(notification.sentAt))}
-          </p>
-        </ItemContent>
-      </Item>
-      <ItemActions className="gap-0 pr-3">
-        {notification.isRead ? null : (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-11 rounded-full text-muted-foreground hover:text-primary"
-            aria-label={`Mark "${notification.subject}" as read`}
-            onClick={() => onAction(notification, "read")}
-          >
-            <Check aria-hidden="true" />
-          </Button>
-        )}
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            nativeButton
-            render={
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-11 rounded-full text-muted-foreground data-open:bg-muted"
-              />
-            }
-          >
-            <MoreHorizontal aria-hidden="true" />
-            <span className="sr-only">More actions for "{notification.subject}"</span>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <NotificationMenuItems notification={notification} onAction={onAction} />
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </ItemActions>
-    </div>
-  );
-}
-
-function NotificationList({
-  items,
-  now,
-  emptyMessage,
-  ...handlers
-}: {
-  items: NotificationRow[];
-  now: number;
-  emptyMessage: string;
-} & RowHandlers) {
-  if (items.length === 0) {
-    return (
-      <div className="dashboard-panel">
-        <p className="px-6 py-12 text-center text-sm text-muted-foreground">{emptyMessage}</p>
-      </div>
-    );
-  }
-
-  let index = 0;
-  return (
-    <div className="flex flex-col gap-6">
-      {groupByDay(items, now).map((group) => (
-        <section key={group.key} aria-label={group.label}>
-          <h2 className="mb-2 px-2 pt-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-            {group.label}
-          </h2>
-          <div className="dashboard-panel overflow-hidden">
-            <div className="civic-stagger divide-y divide-border-lighter">
-              {group.items.map((notification) => (
-                <div key={notification.id} style={staggerStyle(index++)}>
-                  <NotificationItem notification={notification} {...handlers} />
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      ))}
-    </div>
-  );
-}
-
 export default function NotificationsPage({
   audience,
   notifications,
@@ -602,16 +373,10 @@ export default function NotificationsPage({
   onUpdated,
   unreadTotal,
 }: NotificationsPageProps) {
-  const isApplicant = audience === "applicant";
-  const { can } = usePermissions();
-  const [filter, setFilter] = useState<Filter>("all");
   const [isMarkingAll, startMarkAll] = useTransition();
   const [isLoadingMore, startLoadMore] = useTransition();
 
-  const inbox = notifications.filter((n) => n.archivedAt === null);
-  const unread = inbox.filter((n) => !n.isRead);
-  const archived = notifications.filter((n) => n.archivedAt !== null);
-  const unreadCount = unread.length;
+  const unreadCount = notifications.filter((n) => n.archivedAt === null && !n.isRead).length;
   const now = Date.now();
 
   async function applyAction(notification: NotificationRow, action: NotificationAction) {
@@ -675,12 +440,10 @@ export default function NotificationsPage({
 
   const handlers: RowHandlers = { onOpen: handleOpen, onAction: handleAction };
 
-  if (isApplicant) {
+  if (audience === "staff") {
     return (
-      <PortalNotifications
+      <StaffNotifications
         notifications={notifications}
-        unreadCount={unreadTotal ?? unreadCount}
-        now={now}
         hasMore={hasMore}
         isMarkingAll={isMarkingAll}
         isLoadingMore={isLoadingMore}
@@ -692,110 +455,16 @@ export default function NotificationsPage({
   }
 
   return (
-    <div className="dashboard-page max-w-4xl">
-      <header className="dashboard-hero">
-        <div className="relative z-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="mb-3 text-xs font-bold uppercase tracking-[0.13em] text-brand-gold">
-              CCRO workspace
-            </p>
-            <h1 className="text-3xl font-extrabold tracking-[-0.03em] text-white sm:text-4xl">
-              Notifications
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/75">
-              {unreadCount > 0
-                ? `You have ${unreadCount} unread ${unreadCount === 1 ? "alert" : "alerts"} that need your attention.`
-                : "You're all caught up. Requests that need your action will show up here."}
-            </p>
-          </div>
-          {unreadCount > 0 ? (
-            <Button
-              variant="outline"
-              className="civic-press shrink-0 bg-card text-primary hover:bg-primary-soft"
-              onClick={markAllRead}
-              disabled={isMarkingAll}
-            >
-              <Check data-icon="inline-start" aria-hidden="true" />
-              {isMarkingAll ? "Marking as read…" : "Mark all as read"}
-            </Button>
-          ) : null}
-        </div>
-      </header>
-
-      {notifications.length === 0 ? (
-        <Empty className="dashboard-panel civic-enter-scale mx-auto mt-8 max-w-lg border-0 px-6 py-16">
-          <EmptyHeader>
-            <EmptyMedia variant="icon" className="bg-primary-fill text-white shadow-md">
-              <Bell />
-            </EmptyMedia>
-            <EmptyTitle>No notifications yet</EmptyTitle>
-            <EmptyDescription>
-              When a request needs your action, it will be posted here.
-            </EmptyDescription>
-          </EmptyHeader>
-          <EmptyContent>
-            {can("requests:view_all") ? (
-              <QuietLink
-                to="/requests"
-                className={buttonVariants({ variant: "outline", size: "lg" })}
-              >
-                Open the request queue
-              </QuietLink>
-            ) : (
-              <QuietLink
-                to="/cashier"
-                className={buttonVariants({ variant: "outline", size: "lg" })}
-              >
-                Open the cashier counter
-              </QuietLink>
-            )}
-          </EmptyContent>
-        </Empty>
-      ) : (
-        <Tabs
-          value={filter}
-          onValueChange={(value) => setFilter(value as Filter)}
-          className="mt-6"
-        >
-          <TabsList aria-label="Filter notifications">
-            <TabsTrigger value="all">All ({inbox.length})</TabsTrigger>
-            <TabsTrigger value="unread">Unread ({unreadCount})</TabsTrigger>
-            <TabsTrigger value="archived">Archived ({archived.length})</TabsTrigger>
-          </TabsList>
-          <TabsContent value="all">
-            <NotificationList
-              items={inbox}
-              now={now}
-              emptyMessage="Your inbox is empty. Archived notifications are in the Archived tab."
-              {...handlers}
-            />
-          </TabsContent>
-          <TabsContent value="unread">
-            <NotificationList
-              items={unread}
-              now={now}
-              emptyMessage="You're all caught up. New updates will show up here."
-              {...handlers}
-            />
-          </TabsContent>
-          <TabsContent value="archived">
-            <NotificationList
-              items={archived}
-              now={now}
-              emptyMessage="Nothing archived. Use the ⋯ menu on a notification to tuck it away."
-              {...handlers}
-            />
-          </TabsContent>
-        </Tabs>
-      )}
-
-      {hasMore ? (
-        <div className="mt-6 flex justify-center">
-          <Button variant="outline" size="lg" onClick={loadMore} disabled={isLoadingMore}>
-            {isLoadingMore ? "Loading…" : "Load older notifications"}
-          </Button>
-        </div>
-      ) : null}
-    </div>
+    <PortalNotifications
+      notifications={notifications}
+      unreadCount={unreadTotal ?? unreadCount}
+      now={now}
+      hasMore={hasMore}
+      isMarkingAll={isMarkingAll}
+      isLoadingMore={isLoadingMore}
+      onMarkAllRead={markAllRead}
+      onLoadMore={loadMore}
+      {...handlers}
+    />
   );
 }
