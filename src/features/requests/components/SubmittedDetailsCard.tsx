@@ -67,12 +67,21 @@ export function SubmittedDetailsCard({
   showEmpty = false,
   variant = "dashboard",
   bare = false,
+  layout = "stacked",
+  compact = false,
   children,
 }: {
   request: DetailsSource;
   showEmpty?: boolean;
   variant?: "dashboard" | "portal";
   bare?: boolean;
+  /** `rows` puts each label beside its answer, under a small section title. */
+  layout?: "stacked" | "rows";
+  /**
+   * For a narrow side panel: one column from `xl` up (the panel is too thin for
+   * two) and sentence-case labels, which wrap far more readably than caps.
+   */
+  compact?: boolean;
   children?: ReactNode;
 }) {
   const portal = variant === "portal";
@@ -82,7 +91,29 @@ export function SubmittedDetailsCard({
     { includeEmpty: showEmpty },
   );
 
-  const list = (
+  const rows = layout === "rows";
+
+  const list = rows ? (
+    <div className="flex flex-col divide-y divide-border-light">
+      {groups.map((group) => (
+        <section key={group.id} className="py-5 first:pt-0 last:pb-0">
+          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {group.title}
+          </h3>
+          <dl className="grid grid-cols-[minmax(7rem,38%)_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
+            {group.rows.map(({ key, label, value }) => (
+              <div key={key} className="contents">
+                <dt className="text-muted-foreground">{label}</dt>
+                <dd className="font-medium text-foreground capitalize break-words">
+                  {formatValue(key, value)}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      ))}
+    </div>
+  ) : (
   <div
     className={
       portal
@@ -101,10 +132,22 @@ export function SubmittedDetailsCard({
         >
           {group.title}
         </h3>
-        <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+        <dl
+          className={
+            compact
+              ? "grid grid-cols-1 gap-x-6 gap-y-3.5 sm:grid-cols-2 xl:grid-cols-1"
+              : "grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2"
+          }
+        >
           {group.rows.map(({ key, label, value }) => (
             <div key={key} className="min-w-0">
-              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+              <dt
+                className={
+                  compact
+                    ? "mb-0.5 text-xs text-muted-foreground"
+                    : "text-xs uppercase tracking-wide text-muted-foreground"
+                }
+              >
                 {label}
               </dt>
               <dd

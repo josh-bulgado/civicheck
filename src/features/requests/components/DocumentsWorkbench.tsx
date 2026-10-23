@@ -54,7 +54,7 @@ function entryLabel(doc: Attachment) {
   return `${doc.subjectRole ? `${doc.subjectRole}: ` : ""}${doc.requirementName}`;
 }
 
-function StatusIcon({ status }: { status: string }) {
+export function StatusIcon({ status }: { status: string }) {
   if (status === "approved") {
     return <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden="true" />;
   }
@@ -77,6 +77,9 @@ interface DocumentsWorkbenchProps {
   confirmDecisions: boolean;
   /** Decisions held for a few seconds so they can be undone, then saved. */
   decisions: QueuedDecisions;
+  /** The open document, kept by the page so the overview can open one here. */
+  selectedId: string | null;
+  onSelectedIdChange: (id: string | null) => void;
   /** Saves a decision at once, for services that ask for a confirm instead. */
   onDecide: (
     attachmentId: string,
@@ -99,6 +102,8 @@ export function DocumentsWorkbench({
   canReverse,
   confirmDecisions,
   decisions,
+  selectedId,
+  onSelectedIdChange: setSelectedId,
   onDecide,
   onRevert,
 }: DocumentsWorkbenchProps) {
@@ -126,7 +131,6 @@ export function DocumentsWorkbench({
     };
 
   const firstPending = entries.find((entry) => verdictOf(entry.doc).status === "pending");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected =
     entries.find((entry) => entry.doc.id === selectedId) ??
     firstPending ??
@@ -352,7 +356,7 @@ export function DocumentsWorkbench({
       <p className="mb-4 text-xs text-muted-foreground">
         Compare with the original in hand.
       </p>
-      <SubmittedDetailsCard request={request} showEmpty bare />
+      <SubmittedDetailsCard request={request} showEmpty bare compact />
     </aside>
   );
 

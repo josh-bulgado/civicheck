@@ -49,3 +49,26 @@ export function normalizeMessageBody(raw: unknown): MessageBodyResult {
 export function isFlooded(recentCount: number): boolean {
   return recentCount >= MESSAGE_FLOOD_LIMIT;
 }
+
+/**
+ * Starting points staff can drop into the reply box and edit, picked by where
+ * the request stands. Nothing is sent until staff press Send.
+ */
+export function quickReplies(status: string, feesDue: number): string[] {
+  switch (status) {
+    case "submitted":
+    case "under_validation":
+    case "incomplete":
+      return ["Please bring the original of the document we flagged."];
+    case "processing":
+      return [
+        feesDue > 0
+          ? "Your document is being prepared. Please pay at the cashier."
+          : "Your document is being prepared.",
+      ];
+    case "ready_for_release":
+      return ["Your document is ready for pickup."];
+    default:
+      return [];
+  }
+}

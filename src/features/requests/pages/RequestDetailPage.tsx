@@ -32,6 +32,7 @@ import {
   getStatusDetails,
   type RequestStatus,
 } from "~/features/requests/request-workflow";
+import { quickReplies } from "~/features/requests/request-messages";
 import { useQueuedDecisions } from "~/features/requests/hooks/useQueuedDecisions";
 import { DocumentsWorkbench } from "~/features/requests/components/DocumentsWorkbench";
 import { RequestActionBar } from "~/features/requests/components/RequestActionBar";
@@ -40,8 +41,8 @@ import { RequestDetailHeader } from "~/features/requests/components/RequestDetai
 import { RequestHistoryLog } from "~/features/requests/components/RequestHistoryLog";
 import { RequestMessagesCard } from "~/features/requests/components/RequestMessagesCard";
 import { RequestNextBar } from "~/features/requests/components/RequestNextBar";
+import { RequestOverview } from "~/features/requests/components/RequestOverview";
 import { RequestTransitionDialog } from "~/features/requests/components/RequestTransitionDialog";
-import { SubmittedDetailsCard } from "~/features/requests/components/SubmittedDetailsCard";
 import { VerificationFormCard } from "~/features/requests/components/VerificationFormCard";
 
 // On-time birth registration is split by parents' marital status.
@@ -92,6 +93,7 @@ export default function RequestDetailPage({
   const [busy, setBusy] = useState(false);
   const [dialog, setDialog] = useState<TransitionDialog | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
 
   async function handleAttachmentDecision(
     attachmentId: string,
@@ -149,6 +151,7 @@ export default function RequestDetailPage({
   const accepted = attachments.filter((doc) => doc.verificationStatus === "approved").length;
   const pending = attachments.filter((doc) => doc.verificationStatus === "pending").length;
   const lastMessage = request.messages.at(-1);
+  const suggestions = quickReplies(request.status, request.feesDue);
   const waitingForReply = hasChat && lastMessage?.senderRole === "applicant";
   // The URL names the tab, so a link or a reload lands where staff were. With
   // none named, open on the documents when there are any to review.
@@ -158,6 +161,11 @@ export default function RequestDetailPage({
       : request.attachments.length > 0
         ? "documents"
         : "overview";
+
+  function openDocument(id: string) {
+    setSelectedDocId(id);
+    onTabChange("documents");
+  }
 
   async function runTransition(to: RequestStatus, remarks: string) {
     setBusy(true);
@@ -280,35 +288,12 @@ export default function RequestDetailPage({
         </TabsList>
 
         <TabsContent value="overview">
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <div className="flex flex-col gap-4 lg:col-span-2">
-              <SubmittedDetailsCard request={request} showEmpty />
-              <VerificationFormCard
-                variant="staff"
-                trackingNumber={request.trackingNumber}
-                copies={request.copies}
-                formData={request.formData}
-              />
-            </div>
-            <div className="flex flex-col gap-4">
-              <section className="dashboard-panel p-6">
-                <h2 className="mb-2 text-lg font-bold text-foreground">Documents</h2>
-                <p className="text-sm text-muted-foreground">
-                  {attachments.length === 0
-                    ? "Nothing was pre-uploaded. Validate the physical documents at the counter."
-                    : `${accepted} of ${attachments.length} accepted.`}
-                </p>
-                {attachments.length > 0 && (
-                  <Button
-                    className="mt-3"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onTabChange("documents")}
-                  >
-                    Review documents
-                  </Button>
-                )}
-              </section>
+          <div className="flex flex-col gap-4">
+            <RequestOverview
+              request={request}
+              attachments={attachments}
+              onOpenDocument={openDocument}
+            >
               {/* A request with no fee has nothing to collect until the cashier
                   confirms it at release, so the card appears only then. */}
               {(request.feesDue > 0 || request.status === "ready_for_release") && (
@@ -322,7 +307,13 @@ export default function RequestDetailPage({
                   onVerified={() => void onUpdated()}
                 />
               )}
-            </div>
+            </RequestOverview>
+            <VerificationFormCard
+              variant="staff"
+              trackingNumber={request.trackingNumber}
+              copies={request.copies}
+              formData={request.formData}
+            />
           </div>
         </TabsContent>
 
@@ -337,6 +328,8 @@ export default function RequestDetailPage({
             canReverse={canReverse}
             confirmDecisions={confirmDecisions}
             decisions={decisions}
+            selectedId={selectedDocId}
+            onSelectedIdChange={setSelectedDocId}
             onDecide={handleAttachmentDecision}
             onRevert={handleAttachmentRevert}
           />
@@ -344,10 +337,12 @@ export default function RequestDetailPage({
 
         {hasChat && (
           <TabsContent value="chat">
-            <div className="max-w-2xl">
+            <div className="dashboard-panel p-5">
               <RequestMessagesCard
+                variant="bare"
                 requestId={request.id}
                 messages={request.messages}
+                suggestions={suggestions}
                 viewer="staff"
                 onSent={() => void onUpdated()}
               />
@@ -380,6 +375,7 @@ export default function RequestDetailPage({
           onOpenChange={setChatOpen}
           requestId={request.id}
           messages={request.messages}
+          suggestions={suggestions}
           onSent={() => void onUpdated()}
         />
       )}

@@ -17,12 +17,14 @@ export function RequestChatDrawer({
   onOpenChange,
   requestId,
   messages,
+  suggestions,
   onSent,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   requestId: string;
   messages: RequestMessage[];
+  suggestions?: string[];
   onSent: () => void;
 }) {
   return (
@@ -44,6 +46,7 @@ export function RequestChatDrawer({
             variant="bare"
             requestId={requestId}
             messages={messages}
+            suggestions={suggestions}
             viewer="staff"
             onSent={onSent}
           />
