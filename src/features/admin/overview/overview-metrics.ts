@@ -16,8 +16,11 @@ import type { ServiceClassification } from "~/features/admin/services/services.t
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** How many requests the "Step in" strip names. The queue holds the rest. */
-export const LONGEST_WAIT_LIMIT = 5;
+/**
+ * The most requests the "Step in" column can name. It shows only as many as
+ * fit beside the journey; the queue holds the rest.
+ */
+export const LONGEST_WAIT_LIMIT = 8;
 
 /** The wait, in whole days, from which the overview calls a request a long wait. */
 export const LONG_WAIT_DAYS = Math.round(WAIT_CRITICAL_MS / DAY_MS);
