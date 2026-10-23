@@ -28,6 +28,9 @@ export type ServiceSummary = Pick<
   /** Short card title; null until an admin sets one (or before the column exists). */
   short_name: string | null;
   requirement_count: number;
+  /** Lowest and highest fee among the cases behind this card; equal for a single service. */
+  fee_min: number;
+  fee_max: number;
 };
 
 export const getServices = createServerFn({ method: "GET" }).handler(
@@ -57,6 +60,7 @@ export const getServices = createServerFn({ method: "GET" }).handler(
         // while its popup listed a full checklist.
         const routeCode = service.display_group ?? service.service_code;
         const { services: cases } = resolveServices(catalogue, routeCode);
+        const caseFees = cases.map((item) => Number(item.fee));
 
         return {
           service_code: service.service_code,
@@ -71,6 +75,8 @@ export const getServices = createServerFn({ method: "GET" }).handler(
           department_id: service.department_id,
           requirement_count: collectRequirements(catalogue, routeCode, cases)
             .length,
+          fee_min: Math.min(...caseFees),
+          fee_max: Math.max(...caseFees),
         };
       });
   },
