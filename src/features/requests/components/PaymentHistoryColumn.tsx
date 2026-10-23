@@ -1,5 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { SortableHeader } from "~/components/ui/data-table-column-header";
+import { SortHeader } from "~/components/ui/data-table-column-header";
 import type { PaymentHistoryRow } from "../requests.queries";
 
 export function formatPeso(amount: number) {
@@ -9,13 +9,19 @@ export function formatPeso(amount: number) {
   })}`;
 }
 
-function formatVerifiedAt(value: string) {
-  return new Date(value).toLocaleString("en-US", {
+function formatVerifiedDate(value: string) {
+  return new Date(value).toLocaleDateString("en-US", {
     timeZone: "Asia/Manila",
     month: "short",
     day: "numeric",
     year: "numeric",
-    hour: "2-digit",
+  });
+}
+
+function formatVerifiedTime(value: string) {
+  return new Date(value).toLocaleTimeString("en-US", {
+    timeZone: "Asia/Manila",
+    hour: "numeric",
     minute: "2-digit",
   });
 }
@@ -23,7 +29,7 @@ function formatVerifiedAt(value: string) {
 export const paymentHistoryColumns: ColumnDef<PaymentHistoryRow>[] = [
   {
     accessorKey: "trackingNumber",
-    header: ({ column }) => <SortableHeader column={column} label="Tracking No." />,
+    header: ({ column }) => <SortHeader column={column}>Tracking No.</SortHeader>,
     cell: ({ row }) => (
       <span className="font-mono text-xs font-bold text-primary">
         {row.getValue("trackingNumber")}
@@ -32,7 +38,7 @@ export const paymentHistoryColumns: ColumnDef<PaymentHistoryRow>[] = [
   },
   {
     accessorKey: "applicantName",
-    header: ({ column }) => <SortableHeader column={column} label="Applicant" />,
+    header: ({ column }) => <SortHeader column={column}>Applicant</SortHeader>,
     cell: ({ row }) => (
       <span
         className="line-clamp-1 text-sm font-medium text-foreground"
@@ -44,7 +50,7 @@ export const paymentHistoryColumns: ColumnDef<PaymentHistoryRow>[] = [
   },
   {
     accessorKey: "serviceName",
-    header: ({ column }) => <SortableHeader column={column} label="Service" />,
+    header: ({ column }) => <SortHeader column={column}>Service</SortHeader>,
     cell: ({ row }) => (
       <span
         className="block max-w-[220px] truncate text-sm text-muted-foreground"
@@ -56,7 +62,7 @@ export const paymentHistoryColumns: ColumnDef<PaymentHistoryRow>[] = [
   },
   {
     accessorKey: "orNumber",
-    header: ({ column }) => <SortableHeader column={column} label="OR No." />,
+    header: ({ column }) => <SortHeader column={column}>OR No.</SortHeader>,
     cell: ({ row }) =>
       row.original.orNumber ? (
         <span className="font-mono text-xs font-semibold text-foreground">
@@ -69,9 +75,9 @@ export const paymentHistoryColumns: ColumnDef<PaymentHistoryRow>[] = [
   {
     accessorKey: "feesDue",
     header: ({ column }) => (
-      <div className="flex justify-end">
-        <SortableHeader column={column} label="Fee" />
-      </div>
+      <SortHeader column={column} align="end">
+        Fee
+      </SortHeader>
     ),
     cell: ({ row }) => (
       <div className="text-right text-sm font-semibold tabular-nums text-foreground">
@@ -81,16 +87,21 @@ export const paymentHistoryColumns: ColumnDef<PaymentHistoryRow>[] = [
   },
   {
     accessorKey: "verifiedAt",
-    header: ({ column }) => <SortableHeader column={column} label="Verified At" />,
+    header: ({ column }) => <SortHeader column={column}>Verified At</SortHeader>,
     cell: ({ row }) => (
-      <span className="whitespace-nowrap text-xs text-muted-foreground">
-        {formatVerifiedAt(row.original.verifiedAt)}
-      </span>
+      <div className="flex flex-col gap-0.5 whitespace-nowrap">
+        <span className="text-sm text-foreground">
+          {formatVerifiedDate(row.original.verifiedAt)}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          {formatVerifiedTime(row.original.verifiedAt)}
+        </span>
+      </div>
     ),
   },
   {
     accessorKey: "verifiedBy",
-    header: ({ column }) => <SortableHeader column={column} label="Verified By" />,
+    header: ({ column }) => <SortHeader column={column}>Verified By</SortHeader>,
     cell: ({ row }) => (
       <span className="text-sm text-muted-foreground">{row.original.verifiedBy}</span>
     ),

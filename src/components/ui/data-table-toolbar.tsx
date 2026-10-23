@@ -79,8 +79,9 @@ export function TableSearch({
 export interface FilterChipOption<T extends string> {
   value: T;
   label: string;
-  /** Rows the chip would leave. Chips are the overview as well as the filter. */
-  count: number;
+  /** Rows the chip would leave. Chips are the overview as well as the filter.
+   * Leave it off for a chip that is a choice, not a tally (a date range). */
+  count?: number;
   /** Background class for the leading dot, e.g. `bg-health-success-dot`. */
   dotClassName?: string;
 }
@@ -123,7 +124,9 @@ export function FilterChips<T extends string>({
             />
           ) : null}
           {option.label}
-          <span className="tabular-nums opacity-70">{option.count}</span>
+          {option.count === undefined ? null : (
+            <span className="tabular-nums opacity-70">{option.count}</span>
+          )}
         </ToggleGroupItem>
       ))}
     </ToggleGroup>

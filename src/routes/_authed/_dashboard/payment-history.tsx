@@ -28,6 +28,7 @@ export const Route = createFileRoute("/_authed/_dashboard/payment-history")({
 
 function PaymentHistoryRoute() {
   const { range, payments } = Route.useLoaderData();
+  const { user } = Route.useRouteContext();
   const navigate = Route.useNavigate();
   useRealtimeRefresh({ tables: ["application_logs", "requests"] });
 
@@ -35,6 +36,7 @@ function PaymentHistoryRoute() {
     <PaymentHistoryPage
       payments={payments}
       range={range}
+      scopeLabel={user?.role === "admin" ? "CCRO Administration" : "Cashier Counter"}
       onRangeChange={(next) => navigate({ search: next })}
     />
   );
