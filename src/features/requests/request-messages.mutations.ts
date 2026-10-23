@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireActiveSession } from "~/server/auth";
+import { one } from "~/lib/embed";
 import { hasPermission, isDepartmentScopedRole } from "~/lib/permissions";
 import { getSupabaseAdminClient } from "~/utils/supabase";
 import {
@@ -18,10 +19,6 @@ const postMessageSchema = z.object({
   requestId: z.string().uuid(),
   body: z.string(),
 });
-
-function one<T>(value: T | T[] | null | undefined): T | undefined {
-  return Array.isArray(value) ? value[0] : (value ?? undefined);
-}
 
 /** SQLSTATE `program_limit_exceeded`, raised by enforce_request_message_caps. */
 const RATE_LIMIT_SQLSTATE = "54000";

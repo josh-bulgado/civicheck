@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireActiveSession } from "~/server/auth";
+import { one } from "~/lib/embed";
 import { hasPermission, isDepartmentScopedRole } from "~/lib/permissions";
 import { loadServiceCatalogue } from "~/features/services/services.catalogue";
 import { TERMINAL_STATUSES } from "~/features/requests/request-workflow";
@@ -49,10 +50,6 @@ export interface SearchResults {
 
 const SERVICE_RESULT_LIMIT = 6;
 const REQUEST_RESULT_LIMIT = 6;
-
-function one<T>(value: T | T[] | null | undefined): T | undefined {
-  return Array.isArray(value) ? value[0] : (value ?? undefined);
-}
 
 type Embed<T> = T | T[] | null | undefined;
 

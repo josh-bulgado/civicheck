@@ -21,19 +21,11 @@ import {
   REQUEST_STATUSES,
   STAGE_LABELS,
   getStatusDetails,
-  type WorkflowStage,
 } from "../request-workflow";
 import type { StageCounts } from "../requests-table.utils";
+import { STAGE_TONES } from "../stage-tones";
 
 const ALL = "all";
-
-// The stage dots carry the colours of the statuses inside each stage.
-const STAGE_DOT: Record<WorkflowStage, string> = {
-  1: "bg-health-warning-dot",
-  2: "bg-health-info-dot",
-  3: "bg-tone-progress",
-  4: "bg-health-success-dot",
-};
 
 const STATUS_OPTIONS = [
   { value: ALL, label: "All statuses" },
@@ -83,7 +75,7 @@ export function RequestsTableToolbar({
       value: String(stage),
       label: STAGE_LABELS[stage],
       count: stageCounts[stage],
-      dotClassName: STAGE_DOT[stage],
+      dotClassName: STAGE_TONES[stage].dot,
     })),
   ];
 

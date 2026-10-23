@@ -3,10 +3,7 @@ import type {
   MessageSenderRole,
   RequestMessage,
 } from "~/features/requests/request-messages";
-
-function one<T>(value: T | T[] | null | undefined): T | undefined {
-  return Array.isArray(value) ? value[0] : (value ?? undefined);
-}
+import { one } from "~/lib/embed";
 
 /**
  * Oldest first. Runs under the caller's own RLS, so an applicant only ever
