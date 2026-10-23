@@ -7,13 +7,13 @@ import {
   DialogDescription,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
 import { staggerStyle } from "~/components/motion/stagger";
 import type { ServiceRequirement } from "~/features/admin/services/services.types";
+import { ChecklistLoadError } from "~/features/services/components/ChecklistSections";
 import { useServiceOverview } from "~/features/services/hooks/useServiceOverview";
 import {
+  CASE_TAG_LABELS,
   cleanStepText,
   formatFee,
   formatPesoFee,
@@ -38,16 +38,6 @@ interface PortalRequirementsDialogProps {
   /** Raised by the footer's Apply; the card then asks to confirm before routing. */
   onApply?: () => void;
 }
-
-const CASE_TAG_LABELS: Record<string, string> = {
-  marital_only: "Marital child only",
-  non_marital_only: "Non-marital child only",
-  brap_only: "Barangay-assisted (BRAP) only",
-  foreigner_only: "Foreign parent only",
-  parental_consent_required: "Ages 18–20",
-  parental_advice_required: "Ages 21–24",
-  foreign_national_spouse: "Foreign-national applicant",
-};
 
 // The charter writes amounts into step text as "(P100)". They are the one thing
 // in a step worth the eye, so they are set heavier; the wording is left alone.
@@ -300,13 +290,11 @@ export function PortalRequirementsDialog({
           )}
 
           {!loading && error && (
-            <Alert variant="destructive" className="civic-enter-scale mt-8">
-              <AlertTitle>Unable to load requirements</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-              <Button type="button" variant="outline" size="sm" onClick={retry}>
-                Try again
-              </Button>
-            </Alert>
+            <ChecklistLoadError
+              error={error}
+              retry={retry}
+              className="civic-enter-scale mt-8"
+            />
           )}
 
           {!loading && !error && overview && (
