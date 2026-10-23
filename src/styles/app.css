@@ -1132,12 +1132,14 @@
   }
 
   .docket-sheet[data-layer="1"] {
-    transform: rotate(-9deg) translate(calc(-3cqw * var(--docket-scale)), calc(3cqw * var(--docket-scale)));
+    rotate: -9deg;
+    translate: calc(-3cqw * var(--docket-scale)) calc(3cqw * var(--docket-scale));
     opacity: 0.55;
   }
 
   .docket-sheet[data-layer="2"] {
-    transform: rotate(-4deg) translate(calc(-1cqw * var(--docket-scale)), calc(1cqw * var(--docket-scale)));
+    rotate: -4deg;
+    translate: calc(-1cqw * var(--docket-scale)) calc(1cqw * var(--docket-scale));
     opacity: 0.8;
   }
 
@@ -1146,7 +1148,7 @@
     flex-direction: column;
     gap: calc(3cqw * var(--docket-scale));
     padding: calc(5cqw * var(--docket-scale));
-    transform: rotate(1.5deg);
+    rotate: 1.5deg;
     box-shadow: 0 calc(3cqw * var(--docket-scale)) calc(6cqw * var(--docket-scale)) calc(-3cqw * var(--docket-scale)) var(--docket-shadow-color);
   }
 
@@ -1172,7 +1174,7 @@
     border-radius: calc(4.4cqw * var(--docket-scale));
     background: var(--docket-sheet);
     border: 1px solid var(--docket-sheet-line);
-    transform: rotate(2deg);
+    rotate: 2deg;
     box-shadow: 0 calc(3cqw * var(--docket-scale)) calc(6cqw * var(--docket-scale))
       calc(-3cqw * var(--docket-scale)) var(--docket-shadow-color);
   }
@@ -1301,6 +1303,34 @@
     margin-top: auto;
     font-size: calc(2.9cqw * var(--docket-scale));
     color: var(--body-2);
+  }
+
+  /* The CCRO stamp pressed onto the tracker sheet. Placeholder text, like the
+     docket stamp, until the real seal is cleared for use. */
+  .docket-track-stamp {
+    position: absolute;
+    right: calc(6cqw * var(--docket-scale));
+    bottom: calc(5.2cqw * var(--docket-scale));
+    display: grid;
+    place-items: center;
+    width: calc(11cqw * var(--docket-scale));
+    height: calc(11cqw * var(--docket-scale));
+    border: calc(0.5cqw * var(--docket-scale)) solid var(--primary);
+    border-radius: 50%;
+    color: var(--primary);
+    font-size: calc(2.6cqw * var(--docket-scale));
+    font-weight: 700;
+    rotate: -8deg;
+    pointer-events: none;
+  }
+
+  /* One ring that expands off the current step and fades, played once. */
+  .docket-ring {
+    position: absolute;
+    inset: calc(-0.5cqw * var(--docket-scale));
+    border: calc(0.5cqw * var(--docket-scale)) solid var(--primary);
+    border-radius: 50%;
+    pointer-events: none;
   }
 
   .docket-caption {
@@ -1786,6 +1816,17 @@
     opacity: 1;
     transform: none;
     transition: none;
+  }
+
+  /* Framer's stroke drawing is not a transform, so its reduced-motion setting
+     leaves it running. Show the finished check mark and skip the ring. */
+  .docket-check {
+    stroke-dasharray: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+
+  .docket-ring {
+    display: none;
   }
 
   .civic-lift:hover,
