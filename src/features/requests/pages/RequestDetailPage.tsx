@@ -37,7 +37,7 @@ import { DocumentsWorkbench } from "~/features/requests/components/DocumentsWork
 import { RequestActionBar } from "~/features/requests/components/RequestActionBar";
 import { RequestChatDrawer } from "~/features/requests/components/RequestChatDrawer";
 import { RequestDetailHeader } from "~/features/requests/components/RequestDetailHeader";
-import { RequestHistoryTimeline } from "~/features/requests/components/RequestHistoryTimeline";
+import { RequestHistoryLog } from "~/features/requests/components/RequestHistoryLog";
 import { RequestMessagesCard } from "~/features/requests/components/RequestMessagesCard";
 import { RequestNextBar } from "~/features/requests/components/RequestNextBar";
 import { RequestTransitionDialog } from "~/features/requests/components/RequestTransitionDialog";
@@ -356,11 +356,7 @@ export default function RequestDetailPage({
         )}
 
         <TabsContent value="history">
-          <RequestHistoryTimeline
-            logs={request.logs}
-            audience="staff"
-            feesDue={request.feesDue}
-          />
+          <RequestHistoryLog logs={request.logs} feesDue={request.feesDue} />
         </TabsContent>
       </Tabs>
 

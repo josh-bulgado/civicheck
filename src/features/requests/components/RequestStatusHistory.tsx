@@ -1,21 +1,6 @@
 import { cn } from "~/lib/utils";
+import { formatLogDateTime, type LogEntry } from "~/features/requests/request-history";
 import { getCurrentDotClass, getStatusDetails } from "~/features/requests/request-workflow";
-
-interface HistoryLog {
-  id: string;
-  actionStatus: string;
-  createdAt: string;
-}
-
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 /**
  * The applicant's status history: newest first, a dot, the status and when. The
@@ -24,7 +9,7 @@ function formatDateTime(value: string) {
  * moves the request nor asks anything of the applicant, so they stay out (a
  * rejection stays: that is their cue to resubmit).
  */
-export function RequestStatusHistory({ logs }: { logs: HistoryLog[] }) {
+export function RequestStatusHistory({ logs }: { logs: LogEntry[] }) {
   // Logs come back oldest-first.
   const entries = logs
     .filter(
@@ -81,7 +66,7 @@ export function RequestStatusHistory({ logs }: { logs: HistoryLog[] }) {
                 dateTime={log.createdAt}
                 className="shrink-0 text-[15px] text-muted-foreground"
               >
-                {formatDateTime(log.createdAt)}
+                {formatLogDateTime(log.createdAt)}
               </time>
             </li>
           );

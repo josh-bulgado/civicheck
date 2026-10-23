@@ -33,7 +33,7 @@ export interface QueuedDecisions {
 }
 
 /** How long a decision can be taken back before it is saved. */
-export const UNDO_MS = 8000;
+export const UNDO_MS = 15000;
 
 /**
  * Holds accept and reject decisions for a few seconds, so a slip can be undone
