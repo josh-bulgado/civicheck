@@ -2028,40 +2028,13 @@ input[aria-hidden="true"][tabindex="-1"] {
 }
 
 /*
- * Printing the Reports page prints the report sheet and nothing else. Whatever
- * is neither the sheet, inside it, nor holding it is hidden, and the elements
- * that hold it stop being a layout (no sidebar column, scroll area, padding or
- * fixed height) so the sheet starts at the top-left of the page and flows over
- * as many pages as it needs. Hatching is a background image, which browsers
- * drop from print unless asked to keep it.
+ * The report sheet prints from a frame of its own (see lib/print.ts) that holds
+ * nothing but the sheet, so these rules only shape the paper. The hatching is a
+ * background image, which browsers drop from print unless asked to keep it.
  */
 @media print {
   @page {
     margin: 14mm;
-  }
-
-  body :not(:has(.report-sheet)):not(.report-sheet):not(.report-sheet *) {
-    display: none !important;
-  }
-
-  html,
-  body,
-  :has(.report-sheet):not(.report-sheet) {
-    display: block !important;
-    position: static !important;
-    width: auto !important;
-    max-width: none !important;
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: 0 !important;
-    overflow: visible !important;
-    background: #fff !important;
-    box-shadow: none !important;
-    transform: none !important;
-    animation: none !important;
   }
 
   .report-sheet {
@@ -2072,7 +2045,7 @@ input[aria-hidden="true"][tabindex="-1"] {
     print-color-adjust: exact;
   }
 
-  /* Sections may run over a page, but a heading never ends one and a table row never splits. */
+  /* A heading never ends a page, and a table row never splits across two. */
   .report-sheet h3 {
     break-after: avoid;
   }

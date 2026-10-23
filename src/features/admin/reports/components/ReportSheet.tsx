@@ -1,3 +1,4 @@
+import type { Ref } from "react";
 import {
   formatCount,
   formatDays,
@@ -22,6 +23,8 @@ export type SheetSectionKey = (typeof SHEET_SECTIONS)[number]["key"];
 export type SheetSections = Record<SheetSectionKey, boolean>;
 
 interface ReportSheetProps {
+  /** The printable page itself, so the Print button can hand it to the printer. */
+  ref?: Ref<HTMLElement>;
   sections: SheetSections;
   summary: OfficeSummary;
   buckets: ReadonlyArray<VolumeBucket>;
@@ -48,6 +51,7 @@ const HATCH = "repeating-linear-gradient(45deg, #000 0 2px, transparent 2px 5px)
  * rules in app.css).
  */
 export function ReportSheet({
+  ref,
   sections,
   summary,
   buckets,
@@ -69,6 +73,7 @@ export function ReportSheet({
 
   return (
     <article
+      ref={ref}
       aria-label="Operational report"
       className="report-sheet mx-auto flex w-full max-w-3xl flex-col gap-6 bg-white p-6 text-base text-black shadow-lg ring-1 ring-black/15 sm:p-10"
     >

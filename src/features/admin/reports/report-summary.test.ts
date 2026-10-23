@@ -3,6 +3,7 @@ import {
   buildSummaryText,
   describeBusySeason,
   formatDays,
+  formatGeneratedAt,
   pluralize,
   summarizeOffice,
   weightedAverageDays,
@@ -186,5 +187,12 @@ describe("describeBusySeason", () => {
 
   it("says nothing without a profiled service", () => {
     expect(describeBusySeason({ insight: insight({}), selectedService: null })).toBeNull();
+  });
+});
+
+describe("formatGeneratedAt", () => {
+  it("reads on the office's clock, not UTC", () => {
+    expect(formatGeneratedAt("2026-10-23T05:29:00Z")).toBe("Oct 23, 2026, 1:29 PM");
+    expect(formatGeneratedAt("2026-10-23T17:05:00Z")).toBe("Oct 24, 2026, 1:05 AM");
   });
 });

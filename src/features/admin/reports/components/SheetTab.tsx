@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Copy, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
@@ -21,6 +21,7 @@ import type {
   RequestVolumeData,
   ServiceReportData,
 } from "~/features/admin/reports/reports.types";
+import { printElement } from "~/lib/print";
 
 interface SheetTabProps {
   volume: RequestVolumeData;
@@ -42,6 +43,7 @@ const ALL_SECTIONS: SheetSections = {
  */
 export function SheetTab({ volume, report }: SheetTabProps) {
   const [sections, setSections] = useState<SheetSections>(ALL_SECTIONS);
+  const sheetRef = useRef<HTMLElement>(null);
 
   const summary = useMemo(() => summarizeOffice(report), [report]);
   const generatedLabel = formatGeneratedAt(report.generatedAt);
@@ -58,6 +60,15 @@ export function SheetTab({ volume, report }: SheetTabProps) {
       toast.success("Summary copied. Paste it into a message or an email.");
     } catch {
       toast.error("The summary could not be copied. Print the sheet instead.");
+    }
+  };
+
+  const printSheet = async () => {
+    if (!sheetRef.current) return;
+    try {
+      await printElement(sheetRef.current, `CCRO Operational Report, ${report.period.label}`);
+    } catch {
+      toast.error("The sheet could not be printed. Copy the summary instead.");
     }
   };
 
@@ -84,7 +95,7 @@ export function SheetTab({ volume, report }: SheetTabProps) {
           ))}
         </ul>
         <div className="flex flex-wrap items-center gap-3">
-          <Button variant="raised" size="lg" onClick={() => window.print()}>
+          <Button variant="raised" size="lg" onClick={printSheet}>
             <Printer aria-hidden="true" data-icon="inline-start" />
             Print or Save as PDF
           </Button>
@@ -96,6 +107,7 @@ export function SheetTab({ volume, report }: SheetTabProps) {
       </ReportPanel>
 
       <ReportSheet
+        ref={sheetRef}
         sections={sections}
         summary={summary}
         buckets={volume.buckets}

@@ -116,14 +116,27 @@ export function pluralize(count: number, one: string, many = `${one}s`): string 
 }
 
 const generatedAtFormatter = new Intl.DateTimeFormat("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
   timeZone: OFFICE_TIME_ZONE,
 });
 
-/** "Oct 23, 2026, 1:29 PM", on the office's clock whichever machine renders it. */
+/**
+ * "Oct 23, 2026, 1:29 PM", on the office's clock whichever machine renders it.
+ *
+ * Assembled from the formatter's parts rather than taking its `dateStyle` text:
+ * Safari writes "Oct 23, 2026 at 1:29 PM" where Node writes a comma, and a label
+ * that differs between the server and the browser breaks hydration.
+ */
 export function formatGeneratedAt(iso: string): string {
-  return generatedAtFormatter.format(new Date(iso));
+  const part = new Map(
+    generatedAtFormatter.formatToParts(new Date(iso)).map(({ type, value }) => [type, value]),
+  );
+  return `${part.get("month")} ${part.get("day")}, ${part.get("year")}, ${part.get("hour")}:${part.get("minute")} ${part.get("dayPeriod")}`;
 }
 
 /**
