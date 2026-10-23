@@ -38,20 +38,20 @@ export function fromDateKey(key: string | null | undefined): Date | null {
 
 // The CCRO is a single office, so a moment is shown on its Philippine calendar
 // day whichever machine renders it.
-const PORTAL_TIME_ZONE = "Asia/Manila";
+export const OFFICE_TIME_ZONE = "Asia/Manila";
 const shortDateFormat = new Intl.DateTimeFormat("en-US", {
-  timeZone: PORTAL_TIME_ZONE,
+  timeZone: OFFICE_TIME_ZONE,
   month: "short",
   day: "numeric",
 });
 const shortDateYearFormat = new Intl.DateTimeFormat("en-US", {
-  timeZone: PORTAL_TIME_ZONE,
+  timeZone: OFFICE_TIME_ZONE,
   month: "short",
   day: "numeric",
   year: "numeric",
 });
 const yearFormat = new Intl.DateTimeFormat("en-US", {
-  timeZone: PORTAL_TIME_ZONE,
+  timeZone: OFFICE_TIME_ZONE,
   year: "numeric",
 });
 

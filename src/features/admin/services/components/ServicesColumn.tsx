@@ -1,9 +1,9 @@
-import type { Column, ColumnDef } from "@tanstack/react-table";
-import type { ReactNode } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { Link } from "@tanstack/react-router";
-import { ArrowUpDown, Eye, Pencil } from "lucide-react";
+import { Eye, Pencil } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Button, buttonVariants } from "~/components/ui/button";
+import { SortHeader } from "~/components/ui/data-table-column-header";
 import { cn } from "~/lib/utils";
 import { Service, ServiceClassification } from "../services.types";
 import {
@@ -117,30 +117,6 @@ export function buildServiceDossiers(services: Service[]): ServiceDossier[] {
 type ServicesTableMeta = {
   onView?: (service: ServiceDossier) => void;
 };
-
-function SortHeader({
-  column,
-  children,
-  align = "start",
-}: {
-  column: Column<ServiceDossier, unknown>;
-  children: ReactNode;
-  align?: "start" | "end";
-}) {
-  return (
-    <div className={cn("flex", align === "end" && "justify-end")}>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="px-0 text-xs font-semibold text-muted-foreground hover:bg-transparent hover:text-foreground"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        {children}
-        <ArrowUpDown aria-hidden="true" data-icon="inline-end" />
-      </Button>
-    </div>
-  );
-}
 
 export const columns: ColumnDef<ServiceDossier>[] = [
   {

@@ -4,6 +4,7 @@ import { requireActiveSession } from "~/server/auth";
 import {
   DEFAULT_REPORT_MONTHS,
   isReportPeriodMonths,
+  periodStart,
   type ReportPeriodMonths,
 } from "~/features/admin/reports/service-report";
 
@@ -51,27 +52,6 @@ const dateFormatter = new Intl.DateTimeFormat("en-PH", {
   year: "numeric",
   timeZone: "Asia/Manila",
 });
-
-const MANILA_OFFSET_MS = 8 * 60 * 60 * 1_000;
-
-/**
- * Midnight Manila on the first of the calendar month `months - 1` back,
- * expressed as a UTC instant.
- *
- * The office's own clock is what a reporting period means to the CCRO, and the
- * Philippines has no DST — a fixed +08:00 offset is exact here, not an
- * approximation. Deriving the period in UTC instead would pull requests filed
- * before 08:00 Legazpi time into the wrong month.
- */
-function periodStart(now: Date, months: ReportPeriodMonths): Date {
-  const manilaNow = new Date(now.getTime() + MANILA_OFFSET_MS);
-  const firstOfMonth = Date.UTC(
-    manilaNow.getUTCFullYear(),
-    manilaNow.getUTCMonth() - (months - 1),
-    1,
-  );
-  return new Date(firstOfMonth - MANILA_OFFSET_MS);
-}
 
 const asNumber = (value: unknown): number => (typeof value === "number" ? value : 0);
 

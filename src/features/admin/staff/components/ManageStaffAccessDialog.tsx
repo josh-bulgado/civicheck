@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
 import { Alert, AlertDescription } from "~/components/ui/alert";
@@ -11,23 +11,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "~/components/ui/field";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
+import { FieldGroup } from "~/components/ui/field";
 import { Spinner } from "~/components/ui/spinner";
 import { useUpdateStaffAccess } from "../hooks/useStaffManagementActions";
+import {
+  ASSIGNABLE_ROLE_OPTIONS,
+  EMPLOYMENT_TYPE_OPTIONS,
+  roleNeedsDepartment,
+} from "../staff-form.options";
 import type { Department, StaffMember } from "../staff.types";
+import { StaffSelectField } from "./StaffSelectField";
 
 const formSchema = z
   .object({
@@ -36,10 +29,7 @@ const formSchema = z
     employmentType: z.enum(["regular", "job_order", "contractual"]),
   })
   .superRefine((data, context) => {
-    if (
-      (data.role === "staff" || data.role === "supervisor") &&
-      !data.departmentId
-    ) {
+    if (roleNeedsDepartment(data.role) && !data.departmentId) {
       context.addIssue({
         code: "custom",
         path: ["departmentId"],
@@ -49,21 +39,6 @@ const formSchema = z
   });
 
 type FormValues = z.infer<typeof formSchema>;
-
-const roles: { value: FormValues["role"]; label: string }[] = [
-  { value: "staff", label: "Staff" },
-  { value: "supervisor", label: "Supervisor" },
-  { value: "cashier", label: "Cashier" },
-];
-
-const employmentTypes: {
-  value: FormValues["employmentType"];
-  label: string;
-}[] = [
-  { value: "regular", label: "Regular" },
-  { value: "job_order", label: "Job Order" },
-  { value: "contractual", label: "Contractual" },
-];
 
 function ManageStaffAccessForm({
   staffMember,
@@ -84,6 +59,10 @@ function ManageStaffAccessForm({
     },
   });
   const selectedRole = form.watch("role");
+  const departmentOptions = departments.map((department) => ({
+    value: department.id,
+    label: department.name,
+  }));
   const isPending = updateAccess.status === "pending";
 
   async function onSubmit(values: FormValues) {
@@ -91,10 +70,9 @@ function ManageStaffAccessForm({
       data: {
         staffId: staffMember.id,
         role: values.role,
-        departmentId:
-          values.role === "staff" || values.role === "supervisor"
-            ? values.departmentId
-            : null,
+        departmentId: roleNeedsDepartment(values.role)
+          ? values.departmentId
+          : null,
         employmentType: values.employmentType,
       },
     });
@@ -116,134 +94,46 @@ function ManageStaffAccessForm({
       )}
 
       <FieldGroup>
-        <Controller
+        <StaffSelectField
           control={form.control}
           name="role"
-          render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="manage-staff-role">Staff role</FieldLabel>
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger
-                  id="manage-staff-role"
-                  className="w-full"
-                  aria-invalid={fieldState.invalid}
-                >
-                  <SelectValue placeholder="Role">
-                    {(value) =>
-                      roles.find((role) => role.value === value)?.label
-                    }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {roles.map((role) => (
-                      <SelectItem key={role.value} value={role.value}>
-                        {role.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-              {fieldState.invalid ? (
-                <FieldError errors={[fieldState.error]} />
-              ) : null}
-            </Field>
-          )}
+          id="manage-staff-role"
+          label="Staff role"
+          placeholder="Role"
+          options={ASSIGNABLE_ROLE_OPTIONS}
         />
 
-        {selectedRole === "staff" || selectedRole === "supervisor" ? (
-          <Controller
+        {roleNeedsDepartment(selectedRole) ? (
+          <StaffSelectField
             control={form.control}
             name="departmentId"
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="manage-staff-department">
-                  Department
-                </FieldLabel>
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger
-                    id="manage-staff-department"
-                    className="w-full"
-                    aria-invalid={fieldState.invalid}
-                  >
-                    <SelectValue placeholder="Select a department">
-                      {(value) =>
-                        departments.find(
-                          (department) => department.id === value,
-                        )?.name
-                      }
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {departments.map((department) => (
-                        <SelectItem key={department.id} value={department.id}>
-                          {department.name}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                {fieldState.invalid ? (
-                  <FieldError errors={[fieldState.error]} />
-                ) : null}
-              </Field>
-            )}
+            id="manage-staff-department"
+            label="Department"
+            placeholder="Select a department"
+            options={departmentOptions}
           />
         ) : null}
 
-        <Controller
+        <StaffSelectField
           control={form.control}
           name="employmentType"
-          render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="manage-staff-employment">
-                Employment type
-              </FieldLabel>
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger
-                  id="manage-staff-employment"
-                  className="w-full"
-                  aria-invalid={fieldState.invalid}
-                >
-                  <SelectValue placeholder="Employment type">
-                    {(value) =>
-                      employmentTypes.find(
-                        (employmentType) => employmentType.value === value,
-                      )?.label
-                    }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {employmentTypes.map((employmentType) => (
-                      <SelectItem
-                        key={employmentType.value}
-                        value={employmentType.value}
-                      >
-                        {employmentType.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-              {fieldState.invalid ? (
-                <FieldError errors={[fieldState.error]} />
-              ) : null}
-            </Field>
-          )}
+          id="manage-staff-employment"
+          label="Employment type"
+          placeholder="Employment type"
+          options={EMPLOYMENT_TYPE_OPTIONS}
         />
 
         <DialogFooter>
           <Button
             type="button"
             variant="outline"
+            size="lg"
             disabled={isPending}
             onClick={onClose}
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={isPending}>
+          <Button type="submit" size="lg" disabled={isPending}>
             {isPending ? (
               <>
                 <Spinner />

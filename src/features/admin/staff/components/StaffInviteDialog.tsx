@@ -24,16 +24,14 @@ import {
   InputGroupInput,
 } from "~/components/ui/input-group";
 import { Spinner } from "~/components/ui/spinner";
-import type { Department, EmploymentType } from "../staff.types";
+import type { Department } from "../staff.types";
 import { useInviteStaff } from "../hooks/useInviteStaff";
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
+  ASSIGNABLE_ROLE_OPTIONS,
+  EMPLOYMENT_TYPE_OPTIONS,
+  roleNeedsDepartment,
+} from "../staff-form.options";
+import { StaffSelectField } from "./StaffSelectField";
 
 const formSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -45,17 +43,6 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
-
-const roles: { value: FormValues["role"]; label: string }[] = [
-  { value: "staff", label: "Staff" },
-  { value: "supervisor", label: "Supervisor" },
-  { value: "cashier", label: "Cashier" },
-];
-const employmentTypes: { value: EmploymentType; label: string }[] = [
-  { value: "regular", label: "Regular" },
-  { value: "job_order", label: "Job Order" },
-  { value: "contractual", label: "Contractual" },
-];
 
 export function StaffInviteDialog({
   open,
@@ -81,6 +68,10 @@ export function StaffInviteDialog({
     },
   });
   const selectedRole = form.watch("role");
+  const departmentOptions = departments.map((department) => ({
+    value: department.id,
+    label: department.name,
+  }));
 
   async function onSubmit(data: FormValues) {
     const result = await inviteMutation.mutate({
@@ -123,7 +114,7 @@ export function StaffInviteDialog({
                     <FieldLabel htmlFor="staff-firstName">
                       First Name
                     </FieldLabel>
-                    <InputGroup>
+                    <InputGroup size="lg">
                       <InputGroupAddon>
                         <User size={16} aria-hidden="true" />
                       </InputGroupAddon>
@@ -147,7 +138,7 @@ export function StaffInviteDialog({
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel htmlFor="staff-lastName">Last Name</FieldLabel>
-                    <InputGroup>
+                    <InputGroup size="lg">
                       <InputGroupInput
                         {...field}
                         id="staff-lastName"
@@ -169,7 +160,7 @@ export function StaffInviteDialog({
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel htmlFor="staff-email">Email</FieldLabel>
-                  <InputGroup>
+                  <InputGroup size="lg">
                     <InputGroupAddon>
                       <Mail size={16} aria-hidden="true" />
                     </InputGroupAddon>
@@ -189,124 +180,44 @@ export function StaffInviteDialog({
               )}
             />
 
-            <Controller
+            <StaffSelectField
               control={form.control}
               name="role"
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="staff-role">Staff Role</FieldLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="staff-role">
-                      <SelectValue placeholder="Role">
-                        {(value) =>
-                          roles.find((role) => role.value === value)?.label
-                        }
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {roles.map((role) => (
-                          <SelectItem key={role.value} value={role.value}>
-                            {role.label}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
-                  )}
-                </Field>
-              )}
+              id="staff-role"
+              label="Staff Role"
+              placeholder="Role"
+              options={ASSIGNABLE_ROLE_OPTIONS}
             />
-            {(selectedRole === "staff" || selectedRole === "supervisor") && (
-              <Controller
+            {roleNeedsDepartment(selectedRole) && (
+              <StaffSelectField
                 control={form.control}
                 name="departmentId"
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="staff-department">
-                      Department
-                    </FieldLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger
-                        id="staff-department"
-                        aria-invalid={fieldState.invalid}
-                      >
-                        <SelectValue placeholder="Department">
-                          {(value) =>
-                            departments.find(
-                              (department) => department.id === value,
-                            )?.name
-                          }
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          {departments.map((department) => (
-                            <SelectItem
-                              key={department.id}
-                              value={department.id}
-                            >
-                              {department.name}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                    {fieldState.invalid && (
-                      <FieldError errors={[fieldState.error]} />
-                    )}
-                  </Field>
-                )}
+                id="staff-department"
+                label="Department"
+                placeholder="Department"
+                options={departmentOptions}
               />
             )}
-            <Controller
+            <StaffSelectField
               control={form.control}
               name="employmentType"
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="staff-employment-type">
-                    Employment Type
-                  </FieldLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger
-                      id="staff-employment-type"
-                      aria-invalid={fieldState.invalid}
-                    >
-                      <SelectValue placeholder="Employment type">
-                        {(value) =>
-                          employmentTypes.find((type) => type.value === value)
-                            ?.label
-                        }
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {employmentTypes.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
-                  )}
-                </Field>
-              )}
+              id="staff-employment-type"
+              label="Employment Type"
+              placeholder="Employment type"
+              options={EMPLOYMENT_TYPE_OPTIONS}
             />
             <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
+                size="lg"
                 onClick={() => onOpenChange(false)}
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
+                size="lg"
                 disabled={inviteMutation.status === "pending"}
               >
                 {inviteMutation.status === "pending" ? (

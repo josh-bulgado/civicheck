@@ -1,24 +1,11 @@
-import { useRef } from "react";
-import { useHotkey, type HotkeyChord } from "@tanstack/react-hotkeys";
-import { Building2, Search } from "lucide-react";
-import { cn } from "~/lib/utils";
+import { Building2 } from "lucide-react";
 import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "~/components/ui/input-group";
-import { Kbd } from "~/components/ui/kbd";
-import { useHotkeyLabel } from "~/hooks/useHotkeyLabel";
-import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
+  FilterChips,
+  FilterSelect,
+  TableSearch,
+} from "~/components/ui/data-table-toolbar";
 import type { Department } from "~/features/admin/departments.queries";
+import { departmentFilterOptions } from "~/features/admin/department-filter";
 import {
   CLASSIFICATION_FILTERS,
   type ClassificationCounts,
@@ -47,11 +34,6 @@ const CLASSIFICATION_LABEL: Record<ClassificationFilter, string> = {
   unclassified: "Unclassified",
 };
 
-export const ALL_DEPARTMENTS = "all";
-
-/** Jumps to the search box; plain keys are ignored while a field has focus. */
-const SEARCH_HOTKEY: HotkeyChord = "/";
-
 interface ServicesTableToolbarProps {
   globalFilter: string;
   onGlobalFilterChange: (value: string) => void;
@@ -74,110 +56,45 @@ export function ServicesTableToolbar({
   departmentFilter,
   onDepartmentFilterChange,
 }: ServicesTableToolbarProps) {
-  const searchRef = useRef<HTMLInputElement>(null);
-  const hotkeyLabel = useHotkeyLabel();
-  useHotkey(SEARCH_HOTKEY, () => searchRef.current?.focus());
-
   // "Unclassified" only earns a chip when something is actually unclassified.
-  const visibleFilters = CLASSIFICATION_FILTERS.filter(
+  const chips = CLASSIFICATION_FILTERS.filter(
     (filter) =>
       filter !== "unclassified" || classificationCounts.unclassified > 0,
-  );
+  ).map((filter) => ({
+    value: filter,
+    label: CLASSIFICATION_LABEL[filter],
+    count: classificationCounts[filter],
+    dotClassName: filter === "all" ? undefined : CLASSIFICATION_DOT[filter],
+  }));
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <InputGroup size="lg" className="min-w-56 max-w-md flex-1">
-        <InputGroupAddon>
-          <Search aria-hidden="true" />
-        </InputGroupAddon>
-        <InputGroupInput
-          ref={searchRef}
-          placeholder="Search by service name or code..."
-          aria-label="Search services"
-          aria-keyshortcuts="/"
-          value={globalFilter}
-          onChange={(e) => onGlobalFilterChange(e.target.value)}
-          // Escape clears a search, and leaves the box once it is empty.
-          onKeyDown={(e) => {
-            if (e.key !== "Escape") return;
-            if (globalFilter) onGlobalFilterChange("");
-            else e.currentTarget.blur();
-          }}
-        />
-        {globalFilter ? null : (
-          <InputGroupAddon align="inline-end">
-            <Kbd aria-hidden="true">{hotkeyLabel(SEARCH_HOTKEY)}</Kbd>
-          </InputGroupAddon>
+      <TableSearch
+        value={globalFilter}
+        onChange={onGlobalFilterChange}
+        placeholder="Search by service name or code…"
+        label="Search services"
+      />
+
+      <FilterChips
+        label="Filter by classification"
+        value={classificationFilter}
+        onValueChange={onClassificationFilterChange}
+        options={chips}
+      />
+
+      <FilterSelect
+        id="services-department-filter"
+        label="Department"
+        icon={Building2}
+        className="sm:ml-auto"
+        value={departmentFilter}
+        onValueChange={onDepartmentFilterChange}
+        options={departmentFilterOptions(
+          departments,
+          UNASSIGNED_DEPARTMENT_FILTER,
         )}
-      </InputGroup>
-
-      <ToggleGroup
-        aria-label="Filter by classification"
-        value={[classificationFilter]}
-        onValueChange={(values: string[]) => {
-          // base-ui returns all currently active values — take the last selected
-          const next = values[values.length - 1] as ClassificationFilter;
-          if (next) onClassificationFilterChange(next);
-        }}
-        // lg height: the track is 40px, level with the search box and the
-        // department select.
-        variant="pill"
-        size="lg"
-        className="flex-wrap"
-      >
-        {visibleFilters.map((filter) => (
-          <ToggleGroupItem key={filter} value={filter}>
-            {filter !== "all" && (
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "size-1.5 shrink-0 rounded-full",
-                  CLASSIFICATION_DOT[filter],
-                )}
-              />
-            )}
-            {CLASSIFICATION_LABEL[filter]}
-            <span className="tabular-nums opacity-70">
-              {classificationCounts[filter]}
-            </span>
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
-
-      <div className="flex items-center gap-2 sm:ml-auto">
-        <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-          <Building2 aria-hidden="true" className="size-3.5" />
-          <span className="hidden sm:inline">Department:</span>
-        </div>
-        <Select
-          value={departmentFilter}
-          onValueChange={(value) =>
-            onDepartmentFilterChange(value ?? ALL_DEPARTMENTS)
-          }
-        >
-          <SelectTrigger
-            id="services-department-filter"
-            className="w-48"
-            aria-label="Filter by department"
-            size="lg"
-          >
-            <SelectValue placeholder="All departments" className="capitalize" />
-          </SelectTrigger>
-          <SelectContent variant="roomy">
-            <SelectGroup>
-              <SelectItem value={ALL_DEPARTMENTS}>All departments</SelectItem>
-              {departments.map((department) => (
-                <SelectItem key={department.id} value={department.id}>
-                  {department.name}
-                </SelectItem>
-              ))}
-              <SelectItem value={UNASSIGNED_DEPARTMENT_FILTER}>
-                Unassigned
-              </SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </div>
+      />
     </div>
   );
 }

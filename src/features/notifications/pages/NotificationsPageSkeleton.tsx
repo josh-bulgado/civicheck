@@ -40,38 +40,38 @@ function PortalSkeleton() {
   );
 }
 
-/** One staff row: icon tile, subject, body, and the tracking number line. */
+/** One staff row: icon tile, title with its tracking number, and the body line. */
 function StaffRowSkeleton() {
   return (
-    <div className="flex items-start gap-4 px-5 py-5 sm:px-6">
-      <Skeleton className="size-10 shrink-0 rounded-xl" />
-      <div className="flex min-w-0 flex-1 flex-col gap-2.5">
-        <Skeleton className="h-4 w-1/2 rounded-full" />
-        <Skeleton className="h-4 w-4/5 rounded-full" />
-        <Skeleton className="h-3 w-1/3 rounded-full" />
+    <div className="flex items-center gap-3.5 px-5 py-3.5">
+      <Skeleton className="size-9 shrink-0 rounded-[10px]" />
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <Skeleton className="h-4 w-2/5 rounded-full" />
+        <Skeleton className="h-3.5 w-3/4 rounded-full" />
       </div>
+      <Skeleton className="h-3.5 w-14 shrink-0 rounded-full" />
     </div>
   );
 }
 
-/** The CCRO feed: hero, the All / Unread / Archived tabs, then a day group. */
+/** The CCRO feed: the header card, then one card with the toolbar and a day group. */
 function StaffSkeleton() {
   return (
-    <div className="dashboard-page max-w-4xl" aria-label="Loading notifications…">
-      <Skeleton className="h-40 rounded-2xl" />
-      <div className="mt-6 flex gap-2">
-        <Skeleton className="h-9 w-24 rounded-lg" />
-        <Skeleton className="h-9 w-28 rounded-lg" />
-        <Skeleton className="h-9 w-28 rounded-lg" />
-      </div>
-      <section>
-        <Skeleton className="mb-2 ml-2 h-3 w-16 rounded-full" />
-        <div className="dashboard-panel divide-y divide-border-lighter overflow-hidden">
+    <div className="dashboard-page" aria-label="Loading notifications…">
+      <Skeleton className="h-[4.5rem] rounded-xl" />
+      <div className="overflow-hidden rounded-xl border border-border-strong bg-card">
+        <div className="flex flex-wrap items-center gap-3 border-b border-border px-5 py-4">
+          <Skeleton className="h-10 w-full max-w-md rounded-lg" />
+          <Skeleton className="h-10 w-72 rounded-full" />
+          <Skeleton className="h-10 w-28 rounded-full" />
+        </div>
+        <Skeleton className="h-8 rounded-none" />
+        <div className="divide-y divide-border-lighter">
           {ROWS.map((row) => (
             <StaffRowSkeleton key={row} />
           ))}
         </div>
-      </section>
+      </div>
     </div>
   );
 }

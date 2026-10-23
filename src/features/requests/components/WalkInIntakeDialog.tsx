@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -107,8 +108,15 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
 
   return (
     <>
-      <Button type="button" onClick={() => setOpen(true)} disabled={services.length === 0}>
-        Encode walk-in
+      <Button
+        type="button"
+        variant="raised"
+        size="lg"
+        onClick={() => setOpen(true)}
+        disabled={services.length === 0}
+      >
+        <Plus aria-hidden="true" data-icon="inline-start" />
+        Encode Walk-in
       </Button>
 
       <Dialog

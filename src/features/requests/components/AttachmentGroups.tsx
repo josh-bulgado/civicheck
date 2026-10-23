@@ -12,7 +12,7 @@ interface GroupableDoc {
  * the files of the same requirement — and the same subject, e.g. "Father" —
  * together, in the order they were uploaded.
  */
-function groupByRequirement<T extends GroupableDoc>(docs: T[]) {
+export function groupByRequirement<T extends GroupableDoc>(docs: T[]) {
   const groups = new Map<string, { title: string; docs: T[] }>();
   for (const doc of docs) {
     const key = `${doc.subjectRole ?? ""}::${doc.requirementName}`;

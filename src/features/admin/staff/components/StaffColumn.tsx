@@ -1,39 +1,24 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, Check, Copy, RefreshCw } from "lucide-react";
+import { Check, Copy, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import type { Role } from "~/lib/permissions";
+import { SortHeader } from "~/components/ui/data-table-column-header";
 import type { StaffMember } from "../staff.types";
+import {
+  EMPLOYMENT_LABELS,
+  departmentLabel,
+  roleLabel,
+  staffStatus,
+} from "../staff-table.utils";
 import { StaffRowActions } from "./StaffRowActions";
-
-const roleLabels: Partial<Record<Role, string>> = {
-  admin: "Administrator",
-  staff: "Staff",
-  supervisor: "Supervisor",
-  cashier: "Cashier",
-};
-
-const employmentLabels = {
-  regular: "Regular",
-  job_order: "Job order",
-  contractual: "Contractual",
-} as const;
-
-const departmentFallbackByRole: Partial<Record<Role, string>> = {
-  admin: "All departments",
-  cashier: "Not applicable",
-};
 
 function getInitials(staffMember: StaffMember) {
   const initials = `${staffMember.firstName.charAt(0)}${staffMember.lastName.charAt(0)}`;
   return initials.toUpperCase() || staffMember.email.charAt(0).toUpperCase();
 }
-
-const headerClassName =
-  "text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground";
 
 function CopyableEmail({ email }: { email: string }) {
   const [copied, setCopied] = useState(false);
@@ -87,18 +72,10 @@ export function createStaffColumns({
 }): ColumnDef<StaffMember>[] {
   return [
     {
-      accessorKey: "firstName",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className={`${headerClassName} -ml-3 h-8 hover:bg-transparent hover:text-foreground`}
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Member
-          <ArrowUpDown className="size-3" />
-        </Button>
-      ),
+      id: "member",
+      accessorFn: (staffMember) =>
+        `${staffMember.firstName} ${staffMember.lastName}`.trim(),
+      header: ({ column }) => <SortHeader column={column}>Member</SortHeader>,
       cell: ({ row }) => {
         const staffMember = row.original;
         const fullName =
@@ -132,60 +109,69 @@ export function createStaffColumns({
       },
     },
     {
-      accessorKey: "departmentName",
-      header: () => <span className={headerClassName}>Department</span>,
+      id: "department",
+      accessorFn: departmentLabel,
+      header: ({ column }) => (
+        <SortHeader column={column}>Department</SortHeader>
+      ),
       cell: ({ row }) => {
         const staffMember = row.original;
-        const fallback = departmentFallbackByRole[staffMember.role];
+        const label = departmentLabel(staffMember);
 
-        if (fallback) {
+        if (label === "Unassigned") {
           return (
-            <span className="text-sm text-muted-foreground">{fallback}</span>
+            <span className="text-sm text-muted-foreground italic">
+              {label}
+            </span>
           );
         }
 
-        return staffMember.departmentName ? (
-          <span className="text-sm text-foreground/80">
-            {staffMember.departmentName}
-          </span>
-        ) : (
-          <span className="text-sm text-muted-foreground italic">
-            Unassigned
+        // Roles with no department of their own read as quiet fallback text.
+        const isFallback = label !== staffMember.departmentName;
+        return (
+          <span
+            className={
+              isFallback
+                ? "text-sm text-muted-foreground"
+                : "text-sm text-foreground/80"
+            }
+          >
+            {label}
           </span>
         );
       },
     },
     {
-      accessorKey: "employmentType",
-      header: () => <span className={headerClassName}>Employment</span>,
+      id: "employment",
+      accessorFn: (staffMember) =>
+        EMPLOYMENT_LABELS[staffMember.employmentType],
+      header: ({ column }) => (
+        <SortHeader column={column}>Employment</SortHeader>
+      ),
       cell: ({ row }) => (
         <span className="text-sm text-foreground/80">
-          {employmentLabels[row.original.employmentType]}
+          {EMPLOYMENT_LABELS[row.original.employmentType]}
         </span>
       ),
     },
     {
-      accessorKey: "role",
-      header: () => <span className={headerClassName}>Role</span>,
+      id: "role",
+      accessorFn: (staffMember) => roleLabel(staffMember.role),
+      header: ({ column }) => <SortHeader column={column}>Role</SortHeader>,
       cell: ({ row }) => (
         <span className="text-sm font-medium text-foreground/80">
-          {roleLabels[row.original.role] ?? row.original.role}
+          {roleLabel(row.original.role)}
         </span>
       ),
     },
     {
       id: "status",
-      header: () => <span className={headerClassName}>Status</span>,
+      accessorFn: (staffMember) => staffStatus(staffMember).label,
+      header: ({ column }) => <SortHeader column={column}>Status</SortHeader>,
       cell: ({ row }) => {
         const staffMember = row.original;
         const isChecking = checkingStaffId === staffMember.id;
-        const label = staffMember.status !== "active"
-          ? "Deactivated"
-          : staffMember.confirmed
-          ? "Active"
-          : staffMember.emailConfirmed
-            ? "Setup pending"
-            : "Invitation pending";
+        const { key, label } = staffStatus(staffMember);
 
         return (
           <Button
@@ -198,7 +184,11 @@ export function createStaffColumns({
           >
             <span
               className={`size-2 rounded-full ${
-                staffMember.status !== "active" ? "bg-destructive" : staffMember.confirmed ? "bg-success" : "bg-warning"
+                key === "deactivated"
+                  ? "bg-destructive"
+                  : key === "active"
+                    ? "bg-success"
+                    : "bg-warning"
               }`}
             />
             {label}

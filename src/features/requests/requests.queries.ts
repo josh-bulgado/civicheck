@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireActiveSession } from "~/server/auth";
+import { one } from "~/lib/embed";
 import { isDepartmentScopedRole } from "~/lib/permissions";
 import { normalizePaymentRange, paymentRangeBounds } from "~/features/requests/payment-history";
 import {
@@ -15,10 +16,6 @@ const paymentHistorySchema = z.object({
   from: z.string().optional(),
   to: z.string().optional(),
 });
-
-function one<T>(value: T | T[] | null | undefined): T | undefined {
-  return Array.isArray(value) ? value[0] : (value ?? undefined);
-}
 
 export interface StaffRequestRow {
   id: string;

@@ -1,15 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireActiveSession } from "~/server/auth";
+import { one } from "~/lib/embed";
 import {
   parseFormTemplateDefinition,
   templateFieldLabels,
 } from "~/features/forms/form-template.utils";
 import { readRequestMessages } from "~/features/requests/request-messages.server";
 import { loadServiceCatalogue } from "~/features/services/services.catalogue";
-
-function one<T>(value: T | T[] | null | undefined): T | undefined {
-  return Array.isArray(value) ? value[0] : (value ?? undefined);
-}
 
 /** The service a request is for, as the applicant's list embeds it. */
 export interface RequestServiceName {

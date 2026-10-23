@@ -32,6 +32,28 @@ export function isReportPeriodMonths(value: unknown): value is ReportPeriodMonth
   return REPORT_PERIODS.some((period) => period.months === Number(value));
 }
 
+/** Philippine time is a fixed UTC+8: there is no daylight saving to account for. */
+export const MANILA_OFFSET_MS = 8 * 60 * 60 * 1_000;
+
+/**
+ * Midnight Manila on the first of the calendar month `months - 1` back,
+ * expressed as a UTC instant.
+ *
+ * The office's own clock is what a reporting period means to the CCRO, and the
+ * Philippines has no DST — a fixed +08:00 offset is exact here, not an
+ * approximation. Deriving the period in UTC instead would pull requests filed
+ * before 08:00 Legazpi time into the wrong month.
+ */
+export function periodStart(now: Date, months: ReportPeriodMonths): Date {
+  const manilaNow = new Date(now.getTime() + MANILA_OFFSET_MS);
+  const firstOfMonth = Date.UTC(
+    manilaNow.getUTCFullYear(),
+    manilaNow.getUTCMonth() - (months - 1),
+    1,
+  );
+  return new Date(firstOfMonth - MANILA_OFFSET_MS);
+}
+
 /** Short month names, indexed 1–12 to match `extract(month from ...)`. */
 export const MONTH_ABBREVIATIONS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -89,6 +111,33 @@ export function groupPurposes(
     .sort((a, b) => b.count - a.count);
 
   return other > 0 ? [...rows, { label: "Other", count: other }] : rows;
+}
+
+const monthNameFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "long",
+  timeZone: "UTC",
+});
+
+/** "August" for 8: the full name, for sentences. The chart axes use the short one. */
+export function monthName(month: number): string {
+  return monthNameFormatter.format(new Date(Date.UTC(2000, month - 1, 1)));
+}
+
+/** "the last 12 months": a period as it reads inside a sentence. */
+export function periodPhrase(months: ReportPeriodMonths): string {
+  const label = REPORT_PERIODS.find((period) => period.months === months)?.label;
+  return `the ${(label ?? `last ${months} months`).toLowerCase()}`;
+}
+
+/** The month with the most events (1–12), or null when every month is empty. */
+export function seasonalityPeak(
+  seasonality: ReadonlyArray<{ month: number; count: number }>,
+): { month: number; count: number } | null {
+  let peak: { month: number; count: number } | null = null;
+  for (const bucket of seasonality) {
+    if (bucket.count > (peak?.count ?? 0)) peak = bucket;
+  }
+  return peak;
 }
 
 /** Percentage of `total`, or null when there is nothing to divide by. */

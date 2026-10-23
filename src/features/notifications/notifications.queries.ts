@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServerFn } from "@tanstack/react-start";
 import { requireActiveSession } from "~/server/auth";
+import { one } from "~/lib/embed";
 import { hasPermission, type Role } from "~/lib/permissions";
 import { getNotificationAudience } from "~/features/notifications/notification-audience";
 
@@ -50,10 +51,6 @@ export interface NotificationRow {
    */
   serviceName: string | null;
   target: NotificationTarget;
-}
-
-function one<T>(value: T | T[] | null | undefined): T | undefined {
-  return Array.isArray(value) ? value[0] : (value ?? undefined);
 }
 
 /**

@@ -10,6 +10,20 @@ import {
   type RequestMessage,
 } from "~/features/requests/request-messages";
 
+function formatTime(value: string) {
+  return new Date(value).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+function formatDay(value: string) {
+  const date = new Date(value);
+  const sameYear = date.getFullYear() === new Date().getFullYear();
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
+  });
+}
+
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString("en-US", {
     month: "short",
@@ -27,8 +41,14 @@ interface RequestMessagesCardProps {
   viewer: MessageSenderRole;
   /** Called after a message is sent, so the route can re-run its loader. */
   onSent: () => void;
-  /** The applicant page's softer card; staff keep the default. */
-  variant?: "dashboard" | "portal";
+  /**
+   * The applicant page's softer card; staff keep the default. `bare` is the
+   * staff thread for a drawer or tab that already has its own title: chat
+   * bubbles under day headings, with quick replies above the reply box.
+   */
+  variant?: "dashboard" | "portal" | "bare";
+  /** Replies staff can drop into the box and edit. Only the `bare` thread shows them. */
+  suggestions?: string[];
 }
 
 function senderLabel(message: RequestMessage, viewer: MessageSenderRole) {
@@ -48,8 +68,10 @@ export function RequestMessagesCard({
   viewer,
   onSent,
   variant = "dashboard",
+  suggestions = [],
 }: RequestMessagesCardProps) {
   const portal = variant === "portal";
+  const bare = variant === "bare";
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -83,26 +105,37 @@ export function RequestMessagesCard({
 
   const inputId = `message-draft-${requestId}`;
 
+  function insertSuggestion(text: string) {
+    setDraft((current) => (current.trim() ? `${current.trimEnd()} ${text}` : text));
+    document.getElementById(inputId)?.focus();
+  }
+
   return (
     <section
       className={
         portal
           ? "min-w-0 rounded-[28px] bg-card p-6 shadow-portal-card md:p-7"
-          : "dashboard-panel min-w-0 p-5"
+          : bare
+            ? "min-w-0"
+            : "dashboard-panel min-w-0 p-5"
       }
     >
-      <h2
-        className={
-          portal
-            ? "text-[22px] leading-[normal] font-semibold text-foreground"
-            : "text-lg font-bold text-foreground"
-        }
-      >
-        {viewer === "applicant" ? "Messages with CCRO" : "Messages with the applicant"}
-      </h2>
-      <p className="mb-3 mt-1 text-xs text-muted-foreground">
-        Don't send passwords or payment details here.
-      </p>
+      {!bare && (
+        <h2
+          className={
+            portal
+              ? "text-[22px] leading-[normal] font-semibold text-foreground"
+              : "text-lg font-bold text-foreground"
+          }
+        >
+          {viewer === "applicant" ? "Messages with CCRO" : "Messages with the applicant"}
+        </h2>
+      )}
+      {!bare && (
+        <p className="mb-3 mt-1 text-xs text-muted-foreground">
+          Don't send passwords or payment details here.
+        </p>
+      )}
 
       {messages.length === 0 ? (
         <p className="mb-3 text-sm italic text-muted-foreground">
@@ -118,8 +151,44 @@ export function RequestMessagesCard({
           role="log"
           aria-label="Messages"
           tabIndex={0}
-          className="mb-3 max-h-72 overflow-y-auto overscroll-contain rounded-md pr-1 outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          className={`mb-3 overflow-y-auto overscroll-contain rounded-md pr-1 outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${bare ? "max-h-[55vh]" : "max-h-72"}`}
         >
+          {bare ? (
+            <ol className="flex flex-col gap-2 py-1">
+              {messages.map((message, index) => {
+                const mine = message.senderRole === viewer;
+                const day = formatDay(message.createdAt);
+                const newDay =
+                  index === 0 || day !== formatDay(messages[index - 1].createdAt);
+                return (
+                  <li key={message.id} className="flex flex-col gap-2">
+                    {newDay && (
+                      <p className="self-center py-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                        {day}
+                      </p>
+                    )}
+                    <div
+                      className={
+                        mine
+                          ? "max-w-[85%] self-end rounded-xl rounded-br-sm bg-primary-soft px-3 py-2"
+                          : "max-w-[85%] self-start rounded-xl rounded-bl-sm bg-muted px-3 py-2"
+                      }
+                    >
+                      <p className="mb-0.5 text-xs text-muted-foreground">
+                        {senderLabel(message, viewer)} ·{" "}
+                        <time dateTime={message.createdAt}>
+                          {formatTime(message.createdAt)}
+                        </time>
+                      </p>
+                      <p className="whitespace-pre-wrap break-words text-sm text-foreground">
+                        {message.body}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          ) : (
           <ol className="flex flex-col gap-2">
             {messages.map((message) => {
               const mine = message.senderRole === viewer;
@@ -147,9 +216,27 @@ export function RequestMessagesCard({
               );
             })}
           </ol>
+          )}
         </div>
       )}
 
+      {bare && suggestions.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {suggestions.map((text) => (
+            <Button
+              key={text}
+              type="button"
+              variant="outline"
+              size="xs"
+              className="h-auto max-w-full rounded-full py-1 text-left font-normal whitespace-normal"
+              onClick={() => insertSuggestion(text)}
+              disabled={sending}
+            >
+              {text}
+            </Button>
+          ))}
+        </div>
+      )}
       <label htmlFor={inputId} className="sr-only">
         Message
       </label>
@@ -163,13 +250,16 @@ export function RequestMessagesCard({
         placeholder={
           viewer === "applicant"
             ? "Write your question or reply…"
-            : "Write your reply…"
+            : bare
+              ? "Write to the applicant"
+              : "Write your reply…"
         }
         disabled={sending}
       />
       <div className="mt-2 flex items-center justify-between gap-3">
         <span className="text-xs text-muted-foreground">
           {draft.length} / {MESSAGE_MAX_LENGTH}
+          {bare && " · Don't send passwords or payment details."}
         </span>
         <Button size="sm" onClick={handleSend} disabled={!trimmed || sending}>
           <Send data-icon="inline-start" aria-hidden="true" />

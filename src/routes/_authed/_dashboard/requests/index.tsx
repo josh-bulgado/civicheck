@@ -12,6 +12,7 @@ import {
 import { getEncodableServicesFn } from "~/features/requests/walk-in-intake.queries";
 import {
   parseDepartmentFilter,
+  parseNeedsFilter,
   parsePaymentFilter,
   parseRequestStatus,
   parseWorkflowStage,
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/_authed/_dashboard/requests/")({
     status: parseRequestStatus(search.status),
     payment: parsePaymentFilter(search.payment),
     department: parseDepartmentFilter(search.department),
+    needs: parseNeedsFilter(search.needs),
   }),
   beforeLoad: ({ context, location }) => {
     if (
@@ -47,7 +49,9 @@ export const Route = createFileRoute("/_authed/_dashboard/requests/")({
       canEncode ? getEncodableServicesFn() : Promise.resolve([]),
     ]);
 
-    return { requests, departments, scope, services, canEncode };
+    // Read once here so the server render and the browser agree on every age
+    // in the In stage column.
+    return { requests, departments, scope, services, canEncode, now: Date.now() };
   },
   staleTime: 15_000,
   pendingMs: 250,
@@ -57,7 +61,7 @@ export const Route = createFileRoute("/_authed/_dashboard/requests/")({
 });
 
 function RequestQueueRoute() {
-  const { requests, departments, scope, services, canEncode } =
+  const { requests, departments, scope, services, canEncode, now } =
     Route.useLoaderData();
   const filters = Route.useSearch();
   const navigate = useNavigate({ from: "/requests/" });
@@ -74,6 +78,7 @@ function RequestQueueRoute() {
         scopedDepartmentName={scope.isScoped ? scope.departmentName : null}
         encodableServices={canEncode ? services : null}
         onWalkInEncoded={() => router.invalidate()}
+        now={now}
       />
     </div>
   );

@@ -1,155 +1,99 @@
-import { useRef, useState } from "react";
-import { QuietLink } from "~/components/quiet-link";
+import { useState } from "react";
+import { useHotkeys, type HotkeyChord } from "@tanstack/react-hotkeys";
 import { toast } from "sonner";
-import {
-  ArrowLeft,
-  CheckCircle2,
-  ExternalLink,
-  File,
-  FileText,
-  Image as ImageIcon,
-  XCircle,
-} from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { usePermissions } from "~/hooks/usePermissions";
+import { useEscapeToLeave } from "~/features/requests/hooks/useEscapeToLeave";
+import { useHotkeyLabel } from "~/hooks/useHotkeyLabel";
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { Label } from "~/components/ui/label";
-import { Textarea } from "~/components/ui/textarea";
+import { Kbd } from "~/components/ui/kbd";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "~/components/ui/tooltip";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "~/components/ui/alert-dialog";
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from "~/components/ui/item";
+  Tabs,
+  TabsContent,
+  TabsCount,
+  TabsList,
+  TabsTrigger,
+} from "~/components/ui/tabs";
 import type { RequestDetail } from "~/features/requests/requests.queries";
 import {
   advanceRequestStatusFn,
-  getAttachmentSignedUrlFn,
   revertAttachmentVerificationFn,
   setAttachmentVerificationFn,
 } from "~/features/requests/requests.mutations";
 import { PaymentVerificationPanel } from "~/features/requests/components/PaymentVerificationPanel";
 import {
-  REASON_REQUIRED,
+  describeRequestProgress,
+  planRequestActions,
+  type PlannedAction,
+  type TransitionDialog,
+} from "~/features/requests/request-actions";
+import {
   getStatusDetails,
-  getTransitionLabel,
-  isPaymentSettled,
-  nextStatuses,
   type RequestStatus,
 } from "~/features/requests/request-workflow";
-import { staggerStyle } from "~/components/motion/stagger";
-import { AttachmentGroups } from "~/features/requests/components/AttachmentGroups";
-import {
-  AttachmentViewerDialog,
-  getFileKind,
-} from "~/features/requests/components/AttachmentViewerDialog";
-import { RequestDetailHero } from "~/features/requests/components/RequestDetailHero";
-import { RequestHistoryTimeline } from "~/features/requests/components/RequestHistoryTimeline";
+import { quickReplies } from "~/features/requests/request-messages";
+import { useQueuedDecisions } from "~/features/requests/hooks/useQueuedDecisions";
+import { DocumentsWorkbench } from "~/features/requests/components/DocumentsWorkbench";
+import { RequestActionBar } from "~/features/requests/components/RequestActionBar";
+import { RequestChatDrawer } from "~/features/requests/components/RequestChatDrawer";
+import { RequestDetailHeader } from "~/features/requests/components/RequestDetailHeader";
+import { RequestHistoryLog } from "~/features/requests/components/RequestHistoryLog";
 import { RequestMessagesCard } from "~/features/requests/components/RequestMessagesCard";
-import { SubmittedDetailsCard } from "~/features/requests/components/SubmittedDetailsCard";
+import { RequestNextBar } from "~/features/requests/components/RequestNextBar";
+import { RequestOverview } from "~/features/requests/components/RequestOverview";
+import { RequestTransitionDialog } from "~/features/requests/components/RequestTransitionDialog";
 import { VerificationFormCard } from "~/features/requests/components/VerificationFormCard";
-import {
-  RejectionReasonPicker,
-  useRejectionReason,
-} from "~/features/requests/components/RejectionReasonPicker";
-import {
-  DOCUMENT_REJECTION_REASONS,
-  REQUEST_REJECTION_REASONS,
-} from "~/features/requests/rejection-reasons";
 
 // On-time birth registration is split by parents' marital status.
 const CONFIRM_DECISION_SERVICE_CODES = ["OTCOLB-MARITAL", "OTCOLB-NONMARITAL"];
 
+const CHAT_HOTKEY: HotkeyChord = "C";
+
+const DIALOG_TARGET: Record<TransitionDialog, RequestStatus> = {
+  incomplete: "incomplete",
+  reject: "rejected",
+  release: "released",
+};
+
+export const REQUEST_DETAIL_TABS = ["overview", "documents", "chat", "history"] as const;
+export type RequestDetailTab = (typeof REQUEST_DETAIL_TABS)[number];
+
 interface RequestDetailPageProps {
   request: RequestDetail;
+  /** The tab named in the URL, if any. */
+  tab?: RequestDetailTab;
+  onTabChange: (tab: RequestDetailTab) => void;
+  /** Back to the queue the staff member came from. */
+  onBack: () => void;
   /** Called after a mutation succeeds, so the route can re-run its loader. */
-  onUpdated: () => void;
+  onUpdated: () => void | Promise<unknown>;
 }
 
 export default function RequestDetailPage({
   request,
+  tab: requestedTab,
+  onTabChange,
+  onBack,
   onUpdated,
 }: RequestDetailPageProps) {
   const { can, isAdmin } = usePermissions();
-
-  const [remarks, setRemarks] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [rejectingRequest, setRejectingRequest] = useState(false);
-  const requestRejection = useRejectionReason();
-
-  const status = getStatusDetails(request.status);
-  const available = nextStatuses(request.status);
+  const hotkeyLabel = useHotkeyLabel();
 
   const canProcess = can("requests:process");
-  const canReverseVerification = can("requests:reverse_verification");
+  const canReverse = can("requests:reverse_verification");
+  const hasChat = request.allowsMessages && !request.isWalkIn;
   // Accept/reject confirmation is rolling out service by service — on-time
-  // birth registration first.
-  const confirmAttachmentDecisions = CONFIRM_DECISION_SERVICE_CODES.includes(
+  // birth registration first. The others get an undo instead.
+  const confirmDecisions = CONFIRM_DECISION_SERVICE_CODES.includes(
     request.serviceCode.toUpperCase(),
   );
-  const hasUnresolvedAttachments = request.attachments.some(
-    (doc) => doc.verificationStatus !== "approved",
-  );
-  const visibleTransitions = available.filter((s) => {
-    if (s === "processing" && hasUnresolvedAttachments) return false;
-    // Releasing the document is the final step — CCRO admin only.
-    if (s === "released" && !isAdmin) return false;
-    return true;
-  });
-  // Release waits on the cashier — a payment check, or a fee-free confirmation.
-  const paymentSettled = isPaymentSettled(request.paymentStatus);
-  const needsAttachmentsResolved =
-    available.includes("processing") && hasUnresolvedAttachments;
 
-  /** `note` defaults to the remarks box; rejecting passes its picked reason. */
-  async function handleTransition(to: RequestStatus, note = remarks) {
-    if (REASON_REQUIRED.includes(to) && !note.trim()) {
-      toast.error("Give the applicant a reason first.", {
-        description:
-          to === "rejected"
-            ? "Pick a reason for rejecting this request."
-            : "Fill in the remarks box below before this decision.",
-      });
-      return;
-    }
-
-    setBusy(true);
-    try {
-      const res = await advanceRequestStatusFn({
-        data: { requestId: request.id, toStatus: to, remarks: note },
-      });
-      if (res.error) {
-        toast.error("Could not update this request", {
-          description: res.message,
-        });
-        return;
-      }
-      toast.success(`Moved to ${getStatusDetails(to).label}`);
-      setRemarks("");
-      setRejectingRequest(false);
-      requestRejection.reset();
-      onUpdated();
-    } finally {
-      setBusy(false);
-    }
-  }
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [dialog, setDialog] = useState<TransitionDialog | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
 
   async function handleAttachmentDecision(
     attachmentId: string,
@@ -163,7 +107,7 @@ export default function RequestDetailPage({
       toast.error(res.message);
       return false;
     }
-    onUpdated();
+    await onUpdated();
     return true;
   }
 
@@ -180,21 +124,102 @@ export default function RequestDetailPage({
         ? "Decision reopened — the request is back under validation."
         : "Decision reopened — the document is pending review again.",
     );
-    onUpdated();
+    await onUpdated();
     return true;
   }
 
-  return (
-    <div className="dashboard-page ">
-      <QuietLink
-        to="/requests"
-        className="group mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
-      >
-        <ArrowLeft className="size-4 transition-transform duration-200 group-hover:-translate-x-1" />
-        Back to the queue
-      </QuietLink>
+  const decisions = useQueuedDecisions(handleAttachmentDecision);
 
-      <RequestDetailHero
+  // What the page shows right away: a decision still in its undo window counts.
+  const attachments = request.attachments.map((doc) => {
+    const held = decisions.waiting[doc.id];
+    return held
+      ? { ...doc, verificationStatus: held.status, rejectionReason: held.reason }
+      : doc;
+  });
+  const planInput = {
+    status: request.status,
+    paymentStatus: request.paymentStatus,
+    feesDue: request.feesDue,
+    canProcess,
+    isAdmin,
+    attachments,
+  };
+  const plan = planRequestActions(planInput);
+  const summary = describeRequestProgress(planInput);
+
+  const accepted = attachments.filter((doc) => doc.verificationStatus === "approved").length;
+  const pending = attachments.filter((doc) => doc.verificationStatus === "pending").length;
+  const lastMessage = request.messages.at(-1);
+  const suggestions = quickReplies(request.status, request.feesDue);
+  const waitingForReply = hasChat && lastMessage?.senderRole === "applicant";
+  // The URL names the tab, so a link or a reload lands where staff were. With
+  // none named, open on the documents when there are any to review.
+  const tab: RequestDetailTab =
+    requestedTab && (requestedTab !== "chat" || hasChat)
+      ? requestedTab
+      : request.attachments.length > 0
+        ? "documents"
+        : "overview";
+
+  function openDocument(id: string) {
+    setSelectedDocId(id);
+    onTabChange("documents");
+  }
+
+  async function runTransition(to: RequestStatus, remarks: string) {
+    setBusy(true);
+    try {
+      // Decisions still in their undo window are saved first, so the server
+      // checks the same documents the staff member is looking at.
+      await decisions.flush();
+      const res = await advanceRequestStatusFn({
+        data: { requestId: request.id, toStatus: to, remarks },
+      });
+      if (res.error) {
+        toast.error("Could not update this request", { description: res.message });
+        return false;
+      }
+      toast.success(`Moved to ${getStatusDetails(to).label}`);
+      setNote("");
+      await onUpdated();
+      return true;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function handleAction(action: PlannedAction) {
+    if (action.dialog) {
+      setDialog(action.dialog);
+      return;
+    }
+    // The note box shows only beside a plain main action, so a note typed
+    // earlier is not sent along with something else.
+    const noteShown = plan.primary != null && plan.primary.dialog == null;
+    void runTransition(action.to, noteShown ? note.trim() : "");
+  }
+
+  async function handleDialogConfirm(type: TransitionDialog, text: string) {
+    if (await runTransition(DIALOG_TARGET[type], text)) setDialog(null);
+  }
+
+  // Escape goes back to the queue once nothing else is open. A note being
+  // written is kept, so Escape leaves it alone until it is sent or cleared.
+  useEscapeToLeave({ enabled: !dialog && !chatOpen && !note.trim(), onLeave: onBack });
+
+  useHotkeys([
+    {
+      hotkey: CHAT_HOTKEY,
+      callback: () => setChatOpen(true),
+      options: { enabled: hasChat && tab === "documents" && !chatOpen && !dialog },
+    },
+  ]);
+
+  return (
+    <div className="dashboard-page">
+      <RequestDetailHeader
+        onBack={onBack}
         trackingNumber={request.trackingNumber}
         status={request.status}
         paymentStatus={request.paymentStatus}
@@ -203,514 +228,157 @@ export default function RequestDetailPage({
           <>
             {request.applicantName} · {request.serviceName}
             {request.isWalkIn ? " · Walk-in" : ""}
+            {request.feesDue <= 0 ? " · No fee" : ""}
           </>
+        }
+        badges={
+          waitingForReply && (
+            <Badge variant="warning">Applicant waiting for a reply</Badge>
+          )
+        }
+        footer={
+          <RequestNextBar
+            summary={summary}
+            plan={plan}
+            note={note}
+            onNoteChange={setNote}
+          />
+        }
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            {hasChat && tab === "documents" && (
+              <Button variant="outline" onClick={() => setChatOpen(true)}>
+                <MessageSquare data-icon="inline-start" aria-hidden="true" />
+                Chat <Kbd>{hotkeyLabel(CHAT_HOTKEY)}</Kbd>
+              </Button>
+            )}
+            <RequestActionBar plan={plan} busy={busy} onAction={handleAction} />
+          </div>
         }
       />
 
-      <div className="civic-stagger mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div
-          style={staggerStyle(0)}
-          className="flex flex-col gap-6 lg:col-span-2"
-        >
-          <SubmittedDetailsCard request={request} showEmpty />
+      <Tabs value={tab} onValueChange={(value) => onTabChange(value as RequestDetailTab)} className="gap-4">
+        <TabsList variant="counted">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="documents">
+            Documents
+            {attachments.length > 0 && (
+              <TabsCount tone={pending > 0 ? "alert" : "default"}>
+                {accepted}/{attachments.length}
+                <span className="sr-only"> accepted</span>
+              </TabsCount>
+            )}
+          </TabsTrigger>
+          {hasChat && (
+            <TabsTrigger value="chat">
+              Chat
+              <TabsCount tone={waitingForReply ? "alert" : "default"}>
+                {request.messages.length}
+                <span className="sr-only"> messages</span>
+              </TabsCount>
+            </TabsTrigger>
+          )}
+          <TabsTrigger value="history">
+            History
+            <TabsCount>
+              {request.logs.length}
+              <span className="sr-only"> entries</span>
+            </TabsCount>
+          </TabsTrigger>
+        </TabsList>
 
-          <VerificationFormCard
-            variant="staff"
-            trackingNumber={request.trackingNumber}
-            copies={request.copies}
-            formData={request.formData}
-          />
-
-          <section className="dashboard-panel p-6">
-            <h2 className="mb-4 text-lg font-bold text-foreground">
-              Uploaded requirements ({request.attachments.length})
-            </h2>
-            {request.attachments.length === 0 ? (
-              <p className="text-sm italic text-muted-foreground">
-                Nothing was pre-uploaded. Validate the physical documents at the
-                counter.
-              </p>
-            ) : (
-              <ItemGroup className="civic-stagger-auto gap-3">
-                <AttachmentGroups
-                  docs={request.attachments}
-                  renderRow={(doc, title) => (
-                    <AttachmentRow
-                      key={doc.id}
-                      doc={doc}
-                      title={title}
-                      canProcess={canProcess}
-                      canReverse={canReverseVerification}
-                      confirmDecision={confirmAttachmentDecisions}
-                      onDecide={handleAttachmentDecision}
-                      onRevert={handleAttachmentRevert}
-                    />
-                  )}
+        <TabsContent value="overview">
+          <div className="flex flex-col gap-4">
+            <RequestOverview
+              request={request}
+              attachments={attachments}
+              onOpenDocument={openDocument}
+            >
+              {/* A request with no fee has nothing to collect until the cashier
+                  confirms it at release, so the card appears only then. */}
+              {(request.feesDue > 0 || request.status === "ready_for_release") && (
+                <PaymentVerificationPanel
+                  requestId={request.id}
+                  status={request.status}
+                  feesDue={request.feesDue}
+                  copies={request.copies}
+                  paymentStatus={request.paymentStatus}
+                  orNumber={request.orNumber}
+                  onVerified={() => void onUpdated()}
                 />
-              </ItemGroup>
-            )}
-          </section>
-
-          <RequestHistoryTimeline
-            logs={request.logs}
-            audience="staff"
-            feesDue={request.feesDue}
-          />
-        </div>
-
-        <div style={staggerStyle(1)} className="flex flex-col gap-6">
-          <section className="dashboard-panel p-6">
-            <h2 className="mb-4 text-lg font-bold text-foreground">
-              Move this request
-            </h2>
-
-            {!canProcess ? (
-              <p className="text-sm italic text-muted-foreground">
-                Your role can view this request but not advance it.
-              </p>
-            ) : available.length === 0 ? (
-              <p className="text-sm italic text-muted-foreground">
-                This request is {status.label.toLowerCase()} — nothing further
-                to do.
-              </p>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {visibleTransitions.length > 0 && (
-                  <>
-                    <div className="flex flex-col gap-2">
-                      <Label htmlFor="remarks">
-                        Remarks
-                        {/* Rejecting has its own reason picker below. */}
-                        {visibleTransitions.some(
-                          (s) =>
-                            s !== "rejected" && REASON_REQUIRED.includes(s),
-                        )
-                          ? " (required to mark incomplete)"
-                          : " (optional)"}
-                      </Label>
-                      <Textarea
-                        id="remarks"
-                        rows={3}
-                        value={remarks}
-                        onChange={(e) => setRemarks(e.target.value)}
-                        placeholder="What should the applicant know?"
-                      />
-                    </div>
-
-                    <div className="civic-stagger-auto flex flex-col gap-3">
-                      {visibleTransitions.map((next) => {
-                        // The reason panel below replaces the button while open.
-                        if (next === "rejected" && rejectingRequest)
-                          return null;
-                        const awaitingPayment =
-                          next === "released" && !paymentSettled;
-                        return (
-                          <Button
-                            key={next}
-                            variant={
-                              next === "rejected" ? "outline" : "default"
-                            }
-                            disabled={busy || awaitingPayment}
-                            // Gray, not just faded blue, so a payment-locked
-                            // release reads as unavailable at a glance.
-                            className={
-                              awaitingPayment
-                                ? "disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
-                                : undefined
-                            }
-                            onClick={
-                              next === "rejected"
-                                ? () => setRejectingRequest(true)
-                                : () => handleTransition(next)
-                            }
-                          >
-                            {getTransitionLabel(request.status, next)}
-                          </Button>
-                        );
-                      })}
-                    </div>
-
-                    {rejectingRequest && (
-                      <div className="civic-enter-sm flex flex-col gap-3 rounded-lg border border-border-light bg-muted/30 p-3">
-                        <RejectionReasonPicker
-                          idPrefix="request-reject"
-                          legend="Why is this request being rejected?"
-                          reasons={REQUEST_REJECTION_REASONS}
-                          state={requestRejection}
-                          disabled={busy}
-                        />
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            disabled={busy || !requestRejection.reason}
-                            onClick={() =>
-                              handleTransition(
-                                "rejected",
-                                requestRejection.reason,
-                              )
-                            }
-                          >
-                            Confirm reject
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={busy}
-                            onClick={() => {
-                              setRejectingRequest(false);
-                              requestRejection.reset();
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {needsAttachmentsResolved && (
-                  <p className="civic-enter-sm rounded-lg border border-warning/20 bg-warning/5 p-3 text-xs text-warning-strong">
-                    Every uploaded requirement needs to be accepted first — some
-                    are still pending or rejected.
-                  </p>
-                )}
-
-                {request.status === "ready_for_release" && !isAdmin && (
-                  <p className="civic-enter-sm rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-                    Only the CCRO admin can release the document once the
-                    cashier has cleared it.
-                  </p>
-                )}
-
-                {request.status === "ready_for_release" && !paymentSettled && (
-                  <p className="civic-enter-sm rounded-lg border border-warning/20 bg-warning/5 p-3 text-xs text-warning-strong">
-                    The cashier must clear this request (payment verified, or
-                    fee-free confirmed) before it can be released.
-                  </p>
-                )}
-              </div>
-            )}
-          </section>
-
-          {request.allowsMessages && !request.isWalkIn && (
-            <RequestMessagesCard
-              requestId={request.id}
-              messages={request.messages}
-              viewer="staff"
-              onSent={onUpdated}
+              )}
+            </RequestOverview>
+            <VerificationFormCard
+              variant="staff"
+              trackingNumber={request.trackingNumber}
+              copies={request.copies}
+              formData={request.formData}
             />
-          )}
-
-          <PaymentVerificationPanel
-            requestId={request.id}
-            status={request.status}
-            feesDue={request.feesDue}
-            copies={request.copies}
-            paymentStatus={request.paymentStatus}
-            orNumber={request.orNumber}
-            onVerified={onUpdated}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-type AttachmentDoc = RequestDetail["attachments"][number];
-
-function AttachmentRow({
-  doc,
-  title,
-  canProcess,
-  canReverse,
-  confirmDecision,
-  onDecide,
-  onRevert,
-}: {
-  doc: AttachmentDoc;
-  /** Overrides the requirement name, e.g. "File 2 of 3" inside a group. */
-  title?: string;
-  canProcess: boolean;
-  canReverse: boolean;
-  /** Ask "are you sure?" before an accept/reject is actually saved. */
-  confirmDecision: boolean;
-  onDecide: (
-    attachmentId: string,
-    status: "approved" | "rejected",
-    reason?: string,
-  ) => Promise<boolean>;
-  onRevert: (attachmentId: string, reason: string) => Promise<boolean>;
-}) {
-  const [busy, setBusy] = useState(false);
-  const [rejecting, setRejecting] = useState(false);
-  const [pendingDecision, setPendingDecision] = useState<
-    "approved" | "rejected" | null
-  >(null);
-  const rejection = useRejectionReason();
-  const [reverting, setReverting] = useState(false);
-  const [revertReason, setRevertReason] = useState("");
-  const [viewing, setViewing] = useState(false);
-  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
-  const confirmButton = useRef<HTMLButtonElement | null>(null);
-
-  async function handleViewFile() {
-    setViewing(true);
-    try {
-      const res = await getAttachmentSignedUrlFn({
-        data: { attachmentId: doc.id },
-      });
-      if (res.error) {
-        toast.error(res.message);
-        return;
-      }
-      setViewerUrl(res.url);
-    } finally {
-      setViewing(false);
-    }
-  }
-
-  async function handleAccept() {
-    setBusy(true);
-    try {
-      await onDecide(doc.id, "approved");
-    } finally {
-      setBusy(false);
-      setPendingDecision(null);
-    }
-  }
-
-  async function handleConfirmReject() {
-    if (!rejection.reason) return;
-    setBusy(true);
-    try {
-      const ok = await onDecide(doc.id, "rejected", rejection.reason);
-      if (ok) {
-        setRejecting(false);
-        rejection.reset();
-      }
-    } finally {
-      setBusy(false);
-      setPendingDecision(null);
-    }
-  }
-
-  async function handleConfirmRevert() {
-    if (!revertReason.trim()) return;
-    setBusy(true);
-    try {
-      const ok = await onRevert(doc.id, revertReason.trim());
-      if (ok) {
-        setReverting(false);
-        setRevertReason("");
-      }
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const fileKind = getFileKind(doc.fileUrl);
-
-  return (
-    <div className="flex flex-col gap-3">
-      <Item variant="outline" className="rounded-lg border-border-light p-4">
-        <ItemMedia variant="icon">
-          {fileKind === "image" ? (
-            <ImageIcon className="size-4" />
-          ) : fileKind === "pdf" ? (
-            <FileText className="size-4" />
-          ) : (
-            <File className="size-4" />
-          )}
-        </ItemMedia>
-        <ItemContent>
-          <ItemTitle className="font-semibold text-foreground">
-            {title ??
-              `${doc.subjectRole ? `${doc.subjectRole}: ` : ""}${doc.requirementName}`}
-          </ItemTitle>
-          <ItemDescription className="text-xs capitalize">
-            {doc.verificationStatus}
-            {doc.rejectionReason ? ` — ${doc.rejectionReason}` : ""}
-          </ItemDescription>
-        </ItemContent>
-        <ItemActions className="flex-wrap">
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  disabled={viewing}
-                  onClick={handleViewFile}
-                  aria-label="View file"
-                />
-              }
-            >
-              <ExternalLink className="size-4" />
-            </TooltipTrigger>
-            <TooltipContent>View file</TooltipContent>
-          </Tooltip>
-          {canProcess && doc.verificationStatus === "pending" && !rejecting && (
-            <>
-              <Button
-                size="sm"
-                variant="success"
-                disabled={busy}
-                onClick={
-                  confirmDecision
-                    ? () => setPendingDecision("approved")
-                    : handleAccept
-                }
-              >
-                <CheckCircle2 className="size-4" />
-                Accept
-              </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                disabled={busy}
-                onClick={() => setRejecting(true)}
-              >
-                <XCircle className="size-4" />
-                Reject
-              </Button>
-            </>
-          )}
-          {canReverse && doc.verificationStatus !== "pending" && !reverting && (
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={busy}
-              onClick={() => setReverting(true)}
-            >
-              Undo decision
-            </Button>
-          )}
-        </ItemActions>
-      </Item>
-
-      {reverting && (
-        <div className="civic-enter-sm flex flex-col gap-2 rounded-lg border border-border-light bg-muted/30 p-3">
-          <Label htmlFor={`revert-reason-${doc.id}`}>
-            Why is this decision being reopened?
-          </Label>
-          <Textarea
-            id={`revert-reason-${doc.id}`}
-            rows={2}
-            value={revertReason}
-            onChange={(e) => setRevertReason(e.target.value)}
-            placeholder="What happened, so there's a record of why this was reopened?"
-          />
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={busy || !revertReason.trim()}
-              onClick={handleConfirmRevert}
-            >
-              Confirm undo
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={busy}
-              onClick={() => {
-                setReverting(false);
-                setRevertReason("");
-              }}
-            >
-              Cancel
-            </Button>
           </div>
-        </div>
-      )}
+        </TabsContent>
 
-      {rejecting && (
-        <div className="civic-enter-sm flex flex-col gap-3 rounded-lg border border-border-light bg-muted/30 p-3">
-          <RejectionReasonPicker
-            idPrefix={`reject-reason-${doc.id}`}
-            legend="Reason for rejecting this document"
-            reasons={DOCUMENT_REJECTION_REASONS}
-            state={rejection}
-            disabled={busy}
+        {/* Kept mounted so the selected document and any decision still in its
+            undo window survive a visit to another tab. */}
+        <TabsContent value="documents" keepMounted>
+          <DocumentsWorkbench
+            request={request}
+            active={tab === "documents"}
+            paused={dialog != null || chatOpen}
+            canProcess={canProcess}
+            canReverse={canReverse}
+            confirmDecisions={confirmDecisions}
+            decisions={decisions}
+            selectedId={selectedDocId}
+            onSelectedIdChange={setSelectedDocId}
+            onDecide={handleAttachmentDecision}
+            onRevert={handleAttachmentRevert}
           />
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="destructive"
-              disabled={busy || !rejection.reason}
-              onClick={
-                confirmDecision
-                  ? () => setPendingDecision("rejected")
-                  : handleConfirmReject
-              }
-            >
-              Confirm reject
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={busy}
-              onClick={() => {
-                setRejecting(false);
-                rejection.reset();
-              }}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      )}
+        </TabsContent>
 
-      <AlertDialog
-        open={pendingDecision != null}
-        onOpenChange={(open) => !open && !busy && setPendingDecision(null)}
-      >
-        {/* Accepting is routine and reversible ("Undo decision"), so "Yes"
-            takes focus and Enter confirms. Rejecting keeps the default
-            (first focusable = Cancel) so it can't be fired by a stray Enter. */}
-        <AlertDialogContent
-          initialFocus={pendingDecision === "approved" ? confirmButton : true}
-        >
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {pendingDecision === "approved"
-                ? "Accept this document?"
-                : "Reject this document?"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {pendingDecision === "approved"
-                ? `"${doc.requirementName}" will be marked as accepted.`
-                : `"${doc.requirementName}" will be marked as rejected and the applicant will see your reason.`}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              ref={confirmButton}
-              variant={
-                pendingDecision === "approved" ? "success" : "destructive"
-              }
-              disabled={busy}
-              onClick={
-                pendingDecision === "approved"
-                  ? handleAccept
-                  : handleConfirmReject
-              }
-            >
-              {pendingDecision === "approved" ? "Yes, accept" : "Yes, reject"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        {hasChat && (
+          <TabsContent value="chat">
+            <div className="dashboard-panel p-5">
+              <RequestMessagesCard
+                variant="bare"
+                requestId={request.id}
+                messages={request.messages}
+                suggestions={suggestions}
+                viewer="staff"
+                onSent={() => void onUpdated()}
+              />
+            </div>
+          </TabsContent>
+        )}
 
-      <AttachmentViewerDialog
-        url={viewerUrl}
-        subjectRole={doc.subjectRole}
-        requirementName={doc.requirementName}
-        onClose={() => setViewerUrl(null)}
+        <TabsContent value="history">
+          <RequestHistoryLog logs={request.logs} feesDue={request.feesDue} />
+        </TabsContent>
+      </Tabs>
+
+      <RequestTransitionDialog
+        type={dialog}
+        busy={busy}
+        context={{
+          applicantName: request.applicantName,
+          copies: request.copies,
+          feesDue: request.feesDue,
+          orNumber: request.orNumber,
+          attachments,
+        }}
+        onClose={() => setDialog(null)}
+        onConfirm={handleDialogConfirm}
       />
+
+      {hasChat && (
+        <RequestChatDrawer
+          open={chatOpen}
+          onOpenChange={setChatOpen}
+          requestId={request.id}
+          messages={request.messages}
+          suggestions={suggestions}
+          onSent={() => void onUpdated()}
+        />
+      )}
     </div>
   );
 }

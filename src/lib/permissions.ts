@@ -90,8 +90,8 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "requests:archive",
     "requests:legal",
     "requests:encode_walkin",
-    // Read-only: the admin releases documents, so seeing what the cashier
-    // verified is the other half of the check — but admin can't verify itself.
+    // Read-only oversight: the admin can see what the cashier verified, to
+    // check the office's money side, but can't verify a payment itself.
     "requests:view_payments",
     "notifications:view_staff",
     "users:invite_staff",
