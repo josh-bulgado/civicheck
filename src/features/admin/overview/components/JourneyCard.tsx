@@ -33,7 +33,12 @@ import { cn } from "~/lib/utils";
 const VIEW_WIDTH = 1200;
 const VIEW_HEIGHT = 320;
 /** Each bubble's height, so the path rises and dips between the stages. */
-const BUBBLE_CENTER_Y: Record<WorkflowStage, number> = { 1: 170, 2: 130, 3: 180, 4: 140 };
+const BUBBLE_CENTER_Y: Record<WorkflowStage, number> = {
+  1: 170,
+  2: 130,
+  3: 180,
+  4: 140,
+};
 const JOURNEY_PATH =
   "M0 170 C 250 170, 260 130, 450 130 S 620 180, 750 180 S 900 140, 1050 140 L 1200 140";
 
@@ -71,10 +76,6 @@ export function JourneyCard({ requests }: { requests: RequestOverview }) {
             {requests.openTotal === 1 ? "Request Is" : "Requests Are"} Right Now
           </h2>
         </CardTitle>
-        <CardDescription>
-          A bigger bubble means more requests. The numbers are exact. A red ring
-          marks requests waiting on staff {LONG_WAIT_LABEL}.
-        </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {isClear ? (
@@ -142,7 +143,12 @@ function StageBubble({
 
   return (
     <g>
-      <circle cx={cx} cy={cy} r={radius + 12} className={cn(tones.fill, "opacity-20")} />
+      <circle
+        cx={cx}
+        cy={cy}
+        r={radius + 12}
+        className={cn(tones.fill, "opacity-20")}
+      />
       <circle cx={cx} cy={cy} r={radius} className={tones.fill} />
       <Icon
         x={cx - iconSize / 2}
