@@ -32,6 +32,8 @@ interface DataTableCardProps<TData> {
   emptyLabel: string;
   onClearFilters?: () => void;
   emptyIcon?: LucideIcon;
+  /** Replaces the client-side pagination footer, for tables paged by the server. */
+  footer?: ReactNode;
   /** Per-row attributes: click handlers, data attributes, extra classes. */
   getRowProps?: (row: Row<TData>) => RowProps;
   cellClassName?: string;
@@ -50,6 +52,7 @@ export function DataTableCard<TData>({
   emptyLabel,
   onClearFilters,
   emptyIcon: EmptyIcon = SlidersHorizontal,
+  footer,
   getRowProps,
   cellClassName,
   className,
@@ -145,7 +148,7 @@ export function DataTableCard<TData>({
       </div>
 
       <div className="border-t border-border px-5 py-4">
-        <DataTablePagination table={table} />
+        {footer ?? <DataTablePagination table={table} />}
       </div>
     </div>
   );

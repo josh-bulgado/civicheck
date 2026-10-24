@@ -19,6 +19,8 @@ interface DataTablePaginationProps<TData> {
   pageSizeOptions?: number[];
   // server-side overrides — provide these for server-side pagination
   pageCount?: number;
+  /** Rows across every page. Without it, server-side mode can only say "N+". */
+  total?: number;
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (size: number) => void;
 }
@@ -27,6 +29,7 @@ export function DataTablePagination<TData>({
   table,
   pageSizeOptions = [10, 20, 50],
   pageCount: serverPageCount,
+  total,
   onPageChange,
   onPageSizeChange,
 }: DataTablePaginationProps<TData>) {
@@ -45,7 +48,7 @@ export function DataTablePagination<TData>({
   const lastRow = isServerSide
     ? pageIndex * pageSize + totalRows
     : Math.min((pageIndex + 1) * pageSize, totalRows);
-  const totalLabel = isServerSide ? `${lastRow}+` : `${totalRows}`;
+  const totalLabel = String(isServerSide ? (total ?? `${lastRow}+`) : totalRows);
 
   const goToPage = (page: number) => {
     if (isServerSide) {
