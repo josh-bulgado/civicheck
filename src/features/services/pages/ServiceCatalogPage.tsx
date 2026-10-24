@@ -22,6 +22,8 @@ interface ServiceCatalogPageProps {
   scope: Awaited<ReturnType<typeof getMyDepartmentScopeFn>>;
   /** Requests per card, keyed by `display_group ?? service_code`: "Most used first". */
   usage: Record<string, number>;
+  category?: CategoryFilter;
+  onCategoryChange: (category: CategoryFilter) => void;
   /** `display_group ?? service_code` deep-linked from the command palette. */
   selectedService?: string;
   onSelectService: (code: string) => void;
@@ -32,6 +34,8 @@ export default function ServiceCatalogPage({
   services: allServices,
   scope,
   usage,
+  category = "all",
+  onCategoryChange: setCategory,
   selectedService,
   onSelectService,
   onDismissSelectedService,
@@ -67,7 +71,6 @@ export default function ServiceCatalogPage({
   );
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [category, setCategory] = useState<CategoryFilter>("all");
   // The applicant's directory opens on what other people ask for most.
   const [sort, setSort] = useState<SortOption>("popular");
 

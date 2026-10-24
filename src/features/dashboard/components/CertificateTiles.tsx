@@ -13,6 +13,7 @@ import { cn } from "~/lib/utils";
 const TILES = [
   {
     label: "Birth Certificate",
+    category: "birth",
     blurb: "Register a new birth, on time or late.",
     photo: "/services/cert-birth-clean.webp",
     from: "#e6effc",
@@ -22,6 +23,7 @@ const TILES = [
   },
   {
     label: "Marriage Certificate",
+    category: "marriage",
     blurb: "Register a marriage, on time or late.",
     photo: "/services/cert-marriage-clean.webp",
     from: "#fdf1f2",
@@ -31,6 +33,7 @@ const TILES = [
   },
   {
     label: "Death Certificate",
+    category: "death",
     blurb: "Register a death, on time or late.",
     photo: "/services/cert-death-clean.webp",
     from: "#efecfa",
@@ -40,6 +43,7 @@ const TILES = [
   },
   {
     label: "Marriage License",
+    category: "marriage",
     blurb: "Apply for a marriage license at the CCRO.",
     photo: "/services/cert-license-clean.webp",
     from: "#e8f6ee",
@@ -105,6 +109,7 @@ export function CertificateTiles({
         <QuietLink
           key={tile.label}
           to="/services"
+          search={{ category: tile.category }}
           style={
             {
               ...staggerStyle(index),
