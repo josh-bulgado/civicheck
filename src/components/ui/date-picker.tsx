@@ -28,9 +28,16 @@ export type DatePickerProps = {
   icon?: "chevron" | "calendar" | "none";
   /** Shows a Clear action — leave off for required fields. */
   clearable?: boolean;
-  size?: "default" | "sm";
+  /** The same scale as Input and SelectTrigger: sm 32px, default 36px, lg 40px. */
+  size?: "default" | "sm" | "lg";
   className?: string;
 };
+
+const triggerSizeClasses = {
+  sm: "h-8 text-xs",
+  default: "h-9",
+  lg: "h-10 px-3",
+} as const;
 
 export function DatePicker({
   id,
@@ -92,7 +99,7 @@ export function DatePicker({
               // Same surface as Input/SelectTrigger: the outline variant's
               // bg-background is a tinted gray in light mode, so reset it.
               "w-full justify-between border-input bg-transparent px-2.5 text-left font-normal shadow-xs",
-              size === "sm" ? "h-8 text-xs" : "h-9",
+              triggerSizeClasses[size],
               !selected && "text-muted-foreground",
               className,
             )}
