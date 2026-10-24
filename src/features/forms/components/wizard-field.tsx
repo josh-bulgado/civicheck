@@ -27,9 +27,9 @@ export const WIZARD_CONTROL_CLASS = `h-14 rounded-[14px] border-border bg-card p
 
 export const WIZARD_TEXTAREA_CLASS = `rounded-[14px] border-border bg-card px-4.5 py-3.5 text-[17px] shadow-none placeholder:text-[#8a97a8] dark:placeholder:text-muted-foreground md:text-[17px] ${INVALID_CONTROL_CLASS}`;
 
-/** A control made of an addon and an input (the mobile number): same face as the single-line ones. */
+/** Mobile number: the same face as single-line controls, with an 18px prefix and input. */
 export const WIZARD_GROUP_CLASS =
-  "h-14 rounded-[14px] border-border bg-card shadow-none *:data-[slot=input-group-control]:text-[17px] md:*:data-[slot=input-group-control]:text-[17px]";
+  "h-14 rounded-[14px] border-border bg-card shadow-none *:data-[slot=input-group-control]:text-lg md:*:data-[slot=input-group-control]:text-lg [&_[data-slot=input-group-addon]>span]:text-lg";
 
 /** Error line under a field: icon plus message, 15px semibold in the error ink. */
 export function WizardFieldError({

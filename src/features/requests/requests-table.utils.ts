@@ -106,7 +106,8 @@ export function countNeedingStaff(requests: ReadonlyArray<TurnFields>): number {
 
 // ─── Time in stage ───────────────────────────────────────────────────────────
 
-const HOUR_MS = 3_600_000;
+const MINUTE_MS = 60_000;
+const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
 
 /**
@@ -117,15 +118,19 @@ export const WAIT_WARNING_MS = 3 * DAY_MS;
 export const WAIT_CRITICAL_MS = 5 * DAY_MS;
 
 /**
- * How long the request has been in its current status, as "5h" or "3d".
+ * Completed minutes under an hour, hours under a day, then days. During the
+ * second day only, include the remaining whole hours (for example, "1d 5h").
  * Measured from `updatedAt`, which also moves when payment is verified, so it
  * restarts at that point.
  */
 export function formatTimeInStage(updatedAt: string, now: number): string {
   const elapsed = Math.max(0, now - Date.parse(updatedAt));
-  if (elapsed < HOUR_MS) return "<1h";
-  if (elapsed < 2 * DAY_MS) return `${Math.floor(elapsed / HOUR_MS)}h`;
-  return `${Math.floor(elapsed / DAY_MS)}d`;
+  if (elapsed < HOUR_MS) return `${Math.floor(elapsed / MINUTE_MS)}m`;
+  if (elapsed < DAY_MS) return `${Math.floor(elapsed / HOUR_MS)}h`;
+
+  const days = Math.floor(elapsed / DAY_MS);
+  const hours = Math.floor((elapsed % DAY_MS) / HOUR_MS);
+  return days === 1 && hours > 0 ? `${days}d ${hours}h` : `${days}d`;
 }
 
 export type WaitTone = "quiet" | "normal" | "warning" | "critical";

@@ -936,8 +936,8 @@
   box-shadow: none;
 }
 
-/* The staff/admin shell uses the portal's frame (a ground, the sidebar sitting on
-   it, one floating panel) with a quieter ground. A fixed layer for the same
+/* Every workspace shares the portal's sidebar ground and floating frame.
+   A fixed layer for the same
    reasons as `.citizen-portal::before`. */
 .workspace-frame {
   isolation: isolate;
@@ -948,7 +948,7 @@
   position: fixed;
   inset: 0;
   z-index: -1;
-  background: var(--workspace-ground);
+  background: var(--portal-ground);
   pointer-events: none;
 }
 

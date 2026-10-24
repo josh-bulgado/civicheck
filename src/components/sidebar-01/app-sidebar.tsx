@@ -4,6 +4,7 @@ import { Sidebar, SidebarContent, useSidebar } from "~/components/ui/sidebar";
 import { NavFooter } from "~/components/sidebar-01/nav-footer";
 import { NavHeader } from "~/components/sidebar-01/nav-header";
 import { NavMain } from "~/components/sidebar-01/nav-main";
+import { AdminNav } from "~/components/sidebar-01/admin-nav";
 import { usePermissions } from "~/hooks/usePermissions";
 import { cn } from "~/lib/utils";
 import type { AccountProfile } from "~/features/account/account.types";
@@ -16,8 +17,8 @@ import { getWorkspaceDetails } from "./workspace";
  *
  * Every role gets the same frame: no box, the sidebar sitting directly on the
  * page's ground (a sheet below `md`), folding to an icon rail on desktop.
- * Applicants get the portal's calm markup inside it; everyone else the
- * workspace's, with section labels and search.
+ * All roles share the portal's pills, branding and account card. Internal
+ * workspaces add search; CCRO administrators have inline navigation groups.
  */
 export function AppSidebar({
   user,
@@ -31,6 +32,7 @@ export function AppSidebar({
   const { isMobile } = useSidebar();
   const workspace = getWorkspaceDetails(role);
   const citizen = role === "applicant";
+  const admin = role === "admin";
 
   const navGroups = buildNavGroups(role, can, unreadNotifications);
 
@@ -40,10 +42,14 @@ export function AppSidebar({
       {/* The padding gives the active pill's shadow room: this container
           scrolls on a short screen, and overflow clips whatever leaves it. The
           negative margins cancel it out so the pills sit where the grid says. */}
-      <SidebarContent className={citizen ? "-mx-3.5 -my-6 px-3.5 py-6" : undefined}>
-        <NavMain groups={navGroups} citizen={citizen} />
+      <SidebarContent className="-mx-3.5 -my-6 px-3.5 py-6">
+        {admin ? (
+          <AdminNav groups={navGroups} />
+        ) : (
+          <NavMain groups={navGroups} label={workspace.label} />
+        )}
       </SidebarContent>
-      <NavFooter account={user ?? null} citizen={citizen} />
+      <NavFooter account={user ?? null} />
     </>
   );
 
@@ -57,21 +63,15 @@ export function AppSidebar({
       className="p-2.5 pr-1.5"
       {...props}
     >
-      {citizen ? (
-        // 248px column with the design's own inset. Desktop shows the page's
-        // ground through it; the mobile sheet has none behind it, so it paints
-        // its own, or the active pill (white) would disappear into a white sheet.
-        <div
-          className={cn(
-            "flex min-h-0 flex-1 flex-col pt-1.5 pr-2 pb-1 pl-1.5",
-            isMobile && "bg-(image:--portal-ground)",
-          )}
-        >
-          {sections}
-        </div>
-      ) : (
-        sections
-      )}
+      {/* Desktop shares the page's ground; mobile sheets paint the same wash. */}
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 flex-col pt-1.5 pr-2 pb-1 pl-1.5",
+          isMobile && "bg-(image:--portal-ground)",
+        )}
+      >
+        {sections}
+      </div>
     </Sidebar>
   );
 }

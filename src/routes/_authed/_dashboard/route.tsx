@@ -86,6 +86,7 @@ function DashboardLayout() {
   const { user } = Route.useRouteContext();
   const { unreadNotifications } = Route.useLoaderData();
   const isCitizen = user?.role === "applicant";
+  const isCcroAdmin = user?.role === "admin";
   // Sidebar badge tracks new notifications live, from wherever the reader
   // happens to be — not just while they're on the notifications page itself.
   const audience = user ? getNotificationAudience(user.role as Role) : null;
@@ -161,7 +162,7 @@ function DashboardLayout() {
         // 10px, the panel floats on the ground from `md`, and on a phone the page
         // fills the screen.
         <SidebarInset className="min-w-0 bg-transparent p-0 md:p-2.5 md:pl-0">
-          <div className="flex w-full flex-1 flex-col bg-workspace md:rounded-panel md:shadow-portal-panel">
+          <div className={`flex w-full flex-1 flex-col md:rounded-panel md:shadow-portal-panel ${isCcroAdmin ? "bg-portal-panel" : "bg-workspace"}`}>
             <header className="flex h-16 shrink-0 items-center justify-between px-4 sm:px-6 lg:px-8">
               <div className="flex min-w-0 items-center gap-3">
                 {/* From md the toggle lives in the sidebar, as in the applicant

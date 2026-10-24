@@ -37,8 +37,10 @@ describe("describeWait", () => {
       spoken: "3 days",
     });
     expect(describeWait(new Date(NOW - 30 * HOUR).toISOString(), NOW)).toMatchObject({
-      short: "30h",
-      unit: "hours",
+      short: "1d 6h",
+      value: "1",
+      unit: "day 6 hours",
+      spoken: "1 day 6 hours",
     });
     expect(describeWait(new Date(NOW - 1 * HOUR).toISOString(), NOW)).toMatchObject({
       short: "1h",
@@ -47,12 +49,33 @@ describe("describeWait", () => {
     });
   });
 
-  it("says under an hour for a fresh request", () => {
+  it("describes minutes for a fresh request", () => {
     expect(describeWait(new Date(NOW - 60_000).toISOString(), NOW)).toMatchObject({
-      short: "<1h",
-      value: "<1",
-      unit: "hour",
-      spoken: "under 1 hour",
+      short: "1m",
+      value: "1",
+      unit: "minute",
+      spoken: "1 minute",
+    });
+    expect(describeWait(new Date(NOW - 10 * 60_000).toISOString(), NOW)).toMatchObject({
+      short: "10m",
+      value: "10",
+      unit: "minutes",
+      spoken: "10 minutes",
+    });
+  });
+
+  it("omits hours at a whole day and after two days", () => {
+    expect(describeWait(new Date(NOW - DAY).toISOString(), NOW)).toMatchObject({
+      short: "1d",
+      value: "1",
+      unit: "day",
+      spoken: "1 day",
+    });
+    expect(describeWait(new Date(NOW - 53 * HOUR).toISOString(), NOW)).toMatchObject({
+      short: "2d",
+      value: "2",
+      unit: "days",
+      spoken: "2 days",
     });
   });
 });

@@ -346,6 +346,7 @@ export function ExpandedDocumentView({
   details,
   position,
   onStep,
+  navigationEnabled = true,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -353,9 +354,10 @@ export function ExpandedDocumentView({
   preview: ReactNode;
   decision: ReactNode;
   details: ReactNode;
-  /** "2 of 4", shown between the previous and next buttons. */
+  /** "2 of 4", announced when the selected document changes. */
   position: string;
   onStep: (delta: number) => void;
+  navigationEnabled?: boolean;
 }) {
   // Focus starts on the file, not on the first button, so no ring lands on an icon.
   const previewRef = useRef<HTMLDivElement>(null);
@@ -366,34 +368,48 @@ export function ExpandedDocumentView({
         initialFocus={previewRef}
         showCloseButton={false}
         className="flex h-[94vh] w-[96vw] max-w-none flex-col gap-0 overflow-hidden p-0 sm:max-w-none"
+        onKeyDownCapture={(event) => {
+          if (
+            !open || !navigationEnabled || event.defaultPrevented ||
+            event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
+            (event.key !== "ArrowLeft" && event.key !== "ArrowRight")
+          ) return;
+
+          const target = event.target;
+          if (!(target instanceof HTMLElement)) return;
+          // Editing, choosing an option, or interacting with a nested dialog
+          // keeps its own arrow-key behavior.
+          if (
+            target.isContentEditable ||
+            target.closest('input, textarea, select, [role="textbox"], [role="combobox"], [role="listbox"], [role="menu"], [role="slider"], [role="spinbutton"], [role="tablist"]')
+          ) return;
+          const dialog = target.closest('[role="dialog"], [role="alertdialog"]');
+          if (dialog && dialog !== event.currentTarget) return;
+
+          // Capture before the image's magnifier handles its own arrow keys.
+          event.preventDefault();
+          event.stopPropagation();
+          // The file can unmount while its next signed link loads.
+          previewRef.current?.focus({ preventScroll: true });
+          onStep(event.key === "ArrowRight" ? 1 : -1);
+        }}
       >
         <DialogDescription className="sr-only">
-          Review the document, then accept or reject it.
+          Review the document, then accept or reject it. Use the Left and Right
+          arrow keys to switch documents. Use Shift + arrow keys to move the magnifier.
         </DialogDescription>
-        <div className="flex items-start gap-2 border-b border-border-light pr-4">
+        <div className="flex flex-col border-b border-border-light sm:flex-row sm:items-start sm:gap-2 sm:pr-4">
           <div className="min-w-0 flex-1">{header}</div>
-          <div className="flex shrink-0 items-center gap-1 py-3">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Previous document"
-              onClick={() => onStep(-1)}
-            >
-              <ChevronLeft aria-hidden="true" />
-            </Button>
-            <span className="text-xs text-muted-foreground tabular-nums">{position}</span>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Next document"
-              onClick={() => onStep(1)}
-            >
-              <ChevronRight aria-hidden="true" />
-            </Button>
+          <div className="flex shrink-0 items-center justify-between gap-3 px-4 pb-3 sm:justify-end sm:px-0 sm:py-3">
+            <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
+              <Kbd>←</Kbd><Kbd>→</Kbd> switch documents
+            </span>
+            <span role="status" aria-label="Document position" className="text-xs text-muted-foreground tabular-nums">
+              {position}
+            </span>
             <Button
               variant="outline"
               size="sm"
-              className="ml-2"
               onClick={() => onOpenChange(false)}
             >
               Back to documents <Kbd>Esc</Kbd>
@@ -407,7 +423,31 @@ export function ExpandedDocumentView({
               tabIndex={-1}
               className="relative min-h-0 flex-1 bg-muted/30 outline-none"
             >
-              <div className="absolute inset-0 p-3">{preview}</div>
+              <div className="absolute inset-0 px-14 py-3 sm:px-16">{preview}</div>
+              <Button
+                variant="outline"
+                size="icon-lg"
+                className="absolute top-1/2 left-2 size-11 -translate-y-1/2 rounded-full bg-background/95 shadow-md sm:left-3"
+                aria-label="Previous document"
+                aria-keyshortcuts="ArrowLeft"
+                title="Previous document (←)"
+                disabled={!navigationEnabled}
+                onClick={() => onStep(-1)}
+              >
+                <ChevronLeft className="size-5" aria-hidden="true" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon-lg"
+                className="absolute top-1/2 right-2 size-11 -translate-y-1/2 rounded-full bg-background/95 shadow-md sm:right-3"
+                aria-label="Next document"
+                aria-keyshortcuts="ArrowRight"
+                title="Next document (→)"
+                disabled={!navigationEnabled}
+                onClick={() => onStep(1)}
+              >
+                <ChevronRight className="size-5" aria-hidden="true" />
+              </Button>
             </div>
             {decision}
           </div>

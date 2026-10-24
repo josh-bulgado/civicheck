@@ -32,6 +32,8 @@ yarn-error.log*
 /blob-report/
 /playwright/.cache/
 .playwright-mcp/
+# Generated screenshots, previews, and verification output
+/artifacts/
 coverage/
 *.lcov
 

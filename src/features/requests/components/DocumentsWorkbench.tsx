@@ -514,6 +514,7 @@ export function DocumentsWorkbench({
           details={<SubmittedDetailsCard request={request} showEmpty bare />}
           position={`${selectedIndex + 1} of ${entries.length}`}
           onStep={step}
+          navigationEnabled={shortcuts && entries.length > 1}
         />
       )}
 

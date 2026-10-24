@@ -40,6 +40,8 @@ type EmailShellOptions = {
   contentHtml: string;
   /** Closing line in the footer, e.g. what to do if this wasn't you. */
   footerNote?: string;
+  /** Omit the office and automated-message footer for minimal emails. */
+  includeOrganizationFooter?: boolean;
 };
 
 /**
@@ -104,9 +106,10 @@ function renderEmailShell({
   heading,
   contentHtml,
   footerNote,
+  includeOrganizationFooter = true,
 }: EmailShellOptions) {
   const footerNoteHtml = footerNote
-    ? `${escapeHtml(footerNote)}<br /><br />`
+    ? `${escapeHtml(footerNote)}${includeOrganizationFooter ? "<br /><br />" : ""}`
     : "";
 
   return `<!doctype html>
@@ -141,8 +144,8 @@ function renderEmailShell({
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="560" style="width:100%;max-width:560px;">
             <tr>
               <td style="padding:20px 8px 0;text-align:center;font-family:${FONT_STACK};font-size:12px;line-height:1.7;color:${COLORS.muted};">
-                ${footerNoteHtml}City Civil Registrar Office · City Government of Legazpi<br />
-                This is an automated message — please do not reply to it.
+                ${footerNoteHtml}${includeOrganizationFooter ? `City Civil Registrar Office · City Government of Legazpi<br />
+                This is an automated message — please do not reply to it.` : ""}
               </td>
             </tr>
           </table>
@@ -151,6 +154,33 @@ function renderEmailShell({
     </table>
   </body>
 </html>`;
+}
+
+function renderCodePanel(code: string) {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:0 0 24px;">
+                  <tr>
+                    <td align="center" bgcolor="${COLORS.codePanel}" style="border-radius:16px;padding:24px 16px;">
+                      <p style="margin:0 0 8px;font-family:${FONT_STACK};font-size:13px;font-weight:700;line-height:1.4;color:${COLORS.label};">Your verification code</p>
+                      <span style="font-family:${CODE_FONT_STACK};font-size:34px;font-weight:700;line-height:1.2;letter-spacing:4px;word-spacing:8px;white-space:nowrap;color:${COLORS.primary};">${escapeHtml(formatCode(code))}</span>
+                    </td>
+                  </tr>
+                </table>`;
+}
+
+/** Minimal confirmation email shared by signup and resend. */
+export function renderVerificationEmail(code: string) {
+  const heading = "Confirm your email address";
+
+  return renderEmailShell({
+    preheader: heading,
+    heading,
+    includeOrganizationFooter: false,
+    footerNote: "If you did not request this, you can safely ignore this email.",
+    contentHtml: `${renderHeading(heading)}
+                ${renderCodePanel(code)}
+
+                <p style="margin:0;text-align:center;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${COLORS.muted};">This code expires in 1 hour.</p>`,
+  });
 }
 
 type OtpEmailOptions = {
@@ -189,14 +219,7 @@ export function renderOtpEmail({
                 ${renderHeading(heading)}
                 ${renderParagraphs(paragraphs)}
 
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:0 0 24px;">
-                  <tr>
-                    <td align="center" bgcolor="${COLORS.codePanel}" style="border-radius:16px;padding:24px 16px;">
-                      <p style="margin:0 0 8px;font-family:${FONT_STACK};font-size:13px;font-weight:700;line-height:1.4;color:${COLORS.label};">Your verification code</p>
-                      <span style="font-family:${CODE_FONT_STACK};font-size:34px;font-weight:700;line-height:1.2;letter-spacing:4px;word-spacing:8px;white-space:nowrap;color:${COLORS.primary};">${escapeHtml(formatCode(code))}</span>
-                    </td>
-                  </tr>
-                </table>
+                ${renderCodePanel(code)}
 
                 ${renderNote(noteLines)}`,
   });

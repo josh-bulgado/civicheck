@@ -29,13 +29,13 @@ export type DeskSourceRow = Pick<
 
 /** How long a request has been in its status, in the words the dashboard uses. */
 export interface DeskWait {
-  /** The queue's own figure: "5h", "3d" or "<1h". */
+  /** The queue's own figure: "10m", "5h", "1d 5h" or "3d". */
   short: string;
-  /** The number alone, for a large display: "5", "3" or "<1". */
+  /** The leading number, for a large display: "10", "5" or "3". */
   value: string;
-  /** Its unit, agreeing with the number: "hours", "day". */
+  /** Its unit and any remaining time: "minutes", "hours", "day 5 hours". */
   unit: string;
-  /** For a screen reader: "3 days", "under 1 hour". */
+  /** For a screen reader: "10 minutes", "1 day 5 hours", "3 days". */
   spoken: string;
 }
 
@@ -83,19 +83,27 @@ export interface StaffDesk {
 /** How many of the staff's requests the dashboard names. */
 export const DESK_LIST_LIMIT = 5;
 
-const WAIT_UNITS = { d: ["day", "days"], h: ["hour", "hours"] } as const;
+const WAIT_UNITS = {
+  d: ["day", "days"],
+  h: ["hour", "hours"],
+  m: ["minute", "minutes"],
+} as const;
 
 export function describeWait(updatedAt: string, now: number): DeskWait {
   const short = formatTimeInStage(updatedAt, now);
-  const unit = short.endsWith("d") ? "d" : "h";
-  const value = short.slice(0, -1);
-  const [one, many] = WAIT_UNITS[unit];
-  const singular = value === "1" || value.startsWith("<");
+  const parts = short.split(" ").map((part) => {
+    const key = part.endsWith("d") ? "d" : part.endsWith("h") ? "h" : "m";
+    const value = part.slice(0, -1);
+    const [one, many] = WAIT_UNITS[key];
+    return { value, unit: value === "1" ? one : many };
+  });
+  const [first, ...remaining] = parts;
+  const remainder = remaining.map(({ value, unit }) => `${value} ${unit}`);
   return {
     short,
-    value,
-    unit: singular ? one : many,
-    spoken: value.startsWith("<") ? `under 1 ${one}` : `${value} ${singular ? one : many}`,
+    value: first.value,
+    unit: [first.unit, ...remainder].join(" "),
+    spoken: parts.map(({ value, unit }) => `${value} ${unit}`).join(" "),
   };
 }
 
