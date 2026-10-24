@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  acceptTrackingInput,
   formatTrackingNumber,
   isDigitsMode,
   lookupYears,
@@ -40,6 +41,35 @@ describe("parseTrackingInput", () => {
     expect(parseTrackingInput("81826", YEARS).kind).toBe("incomplete");
     expect(parseTrackingInput("8182691", YEARS).kind).toBe("incomplete");
     expect(parseTrackingInput("CCRO-26-818269", YEARS).kind).toBe("incomplete");
+  });
+});
+
+describe("acceptTrackingInput", () => {
+  it("takes digits and ignores stray letters, so the prefix stays drawn", () => {
+    expect(acceptTrackingInput("8182", "818")).toBe("8182");
+    expect(acceptTrackingInput("818d", "818")).toBe("818");
+    expect(acceptTrackingInput("d", "")).toBe("");
+    expect(acceptTrackingInput("dsds", "dsd")).toBe("dsd");
+  });
+
+  it("still lets a scanner type the whole number one character at a time", () => {
+    const typed = "CCRO-2026-818269";
+    let field = "";
+    for (let length = 1; length <= typed.length; length++) {
+      field = acceptTrackingInput(typed.slice(0, length), field);
+    }
+    expect(field).toBe(typed);
+  });
+
+  it("still takes a pasted whole number, in any case", () => {
+    expect(acceptTrackingInput("ccro-2026-818269", "")).toBe("ccro-2026-818269");
+    expect(acceptTrackingInput("CCRO2026818269", "")).toBe("CCRO2026818269");
+    expect(acceptTrackingInput("2026-818269", "")).toBe("2026-818269");
+  });
+
+  it("rejects text that is not a tracking number", () => {
+    expect(acceptTrackingInput("CCRX", "CCR")).toBe("CCR");
+    expect(acceptTrackingInput("Tracking: 818269", "")).toBe("");
   });
 });
 

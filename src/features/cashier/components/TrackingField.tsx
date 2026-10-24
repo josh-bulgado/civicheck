@@ -1,7 +1,14 @@
 import type { KeyboardEventHandler, Ref } from "react";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from "~/components/ui/input-group";
 import { Kbd } from "~/components/ui/kbd";
 import { Label } from "~/components/ui/label";
-import { isDigitsMode } from "../tracking-input";
+import { cn } from "~/lib/utils";
+import { acceptTrackingInput, isDigitsMode } from "../tracking-input";
 
 interface TrackingFieldProps {
   value: string;
@@ -38,13 +45,15 @@ export function TrackingField({
       <Label htmlFor="tracking-number" className="text-sm font-semibold">
         Tracking Number
       </Label>
-      <div className="flex h-16 items-center gap-1.5 rounded-xl border border-border-strong bg-card px-4 transition-shadow focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
+      <InputGroup className="h-16 rounded-xl border-border-strong bg-card">
         {digitsMode ? (
-          <span aria-hidden="true" className="font-mono text-xl text-muted-foreground select-none">
-            CCRO-{year}-
-          </span>
+          <InputGroupAddon className="pl-4">
+            <InputGroupText aria-hidden="true" className="font-mono text-xl">
+              CCRO-{year}-
+            </InputGroupText>
+          </InputGroupAddon>
         ) : null}
-        <input
+        <InputGroupInput
           id="tracking-number"
           ref={inputRef}
           name="tracking-number"
@@ -54,15 +63,20 @@ export function TrackingField({
           spellCheck={false}
           autoFocus
           value={value}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(event) => onChange(acceptTrackingInput(event.target.value, value))}
           onKeyDown={onKeyDown}
           placeholder={digitsMode ? "000000" : undefined}
           aria-describedby={HELP_ID}
           aria-busy={busy}
-          className="min-w-0 flex-1 bg-transparent font-mono text-3xl font-semibold tracking-[0.08em] outline-none placeholder:text-muted-foreground/50"
+          className={cn(
+            "h-full font-mono text-3xl font-semibold tracking-[0.08em] placeholder:text-muted-foreground/50 md:text-3xl",
+            digitsMode ? "pl-1.5" : "pl-4",
+          )}
         />
-        <Kbd aria-hidden="true">{hotkeyLabel}</Kbd>
-      </div>
+        <InputGroupAddon align="inline-end" className="pr-4">
+          <Kbd aria-hidden="true">{hotkeyLabel}</Kbd>
+        </InputGroupAddon>
+      </InputGroup>
       <p id={HELP_ID} className="sr-only">
         Type the last 6 digits, or scan or paste the whole number. The lookup runs on its own.
       </p>

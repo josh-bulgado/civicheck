@@ -63,6 +63,20 @@ export function trackingYear(trackingNumber: string): number | null {
 }
 
 /**
+ * What the field accepts as the cashier types. Digits (and the dashes of a
+ * pasted number) always go in. Letters go in only while they spell `CCRO`, so a
+ * scanner or a pasted whole number still works but a stray letter is ignored
+ * instead of flipping the field out of digits mode. A rejected edit returns the
+ * previous value.
+ */
+export function acceptTrackingInput(next: string, previous: string): string {
+  const text = next.toUpperCase().replace(/\s+/g, "");
+  if (/^[\d-]*$/.test(text)) return next;
+  if (text.startsWith("CCRO") || "CCRO".startsWith(text)) return next;
+  return previous;
+}
+
+/**
  * Whether the field is in "just the digits" mode, where the `CCRO-<year>-`
  * prefix is drawn for the cashier instead of typed.
  */
