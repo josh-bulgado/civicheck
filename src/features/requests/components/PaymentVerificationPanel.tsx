@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { usePermissions } from "~/hooks/usePermissions";
-import { verifyPaymentFn } from "~/features/requests/requests.mutations";
+import { submitPaymentVerification } from "~/features/requests/verify-payment";
 import { getStatusDetails } from "~/features/requests/request-workflow";
 
 export function PaymentVerificationPanel({
@@ -38,18 +37,12 @@ export function PaymentVerificationPanel({
   async function handleVerifyPayment() {
     setBusy(true);
     try {
-      const res = await verifyPaymentFn({
-        data: isFree
-          ? { requestId, confirmNoFee: noFeeConfirmed }
-          : { requestId, orNumber: value },
-      });
-      if (res.error) {
-        toast.error(isFree ? "Could not confirm this request" : "Could not verify payment", {
-          description: res.message,
-        });
-        return;
-      }
-      toast.success(isFree ? "Fee-free request confirmed" : "Payment verified");
+      const recorded = await submitPaymentVerification(
+        isFree
+          ? { requestId, free: true, confirmNoFee: noFeeConfirmed }
+          : { requestId, free: false, orNumber: value },
+      );
+      if (!recorded) return;
       setValue("");
       setNoFeeConfirmed(false);
       onVerified();

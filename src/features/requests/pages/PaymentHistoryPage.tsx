@@ -5,7 +5,7 @@ import { downloadCsv } from "~/lib/csv";
 import { formatDateKey } from "~/lib/date";
 import type { PaymentHistoryRow } from "~/features/requests/requests.queries";
 import { PaymentHistoryDataTable } from "~/features/requests/components/PaymentHistoryDataTable";
-import { formatPeso } from "~/features/requests/components/PaymentHistoryColumn";
+import { formatPeso } from "~/lib/peso";
 import { paymentsToCsv, type PaymentRange } from "~/features/requests/payment-history";
 
 interface PaymentHistoryPageProps {

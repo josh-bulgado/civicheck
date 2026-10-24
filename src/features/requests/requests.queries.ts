@@ -10,7 +10,11 @@ import {
 } from "~/features/forms/form-template.utils";
 import { readRequestMessages } from "~/features/requests/request-messages.server";
 
-const trackingLookupSchema = z.object({ trackingNumber: z.string().min(1) });
+// A counter lookup sends the numbers a bare 6-digit entry could mean: one per
+// year it might have been filed in (see cashier/tracking-input.ts).
+const trackingLookupSchema = z.object({
+  trackingNumbers: z.array(z.string().regex(/^CCRO-\d{4}-\d{6}$/)).min(1).max(3),
+});
 const requestIdSchema = z.object({ requestId: z.string().uuid() });
 const paymentHistorySchema = z.object({
   from: z.string().optional(),
@@ -82,7 +86,7 @@ interface RequestListRow {
   profiles: Embed<PersonName>;
 }
 
-/** A `requests` row as `lookupRequestByTrackingFn` selects it. */
+/** A `requests` row as `lookupRequestsByTrackingFn` selects it. */
 interface CashierLookupRow {
   id: string;
   tracking_number: string;
@@ -222,18 +226,37 @@ export interface CashierLookupResult {
   serviceName: string;
 }
 
+function toCashierLookupResult(row: CashierLookupRow): CashierLookupResult {
+  const service = one<ServiceEmbed>(row.services_registry);
+  const profile = one<PersonName>(row.profiles);
+  const applicantName =
+    (profile ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() : "") ||
+    `${row.subject_first_name ?? ""} ${row.subject_last_name ?? ""}`.trim() ||
+    "—";
+
+  return {
+    id: row.id,
+    trackingNumber: row.tracking_number,
+    status: row.status,
+    paymentStatus: row.payment_status,
+    orNumber: row.or_number,
+    feesDue: Number(row.fees_due ?? 0),
+    applicantName,
+    serviceName: service?.display_name || service?.name || "—",
+  };
+}
+
 /**
- * Counter lookup by tracking number, for the cashier's payment desk. Returns
- * only what a cashier needs to collect payment — no `form_data`, no
+ * Counter lookup by tracking number, for the cashier's payment desk. Takes the
+ * full numbers an entry could mean and returns whichever exist, newest year
+ * first: usually one, and two when the same 6 digits were issued in both years.
+ * Returns only what a cashier needs to collect payment — no `form_data`, no
  * attachments, no logs — deliberately narrower than `getRequestDetailFn`.
  */
-export const lookupRequestByTrackingFn = createServerFn({ method: "GET" })
+export const lookupRequestsByTrackingFn = createServerFn({ method: "GET" })
   .validator(trackingLookupSchema)
-  .handler(async ({ data }): Promise<CashierLookupResult | null> => {
+  .handler(async ({ data }): Promise<CashierLookupResult[]> => {
     const { supabase } = await requireActiveSession("requests:collect_payment");
-
-    const trackingNumber = data.trackingNumber.trim();
-    if (!trackingNumber) return null;
 
     const { data: found, error } = await supabase
       .from("requests")
@@ -244,30 +267,11 @@ export const lookupRequestByTrackingFn = createServerFn({ method: "GET" })
          services_registry(name, display_name),
          profiles(first_name, last_name)`,
       )
-      .eq("tracking_number", trackingNumber)
-      .maybeSingle();
+      .in("tracking_number", data.trackingNumbers)
+      .order("tracking_number", { ascending: false });
 
     if (error) throw new Error(error.message);
-    if (!found) return null;
-    const row = found as CashierLookupRow;
-
-    const service = one<ServiceEmbed>(row.services_registry);
-    const profile = one<PersonName>(row.profiles);
-    const applicantName =
-      (profile ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() : "") ||
-      `${row.subject_first_name ?? ""} ${row.subject_last_name ?? ""}`.trim() ||
-      "—";
-
-    return {
-      id: row.id,
-      trackingNumber: row.tracking_number,
-      status: row.status,
-      paymentStatus: row.payment_status,
-      orNumber: row.or_number,
-      feesDue: Number(row.fees_due ?? 0),
-      applicantName,
-      serviceName: service?.display_name || service?.name || "—",
-    };
+    return ((found ?? []) as CashierLookupRow[]).map(toCashierLookupResult);
   });
 
 /** How many requests are ready for release but still unpaid, for the cashier dashboard. */
