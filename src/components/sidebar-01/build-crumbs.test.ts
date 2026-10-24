@@ -40,7 +40,6 @@ describe("buildCrumbs", () => {
 
   it("names pages the way the sidebar does for the role", () => {
     expect(buildCrumbs("staff", at("/staff-dashboard")).at(-1)?.label).toBe("Staff Dashboard");
-    expect(buildCrumbs("cashier", at("/staff-dashboard")).at(-1)?.label).toBe("Cashier Dashboard");
     expect(buildCrumbs("staff", at("/(service)/services")).at(-1)?.label).toBe("Service Reference");
   });
 

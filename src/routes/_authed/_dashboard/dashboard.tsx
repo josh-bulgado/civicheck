@@ -20,6 +20,9 @@ export const Route = createFileRoute("/_authed/_dashboard/dashboard")({
       throw redirect({ to: "/admin" });
     } else if (hasPermission(role, "dashboard:staff")) {
       throw redirect({ to: "/staff-dashboard" });
+    } else if (hasPermission(role, "requests:collect_payment")) {
+      // The cashier has no dashboard: the counter is the home page.
+      throw redirect({ to: "/cashier", search: {} });
     }
     // Applicants have no dedicated route to redirect to — this route renders
     // their dashboard directly instead.

@@ -373,25 +373,6 @@ export const getPaymentHistoryFn = createServerFn({ method: "GET" })
     });
   });
 
-/** How many payments the cashier has verified today, for the dashboard. */
-export const getPaymentsVerifiedTodayCountFn = createServerFn({ method: "GET" }).handler(
-  async () => {
-    const { supabase } = await requireActiveSession("requests:collect_payment");
-
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-
-    const { count, error } = await supabase
-      .from("application_logs")
-      .select("id", { count: "exact", head: true })
-      .eq("action_status", "payment_verified")
-      .gte("created_at", startOfToday.toISOString());
-
-    if (error) throw new Error(error.message);
-    return count ?? 0;
-  },
-);
-
 /** What department (if any) the caller is scoped to, for UI display. */
 export const getMyDepartmentScopeFn = createServerFn({ method: "GET" }).handler(async () => {
   const { role, departmentId, departmentName } = await requireActiveSession();

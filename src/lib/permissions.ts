@@ -79,7 +79,6 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "requests:collect_payment",
     "requests:view_payments",
     "notifications:view_staff",
-    "dashboard:staff",
   ],
   admin: [
     "services:view",

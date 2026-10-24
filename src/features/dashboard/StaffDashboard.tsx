@@ -1,8 +1,4 @@
 import { formatOfficeDate } from "~/features/admin/overview/overview-formatters";
-import {
-  CashierDashboard,
-  type CashierDashboardData,
-} from "~/features/dashboard/CashierDashboard";
 import { HeldRequestsCard } from "~/features/dashboard/components/HeldRequestsCard";
 import { NextUpCard } from "~/features/dashboard/components/NextUpCard";
 import { StaffStageCard } from "~/features/dashboard/components/StaffStageCard";
@@ -13,7 +9,6 @@ import type { getMyDepartmentScopeFn } from "~/features/requests/requests.querie
 import type { EncodableService } from "~/features/requests/walk-in-intake.queries";
 
 interface StaffDeskData {
-  isCashier: false;
   canEncodeWalkIn: boolean;
   scope: Awaited<ReturnType<typeof getMyDepartmentScopeFn>>;
   /** Null when the role cannot view the request queue. */
@@ -23,7 +18,7 @@ interface StaffDeskData {
   officeDate: string;
 }
 
-export type StaffDashboardStats = StaffDeskData | ({ isCashier: true } & CashierDashboardData);
+export type StaffDashboardStats = StaffDeskData;
 
 interface StaffDashboardProps {
   stats: StaffDashboardStats;
@@ -32,7 +27,6 @@ interface StaffDashboardProps {
 }
 
 export function StaffDashboard({ stats, onChanged }: StaffDashboardProps) {
-  if (stats.isCashier) return <CashierDashboard {...stats} />;
   return <StaffDeskPage {...stats} onChanged={onChanged} />;
 }
 
