@@ -7,7 +7,7 @@ import { NavMain } from "~/components/sidebar-01/nav-main";
 import { usePermissions } from "~/hooks/usePermissions";
 import { cn } from "~/lib/utils";
 import type { AccountProfile } from "~/features/account/account.types";
-import { buildNavGroups } from "./nav-config";
+import { buildNavGroups, type NavItemId } from "./nav-config";
 import { getWorkspaceDetails } from "./workspace";
 
 /**
@@ -22,17 +22,19 @@ import { getWorkspaceDetails } from "./workspace";
 export function AppSidebar({
   user,
   unreadNotifications = 0,
+  attentionIds,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   user?: AccountProfile | null;
   unreadNotifications?: number;
+  attentionIds?: readonly NavItemId[];
 }) {
   const { can, role } = usePermissions();
   const { isMobile } = useSidebar();
   const workspace = getWorkspaceDetails(role);
   const citizen = role === "applicant";
 
-  const navGroups = buildNavGroups(role, can, unreadNotifications);
+  const navGroups = buildNavGroups(role, can, unreadNotifications, attentionIds);
 
   const sections = (
     <>

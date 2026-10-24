@@ -33,8 +33,8 @@ import { useSaveServiceConfiguration } from "../hooks/useSaveServiceConfiguratio
 import { findRequirementIssue } from "../service-configuration.schema";
 import { getServiceChecklist } from "../services.queries";
 import type { Service } from "../services.types";
+import { DiscardChangesDialog } from "~/components/feedback/DiscardChangesDialog";
 import {
-  DiscardChangesDialog,
   ServiceDossierHeader,
   ServiceEditorSection,
   ServiceEditorTabBar,

@@ -1,7 +1,10 @@
-import { UsersRound } from "lucide-react";
-import { AccountsCategoryNav } from "../components/AccountsCategoryNav";
+import { useState } from "react";
+import { UserRoundCog } from "lucide-react";
+import { Button } from "~/components/ui/button";
+import { PageHeaderCard } from "~/components/ui/page-header-card";
+import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { AccountsDataTable } from "../components/AccountsDataTable";
-import { SystemAdminPageHeader } from "../components/SystemAdminPageHeader";
+import { RealtimeStatusBadge } from "../components/RealtimeStatusBadge";
 import type {
   AccountCategory,
   AccountFilters,
@@ -10,29 +13,14 @@ import type {
   SystemAdminDepartment,
 } from "../system-admin.types";
 
-const pageContent = {
-  personnel: {
-    eyebrow: "CCRO directory",
-    title: "CCRO personnel accounts",
-    description:
-      "Search and filter personnel, send password reset links, sign accounts out, suspend or reactivate them, and manage the CCRO Administrator assignment. Invitations are managed by the CCRO Administrator.",
-  },
-  citizens: {
-    eyebrow: "Citizen directory",
-    title: "Citizen accounts",
-    description:
-      "Help residents with sign-in problems — resend verification, send reset links, sign out, suspend or reactivate — without opening submissions or documents.",
-  },
-  "platform-admins": {
-    eyebrow: "Protected directory",
-    title: "Platform administrators",
-    description:
-      "Review protected System Administrator accounts. Their access cannot be modified from this directory.",
-  },
-} satisfies Record<
-  AccountCategory,
-  { eyebrow: string; title: string; description: string }
->;
+const descriptions = {
+  personnel:
+    "System Administration, CCRO personnel. Invitations are managed by the CCRO Administrator.",
+  citizens:
+    "System Administration, citizens. Their submissions and documents are not shown here.",
+  "platform-admins":
+    "System Administration, platform administrators. Protected accounts cannot be changed here.",
+} satisfies Record<AccountCategory, string>;
 
 export function AccountsPage({
   accounts,
@@ -57,44 +45,45 @@ export function AccountsPage({
   total: number;
   hasNextPage: boolean;
 }) {
-  const content = pageContent[category];
+  const [replacementOpen, setReplacementOpen] = useState(false);
+  // Every account mutation (edit, suspend, reactivate, admin replacement)
+  // writes a profiles row, so one subscription covers the whole directory.
+  const realtimeStatus = useRealtimeRefresh({ tables: ["profiles"] });
 
   return (
     <div className="dashboard-page">
-      <SystemAdminPageHeader
-        icon={UsersRound}
-        title="Account oversight"
-        description="Manage platform access and administrator assignments without opening citizen submissions or documents."
+      <PageHeaderCard title="Accounts Center" description={descriptions[category]}>
+        <div className="flex flex-wrap items-center gap-3">
+          <RealtimeStatusBadge status={realtimeStatus} />
+          {category === "personnel" ? (
+            <Button
+              variant="raised"
+              size="lg"
+              onClick={() => setReplacementOpen(true)}
+            >
+              <UserRoundCog aria-hidden="true" data-icon="inline-start" />
+              {hasActiveAdmin
+                ? "Replace CCRO Administrator"
+                : "Appoint CCRO Administrator"}
+            </Button>
+          ) : null}
+        </div>
+      </PageHeaderCard>
+      <AccountsDataTable
+        key={category}
+        data={accounts}
+        adminCandidates={adminCandidates}
+        departments={departments}
+        hasActiveAdmin={hasActiveAdmin}
+        category={category}
+        filters={filters}
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        hasNextPage={hasNextPage}
+        replacementOpen={replacementOpen}
+        onReplacementOpenChange={setReplacementOpen}
       />
-      <AccountsCategoryNav activeCategory={category} />
-      <section className="dashboard-panel overflow-hidden">
-        <div className="border-b border-border px-5 py-5 sm:px-6">
-          <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
-            {content.eyebrow}
-          </p>
-          <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground">
-            {content.title}
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {content.description}
-          </p>
-        </div>
-        <div className="p-5 sm:p-6">
-          <AccountsDataTable
-            key={category}
-            data={accounts}
-            adminCandidates={adminCandidates}
-            departments={departments}
-            hasActiveAdmin={hasActiveAdmin}
-            category={category}
-            filters={filters}
-            page={page}
-            pageSize={pageSize}
-            total={total}
-            hasNextPage={hasNextPage}
-          />
-        </div>
-      </section>
     </div>
   );
 }

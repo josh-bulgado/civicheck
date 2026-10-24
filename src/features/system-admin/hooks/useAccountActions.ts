@@ -1,6 +1,5 @@
-import { useCallback, useState } from "react";
-import { useRouter } from "@tanstack/react-router";
-import { toast } from "sonner";
+import { useCallback } from "react";
+import { useActionRunner } from "~/hooks/useActionRunner";
 import {
   reactivateAccount,
   replaceCcroAdmin,
@@ -30,35 +29,9 @@ export type AccountPendingAction =
   | null;
 
 export function useAccountActions() {
-  const router = useRouter();
-  const [pendingAction, setPendingAction] =
-    useState<AccountPendingAction>(null);
-
-  const run = useCallback(
-    async (
-      action: () => Promise<unknown>,
-      pending: Exclude<AccountPendingAction, null>,
-      successMessage: string,
-    ) => {
-      setPendingAction(pending);
-      try {
-        await action();
-        toast.success(successMessage);
-        await router.invalidate();
-        return true;
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "The action could not be completed.",
-        );
-        return false;
-      } finally {
-        setPendingAction(null);
-      }
-    },
-    [router],
-  );
+  const { pending: pendingAction, run } = useActionRunner<
+    Exclude<AccountPendingAction, null>
+  >("The action could not be completed.");
 
   const suspend = useCallback(
     (accountId: string, reason: string) =>

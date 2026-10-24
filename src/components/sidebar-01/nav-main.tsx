@@ -139,7 +139,7 @@ export function NavMain({ groups, citizen = false }: NavMainProps) {
                       className="flex w-full items-center rounded-[14px] [&[data-status=active]>button]:bg-card [&[data-status=active]>button]:font-semibold [&[data-status=active]>button]:text-foreground [&[data-status=active]>button]:shadow-portal-nav-active [&[data-status=active]>button]:hover:bg-card [&[data-status=active]>button>svg]:fill-primary/14 [&[data-status=active]>button>svg]:text-primary"
                     >
                       <SidebarMenuButton
-                        tooltip={item.title}
+                        tooltip={item.attention ? `${item.title} · Needs attention` : item.title}
                         // The icon sits on the rail's centre line (19px in), so
                         // folding never moves it: the label fades and is clipped.
                         // Folded the button is a 44px square around the icon; margin and
@@ -150,6 +150,16 @@ export function NavMain({ groups, citizen = false }: NavMainProps) {
                         <span className="flex-1 whitespace-nowrap transition-opacity duration-150 group-data-[collapsible=icon]:opacity-0">
                           {item.title}
                         </span>
+                        {item.attention ? (
+                          <>
+                            {/* Folded, the dot moves onto the icon so it is still seen. */}
+                            <span
+                              aria-hidden="true"
+                              className="size-2.5 shrink-0 rounded-full bg-health-warning-dot ring-2 ring-sidebar group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:top-1.5 group-data-[collapsible=icon]:right-1.5"
+                            />
+                            <span className="sr-only">Needs attention</span>
+                          </>
+                        ) : null}
                         {!!item.badge && (
                           <span
                             key={item.badge}

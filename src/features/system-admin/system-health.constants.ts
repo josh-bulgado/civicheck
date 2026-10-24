@@ -26,40 +26,29 @@ export const healthStatusContent: Record<
   },
 };
 
-export const healthDataSources = [
-  {
-    signal: "Database",
-    source: "Metadata-only profiles availability probe",
-    refresh: "On dashboard refresh",
-    owner: "Platform operations",
-    exposure: "Availability and response time only",
-  },
-  {
-    signal: "Authentication",
-    source: "Supabase Auth administrative availability probe",
-    refresh: "On dashboard refresh",
-    owner: "Identity operations",
-    exposure: "Availability and response time only",
-  },
-  {
-    signal: "Document storage",
-    source: "Bucket probe and aggregate storage RPC",
-    refresh: "On dashboard refresh",
-    owner: "Platform operations",
-    exposure: "Object count and total bytes only",
-  },
-  {
-    signal: "Background jobs",
-    source: "Metadata-only job run records",
-    refresh: "Written by each job runner",
-    owner: "Platform engineering",
-    exposure: "Job key, state, retry count, and failure code",
-  },
-  {
-    signal: "Request workflow",
-    source: "Staff-owned request stage timestamps",
-    refresh: "On dashboard refresh",
-    owner: "CCRO operations",
-    exposure: "Aggregate stale-record count only",
-  },
-] as const;
+/** How long checks are kept. The nightly prune in the database must match. */
+export const HEALTH_RETENTION_DAYS = 30;
+
+/**
+ * What this page records, what it never does, and who sees it. The first list is what the
+ * checks write; the second is the promise that makes the page safe to show.
+ */
+export const privacyBoundary = {
+  recorded: [
+    "Availability and response time of the database, sign-in and document storage",
+    "Object count and total size of stored documents",
+    "The result of each check run: succeeded, failed, retries",
+    "Incident titles with a short, redacted summary",
+  ],
+  never: [
+    "Citizen form values or request remarks",
+    "Document names, paths or contents",
+    "Any request record, count or timestamp",
+    "Passwords, tokens or other secrets",
+  ],
+  access: [
+    "Active system administrators only, enforced in the database",
+    `Kept for ${HEALTH_RETENTION_DAYS} days, then deleted automatically`,
+    "Changes to limits, maintenance and alerts are written to the Audit Center",
+  ],
+} as const;

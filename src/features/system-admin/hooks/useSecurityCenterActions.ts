@@ -1,6 +1,5 @@
-import { useCallback, useState } from "react";
-import { useRouter } from "@tanstack/react-router";
-import { toast } from "sonner";
+import { useCallback } from "react";
+import { useActionRunner } from "~/hooks/useActionRunner";
 import {
   manageSecurityFinding,
   reviewSecurityControl,
@@ -12,35 +11,9 @@ type PendingSecurityAction =
   | null;
 
 export function useSecurityCenterActions() {
-  const router = useRouter();
-  const [pendingAction, setPendingAction] =
-    useState<PendingSecurityAction>(null);
-
-  const run = useCallback(
-    async (
-      action: () => Promise<unknown>,
-      pending: Exclude<PendingSecurityAction, null>,
-      successMessage: string,
-    ) => {
-      setPendingAction(pending);
-      try {
-        await action();
-        toast.success(successMessage);
-        await router.invalidate();
-        return true;
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "The security action could not be completed.",
-        );
-        return false;
-      } finally {
-        setPendingAction(null);
-      }
-    },
-    [router],
-  );
+  const { pending: pendingAction, run } = useActionRunner<
+    Exclude<PendingSecurityAction, null>
+  >("The security action could not be completed.");
 
   const acknowledge = useCallback(
     (findingId: string) =>

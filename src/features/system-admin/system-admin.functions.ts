@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { User } from "@supabase/supabase-js";
 import { z } from "zod";
 import { getSupabaseAdminClient } from "~/utils/supabase";
 import { requireActiveSession } from "~/server/auth";
@@ -36,7 +37,7 @@ const accountPageSchema = pageSchema.extend({
     .optional(),
   status: z.enum(["active", "suspended", "deactivated"]).optional(),
   departmentId: z.string().min(1).max(100).optional(),
-  signIn: z.literal("never").optional(),
+  signIn: z.enum(["never", "unverified"]).optional(),
 });
 const accountActionSchema = z.object({ targetId: z.string().uuid() });
 const suspendSchema = accountActionSchema.extend({
@@ -158,6 +159,23 @@ function buildAuthCallbackUrl(
   return url.toString();
 }
 
+/** Invited by the CCRO Administrator and has not accepted yet. */
+function hasPendingInvitation(user: Pick<User, "user_metadata">) {
+  return (
+    Boolean(user.user_metadata?.invited_role) &&
+    !user.user_metadata?.invitation_accepted_at
+  );
+}
+
+/** Which auth users each sign-in filter keeps. */
+const signInFilters: Record<
+  NonNullable<z.infer<typeof accountPageSchema>["signIn"]>,
+  (user: User) => boolean
+> = {
+  never: (user) => !user.last_sign_in_at,
+  unverified: (user) => !user.email_confirmed_at && !hasPendingInvitation(user),
+};
+
 export const getAccounts = createServerFn({ method: "GET" })
   .validator(accountPageSchema)
   .handler(async ({ data }) => {
@@ -211,10 +229,10 @@ export const getAccounts = createServerFn({ method: "GET" })
     if (data.departmentId) {
       profilesQuery = profilesQuery.eq("department_id", data.departmentId);
     }
-    if (data.signIn === "never") {
+    if (data.signIn) {
       profilesQuery = profilesQuery.in(
         "id",
-        authUsers.filter((user) => !user.last_sign_in_at).map((user) => user.id),
+        authUsers.filter(signInFilters[data.signIn]).map((user) => user.id),
       );
     }
     // Every word must match the first name, last name, or email, so
@@ -267,9 +285,7 @@ export const getAccounts = createServerFn({ method: "GET" })
       if (!user) throw new Error(`Auth user ${profile.id} is missing.`);
 
       const invitePending =
-        profile.role !== "applicant" &&
-        Boolean(user.user_metadata?.invited_role) &&
-        !user.user_metadata?.invitation_accepted_at;
+        profile.role !== "applicant" && hasPendingInvitation(user);
 
       return {
         id: user.id,
@@ -483,7 +499,7 @@ export const sendAccountPasswordReset = createServerFn({ method: "POST" })
     if (authUserError || !user?.email) {
       throw new Error("The sign-in record for this account is missing.");
     }
-    if (user.user_metadata?.invited_role && !user.user_metadata?.invitation_accepted_at) {
+    if (hasPendingInvitation(user)) {
       throw new Error(
         "This person has not accepted their invitation yet. The CCRO Administrator can resend it.",
       );

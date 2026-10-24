@@ -1,92 +1,69 @@
-import { useEffect, useRef, useState } from "react";
-import { RotateCcw, Search, UserRoundCog } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { RotateCcw } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
-import type { RealtimeStatus } from "~/hooks/useRealtimeRefresh";
+  FilterChips,
+  FilterSelect,
+  TableSearch,
+  type FilterChipOption,
+} from "~/components/ui/data-table-toolbar";
 import type { AccountStatus, Role } from "~/lib/permissions";
-import { roleLabels } from "../system-admin.constants";
+import {
+  accountCategories,
+  accountCategoryLabels,
+  accountStatusLabels,
+  roleLabels,
+} from "../system-admin.constants";
 import type {
   AccountCategory,
   AccountFilters,
+  AccountSignInFilter,
   SystemAdminDepartment,
 } from "../system-admin.types";
-import { RealtimeStatusBadge } from "./RealtimeStatusBadge";
 
 const ALL = "all";
 const SEARCH_DEBOUNCE_MS = 350;
 
 const personnelRoles: Role[] = ["staff", "supervisor", "cashier", "admin"];
 
-const statusOptions: { value: AccountStatus; label: string }[] = [
-  { value: "active", label: "Active" },
-  { value: "suspended", label: "Suspended" },
-  { value: "deactivated", label: "Deactivated" },
+const categoryOptions: FilterChipOption<AccountCategory>[] =
+  accountCategories.map((value) => ({
+    value,
+    label: accountCategoryLabels[value],
+  }));
+
+const roleOptions = [
+  { value: ALL, label: "All roles" },
+  ...personnelRoles.map((role) => ({ value: role, label: roleLabels[role] })),
 ];
 
-type FilterOption = { value: string; label: string };
+const statusOptions = [
+  { value: ALL, label: "All statuses" },
+  ...(Object.keys(accountStatusLabels) as AccountStatus[]).map((status) => ({
+    value: status,
+    label: accountStatusLabels[status],
+  })),
+];
 
-function FilterSelect({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: FilterOption[];
-  onChange: (value: string) => void;
-}) {
-  return (
-    <Select
-      value={value}
-      onValueChange={(next) => onChange(next as string)}
-    >
-      <SelectTrigger aria-label={label} className="w-full sm:w-44">
-        <SelectValue>
-          {(current) =>
-            options.find((option) => option.value === current)?.label
-          }
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent>
-        <SelectGroup>
-          {options.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
-  );
-}
+const signInOptions: { value: AccountSignInFilter | typeof ALL; label: string }[] =
+  [
+    { value: ALL, label: "Any sign-in" },
+    { value: "never", label: "Never signed in" },
+    { value: "unverified", label: "Email not verified" },
+  ];
 
 export function AccountsTableToolbar({
   category,
   filters,
   departments,
   onFiltersChange,
-  placeholder,
-  realtimeStatus,
-  onReplaceAdministrator,
-  replaceAdministratorLabel = "Replace CCRO Administrator",
+  onCategoryChange,
 }: {
   category: AccountCategory;
   filters: AccountFilters;
   departments: SystemAdminDepartment[];
   onFiltersChange: (filters: AccountFilters) => void;
-  placeholder: string;
-  realtimeStatus: RealtimeStatus;
-  onReplaceAdministrator?: () => void;
-  replaceAdministratorLabel?: string;
+  onCategoryChange: (category: AccountCategory) => void;
 }) {
   const [search, setSearch] = useState(filters.q ?? "");
   const latest = useRef({ filters, onFiltersChange });
@@ -113,66 +90,60 @@ export function AccountsTableToolbar({
     setSearch(filters.q ?? "");
   }, [filters.q]);
 
+  const departmentOptions = useMemo(
+    () => [
+      { value: ALL, label: "All departments" },
+      ...departments.map((department) => ({
+        value: department.id,
+        label: department.name,
+      })),
+    ],
+    [departments],
+  );
+
   function update(patch: Partial<AccountFilters>) {
     onFiltersChange({ ...filters, ...patch });
   }
 
   const isPersonnel = category === "personnel";
-  const hasFilters = Boolean(
-    filters.q ||
-      filters.role ||
-      filters.status ||
-      filters.departmentId ||
-      filters.signIn,
-  );
+  const hasFilters = Object.values(filters).some(Boolean);
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex w-full items-center gap-3 sm:max-w-sm">
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder={placeholder}
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              aria-label="Search accounts by name or email"
-              className="h-10 rounded-lg pl-10 text-sm"
-            />
-          </div>
-          <RealtimeStatusBadge status={realtimeStatus} />
-        </div>
-        {onReplaceAdministrator ? (
-          <Button onClick={onReplaceAdministrator} className="sm:shrink-0">
-            <UserRoundCog />
-            {replaceAdministratorLabel}
-          </Button>
-        ) : null}
+      <div className="flex flex-wrap items-center gap-3">
+        <TableSearch
+          value={search}
+          onChange={setSearch}
+          placeholder="Search by name or email…"
+          label="Search accounts"
+        />
+        <FilterChips
+          label="Account group"
+          value={category}
+          onValueChange={onCategoryChange}
+          options={categoryOptions}
+        />
       </div>
 
       {category === "platform-admins" ? null : (
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="flex flex-wrap items-center gap-3 sm:justify-end">
           {isPersonnel ? (
             <FilterSelect
-              label="Filter by role"
+              id="accounts-role-filter"
+              label="Role"
               value={filters.role ?? ALL}
-              options={[
-                { value: ALL, label: "All roles" },
-                ...personnelRoles.map((role) => ({
-                  value: role,
-                  label: roleLabels[role],
-                })),
-              ]}
-              onChange={(value) =>
+              options={roleOptions}
+              onValueChange={(value) =>
                 update({ role: value === ALL ? undefined : (value as Role) })
               }
             />
           ) : null}
           <FilterSelect
-            label="Filter by status"
+            id="accounts-status-filter"
+            label="Status"
             value={filters.status ?? ALL}
-            options={[{ value: ALL, label: "All statuses" }, ...statusOptions]}
-            onChange={(value) =>
+            options={statusOptions}
+            onValueChange={(value) =>
               update({
                 status: value === ALL ? undefined : (value as AccountStatus),
               })
@@ -180,39 +151,34 @@ export function AccountsTableToolbar({
           />
           {isPersonnel ? (
             <FilterSelect
-              label="Filter by department"
+              id="accounts-department-filter"
+              label="Department"
               value={filters.departmentId ?? ALL}
-              options={[
-                { value: ALL, label: "All departments" },
-                ...departments.map((department) => ({
-                  value: department.id,
-                  label: department.name,
-                })),
-              ]}
-              onChange={(value) =>
+              options={departmentOptions}
+              onValueChange={(value) =>
                 update({ departmentId: value === ALL ? undefined : value })
               }
             />
           ) : null}
           <FilterSelect
-            label="Filter by sign-in"
+            id="accounts-sign-in-filter"
+            label="Sign-in"
             value={filters.signIn ?? ALL}
-            options={[
-              { value: ALL, label: "Any sign-in" },
-              { value: "never", label: "Never signed in" },
-            ]}
-            onChange={(value) =>
-              update({ signIn: value === "never" ? "never" : undefined })
+            options={signInOptions}
+            onValueChange={(value) =>
+              update({
+                signIn: value === ALL ? undefined : (value as AccountSignInFilter),
+              })
             }
           />
           {hasFilters ? (
             <Button
               variant="ghost"
-              size="sm"
+              size="lg"
               onClick={() => onFiltersChange({})}
             >
-              <RotateCcw />
-              Clear filters
+              <RotateCcw aria-hidden="true" data-icon="inline-start" />
+              Clear Filters
             </Button>
           ) : null}
         </div>

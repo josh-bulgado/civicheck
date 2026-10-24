@@ -42,7 +42,9 @@ export function roleLabel(role: Role): string {
 }
 
 /** Department as the table shows it: some roles never belong to one. */
-export function departmentLabel(staffMember: StaffMember): string {
+export function departmentLabel(
+  staffMember: Pick<StaffMember, "role" | "departmentName">,
+): string {
   return (
     DEPARTMENT_FALLBACK_BY_ROLE[staffMember.role] ??
     staffMember.departmentName ??

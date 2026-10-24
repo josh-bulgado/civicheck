@@ -219,6 +219,8 @@ export function buildNavGroups(
   role: Role,
   can: (permission: Permission) => boolean,
   unreadNotifications = 0,
+  /** Items that get the attention dot, such as System Health while something is wrong. */
+  attentionIds: readonly NavItemId[] = [],
 ): NavGroup[] {
   return ROLE_LAYOUTS[role]
     .map(({ itemIds, ...group }) => ({
@@ -234,6 +236,7 @@ export function buildNavGroups(
             icon:
               role === "applicant" ? (entry.applicantIcon ?? entry.icon) : entry.icon,
             ...(id === "notifications" ? { badge: unreadNotifications } : {}),
+            ...(attentionIds.includes(id) ? { attention: true } : {}),
           },
         ];
       }),
