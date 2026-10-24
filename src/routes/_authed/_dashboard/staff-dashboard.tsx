@@ -5,14 +5,14 @@ import {
   getAwaitingPaymentCountFn,
   getMyDepartmentScopeFn,
   getPaymentsVerifiedTodayCountFn,
-  type StaffRequestRow,
 } from "~/features/requests/requests.queries";
-import { STAGE_OF, isRequestStatus } from "~/features/requests/request-workflow";
 import { getEncodableServicesFn } from "~/features/requests/walk-in-intake.queries";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { StaffDashboard } from "~/features/dashboard/StaffDashboard";
+import { summarizeStaffDesk } from "~/features/dashboard/staff-desk";
 import { StaffDashboardSkeleton } from "~/features/dashboard/StaffDashboardSkeleton";
 import { denyAccess } from "~/lib/access";
+import { toDateKey } from "~/lib/date";
 
 export const Route = createFileRoute("/_authed/_dashboard/staff-dashboard")({
   beforeLoad: ({ context, location }) => {
@@ -20,33 +20,17 @@ export const Route = createFileRoute("/_authed/_dashboard/staff-dashboard")({
       denyAccess(location);
   },
   loader: async ({ context }) => {
-    const isCashier = context.user?.role === "cashier";
-
     // Cashier holds no request-docket permissions — it must
     // never call those functions, only the narrow counts
     // its own Cashier Counter / Payment History actually need.
-    if (isCashier) {
+    if (context.user?.role === "cashier") {
       const [scope, unpaid, paymentsVerifiedToday] = await Promise.all([
         getMyDepartmentScopeFn(),
         getAwaitingPaymentCountFn(),
         getPaymentsVerifiedTodayCountFn(),
       ]);
 
-      return {
-        isCashier: true as const,
-        canViewRequests: false,
-        canEncodeWalkIn: false,
-        awaitingIntake: 0,
-        inValidation: 0,
-        inProgress: 0,
-        readyForRelease: 0,
-        unpaid,
-        paymentsVerifiedToday,
-        scope,
-        needsAttention: [] as StaffRequestRow[],
-        needsAttentionCount: 0,
-        encodableServices: [],
-      };
+      return { isCashier: true as const, unpaid, paymentsVerifiedToday, scope };
     }
 
     const role = context.user!.role as Role;
@@ -58,32 +42,13 @@ export const Route = createFileRoute("/_authed/_dashboard/staff-dashboard")({
       canEncodeWalkIn ? getEncodableServicesFn() : Promise.resolve([]),
     ]);
 
-    const inStage = (stage: number) =>
-      requests.filter((r) => isRequestStatus(r.status) && STAGE_OF[r.status] === stage)
-        .length;
-
-    const needsAttentionAll = requests
-      .filter((r) => r.status === "incomplete" || r.status === "rejected")
-      .sort((a, b) => a.updatedAt.localeCompare(b.updatedAt));
-
     return {
       isCashier: false as const,
-      canViewRequests,
       canEncodeWalkIn,
-      awaitingIntake: inStage(1),
-      inValidation: inStage(2),
-      // Stage 4 is Release, which the readyForRelease tile already counts —
-      // rolling it in here would double-count it (and pull in released ones).
-      inProgress: inStage(3),
-      readyForRelease: requests.filter((r) => r.status === "ready_for_release").length,
-      unpaid: requests.filter(
-        (r) => r.status === "ready_for_release" && r.paymentStatus !== "verified",
-      ).length,
-      paymentsVerifiedToday: 0,
       scope,
-      needsAttention: needsAttentionAll.slice(0, 5),
-      needsAttentionCount: needsAttentionAll.length,
+      desk: canViewRequests ? summarizeStaffDesk(requests, Date.now()) : null,
       encodableServices,
+      officeDate: toDateKey(),
     };
   },
   staleTime: 15_000,

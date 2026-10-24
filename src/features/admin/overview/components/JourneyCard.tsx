@@ -1,13 +1,6 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import {
-  CheckCircle2,
-  FileClock,
-  FileSearch,
-  ListChecks,
-  TicketCheck,
-  type LucideIcon,
-} from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { CountUp } from "~/components/motion/count-up";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
@@ -23,6 +16,7 @@ import {
   type RequestOverview,
   type StageSummary,
 } from "~/features/admin/overview/overview-metrics";
+import { STAGE_ICONS } from "~/features/requests/stage-icons";
 import { STAGE_TONES } from "~/features/requests/stage-tones";
 import type { WorkflowStage } from "~/features/requests/request-workflow";
 import { cn } from "~/lib/utils";
@@ -41,13 +35,6 @@ const BUBBLE_CENTER_Y: Record<WorkflowStage, number> = {
 };
 const JOURNEY_PATH =
   "M0 105 C 250 105, 260 85, 450 85 S 620 110, 750 110 S 900 90, 1050 90 L 1200 90";
-
-const STAGE_ICONS: Record<WorkflowStage, LucideIcon> = {
-  1: FileClock,
-  2: FileSearch,
-  3: ListChecks,
-  4: TicketCheck,
-};
 
 function describeJourney(requests: RequestOverview) {
   const stages = requests.stages
