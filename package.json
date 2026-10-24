@@ -61,6 +61,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.11",
     "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "^4.2.2",
     "@tanstack/devtools-vite": "^0.8.5",

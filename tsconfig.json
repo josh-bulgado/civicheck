@@ -1,5 +1,7 @@
 {
   "include": ["**/*.ts", "**/*.tsx"],
+  // supabase/functions run on Deno (jsr:, npm: imports, the Deno global), not under this compiler.
+  "exclude": ["node_modules", "supabase/functions"],
   "compilerOptions": {
     "typeRoots": ["./node_modules/@types", "./src/types"],
     "strict": true,
