@@ -7,6 +7,8 @@ export interface NavItem {
   url: string;
   isActive?: boolean;
   badge?: number;
+  /** A dot: something on this page needs a look. Not a count. */
+  attention?: boolean;
 }
 
 export interface NavGroup {

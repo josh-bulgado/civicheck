@@ -28,7 +28,8 @@ import { NewNotificationToasts } from "~/features/notifications/components/NewNo
 import { invalidatePaletteDefaults } from "~/features/search/palette-defaults";
 import { getNotificationAudience } from "~/features/notifications/notification-audience";
 import { WelcomeTutorial } from "~/features/onboarding/components/WelcomeTutorial";
-import type { Role } from "~/lib/permissions";
+import { getHealthAttention } from "~/features/system-admin/system-health.functions";
+import { hasPermission, type Role } from "~/lib/permissions";
 
 // The sidebar's column, for every role: its own width, the 10px of frame to its
 // left and the 6px gap before the panel. The panel's other three sides get their
@@ -54,7 +55,13 @@ export const Route = createFileRoute("/_authed/_dashboard")({
       context.user && getNotificationAudience(context.user.role as Role)
         ? await getUnreadNotificationSummaryFn().catch(() => null)
         : null;
+    // System Health's dot. Like the badge, it must never take the dashboard down with it.
+    const healthNeedsAttention =
+      context.user && hasPermission(context.user.role as Role, "health:view")
+        ? await getHealthAttention().catch(() => false)
+        : false;
     return {
+      healthNeedsAttention,
       unreadNotifications: unread?.count ?? 0,
       // Which requests those are about. The request list marks them "New".
       unreadRequestIds: unread?.requestIds ?? [],
@@ -62,6 +69,10 @@ export const Route = createFileRoute("/_authed/_dashboard")({
   },
   staleTime: 30_000,
 });
+
+// Constants, so the sidebar does not see a new array on every render.
+const HEALTH_ATTENTION = ["system-health"] as const;
+const NO_ATTENTION = [] as const;
 
 function refreshPortalCaches() {
   invalidateNotificationPreview();
@@ -84,7 +95,7 @@ function DashboardLayout() {
       ),
   });
   const { user } = Route.useRouteContext();
-  const { unreadNotifications } = Route.useLoaderData();
+  const { unreadNotifications, healthNeedsAttention } = Route.useLoaderData();
   const isCitizen = user?.role === "applicant";
   // Sidebar badge tracks new notifications live, from wherever the reader
   // happens to be — not just while they're on the notifications page itself.
@@ -100,6 +111,13 @@ function DashboardLayout() {
     onRow: (event) => {
       if (user && isNewArrival(event)) announceNotification(user.id, String(event.row.id));
     },
+  });
+
+  // The System Health dot follows incidents and the monitor's own runs, from any page.
+  const canViewHealth = !!user && hasPermission(user.role as Role, "health:view");
+  useRealtimeRefresh({
+    tables: ["system_operational_events", "system_background_job_runs"],
+    enabled: canViewHealth,
   });
 
   return (
@@ -118,7 +136,11 @@ function DashboardLayout() {
         Skip to Main Content
       </a>
       {!isServiceEditor && (
-        <AppSidebar user={user} unreadNotifications={unreadNotifications} />
+        <AppSidebar
+          user={user}
+          unreadNotifications={unreadNotifications}
+          attentionIds={healthNeedsAttention ? HEALTH_ATTENTION : NO_ATTENTION}
+        />
       )}
       {isServiceEditor ? (
         <main

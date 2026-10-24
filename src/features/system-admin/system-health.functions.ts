@@ -1,413 +1,216 @@
 import { createServerFn } from "@tanstack/react-start";
 import { setResponseHeader } from "@tanstack/react-start/server";
+import { z } from "zod";
+import { hasPermission } from "~/lib/permissions";
 import { requireActiveSession } from "~/server/auth";
 import { getSupabaseAdminClient } from "~/utils/supabase";
-import type {
-  HealthEvent,
-  HealthStatus,
-  OperationalSignal,
-  ServiceHealth,
-  SystemHealthDashboard,
-} from "./system-admin.types";
+import { getRequestNetworkSignal } from "./network-signal.server";
+import { getSecurityCenter } from "./security-center.functions";
+import {
+  buildDashboard,
+  MANUAL_CHECK_COOLDOWN_SECONDS,
+  type RawHealthSummary,
+  type RawSeriesRow,
+} from "./system-health.model";
+import type { SecurityGlance, SystemHealthDashboard } from "./system-admin.types";
 
-type ServiceKey = ServiceHealth["key"];
+const BYTES_PER_GB = 1024 ** 3;
 
-type ProbeResult<T = undefined> = {
-  key: ServiceKey;
-  status: HealthStatus;
-  responseTimeMs: number | null;
-  checkedAt: string;
-  value: T | null;
-};
+const isoDate = z
+  .string()
+  .refine((value) => !Number.isNaN(Date.parse(value)), "Enter a valid date and time.");
 
-type StorageUsage = {
-  objectCount: number;
-  totalBytes: number;
-};
+const maintenanceSchema = z
+  .object({
+    component: z.enum(["database", "authentication", "storage", "all"]),
+    title: z.string().trim().min(1, "Enter a title.").max(120, "Use 120 characters or fewer."),
+    note: z.string().trim().max(500, "Use 500 characters or fewer.").default(""),
+    startsAt: isoDate,
+    endsAt: isoDate,
+  })
+  .refine((value) => Date.parse(value.endsAt) > Date.parse(value.startsAt), {
+    message: "The window must end after it starts.",
+    path: ["endsAt"],
+  });
 
-const serviceDetails: Record<
-  ServiceKey,
-  { name: string; description: string; slowAfterMs: number }
-> = {
-  database: {
-    name: "Core database",
-    description: "Profiles and operational records",
-    slowAfterMs: 600,
-  },
-  authentication: {
-    name: "Authentication",
-    description: "Account sign-in and session service",
-    slowAfterMs: 1_200,
-  },
-  storage: {
-    name: "Document storage",
-    description: "Protected upload storage availability",
-    slowAfterMs: 1_500,
-  },
-};
+const slowLimit = z.number().int().min(100, "Use at least 100 ms.").max(60_000, "Use 60,000 ms or fewer.");
 
-const activeRequestStatuses = ["submitted", "under_validation", "processing"];
+const limitsSchema = z.object({
+  database: slowLimit,
+  authentication: slowLimit,
+  storage: slowLimit,
+  capacityGb: z.number().positive("Enter a capacity above zero.").max(1_000_000).nullable(),
+});
 
-function normalizeStatus(value: unknown): HealthStatus {
-  return value === "operational" ||
-    value === "degraded" ||
-    value === "outage"
-    ? value
-    : "unknown";
-}
+const acknowledgeSchema = z.object({ eventId: z.string().uuid() });
+const alertsSchema = z.object({ enabled: z.boolean() });
 
-function numberOf(value: unknown): number {
-  const result = Number(value ?? 0);
-  return Number.isFinite(result) ? result : 0;
-}
-
-function roundPercent(value: number): number {
-  return Math.round(value * 10) / 10;
-}
-
-function statusRank(status: HealthStatus): number {
-  switch (status) {
-    case "outage":
-      return 3;
-    case "degraded":
-      return 2;
-    case "unknown":
-      return 1;
-    default:
-      return 0;
-  }
-}
-
-async function runProbe<T>(
-  key: ServiceKey,
-  check: () => Promise<T>,
-): Promise<ProbeResult<T>> {
-  const startedAt = performance.now();
+/** The Security Center numbers this page glances at. Health still loads if they cannot be read. */
+async function readSecurityGlance(): Promise<SecurityGlance | null> {
   try {
-    const value = await check();
-    const responseTimeMs = Math.max(0, Math.round(performance.now() - startedAt));
+    const security = await getSecurityCenter();
     return {
-      key,
-      status:
-        responseTimeMs > serviceDetails[key].slowAfterMs
-          ? "degraded"
-          : "operational",
-      responseTimeMs,
-      checkedAt: new Date().toISOString(),
-      value,
+      posture: security.posture,
+      openFindingCount: security.openFindingCount,
+      overdueControlCount: security.overdueControlCount,
     };
   } catch {
-    return {
-      key,
-      status: key === "database" ? "outage" : "degraded",
-      responseTimeMs: null,
-      checkedAt: new Date().toISOString(),
-      value: null,
-    };
+    return null;
   }
 }
 
-function buildServiceHealth(
-  probe: ProbeResult<unknown>,
-  historicalRows: Array<{
-    component_key: string;
-    status: string;
-    response_time_ms: number | null;
-    recorded_at: string;
-  }>,
-): ServiceHealth {
-  const historical = historicalRows
-    .filter((row) => row.component_key === probe.key)
-    .map((row) => ({
-      timestamp: row.recorded_at,
-      responseTimeMs: row.response_time_ms,
-      status: normalizeStatus(row.status),
-    }));
-  const trend = [
-    ...historical,
-    {
-      timestamp: probe.checkedAt,
-      responseTimeMs: probe.responseTimeMs,
-      status: probe.status,
-    },
-  ].slice(-24);
-  const successful = trend.filter((point) => point.status === "operational").length;
-  const errors = trend.filter(
-    (point) => point.status === "degraded" || point.status === "outage",
-  ).length;
-
-  return {
-    key: probe.key,
-    name: serviceDetails[probe.key].name,
-    description: serviceDetails[probe.key].description,
-    status: probe.status,
-    responseTimeMs: probe.responseTimeMs,
-    availabilityPercent: roundPercent((successful / trend.length) * 100),
-    errorRatePercent: roundPercent((errors / trend.length) * 100),
-    lastCheckedAt: probe.checkedAt,
-    trend,
-  };
-}
-
-function buildDerivedEvents(services: ServiceHealth[]): HealthEvent[] {
-  const events: HealthEvent[] = [];
-
-  for (const service of services) {
-    for (let index = 1; index < service.trend.length; index += 1) {
-      const previous = service.trend[index - 1];
-      const current = service.trend[index];
-      if (previous.status === current.status) continue;
-
-      const recovered =
-        current.status === "operational" && previous.status !== "operational";
-      events.push({
-        id: `derived-${service.key}-${current.timestamp}`,
-        component: service.name,
-        title: recovered
-          ? `${service.name} recovered`
-          : `${service.name} changed to ${current.status}`,
-        summary: recovered
-          ? "The latest aggregate probe returned to normal."
-          : "The aggregate availability or response-time probe crossed its health threshold.",
-        type: recovered ? "recovery" : "degradation",
-        severity: recovered
-          ? "info"
-          : current.status === "outage"
-            ? "critical"
-            : "warning",
-        timestamp: current.timestamp,
-        resolvedAt: recovered ? current.timestamp : null,
-        relatedAuditEventId: null,
-      });
-    }
-
-    if (service.status !== "operational") {
-      events.push({
-        id: `active-${service.key}`,
-        component: service.name,
-        title: `${service.name} is ${service.status}`,
-        summary: "The current metadata-only probe requires operational review.",
-        type: "degradation",
-        severity: service.status === "outage" ? "critical" : "warning",
-        timestamp: service.lastCheckedAt,
-        resolvedAt: null,
-        relatedAuditEventId: null,
-      });
-    }
-  }
-
-  return events;
-}
-
+/** The page only reads. Checking happens on a schedule and on Check Now. */
 export const getSystemHealth = createServerFn({ method: "GET" }).handler(
   async (): Promise<SystemHealthDashboard> => {
-    await requireActiveSession("health:view");
+    const session = await requireActiveSession("health:view");
     setResponseHeader("Cache-Control", "no-store");
 
     const admin = getSupabaseAdminClient();
-    const checkedAt = new Date().toISOString();
-    const historyCutoff = new Date(Date.now() - 24 * 60 * 60 * 1_000).toISOString();
-    const workflowCutoff = Date.now() - 48 * 60 * 60 * 1_000;
-
-    const databaseProbePromise = runProbe("database", async () => {
-      const { error } = await admin
-        .from("profiles")
-        .select("id", { count: "exact", head: true });
-      if (error) throw error;
-    });
-    const authenticationProbePromise = runProbe("authentication", async () => {
-      const { error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1 });
-      if (error) throw error;
-    });
-    const storageProbePromise = runProbe<StorageUsage>("storage", async () => {
-      const [buckets, usage] = await Promise.all([
-        admin.storage.listBuckets(),
-        admin.rpc("system_health_storage_usage"),
-      ]);
-      if (buckets.error) throw buckets.error;
-      if (usage.error) throw usage.error;
-      const row = Array.isArray(usage.data) ? usage.data[0] : usage.data;
-      return {
-        objectCount: numberOf(row?.object_count),
-        totalBytes: numberOf(row?.total_bytes),
-      };
-    });
-
-    const historyPromise = admin
-      .from("system_health_snapshots")
-      .select("component_key, status, response_time_ms, recorded_at")
-      .gte("recorded_at", historyCutoff)
-      .order("recorded_at", { ascending: true })
-      .limit(500);
-    const jobsPromise = admin
-      .from("system_background_job_runs")
-      .select("status, retry_count, started_at, completed_at")
-      .gte("started_at", historyCutoff);
-    const workflowPromise = admin
-      .from("requests")
-      .select("status, updated_at")
-      .in("status", activeRequestStatuses);
-    const eventsPromise = admin
-      .from("system_operational_events")
-      .select(
-        "id, component_key, severity, event_type, title, summary, started_at, resolved_at, related_audit_event_id",
-      )
-      .order("started_at", { ascending: false })
-      .limit(12);
-
-    const [
-      databaseProbe,
-      authenticationProbe,
-      storageProbe,
-      historyResult,
-      jobsResult,
-      workflowResult,
-      eventsResult,
-    ] = await Promise.all([
-      databaseProbePromise,
-      authenticationProbePromise,
-      storageProbePromise,
-      historyPromise,
-      jobsPromise,
-      workflowPromise,
-      eventsPromise,
+    const [summary, series, security] = await Promise.all([
+      admin.rpc("system_health_summary"),
+      admin.rpc("system_health_series", { p_hours: 24 }),
+      readSecurityGlance(),
     ]);
 
-    const probes = [databaseProbe, authenticationProbe, storageProbe];
-    const { error: snapshotError } = await admin
-      .from("system_health_snapshots")
-      .insert(
-        probes.map((probe) => ({
-          component_key: probe.key,
-          status: probe.status,
-          response_time_ms: probe.responseTimeMs,
-          recorded_at: probe.checkedAt,
-        })),
+    // PostgREST reports a missing function as PGRST202: the migration has not been applied.
+    if (summary.error?.code === "PGRST202") {
+      throw new Error(
+        "System Health needs its database migration. Apply supabase/migrations/20261024120000_system_health_monitoring.sql, then reload.",
       );
-    if (snapshotError) {
-      console.warn("System health snapshot could not be recorded.");
     }
+    if (summary.error || !summary.data) {
+      console.error("system_health_summary failed:", summary.error?.message);
+      throw new Error("System health could not be loaded. Try again in a moment.");
+    }
+    if (series.error) console.error("system_health_series failed:", series.error.message);
 
-    const historicalRows = historyResult.error ? [] : (historyResult.data ?? []);
-    const services = probes.map((probe) =>
-      buildServiceHealth(probe, historicalRows),
-    );
-
-    const jobRows = jobsResult.error ? [] : (jobsResult.data ?? []);
-    const failedJobs = jobRows.filter((row) => row.status === "failed").length;
-    const jobsStatus: HealthStatus = jobsResult.error
-      ? "unknown"
-      : failedJobs > 0
-        ? "degraded"
-        : "operational";
-
-    const workflowRows = workflowResult.error ? [] : (workflowResult.data ?? []);
-    const stalledRequests = workflowRows.filter(
-      (row) => new Date(row.updated_at).getTime() < workflowCutoff,
-    ).length;
-    const workflowStatus: HealthStatus = workflowResult.error
-      ? "unknown"
-      : stalledRequests > 0
-        ? "degraded"
-        : "operational";
-
-    const storageCapacity = numberOf(process.env.SUPABASE_STORAGE_CAPACITY_BYTES);
-    const storageUsage = storageProbe.value;
-    const storagePercent =
-      storageUsage && storageCapacity > 0
-        ? roundPercent((storageUsage.totalBytes / storageCapacity) * 100)
-        : null;
-    const storageSignalStatus: HealthStatus =
-      storageProbe.status !== "operational"
-        ? storageProbe.status
-        : storagePercent !== null && storagePercent >= 85
-          ? "degraded"
-          : "operational";
-
-    const signals: OperationalSignal[] = [
-      {
-        key: "jobs",
-        label: "Background jobs",
-        value: jobsResult.error ? "Unavailable" : `${failedJobs} failed`,
-        detail: jobsResult.error
-          ? "Job telemetry is unavailable."
-          : `${jobRows.length} runs recorded in the last 24 hours.`,
-        status: jobsStatus,
-      },
-      {
-        key: "storage",
-        label: "Storage capacity",
-        value: storageUsage
-          ? `${(storageUsage.totalBytes / 1_048_576).toFixed(1)} MB`
-          : "Unavailable",
-        detail: storageUsage
-          ? storagePercent === null
-            ? `${storageUsage.objectCount} objects; capacity baseline not configured.`
-            : `${storagePercent}% of configured capacity across ${storageUsage.objectCount} objects.`
-          : "Aggregate storage telemetry is unavailable.",
-        status: storageSignalStatus,
-      },
-      {
-        key: "workflow",
-        label: "Request workflow",
-        value: workflowResult.error
-          ? "Unavailable"
-          : `${stalledRequests} stalled`,
-        detail: workflowResult.error
-          ? "Workflow telemetry is unavailable."
-          : `${workflowRows.length} active records checked; stalled means no update for 48 hours.`,
-        status: workflowStatus,
-      },
-    ];
-
-    const explicitEvents: HealthEvent[] = eventsResult.error
-      ? []
-      : (eventsResult.data ?? []).map((event) => ({
-          id: event.id,
-          component: event.component_key,
-          title: event.title,
-          summary: event.summary,
-          type: event.event_type as HealthEvent["type"],
-          severity: event.severity as HealthEvent["severity"],
-          timestamp: event.started_at,
-          resolvedAt: event.resolved_at,
-          relatedAuditEventId: event.related_audit_event_id,
-        }));
-    const activeEventStatuses: HealthStatus[] = explicitEvents
-      .filter(
-        (event) => event.type === "degradation" && event.resolvedAt === null,
-      )
-      .map((event) =>
-        event.severity === "critical" ? "outage" : "degraded",
-      );
-    const events = [...explicitEvents, ...buildDerivedEvents(services)]
-      .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
-      .slice(0, 10);
-
-    const allStatuses = [
-      ...services.map((service) => service.status),
-      ...signals.map((signal) => signal.status),
-      ...activeEventStatuses,
-    ];
-    const overallStatus = allStatuses.reduce<HealthStatus>((worst, status) =>
-      statusRank(status) > statusRank(worst) ? status : worst,
-    "operational");
-    const availabilityPercent = roundPercent(
-      services.reduce((total, service) => total + service.availabilityPercent, 0) /
-        services.length,
-    );
-    const activeDegradations = allStatuses.filter(
-      (status) => status === "degraded" || status === "outage",
-    ).length;
-
-    return {
-      overallStatus,
-      availabilityPercent,
-      activeDegradations,
-      checkedAt,
-      services,
-      signals,
-      events,
-    };
+    return buildDashboard({
+      summary: summary.data as RawHealthSummary,
+      series: (series.data ?? []) as RawSeriesRow[],
+      security,
+      canManage: hasPermission(session.role, "health:manage"),
+    });
   },
 );
+
+/** The sidebar dot: true while an incident is open or the monitor has stopped. Cheap enough to run on every page. */
+export const getHealthAttention = createServerFn({ method: "GET" }).handler(async (): Promise<boolean> => {
+  await requireActiveSession("health:view");
+  setResponseHeader("Cache-Control", "no-store");
+  const { data, error } = await getSupabaseAdminClient().rpc("system_health_attention");
+  return !error && data === true;
+});
+
+/** Calls the same function the schedule calls, so a manual check and a scheduled one cannot differ. */
+export const runHealthCheck = createServerFn({ method: "POST" }).handler(async () => {
+  const session = await requireActiveSession("health:manage");
+  const secret = process.env.HEALTH_PROBE_SECRET;
+  const baseUrl = process.env.SUPABASE_URL;
+  if (!secret || !baseUrl) {
+    throw new Error(
+      "Checks are not set up yet. Add HEALTH_PROBE_SECRET to .env and deploy the health-probe function.",
+    );
+  }
+
+  const admin = getSupabaseAdminClient();
+  const { data: last } = await admin
+    .from("system_health_snapshots")
+    .select("recorded_at")
+    .eq("run_kind", "manual")
+    .not("triggered_by", "is", null)
+    .order("recorded_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (last && Date.now() - new Date(last.recorded_at).getTime() < MANUAL_CHECK_COOLDOWN_SECONDS * 1000) {
+    throw new Error("A check ran a moment ago. Wait a minute and try again.");
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}/functions/v1/health-probe`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-health-secret": secret },
+      body: JSON.stringify({ run_kind: "manual", triggered_by: session.user.id }),
+      signal: AbortSignal.timeout(25_000),
+    });
+  } catch {
+    throw new Error("The health-probe function did not answer. Check that it is deployed, then try again.");
+  }
+  if (response.status === 401) {
+    throw new Error("The health-probe function rejected the secret. Use the same HEALTH_PROBE_SECRET in .env and in the function's secrets.");
+  }
+  if (response.status === 404) throw new Error("The health-probe function is not deployed yet.");
+  if (!response.ok) throw new Error("The check could not be recorded. Try again in a moment.");
+
+  await runHealthAction("system_health_audit_manual_run", session.user.id, {});
+  return { success: true };
+});
+
+export const recordMaintenance = createServerFn({ method: "POST" })
+  .validator(maintenanceSchema)
+  .handler(async ({ data }) => {
+    const session = await requireActiveSession("health:manage");
+    await runHealthAction("system_health_record_maintenance", session.user.id, {
+      p_component: data.component,
+      p_title: data.title,
+      p_note: data.note,
+      p_start: new Date(data.startsAt).toISOString(),
+      p_end: new Date(data.endsAt).toISOString(),
+    });
+    return { success: true };
+  });
+
+export const acknowledgeHealthEvent = createServerFn({ method: "POST" })
+  .validator(acknowledgeSchema)
+  .handler(async ({ data }) => {
+    const session = await requireActiveSession("health:manage");
+    await runHealthAction("system_health_acknowledge_event", session.user.id, { p_event: data.eventId });
+    return { success: true };
+  });
+
+export const updateHealthLimits = createServerFn({ method: "POST" })
+  .validator(limitsSchema)
+  .handler(async ({ data }) => {
+    const session = await requireActiveSession("health:manage");
+    await runHealthAction("system_health_update_limits", session.user.id, {
+      p_limits: {
+        database: data.database,
+        authentication: data.authentication,
+        storage: data.storage,
+        capacity_bytes: data.capacityGb === null ? null : Math.round(data.capacityGb * BYTES_PER_GB),
+      },
+    });
+    return { success: true };
+  });
+
+export const setHealthAlerts = createServerFn({ method: "POST" })
+  .validator(alertsSchema)
+  .handler(async ({ data }) => {
+    const session = await requireActiveSession("health:manage");
+    await runHealthAction("system_health_set_alerts", session.user.id, { p_enabled: data.enabled });
+    return { success: true };
+  });
+
+/**
+ * Runs one of the administrative functions. Each writes its own audit entry in the same
+ * transaction as the change, so an action and its record cannot come apart.
+ */
+async function runHealthAction(
+  fn:
+    | "system_health_audit_manual_run"
+    | "system_health_record_maintenance"
+    | "system_health_acknowledge_event"
+    | "system_health_update_limits"
+    | "system_health_set_alerts",
+  actorId: string,
+  args: Record<string, unknown>,
+) {
+  const { maskedIpAddress, userAgent } = getRequestNetworkSignal();
+  const { error } = await getSupabaseAdminClient().rpc(fn, {
+    p_actor: actorId,
+    ...args,
+    p_ip: maskedIpAddress,
+    p_ua: userAgent,
+  });
+  if (error) throw new Error(error.message);
+}

@@ -5,7 +5,13 @@ import { getSystemHealth } from "~/features/system-admin/system-health.functions
 import { hasPermission, type Role } from "~/lib/permissions";
 import { denyAccess } from "~/lib/access";
 
+type HealthSearch = { view?: "data" };
+
 export const Route = createFileRoute("/_authed/_dashboard/system-admin/health")({
+  // The Data & Privacy view can be linked to. Overview is the default and keeps the URL clean.
+  validateSearch: (search: Record<string, unknown>): HealthSearch => ({
+    view: search.view === "data" ? "data" : undefined,
+  }),
   beforeLoad: ({ context, location }) => {
     if (
       !context.user ||
@@ -24,5 +30,15 @@ export const Route = createFileRoute("/_authed/_dashboard/system-admin/health")(
 
 function HealthRoute() {
   const data = Route.useLoaderData();
-  return <SystemHealthPage data={data} />;
+  const { view } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  return (
+    <SystemHealthPage
+      data={data}
+      view={view === "data" ? "data" : "overview"}
+      onViewChange={(next) =>
+        void navigate({ search: { view: next === "data" ? "data" : undefined }, replace: true })
+      }
+    />
+  );
 }

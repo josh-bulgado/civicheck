@@ -123,52 +123,135 @@ export type HealthStatus =
   | "outage"
   | "unknown";
 
-export type HealthTrendPoint = {
-  timestamp: string;
-  responseTimeMs: number | null;
-  status: HealthStatus;
+/** One check: ok, slow (over its limit) or failed (no answer). */
+export type CheckOutcome = "ok" | "slow" | "failed";
+
+/** Where a figure comes from. Read from the components table, never written in code. */
+export type HealthSource = {
+  measuredBy: string;
+  updates: string;
+  exposure: string;
 };
 
+export type HealthCheck = {
+  at: string;
+  outcome: CheckOutcome;
+  responseMs: number | null;
+};
+
+export type ServiceKey = "database" | "authentication" | "storage";
+
 export type ServiceHealth = {
-  key: "database" | "authentication" | "storage";
+  key: ServiceKey;
   name: string;
   description: string;
   status: HealthStatus;
-  responseTimeMs: number | null;
-  availabilityPercent: number;
-  errorRatePercent: number;
-  lastCheckedAt: string;
-  trend: HealthTrendPoint[];
+  /** The latest check. Null before the first one. */
+  outcome: CheckOutcome | null;
+  responseMs: number | null;
+  slowAfterMs: number;
+  /** Share of the last 24 hours spent healthy, weighted by time. Null with no checks. */
+  availabilityPercent: number | null;
+  okCount: number;
+  slowCount: number;
+  failedCount: number;
+  lastCheckedAt: string | null;
+  /** The last 24 hours, oldest first. */
+  checks: HealthCheck[];
+  source: HealthSource;
 };
 
-export type OperationalSignal = {
-  key: "jobs" | "storage" | "workflow";
-  label: string;
-  value: string;
-  detail: string;
+export type StorageCapacity = {
+  name: string;
+  description: string;
   status: HealthStatus;
+  /** False until a system administrator sets a capacity. */
+  configured: boolean;
+  objectCount: number | null;
+  totalBytes: number | null;
+  capacityBytes: number | null;
+  percentUsed: number | null;
+  lastCheckedAt: string | null;
+  source: HealthSource;
+};
+
+export type MonitorHealth = {
+  name: string;
+  description: string;
+  /** Unknown until the first run, degraded once a run is overdue or failed. */
+  status: HealthStatus;
+  lastRunAt: string | null;
+  lastRunSucceeded: boolean | null;
+  runs24h: number;
+  succeeded24h: number;
+  minutesSinceLastRun: number | null;
+  source: HealthSource;
 };
 
 export type HealthEvent = {
   id: string;
+  componentKey: string;
   component: string;
   title: string;
   summary: string;
   type: "degradation" | "recovery" | "maintenance";
   severity: "info" | "warning" | "critical";
-  timestamp: string;
+  startedAt: string;
   resolvedAt: string | null;
+  acknowledgedAt: string | null;
+  acknowledgedByName: string | null;
+  plannedStart: string | null;
+  plannedEnd: string | null;
   relatedAuditEventId: string | null;
+};
+
+export type HealthSettings = {
+  emailAlerts: boolean;
+  cooldownMinutes: number;
+};
+
+export type SecurityGlance = {
+  posture: SecurityPosture;
+  openFindingCount: number;
+  overdueControlCount: number;
 };
 
 export type SystemHealthDashboard = {
   overallStatus: HealthStatus;
-  availabilityPercent: number;
-  activeDegradations: number;
-  checkedAt: string;
+  /** Average availability of the services, by time. Null with no checks. */
+  availabilityPercent: number | null;
+  slowest: { name: string; responseMs: number } | null;
+  /** Open incidents, plus one when the monitor itself has stopped. */
+  activeCount: number;
+  checkedAt: string | null;
+  now: string;
   services: ServiceHealth[];
-  signals: OperationalSignal[];
+  capacity: StorageCapacity;
+  monitor: MonitorHealth;
+  /** Open incidents first, then the last 7 days and upcoming maintenance. */
   events: HealthEvent[];
+  settings: HealthSettings;
+  /** Null when Security Center could not be read, so Health still loads. */
+  security: SecurityGlance | null;
+  lastManualCheckAt: string | null;
+  /** Whether this account may run checks and change limits. */
+  canManage: boolean;
+};
+
+export type MaintenanceInput = {
+  component: ServiceKey | "all";
+  title: string;
+  note: string;
+  startsAt: string;
+  endsAt: string;
+};
+
+export type HealthLimitsInput = {
+  database: number;
+  authentication: number;
+  storage: number;
+  /** Null clears the capacity, which turns the gauge back to Not Configured. */
+  capacityGb: number | null;
 };
 
 export type SecurityFindingSeverity = "critical" | "high" | "medium" | "low";
