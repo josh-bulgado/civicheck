@@ -1,16 +1,6 @@
 import type { ReactNode, Ref } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, CircleAlert, Save, type LucideIcon } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "~/components/ui/alert-dialog";
 import { Badge } from "~/components/ui/badge";
 import { Button, buttonVariants } from "~/components/ui/button";
 import {
@@ -301,45 +291,5 @@ export function ServiceFormActionBar({
               : "Create & Publish"}
       </Button>
     </div>
-  );
-}
-
-interface DiscardChangesDialogProps {
-  open: boolean;
-  /** What the admin is leaving, such as "the service editor". */
-  subject: string;
-  onKeepEditing: () => void;
-  onDiscard: () => void;
-}
-
-/** Asks before navigation drops an editor's unsaved changes. */
-export function DiscardChangesDialog({
-  open,
-  subject,
-  onKeepEditing,
-  onDiscard,
-}: DiscardChangesDialogProps) {
-  return (
-    <AlertDialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next && open) onKeepEditing();
-      }}
-    >
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
-          <AlertDialogDescription>
-            If you leave {subject} now, your unsaved changes will be lost.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Keep editing</AlertDialogCancel>
-          <AlertDialogAction variant="destructive" onClick={onDiscard}>
-            Discard and leave
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   );
 }
