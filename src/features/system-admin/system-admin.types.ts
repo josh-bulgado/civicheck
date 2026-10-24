@@ -42,14 +42,20 @@ export type AccountSummary = {
   invitedAt: string | null;
 };
 
+/**
+ * "never" narrows to accounts that have not signed in yet; "unverified" to
+ * accounts whose email is still unconfirmed, pending invitations excluded
+ * (those belong to the CCRO Administrator).
+ */
+export type AccountSignInFilter = "never" | "unverified";
+
 /** Server-side directory filters, mirrored in the accounts route's search. */
 export type AccountFilters = {
   q?: string;
   role?: Role;
   status?: AccountStatus;
   departmentId?: string;
-  /** "never" narrows to accounts that have not signed in yet. */
-  signIn?: "never";
+  signIn?: AccountSignInFilter;
 };
 
 /** One audit event that targeted an account, shaped for the history dialog. */

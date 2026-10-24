@@ -1,14 +1,20 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown } from "lucide-react";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
-import { roleLabels } from "../system-admin.constants";
-import type { AccountCategory, AccountSummary } from "../system-admin.types";
-import { AccountRowActions } from "./AccountRowActions";
+import { SortHeader } from "~/components/ui/data-table-column-header";
+import { departmentLabel } from "~/features/admin/staff/staff-table.utils";
+import { accountStatusLabels, roleLabels } from "../system-admin.constants";
+import type {
+  AccountCategory,
+  AccountSummary,
+  SystemAdminDepartment,
+} from "../system-admin.types";
+import {
+  AccountRowActions,
+  type AccountActionHandlers,
+} from "./AccountRowActions";
 
-const headerClassName =
-  "text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground";
+const plainHeaderClassName = "text-xs font-semibold text-muted-foreground";
 
 function getInitials(account: AccountSummary) {
   const initials = `${account.firstName.charAt(0)}${account.lastName.charAt(0)}`;
@@ -27,20 +33,57 @@ function formatRelative(lastSignInAt: string) {
 }
 
 /**
+ * Where the account stands. A suspended or deactivated account stays that
+ * even if its invitation was never accepted, so the three never overlap.
+ */
+function accountState(account: AccountSummary) {
+  if (account.status !== "active") {
+    return {
+      label: accountStatusLabels[account.status],
+      dotClassName: "bg-destructive",
+    };
+  }
+  if (account.invitePending) {
+    return { label: "Setup pending", dotClassName: "bg-warning" };
+  }
+  return { label: accountStatusLabels.active, dotClassName: "bg-success" };
+}
+
+function StatusCell({ account }: { account: AccountSummary }) {
+  const { label, dotClassName } = accountState(account);
+
+  return (
+    <div className="max-w-48">
+      <span className="flex items-center gap-2 text-sm text-foreground/75">
+        <span
+          aria-hidden="true"
+          className={`size-2 shrink-0 rounded-full ${dotClassName}`}
+        />
+        {label}
+      </span>
+      {account.suspensionReason ? (
+        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+          {account.suspensionReason}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/**
  * Sign-in recency, not live presence: Supabase only records when a session was
  * created, so this cannot tell whether someone is using the system right now.
  */
 function LastSignInCell({ account }: { account: AccountSummary }) {
   const { lastSignInAt } = account;
 
-  // Invited personnel who have not accepted yet. Sending and cancelling the
-  // invitation is the CCRO Administrator's job, so this is visibility only.
+  // Sending and cancelling the invitation is the CCRO Administrator's job, so
+  // this is visibility only.
   if (account.invitePending && account.invitedAt) {
     return (
-      <Badge variant="warning" className="gap-1.5">
-        <span className="size-1.5 rounded-full bg-warning" aria-hidden="true" />
-        Invite pending · sent {formatRelative(account.invitedAt)}
-      </Badge>
+      <span className="whitespace-nowrap text-sm text-muted-foreground">
+        Invite sent {formatRelative(account.invitedAt)}
+      </span>
     );
   }
 
@@ -60,6 +103,7 @@ function LastSignInCell({ account }: { account: AccountSummary }) {
 
 export function createAccountColumns({
   category,
+  departments,
   pendingAccountId,
   onEdit,
   onSuspend,
@@ -70,29 +114,18 @@ export function createAccountColumns({
   onRevokeSessions,
 }: {
   category: AccountCategory;
+  departments: SystemAdminDepartment[];
   pendingAccountId: string | null;
-  onEdit: (account: AccountSummary) => void;
-  onSuspend: (account: AccountSummary) => void;
-  onReactivate: (account: AccountSummary) => void;
-  onViewHistory: (account: AccountSummary) => void;
-  onSendPasswordReset: (account: AccountSummary) => void;
-  onResendVerification: (account: AccountSummary) => void;
-  onRevokeSessions: (account: AccountSummary) => void;
-}): ColumnDef<AccountSummary>[] {
+} & AccountActionHandlers): ColumnDef<AccountSummary>[] {
+  const departmentNames = new Map(
+    departments.map((department) => [department.id, department.name]),
+  );
+
   return [
     {
-      accessorKey: "firstName",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className={`${headerClassName} -ml-3 h-8 hover:bg-transparent hover:text-foreground`}
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Account
-          <ArrowUpDown className="size-3" />
-        </Button>
-      ),
+      id: "member",
+      accessorFn: (account) => `${account.firstName} ${account.lastName}`.trim(),
+      header: ({ column }) => <SortHeader column={column}>Member</SortHeader>,
       cell: ({ row }) => {
         const account = row.original;
         const fullName =
@@ -100,7 +133,7 @@ export function createAccountColumns({
           "Unnamed account";
 
         return (
-          <div className="flex min-w-56 items-center gap-3">
+          <div className="flex min-w-72 items-center gap-3.5">
             <Avatar size="lg" className="bg-primary">
               <AvatarFallback className="bg-primary-fill font-semibold text-white">
                 {getInitials(account)}
@@ -118,62 +151,61 @@ export function createAccountColumns({
         );
       },
     },
-    {
-      accessorKey: "role",
-      header: () => <span className={headerClassName}>Role</span>,
-      cell: ({ row }) => (
-        <span className="text-sm font-medium text-foreground/80">
-          {roleLabels[row.original.role]}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "status",
-      header: () => <span className={headerClassName}>Status</span>,
-      cell: ({ row }) => (
-        <div className="max-w-48">
-          <Badge
-            variant={
-              row.original.status === "active" ? "secondary" : "destructive"
-            }
-            className="capitalize"
-          >
-            {row.original.status}
-          </Badge>
-          {row.original.suspensionReason ? (
-            <p className="mt-1.5 line-clamp-2 text-xs text-muted-foreground">
-              {row.original.suspensionReason}
-            </p>
-          ) : null}
-        </div>
-      ),
-    },
     ...(category === "personnel"
       ? [
           {
-            id: "lastSignIn",
-            header: () => <span className={headerClassName}>Last sign-in</span>,
+            id: "role",
+            header: () => <span className={plainHeaderClassName}>Role</span>,
             cell: ({ row }) => (
-              <LastSignInCell account={row.original} />
+              <span className="text-sm font-medium text-foreground/80">
+                {roleLabels[row.original.role]}
+              </span>
             ),
+          } satisfies ColumnDef<AccountSummary>,
+          {
+            id: "department",
+            header: () => (
+              <span className={plainHeaderClassName}>Department</span>
+            ),
+            cell: ({ row }) => {
+              const { role, departmentId } = row.original;
+              const label = departmentLabel({
+                role,
+                departmentName: departmentId
+                  ? (departmentNames.get(departmentId) ?? null)
+                  : null,
+              });
+
+              return (
+                <span
+                  className={
+                    label === "Unassigned"
+                      ? "text-sm italic text-muted-foreground"
+                      : "text-sm text-foreground/80"
+                  }
+                >
+                  {label}
+                </span>
+              );
+            },
           } satisfies ColumnDef<AccountSummary>,
         ]
       : []),
     {
+      id: "status",
+      header: () => <span className={plainHeaderClassName}>Status</span>,
+      cell: ({ row }) => <StatusCell account={row.original} />,
+    },
+    {
+      id: "lastSignIn",
+      header: () => <span className={plainHeaderClassName}>Last sign-in</span>,
+      cell: ({ row }) => <LastSignInCell account={row.original} />,
+    },
+    {
       accessorKey: "createdAt",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className={`${headerClassName} -ml-3 h-8 hover:bg-transparent hover:text-foreground`}
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Created
-          <ArrowUpDown className="size-3" />
-        </Button>
-      ),
+      header: ({ column }) => <SortHeader column={column}>Created</SortHeader>,
       cell: ({ row }) => (
-        <span className="whitespace-nowrap text-sm text-muted-foreground">
+        <span className="whitespace-nowrap text-sm tabular-nums text-muted-foreground">
           {new Date(row.original.createdAt).toLocaleDateString()}
         </span>
       ),
@@ -183,19 +215,17 @@ export function createAccountColumns({
       enableSorting: false,
       header: () => <span className="sr-only">Actions</span>,
       cell: ({ row }) => (
-        <div className="flex justify-end">
-          <AccountRowActions
-            account={row.original}
-            isPending={pendingAccountId === row.original.id}
-            onEdit={onEdit}
-            onSuspend={onSuspend}
-            onReactivate={onReactivate}
-            onViewHistory={onViewHistory}
-            onSendPasswordReset={onSendPasswordReset}
-            onResendVerification={onResendVerification}
-            onRevokeSessions={onRevokeSessions}
-          />
-        </div>
+        <AccountRowActions
+          account={row.original}
+          isPending={pendingAccountId === row.original.id}
+          onEdit={onEdit}
+          onSuspend={onSuspend}
+          onReactivate={onReactivate}
+          onViewHistory={onViewHistory}
+          onSendPasswordReset={onSendPasswordReset}
+          onResendVerification={onResendVerification}
+          onRevokeSessions={onRevokeSessions}
+        />
       ),
     },
   ];
