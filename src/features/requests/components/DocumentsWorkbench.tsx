@@ -1,3 +1,4 @@
+import { documentReviewBlockedReason } from "../document-review";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys, type HotkeyChord } from "@tanstack/react-hotkeys";
 import { CheckCircle2, Circle, XCircle } from "lucide-react";
@@ -109,6 +110,7 @@ export function DocumentsWorkbench({
 }: DocumentsWorkbenchProps) {
   const hotkeyLabel = useHotkeyLabel();
   const { attachments } = request;
+  const blockedReason = documentReviewBlockedReason(request.status);
 
   const entries = useMemo(
     () =>
@@ -210,7 +212,7 @@ export function DocumentsWorkbench({
   }, [active, selectedDocId]);
 
   function decide(doc: Attachment, status: Decision, reason?: string) {
-    if (!canProcess || verdictOf(doc).status !== "pending") return;
+    if (!canProcess || blockedReason || verdictOf(doc).status !== "pending") return;
     if (confirmDecisions) {
       setConfirming({ doc, status, reason });
       return;
@@ -223,7 +225,7 @@ export function DocumentsWorkbench({
   }
 
   async function confirmDecision() {
-    if (!confirming) return;
+    if (!confirming || blockedReason) return;
     setBusy(true);
     try {
       const ok = await onDecide(
@@ -264,7 +266,7 @@ export function DocumentsWorkbench({
     : -1;
 
   const canDecide =
-    canProcess && selected != null && selectedVerdict?.status === "pending";
+    canProcess && !blockedReason && selected != null && selectedVerdict?.status === "pending";
   const rejectingSelected = selected != null && rejectingId === selected.doc.id;
 
   const controls: DecisionControls | null =
@@ -275,6 +277,7 @@ export function DocumentsWorkbench({
           reason: selectedVerdict.reason,
           held: selected.doc.id in decisions.waiting,
           canDecide,
+          blockedReason: canProcess ? blockedReason : null,
           canReverse,
           confirmDecisions,
           busy,

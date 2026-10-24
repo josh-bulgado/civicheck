@@ -154,6 +154,7 @@ export interface DecisionControls {
   /** The decision is waiting out its undo window. */
   held: boolean;
   canDecide: boolean;
+  blockedReason: string | null;
   canReverse: boolean;
   confirmDecisions: boolean;
   busy: boolean;
@@ -221,17 +222,17 @@ export function DocumentDecisionBar({
         </div>
       )}
 
-      {c.canDecide && !c.rejecting && (
+      {(c.canDecide || c.blockedReason) && !c.rejecting && !decided && (
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="success" disabled={c.busy} onClick={c.onAccept}>
+          <Button variant="success" disabled={c.busy || !c.canDecide} onClick={c.onAccept}>
             <CheckCircle2 data-icon="inline-start" aria-hidden="true" />
             Accept <Kbd>{c.acceptKey}</Kbd>
           </Button>
-          <Button variant="outline" disabled={c.busy} onClick={c.onStartReject}>
+          <Button variant="outline" disabled={c.busy || !c.canDecide} onClick={c.onStartReject}>
             <XCircle data-icon="inline-start" aria-hidden="true" />
             Reject <Kbd>{c.rejectKey}</Kbd>
           </Button>
-          {!c.confirmDecisions && (
+          {!c.confirmDecisions && !c.blockedReason && (
             <span className="text-xs text-muted-foreground">
               Moves to the next document. You can undo for a few seconds.
             </span>
@@ -239,7 +240,11 @@ export function DocumentDecisionBar({
         </div>
       )}
 
-      {!c.canDecide && !decided && (
+      {c.blockedReason && !decided && (
+        <p className="text-sm text-muted-foreground">{c.blockedReason}</p>
+      )}
+
+      {!c.canDecide && !c.blockedReason && !decided && (
         <p className="text-sm text-muted-foreground">
           Your role can view this document but not decide on it.
         </p>
