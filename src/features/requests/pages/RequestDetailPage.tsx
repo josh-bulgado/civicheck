@@ -77,7 +77,7 @@ export default function RequestDetailPage({
   onBack,
   onUpdated,
 }: RequestDetailPageProps) {
-  const { can, isAdmin } = usePermissions();
+  const { can } = usePermissions();
   const hotkeyLabel = useHotkeyLabel();
 
   const canProcess = can("requests:process");
@@ -142,7 +142,6 @@ export default function RequestDetailPage({
     paymentStatus: request.paymentStatus,
     feesDue: request.feesDue,
     canProcess,
-    isAdmin,
     attachments,
   };
   const plan = planRequestActions(planInput);

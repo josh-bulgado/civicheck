@@ -45,6 +45,9 @@ function ServicesRoute() {
       scope={scope}
       usage={usage}
       selectedService={service}
+      onSelectService={(code) =>
+        navigate({ search: { service: code }, replace: true })
+      }
       onDismissSelectedService={() =>
         navigate({ search: {}, replace: true })
       }

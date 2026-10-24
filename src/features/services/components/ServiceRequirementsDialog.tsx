@@ -1,12 +1,4 @@
-import { useState } from "react";
-import {
-  AlertTriangle,
-  ArrowRight,
-  ChevronDown,
-  Clock,
-  MapPin,
-  Wallet,
-} from "lucide-react";
+import { ArrowRight, Clock, Wallet } from "lucide-react";
 import {
   Dialog,
   DialogClose,
@@ -15,15 +7,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "~/components/ui/collapsible";
 import { staggerStyle } from "~/components/motion/stagger";
+import {
+  ChecklistLoadError,
+  ConditionalDocuments,
+  OfficeSteps,
+  RequiredDocuments,
+} from "~/features/services/components/ChecklistSections";
+import { FactsStrip } from "~/features/services/components/FactsStrip";
 import { useServiceOverview } from "~/features/services/hooks/useServiceOverview";
 import type { ServiceRequirement } from "~/features/admin/services/services.types";
 import {
@@ -31,11 +24,8 @@ import {
   formatFee,
   formatServiceCode,
   getVisitBadge,
-  parseRequirementName,
-  splitCaseLabel,
   summarizeWait,
 } from "~/features/services/service-utils";
-import { cn } from "~/lib/utils";
 
 interface ServiceRequirementsDialogProps {
   /** `display_group ?? service_code` — the same code the apply flow routes on. */
@@ -54,63 +44,10 @@ interface ServiceRequirementsDialogProps {
   onApply?: () => void;
 }
 
-const CASE_TAG_LABELS: Record<string, string> = {
-  marital_only: "Marital child only",
-  non_marital_only: "Non-marital child only",
-  brap_only: "Barangay-assisted (BRAP) only",
-  foreigner_only: "Foreign parent only",
-  parental_consent_required: "Ages 18–20",
-  parental_advice_required: "Ages 21–24",
-  foreign_national_spouse: "Foreign-national applicant",
-};
-
 const badgeToneClasses = {
   success: "bg-success-soft text-success",
   warning: "bg-warning-soft text-warning",
 } as const;
-
-/** One checklist row — document name, where to secure it, and who it applies to. */
-function RequirementRow({
-  requirement,
-  tone,
-}: {
-  requirement: ServiceRequirement;
-  tone: "required" | "conditional";
-}) {
-  const { caseLabel, name } = splitCaseLabel(requirement.requirement_name);
-  const { primary, secondary } = parseRequirementName(name);
-  const source = requirement.where_to_secure ?? secondary;
-  const caseTag = requirement.applies_when
-    ? "Depends on case answers"
-    : requirement.case_tag
-      ? (CASE_TAG_LABELS[requirement.case_tag] ?? null)
-      : null;
-
-  return (
-    <li className="flex flex-col gap-1 px-4 py-3">
-      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <p className="text-sm font-semibold leading-snug text-body-strong">
-          {primary}
-        </p>
-        {(caseLabel || caseTag) && (
-          <span className="rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-bold text-primary">
-            {caseLabel ?? caseTag}
-          </span>
-        )}
-      </div>
-      {source && (
-        <p
-          className={`flex items-start gap-1.5 text-xs leading-snug ${
-            tone === "conditional" ? "text-warning-strong" : "text-muted-foreground"
-          }`}
-        >
-          <MapPin className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
-          {source}
-        </p>
-      )}
-    </li>
-  );
-}
 
 export function ServiceRequirementsDialog({
   serviceCode,
@@ -123,7 +60,6 @@ export function ServiceRequirementsDialog({
   onApply,
 }: ServiceRequirementsDialogProps) {
   const { overview, loading, error, retry } = useServiceOverview(serviceCode, open);
-  const [conditionalOpen, setConditionalOpen] = useState(false);
 
   const visitBadge = getVisitBadge(processingTime);
   const isGroup = overview?.isGroup ?? false;
@@ -164,28 +100,22 @@ export function ServiceRequirementsDialog({
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-          <div className="grid grid-cols-2 divide-x divide-border-light rounded-[10px] border border-border-light">
-            <div className="flex flex-col gap-1 px-4 py-3.5">
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Wallet className="size-3.5" aria-hidden="true" />
-                Fee at cashier
-              </span>
-              <span className="text-lg font-bold text-foreground">
-                {formatFee(fee, displayGroup)}
-              </span>
-              <span className="text-xs text-body">Paid at the CCRO cashier</span>
-            </div>
-            <div className="flex flex-col gap-1 px-4 py-3.5">
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Clock className="size-3.5" aria-hidden="true" />
-                Time at the office
-              </span>
-              <span className="text-lg font-bold text-foreground">
-                {summarizeWait(processingTime)}
-              </span>
-              <span className="text-xs text-body">{processingTime}</span>
-            </div>
-          </div>
+          <FactsStrip
+            facts={[
+              {
+                icon: Wallet,
+                label: "Fee at cashier",
+                value: formatFee(fee, displayGroup),
+                hint: "Paid at the CCRO cashier",
+              },
+              {
+                icon: Clock,
+                label: "Time at the office",
+                value: summarizeWait(processingTime),
+                hint: processingTime,
+              },
+            ]}
+          />
 
           {loading && (
             <div className="civic-stagger mt-5 flex flex-col gap-3">
@@ -200,18 +130,11 @@ export function ServiceRequirementsDialog({
           )}
 
           {!loading && error && (
-            <Alert variant="destructive" className="civic-enter-scale mt-5">
-              <AlertTitle>Unable to load requirements</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={retry}
-              >
-                Try again
-              </Button>
-            </Alert>
+            <ChecklistLoadError
+              error={error}
+              retry={retry}
+              className="civic-enter-scale mt-5"
+            />
           )}
 
           {!loading && !error && overview && (
@@ -243,87 +166,11 @@ export function ServiceRequirementsDialog({
                 </section>
               )}
 
-              <section className="flex flex-col gap-2.5">
-                <h3 className="text-sm font-bold text-foreground">
-                  Documents to bring ({mandatoryReqs.length})
-                </h3>
-                {mandatoryReqs.length === 0 ? (
-                  <p className="rounded-[10px] border border-dashed border-dashed-border bg-background p-3.5 text-xs italic text-muted-foreground">
-                    No required documents are listed for this service.
-                  </p>
-                ) : (
-                  <ul className="divide-y divide-border-lighter rounded-[10px] border border-border-light">
-                    {mandatoryReqs.map((req) => (
-                      <RequirementRow key={req.id} requirement={req} tone="required" />
-                    ))}
-                  </ul>
-                )}
-              </section>
+              <RequiredDocuments requirements={mandatoryReqs} />
 
-              {conditionalReqs.length > 0 && (
-                <Collapsible
-                  open={conditionalOpen}
-                  onOpenChange={setConditionalOpen}
-                  className="flex flex-col gap-2.5"
-                >
-                  <CollapsibleTrigger
-                    render={
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="h-auto w-full justify-between px-0 text-left whitespace-normal"
-                      />
-                    }
-                  >
-                    <h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-                      <AlertTriangle
-                        className="size-3.5 text-warning"
-                        aria-hidden="true"
-                      />
-                      Only if it applies to you ({conditionalReqs.length})
-                    </h3>
-                    <ChevronDown
-                      data-icon="inline-end"
-                      className={cn(
-                        "transition-transform duration-200",
-                        conditionalOpen && "rotate-180",
-                      )}
-                      aria-hidden="true"
-                    />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <ul className="divide-y divide-warning-border/40 rounded-[10px] border border-warning-border bg-warning-soft">
-                      {conditionalReqs.map((req) => (
-                        <RequirementRow
-                          key={req.id}
-                          requirement={req}
-                          tone="conditional"
-                        />
-                      ))}
-                    </ul>
-                  </CollapsibleContent>
-                </Collapsible>
-              )}
+              <ConditionalDocuments requirements={conditionalReqs} />
 
-              {steps.length > 0 && (
-                <section className="flex flex-col gap-3">
-                  <h3 className="text-sm font-bold text-foreground">
-                    What happens at the office
-                  </h3>
-                  <ol className="flex flex-col gap-3">
-                    {steps.map((step, index) => (
-                      <li key={index} className="flex gap-3">
-                        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-bold text-primary">
-                          {index + 1}
-                        </span>
-                        <p className="pt-0.5 text-sm leading-relaxed text-body-strong">
-                          {step}
-                        </p>
-                      </li>
-                    ))}
-                  </ol>
-                </section>
-              )}
+              <OfficeSteps steps={steps} />
             </div>
           )}
         </div>

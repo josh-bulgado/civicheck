@@ -55,6 +55,18 @@ const yearFormat = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
+const timeFormat = new Intl.DateTimeFormat("en-US", {
+  timeZone: OFFICE_TIME_ZONE,
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+/** "11:09 AM" for a timestamp, on the office's clock. "" if unparsable. */
+export function formatOfficeTime(iso: string): string {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? "" : timeFormat.format(date);
+}
+
 /** "Aug 15" for a timestamp, with the year once it isn't this one. "" if unparsable. */
 export function formatShortDate(iso: string, now: Date = new Date()): string {
   const date = new Date(iso);

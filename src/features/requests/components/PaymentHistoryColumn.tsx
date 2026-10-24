@@ -1,13 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { SortHeader } from "~/components/ui/data-table-column-header";
+import { formatPeso } from "~/lib/peso";
 import type { PaymentHistoryRow } from "../requests.queries";
-
-export function formatPeso(amount: number) {
-  return `₱${amount.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
 
 function formatVerifiedDate(value: string) {
   return new Date(value).toLocaleDateString("en-US", {

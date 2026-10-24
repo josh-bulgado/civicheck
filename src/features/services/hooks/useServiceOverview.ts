@@ -7,6 +7,16 @@ import {
   serviceCacheKeys,
 } from "~/features/services/services.cache";
 
+/**
+ * Starts a checklist's load ahead of the click, so a row that is hovered or
+ * focused opens already filled. A failure is ignored: the click retries it.
+ */
+export function prefetchServiceOverview(serviceCode: string) {
+  cachedServiceRead(serviceCacheKeys.overview(serviceCode), () =>
+    getServiceOverview({ data: serviceCode }),
+  ).catch(() => {});
+}
+
 export type ServiceOverview = Awaited<ReturnType<typeof getServiceOverview>>;
 
 /**

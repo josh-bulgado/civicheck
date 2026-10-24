@@ -332,6 +332,17 @@ export interface RequirementCaseTag {
   applies_when?: ConditionRule | null;
 }
 
+/** What a requirement's `case_tag` means, in the words a checklist shows beside it. */
+export const CASE_TAG_LABELS: Record<string, string> = {
+  marital_only: "Marital child only",
+  non_marital_only: "Non-marital child only",
+  brap_only: "Barangay-assisted (BRAP) only",
+  foreigner_only: "Foreign parent only",
+  parental_consent_required: "Ages 18–20",
+  parental_advice_required: "Ages 21–24",
+  foreign_national_spouse: "Foreign-national applicant",
+};
+
 /**
  * Whether a requirement applies to the currently selected service code, based
  * on its case_tag. Requirements with no case_tag always apply.

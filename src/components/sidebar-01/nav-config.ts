@@ -51,7 +51,7 @@ const NAV_ENTRIES = {
     anyOf: ["dashboard:admin"],
   },
   "staff-dashboard": {
-    title: (role) => (role === "cashier" ? "Cashier Dashboard" : "Staff Dashboard"),
+    title: "Staff Dashboard",
     url: "/staff-dashboard",
     icon: LayoutDashboard,
     anyOf: ["dashboard:staff"],
@@ -196,7 +196,7 @@ const ROLE_LAYOUTS: Record<Role, GroupLayout[]> = {
   staff: PERSONNEL_LAYOUT,
   supervisor: PERSONNEL_LAYOUT,
   cashier: [
-    { id: "home", itemIds: ["staff-dashboard", "notifications"] },
+    { id: "home", itemIds: ["notifications"] },
     { id: "payments", label: "Payments", itemIds: ["cashier-counter", "payment-history"] },
   ],
   admin: [

@@ -173,14 +173,6 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
       }
     }
 
-    // Handing the document over is the final step, reserved for the CCRO admin.
-    if (toStatus === "released" && role !== "admin") {
-      return {
-        error: true,
-        message: "Only the CCRO admin can release a document.",
-      };
-    }
-
     // The cashier verifies payment — or confirms a fee-free request — before
     // the document leaves the counter.
     const paymentSettled = isPaymentSettled(request.payment_status);
