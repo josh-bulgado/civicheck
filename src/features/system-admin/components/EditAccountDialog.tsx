@@ -1,11 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useEffect, type ReactNode } from "react";
 import { useHotkeys } from "@tanstack/react-hotkeys";
 import { Controller, useForm, useWatch, type Control } from "react-hook-form";
 import z from "zod";
@@ -46,6 +40,7 @@ import {
 } from "~/components/ui/select";
 import { Spinner } from "~/components/ui/spinner";
 import { useHotkeyLabel } from "~/hooks/useHotkeyLabel";
+import { useUnsavedChangesClose } from "~/hooks/useUnsavedChangesClose";
 import { toDateKey } from "~/lib/date";
 import { mobileDigits } from "~/lib/phone";
 import { cn } from "~/lib/utils";
@@ -547,23 +542,8 @@ export function EditAccountDialog({
   onOpenChange: (open: boolean) => void;
   onConfirm: (values: AccountDetailsInput) => Promise<boolean>;
 }) {
-  const hasUnsavedChanges = useRef(false);
-  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
-
-  const trackDirty = useCallback((dirty: boolean) => {
-    hasUnsavedChanges.current = dirty;
-  }, []);
-
-  // Esc, the X, a click outside and Cancel all land here.
-  function requestClose() {
-    if (hasUnsavedChanges.current && !isPending) setConfirmingDiscard(true);
-    else onOpenChange(false);
-  }
-
-  function closeNow() {
-    setConfirmingDiscard(false);
-    onOpenChange(false);
-  }
+  const { trackDirty, requestClose, closeNow, confirmingDiscard, setConfirmingDiscard } =
+    useUnsavedChangesClose({ isPending, onClose: () => onOpenChange(false) });
 
   return (
     <Dialog
