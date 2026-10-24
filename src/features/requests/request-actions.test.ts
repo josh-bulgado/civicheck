@@ -14,7 +14,6 @@ function input(overrides: Partial<RequestActionInput> = {}): RequestActionInput 
     paymentStatus: "unpaid",
     feesDue: 240,
     canProcess: true,
-    isAdmin: false,
     attachments: [],
     ...overrides,
   };
@@ -104,22 +103,14 @@ describe("planning the actions on a request", () => {
     });
   });
 
-  it("blocks release for a non-admin, whatever the payment", () => {
+  it("blocks release until the cashier has verified payment", () => {
     const plan = planRequestActions(
-      input({ status: "ready_for_release", paymentStatus: "verified", isAdmin: false }),
+      input({ status: "ready_for_release", paymentStatus: "unpaid" }),
     );
 
     expect(plan.primary?.to).toBe("released");
-    expect(plan.primary?.blocked).toBe("Only the CCRO admin can release the document");
-    expect(plan.reject).toBeNull();
-  });
-
-  it("blocks release for an admin until the cashier has verified payment", () => {
-    const plan = planRequestActions(
-      input({ status: "ready_for_release", paymentStatus: "unpaid", isAdmin: true }),
-    );
-
     expect(plan.primary?.blocked).toBe("Waiting for the cashier to verify payment");
+    expect(plan.reject).toBeNull();
   });
 
   it("words the wait differently for a fee-free request", () => {
@@ -128,7 +119,6 @@ describe("planning the actions on a request", () => {
         status: "ready_for_release",
         paymentStatus: "unpaid",
         feesDue: 0,
-        isAdmin: true,
       }),
     );
 
@@ -137,9 +127,9 @@ describe("planning the actions on a request", () => {
     );
   });
 
-  it("opens release for an admin once payment is verified, behind a dialog", () => {
+  it("opens release for any role that can process once payment is verified, behind a dialog", () => {
     const plan = planRequestActions(
-      input({ status: "ready_for_release", paymentStatus: "verified", isAdmin: true }),
+      input({ status: "ready_for_release", paymentStatus: "verified" }),
     );
 
     expect(plan.primary?.blocked).toBeUndefined();

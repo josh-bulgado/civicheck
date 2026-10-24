@@ -40,7 +40,6 @@ export interface RequestActionInput {
   paymentStatus: string | null;
   feesDue: number;
   canProcess: boolean;
-  isAdmin: boolean;
   attachments: { verificationStatus: string }[];
 }
 
@@ -114,13 +113,10 @@ function blockedReason(
       return `${plural(pending, "document")} still ${pending === 1 ? "needs" : "need"} a decision`;
     }
   }
-  if (to === "released") {
-    if (!input.isAdmin) return "Only the CCRO admin can release the document";
-    if (!paymentSettled) {
-      return input.feesDue > 0
-        ? "Waiting for the cashier to verify payment"
-        : "Waiting for the cashier to confirm this fee-free request";
-    }
+  if (to === "released" && !paymentSettled) {
+    return input.feesDue > 0
+      ? "Waiting for the cashier to verify payment"
+      : "Waiting for the cashier to confirm this fee-free request";
   }
   return undefined;
 }
