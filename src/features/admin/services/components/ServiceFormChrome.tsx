@@ -1,6 +1,6 @@
 import type { ReactNode, Ref } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, CircleAlert, Save, type LucideIcon } from "lucide-react";
+import { CircleAlert, Save, type LucideIcon } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +21,7 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { IconTile } from "~/components/ui/icon-tile";
+import { Kbd } from "~/components/ui/kbd";
 import { Spinner } from "~/components/ui/spinner";
 import { TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { formatServiceCode } from "~/features/services/service-utils";
@@ -51,69 +52,44 @@ export function ServiceDossierHeader({
 }: ServiceDossierHeaderProps) {
   const isVariant = mode === "variant";
   const isGroup = mode === "group";
-  const backClassName = cn(
-    buttonVariants({ variant: "outline", size: "icon" }),
-    "size-11 shrink-0 rounded-full",
-  );
 
   return (
     <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 bg-background px-4 pt-5 pb-3 sm:px-8">
-      <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
-        {(isVariant || isGroup) && displayGroup ? (
-          <Link
-            to="/admin/services/groups/$displayGroup"
-            params={{ displayGroup }}
-            search={{ scope: undefined }}
-            className={backClassName}
-            aria-label="Back to service group"
-          >
-            <ArrowLeft aria-hidden="true" />
-          </Link>
-        ) : (
-          <Link
-            to="/admin/services"
-            className={backClassName}
-            aria-label="Back to services registry"
-          >
-            <ArrowLeft aria-hidden="true" />
-          </Link>
-        )}
-        <div className="flex min-w-0 flex-col gap-1">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-            <span>Services Registry</span>
-            <span aria-hidden="true">/</span>
-            <span>
-              {isGroup
-                ? "Edit Shared Application"
-                : isVariant
-                  ? "Edit Variant"
-                  : isEdit
-                    ? "Edit Service"
-                    : "New Service"}
-            </span>
-            <span aria-hidden="true" className="hidden sm:inline">
-              ·
-            </span>
-            <span translate="no" className="hidden font-mono sm:inline">
-              {isGroup ? displayGroup : formatServiceCode(serviceCode)}
-            </span>
-          </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <h1 className="text-pretty text-lg font-semibold tracking-tight sm:text-xl">
-              {serviceName || (isEdit ? "Edit Service" : "Register a Service")}
-            </h1>
-            {isVariant ? (
-              <Badge variant="neutral">Variant Record</Badge>
-            ) : applicationLoading ? (
-              <Badge variant="neutral">Loading…</Badge>
-            ) : applicationVersion > 0 ? (
-              <Badge variant="success">
-                Application v{applicationVersion} Live
-              </Badge>
-            ) : (
-              <Badge variant="warning">Application Not Published</Badge>
-            )}
-          </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          <span>Services Registry</span>
+          <span aria-hidden="true">/</span>
+          <span>
+            {isGroup
+              ? "Edit Shared Application"
+              : isVariant
+                ? "Edit Variant"
+                : isEdit
+                  ? "Edit Service"
+                  : "New Service"}
+          </span>
+          <span aria-hidden="true" className="hidden sm:inline">
+            ·
+          </span>
+          <span translate="no" className="hidden font-mono sm:inline">
+            {isGroup ? displayGroup : formatServiceCode(serviceCode)}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <h1 className="text-pretty text-lg font-semibold tracking-tight sm:text-xl">
+            {serviceName || (isEdit ? "Edit Service" : "Register a Service")}
+          </h1>
+          {isVariant ? (
+            <Badge variant="neutral">Variant Record</Badge>
+          ) : applicationLoading ? (
+            <Badge variant="neutral">Loading…</Badge>
+          ) : applicationVersion > 0 ? (
+            <Badge variant="success">
+              Application v{applicationVersion} Live
+            </Badge>
+          ) : (
+            <Badge variant="warning">Application Not Published</Badge>
+          )}
         </div>
       </div>
       {children}
@@ -122,11 +98,17 @@ export function ServiceDossierHeader({
 }
 
 interface ServiceEditorTabBarProps {
-  tabs: readonly { id: string; label: string; icon: LucideIcon }[];
+  tabs: readonly {
+    id: string;
+    label: string;
+    icon: LucideIcon;
+    hotkey?: string;
+  }[];
   label: string;
   /** Tabs whose section has errors get a "Needs attention" mark. */
   invalidIds?: ReadonlySet<string>;
   listRef?: Ref<HTMLDivElement>;
+  shortcutsEnabled?: boolean;
 }
 
 /** The underline section bar under the header; render it inside `<Tabs>`. */
@@ -135,6 +117,7 @@ export function ServiceEditorTabBar({
   label,
   invalidIds,
   listRef,
+  shortcutsEnabled = false,
 }: ServiceEditorTabBarProps) {
   return (
     <div className="shrink-0 border-b border-border bg-background px-4 sm:px-8">
@@ -144,10 +127,22 @@ export function ServiceEditorTabBar({
         className="w-full"
         aria-label={label}
       >
-        {tabs.map(({ id, label: tabLabel, icon: Icon }) => (
-          <TabsTrigger key={id} value={id} className="gap-2">
+        {tabs.map(({ id, label: tabLabel, icon: Icon, hotkey }) => (
+          <TabsTrigger
+            key={id}
+            value={id}
+            className="gap-2"
+            aria-keyshortcuts={
+              shortcutsEnabled && hotkey ? hotkey : undefined
+            }
+          >
             <Icon aria-hidden="true" />
             <span>{tabLabel}</span>
+            {shortcutsEnabled && hotkey ? (
+              <Kbd aria-hidden="true" className="hidden xl:inline-flex">
+                {hotkey}
+              </Kbd>
+            ) : null}
             {invalidIds?.has(id) ? (
               <CircleAlert
                 aria-label="Needs attention"
@@ -229,6 +224,14 @@ interface ServiceFormActionBarProps {
   isDirty: boolean;
   mode?: EditorMode;
   displayGroup?: string | null;
+  saveShortcut?: {
+    label: string;
+    ariaKeyShortcuts: string;
+  };
+  exitShortcut?: {
+    label: string;
+    ariaKeyShortcuts: string;
+  };
 }
 
 export function ServiceFormActionBar({
@@ -238,11 +241,23 @@ export function ServiceFormActionBar({
   isDirty,
   mode = "full",
   displayGroup = null,
+  saveShortcut,
+  exitShortcut,
 }: ServiceFormActionBarProps) {
   const isVariant = mode === "variant";
   const isGroup = mode === "group";
   const cancelClassName = cn(
     buttonVariants({ variant: "outline", size: "lg" }),
+  );
+  const cancelContent = (
+    <>
+      Cancel
+      {exitShortcut ? (
+        <Kbd aria-hidden="true" className="hidden sm:inline-flex">
+          {exitShortcut.label}
+        </Kbd>
+      ) : null}
+    </>
   );
 
   return (
@@ -278,15 +293,26 @@ export function ServiceFormActionBar({
           params={{ displayGroup }}
           search={{ scope: undefined }}
           className={cancelClassName}
+          aria-keyshortcuts={exitShortcut?.ariaKeyShortcuts}
         >
-          Cancel
+          {cancelContent}
         </Link>
       ) : (
-        <Link to="/admin/services" className={cancelClassName}>
-          Cancel
+        <Link
+          to="/admin/services"
+          className={cancelClassName}
+          aria-keyshortcuts={exitShortcut?.ariaKeyShortcuts}
+        >
+          {cancelContent}
         </Link>
       )}
-      <Button type="submit" variant="raised" size="lg" disabled={isDisabled}>
+      <Button
+        type="submit"
+        variant="raised"
+        size="lg"
+        disabled={isDisabled}
+        aria-keyshortcuts={saveShortcut?.ariaKeyShortcuts}
+      >
         {isSaving ? (
           <Spinner data-icon="inline-start" />
         ) : (
@@ -299,6 +325,14 @@ export function ServiceFormActionBar({
             : isEdit
               ? "Save & Publish"
               : "Create & Publish"}
+        {saveShortcut ? (
+          <Kbd
+            aria-hidden="true"
+            className="hidden bg-white/20 text-current sm:inline-flex"
+          >
+            {saveShortcut.label}
+          </Kbd>
+        ) : null}
       </Button>
     </div>
   );

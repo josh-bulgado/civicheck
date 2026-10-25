@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useHotkeys, type HotkeyChord } from "@tanstack/react-hotkeys";
 import { useBlocker, useLocation, useNavigate } from "@tanstack/react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -23,6 +24,8 @@ import { formatServiceCode } from "~/features/services/service-utils";
 import { Tabs } from "~/components/ui/tabs";
 import { Button } from "~/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Kbd } from "~/components/ui/kbd";
+import { useHotkeyLabel } from "~/hooks/useHotkeyLabel";
 import type { Department } from "~/features/admin/departments.queries";
 import type { ConditionRef } from "~/features/forms/form-option-usage";
 import { getServiceFormTemplateFn } from "~/features/forms/form-template.functions";
@@ -64,17 +67,6 @@ import {
   type ServiceFormValues,
 } from "./service-form.config";
 
-const EDITOR_SECTION_IDS = [
-  "registry-details",
-  "citizen-journey",
-  "case-questions",
-  "application-form",
-  "requirements",
-  "relationships",
-] as const;
-
-type EditorSectionId = (typeof EDITOR_SECTION_IDS)[number];
-
 const EDITOR_TABS = [
   { id: "registry-details", label: "Registry & Fees", icon: FileText },
   { id: "citizen-journey", label: "Citizen Journey", icon: RouteIcon },
@@ -87,6 +79,21 @@ const EDITOR_TABS = [
   { id: "requirements", label: "Requirements", icon: ClipboardCheck },
   { id: "relationships", label: "Relationships", icon: Link2 },
 ] as const;
+
+type EditorSectionId = (typeof EDITOR_TABS)[number]["id"];
+
+const SECTION_HOTKEYS = ["1", "2", "3", "4", "5", "6"] as const;
+const SAVE_HOTKEY: HotkeyChord = "Mod+S";
+const EXIT_HOTKEY: HotkeyChord = "Escape";
+const PREVIOUS_SECTION_HOTKEY: HotkeyChord = "K";
+const NEXT_SECTION_HOTKEY: HotkeyChord = "J";
+const SAVE_ARIA_KEYSHORTCUTS = "Control+S Meta+S";
+
+function editorOverlayIsOpen() {
+  return (
+    document.querySelector('[role="dialog"], [role="alertdialog"]') !== null
+  );
+}
 
 const FIELD_ERROR_DESTINATIONS: Partial<
   Record<
@@ -199,6 +206,8 @@ interface ServiceFormPageProps {
   service?: Service | null;
   /** Restrict a grouped-service edit to this one internal registry record. */
   variantOnly?: boolean;
+  /** Enable the edit route's power-user keyboard controls and visible hints. */
+  keyboardShortcuts?: boolean;
 }
 
 /** Full-page editor and orchestration layer for a service registry dossier. */
@@ -208,6 +217,7 @@ export function ServiceFormPage({
   onSaved,
   service = null,
   variantOnly = false,
+  keyboardShortcuts = false,
 }: ServiceFormPageProps) {
   const isEdit = service !== null;
   const mutation = useSaveServiceConfiguration();
@@ -260,7 +270,7 @@ export function ServiceFormPage({
   const availableTabs = EDITOR_TABS.filter(
     ({ id }) =>
       !variantOnly || (id !== "case-questions" && id !== "application-form"),
-  );
+  ).map((tab, index) => ({ ...tab, hotkey: SECTION_HOTKEYS[index]! }));
   const requestedSection = !hydrated
     ? "registry-details"
     : hash === "timing-routing"
@@ -275,6 +285,7 @@ export function ServiceFormPage({
   const previousTab = availableTabs[activeTabIndex - 1];
   const nextTab = availableTabs[activeTabIndex + 1];
   const workspaceRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const tabListRef = useRef<HTMLDivElement>(null);
   const errorSummaryRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -465,6 +476,18 @@ export function ServiceFormPage({
       hashScrollIntoView: false,
     });
     workspaceRef.current?.scrollTo({ top: 0 });
+  }
+
+  function exitEditor() {
+    if (variantOnly && service?.display_group) {
+      void navigate({
+        to: "/admin/services/groups/$displayGroup",
+        params: { displayGroup: service.display_group },
+        search: { scope: undefined },
+      });
+      return;
+    }
+    void navigate({ to: "/admin/services" });
   }
 
   async function focusErrorDestination(
@@ -753,6 +776,55 @@ export function ServiceFormPage({
 
   const isSaving = mutation.status === "pending" || form.formState.isSubmitting;
   const isSubmitDisabled = isSaving || checklistLoading || templateLoading;
+  const hotkeyLabel = useHotkeyLabel();
+
+  // Plain navigation keys stay out of the way while a field is focused.
+  // Mod+S remains available while typing, matching the other admin editor.
+  useHotkeys(
+    [
+      {
+        hotkey: SAVE_HOTKEY,
+        callback: () => {
+          if (!editorOverlayIsOpen() && !isSubmitDisabled) {
+            formRef.current?.requestSubmit();
+          }
+        },
+      },
+      {
+        hotkey: EXIT_HOTKEY,
+        callback: () => {
+          if (!editorOverlayIsOpen()) exitEditor();
+        },
+        options: { ignoreInputs: true },
+      },
+      ...availableTabs.map(({ id, hotkey }) => ({
+        hotkey,
+        callback: () => {
+          if (!editorOverlayIsOpen()) void revealSection(id);
+        },
+      })),
+      {
+        hotkey: PREVIOUS_SECTION_HOTKEY,
+        callback: () => {
+          if (!editorOverlayIsOpen() && previousTab) {
+            void revealSection(previousTab.id);
+          }
+        },
+      },
+      {
+        hotkey: NEXT_SECTION_HOTKEY,
+        callback: () => {
+          if (!editorOverlayIsOpen() && nextTab) {
+            void revealSection(nextTab.id);
+          }
+        },
+      },
+    ],
+    {
+      enabled: keyboardShortcuts && blocker.status !== "blocked",
+    },
+  );
+
   const errorSummary = useMemo(() => {
     if (!submitted) return [];
 
@@ -799,6 +871,7 @@ export function ServiceFormPage({
     >
       <FormProvider {...form}>
         <form
+          ref={formRef}
           className="flex min-h-0 min-w-0 flex-1 flex-col"
           onSubmit={form.handleSubmit(onSubmit, onInvalid)}
         >
@@ -818,6 +891,22 @@ export function ServiceFormPage({
               isDirty={isDirty}
               mode={variantOnly ? "variant" : "full"}
               displayGroup={service?.display_group}
+              saveShortcut={
+                keyboardShortcuts
+                  ? {
+                      label: hotkeyLabel(SAVE_HOTKEY),
+                      ariaKeyShortcuts: SAVE_ARIA_KEYSHORTCUTS,
+                    }
+                  : undefined
+              }
+              exitShortcut={
+                keyboardShortcuts
+                  ? {
+                      label: hotkeyLabel(EXIT_HOTKEY),
+                      ariaKeyShortcuts: EXIT_HOTKEY,
+                    }
+                  : undefined
+              }
             />
           </ServiceDossierHeader>
           <Tabs
@@ -833,6 +922,7 @@ export function ServiceFormPage({
               label="Service configuration"
               invalidIds={invalidSections}
               listRef={tabListRef}
+              shortcutsEnabled={keyboardShortcuts}
             />
             <div
               ref={workspaceRef}
@@ -1030,6 +1120,11 @@ export function ServiceFormPage({
                         type="button"
                         variant="outline"
                         size="lg"
+                        aria-keyshortcuts={
+                          keyboardShortcuts
+                            ? PREVIOUS_SECTION_HOTKEY
+                            : undefined
+                        }
                         onClick={() => void revealSection(previousTab.id)}
                       >
                         <ArrowLeft
@@ -1037,6 +1132,11 @@ export function ServiceFormPage({
                           data-icon="inline-start"
                         />
                         Previous
+                        {keyboardShortcuts ? (
+                          <Kbd aria-hidden="true" className="hidden sm:inline-flex">
+                            {hotkeyLabel(PREVIOUS_SECTION_HOTKEY)}
+                          </Kbd>
+                        ) : null}
                       </Button>
                     ) : null}
                     {nextTab ? (
@@ -1044,12 +1144,20 @@ export function ServiceFormPage({
                         type="button"
                         variant="outline"
                         size="lg"
+                        aria-keyshortcuts={
+                          keyboardShortcuts ? NEXT_SECTION_HOTKEY : undefined
+                        }
                         onClick={() => void revealSection(nextTab.id)}
                       >
                         <span className="sm:hidden">Next section</span>
                         <span className="hidden sm:inline">
                           {nextTab.label}
                         </span>
+                        {keyboardShortcuts ? (
+                          <Kbd aria-hidden="true" className="hidden sm:inline-flex">
+                            {hotkeyLabel(NEXT_SECTION_HOTKEY)}
+                          </Kbd>
+                        ) : null}
                         <ArrowRight aria-hidden="true" data-icon="inline-end" />
                       </Button>
                     ) : null}
