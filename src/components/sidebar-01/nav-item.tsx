@@ -1,6 +1,6 @@
 "use client";
 
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { staggerStyle } from "~/components/motion/stagger";
 import { SidebarMenuItem, useSidebar } from "~/components/ui/sidebar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";

@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { BarChart3, ClipboardList, LayoutGrid, Users } from "lucide-react";
 import { JourneyCard } from "~/features/admin/overview/components/JourneyCard";
 import {

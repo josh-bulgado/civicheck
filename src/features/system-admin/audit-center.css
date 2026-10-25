@@ -1,0 +1,33 @@
+.audit-center-page {
+  animation: none;
+}
+
+.audit-events-card {
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 22px;
+  background: var(--card);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--primary) 4%, transparent),
+    0 1px 2px rgb(15 27 45 / 3%);
+}
+
+.audit-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-lighter);
+}
+
+.audit-events-table {
+  min-width: 960px;
+  color: var(--foreground);
+}
+
+@media (max-width: 639px) {
+  .audit-toolbar {
+    padding: 16px;
+  }
+}

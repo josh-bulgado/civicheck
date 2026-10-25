@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { ArrowRight, Building2, Clock, Landmark, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { FeaturedChecklist } from "../landing.queries";

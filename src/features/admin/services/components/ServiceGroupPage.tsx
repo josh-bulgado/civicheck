@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { useHotkeys } from "@tanstack/react-hotkeys";
 import { ArrowLeft, ArrowRight, FileSliders, Search } from "lucide-react";
 import { Badge } from "~/components/ui/badge";

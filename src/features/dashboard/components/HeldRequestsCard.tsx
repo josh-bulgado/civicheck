@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { ChevronRight, UserRound, Wallet, type LucideIcon } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import type { HeldRequests } from "~/features/dashboard/staff-desk";

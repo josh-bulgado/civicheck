@@ -1,5 +1,5 @@
 import type { ReactNode, Ref } from "react";
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { CircleAlert, Save, type LucideIcon } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Button, buttonVariants } from "~/components/ui/button";
@@ -13,6 +13,7 @@ import {
 import { IconTile } from "~/components/ui/icon-tile";
 import { Kbd } from "~/components/ui/kbd";
 import { Spinner } from "~/components/ui/spinner";
+import { Skeleton } from "~/components/ui/skeleton";
 import { TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { formatServiceCode } from "~/features/services/service-utils";
 import { cn } from "~/lib/utils";
@@ -72,7 +73,9 @@ export function ServiceDossierHeader({
           {isVariant ? (
             <Badge variant="neutral">Variant Record</Badge>
           ) : applicationLoading ? (
-            <Badge variant="neutral">Loading…</Badge>
+            <span role="status" aria-label="Loading application status">
+              <Skeleton aria-hidden="true" className="h-6 w-36 rounded-full" />
+            </span>
           ) : applicationVersion > 0 ? (
             <Badge variant="success">
               Application v{applicationVersion} Live
@@ -122,9 +125,7 @@ export function ServiceEditorTabBar({
             key={id}
             value={id}
             className="gap-2"
-            aria-keyshortcuts={
-              shortcutsEnabled && hotkey ? hotkey : undefined
-            }
+            aria-keyshortcuts={shortcutsEnabled && hotkey ? hotkey : undefined}
           >
             <Icon aria-hidden="true" />
             <span>{tabLabel}</span>

@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { Fingerprint, History, LogIn, Shield } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import {

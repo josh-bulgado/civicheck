@@ -1,3 +1,4 @@
+import { QuietAnchor } from "~/components/quiet-link";
 import * as React from "react";
 import { ArrowRight, Menu } from "lucide-react";
 
@@ -9,7 +10,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "~/components/ui/sheet";
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { cn } from "~/lib/utils";
 
 const navItems = ["Blocks", "Pricing", "Docs", "Changelog"];
@@ -29,7 +30,7 @@ export default function Hero01() {
       />
 
       <header className="relative mx-auto flex max-w-6xl items-center justify-between px-6 py-5 sm:px-8">
-        <a
+        <QuietAnchor
           href="#"
           className="flex items-center gap-2 font-semibold tracking-tight text-foreground"
         >
@@ -39,16 +40,16 @@ export default function Hero01() {
             className="size-6"
           />
           blockus
-        </a>
+        </QuietAnchor>
         <nav className="hidden items-center gap-7 md:flex">
           {navItems.map((item) => (
-            <a
+            <QuietAnchor
               key={item}
               href={`#${item.toLowerCase()}`}
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               {item}
-            </a>
+            </QuietAnchor>
           ))}
         </nav>
         <div className="flex items-center gap-2">
@@ -89,13 +90,13 @@ export default function Hero01() {
                 <ul className="mt-5 flex flex-col">
                   {navItems.map((item) => (
                     <li key={item}>
-                      <a
+                      <QuietAnchor
                         href={`#${item.toLowerCase()}`}
                         onClick={() => setMenuOpen(false)}
                         className="block rounded-md px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
                       >
                         {item}
-                      </a>
+                      </QuietAnchor>
                     </li>
                   ))}
                 </ul>

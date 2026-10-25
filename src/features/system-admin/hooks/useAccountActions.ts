@@ -28,10 +28,10 @@ export type AccountPendingAction =
   | { type: "replace-admin" }
   | null;
 
-export function useAccountActions() {
+export function useAccountActions(onRefresh?: () => void) {
   const { pending: pendingAction, run } = useActionRunner<
     Exclude<AccountPendingAction, null>
-  >("The action could not be completed.");
+  >("The action could not be completed.", onRefresh);
 
   const suspend = useCallback(
     (accountId: string, reason: string) =>
@@ -86,7 +86,8 @@ export function useAccountActions() {
   const resendVerification = useCallback(
     (accountId: string, email: string) =>
       run(
-        () => resendAccountVerification({ data: { targetId: accountId, email } }),
+        () =>
+          resendAccountVerification({ data: { targetId: accountId, email } }),
         { type: "resend-verification", accountId },
         "Verification email sent.",
       ),
@@ -94,7 +95,11 @@ export function useAccountActions() {
   );
 
   const replaceAdministrator = useCallback(
-    ({ candidateId, outgoingRole, outgoingDepartmentId }: ReplaceAdministratorInput) =>
+    ({
+      candidateId,
+      outgoingRole,
+      outgoingDepartmentId,
+    }: ReplaceAdministratorInput) =>
       run(
         () =>
           replaceCcroAdmin({

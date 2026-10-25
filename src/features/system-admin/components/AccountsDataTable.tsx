@@ -2,12 +2,22 @@ import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
 import {
   getCoreRowModel,
+  flexRender,
   getSortedRowModel,
   useReactTable,
   type PaginationState,
   type SortingState,
 } from "@tanstack/react-table";
-import { DataTableCard } from "~/components/ui/data-table-card";
+import { Search } from "lucide-react";
+import { Button } from "~/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
 import { DataTablePagination } from "~/components/ui/data-table-pagination";
 import { useAccountActions } from "../hooks/useAccountActions";
 import {
@@ -25,6 +35,7 @@ import { AccountConfirmDialog } from "./AccountConfirmDialog";
 import { AccountHistoryDialog } from "./AccountHistoryDialog";
 import { createAccountColumns } from "./AccountsColumn";
 import { AccountsTableToolbar } from "./AccountsTableToolbar";
+import { AccountsTableSkeleton } from "./AccountsTableSkeleton";
 import { EditAccountDialog } from "./EditAccountDialog";
 import { ReplaceCcroAdminDialog } from "./ReplaceCcroAdminDialog";
 import { ResendVerificationDialog } from "./ResendVerificationDialog";
@@ -69,6 +80,9 @@ export function AccountsDataTable({
   hasNextPage,
   replacementOpen,
   onReplacementOpenChange,
+  isLoading = false,
+  error = null,
+  onRefresh,
 }: {
   data: AccountSummary[];
   adminCandidates: AdminCandidate[];
@@ -82,6 +96,9 @@ export function AccountsDataTable({
   hasNextPage: boolean;
   replacementOpen: boolean;
   onReplacementOpenChange: (open: boolean) => void;
+  isLoading?: boolean;
+  error?: string | null;
+  onRefresh?: () => void;
 }) {
   const router = useRouter();
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -105,7 +122,7 @@ export function AccountsDataTable({
     revokeSessions,
     resendVerification,
     replaceAdministrator,
-  } = useAccountActions();
+  } = useAccountActions(onRefresh);
 
   const pendingAccountId =
     pendingAction && "accountId" in pendingAction
@@ -158,6 +175,7 @@ export function AccountsDataTable({
 
   const table = useReactTable({
     data,
+    getRowId: (account) => account.id,
     columns,
     state: { sorting, pagination },
     onSortingChange: setSorting,
@@ -174,6 +192,7 @@ export function AccountsDataTable({
     nextPage: number,
     nextFilters: AccountFilters = filters,
     nextPageSize: number = pageSize,
+    replace = false,
   ) {
     return router.navigate({
       to: "/system-admin/accounts",
@@ -184,12 +203,17 @@ export function AccountsDataTable({
           nextPageSize === defaultAccountPageSize ? undefined : nextPageSize,
         ...nextFilters,
       },
+      replace,
+      resetScroll: false,
     });
   }
 
   const hasFilters = Object.values(filters).some(Boolean);
   const { noun: accountNoun, label: tableLabel } = accountCopy[category];
-  const pendingFor = (type: NonNullable<typeof pendingAction>["type"], id?: string) =>
+  const pendingFor = (
+    type: NonNullable<typeof pendingAction>["type"],
+    id?: string,
+  ) =>
     pendingAction?.type === type &&
     "accountId" in pendingAction &&
     pendingAction.accountId === id;
@@ -198,41 +222,153 @@ export function AccountsDataTable({
 
   return (
     <>
-      <DataTableCard
-        table={table}
-        cellClassName="py-3"
-        toolbar={
-          <AccountsTableToolbar
-            category={category}
-            filters={filters}
-            departments={departments}
-            onFiltersChange={(next) => void navigate(1, next)}
-            onCategoryChange={(next) =>
-              void router.navigate({
-                to: "/system-admin/accounts",
-                search: { category: next, page: 1 },
-              })
-            }
-          />
-        }
-        label={tableLabel}
-        emptyLabel={
-          hasFilters
-            ? `No ${accountNoun}s match these filters.`
-            : `No ${accountNoun}s yet.`
-        }
-        onClearFilters={hasFilters ? () => void navigate(1, {}) : undefined}
-        footer={
-          <DataTablePagination
-            table={table}
-            pageCount={pageCount}
-            total={total}
-            pageSizeOptions={[...accountPageSizes]}
-            onPageChange={(pageIndex) => void navigate(pageIndex + 1)}
-            onPageSizeChange={(size) => void navigate(1, filters, size)}
-          />
-        }
-      />
+      <div className="accounts-directory-card" aria-busy={isLoading}>
+        <AccountsTableToolbar
+          category={category}
+          filters={filters}
+          departments={departments}
+          onFiltersChange={(next) => void navigate(1, next, pageSize, true)}
+          onCategoryChange={(next) =>
+            void router.navigate({
+              to: "/system-admin/accounts",
+              search: { category: next, page: 1 },
+            })
+          }
+        />
+        {error ? (
+          <div
+            role="alert"
+            className="flex flex-wrap items-center justify-between gap-3 border-b border-border-lighter px-6 py-4 text-sm"
+          >
+            <p>{error}</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onRefresh}
+            >
+              Try again
+            </Button>
+          </div>
+        ) : null}
+        <Table className="accounts-directory-table" aria-label={tableLabel}>
+          <colgroup>
+            {category === "personnel" ? (
+              <>
+                <col className="w-[29%]" />
+                <col className="w-[17%]" />
+                <col className="w-[14%]" />
+                <col className="w-[13%]" />
+                <col className="w-[10%]" />
+                <col className="w-[17%]" />
+              </>
+            ) : (
+              <>
+                <col className="w-[40%]" />
+                <col className="w-[23%]" />
+                <col className="w-[20%]" />
+                <col className="w-[17%]" />
+              </>
+            )}
+          </colgroup>
+          <TableHeader className="bg-surface-subtle/60">
+            {table.getHeaderGroups().map((group) => (
+              <TableRow
+                key={group.id}
+                className="border-border-lighter hover:bg-transparent"
+              >
+                {group.headers.map((header) => (
+                  <TableHead
+                    key={header.id}
+                    className="h-12 px-6 text-xs font-semibold text-muted-foreground"
+                    aria-sort={
+                      header.column.getIsSorted() === "asc"
+                        ? "ascending"
+                        : header.column.getIsSorted() === "desc"
+                          ? "descending"
+                          : undefined
+                    }
+                  >
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <AccountsTableSkeleton category={category} />
+            ) : table.getRowModel().rows.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  className="h-[68px] border-border-lighter hover:bg-surface-subtle/60"
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id} className="px-6 py-3">
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : !error ? (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-48 px-5 text-center"
+                >
+                  <Search
+                    className="mx-auto mb-3 size-6 text-muted-foreground/50"
+                    aria-hidden="true"
+                  />
+                  <p className="font-medium">
+                    {hasFilters
+                      ? `No ${accountNoun}s match these filters.`
+                      : `No ${accountNoun}s yet.`}
+                  </p>
+                  {hasFilters ? (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="mt-1"
+                      onClick={() => void navigate(1, {})}
+                    >
+                      Clear filters
+                    </Button>
+                  ) : null}
+                </TableCell>
+              </TableRow>
+            ) : null}
+          </TableBody>
+        </Table>
+        {!isLoading && !error && pageCount > 1 ? (
+          <div className="border-t border-border-lighter px-5 py-4">
+            <DataTablePagination
+              table={table}
+              pageCount={pageCount}
+              total={total}
+              pageSizeOptions={[...accountPageSizes]}
+              onPageChange={(pageIndex) => void navigate(pageIndex + 1)}
+              onPageSizeChange={(size) => void navigate(1, filters, size)}
+            />
+          </div>
+        ) : null}
+      </div>
+      <p role="status" className="sr-only">
+        {isLoading
+          ? `Loading ${tableLabel.toLowerCase()}`
+          : error
+            ? "Accounts could not be loaded"
+            : `${total} accounts`}
+      </p>
 
       <SuspendAccountDialog
         account={suspendTarget}

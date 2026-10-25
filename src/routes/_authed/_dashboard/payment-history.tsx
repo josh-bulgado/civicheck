@@ -1,3 +1,4 @@
+import { TablePageSkeleton } from "~/components/feedback/PageSkeleton";
 import { createFileRoute } from "@tanstack/react-router";
 import { hasPermission, type Role } from "~/lib/permissions";
 import { getPaymentHistoryFn } from "~/features/requests/requests.queries";
@@ -23,6 +24,7 @@ export const Route = createFileRoute("/_authed/_dashboard/payment-history")({
     payments: await getPaymentHistoryFn({ data: deps }),
   }),
   staleTime: 30_000,
+  pendingComponent: () => <TablePageSkeleton label="Loading payment history" />,
   component: PaymentHistoryRoute,
 });
 

@@ -1,3 +1,4 @@
+import { EditorPageSkeleton } from "~/components/feedback/PageSkeleton";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { getActiveDepartments } from "~/features/admin/departments.queries";
 import { ServiceFormPage } from "~/features/admin/services/components/ServiceFormPage";
@@ -22,6 +23,7 @@ export const Route = createFileRoute(
     ]);
     return { services, departments };
   },
+  pendingComponent: EditorPageSkeleton,
   component: NewServiceRoute,
 });
 

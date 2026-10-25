@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { Baby, Gem, Heart, ScrollText } from "lucide-react";
 import { Reveal } from "~/components/motion/reveal";
 

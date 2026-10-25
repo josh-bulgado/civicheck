@@ -13,12 +13,7 @@ import { toast } from "sonner";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,11 +27,9 @@ import {
   EmptyTitle,
 } from "~/components/ui/empty";
 import { Input } from "~/components/ui/input";
-import { Spinner } from "~/components/ui/spinner";
+import { PanelSkeleton } from "~/components/feedback/PageSkeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import {
-  type ConditionSource,
-} from "~/features/forms/components/ConditionRuleBuilder";
+import { type ConditionSource } from "~/features/forms/components/ConditionRuleBuilder";
 import type { FormTemplateDefinition } from "~/features/forms/form-template.types";
 import type { Service } from "../../services.types";
 import {
@@ -49,7 +42,10 @@ import {
   variantScopeCondition,
   type RequirementScopeKind,
 } from "../requirement-scope";
-import { EMPTY_REQUIREMENT, type ServiceFormValues } from "../service-form.config";
+import {
+  EMPTY_REQUIREMENT,
+  type ServiceFormValues,
+} from "../service-form.config";
 import { RequirementSheet } from "./RequirementSheet";
 import { RequirementsTable, type RequirementEntry } from "./RequirementsTable";
 
@@ -394,22 +390,15 @@ export function RequirementsSection({
             <AlertTriangle aria-hidden="true" />
             <AlertDescription>
               This checklist is shared by {sharedWith.length + 1} services.
-              Inherited requirements are locked to prevent group-wide edits — use{" "}
-              <span className="font-medium">Override for this variant</span> to
-              change one without touching the others.
+              Inherited requirements are locked to prevent group-wide edits —
+              use <span className="font-medium">Override for this variant</span>{" "}
+              to change one without touching the others.
             </AlertDescription>
           </Alert>
         ) : null}
 
         {isLoading ? (
-          <div
-            className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 py-6 text-xs text-muted-foreground"
-            role="status"
-            aria-live="polite"
-          >
-            <Spinner className="size-4" />
-            Loading checklist&hellip;
-          </div>
+          <PanelSkeleton label="Loading checklist" rows={3} className="py-4" />
         ) : (
           <>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -445,11 +434,16 @@ export function RequirementsSection({
                   <Plus aria-hidden="true" data-icon="inline-start" />
                   Add
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" variant="roomy" className="min-w-64">
-                  <DropdownMenuItem
-                    onClick={addBlank}
-                  >
-                    <Plus aria-hidden="true" className="text-muted-foreground" />
+                <DropdownMenuContent
+                  align="end"
+                  variant="roomy"
+                  className="min-w-64"
+                >
+                  <DropdownMenuItem onClick={addBlank}>
+                    <Plus
+                      aria-hidden="true"
+                      className="text-muted-foreground"
+                    />
                     Add Requirement
                   </DropdownMenuItem>
                   <DropdownMenuItem
@@ -570,9 +564,7 @@ export function RequirementsSection({
                       entries={visibleEntries}
                       locked={groupLocked}
                       onOpen={openRequirement}
-                      onOverride={
-                        canOverride ? overrideRequirement : undefined
-                      }
+                      onOverride={canOverride ? overrideRequirement : undefined}
                       onRemove={removeRequirement}
                       conditionSources={conditionSources}
                     />

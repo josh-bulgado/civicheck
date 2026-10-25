@@ -16,6 +16,7 @@
 
 import type { AccountProfile } from "~/features/account/account.types";
 import { clearFileCache } from "~/lib/file-preview-cache";
+import { clearAuditEventsCache } from "~/features/system-admin/audit-events.cache";
 
 type CurrentUser = AccountProfile | null;
 
@@ -59,7 +60,8 @@ export function loadCurrentUser(
  */
 export function clearCurrentUser(): void {
   entry = null;
-  // Previewed documents belong to whoever was signed in. They must not outlive
-  // that identity in the tab, so a sign-out empties the file cache too.
+  // Documents and audit metadata belong to the signed-in account. They must
+  // not outlive that identity in this tab.
   clearFileCache();
+  clearAuditEventsCache();
 }

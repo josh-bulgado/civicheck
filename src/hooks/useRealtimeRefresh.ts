@@ -48,6 +48,7 @@ export function useRealtimeRefresh({
   schema = "public",
   enabled = true,
   onChange,
+  onRefresh,
   onRow,
 }: {
   tables: string[];
@@ -59,6 +60,8 @@ export function useRealtimeRefresh({
    * fallback — a cache has its own expiry for that.
    */
   onChange?: () => void;
+  /** Replace route-loader invalidation with a debounced, local cache refresh. */
+  onRefresh?: () => void;
   /**
    * Same moment as `onChange`, but with the row itself, for a caller that needs
    * to know *what* changed (a pop-up for a new notification) rather than only
@@ -75,6 +78,8 @@ export function useRealtimeRefresh({
   routerRef.current = router;
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const onRefreshRef = useRef(onRefresh);
+  onRefreshRef.current = onRefresh;
   const onRowRef = useRef(onRow);
   onRowRef.current = onRow;
   // Arrays are a fresh reference each render, so the effect keys off the names.
@@ -88,13 +93,15 @@ export function useRealtimeRefresh({
 
     let cancelled = false;
     let channel: RealtimeChannel | undefined;
-    let client: Awaited<ReturnType<typeof getSupabaseBrowserClient>> | undefined;
+    let client:
+      Awaited<ReturnType<typeof getSupabaseBrowserClient>> | undefined;
     let debounce: ReturnType<typeof setTimeout> | undefined;
     let lastRefreshAt = 0;
 
     const refreshNow = () => {
       lastRefreshAt = Date.now();
-      void routerRef.current.invalidate();
+      if (onRefreshRef.current) onRefreshRef.current();
+      else void routerRef.current.invalidate();
     };
 
     const scheduleRefresh = () => {

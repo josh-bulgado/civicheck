@@ -63,39 +63,27 @@ export function AccountRowActions({
 
   return (
     <div className="flex items-center justify-end gap-2">
-      {isActive ? (
-        canEdit ? (
-          <Button
-            variant="outline"
-            size="lg"
-            disabled={isPending}
-            onClick={() => onEdit(account)}
-            className="whitespace-nowrap"
-          >
-            <SquarePen aria-hidden="true" data-icon="inline-start" />
-            Edit Details
-          </Button>
-        ) : null
-      ) : (
+      {!isActive ? (
         <Button
           variant="outline"
-          size="lg"
+          shape="pill"
           disabled={isPending}
           onClick={() => onReactivate(account)}
-          className="whitespace-nowrap"
+          className="gap-1.5 bg-card px-3 shadow-none"
         >
           <RotateCcw aria-hidden="true" data-icon="inline-start" />
           Reactivate
         </Button>
-      )}
+      ) : null}
       <DropdownMenu>
         <DropdownMenuTrigger
           nativeButton
           render={
             <Button
               variant="ghost"
-              size="icon-lg"
-              className="text-muted-foreground data-open:bg-muted"
+              size="icon-sm"
+              disabled={isPending}
+              className="rounded-full text-muted-foreground data-open:bg-muted"
             />
           }
         >
@@ -115,9 +103,7 @@ export function AccountRowActions({
             <History />
             Account history
           </DropdownMenuItem>
-          {/* A suspended account keeps its Edit action here, because the row
-              button becomes Reactivate. */}
-          {!isActive && canEdit ? (
+          {canEdit ? (
             <DropdownMenuItem
               disabled={isPending}
               onClick={() => onEdit(account)}

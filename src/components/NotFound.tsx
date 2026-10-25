@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { Link, useLocation, useRouter } from "@tanstack/react-router";
+import { useLocation, useRouter } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import {
   ArrowLeft,
   ArrowRight,

@@ -1,90 +1,104 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown } from "lucide-react";
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
+import { ArrowDown, ArrowUp } from "lucide-react";
+import { formatAuditEventType } from "../audit-event.utils";
 import type { NormalizedAuditEvent } from "../system-admin.types";
-
-const headerClassName =
-  "text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground";
 
 function SortableHeader({
   label,
   column,
 }: {
   label: string;
-  column: { getIsSorted: () => false | "asc" | "desc"; toggleSorting: (descending: boolean) => void };
+  column: {
+    getIsSorted: () => false | "asc" | "desc";
+    toggleSorting: (descending: boolean) => void;
+  };
 }) {
+  const sorted = column.getIsSorted();
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className={`${headerClassName} -ml-3 h-8 hover:bg-transparent hover:text-foreground`}
-      onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+    <button
+      type="button"
+      className="flex h-9 items-center gap-1.5 rounded-sm text-left"
+      onClick={() => column.toggleSorting(sorted === "asc")}
+      aria-label={`Sort by ${label.toLowerCase()}${sorted ? `, currently ${sorted === "asc" ? "ascending" : "descending"}` : ""}`}
     >
       {label}
-      <ArrowUpDown className="size-3" />
-    </Button>
+      {sorted === "asc" ? (
+        <ArrowUp className="size-3" aria-hidden="true" />
+      ) : null}
+      {sorted === "desc" ? (
+        <ArrowDown className="size-3" aria-hidden="true" />
+      ) : null}
+    </button>
   );
 }
+
+const sourceLabels = {
+  system: "System",
+  request: "Request",
+  "sign-in": "Sign-In",
+};
+
+// Reuse formatters instead of constructing two Intl instances for every row.
+const auditDate = new Intl.DateTimeFormat("en-US");
+const auditTime = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
+  minute: "2-digit",
+  second: "2-digit",
+});
 
 export const auditColumns: ColumnDef<NormalizedAuditEvent>[] = [
   {
     accessorKey: "timestamp",
     header: ({ column }) => <SortableHeader label="Time" column={column} />,
     cell: ({ row }) => (
-      <div className="min-w-40">
-        <p className="font-medium text-foreground">
-          {new Date(row.original.timestamp).toLocaleDateString()}
-        </p>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {new Date(row.original.timestamp).toLocaleTimeString()}
-        </p>
-      </div>
+      <time dateTime={row.original.timestamp} className="block">
+        <span className="block font-medium">
+          {auditDate.format(new Date(row.original.timestamp))}
+        </span>
+        <span className="mt-0.5 block text-xs text-muted-foreground">
+          {auditTime.format(new Date(row.original.timestamp))}
+        </span>
+      </time>
     ),
   },
   {
     accessorKey: "source",
-    header: () => <span className={headerClassName}>Source</span>,
+    header: "Source",
     cell: ({ row }) => (
-      <Badge variant="outline" className="capitalize">
-        {row.original.source}
-      </Badge>
+      <span
+        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs leading-5 font-medium ${row.original.source === "system" ? "bg-secondary text-primary-hover" : "bg-primary-soft text-primary"}`}
+      >
+        {sourceLabels[row.original.source]}
+      </span>
     ),
   },
   {
     accessorKey: "eventType",
     header: ({ column }) => <SortableHeader label="Event" column={column} />,
     cell: ({ row }) => (
-      <span className="font-medium capitalize text-foreground/85">
-        {row.original.eventType.replaceAll("_", " ")}
+      <span
+        className="font-medium text-foreground/85"
+        title={
+          row.original.requestId
+            ? `Request ${row.original.requestId}`
+            : (row.original.targetId ?? undefined)
+        }
+      >
+        {formatAuditEventType(row.original.eventType)}
       </span>
     ),
   },
   {
     accessorKey: "actor",
     header: ({ column }) => <SortableHeader label="Actor" column={column} />,
-    cell: ({ row }) => (
-      <span className="text-foreground/80">{row.original.actor}</span>
-    ),
-  },
-  {
-    id: "target",
-    header: () => <span className={headerClassName}>Target</span>,
-    cell: ({ row }) => (
-      <span className="font-mono text-xs text-muted-foreground">
-        {row.original.requestId
-          ? `Request ${row.original.requestId}`
-          : (row.original.targetId ?? "—")}
-      </span>
-    ),
   },
   {
     id: "device",
-    header: () => <span className={headerClassName}>Device</span>,
+    header: "Device",
     cell: ({ row }) =>
       row.original.deviceLabel || row.original.maskedIpAddress ? (
         <div className="min-w-36">
-          <p className="text-sm text-foreground/80">
+          <p className="text-foreground/80">
             {row.original.deviceLabel ?? "Unrecognized device"}
           </p>
           {row.original.maskedIpAddress ? (
@@ -94,7 +108,7 @@ export const auditColumns: ColumnDef<NormalizedAuditEvent>[] = [
           ) : null}
         </div>
       ) : (
-        <span className="text-sm text-muted-foreground">—</span>
+        <span className="text-muted-foreground">—</span>
       ),
   },
 ];

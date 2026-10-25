@@ -1,10 +1,7 @@
 import { useState } from "react";
-import { UserRoundCog } from "lucide-react";
+import { UserRoundPlus } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import { PageHeaderCard } from "~/components/ui/page-header-card";
-import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { AccountsDataTable } from "../components/AccountsDataTable";
-import { RealtimeStatusBadge } from "../components/RealtimeStatusBadge";
 import type {
   AccountCategory,
   AccountFilters,
@@ -12,14 +9,12 @@ import type {
   AdminCandidate,
   SystemAdminDepartment,
 } from "../system-admin.types";
+import "../accounts-center.css";
 
 const descriptions = {
-  personnel:
-    "System Administration, CCRO personnel. Invitations are managed by the CCRO Administrator.",
-  citizens:
-    "System Administration, citizens. Their submissions and documents are not shown here.",
-  "platform-admins":
-    "System Administration, platform administrators. Protected accounts cannot be changed here.",
+  personnel: "CCRO personnel",
+  citizens: "Citizens",
+  "platform-admins": "Platform administrators",
 } satisfies Record<AccountCategory, string>;
 
 export function AccountsPage({
@@ -33,6 +28,9 @@ export function AccountsPage({
   pageSize,
   total,
   hasNextPage,
+  isLoading = false,
+  error = null,
+  onRefresh,
 }: {
   accounts: AccountSummary[];
   adminCandidates: AdminCandidate[];
@@ -44,31 +42,38 @@ export function AccountsPage({
   pageSize: number;
   total: number;
   hasNextPage: boolean;
+  isLoading?: boolean;
+  error?: string | null;
+  onRefresh?: () => void;
 }) {
   const [replacementOpen, setReplacementOpen] = useState(false);
-  // Every account mutation (edit, suspend, reactivate, admin replacement)
-  // writes a profiles row, so one subscription covers the whole directory.
-  const realtimeStatus = useRealtimeRefresh({ tables: ["profiles"] });
 
   return (
-    <div className="dashboard-page">
-      <PageHeaderCard title="Accounts Center" description={descriptions[category]}>
-        <div className="flex flex-wrap items-center gap-3">
-          <RealtimeStatusBadge status={realtimeStatus} />
-          {category === "personnel" ? (
-            <Button
-              variant="raised"
-              size="lg"
-              onClick={() => setReplacementOpen(true)}
-            >
-              <UserRoundCog aria-hidden="true" data-icon="inline-start" />
-              {hasActiveAdmin
-                ? "Replace CCRO Administrator"
-                : "Appoint CCRO Administrator"}
-            </Button>
-          ) : null}
+    <div className="dashboard-page accounts-center-page">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-1.5">
+          <h1 className="text-3xl font-extrabold tracking-[-0.03em] sm:text-4xl">
+            Accounts Center
+          </h1>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {descriptions[category]}
+          </p>
         </div>
-      </PageHeaderCard>
+        {category === "personnel" ? (
+          <Button
+            size="lg"
+            shape="pill"
+            className="gap-2 px-4"
+            onClick={() => setReplacementOpen(true)}
+            disabled={isLoading || !!error}
+          >
+            <UserRoundPlus aria-hidden="true" />
+            {hasActiveAdmin
+              ? "Replace CCRO Administrator"
+              : "Appoint CCRO Administrator"}
+          </Button>
+        ) : null}
+      </header>
       <AccountsDataTable
         key={category}
         data={accounts}
@@ -83,6 +88,9 @@ export function AccountsPage({
         hasNextPage={hasNextPage}
         replacementOpen={replacementOpen}
         onReplacementOpenChange={setReplacementOpen}
+        isLoading={isLoading}
+        error={error}
+        onRefresh={onRefresh}
       />
     </div>
   );

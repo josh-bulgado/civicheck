@@ -1,3 +1,4 @@
+import { EditorPageSkeleton, PageSkeleton } from "~/components/feedback/PageSkeleton";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { ServiceGroupApplicationPage } from "~/features/admin/services/components/ServiceGroupApplicationPage";
 import { ServiceGroupPage } from "~/features/admin/services/components/ServiceGroupPage";
@@ -62,6 +63,7 @@ export const Route = createFileRoute(
       })),
     };
   },
+  pendingComponent: ServiceGroupPending,
   component: ServiceGroupRoute,
 });
 
@@ -77,4 +79,9 @@ function ServiceGroupRoute() {
   ) : (
     <ServiceGroupPage variants={variants} />
   );
+}
+
+function ServiceGroupPending() {
+  const { scope } = Route.useSearch();
+  return scope === "application" ? <EditorPageSkeleton /> : <PageSkeleton label="Loading service group" />;
 }

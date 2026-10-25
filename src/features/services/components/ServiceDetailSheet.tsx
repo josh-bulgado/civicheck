@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PanelSkeleton } from "~/components/feedback/PageSkeleton";
 import {
   Sheet,
   SheetContent,
@@ -99,7 +100,8 @@ export function ServiceDetailSheet({
         setRequirements(data);
       } catch (err) {
         setError(
-          (err instanceof Error && err.message) || "Failed to load requirements.",
+          (err instanceof Error && err.message) ||
+            "Failed to load requirements.",
         );
       } finally {
         setLoading(false);
@@ -308,18 +310,11 @@ export function ServiceDetailSheet({
             </h4>
 
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-8 space-y-2">
-                <div
-                  className="h-6 w-6 animate-spin rounded-full border-2 border-t-transparent"
-                  style={{
-                    borderColor: "var(--primary)",
-                    borderTopColor: "transparent",
-                  }}
-                />
-                <span className="text-xs text-muted-foreground">
-                  Loading requirements...
-                </span>
-              </div>
+              <PanelSkeleton
+                label="Loading requirements"
+                rows={3}
+                className="py-4"
+              />
             ) : error ? (
               <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-lg">
                 {error}

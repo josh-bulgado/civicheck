@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { RotateCcw } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { SlidersHorizontal, X } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import {
   FilterChips,
@@ -7,6 +7,11 @@ import {
   TableSearch,
   type FilterChipOption,
 } from "~/components/ui/data-table-toolbar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover";
 import type { AccountStatus, Role } from "~/lib/permissions";
 import {
   accountCategories,
@@ -22,21 +27,16 @@ import type {
 } from "../system-admin.types";
 
 const ALL = "all";
-const SEARCH_DEBOUNCE_MS = 350;
-
 const personnelRoles: Role[] = ["staff", "supervisor", "cashier", "admin"];
-
 const categoryOptions: FilterChipOption<AccountCategory>[] =
   accountCategories.map((value) => ({
     value,
     label: accountCategoryLabels[value],
   }));
-
 const roleOptions = [
   { value: ALL, label: "All roles" },
   ...personnelRoles.map((role) => ({ value: role, label: roleLabels[role] })),
 ];
-
 const statusOptions = [
   { value: ALL, label: "All statuses" },
   ...(Object.keys(accountStatusLabels) as AccountStatus[]).map((status) => ({
@@ -44,13 +44,14 @@ const statusOptions = [
     label: accountStatusLabels[status],
   })),
 ];
-
-const signInOptions: { value: AccountSignInFilter | typeof ALL; label: string }[] =
-  [
-    { value: ALL, label: "Any sign-in" },
-    { value: "never", label: "Never signed in" },
-    { value: "unverified", label: "Email not verified" },
-  ];
+const signInOptions: {
+  value: AccountSignInFilter | typeof ALL;
+  label: string;
+}[] = [
+  { value: ALL, label: "Any sign-in" },
+  { value: "never", label: "Never signed in" },
+  { value: "unverified", label: "Email not verified" },
+];
 
 export function AccountsTableToolbar({
   category,
@@ -66,29 +67,31 @@ export function AccountsTableToolbar({
   onCategoryChange: (category: AccountCategory) => void;
 }) {
   const [search, setSearch] = useState(filters.q ?? "");
-  const latest = useRef({ filters, onFiltersChange });
-  latest.current = { filters, onFiltersChange };
-  // The last query this toolbar pushed into the URL. A URL value different
-  // from it came from elsewhere (back/forward, "Clear filters").
-  const submittedQuery = useRef(filters.q);
+  const [previousQuery, setPreviousQuery] = useState(filters.q);
+  const [submittedQuery, setSubmittedQuery] = useState<
+    string | undefined | null
+  >(null);
 
-  // Typing is debounced into the URL so each keystroke is not a server round
-  // trip; the other filters are discrete and apply immediately.
-  useEffect(() => {
-    const next = search.trim() || undefined;
-    if (next === latest.current.filters.q) return;
-    const timer = setTimeout(() => {
-      submittedQuery.current = next;
-      latest.current.onFiltersChange({ ...latest.current.filters, q: next });
-    }, SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [search]);
+  // Preserve newer typing when an earlier search response arrives.
+  if (previousQuery !== filters.q) {
+    setPreviousQuery(filters.q);
+    if (filters.q !== submittedQuery) setSearch(filters.q ?? "");
+  }
+
+  const apply = useCallback(
+    (next: AccountFilters) => {
+      setSubmittedQuery(next.q);
+      onFiltersChange(next);
+    },
+    [onFiltersChange],
+  );
 
   useEffect(() => {
-    if (filters.q === submittedQuery.current) return;
-    submittedQuery.current = filters.q;
-    setSearch(filters.q ?? "");
-  }, [filters.q]);
+    const q = search.trim() || undefined;
+    if (q === filters.q || q === submittedQuery) return;
+    const timer = window.setTimeout(() => apply({ ...filters, q }), 350);
+    return () => window.clearTimeout(timer);
+  }, [search, filters, submittedQuery, apply]);
 
   const departmentOptions = useMemo(
     () => [
@@ -102,21 +105,21 @@ export function AccountsTableToolbar({
   );
 
   function update(patch: Partial<AccountFilters>) {
-    onFiltersChange({ ...filters, ...patch });
+    apply({ ...filters, q: search.trim() || undefined, ...patch });
   }
 
   const isPersonnel = category === "personnel";
-  const hasFilters = Object.values(filters).some(Boolean);
+  const activeCount = [
+    filters.role,
+    filters.status,
+    filters.departmentId,
+    filters.signIn,
+  ].filter(Boolean).length;
+  const hasFilters = search || activeCount > 0;
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <TableSearch
-          value={search}
-          onChange={setSearch}
-          placeholder="Search by name or email…"
-          label="Search accounts"
-        />
+    <div className="accounts-toolbar">
+      <div className="accounts-categories">
         <FilterChips
           label="Account group"
           value={category}
@@ -124,65 +127,164 @@ export function AccountsTableToolbar({
           options={categoryOptions}
         />
       </div>
-
-      {category === "platform-admins" ? null : (
-        <div className="flex flex-wrap items-center gap-3 sm:justify-end">
-          {isPersonnel ? (
-            <FilterSelect
-              id="accounts-role-filter"
-              label="Role"
-              value={filters.role ?? ALL}
-              options={roleOptions}
-              onValueChange={(value) =>
-                update({ role: value === ALL ? undefined : (value as Role) })
-              }
-            />
-          ) : null}
-          <FilterSelect
-            id="accounts-status-filter"
-            label="Status"
-            value={filters.status ?? ALL}
-            options={statusOptions}
-            onValueChange={(value) =>
-              update({
-                status: value === ALL ? undefined : (value as AccountStatus),
-              })
-            }
+      <div className="accounts-toolbar-controls">
+        <div className="accounts-search">
+          <TableSearch
+            value={search}
+            onChange={setSearch}
+            placeholder="Search by name or email"
+            label="Search accounts"
           />
-          {isPersonnel ? (
-            <FilterSelect
-              id="accounts-department-filter"
-              label="Department"
-              value={filters.departmentId ?? ALL}
-              options={departmentOptions}
-              onValueChange={(value) =>
-                update({ departmentId: value === ALL ? undefined : value })
-              }
-            />
-          ) : null}
-          <FilterSelect
-            id="accounts-sign-in-filter"
-            label="Sign-in"
-            value={filters.signIn ?? ALL}
-            options={signInOptions}
-            onValueChange={(value) =>
-              update({
-                signIn: value === ALL ? undefined : (value as AccountSignInFilter),
-              })
-            }
-          />
-          {hasFilters ? (
-            <Button
-              variant="ghost"
-              size="lg"
-              onClick={() => onFiltersChange({})}
-            >
-              <RotateCcw aria-hidden="true" data-icon="inline-start" />
-              Clear Filters
-            </Button>
-          ) : null}
         </div>
-      )}
+        {category !== "platform-admins" ? (
+          <Popover>
+            <PopoverTrigger
+              nativeButton
+              render={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  shape="pill"
+                  className="gap-2 border-border bg-card px-4 font-normal shadow-none"
+                />
+              }
+            >
+              <SlidersHorizontal aria-hidden="true" /> Filters
+              {activeCount ? (
+                <span className="flex size-5 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary">
+                  {activeCount}
+                </span>
+              ) : null}
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              aria-labelledby="accounts-filters-title"
+              className="w-80 space-y-4 rounded-2xl p-4"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <p id="accounts-filters-title" className="text-sm font-medium">
+                  Filter accounts
+                </p>
+                {hasFilters ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSearch("");
+                      apply({});
+                    }}
+                  >
+                    <X aria-hidden="true" /> Clear all
+                  </Button>
+                ) : null}
+              </div>
+              {isPersonnel ? (
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="accounts-role-filter"
+                    className="text-sm font-medium"
+                  >
+                    Role
+                  </label>
+                  <FilterSelect
+                    id="accounts-role-filter"
+                    label="Role"
+                    className="w-full"
+                    triggerClassName="w-full rounded-lg"
+                    value={filters.role ?? ALL}
+                    options={roleOptions}
+                    onValueChange={(value) =>
+                      update({
+                        role:
+                          value === ALL
+                            ? undefined
+                            : personnelRoles.find((role) => role === value),
+                      })
+                    }
+                  />
+                </div>
+              ) : null}
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="accounts-status-filter"
+                  className="text-sm font-medium"
+                >
+                  Status
+                </label>
+                <FilterSelect
+                  id="accounts-status-filter"
+                  label="Status"
+                  className="w-full"
+                  triggerClassName="w-full rounded-lg"
+                  value={filters.status ?? ALL}
+                  options={statusOptions}
+                  onValueChange={(value) =>
+                    update({
+                      status:
+                        value === ALL
+                          ? undefined
+                          : (
+                              Object.keys(
+                                accountStatusLabels,
+                              ) as AccountStatus[]
+                            ).find((status) => status === value),
+                    })
+                  }
+                />
+              </div>
+              {isPersonnel ? (
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="accounts-department-filter"
+                    className="text-sm font-medium"
+                  >
+                    Department
+                  </label>
+                  <FilterSelect
+                    id="accounts-department-filter"
+                    label="Department"
+                    className="w-full"
+                    triggerClassName="w-full rounded-lg"
+                    value={filters.departmentId ?? ALL}
+                    options={departmentOptions}
+                    onValueChange={(value) =>
+                      update({
+                        departmentId: value === ALL ? undefined : value,
+                      })
+                    }
+                  />
+                </div>
+              ) : null}
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="accounts-sign-in-filter"
+                  className="text-sm font-medium"
+                >
+                  Sign-in
+                </label>
+                <FilterSelect
+                  id="accounts-sign-in-filter"
+                  label="Sign-in"
+                  className="w-full"
+                  triggerClassName="w-full rounded-lg"
+                  value={filters.signIn ?? ALL}
+                  options={signInOptions}
+                  onValueChange={(value) =>
+                    update({
+                      signIn:
+                        value === "never" || value === "unverified"
+                          ? value
+                          : undefined,
+                    })
+                  }
+                />
+              </div>
+            </PopoverContent>
+          </Popover>
+        ) : null}
+      </div>
     </div>
   );
 }

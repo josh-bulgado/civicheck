@@ -1,3 +1,4 @@
+import { QuietAnchor } from "~/components/quiet-link";
 import { useEffect, useState } from "react";
 import { ExternalLink, FileText, Maximize2 } from "lucide-react";
 import { buttonVariants } from "~/components/ui/button";
@@ -9,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { Spinner } from "~/components/ui/spinner";
+import { DocumentSkeleton } from "~/components/feedback/PageSkeleton";
 import { PdfViewer } from "~/components/pdf/PdfViewer";
 import { useCachedFileUrl } from "~/lib/use-cached-file-url";
 import { cn } from "~/lib/utils";
@@ -134,7 +135,10 @@ export function DocumentPreview({
         type="button"
         aria-label={`Preview ${label}`}
         onClick={() => setOpen(true)}
-        className={cn(frame, "hover:border-primary focus-visible:ring-2 focus-visible:ring-primary/40 outline-none")}
+        className={cn(
+          frame,
+          "hover:border-primary focus-visible:ring-2 focus-visible:ring-primary/40 outline-none",
+        )}
       >
         {thumbnail}
       </button>
@@ -163,13 +167,10 @@ export function DocumentPreview({
                 className="h-[65vh]"
               />
             ) : (
-              <div
-                role="status"
-                className="flex h-[65vh] items-center justify-center gap-2 rounded-lg border border-border-light bg-surface-subtle text-sm text-muted-foreground"
-              >
-                <Spinner className="size-4" aria-hidden="true" />
-                Loading PDF…
-              </div>
+              <DocumentSkeleton
+                label="Loading PDF"
+                className="h-[65vh] rounded-lg bg-surface-subtle"
+              />
             )
           ) : (
             <div className="flex max-h-[65vh] min-h-40 w-full items-center justify-center overflow-auto rounded-lg bg-surface-subtle">
@@ -181,15 +182,12 @@ export function DocumentPreview({
                   className="max-h-[65vh] w-full object-contain"
                 />
               ) : imageLoading ? (
-                <div
-                  role="status"
-                  className="flex items-center gap-2 p-6 text-sm text-muted-foreground"
-                >
-                  <Spinner className="size-4" aria-hidden="true" />
-                  Loading image…
-                </div>
+                <DocumentSkeleton label="Loading image" />
               ) : (
-                <p role="alert" className="p-6 text-center text-sm text-body-strong">
+                <p
+                  role="alert"
+                  className="p-6 text-center text-sm text-body-strong"
+                >
                   This preview couldn’t be loaded. The file is still uploaded —
                   you can close this and try again.
                 </p>
@@ -198,7 +196,7 @@ export function DocumentPreview({
           )}
 
           <DialogFooter>
-            <a
+            <QuietAnchor
               href={url}
               target="_blank"
               rel="noopener noreferrer"
@@ -206,7 +204,7 @@ export function DocumentPreview({
             >
               <ExternalLink data-icon="inline-start" aria-hidden="true" />
               Open in new tab
-            </a>
+            </QuietAnchor>
           </DialogFooter>
         </DialogContent>
       </Dialog>

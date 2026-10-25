@@ -1,3 +1,4 @@
+import { QuietAnchor } from "~/components/quiet-link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys, type HotkeyChord } from "@tanstack/react-hotkeys";
 import { useBlocker, useLocation, useNavigate } from "@tanstack/react-router";
@@ -959,7 +960,7 @@ export function ServiceFormPage({
                         <ul className="flex list-disc flex-col gap-1 pl-4">
                           {errorSummary.map((error) => (
                             <li key={String(error.fieldName)}>
-                              <a
+                              <QuietAnchor
                                 href={`#${error.anchor}`}
                                 className="font-medium underline underline-offset-4"
                                 onClick={(event) => {
@@ -971,7 +972,7 @@ export function ServiceFormPage({
                                 }}
                               >
                                 {error.label}: {error.message}
-                              </a>
+                              </QuietAnchor>
                             </li>
                           ))}
                         </ul>

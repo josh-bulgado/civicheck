@@ -1,3 +1,4 @@
+import { QuietAnchor } from "~/components/quiet-link";
 import type { CSSProperties } from "react";
 import {
   createFileRoute,
@@ -130,12 +131,12 @@ function DashboardLayout() {
       }
       style={isServiceEditor ? undefined : SIDEBAR_STYLE}
     >
-      <a
+      <QuietAnchor
         href="#main-content"
         className="sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:not-sr-only focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-foreground focus:shadow-lg"
       >
         Skip to Main Content
-      </a>
+      </QuietAnchor>
       {!isServiceEditor && (
         <AppSidebar
           user={user}

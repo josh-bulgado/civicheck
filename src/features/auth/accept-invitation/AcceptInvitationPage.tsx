@@ -1,5 +1,5 @@
 import { ThemeSwitch } from "~/components/theme-switch";
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { ShieldCheck } from "lucide-react";
 import { CiviCheckIdentity } from "~/components/brand/civic-identity";
 import { AuthBadgePanel } from "../components/AuthSidePanel";

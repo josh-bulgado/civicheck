@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useHotkeys, type HotkeyChord } from "@tanstack/react-hotkeys";
-import { Link, useBlocker, useRouter } from "@tanstack/react-router";
+import { useBlocker, useRouter } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import {
   Controller,
   useForm,

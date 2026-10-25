@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CityGovernmentIdentity, CiviCheckIdentity } from "~/components/brand/civic-identity";

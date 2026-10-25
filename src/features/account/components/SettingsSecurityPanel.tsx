@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { Check, Circle, Eye, EyeClosed } from "lucide-react";
 import * as React from "react";
 import { Controller, useForm } from "react-hook-form";

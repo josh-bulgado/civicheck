@@ -108,6 +108,7 @@ export type NormalizedAuditEvent = {
 export type AuditFilters = {
   page?: number;
   pageSize?: number;
+  q?: string;
   actor?: string;
   event?: string;
   source?: "all" | "system" | "request" | "sign-in";
@@ -115,6 +116,12 @@ export type AuditFilters = {
   to?: string;
   /** Narrows to events performed by, or targeting, this profile id. */
   account?: string;
+};
+
+export type AuditEventsResult = {
+  events: NormalizedAuditEvent[];
+  total: number;
+  filters: AuditFilters;
 };
 
 export type HealthStatus =

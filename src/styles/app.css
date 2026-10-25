@@ -783,15 +783,6 @@
   }
 }
 
-@keyframes civic-progress-sweep {
-  from {
-    transform: translate3d(-100%, 0, 0);
-  }
-  to {
-    transform: translate3d(400%, 0, 0);
-  }
-}
-
 /* Paired with `pathLength={1}` on the SVG element, so the draw-in timing is
    independent of the path's actual on-screen length. */
 @keyframes civic-draw-line {
@@ -800,128 +791,6 @@
   }
   to {
     stroke-dashoffset: 0;
-  }
-}
-
-/* Page loader ring. A rotation is the one motion that reads as "working" without
-   implying progress, so the reduced-motion variant swaps it for a slow opacity
-   breathe rather than freezing — a frozen ring would look like a hung page. */
-@keyframes civic-loader-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes civic-loader-breathe {
-  0%,
-  100% {
-    opacity: 0.35;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-/* ─── Apply hand-off loader ──────────────────────────────────────────────────
-   Shown while the router moves into the apply flow. The sheet's checklist
-   lines draw in on a loop for as long as the navigation is pending. The CCRO
-   stamp is the completion mark: it is only mounted once the navigation has
-   resolved, lands a single time, and the loader then leaves. No stamp means
-   still working. The loop's timings are mirrored in ApplyTransitionLoader so
-   the stamp waits for a fully drawn sheet. Resting styles are the finished
-   state, so with reduced motion the sheet simply sits there. */
-
-@keyframes civic-apply-line {
-  0%,
-  6% {
-    transform: scaleX(0);
-    opacity: 1;
-  }
-  40%,
-  88% {
-    transform: scaleX(1);
-    opacity: 1;
-  }
-  100% {
-    transform: scaleX(1);
-    opacity: 0;
-  }
-}
-
-@keyframes civic-apply-stamp {
-  0% {
-    opacity: 0;
-    transform: translate3d(0, -10px, 0) scale(1.7) rotate(-14deg);
-  }
-  55% {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(0.92) rotate(-14deg);
-  }
-  100% {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1) rotate(-14deg);
-  }
-}
-
-/* The sheet gives a little under the stamp, in time with the impact above. */
-@keyframes civic-apply-bump {
-  0%,
-  48%,
-  100% {
-    transform: translate3d(0, 0, 0);
-  }
-  56% {
-    transform: translate3d(0, 3px, 0);
-  }
-}
-
-@keyframes civic-apply-fade-out {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
-
-.civic-apply-overlay {
-  animation: civic-fade-in var(--duration-base) var(--ease-civic) both;
-}
-
-.civic-apply-overlay[data-leaving] {
-  animation: civic-apply-fade-out var(--duration-base) var(--ease-civic) forwards;
-}
-
-.civic-apply-sheet[data-stamped] {
-  animation: civic-apply-bump var(--duration-slow) ease-out both;
-}
-
-.civic-apply-line {
-  transform-origin: left center;
-  /* Duration and stagger are set inline from the component. */
-  animation: civic-apply-line 1600ms var(--ease-civic) infinite both;
-}
-
-/* Once stamped the lines hold their drawn state instead of looping on. */
-.civic-apply-sheet[data-stamped] .civic-apply-line {
-  animation: none;
-}
-
-.civic-apply-stamp {
-  transform: rotate(-14deg);
-  animation: civic-apply-stamp var(--duration-slow) var(--ease-civic-emphasized) both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .civic-apply-overlay,
-  .civic-apply-overlay[data-leaving] {
-    animation-duration: 1ms;
-  }
-
-  .civic-apply-sheet,
-  .civic-apply-line,
-  .civic-apply-stamp {
-    animation: none;
   }
 }
 
@@ -1037,14 +906,9 @@
     --surface-subtle: var(--auth-bg);
   }
 
-  /* Every authed page wraps itself in this, and route components remount on
-     navigation, so a single rule here gives the whole workspace a consistent
-     arrival without each page opting in. Deliberately a plain fade: individual
-     sections inside supply the vertical movement, and doing both at two levels
-     reads as the page sliding twice. */
+  /* Shared page dimensions stay fixed through loading and navigation. */
   .dashboard-page {
     @apply mx-auto w-full max-w-[1440px] space-y-6;
-    animation: civic-fade-in var(--duration-base) var(--ease-civic) both;
   }
 
   /* The cashier counter's slip: a sheet with torn top and bottom edges. The
@@ -1530,7 +1394,6 @@
 
   .portal-page {
     @apply flex w-full flex-col gap-4;
-    animation: civic-fade-in var(--duration-base) var(--ease-civic) both;
   }
 
   /* No border and no shadow: the ground color is what separates the cards. */
@@ -1825,24 +1688,6 @@
       civic-shimmer 1.5s var(--ease-civic) infinite;
   }
 
-  /* Thin indeterminate bar, for the top of a panel that is refreshing. */
-  .civic-progress-track {
-    @apply relative h-0.5 w-full overflow-hidden rounded-full bg-border-light;
-  }
-
-  .civic-progress-track::after {
-    content: "";
-    @apply absolute inset-y-0 left-0 w-1/4 rounded-full bg-primary;
-    animation: civic-progress-sweep 1.15s var(--ease-civic) infinite;
-  }
-
-  /* Ring for a page that is waiting on its data: a quiet track with one arc of
-     brand blue travelling round it. */
-  .civic-loader-ring {
-    @apply size-11 rounded-full border-[3px] border-border-light border-t-primary;
-    animation: civic-loader-spin 0.85s linear infinite;
-  }
-
   /* Sparkline / trend polyline that draws itself in on mount. */
   .civic-draw-line {
     stroke-dasharray: 1;
@@ -1920,7 +1765,6 @@
   }
 
   .civic-skeleton,
-  .civic-progress-track::after,
   .civic-live-dot::before {
     animation: none;
   }
@@ -1934,9 +1778,6 @@
     display: none;
   }
 
-  .civic-loader-ring {
-    animation: civic-loader-breathe 1.8s ease-in-out infinite;
-  }
 }
 
 /* Kept outside the cascade layers on purpose: inputs set their placeholder
@@ -2176,5 +2017,18 @@ input[aria-hidden="true"][tabindex="-1"] {
 
   .report-sheet tr {
     break-inside: avoid;
+  }
+}
+
+/* Skeletons hold the page layout while data arrives; do not fade the page itself. */
+[data-page-skeleton] {
+  animation: none;
+}
+
+/* The router already waits before showing these placeholders. Paint them
+   immediately so entering a pending route never produces a blank frame. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-page-skeleton] .civic-skeleton {
+    animation: civic-shimmer 1.5s var(--ease-civic) infinite;
   }
 }

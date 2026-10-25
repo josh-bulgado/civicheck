@@ -1,9 +1,15 @@
 import { AlertTriangle, ClipboardCheck } from "lucide-react";
 import { Alert, AlertDescription } from "~/components/ui/alert";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
 import { Field, FieldDescription, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import { Spinner } from "~/components/ui/spinner";
+import { PanelSkeleton } from "~/components/feedback/PageSkeleton";
 import { FormTemplateBuilder } from "~/features/forms/components/FormTemplateBuilder";
 import type { ConditionRef } from "~/features/forms/form-option-usage";
 import type { FormTemplateDefinition } from "~/features/forms/form-template.types";
@@ -101,14 +107,11 @@ export function ApplicationFormSection({
         </div>
 
         {isLoading ? (
-          <div
-            className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 py-6 text-xs text-muted-foreground"
-            role="status"
-            aria-live="polite"
-          >
-            <Spinner />
-            Loading application form&hellip;
-          </div>
+          <PanelSkeleton
+            label="Loading application form"
+            rows={4}
+            className="py-4"
+          />
         ) : (
           <FormTemplateBuilder
             definition={formDefinition}

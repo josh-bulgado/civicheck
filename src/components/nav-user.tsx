@@ -22,7 +22,7 @@ import {
   BellIcon,
   LogOutIcon,
 } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 
 export function NavUser({
   user,

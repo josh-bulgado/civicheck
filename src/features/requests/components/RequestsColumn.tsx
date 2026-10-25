@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { ChevronRight } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { SortHeader } from "~/components/ui/data-table-column-header";

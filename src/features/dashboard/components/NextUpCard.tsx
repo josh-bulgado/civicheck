@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";

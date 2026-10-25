@@ -1,5 +1,7 @@
 import { useRef, useState, type KeyboardEvent } from "react";
-import { Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { useNavigate, useRouter } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
+import { PanelSkeleton } from "~/components/feedback/PageSkeleton";
 import { useHotkeys, type HotkeyChord } from "@tanstack/react-hotkeys";
 import { CircleAlert, QrCode } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -75,7 +77,13 @@ export function CashierCounterPage({
     if (counter.raw !== "") return;
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
-      setTapeIndex((index) => stepTapeSelection(index, event.key === "ArrowDown" ? 1 : -1, rows.length));
+      setTapeIndex((index) =>
+        stepTapeSelection(
+          index,
+          event.key === "ArrowDown" ? 1 : -1,
+          rows.length,
+        ),
+      );
     } else if (event.key === "Enter" && tapeIndex >= 0 && rows[tapeIndex]) {
       event.preventDefault();
       open(rows[tapeIndex].trackingNumber);
@@ -90,7 +98,14 @@ export function CashierCounterPage({
       { hotkey: "S", callback: () => setScannerOpen(true) },
       { hotkey: "R", callback: () => receiptRef.current?.focus() },
       { hotkey: "N", callback: next },
-      { hotkey: "H", callback: () => void navigate({ to: "/payment-history", search: { from: undefined, to: undefined } }) },
+      {
+        hotkey: "H",
+        callback: () =>
+          void navigate({
+            to: "/payment-history",
+            search: { from: undefined, to: undefined },
+          }),
+      },
       { hotkey: "Escape", callback: next },
       { hotkey: "Mod+Enter", callback: () => formRef.current?.requestSubmit() },
       ...(choices ?? []).slice(0, 2).map((choice, index) => ({
@@ -101,7 +116,8 @@ export function CashierCounterPage({
     { enabled, preventDefault: true },
   );
 
-  const year = (result && trackingYear(result.trackingNumber)) ?? lookupYears()[0];
+  const year =
+    (result && trackingYear(result.trackingNumber)) ?? lookupYears()[0];
   const submitHint = hotkeyLabel("Mod+Enter");
   const escapeHint = hotkeyLabel("Escape");
 
@@ -167,48 +183,63 @@ export function CashierCounterPage({
           <div
             aria-live="polite"
             aria-busy={searching}
-            className="flex min-w-0 flex-col gap-6 transition-opacity data-[searching=true]:opacity-60"
-            data-searching={searching}
+            className="flex min-w-0 flex-col gap-6"
           >
-            {missing ? (
-              <Alert variant="destructive">
-                <CircleAlert aria-hidden="true" />
-                <AlertTitle>No Request Matches {counter.raw.trim()}</AlertTitle>
-                <AlertDescription>
-                  Check the number with the applicant, or scan their QR instead.
-                </AlertDescription>
-              </Alert>
-            ) : null}
-
-            {choices ? <TrackingPicker choices={choices} onPick={counter.pick} /> : null}
-
-            {result ? (
-              <CounterSlip
-                key={result.id}
-                result={result}
-                verified={verified}
-                recording={recording}
-                onRecord={(payment) => void counter.record(payment)}
-                onNext={next}
-                onClear={next}
-                formRef={formRef}
-                receiptRef={receiptRef}
-                submitHint={submitHint}
-                nextHint={hotkeyLabel("N")}
-                clearHint={escapeHint}
+            {searching ? (
+              <PanelSkeleton
+                label="Loading request payment details"
+                rows={4}
+                className="rounded-xl border border-border-strong bg-card p-6"
               />
-            ) : !choices ? (
-              <div className="mx-auto w-full max-w-lg rounded-md border-2 border-dashed border-border-strong px-8 py-9 text-muted-foreground">
-                <div className="flex flex-col gap-3.5" aria-hidden="true">
-                  <span className="h-2.5 w-3/5 rounded-full bg-muted" />
-                  <span className="h-2.5 w-5/6 rounded-full bg-muted" />
-                  <span className="h-2.5 w-2/5 rounded-full bg-muted" />
-                </div>
-                <p className="mt-6 text-base text-foreground">
-                  Type the last 6 digits, or scan the QR. The slip for that applicant appears here.
-                </p>
-              </div>
-            ) : null}
+            ) : (
+              <>
+                {missing ? (
+                  <Alert variant="destructive">
+                    <CircleAlert aria-hidden="true" />
+                    <AlertTitle>
+                      No Request Matches {counter.raw.trim()}
+                    </AlertTitle>
+                    <AlertDescription>
+                      Check the number with the applicant, or scan their QR
+                      instead.
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
+
+                {choices ? (
+                  <TrackingPicker choices={choices} onPick={counter.pick} />
+                ) : null}
+
+                {result ? (
+                  <CounterSlip
+                    key={result.id}
+                    result={result}
+                    verified={verified}
+                    recording={recording}
+                    onRecord={(payment) => void counter.record(payment)}
+                    onNext={next}
+                    onClear={next}
+                    formRef={formRef}
+                    receiptRef={receiptRef}
+                    submitHint={submitHint}
+                    nextHint={hotkeyLabel("N")}
+                    clearHint={escapeHint}
+                  />
+                ) : !choices ? (
+                  <div className="mx-auto w-full max-w-lg rounded-md border-2 border-dashed border-border-strong px-8 py-9 text-muted-foreground">
+                    <div className="flex flex-col gap-3.5" aria-hidden="true">
+                      <span className="h-2.5 w-3/5 rounded-full bg-muted" />
+                      <span className="h-2.5 w-5/6 rounded-full bg-muted" />
+                      <span className="h-2.5 w-2/5 rounded-full bg-muted" />
+                    </div>
+                    <p className="mt-6 text-base text-foreground">
+                      Type the last 6 digits, or scan the QR. The slip for that
+                      applicant appears here.
+                    </p>
+                  </div>
+                ) : null}
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -224,7 +255,11 @@ export function CashierCounterPage({
         ]}
       />
 
-      <QrScannerDialog open={scannerOpen} onOpenChange={setScannerOpen} onDecode={open} />
+      <QrScannerDialog
+        open={scannerOpen}
+        onOpenChange={setScannerOpen}
+        onDecode={open}
+      />
     </div>
   );
 }

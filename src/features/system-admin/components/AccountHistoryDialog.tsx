@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { ScrollText } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import {
@@ -10,9 +10,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { Spinner } from "~/components/ui/spinner";
+import { PanelSkeleton } from "~/components/feedback/PageSkeleton";
 import { getAccountHistory } from "../system-admin.functions";
-import type { AccountHistoryEvent, AccountSummary } from "../system-admin.types";
+import type {
+  AccountHistoryEvent,
+  AccountSummary,
+} from "../system-admin.types";
 
 type HistoryState =
   | { status: "loading" }
@@ -46,10 +49,11 @@ function HistoryBody({ accountId }: { accountId: string }) {
 
   if (state.status === "loading") {
     return (
-      <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
-        <Spinner />
-        Loading history
-      </div>
+      <PanelSkeleton
+        label="Loading account history"
+        rows={3}
+        className="py-4"
+      />
     );
   }
   if (state.status === "error") {
@@ -58,7 +62,8 @@ function HistoryBody({ accountId }: { accountId: string }) {
   if (!state.events.length) {
     return (
       <p className="py-6 text-center text-sm text-muted-foreground">
-        No administrative actions or sign-ins have been recorded for this account.
+        No administrative actions or sign-ins have been recorded for this
+        account.
       </p>
     );
   }

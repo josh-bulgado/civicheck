@@ -1,4 +1,6 @@
 "use client"
+import { QuietAnchor } from "~/components/quiet-link";
+
 
 import {
   DropdownMenu,
@@ -34,7 +36,7 @@ export function NavProjects({
       <SidebarMenu>
         {projects.map((item) => (
           <SidebarMenuItem key={item.name}>
-            <SidebarMenuButton render={<a href={item.url} />}>
+            <SidebarMenuButton render={<QuietAnchor href={item.url} />}>
               {item.icon}
               <span>{item.name}</span>
             </SidebarMenuButton>

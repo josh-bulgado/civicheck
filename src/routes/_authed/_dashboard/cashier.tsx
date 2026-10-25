@@ -1,3 +1,4 @@
+import { CashierCounterSkeleton } from "~/features/cashier/components/CashierCounterSkeleton";
 import { createFileRoute } from "@tanstack/react-router";
 import { hasPermission, type Role } from "~/lib/permissions";
 import { CashierCounterPage } from "~/features/cashier/components/CashierCounterPage";
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/_authed/_dashboard/cashier")({
     return { payments, awaitingCount };
   },
   staleTime: 30_000,
+  pendingComponent: CashierCounterSkeleton,
   component: CashierPage,
 });
 

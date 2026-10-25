@@ -1,3 +1,4 @@
+import { QuietAnchor } from "~/components/quiet-link";
 import { EyeOff, ShieldAlert } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
@@ -17,12 +18,12 @@ export function SecurityCenterPage({
 }) {
   return (
     <div className="dashboard-page">
-      <a
+      <QuietAnchor
         href="#security-center-content"
         className="sr-only rounded-md bg-card px-3 py-2 text-sm font-bold text-foreground shadow-md focus:fixed focus:top-4 focus:left-4 focus:not-sr-only focus-visible:ring-2 focus-visible:ring-ring"
       >
         Skip to Security Center
-      </a>
+      </QuietAnchor>
       <SystemAdminPageHeader
         icon={ShieldAlert}
         title="Security Center"

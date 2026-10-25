@@ -1,5 +1,5 @@
 import { useId, useState, type FormEvent, type Ref } from "react";
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import {
   ArrowUpRight,
   ChevronRight,

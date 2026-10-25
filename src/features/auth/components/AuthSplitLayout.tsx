@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { ArrowLeft } from "lucide-react";
 import { CiviCheckIdentity } from "~/components/brand/civic-identity";
 import { enterDelay } from "~/components/motion/stagger";

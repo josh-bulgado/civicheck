@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useBlocker, useRouter } from "@tanstack/react-router";
-import { ArrowLeft, ArrowRight, GitBranch, SlidersHorizontal } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  GitBranch,
+  SlidersHorizontal,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
-import { Spinner } from "~/components/ui/spinner";
+import { PanelSkeleton } from "~/components/feedback/PageSkeleton";
 import { Tabs } from "~/components/ui/tabs";
 import { DiscardChangesDialog } from "~/components/feedback/DiscardChangesDialog";
 import {
@@ -35,7 +40,11 @@ import type { Service } from "../services.types";
 
 const SECTIONS = [
   { id: "variant-routing", label: "Timing & Routing", icon: GitBranch },
-  { id: "application-form", label: "Application Form", icon: SlidersHorizontal },
+  {
+    id: "application-form",
+    label: "Application Form",
+    icon: SlidersHorizontal,
+  },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -45,7 +54,8 @@ function publishedKeys(definition: FormTemplateDefinition) {
     ...definition.sections.flatMap((section) =>
       section.fields.map((field) => field.key),
     ),
-    ...(definition.caseSelector?.questions.map((question) => question.key) ?? []),
+    ...(definition.caseSelector?.questions.map((question) => question.key) ??
+      []),
   ];
 }
 
@@ -68,7 +78,8 @@ export function ServiceGroupApplicationPage({
   const groupKey = representative.display_group!;
   const displayName = representative.display_name ?? groupKey;
 
-  const [activeSection, setActiveSection] = useState<SectionId>("variant-routing");
+  const [activeSection, setActiveSection] =
+    useState<SectionId>("variant-routing");
   const workspaceRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -93,9 +104,7 @@ export function ServiceGroupApplicationPage({
         const nextDefinition =
           template?.definition ?? buildLegacyFormDefinition(representative);
         setDefinition(nextDefinition);
-        setTemplateName(
-          template?.templateName ?? `${displayName} application`,
-        );
+        setTemplateName(template?.templateName ?? `${displayName} application`);
         setTemplateVersion(template?.version ?? 0);
         setTemplateVersionId(template?.versionId ?? null);
         setTemplateSharedCodes(
@@ -155,8 +164,9 @@ export function ServiceGroupApplicationPage({
       orderedVariants.map((variant) => variant.service_code),
     );
     const mappedCodes = new Set(
-      parsed.data.caseSelector?.outcomes.map((outcome) => outcome.serviceCode) ??
-        [],
+      parsed.data.caseSelector?.outcomes.map(
+        (outcome) => outcome.serviceCode,
+      ) ?? [],
     );
     if (
       !parsed.data.caseSelector ||
@@ -185,8 +195,7 @@ export function ServiceGroupApplicationPage({
       const published = await publishServiceFormTemplateFn({
         data: {
           serviceCode: representative.service_code,
-          templateName:
-            templateName.trim() || `${displayName} application`,
+          templateName: templateName.trim() || `${displayName} application`,
           definition: parsed.data,
           expectedVersionId: templateVersionId,
         },
@@ -297,12 +306,11 @@ export function ServiceGroupApplicationPage({
                 summary={routingSummary}
               >
                 {isLoading ? (
-                  <div
-                    role="status"
-                    className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground"
-                  >
-                    <Spinner /> Loading routing configuration&hellip;
-                  </div>
+                  <PanelSkeleton
+                    label="Loading routing configuration"
+                    rows={3}
+                    className="py-4"
+                  />
                 ) : (
                   <CaseQuestionsSection
                     embedded

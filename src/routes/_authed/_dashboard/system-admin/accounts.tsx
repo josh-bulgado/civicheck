@@ -1,11 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AccountsPage } from "~/features/system-admin/pages/AccountsPage";
-import { getAccounts } from "~/features/system-admin/system-admin.functions";
+import { useAccounts } from "~/features/system-admin/hooks/useAccounts";
+import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import {
   accountPageSizes,
   defaultAccountPageSize,
 } from "~/features/system-admin/system-admin.constants";
-import { hasPermission, type AccountStatus, type Role } from "~/lib/permissions";
+import {
+  hasPermission,
+  type AccountStatus,
+  type Role,
+} from "~/lib/permissions";
 import type {
   AccountCategory,
   AccountFilters,
@@ -43,7 +48,9 @@ function optionalText(value: unknown, maxLength: number) {
     : undefined;
 }
 
-export const Route = createFileRoute("/_authed/_dashboard/system-admin/accounts")({
+export const Route = createFileRoute(
+  "/_authed/_dashboard/system-admin/accounts",
+)({
   validateSearch: (search: Record<string, unknown>): AccountsSearch => ({
     category: normalizeCategory(search.category),
     page: Math.max(1, Number(search.page) || 1),
@@ -61,21 +68,61 @@ export const Route = createFileRoute("/_authed/_dashboard/system-admin/accounts"
     )
       denyAccess(location);
   },
-  loaderDeps: ({ search }) => search,
-  loader: ({ deps }) =>
-    getAccounts({
-      data: { ...deps, pageSize: deps.pageSize ?? defaultAccountPageSize },
-    }),
+  // Account reads happen inside the mounted page, so navigation never replaces
+  // its heading or controls with a full-page pending view.
+  pendingComponent: AccountsPending,
   component: RouteComponent,
 });
 
 function RouteComponent() {
-  const data = Route.useLoaderData();
-  const { q, role, status, departmentId, signIn } = Route.useSearch();
+  const search = Route.useSearch();
+  const { user } = Route.useRouteContext();
+  const result = useAccounts(user!.id, search);
+  useRealtimeRefresh({ tables: ["profiles"], onRefresh: result.refresh });
+  return <AccountsView search={search} {...result} />;
+}
+
+function AccountsPending() {
+  return <AccountsView search={Route.useSearch()} isLoading />;
+}
+
+function AccountsView({
+  search,
+  data,
+  metadata,
+  isLoading,
+  error,
+  refresh,
+}: {
+  search: AccountsSearch;
+} & Partial<ReturnType<typeof useAccounts>>) {
+  const {
+    category,
+    page,
+    pageSize = defaultAccountPageSize,
+    q,
+    role,
+    status,
+    departmentId,
+    signIn,
+  } = search;
   return (
     <AccountsPage
-      {...data}
+      accounts={data?.accounts ?? []}
+      adminCandidates={metadata?.adminCandidates ?? []}
+      departments={metadata?.departments ?? []}
+      hasActiveAdmin={
+        metadata?.category === "personnel" ? metadata.hasActiveAdmin : true
+      }
+      category={category}
+      page={page}
+      pageSize={pageSize}
+      total={data?.total ?? 0}
+      hasNextPage={data?.hasNextPage ?? false}
       filters={{ q, role, status, departmentId, signIn }}
+      isLoading={isLoading}
+      error={error}
+      onRefresh={refresh}
     />
   );
 }

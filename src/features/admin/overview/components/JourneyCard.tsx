@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { CheckCircle2 } from "lucide-react";
 import { CountUp } from "~/components/motion/count-up";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";

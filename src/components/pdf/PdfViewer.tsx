@@ -1,3 +1,4 @@
+import { QuietAnchor } from "~/components/quiet-link";
 import { useEffect, useRef, useState } from "react";
 import { ExternalLink, Minus, Plus } from "lucide-react";
 import type {
@@ -6,7 +7,7 @@ import type {
   RenderTask,
 } from "pdfjs-dist";
 import { Button } from "~/components/ui/button";
-import { Spinner } from "~/components/ui/spinner";
+import { DocumentSkeleton } from "~/components/feedback/PageSkeleton";
 
 /**
  * Loads pdf.js on first use, in the browser only. pdf.js touches DOM globals
@@ -178,7 +179,9 @@ export function PdfViewer({ url, title, onError, className }: PdfViewerProps) {
           type="button"
           variant="outline"
           nativeButton={false}
-          render={<a href={url} target="_blank" rel="noopener noreferrer" />}
+          render={
+            <QuietAnchor href={url} target="_blank" rel="noopener noreferrer" />
+          }
         >
           <ExternalLink data-icon="inline-start" aria-hidden="true" />
           Open in a new tab
@@ -221,7 +224,9 @@ export function PdfViewer({ url, title, onError, className }: PdfViewerProps) {
             aria-label="Zoom in"
             disabled={zoomIndex === ZOOM_STEPS.length - 1}
             onClick={() =>
-              setZoomIndex((index) => Math.min(ZOOM_STEPS.length - 1, index + 1))
+              setZoomIndex((index) =>
+                Math.min(ZOOM_STEPS.length - 1, index + 1),
+              )
             }
           >
             <Plus aria-hidden="true" />
@@ -238,13 +243,7 @@ export function PdfViewer({ url, title, onError, className }: PdfViewerProps) {
         style={{ padding: PAGE_GUTTER_PX }}
       >
         {state.phase === "loading" ? (
-          <div
-            role="status"
-            className="flex h-full min-h-40 items-center justify-center gap-2 text-sm text-muted-foreground"
-          >
-            <Spinner className="size-4" aria-hidden="true" />
-            Loading PDF…
-          </div>
+          <DocumentSkeleton label="Loading PDF" />
         ) : (
           <div className="flex w-max min-w-full flex-col items-center gap-3">
             {Array.from({ length: state.doc.numPages }, (_, index) => (
@@ -361,9 +360,10 @@ function PdfPage({ doc, pageNumber, width, aspect, label }: PdfPageProps) {
     >
       <canvas ref={canvasRef} className="block size-full" />
       {status === "rendering" && shouldRender ? (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Spinner className="size-5 text-muted-foreground" aria-hidden="true" />
-        </div>
+        <DocumentSkeleton
+          label={`Rendering ${label}`}
+          className="absolute inset-0"
+        />
       ) : null}
       {status === "failed" ? (
         <p

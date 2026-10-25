@@ -1,8 +1,9 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const SRC = new URL("..", import.meta.url).pathname;
+const SRC = fileURLToPath(new URL("..", import.meta.url));
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -39,7 +40,7 @@ const ALLOWED: Array<[file: string, includes: string, why: string]> = [
 const files = walk(SRC)
   // Class strings also live in plain .ts files (shared style sets), so look there too.
   .filter((f) => /\.tsx?$/.test(f) && !/\.test\.ts$/.test(f))
-  .map((f) => relative(SRC, f))
+  .map((f) => relative(SRC, f).replaceAll("\\", "/"))
   .filter((f) => !LIGHT_ONLY.some((prefix) => f.startsWith(prefix)));
 
 // bg-white over 25% opacity is a surface and must be bg-card; low-alpha white is

@@ -1,4 +1,5 @@
-import { Link, useRouter } from "@tanstack/react-router";
+import { useRouter } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { ArrowLeft, ArrowRight, LockKeyhole, LogIn } from "lucide-react";
 import {
   ErrorPageLayout,

@@ -1,3 +1,4 @@
+import { CatalogPageSkeleton } from "~/components/feedback/PageSkeleton";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { getServices, getServiceUsageFn } from "~/features/services/services.queries";
 import ServiceCatalogPage from "~/features/services/pages/ServiceCatalogPage";
@@ -38,6 +39,7 @@ export const Route = createFileRoute("/_authed/_dashboard/(service)/services")({
   // realtime below covers the case where the edit happens while this page is
   // already open.
   staleTime: 5 * 60_000,
+  pendingComponent: CatalogPageSkeleton,
   component: ServicesRoute,
 });
 

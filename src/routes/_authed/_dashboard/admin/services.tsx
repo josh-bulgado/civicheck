@@ -1,3 +1,4 @@
+import { TablePageSkeleton } from "~/components/feedback/PageSkeleton";
 import { createFileRoute } from "@tanstack/react-router";
 import { getAdminServices } from "~/features/admin/services/services.queries";
 import { getActiveDepartments } from "~/features/admin/departments.queries";
@@ -22,6 +23,7 @@ export const Route = createFileRoute("/_authed/_dashboard/admin/services")({
     return { services, departments };
   },
   staleTime: 5 * 60_000,
+  pendingComponent: () => <TablePageSkeleton label="Loading services registry" columns={5} />,
   component: AdminServicesRoute,
 });
 

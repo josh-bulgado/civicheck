@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { ArrowUpRight } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";

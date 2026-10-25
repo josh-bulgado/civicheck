@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { formatCount } from "~/features/admin/overview/overview-formatters";
 import { LONG_WAIT_LABEL } from "~/features/admin/overview/overview-metrics";

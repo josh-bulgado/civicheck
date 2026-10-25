@@ -1,3 +1,4 @@
+import { EditorPageSkeleton } from "~/components/feedback/PageSkeleton";
 import {
   createFileRoute,
   notFound,
@@ -43,6 +44,7 @@ export const Route = createFileRoute(
 
     return { services, departments, service };
   },
+  pendingComponent: EditorPageSkeleton,
   component: EditServiceRoute,
 });
 

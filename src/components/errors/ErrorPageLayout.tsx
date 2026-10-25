@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { useRouterState } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import type { LucideIcon } from "lucide-react";
 import {
   CityGovernmentIdentity,

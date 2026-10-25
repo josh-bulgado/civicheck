@@ -3,7 +3,8 @@
 import { Fragment, type ReactNode } from "react";
 import { Command as CommandPrimitive } from "cmdk";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-import { ChevronRight, Loader2, Search } from "lucide-react";
+import { ChevronRight, Search } from "lucide-react";
+import { Skeleton } from "~/components/ui/skeleton";
 import {
   Dialog,
   DialogDescription,
@@ -31,8 +32,14 @@ export function sentenceCase(label: string): string {
 // (blue); finished ones fall back to grey.
 const INK = {
   ready: { dot: "bg-[#1f8a5b] dark:bg-success", text: "text-tone-success" },
-  processing: { dot: "bg-[#4a3b8f] dark:bg-tone-progress", text: "text-tone-progress" },
-  moving: { dot: "bg-[#0b4da2] dark:bg-primary", text: "text-accent-foreground" },
+  processing: {
+    dot: "bg-[#4a3b8f] dark:bg-tone-progress",
+    text: "text-tone-progress",
+  },
+  moving: {
+    dot: "bg-[#0b4da2] dark:bg-primary",
+    text: "text-accent-foreground",
+  },
   done: { dot: "bg-[#9aa5b5] dark:bg-muted-foreground", text: "text-muted-2" },
 } as const;
 
@@ -62,7 +69,7 @@ const PALETTE_ROW =
 export type PaletteSearchStatus = "idle" | "loading" | "ready" | "error";
 
 /**
- * What a search's status means for the sheet: whether to show the spinner, the
+ * What a search's status means for the sheet: whether to show skeletons, the
  * "unavailable" message, and what a screen reader is told. A term shorter than
  * `minQueryLength` is never sent to the server, so it is never loading or failed.
  */
@@ -78,7 +85,11 @@ export function searchState(
     searching,
     isLoading,
     failed,
-    announcement: isLoading ? "Searching" : failed ? "Search is unavailable" : "",
+    announcement: isLoading
+      ? "Searching"
+      : failed
+        ? "Search is unavailable"
+        : "",
   };
 }
 
@@ -92,8 +103,16 @@ export const SEARCH_FAILED_LINES = [
 export function RequestStatusLabel({ status }: { status: string }) {
   const ink = inkFor(status);
   return (
-    <span className={cn("flex shrink-0 items-center gap-2 text-sm font-semibold", ink.text)}>
-      <span className={cn("size-2 shrink-0 rounded-full", ink.dot)} aria-hidden="true" />
+    <span
+      className={cn(
+        "flex shrink-0 items-center gap-2 text-sm font-semibold",
+        ink.text,
+      )}
+    >
+      <span
+        className={cn("size-2 shrink-0 rounded-full", ink.dot)}
+        aria-hidden="true"
+      />
       {sentenceCase(getStatusDetails(status).label)}
     </span>
   );
@@ -121,7 +140,11 @@ export function PaletteRow({
   trailing,
 }: PaletteRowProps) {
   return (
-    <CommandPrimitive.Item value={value} onSelect={onSelect} className={PALETTE_ROW}>
+    <CommandPrimitive.Item
+      value={value}
+      onSelect={onSelect}
+      className={PALETTE_ROW}
+    >
       {icon}
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[16.5px] leading-snug font-medium text-foreground">
@@ -149,7 +172,13 @@ export function RowChevron() {
 }
 
 /** A short message in the list: nothing found, or the search failed. */
-export function PaletteEmpty({ lines, failed }: { lines: string[]; failed: boolean }) {
+export function PaletteEmpty({
+  lines,
+  failed,
+}: {
+  lines: string[];
+  failed: boolean;
+}) {
   return (
     <div className="px-4.5 py-4.5">
       {lines.map((line, index) => (
@@ -195,7 +224,10 @@ export function RowSkeleton({ count }: { count: number }) {
     <div role="status" aria-label="Loading" className="pt-4">
       <ul aria-hidden="true" className="flex flex-col">
         {Array.from({ length: count }, (_, index) => (
-          <li key={index} className="flex min-h-13 items-center gap-4 px-4.5 py-2.5">
+          <li
+            key={index}
+            className="flex min-h-13 items-center gap-4 px-4.5 py-2.5"
+          >
             <span className="flex min-w-0 flex-1 flex-col gap-2">
               <span className="civic-skeleton block h-4 w-1/2 rounded-full" />
               <span className="civic-skeleton block h-3 w-2/5 rounded-full" />
@@ -213,7 +245,7 @@ interface PaletteSheetProps {
   onOpenChange: (open: boolean) => void;
   query: string;
   onQueryChange: (value: string) => void;
-  /** Shows a spinner in the search field. */
+  /** Shows skeleton rows while search results load. */
   loading: boolean;
   /** Read out by screen readers when it changes: "Searching", an error, or nothing. */
   announcement: string;
@@ -250,7 +282,9 @@ export function PaletteSheet({
           className="fixed top-14 left-1/2 z-50 w-[min(35rem,calc(100vw-1.5rem))] -translate-x-1/2 overflow-hidden rounded-panel bg-card p-2.5 pb-3 text-foreground shadow-[0_30px_80px_rgba(15,27,45,0.28),0_0_0_1px_rgba(15,27,45,0.05)] duration-150 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 data-closed:fill-mode-forwards"
         >
           <DialogTitle className="sr-only">Search CiviCheck</DialogTitle>
-          <DialogDescription className="sr-only">{description}</DialogDescription>
+          <DialogDescription className="sr-only">
+            {description}
+          </DialogDescription>
 
           <CommandPrimitive
             shouldFilter={false}
@@ -259,19 +293,16 @@ export function PaletteSheet({
             className="flex flex-col"
           >
             <div className="flex h-14 items-center gap-3 rounded-full bg-portal-panel px-5">
-              <Search className="size-5 shrink-0 text-muted-2" aria-hidden="true" />
+              <Search
+                className="size-5 shrink-0 text-muted-2"
+                aria-hidden="true"
+              />
               <CommandPrimitive.Input
                 value={query}
                 onValueChange={onQueryChange}
                 placeholder="Search"
                 className="min-w-0 flex-1 bg-transparent text-[17px] text-foreground outline-none placeholder:text-[#7a8696] dark:placeholder:text-muted-foreground"
               />
-              {loading ? (
-                <Loader2
-                  className="size-4.5 shrink-0 animate-spin text-[#7a8696] dark:text-muted-foreground"
-                  aria-hidden="true"
-                />
-              ) : null}
               {/* Plain text, not a key cap: Escape is not the thing to reach for. */}
               <span
                 className="shrink-0 text-[13px] font-semibold text-[#7a8696] dark:text-muted-foreground"
@@ -285,7 +316,29 @@ export function PaletteSheet({
               <div role="status" aria-live="polite" className="sr-only">
                 {announcement}
               </div>
-              {children}
+              {loading ? (
+                <div
+                  role="status"
+                  aria-label="Searching CiviCheck"
+                  className="space-y-4 px-4 py-5"
+                >
+                  {[0, 1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      aria-hidden="true"
+                      className="flex items-center gap-3"
+                    >
+                      <Skeleton className="size-9 rounded-full" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-4/5" />
+                        <Skeleton className="h-3 w-1/2" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                children
+              )}
             </CommandPrimitive.List>
           </CommandPrimitive>
         </DialogPrimitive.Popup>

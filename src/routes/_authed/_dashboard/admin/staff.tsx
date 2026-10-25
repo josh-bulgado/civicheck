@@ -1,3 +1,4 @@
+import { TablePageSkeleton } from "~/components/feedback/PageSkeleton";
 import { createFileRoute } from "@tanstack/react-router";
 import { getStaff } from "~/features/admin/staff/staff.queries";
 import { hasPermission } from "~/lib/permissions";
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/_authed/_dashboard/admin/staff")({
   },
   loader: () => getStaff(),
   staleTime: 30_000,
+  pendingComponent: () => <TablePageSkeleton label="Loading personnel" avatar />,
   component: AdminStaffRoute,
 });
 

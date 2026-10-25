@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { AlertCircleIcon, Lock, Mail } from "lucide-react";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";

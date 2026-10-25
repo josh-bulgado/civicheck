@@ -1,7 +1,8 @@
+import { QuietAnchor } from "~/components/quiet-link";
 import { ExternalLink } from "lucide-react";
 import { PdfViewer } from "~/components/pdf/PdfViewer";
 import { Button } from "~/components/ui/button";
-import { Spinner } from "~/components/ui/spinner";
+import { DocumentSkeleton } from "~/components/feedback/PageSkeleton";
 import { ImageMagnifier } from "~/features/requests/components/ImageMagnifier";
 import { useCachedFileUrl } from "~/lib/use-cached-file-url";
 import { cn } from "~/lib/utils";
@@ -30,7 +31,10 @@ export function AttachmentPreview({
   // Each open signs a fresh link, but the file behind it is the same one, so
   // the bytes come from the in-memory cache after the first view. A failed
   // download falls back to the signed link itself.
-  const file = useCachedFileUrl(url, fileKind === "image" || fileKind === "pdf");
+  const file = useCachedFileUrl(
+    url,
+    fileKind === "image" || fileKind === "pdf",
+  );
   const fileReady = file.status === "ready" || file.status === "failed";
   const fileSrc = file.src ?? url;
 
@@ -49,13 +53,9 @@ export function AttachmentPreview({
             <PdfViewer url={fileSrc} title={name} className="h-full w-full" />
           )
         ) : (
-          <div
-            role="status"
-            className="flex items-center gap-2 text-sm text-muted-foreground"
-          >
-            <Spinner className="size-4" aria-hidden="true" />
-            Loading {fileKind === "pdf" ? "PDF" : "image"}…
-          </div>
+          <DocumentSkeleton
+            label={`Loading ${fileKind === "pdf" ? "PDF" : "image"}`}
+          />
         )
       ) : (
         <div className="flex flex-col items-center gap-3 py-8 text-sm text-muted-foreground">
@@ -64,7 +64,13 @@ export function AttachmentPreview({
             size="sm"
             variant="outline"
             nativeButton={false}
-            render={<a href={url} target="_blank" rel="noopener noreferrer" />}
+            render={
+              <QuietAnchor
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+              />
+            }
           >
             <ExternalLink className="size-4" />
             Open in a new tab

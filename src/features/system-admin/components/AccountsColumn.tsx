@@ -1,7 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
-import { SortHeader } from "~/components/ui/data-table-column-header";
 import { departmentLabel } from "~/features/admin/staff/staff-table.utils";
 import { accountStatusLabels, roleLabels } from "../system-admin.constants";
 import type {
@@ -15,6 +15,33 @@ import {
 } from "./AccountRowActions";
 
 const plainHeaderClassName = "text-xs font-semibold text-muted-foreground";
+
+function SortableMemberHeader({
+  column,
+}: {
+  column: {
+    getIsSorted: () => false | "asc" | "desc";
+    toggleSorting: (descending: boolean) => void;
+  };
+}) {
+  const sorted = column.getIsSorted();
+  return (
+    <button
+      type="button"
+      className="flex h-9 items-center gap-1.5 rounded-sm"
+      aria-label="Sort by member"
+      onClick={() => column.toggleSorting(sorted === "asc")}
+    >
+      Member
+      {sorted === "asc" ? (
+        <ArrowUp className="size-3" aria-hidden="true" />
+      ) : null}
+      {sorted === "desc" ? (
+        <ArrowDown className="size-3" aria-hidden="true" />
+      ) : null}
+    </button>
+  );
+}
 
 function getInitials(account: AccountSummary) {
   const initials = `${account.firstName.charAt(0)}${account.lastName.charAt(0)}`;
@@ -124,8 +151,9 @@ export function createAccountColumns({
   return [
     {
       id: "member",
-      accessorFn: (account) => `${account.firstName} ${account.lastName}`.trim(),
-      header: ({ column }) => <SortHeader column={column}>Member</SortHeader>,
+      accessorFn: (account) =>
+        `${account.firstName} ${account.lastName}`.trim(),
+      header: ({ column }) => <SortableMemberHeader column={column} />,
       cell: ({ row }) => {
         const account = row.original;
         const fullName =
@@ -133,17 +161,23 @@ export function createAccountColumns({
           "Unnamed account";
 
         return (
-          <div className="flex min-w-72 items-center gap-3.5">
-            <Avatar size="lg" className="bg-primary">
-              <AvatarFallback className="bg-primary-fill font-semibold text-white">
+          <div className="flex min-w-0 items-center gap-3.5">
+            <Avatar size="lg" className="after:border-0" aria-hidden="true">
+              <AvatarFallback className="bg-primary-soft font-semibold text-primary">
                 {getInitials(account)}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <p className="truncate font-medium text-foreground">
+              <p
+                className="truncate font-medium text-foreground"
+                title={fullName}
+              >
                 {fullName}
               </p>
-              <p className="mt-0.5 truncate text-sm text-muted-foreground">
+              <p
+                className="mt-0.5 truncate text-sm text-muted-foreground"
+                title={account.email}
+              >
                 {account.email}
               </p>
             </div>
@@ -179,12 +213,14 @@ export function createAccountColumns({
               return (
                 <span
                   className={
-                    label === "Unassigned"
-                      ? "text-sm italic text-muted-foreground"
+                    label === "Unassigned" || label === "Not applicable"
+                      ? "text-sm text-muted-foreground"
                       : "text-sm text-foreground/80"
                   }
                 >
-                  {label}
+                  {label === "Unassigned" || label === "Not applicable"
+                    ? "—"
+                    : label}
                 </span>
               );
             },
@@ -200,15 +236,6 @@ export function createAccountColumns({
       id: "lastSignIn",
       header: () => <span className={plainHeaderClassName}>Last sign-in</span>,
       cell: ({ row }) => <LastSignInCell account={row.original} />,
-    },
-    {
-      accessorKey: "createdAt",
-      header: ({ column }) => <SortHeader column={column}>Created</SortHeader>,
-      cell: ({ row }) => (
-        <span className="whitespace-nowrap text-sm tabular-nums text-muted-foreground">
-          {new Date(row.original.createdAt).toLocaleDateString()}
-        </span>
-      ),
     },
     {
       id: "actions",

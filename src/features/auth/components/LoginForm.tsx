@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { Button } from "~/components/ui/button";
 
 import { AlertCircleIcon, Lock, Mail } from "lucide-react";

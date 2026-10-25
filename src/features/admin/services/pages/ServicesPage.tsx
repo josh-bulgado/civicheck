@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { Blocks, Plus } from "lucide-react";
 import { buttonVariants } from "~/components/ui/button";
 import { PageHeaderCard } from "~/components/ui/page-header-card";

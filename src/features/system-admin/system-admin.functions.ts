@@ -17,11 +17,12 @@ import type {
   AccountSex,
   AccountSummary,
   AdminCandidate,
-  AuditFilters,
+  AuditEventsResult,
   NormalizedAuditEvent,
 } from "./system-admin.types";
 import type { AccountStatus, Role } from "~/lib/permissions";
 import { accountCategoryRoles } from "./system-admin.constants";
+import { matchesAuditSearch } from "./audit-event.utils";
 
 const pageSchema = z.object({
   page: z.number().int().min(1).default(1),
@@ -80,6 +81,7 @@ const replacementSchema = z.object({
   outgoingDepartmentId: z.string().min(1).nullable().optional(),
 });
 const auditSchema = pageSchema.extend({
+  q: z.string().trim().max(100).optional(),
   actor: z.string().trim().max(100).optional(),
   event: z.string().trim().max(100).optional(),
   source: z.enum(["all", "system", "request", "sign-in"]).default("all"),
@@ -717,7 +719,7 @@ const AUDIT_SOURCE_ROW_LIMIT = 1_000;
 
 export const getAuditEvents = createServerFn({ method: "GET" })
   .validator(auditSchema)
-  .handler(async ({ data }): Promise<{ events: NormalizedAuditEvent[]; total: number; filters: AuditFilters }> => {
+  .handler(async ({ data }): Promise<AuditEventsResult> => {
     await requireActiveSession("audit:view");
     const admin = getSupabaseAdminClient();
     const fromBound = data.from ? `${data.from}T00:00:00` : null;
@@ -772,11 +774,11 @@ export const getAuditEvents = createServerFn({ method: "GET" })
     const actor = data.actor?.toLowerCase();
     const event = data.event?.toLowerCase();
     events = events.filter((e) =>
+      matchesAuditSearch(e, data.q ?? "") &&
       (!actor || e.actor.toLowerCase().includes(actor) || e.actorId?.toLowerCase().includes(actor)) &&
       (!event || e.eventType.toLowerCase().includes(event)) &&
       (!data.account || e.actorId === data.account || e.targetId === data.account)
     ).sort((a, b) => b.timestamp.localeCompare(a.timestamp));
     const total = events.length;
-    const start = (data.page - 1) * data.pageSize;
-    return { events: events.slice(start, start + data.pageSize), total, filters: data };
+    return { events, total, filters: data };
   });

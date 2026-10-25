@@ -1,4 +1,5 @@
 import * as React from "react"
+import { QuietAnchor } from "~/components/quiet-link"
 import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -683,7 +684,7 @@ function SidebarMenuSubButton({
       },
       props
     ),
-    render,
+    render: render ?? <QuietAnchor />,
     state: {
       slot: "sidebar-menu-sub-button",
       sidebar: "menu-sub-button",

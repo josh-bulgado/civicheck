@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { CheckCircle, ArrowRight, AlertCircleIcon, Lock } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { Button, buttonVariants } from "~/components/ui/button";

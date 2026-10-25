@@ -1,0 +1,88 @@
+.accounts-directory-card {
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 22px;
+  background: var(--card);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--primary) 4%, transparent),
+    0 1px 2px rgb(15 27 45 / 3%);
+}
+
+.accounts-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-lighter);
+}
+
+.accounts-categories {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: 999px;
+}
+
+.accounts-categories [data-slot="toggle-group"] {
+  flex-wrap: nowrap;
+  background: var(--primary-soft);
+}
+
+.accounts-categories [data-slot="toggle-group-item"] {
+  font-weight: 400;
+  color: var(--primary-hover);
+}
+
+.accounts-categories [data-slot="toggle-group-item"][data-pressed] {
+  background: var(--card);
+  color: var(--foreground);
+  font-weight: 500;
+  box-shadow: 0 2px 5px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.accounts-toolbar-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.accounts-search {
+  width: 288px;
+  min-width: 0;
+}
+
+.accounts-search [data-slot="input-group"] {
+  min-width: 0;
+  border-color: var(--border);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.accounts-search [data-slot="input-group-addon"]:has(kbd) {
+  display: none;
+}
+
+.accounts-directory-table {
+  min-width: 1100px;
+  table-layout: fixed;
+}
+
+.accounts-directory-table td:last-child {
+  padding-left: 0;
+}
+
+@media (max-width: 639px) {
+  .accounts-toolbar {
+    padding: 16px;
+  }
+
+  .accounts-toolbar-controls {
+    width: 100%;
+  }
+
+  .accounts-search {
+    flex: 1;
+  }
+}

@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { ChevronRight } from "lucide-react";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "~/components/ui/item";
 import { StageStatus } from "~/features/dashboard/components/StageStatus";

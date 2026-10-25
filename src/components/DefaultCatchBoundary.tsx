@@ -1,5 +1,6 @@
 import * as React from "react";
-import { Link, useRouter } from "@tanstack/react-router";
+import { useRouter } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { RotateCw, TriangleAlert, WifiOff } from "lucide-react";
 import { Forbidden } from "~/components/Forbidden";

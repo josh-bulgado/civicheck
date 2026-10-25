@@ -1,3 +1,4 @@
+import { PageSkeleton } from "~/components/feedback/PageSkeleton";
 import { createFileRoute } from "@tanstack/react-router";
 import { FormBlocksPage } from "~/features/admin/services/pages/FormBlocksPage";
 import { listFormFieldBlocksFn } from "~/features/forms/form-field-block.functions";
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/_authed/_dashboard/admin/services_/blocks
     }
   },
   loader: () => listFormFieldBlocksFn(),
+  pendingComponent: () => <PageSkeleton label="Loading shared form blocks" />,
   component: FormBlocksRoute,
 });
 

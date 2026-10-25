@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { useRouterState } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { ChevronDown, SlidersHorizontal, TrendingUp } from "lucide-react";
 import {
   Collapsible,

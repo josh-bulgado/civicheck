@@ -7,14 +7,26 @@ import { Search, FileText, Upload } from "lucide-react";
 import { enterDelay } from "~/components/motion/stagger";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
-import { Field, FieldError, FieldGroup, FieldLabel } from "~/components/ui/field";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Spinner } from "~/components/ui/spinner";
+import { PanelSkeleton } from "~/components/feedback/PageSkeleton";
 import SiteHeader from "~/features/landing/components/SiteHeader";
 import SiteFooter from "~/features/landing/components/SiteFooter";
-import { trackRequestFn, resubmitAttachmentFn } from "~/features/track/track.queries";
-import { getStatusDetails, getPaymentDetails } from "~/features/services/request-status";
+import {
+  trackRequestFn,
+  resubmitAttachmentFn,
+} from "~/features/track/track.queries";
+import {
+  getStatusDetails,
+  getPaymentDetails,
+} from "~/features/services/request-status";
 import { formatFee } from "~/features/services/service-utils";
 
 const ACCEPT = "image/jpeg,image/png,application/pdf";
@@ -75,7 +87,10 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
   const form = useForm<TrackValues>({
     resolver: zodResolver(trackSchema),
     mode: "onBlur",
-    defaultValues: { trackingNumber: initialTrackingNumber ?? "", lastName: "" },
+    defaultValues: {
+      trackingNumber: initialTrackingNumber ?? "",
+      lastName: "",
+    },
   });
 
   async function onSubmit(values: TrackValues) {
@@ -132,8 +147,8 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
             Track an existing request
           </h1>
           <p className="mt-3.5 text-lg leading-relaxed text-body">
-            Enter your tracking number and the last name on the request to
-            check its status.
+            Enter your tracking number and the last name on the request to check
+            its status.
           </p>
         </div>
 
@@ -148,14 +163,18 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
                 name="trackingNumber"
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="trackingNumber">Tracking number</FieldLabel>
+                    <FieldLabel htmlFor="trackingNumber">
+                      Tracking number
+                    </FieldLabel>
                     <Input
                       id="trackingNumber"
                       placeholder="e.g. CCRO-2026-000123"
                       autoCapitalize="characters"
                       {...field}
                     />
-                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
                   </Field>
                 )}
               />
@@ -164,9 +183,17 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
                 name="lastName"
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="lastName">Last name on the request</FieldLabel>
-                    <Input id="lastName" placeholder="e.g. Dela Cruz" {...field} />
-                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                    <FieldLabel htmlFor="lastName">
+                      Last name on the request
+                    </FieldLabel>
+                    <Input
+                      id="lastName"
+                      placeholder="e.g. Dela Cruz"
+                      {...field}
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
                   </Field>
                 )}
               />
@@ -195,7 +222,15 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
           )}
         </div>
 
-        {result && status && payment && (
+        {submitting ? (
+          <PanelSkeleton
+            label="Loading request status"
+            rows={3}
+            className="mt-6 rounded-xl border border-border bg-card p-6 sm:p-8"
+          />
+        ) : null}
+
+        {!submitting && result && status && payment && (
           // Keyed on the tracking number so looking up a second request replays
           // the entrance instead of silently swapping the numbers in place.
           <div
@@ -210,7 +245,9 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
                 <p className="font-mono text-sm font-semibold text-muted-foreground">
                   {result.trackingNumber}
                 </p>
-                <p className="text-lg font-bold text-foreground">{result.serviceName}</p>
+                <p className="text-lg font-bold text-foreground">
+                  {result.serviceName}
+                </p>
               </div>
             </div>
 
@@ -245,7 +282,9 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
 
             {result.attachments.length > 0 && (
               <div className="mt-6 border-t border-border-lighter pt-5">
-                <h2 className="mb-3 text-sm font-bold text-foreground">Your documents</h2>
+                <h2 className="mb-3 text-sm font-bold text-foreground">
+                  Your documents
+                </h2>
                 <div className="flex flex-col gap-3">
                   {result.attachments.map((doc) => (
                     <AttachmentTrackRow

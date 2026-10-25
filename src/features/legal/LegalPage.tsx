@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import SiteFooter from "~/features/landing/components/SiteFooter";
 import SiteHeader from "~/features/landing/components/SiteHeader";
 import { LegalDocumentBody } from "./components/LegalDocumentBody";

@@ -1,3 +1,4 @@
+import { QuietAnchor } from "~/components/quiet-link";
 import { useRef, type ReactNode } from "react";
 import {
   CheckCircle2,
@@ -18,7 +19,7 @@ import {
 } from "~/components/ui/dialog";
 import { Kbd } from "~/components/ui/kbd";
 import { Label } from "~/components/ui/label";
-import { Spinner } from "~/components/ui/spinner";
+import { DocumentSkeleton } from "~/components/feedback/PageSkeleton";
 import { Textarea } from "~/components/ui/textarea";
 import { AttachmentPreview } from "~/features/requests/components/AttachmentPreview";
 import {
@@ -69,9 +70,15 @@ export function DocumentViewerHeader({
   asDialogTitle?: boolean;
   className?: string;
 }) {
-  const titleClass = "flex min-h-8 min-w-0 flex-1 items-center text-sm font-bold text-foreground";
+  const titleClass =
+    "flex min-h-8 min-w-0 flex-1 items-center text-sm font-bold text-foreground";
   return (
-    <div className={cn("flex items-start justify-between gap-3 px-4 py-3", className)}>
+    <div
+      className={cn(
+        "flex items-start justify-between gap-3 px-4 py-3",
+        className,
+      )}
+    >
       {asDialogTitle ? (
         <DialogTitle className={titleClass}>{label}</DialogTitle>
       ) : (
@@ -87,7 +94,13 @@ export function DocumentViewerHeader({
             size="icon-sm"
             aria-label="Open the file in a new tab"
             nativeButton={false}
-            render={<a href={url} target="_blank" rel="noopener noreferrer" />}
+            render={
+              <QuietAnchor
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+              />
+            }
           >
             <ExternalLink aria-hidden="true" />
           </Button>
@@ -119,7 +132,9 @@ export function DocumentPreviewBox({
   className: string;
 }) {
   if (link?.url) {
-    return <AttachmentPreview url={link.url} name={name} className={className} />;
+    return (
+      <AttachmentPreview url={link.url} name={name} className={className} />
+    );
   }
   if (link?.error) {
     return (
@@ -133,18 +148,7 @@ export function DocumentPreviewBox({
       </p>
     );
   }
-  return (
-    <div
-      role="status"
-      className={cn(
-        "flex items-center justify-center gap-2 text-sm text-muted-foreground",
-        className,
-      )}
-    >
-      <Spinner className="size-4" aria-hidden="true" />
-      Loading file…
-    </div>
-  );
+  return <DocumentSkeleton label="Loading file" className={className} />;
 }
 
 export interface DecisionControls {
@@ -215,7 +219,12 @@ export function DocumentDecisionBar({
             >
               Reject document
             </Button>
-            <Button size="sm" variant="ghost" disabled={c.busy} onClick={c.onCancelReject}>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={c.busy}
+              onClick={c.onCancelReject}
+            >
               Cancel <Kbd>Esc</Kbd>
             </Button>
           </div>
@@ -224,11 +233,19 @@ export function DocumentDecisionBar({
 
       {(c.canDecide || c.blockedReason) && !c.rejecting && !decided && (
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="success" disabled={c.busy || !c.canDecide} onClick={c.onAccept}>
+          <Button
+            variant="success"
+            disabled={c.busy || !c.canDecide}
+            onClick={c.onAccept}
+          >
             <CheckCircle2 data-icon="inline-start" aria-hidden="true" />
             Accept <Kbd>{c.acceptKey}</Kbd>
           </Button>
-          <Button variant="outline" disabled={c.busy || !c.canDecide} onClick={c.onStartReject}>
+          <Button
+            variant="outline"
+            disabled={c.busy || !c.canDecide}
+            onClick={c.onStartReject}
+          >
             <XCircle data-icon="inline-start" aria-hidden="true" />
             Reject <Kbd>{c.rejectKey}</Kbd>
           </Button>
@@ -262,9 +279,15 @@ export function DocumentDecisionBar({
           >
             <div className="flex min-w-0 items-start gap-2.5">
               {c.status === "approved" ? (
-                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />
+                <CheckCircle2
+                  className="mt-0.5 size-4 shrink-0 text-success"
+                  aria-hidden="true"
+                />
               ) : (
-                <XCircle className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden="true" />
+                <XCircle
+                  className="mt-0.5 size-4 shrink-0 text-destructive"
+                  aria-hidden="true"
+                />
               )}
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-foreground">
@@ -289,7 +312,12 @@ export function DocumentDecisionBar({
             ) : (
               c.canReverse &&
               !c.reopening && (
-                <Button size="sm" variant="outline" disabled={c.busy} onClick={c.onStartReopen}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={c.busy}
+                  onClick={c.onStartReopen}
+                >
                   <Undo2 data-icon="inline-start" aria-hidden="true" />
                   Undo decision
                 </Button>
@@ -320,7 +348,12 @@ export function DocumentDecisionBar({
                 >
                   Confirm undo
                 </Button>
-                <Button size="sm" variant="ghost" disabled={c.busy} onClick={c.onCancelReopen}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={c.busy}
+                  onClick={c.onCancelReopen}
+                >
                   Cancel
                 </Button>
               </div>
@@ -370,10 +403,16 @@ export function ExpandedDocumentView({
         className="flex h-[94vh] w-[96vw] max-w-none flex-col gap-0 overflow-hidden p-0 sm:max-w-none"
         onKeyDownCapture={(event) => {
           if (
-            !open || !navigationEnabled || event.defaultPrevented ||
-            event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
+            !open ||
+            !navigationEnabled ||
+            event.defaultPrevented ||
+            event.altKey ||
+            event.ctrlKey ||
+            event.metaKey ||
+            event.shiftKey ||
             (event.key !== "ArrowLeft" && event.key !== "ArrowRight")
-          ) return;
+          )
+            return;
 
           const target = event.target;
           if (!(target instanceof HTMLElement)) return;
@@ -381,9 +420,14 @@ export function ExpandedDocumentView({
           // keeps its own arrow-key behavior.
           if (
             target.isContentEditable ||
-            target.closest('input, textarea, select, [role="textbox"], [role="combobox"], [role="listbox"], [role="menu"], [role="slider"], [role="spinbutton"], [role="tablist"]')
-          ) return;
-          const dialog = target.closest('[role="dialog"], [role="alertdialog"]');
+            target.closest(
+              'input, textarea, select, [role="textbox"], [role="combobox"], [role="listbox"], [role="menu"], [role="slider"], [role="spinbutton"], [role="tablist"]',
+            )
+          )
+            return;
+          const dialog = target.closest(
+            '[role="dialog"], [role="alertdialog"]',
+          );
           if (dialog && dialog !== event.currentTarget) return;
 
           // Capture before the image's magnifier handles its own arrow keys.
@@ -396,15 +440,21 @@ export function ExpandedDocumentView({
       >
         <DialogDescription className="sr-only">
           Review the document, then accept or reject it. Use the Left and Right
-          arrow keys to switch documents. Use Shift + arrow keys to move the magnifier.
+          arrow keys to switch documents. Use Shift + arrow keys to move the
+          magnifier.
         </DialogDescription>
         <div className="flex flex-col border-b border-border-light sm:flex-row sm:items-start sm:gap-2 sm:pr-4">
           <div className="min-w-0 flex-1">{header}</div>
           <div className="flex shrink-0 items-center justify-between gap-3 px-4 pb-3 sm:justify-end sm:px-0 sm:py-3">
             <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
-              <Kbd>←</Kbd><Kbd>→</Kbd> switch documents
+              <Kbd>←</Kbd>
+              <Kbd>→</Kbd> switch documents
             </span>
-            <span role="status" aria-label="Document position" className="text-xs text-muted-foreground tabular-nums">
+            <span
+              role="status"
+              aria-label="Document position"
+              className="text-xs text-muted-foreground tabular-nums"
+            >
               {position}
             </span>
             <Button
@@ -423,7 +473,9 @@ export function ExpandedDocumentView({
               tabIndex={-1}
               className="relative min-h-0 flex-1 bg-muted/30 outline-none"
             >
-              <div className="absolute inset-0 px-14 py-3 sm:px-16">{preview}</div>
+              <div className="absolute inset-0 px-14 py-3 sm:px-16">
+                {preview}
+              </div>
               <Button
                 variant="outline"
                 size="icon-lg"
@@ -452,7 +504,9 @@ export function ExpandedDocumentView({
             {decision}
           </div>
           <aside className="hidden w-80 shrink-0 overflow-y-auto border-l border-border-light p-5 lg:block">
-            <h2 className="mb-1 text-sm font-bold text-foreground">Submitted details</h2>
+            <h2 className="mb-1 text-sm font-bold text-foreground">
+              Submitted details
+            </h2>
             <p className="mb-4 text-xs text-muted-foreground">
               Compare with the original in hand.
             </p>

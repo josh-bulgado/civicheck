@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { useRef, useState } from "react";
 import { Blocks, Unlink } from "lucide-react";
 import { toast } from "sonner";

@@ -1,3 +1,4 @@
+import { QuietAnchor } from "~/components/quiet-link";
 import {
   Collapsible,
   CollapsibleContent,
@@ -51,7 +52,7 @@ export function NavMain({
               <SidebarMenuSub>
                 {item.items?.map((subItem) => (
                   <SidebarMenuSubItem key={subItem.title}>
-                    <SidebarMenuSubButton render={<a href={subItem.url} />}>
+                    <SidebarMenuSubButton render={<QuietAnchor href={subItem.url} />}>
                       <span>{subItem.title}</span>
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
