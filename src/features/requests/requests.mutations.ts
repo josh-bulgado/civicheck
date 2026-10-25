@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { documentReviewBlockedReason } from "./document-review";
 import { requireActiveSession } from "~/server/auth";
 import { isDepartmentScopedRole } from "~/lib/permissions";
 import {
@@ -349,32 +350,9 @@ export const setAttachmentVerificationFn = createServerFn({ method: "POST" })
       }
     }
 
-    // Staff often go straight to reviewing documents without separately
-    // clicking "Start validation" first — bump the request out of `submitted`
-    // automatically so its status (and any notification below) never lags
-    // behind the fact that someone is actively deciding on it.
-    if (requestInfo?.status === "submitted") {
-      const { data: bumped } = await supabase
-        .from("requests")
-        .update({ status: "under_validation", updated_at: new Date().toISOString() })
-        .eq("id", attachment.request_id)
-        .eq("status", "submitted")
-        .select("id");
-      if (bumped && bumped.length > 0) {
-        await supabase.from("application_logs").insert({
-          request_id: attachment.request_id,
-          performed_by_profile_id: user.id,
-          action_status: "under_validation",
-          remarks: "Validation started automatically — a document was reviewed.",
-        });
-        if (requestInfo.tracking_number) {
-          const startedNotification = buildStatusChangeEmail(
-            "under_validation",
-            requestInfo.tracking_number,
-          );
-          await dispatchApplicantNotification(supabase, attachment.request_id, startedNotification);
-        }
-      }
+    const blockedReason = documentReviewBlockedReason(requestInfo?.status);
+    if (blockedReason) {
+      return { error: true, message: blockedReason };
     }
 
     const reason = data.status === "rejected" ? data.reason?.trim() : null;
@@ -427,9 +405,9 @@ export const setAttachmentVerificationFn = createServerFn({ method: "POST" })
     }
 
     // Once nothing's left pending, the applicant's pre-validation is done —
-    // tell them they can finish this in person. Doesn't advance requests.status
-    // any further than the auto-bump above: the authoritative in-person
-    // recheck still happens at under_validation.
+    // tell them they can finish this in person. This does not advance the
+    // request status: the authoritative in-person recheck still happens
+    // at under_validation.
     if (data.status === "approved") {
       const { data: siblings } = await supabase
         .from("requirements_attachments")

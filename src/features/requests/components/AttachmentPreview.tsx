@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { ExternalLink, Minus, Plus } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { PdfViewer } from "~/components/pdf/PdfViewer";
 import { Button } from "~/components/ui/button";
 import { Spinner } from "~/components/ui/spinner";
+import { ImageMagnifier } from "~/features/requests/components/ImageMagnifier";
 import { useCachedFileUrl } from "~/lib/use-cached-file-url";
 import { cn } from "~/lib/utils";
 
@@ -11,58 +11,6 @@ export function getFileKind(url: string): "image" | "pdf" | "other" {
   if (/\.(png|jpe?g|gif|webp|svg)$/.test(clean)) return "image";
   if (/\.pdf$/.test(clean)) return "pdf";
   return "other";
-}
-
-const IMAGE_ZOOMS = [1, 1.5, 2, 3];
-
-/**
- * An image that fits its box until zoomed. Zooming grows it inside a scrolling
- * frame, so the details of an ID or a stamp can be checked up close.
- */
-function ZoomableImage({ src, alt }: { src: string; alt: string }) {
-  const [step, setStep] = useState(0);
-  const zoom = IMAGE_ZOOMS[step];
-
-  return (
-    <div className="relative h-full w-full">
-      <div className="h-full w-full overflow-auto rounded-md">
-        <img
-          src={src}
-          alt={alt}
-          style={zoom === 1 ? undefined : { width: `${zoom * 100}%` }}
-          className={cn(
-            "max-w-none",
-            zoom === 1 ? "h-full w-full object-contain" : "h-auto",
-          )}
-        />
-      </div>
-      <div className="absolute top-2 right-2 flex items-center gap-0.5 rounded-lg bg-background/90 p-0.5 shadow-sm ring-1 ring-border">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Zoom out"
-          disabled={step === 0}
-          onClick={() => setStep((current) => Math.max(0, current - 1))}
-        >
-          <Minus aria-hidden="true" />
-        </Button>
-        <span className="min-w-10 text-center text-xs tabular-nums text-muted-foreground">
-          {zoom === 1 ? "Fit" : `${zoom * 100}%`}
-        </span>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Zoom in"
-          disabled={step === IMAGE_ZOOMS.length - 1}
-          onClick={() =>
-            setStep((current) => Math.min(IMAGE_ZOOMS.length - 1, current + 1))
-          }
-        >
-          <Plus aria-hidden="true" />
-        </Button>
-      </div>
-    </div>
-  );
 }
 
 /**
@@ -96,7 +44,7 @@ export function AttachmentPreview({
       {fileKind === "image" || fileKind === "pdf" ? (
         fileReady ? (
           fileKind === "image" ? (
-            <ZoomableImage key={fileSrc} src={fileSrc} alt={name} />
+            <ImageMagnifier key={fileSrc} src={fileSrc} alt={name} />
           ) : (
             <PdfViewer url={fileSrc} title={name} className="h-full w-full" />
           )

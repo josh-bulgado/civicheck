@@ -61,6 +61,7 @@ function EditServiceRoute() {
       departments={departments}
       service={service}
       variantOnly={variants.length > 1}
+      keyboardShortcuts
       onSaved={() =>
         variants.length > 1 && service.display_group
           ? navigate({

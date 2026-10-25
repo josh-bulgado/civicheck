@@ -163,19 +163,33 @@ describe("countNeedingStaff", () => {
 describe("formatTimeInStage", () => {
   const ago = (ms: number) => new Date(NOW - ms).toISOString();
 
-  it("reads minutes as under an hour", () => {
-    expect(formatTimeInStage(ago(10 * 60_000), NOW)).toBe("<1h");
-  });
-
-  it("counts hours up to two days, then days", () => {
-    expect(formatTimeInStage(ago(5 * HOUR), NOW)).toBe("5h");
-    expect(formatTimeInStage(ago(47 * HOUR), NOW)).toBe("47h");
-    expect(formatTimeInStage(ago(2 * DAY), NOW)).toBe("2d");
-    expect(formatTimeInStage(ago(4.9 * DAY), NOW)).toBe("4d");
+  it.each([
+    [0, "0m"],
+    [60_000 - 1, "0m"],
+    [60_000, "1m"],
+    [10 * 60_000 + 42_000, "10m"],
+    [HOUR - 1, "59m"],
+    [HOUR, "1h"],
+    [2 * HOUR - 1, "1h"],
+    [2 * HOUR, "2h"],
+    [5 * HOUR, "5h"],
+    [DAY - 1, "23h"],
+    [DAY, "1d"],
+    [DAY + HOUR - 1, "1d"],
+    [DAY + HOUR, "1d 1h"],
+    [DAY + 5 * HOUR, "1d 5h"],
+    [40 * HOUR, "1d 16h"],
+    [2 * DAY - 1, "1d 23h"],
+    [2 * DAY, "2d"],
+    [2 * DAY + 5 * HOUR, "2d"],
+    [3 * DAY, "3d"],
+    [4.9 * DAY, "4d"],
+  ])("formats %i elapsed milliseconds as %s", (elapsed, expected) => {
+    expect(formatTimeInStage(ago(elapsed), NOW)).toBe(expected);
   });
 
   it("never goes negative when the clock is behind", () => {
-    expect(formatTimeInStage(ago(-HOUR), NOW)).toBe("<1h");
+    expect(formatTimeInStage(ago(-HOUR), NOW)).toBe("0m");
   });
 });
 

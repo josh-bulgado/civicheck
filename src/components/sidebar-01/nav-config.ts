@@ -7,12 +7,13 @@ import {
   ClipboardList,
   Compass,
   Gauge,
+  Grid2X2,
   History,
   LayoutDashboard,
   ListChecks,
   Shield,
   ShieldAlert,
-  UserPlus,
+  UsersRound,
 } from "lucide-react";
 import type { Permission, Role } from "~/lib/permissions";
 import type { NavGroup, NavItem } from "./types";
@@ -112,13 +113,13 @@ const NAV_ENTRIES = {
   "admin-services": {
     title: "Services Registry",
     url: "/admin/services",
-    icon: LayoutDashboard,
+    icon: Grid2X2,
     anyOf: ["services:manage"],
   },
   "admin-staff": {
     title: "Staff Management",
     url: "/admin/staff",
-    icon: UserPlus,
+    icon: UsersRound,
     anyOf: ["users:invite_staff"],
   },
   "admin-reports": {
@@ -180,11 +181,9 @@ const PERSONNEL_LAYOUT: GroupLayout[] = [
 ];
 
 /**
- * Every role's layout. Each starts with an unlabelled home group (its
- * dashboard, then Notifications) so the inbox is in the same place for everyone.
- * The exception is the applicant's: its sidebar is one flat list in order of
- * importance (start something, then follow it) that ends on Notifications,
- * where the unread badge reads best.
+ * Every role's layout. Admin keeps Overview first, then its operational
+ * groups, with Notifications last. Applicants also finish on Notifications;
+ * the remaining workspaces use their role-specific groups below.
  */
 const ROLE_LAYOUTS: Record<Role, GroupLayout[]> = {
   applicant: [
@@ -200,10 +199,11 @@ const ROLE_LAYOUTS: Record<Role, GroupLayout[]> = {
     { id: "payments", label: "Payments", itemIds: ["cashier-counter", "payment-history"] },
   ],
   admin: [
-    { id: "home", itemIds: ["admin-overview", "notifications"] },
+    { id: "home", itemIds: ["admin-overview"] },
     { id: "operations", label: "Operations", itemIds: ["request-queue"] },
     { id: "management", label: "Management", itemIds: ["admin-services", "admin-staff"] },
     { id: "insights", label: "Insights", itemIds: ["admin-reports", "payment-history"] },
+    { id: "notifications", itemIds: ["notifications"] },
   ],
   system_admin: [
     { id: "monitoring", label: "Monitoring", itemIds: ["system-health", "system-security"] },

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Link } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
@@ -73,14 +74,42 @@ function TimeInStage({
   request: StaffRequestRow;
   now: number;
 }) {
-  // A released or rejected request is not waiting on anyone.
-  if (requestTurn(request) === "none") return <NotApplicable />;
+  const [currentTime, setCurrentTime] = useState(now);
+  const closed = requestTurn(request) === "none";
 
-  const elapsed = formatTimeInStage(request.updatedAt, now);
-  const tone = waitTone(request, now);
+  // Each age owns its clock so ticking never rebuilds the table or its controls.
+  useEffect(() => {
+    const startedAt = Date.parse(request.updatedAt);
+    if (closed || !Number.isFinite(startedAt)) return;
+
+    let timer: number | undefined;
+    const refreshClock = () => {
+      const current = Date.now();
+      setCurrentTime(current);
+      window.clearTimeout(timer);
+      // Align to this request's next completed minute, even after a sleeping tab.
+      const elapsed = Math.max(0, current - startedAt);
+      timer = window.setTimeout(refreshClock, 60_000 - (elapsed % 60_000));
+    };
+
+    refreshClock();
+    window.addEventListener("focus", refreshClock);
+    document.addEventListener("visibilitychange", refreshClock);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("focus", refreshClock);
+      document.removeEventListener("visibilitychange", refreshClock);
+    };
+  }, [now, request.updatedAt, closed]);
+
+  // A released or rejected request is not waiting on anyone.
+  if (closed) return <NotApplicable />;
+
+  const elapsed = formatTimeInStage(request.updatedAt, currentTime);
+  const tone = waitTone(request, currentTime);
   return (
     <span
-      className={cn("text-sm tabular-nums", WAIT_CLASS[tone])}
+      className={cn("text-sm whitespace-nowrap tabular-nums", WAIT_CLASS[tone])}
       title={`In this status for ${elapsed}`}
     >
       {elapsed}

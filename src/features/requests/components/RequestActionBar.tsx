@@ -37,7 +37,9 @@ export function RequestActionBar({
           disabled={busy || primary.blocked != null}
           onClick={() => onAction(primary)}
         >
-          {primary.blocked && <Lock data-icon="inline-start" aria-hidden="true" />}
+          {primary.blocked && (
+            <Lock data-icon="inline-start" aria-hidden="true" />
+          )}
           {primary.label}
         </Button>
       )}
@@ -56,7 +58,7 @@ export function RequestActionBar({
           >
             <MoreHorizontal aria-hidden="true" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-56">
+          <DropdownMenuContent align="end" className="min-w-56" variant="roomy">
             {secondary.map((action) => (
               <DropdownMenuItem
                 key={action.to}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { RealtimeRowEvent } from "~/hooks/useRealtimeRefresh";
 import type { NotificationRow } from "~/features/notifications/notifications.queries";
-import { MAX_TOASTS, addToast, isNewArrival } from "./new-notification-toasts";
+import { addToast, isNewArrival } from "./new-notification-toasts";
 
 const NOW = Date.parse("2026-10-20T08:00:00Z");
 
@@ -79,13 +79,12 @@ describe("addToast", () => {
     expect(stack.map((t) => t.notification.id)).toEqual(["a", "b"]);
   });
 
-  it("pushes the oldest out past the cap", () => {
+  it("keeps older notifications when more than three arrive", () => {
     let stack = addToast([], notification("a"), 1);
     for (const [key, id] of [[2, "b"], [3, "c"], [4, "d"]] as const) {
       stack = addToast(stack, notification(id), key);
     }
-    expect(stack).toHaveLength(MAX_TOASTS);
-    expect(stack.map((t) => t.notification.id)).toEqual(["b", "c", "d"]);
+    expect(stack.map((t) => t.notification.id)).toEqual(["a", "b", "c", "d"]);
   });
 
   it("replaces a repeat of the same notification and moves it to the end", () => {

@@ -8,7 +8,7 @@ import {
 } from "~/utils/supabase";
 import { getAppUrl } from "~/utils/app-url";
 import { sendEmail } from "~/utils/resend";
-import { renderOtpEmail } from "~/utils/email-template";
+import { renderOtpEmail, renderVerificationEmail } from "~/utils/email-template";
 import { requireActiveSession } from "~/server/auth";
 import {
   recordAuthenticationSecurityEvent,
@@ -76,21 +76,7 @@ async function sendSignupOtpEmail(
     await sendEmail({
       to: params.email,
       subject: "Confirm your CiviCheck account",
-      html: renderOtpEmail({
-        preheader: "Use this code to confirm your CiviCheck account.",
-        greeting: `Hello ${params.firstName.trim()},`,
-        heading: "Confirm your email address",
-        paragraphs: [
-          "Thanks for creating a CiviCheck account. Enter the code below to activate it — you can then file civil registry requests online and follow them from submission to release.",
-        ],
-        code: otp,
-        noteLines: [
-          "This code expires in 1 hour and can only be used once.",
-          "You will not be able to sign in until your email is confirmed.",
-        ],
-        footerNote:
-          "If you did not create a CiviCheck account, you can safely ignore this email.",
-      }),
+      html: renderVerificationEmail(otp),
     });
   } catch (sendError) {
     console.error("Resend sending error:", sendError);

@@ -18,21 +18,17 @@ import {
  * re-renders, and it is only touched from the browser.
  */
 
-/** Pop-ups on screen at once. A fourth pushes the oldest out. */
-export const MAX_TOASTS = 3;
-/** How long a pop-up stays before it leaves on its own. */
-export const TOAST_MS = 8_000;
 /** How long the leave animation gets before the pop-up is removed. */
 export const TOAST_EXIT_MS = 160;
 /** Arrivals this close together (one status change can write several) share one lookup. */
 const BATCH_MS = 150;
 /** A refreshed staff alert counts as new only if it was bumped this recently. */
 const FRESH_MS = 10_000;
-/** More than the stack holds, in case the arrivals were not the newest rows. */
-const LOOKUP_LIMIT = MAX_TOASTS + 2;
+/** Recent notifications to look through when resolving a batch of arrivals. */
+const LOOKUP_LIMIT = 5;
 
 export interface NotificationToast {
-  /** Changes every time a pop-up is shown, so a repeat restarts its animation and timer. */
+  /** Changes every time a pop-up is shown, so a repeat restarts its animation. */
   key: number;
   notification: NotificationRow;
   /** Playing its exit animation; removed a moment later. */
@@ -76,17 +72,16 @@ export function isNewArrival(
   return now - Date.parse(String(row.created_at)) < FRESH_MS;
 }
 
-/** The stack after `notification` arrives: newest last, a repeat replaced, the oldest dropped past the cap. */
+/** Newest last, with a repeated notification replaced. Keep others until dismissed. */
 export function addToast(
   toasts: NotificationToast[],
   notification: NotificationRow,
   key: number,
 ): NotificationToast[] {
-  const next = [
+  return [
     ...toasts.filter((toast) => toast.notification.id !== notification.id),
     { key, notification, leaving: false },
   ];
-  return next.slice(-MAX_TOASTS);
 }
 
 /** Starts clean when a different person is signed in on this tab. */
