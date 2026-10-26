@@ -149,9 +149,10 @@ export function AuthEmphasis({ children }: { children: ReactNode }) {
 /**
  * Auth fields run taller than the app default: these screens are the first
  * thing a resident touches, often on a phone, and the extra height keeps every
- * control comfortably above the 44px minimum hit target.
+ * control comfortably above the 44px minimum hit target. The pill shape is
+ * shared by every auth input and select.
  */
-export const authFieldClass = "h-11 rounded-lg px-3.5 text-sm shadow-none";
+export const authFieldClass = "h-11 rounded-full px-3.5 text-sm shadow-none";
 
 /**
  * Softly filled variant used on the create-account screen. With six controls
@@ -169,9 +170,9 @@ export const authLabelClass = "text-[13px] font-medium text-body-strong";
 /** Heavier label for the standalone steps, where it is the only text over a lone field. */
 export const authStepLabelClass = "text-[13px] font-semibold text-foreground";
 
-/** Full-width action, matched to the field height above it. */
+/** Full-width pill action, matched to the field height above it. */
 export const authButtonClass =
-  "h-11 w-full rounded-lg text-[15px] font-semibold";
+  "h-11 w-full rounded-full text-[15px] font-semibold";
 
 export function AuthFormHeading({
   title,

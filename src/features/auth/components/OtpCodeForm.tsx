@@ -120,6 +120,8 @@ export function OtpCodeForm({
                 <InputOTPSlot
                   key={index}
                   index={index}
+                  size="lg"
+                  shape="pill"
                   aria-invalid={shownError !== null}
                 />
               ))}
@@ -162,10 +164,10 @@ export function OtpCodeForm({
         <span>Didn&apos;t get a code?</span>
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
+          size="lg"
           onClick={handleResend}
           disabled={isResending || cooldown > 0}
-          className="h-7.5 rounded-full border-border-light bg-card px-3.5 text-xs font-semibold text-primary disabled:text-disabled disabled:opacity-100"
         >
           {isResending
             ? "Resending…"

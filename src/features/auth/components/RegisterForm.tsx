@@ -67,14 +67,8 @@ const formSchema = signupFieldsSchema
 type FormValues = z.infer<typeof formSchema>;
 
 /** Empty fields should not leave blank validation rows in the form. */
-function SignupFieldError({
-  error,
-}: {
-  error?: { message?: string };
-}) {
-  return (
-    <FieldError errors={[error]} className="text-[13px] leading-5" />
-  );
+function SignupFieldError({ error }: { error?: { message?: string } }) {
+  return <FieldError errors={[error]} className="text-[13px] leading-5" />;
 }
 
 const RegisterForm = () => {
@@ -154,10 +148,7 @@ const RegisterForm = () => {
             control={form.control}
             name="firstName"
             render={({ field, fieldState }) => (
-              <Field
-                data-invalid={fieldState.invalid}
-                className="gap-1.5"
-              >
+              <Field data-invalid={fieldState.invalid} className="gap-1.5">
                 <FieldLabel htmlFor="firstName" className={authLabelClass}>
                   First Name
                   <RequiredMark />
@@ -169,7 +160,6 @@ const RegisterForm = () => {
                   placeholder="Juan"
                   aria-invalid={fieldState.invalid}
                   autoComplete="given-name"
-                  fieldSize="touch"
                 />
                 <SignupFieldError error={fieldState.error} />
               </Field>
@@ -297,10 +287,7 @@ const RegisterForm = () => {
             control={form.control}
             name="email"
             render={({ field, fieldState }) => (
-              <Field
-                data-invalid={fieldState.invalid}
-                className="gap-1.5"
-              >
+              <Field data-invalid={fieldState.invalid} className="gap-1.5">
                 <FieldLabel htmlFor="email" className={authLabelClass}>
                   Email <RequiredMark />
                 </FieldLabel>
@@ -326,10 +313,7 @@ const RegisterForm = () => {
             control={form.control}
             name="password"
             render={({ field, fieldState }) => (
-              <Field
-                data-invalid={fieldState.invalid}
-                className="gap-1.5"
-              >
+              <Field data-invalid={fieldState.invalid} className="gap-1.5">
                 <FieldLabel htmlFor="password" className={authLabelClass}>
                   Password <RequiredMark />
                 </FieldLabel>
