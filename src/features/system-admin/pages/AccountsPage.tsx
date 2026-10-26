@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
 import { UserRoundPlus } from "lucide-react";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { Button } from "~/components/ui/button";
 import { AccountsDataTable } from "../components/AccountsDataTable";
 import {
