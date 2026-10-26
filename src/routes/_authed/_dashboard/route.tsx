@@ -18,6 +18,7 @@ import { CommandPalette } from "~/components/sidebar-01/command-palette";
 import { CityGovernmentIdentity } from "~/components/brand/civic-identity";
 import { ThemeSwitch } from "~/components/theme-switch";
 import { DashboardBreadcrumbs } from "~/components/sidebar-01/dashboard-breadcrumbs";
+import { SystemAdminSearch } from "~/components/sidebar-01/system-admin-search";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { getUnreadNotificationSummaryFn } from "~/features/notifications/notifications.queries";
 import { invalidateNotificationPreview } from "~/features/notifications/notification-preview-cache";
@@ -191,7 +192,11 @@ function DashboardLayout() {
                 {/* From md the toggle lives in the sidebar, as in the applicant
                     shell; here it only opens the sheet on a phone. */}
                 <SidebarTrigger className="size-10 shrink-0 rounded-lg border border-border-strong bg-card shadow-xs hover:bg-surface-subtle md:hidden" />
-                <DashboardBreadcrumbs role={(user?.role ?? "applicant") as Role} />
+                {user?.role === "system_admin" ? (
+                  <SystemAdminSearch />
+                ) : (
+                  <DashboardBreadcrumbs role={(user?.role ?? "applicant") as Role} />
+                )}
               </div>
               <div className="flex shrink-0 items-center gap-4">
                 <ThemeSwitch />

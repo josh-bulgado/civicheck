@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
-import { DataTablePagination } from "~/components/ui/data-table-pagination";
+import { CenterTablePagination } from "./CenterTableControls";
 import { useAccountActions } from "../hooks/useAccountActions";
 import {
   accountPageSizes,
@@ -222,18 +222,15 @@ export function AccountsDataTable({
 
   return (
     <>
-      <div className="accounts-directory-card" aria-busy={isLoading}>
+      <div
+        className="accounts-directory-card center-table-card"
+        aria-busy={isLoading}
+      >
         <AccountsTableToolbar
           category={category}
           filters={filters}
           departments={departments}
           onFiltersChange={(next) => void navigate(1, next, pageSize, true)}
-          onCategoryChange={(next) =>
-            void router.navigate({
-              to: "/system-admin/accounts",
-              search: { category: next, page: 1 },
-            })
-          }
         />
         {error ? (
           <div
@@ -251,16 +248,20 @@ export function AccountsDataTable({
             </Button>
           </div>
         ) : null}
-        <Table className="accounts-directory-table" aria-label={tableLabel}>
+        <Table
+          className="accounts-directory-table center-table"
+          aria-label={tableLabel}
+        >
           <colgroup>
+            <col style={{ width: 48 }} />
             {category === "personnel" ? (
               <>
-                <col className="w-[29%]" />
+                <col className="w-[25%]" />
                 <col className="w-[17%]" />
                 <col className="w-[14%]" />
-                <col className="w-[13%]" />
-                <col className="w-[10%]" />
-                <col className="w-[17%]" />
+                <col className="w-[16%]" />
+                <col className="w-[12%]" />
+                <col className="w-[16%]" />
               </>
             ) : (
               <>
@@ -271,7 +272,7 @@ export function AccountsDataTable({
               </>
             )}
           </colgroup>
-          <TableHeader className="bg-surface-subtle/60">
+          <TableHeader>
             {table.getHeaderGroups().map((group) => (
               <TableRow
                 key={group.id}
@@ -307,6 +308,7 @@ export function AccountsDataTable({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
+                  data-state={row.getIsSelected() ? "selected" : undefined}
                   className="h-[68px] border-border-lighter hover:bg-surface-subtle/60"
                 >
                   {row.getVisibleCells().map((cell) => (
@@ -349,18 +351,15 @@ export function AccountsDataTable({
             ) : null}
           </TableBody>
         </Table>
-        {!isLoading && !error && pageCount > 1 ? (
-          <div className="border-t border-border-lighter px-5 py-4">
-            <DataTablePagination
-              table={table}
-              pageCount={pageCount}
-              total={total}
-              pageSizeOptions={[...accountPageSizes]}
-              onPageChange={(pageIndex) => void navigate(pageIndex + 1)}
-              onPageSizeChange={(size) => void navigate(1, filters, size)}
-            />
-          </div>
-        ) : null}
+        <CenterTablePagination
+          table={table}
+          pageCount={pageCount}
+          total={total}
+          pageSizeOptions={[...accountPageSizes]}
+          onPageChange={(pageIndex) => void navigate(pageIndex + 1)}
+          onPageSizeChange={(size) => void navigate(1, filters, size)}
+          disabled={isLoading || !!error}
+        />
       </div>
       <p role="status" className="sr-only">
         {isLoading

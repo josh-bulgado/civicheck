@@ -37,9 +37,9 @@ const STATUSES: AccountStatus[] = ["active", "suspended", "deactivated"];
 const SIGN_IN_FILTERS: AccountSignInFilter[] = ["never", "unverified"];
 
 function normalizeCategory(value: unknown): AccountCategory {
-  return value === "citizens" || value === "platform-admins"
+  return value === "personnel" || value === "platform-admins"
     ? value
-    : "personnel";
+    : "citizens";
 }
 
 function optionalText(value: unknown, maxLength: number) {

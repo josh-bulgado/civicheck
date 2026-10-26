@@ -1,9 +1,9 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowDown, ArrowUp } from "lucide-react";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { departmentLabel } from "~/features/admin/staff/staff-table.utils";
 import { accountStatusLabels, roleLabels } from "../system-admin.constants";
+import { CenterSortHeader, centerSelectionColumn } from "./CenterTableControls";
 import type {
   AccountCategory,
   AccountSummary,
@@ -13,35 +13,6 @@ import {
   AccountRowActions,
   type AccountActionHandlers,
 } from "./AccountRowActions";
-
-const plainHeaderClassName = "text-xs font-semibold text-muted-foreground";
-
-function SortableMemberHeader({
-  column,
-}: {
-  column: {
-    getIsSorted: () => false | "asc" | "desc";
-    toggleSorting: (descending: boolean) => void;
-  };
-}) {
-  const sorted = column.getIsSorted();
-  return (
-    <button
-      type="button"
-      className="flex h-9 items-center gap-1.5 rounded-sm"
-      aria-label="Sort by member"
-      onClick={() => column.toggleSorting(sorted === "asc")}
-    >
-      Member
-      {sorted === "asc" ? (
-        <ArrowUp className="size-3" aria-hidden="true" />
-      ) : null}
-      {sorted === "desc" ? (
-        <ArrowDown className="size-3" aria-hidden="true" />
-      ) : null}
-    </button>
-  );
-}
 
 function getInitials(account: AccountSummary) {
   const initials = `${account.firstName.charAt(0)}${account.lastName.charAt(0)}`;
@@ -67,29 +38,25 @@ function accountState(account: AccountSummary) {
   if (account.status !== "active") {
     return {
       label: accountStatusLabels[account.status],
-      dotClassName: "bg-destructive",
+      tone: "inactive",
     };
   }
   if (account.invitePending) {
-    return { label: "Setup pending", dotClassName: "bg-warning" };
+    return { label: "Setup pending", tone: "pending" };
   }
-  return { label: accountStatusLabels.active, dotClassName: "bg-success" };
+  return { label: accountStatusLabels.active, tone: "active" };
 }
 
 function StatusCell({ account }: { account: AccountSummary }) {
-  const { label, dotClassName } = accountState(account);
+  const { label, tone } = accountState(account);
 
   return (
-    <div className="max-w-48">
-      <span className="flex items-center gap-2 text-sm text-foreground/75">
-        <span
-          aria-hidden="true"
-          className={`size-2 shrink-0 rounded-full ${dotClassName}`}
-        />
+    <div className="account-status-cell">
+      <span className="account-status" data-tone={tone}>
         {label}
       </span>
       {account.suspensionReason ? (
-        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+        <p className="account-status-reason line-clamp-2">
           {account.suspensionReason}
         </p>
       ) : null}
@@ -149,11 +116,17 @@ export function createAccountColumns({
   );
 
   return [
+    centerSelectionColumn<AccountSummary>(
+      (account) =>
+        `${account.firstName} ${account.lastName}`.trim() || account.email,
+    ),
     {
       id: "member",
       accessorFn: (account) =>
         `${account.firstName} ${account.lastName}`.trim(),
-      header: ({ column }) => <SortableMemberHeader column={column} />,
+      header: ({ column }) => (
+        <CenterSortHeader label="Member" column={column} />
+      ),
       cell: ({ row }) => {
         const account = row.original;
         const fullName =
@@ -161,8 +134,8 @@ export function createAccountColumns({
           "Unnamed account";
 
         return (
-          <div className="flex min-w-0 items-center gap-3.5">
-            <Avatar size="lg" className="after:border-0" aria-hidden="true">
+          <div className="account-member">
+            <Avatar className="after:border-0" aria-hidden="true">
               <AvatarFallback className="bg-primary-soft font-semibold text-primary">
                 {getInitials(account)}
               </AvatarFallback>
@@ -175,7 +148,7 @@ export function createAccountColumns({
                 {fullName}
               </p>
               <p
-                className="mt-0.5 truncate text-sm text-muted-foreground"
+                className="account-member-email truncate"
                 title={account.email}
               >
                 {account.email}
@@ -189,7 +162,10 @@ export function createAccountColumns({
       ? [
           {
             id: "role",
-            header: () => <span className={plainHeaderClassName}>Role</span>,
+            accessorFn: (account) => roleLabels[account.role],
+            header: ({ column }) => (
+              <CenterSortHeader label="Role" column={column} />
+            ),
             cell: ({ row }) => (
               <span className="text-sm font-medium text-foreground/80">
                 {roleLabels[row.original.role]}
@@ -198,8 +174,12 @@ export function createAccountColumns({
           } satisfies ColumnDef<AccountSummary>,
           {
             id: "department",
-            header: () => (
-              <span className={plainHeaderClassName}>Department</span>
+            accessorFn: (account) =>
+              account.role === "admin"
+                ? "All departments"
+                : (departmentNames.get(account.departmentId ?? "") ?? ""),
+            header: ({ column }) => (
+              <CenterSortHeader label="Department" column={column} />
             ),
             cell: ({ row }) => {
               const { role, departmentId } = row.original;
@@ -229,18 +209,24 @@ export function createAccountColumns({
       : []),
     {
       id: "status",
-      header: () => <span className={plainHeaderClassName}>Status</span>,
+      accessorFn: (account) => accountState(account).label,
+      header: ({ column }) => (
+        <CenterSortHeader label="Status" column={column} />
+      ),
       cell: ({ row }) => <StatusCell account={row.original} />,
     },
     {
       id: "lastSignIn",
-      header: () => <span className={plainHeaderClassName}>Last sign-in</span>,
+      accessorFn: (account) => account.lastSignInAt,
+      header: ({ column }) => (
+        <CenterSortHeader label="Last sign-in" column={column} />
+      ),
       cell: ({ row }) => <LastSignInCell account={row.original} />,
     },
     {
       id: "actions",
       enableSorting: false,
-      header: () => <span className="sr-only">Actions</span>,
+      header: "Actions",
       cell: ({ row }) => (
         <AccountRowActions
           account={row.original}

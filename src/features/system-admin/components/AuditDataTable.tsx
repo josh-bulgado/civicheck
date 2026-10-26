@@ -3,6 +3,7 @@ import { useRouter } from "@tanstack/react-router";
 import {
   flexRender,
   getCoreRowModel,
+  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
   type SortingState,
@@ -22,6 +23,7 @@ import { auditColumns } from "./AuditColumn";
 import { AuditTableToolbar, type AuditFilterValues } from "./AuditTableToolbar";
 import { AuditTableSkeleton } from "./AuditTableSkeleton";
 import { AuditTableRows } from "./AuditTableRows";
+import { CenterTablePagination } from "./CenterTableControls";
 
 export function AuditDataTable({
   data,
@@ -40,6 +42,12 @@ export function AuditDataTable({
 }) {
   const router = useRouter();
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [pageSize, setPageSize] = useState(10);
+  const pageCount = Math.max(1, Math.ceil(data.length / pageSize));
+  const pageIndex = Math.min(
+    Math.max(0, (filters.page ?? 1) - 1),
+    pageCount - 1,
+  );
   const values = useMemo<AuditFilterValues>(
     () => ({
       q: filters.q ?? "",
@@ -63,10 +71,12 @@ export function AuditDataTable({
     data,
     columns: auditColumns,
     getRowId: (event) => `${event.source}:${event.id}`,
-    state: { sorting },
+    state: { sorting, pagination: { pageIndex, pageSize } },
+    autoResetPageIndex: false,
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
   });
 
   const applyFilters = useCallback(
@@ -92,7 +102,7 @@ export function AuditDataTable({
   );
 
   return (
-    <div className="audit-events-card" aria-busy={isLoading}>
+    <div className="audit-events-card center-table-card" aria-busy={isLoading}>
       {filters.account ? (
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-lighter px-5 py-3 text-sm">
           <p>
@@ -135,18 +145,20 @@ export function AuditDataTable({
         </div>
       ) : null}
       <Table
-        className="audit-events-table"
+        className="audit-events-table center-table"
         aria-label="Audit events"
         aria-rowcount={data.length + 1}
       >
         <colgroup>
-          <col className="w-[17%]" />
-          <col className="w-[12.5%]" />
-          <col className="w-[24%]" />
-          <col className="w-[24%]" />
-          <col className="w-[22.5%]" />
+          <col style={{ width: 48 }} />
+          <col className="w-[18%]" />
+          <col className="w-[11%]" />
+          <col className="w-[21%]" />
+          <col className="w-[22%]" />
+          <col className="w-[18%]" />
+          <col style={{ width: 100 }} />
         </colgroup>
-        <TableHeader className="bg-surface-subtle/60">
+        <TableHeader>
           {table.getHeaderGroups().map((group) => (
             <TableRow
               key={group.id}
@@ -180,7 +192,10 @@ export function AuditDataTable({
             <AuditTableSkeleton />
           </TableBody>
         ) : data.length ? (
-          <AuditTableRows rows={table.getRowModel().rows} />
+          <AuditTableRows
+            rows={table.getRowModel().rows}
+            rowOffset={pageIndex * pageSize}
+          />
         ) : !error ? (
           <TableBody>
             <TableRow>
@@ -201,6 +216,36 @@ export function AuditDataTable({
           </TableBody>
         ) : null}
       </Table>
+      <CenterTablePagination
+        table={table}
+        total={total}
+        disabled={isLoading || !!error}
+        onPageChange={(nextPage) =>
+          void router.navigate({
+            from: "/system-admin/audit",
+            to: "/system-admin/audit",
+            search: (previous) => ({
+              ...previous,
+              source: previous.source ?? "all",
+              page: nextPage + 1,
+            }),
+            resetScroll: false,
+          })
+        }
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          void router.navigate({
+            from: "/system-admin/audit",
+            to: "/system-admin/audit",
+            search: (previous) => ({
+              ...previous,
+              source: previous.source ?? "all",
+              page: 1,
+            }),
+            resetScroll: false,
+          });
+        }}
+      />
       <p role="status" className="sr-only">
         {isLoading
           ? "Loading audit events"

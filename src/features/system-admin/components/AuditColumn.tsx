@@ -1,36 +1,8 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { CenterSortHeader, centerSelectionColumn } from "./CenterTableControls";
+import { AuditRowActions } from "./AuditRowActions";
 import { formatAuditEventType } from "../audit-event.utils";
 import type { NormalizedAuditEvent } from "../system-admin.types";
-
-function SortableHeader({
-  label,
-  column,
-}: {
-  label: string;
-  column: {
-    getIsSorted: () => false | "asc" | "desc";
-    toggleSorting: (descending: boolean) => void;
-  };
-}) {
-  const sorted = column.getIsSorted();
-  return (
-    <button
-      type="button"
-      className="flex h-9 items-center gap-1.5 rounded-sm text-left"
-      onClick={() => column.toggleSorting(sorted === "asc")}
-      aria-label={`Sort by ${label.toLowerCase()}${sorted ? `, currently ${sorted === "asc" ? "ascending" : "descending"}` : ""}`}
-    >
-      {label}
-      {sorted === "asc" ? (
-        <ArrowUp className="size-3" aria-hidden="true" />
-      ) : null}
-      {sorted === "desc" ? (
-        <ArrowDown className="size-3" aria-hidden="true" />
-      ) : null}
-    </button>
-  );
-}
 
 const sourceLabels = {
   system: "System",
@@ -47,15 +19,18 @@ const auditTime = new Intl.DateTimeFormat("en-US", {
 });
 
 export const auditColumns: ColumnDef<NormalizedAuditEvent>[] = [
+  centerSelectionColumn<NormalizedAuditEvent>(
+    (event) => `${formatAuditEventType(event.eventType)} at ${event.timestamp}`,
+  ),
   {
     accessorKey: "timestamp",
-    header: ({ column }) => <SortableHeader label="Time" column={column} />,
+    header: ({ column }) => <CenterSortHeader label="Time" column={column} />,
     cell: ({ row }) => (
-      <time dateTime={row.original.timestamp} className="block">
-        <span className="block font-medium">
+      <time dateTime={row.original.timestamp}>
+        <span className="audit-event-date">
           {auditDate.format(new Date(row.original.timestamp))}
         </span>
-        <span className="mt-0.5 block text-xs text-muted-foreground">
+        <span className="audit-event-time">
           {auditTime.format(new Date(row.original.timestamp))}
         </span>
       </time>
@@ -63,21 +38,19 @@ export const auditColumns: ColumnDef<NormalizedAuditEvent>[] = [
   },
   {
     accessorKey: "source",
-    header: "Source",
+    header: ({ column }) => <CenterSortHeader label="Source" column={column} />,
     cell: ({ row }) => (
-      <span
-        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs leading-5 font-medium ${row.original.source === "system" ? "bg-secondary text-primary-hover" : "bg-primary-soft text-primary"}`}
-      >
+      <span className="audit-source" data-source={row.original.source}>
         {sourceLabels[row.original.source]}
       </span>
     ),
   },
   {
     accessorKey: "eventType",
-    header: ({ column }) => <SortableHeader label="Event" column={column} />,
+    header: ({ column }) => <CenterSortHeader label="Event" column={column} />,
     cell: ({ row }) => (
       <span
-        className="font-medium text-foreground/85"
+        className="text-foreground"
         title={
           row.original.requestId
             ? `Request ${row.original.requestId}`
@@ -90,11 +63,12 @@ export const auditColumns: ColumnDef<NormalizedAuditEvent>[] = [
   },
   {
     accessorKey: "actor",
-    header: ({ column }) => <SortableHeader label="Actor" column={column} />,
+    header: ({ column }) => <CenterSortHeader label="Actor" column={column} />,
   },
   {
     id: "device",
-    header: "Device",
+    accessorFn: (event) => event.deviceLabel ?? "",
+    header: ({ column }) => <CenterSortHeader label="Device" column={column} />,
     cell: ({ row }) =>
       row.original.deviceLabel || row.original.maskedIpAddress ? (
         <div className="min-w-36">
@@ -102,7 +76,7 @@ export const auditColumns: ColumnDef<NormalizedAuditEvent>[] = [
             {row.original.deviceLabel ?? "Unrecognized device"}
           </p>
           {row.original.maskedIpAddress ? (
-            <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+            <p className="audit-device-address font-mono">
               {row.original.maskedIpAddress}
             </p>
           ) : null}
@@ -110,5 +84,11 @@ export const auditColumns: ColumnDef<NormalizedAuditEvent>[] = [
       ) : (
         <span className="text-muted-foreground">—</span>
       ),
+  },
+  {
+    id: "actions",
+    header: "Actions",
+    enableSorting: false,
+    cell: ({ row }) => <AuditRowActions event={row.original} />,
   },
 ];

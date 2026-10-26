@@ -1,0 +1,231 @@
+.accounts-center-page,
+.audit-center-page {
+  animation: none;
+}
+
+.accounts-center-page > header h1,
+.audit-center-page > header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.accounts-center-page > header p,
+.audit-center-page > header p {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.accounts-center-page > header,
+.audit-center-page > header {
+  margin-bottom: 12px;
+}
+
+.accounts-center-page > header > [data-slot="button"] {
+  height: 36px;
+  font-size: 13px;
+}
+
+.center-table-card {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, var(--card));
+  border-radius: 24px;
+  background: var(--card);
+  box-shadow: 0 2px 8px rgb(15 27 45 / 3%);
+}
+
+.center-table-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  min-height: 66px;
+  padding: 14px 20px;
+  background: color-mix(in srgb, var(--surface-subtle) 75%, var(--card));
+}
+
+.center-table-toolbar [data-slot="input"],
+.center-table-toolbar [data-slot="input-group"],
+.center-table-toolbar [data-slot="select-trigger"],
+.center-table-toolbar > [data-slot="button"] {
+  height: 38px;
+  border-color: color-mix(in srgb, var(--border) 85%, var(--card));
+  border-radius: 999px;
+  background: var(--card);
+  box-shadow: none;
+  font-size: 13px;
+}
+
+.center-table {
+  table-layout: fixed;
+  font-size: 14px;
+  color: var(--foreground);
+}
+
+.center-table thead {
+  background: var(--primary-fill);
+}
+
+.center-table thead tr {
+  border-color: transparent;
+}
+
+.center-table th {
+  height: 42px;
+  padding: 0 14px;
+  color: var(--primary-foreground);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.center-table th:last-child {
+  padding-right: 24px;
+  text-align: right;
+}
+
+.center-table td {
+  height: 56px;
+  padding: 8px 14px;
+  font-size: 14px;
+}
+
+.center-table th:first-child,
+.center-table td:first-child {
+  width: 48px;
+  padding-right: 8px;
+  padding-left: 24px;
+}
+
+.center-table td:last-child {
+  padding-right: 24px;
+}
+
+.center-table tbody tr {
+  height: 56px;
+  border-color: var(--border-lighter);
+}
+
+.center-table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--primary-tint) 65%, var(--card));
+}
+
+.center-table tbody tr:hover {
+  background: var(--primary-soft);
+}
+
+.center-table tbody tr[data-state="selected"] {
+  background: var(--primary-soft);
+}
+
+.center-table [data-slot="checkbox"] {
+  background: var(--card);
+  box-shadow: none;
+}
+
+.center-table [data-slot="checkbox"][data-checked] {
+  background: var(--primary-fill);
+}
+
+.center-table th [data-slot="checkbox"] {
+  border-color: color-mix(in srgb, white 80%, transparent);
+}
+
+.center-sort-header {
+  display: flex;
+  width: 100%;
+  min-height: 40px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-radius: 4px;
+  text-align: left;
+}
+
+.center-sort-header svg {
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+.center-sort-header:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.center-table-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 60px;
+  padding: 14px 24px;
+  border-top: 1px solid var(--border-lighter);
+  font-size: 13px;
+}
+
+.center-page-size,
+.center-page-buttons,
+.center-page-number {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.center-page-size {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.center-page-size [data-slot="select-trigger"] {
+  height: 32px;
+  min-width: 54px;
+  border-radius: 999px;
+  box-shadow: none;
+  font-size: 13px;
+}
+
+.center-page-buttons [data-slot="button"] {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  box-shadow: none;
+  font-size: 13px;
+}
+
+.center-page-buttons svg {
+  width: 14px;
+  height: 14px;
+}
+
+.center-page-ellipsis {
+  padding: 0 8px;
+}
+
+.center-selection-count {
+  color: var(--primary);
+}
+
+@media (max-width: 639px) {
+  .center-table-toolbar {
+    padding: 14px 16px;
+  }
+
+  .center-table-footer {
+    padding: 14px 16px;
+  }
+
+  .center-page-buttons {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .center-page-buttons > button:first-child,
+  .center-page-buttons > button:last-child {
+    display: none;
+  }
+
+  .center-page-ellipsis {
+    padding: 0 3px;
+  }
+}

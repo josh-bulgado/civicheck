@@ -87,6 +87,20 @@ QR-verification only — the CCRO cashier handles the actual transaction.
    pnpm dev
    ```
 
+### Google sign-in on localhost
+
+In Supabase **Authentication → URL Configuration → Redirect URLs**, add
+`http://localhost:3000/auth/callback` alongside your production callback URL.
+If you use a different port or `127.0.0.1`, add that exact callback URL too.
+Keep **Site URL** set to your production URL.
+
+During `pnpm dev`, redirects and auth cookie settings use the current loopback
+origin, even if `APP_URL` contains the production URL. Production builds continue
+to use `APP_URL` (or the Vercel URL environment variables). Supabase must allow
+the local callback URL; otherwise it can redirect back to the production site,
+where the localhost PKCE cookie is unavailable. After changing the configuration,
+start a fresh sign-in from localhost instead of reusing an old callback link.
+
 ### Other scripts
 
 ```bash

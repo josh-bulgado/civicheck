@@ -1,5 +1,6 @@
 import { AuditDataTable } from "../components/AuditDataTable";
 import type { AuditFilters, NormalizedAuditEvent } from "../system-admin.types";
+import "../center-tables.css";
 import "../audit-center.css";
 
 export function AuditPage({

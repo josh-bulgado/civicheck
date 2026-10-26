@@ -92,7 +92,7 @@ export function AuditTableToolbar({
         ? `From ${shortDate(values.from)}`
         : values.to
           ? `Until ${shortDate(values.to)}`
-          : "Any date";
+          : "Date";
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -103,9 +103,9 @@ export function AuditTableToolbar({
     <form
       onSubmit={handleSubmit}
       aria-label="Audit event filters"
-      className="audit-toolbar"
+      className="audit-toolbar center-table-toolbar"
     >
-      <div className="relative w-full sm:w-80 lg:w-96">
+      <div className="audit-search">
         <Search
           className="pointer-events-none absolute top-1/2 left-3.5 z-10 size-4 -translate-y-1/2 text-muted-foreground"
           aria-hidden="true"
@@ -136,7 +136,9 @@ export function AuditTableToolbar({
         >
           <SelectValue>
             {(value) =>
-              sourceOptions.find((option) => option.value === value)?.label
+              value === "all"
+                ? "Source"
+                : sourceOptions.find((option) => option.value === value)?.label
             }
           </SelectValue>
         </SelectTrigger>

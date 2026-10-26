@@ -52,7 +52,9 @@ describe("audit table rendering", () => {
     expect(count).toBeGreaterThan(0);
     expect(count).toBeLessThan(50);
     expect(html).toContain('aria-rowindex="2"');
-    const spacer = /height:(\d+)px/.exec(html);
-    expect(Number(spacer?.[1])).toBeGreaterThan(200_000);
+    const heights = [...html.matchAll(/height:(\d+)px/g)].map((match) =>
+      Number(match[1]),
+    );
+    expect(Math.max(...heights)).toBeGreaterThan(200_000);
   });
 });

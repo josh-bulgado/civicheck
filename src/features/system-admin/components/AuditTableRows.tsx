@@ -15,7 +15,13 @@ function AuditRowCells({ row }: { row: AuditRow }) {
 }
 
 /** Preserve the native page scrollbar and table layout while bounding DOM work. */
-function VirtualAuditTableRows({ rows }: { rows: AuditRow[] }) {
+function VirtualAuditTableRows({
+  rows,
+  rowOffset,
+}: {
+  rows: AuditRow[];
+  rowOffset: number;
+}) {
   const bodyRef = useRef<HTMLTableSectionElement>(null);
   const [scrollMargin, setScrollMargin] = useState(0);
   const getItemKey = useCallback((index: number) => rows[index].id, [rows]);
@@ -58,7 +64,10 @@ function VirtualAuditTableRows({ rows }: { rows: AuditRow[] }) {
     <TableBody ref={bodyRef}>
       {top > 0 ? (
         <tr aria-hidden="true">
-          <td colSpan={5} style={{ height: top, padding: 0, border: 0 }} />
+          <td
+            colSpan={rows[0]?.getVisibleCells().length ?? 7}
+            style={{ height: top, padding: 0, border: 0 }}
+          />
         </tr>
       ) : null}
       {items.map((item) => {
@@ -66,9 +75,10 @@ function VirtualAuditTableRows({ rows }: { rows: AuditRow[] }) {
         return (
           <TableRow
             key={row.id}
+            data-state={row.getIsSelected() ? "selected" : undefined}
             data-index={item.index}
             ref={virtualizer.measureElement}
-            aria-rowindex={item.index + 2}
+            aria-rowindex={rowOffset + item.index + 2}
             className="h-[76px] border-border-lighter hover:bg-surface-subtle/60"
           >
             <AuditRowCells row={row} />
@@ -77,7 +87,10 @@ function VirtualAuditTableRows({ rows }: { rows: AuditRow[] }) {
       })}
       {bottom > 0 ? (
         <tr aria-hidden="true">
-          <td colSpan={5} style={{ height: bottom, padding: 0, border: 0 }} />
+          <td
+            colSpan={rows[0]?.getVisibleCells().length ?? 7}
+            style={{ height: bottom, padding: 0, border: 0 }}
+          />
         </tr>
       ) : null}
     </TableBody>
@@ -86,15 +99,20 @@ function VirtualAuditTableRows({ rows }: { rows: AuditRow[] }) {
 
 export const AuditTableRows = memo(function AuditTableRows({
   rows,
+  rowOffset = 0,
 }: {
   rows: AuditRow[];
+  rowOffset?: number;
 }) {
-  if (rows.length > 100) return <VirtualAuditTableRows rows={rows} />;
+  if (rows.length > 100)
+    return <VirtualAuditTableRows rows={rows} rowOffset={rowOffset} />;
   return (
     <TableBody>
-      {rows.map((row) => (
+      {rows.map((row, index) => (
         <TableRow
           key={row.id}
+          data-state={row.getIsSelected() ? "selected" : undefined}
+          aria-rowindex={rowOffset + index + 2}
           className="h-[76px] border-border-lighter hover:bg-surface-subtle/60"
         >
           <AuditRowCells row={row} />

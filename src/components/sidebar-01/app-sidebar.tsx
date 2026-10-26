@@ -40,7 +40,11 @@ export function AppSidebar({
 
   const sections = (
     <>
-      <NavHeader workspace={workspace} citizen={citizen} />
+      <NavHeader
+        workspace={workspace}
+        citizen={citizen}
+        showSearch={role !== "system_admin"}
+      />
       {/* The padding gives the active pill's shadow room: this container
           scrolls on a short screen, and overflow clips whatever leaves it. The
           negative margins cancel it out so the pills sit where the grid says. */}

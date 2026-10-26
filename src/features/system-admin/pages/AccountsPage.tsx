@@ -1,7 +1,12 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { UserRoundPlus } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { AccountsDataTable } from "../components/AccountsDataTable";
+import {
+  accountCategories,
+  accountCategoryLabels,
+} from "../system-admin.constants";
 import type {
   AccountCategory,
   AccountFilters,
@@ -9,6 +14,7 @@ import type {
   AdminCandidate,
   SystemAdminDepartment,
 } from "../system-admin.types";
+import "../center-tables.css";
 import "../accounts-center.css";
 
 const descriptions = {
@@ -74,6 +80,19 @@ export function AccountsPage({
           </Button>
         ) : null}
       </header>
+      <nav className="accounts-categories" aria-label="Account group">
+        {accountCategories.map((value) => (
+          <Link
+            key={value}
+            to="/system-admin/accounts"
+            search={{ category: value, page: 1 }}
+            resetScroll={false}
+            aria-current={category === value ? "page" : undefined}
+          >
+            {accountCategoryLabels[value]}
+          </Link>
+        ))}
+      </nav>
       <AccountsDataTable
         key={category}
         data={accounts}

@@ -19,7 +19,7 @@ describe("account data skeletons", () => {
           ),
         ),
       );
-      const columns = category === "personnel" ? 6 : 4;
+      const columns = category === "personnel" ? 7 : 5;
       expect([...html.matchAll(/data-slot="table-row"/g)]).toHaveLength(6);
       expect([...html.matchAll(/data-slot="table-cell"/g)]).toHaveLength(
         6 * columns,

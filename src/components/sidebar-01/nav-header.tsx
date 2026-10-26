@@ -21,6 +21,8 @@ interface NavHeaderProps {
   workspace: WorkspaceDetails;
   /** Applicant search lives in the page's top bar. */
   citizen?: boolean;
+  /** System administration search sits above the main page heading. */
+  showSearch?: boolean;
 }
 
 function RailToggle() {
@@ -43,11 +45,18 @@ function RailToggle() {
 }
 
 /** Shared branding for every role; internal workspaces also have a search pill. */
-export function NavHeader({ workspace, citizen = false }: NavHeaderProps) {
+export function NavHeader({
+  workspace,
+  citizen = false,
+  showSearch = true,
+}: NavHeaderProps) {
   const hotkeyLabel = useHotkeyLabel();
+  const { setOpenMobile } = useSidebar();
 
   return (
-    <SidebarHeader className={cn("gap-0 px-2.5 pt-2 pb-10", !citizen && "pb-6")}>
+    <SidebarHeader
+      className={cn("gap-0 px-2.5 pt-2 pb-10", !citizen && "pb-6")}
+    >
       <div className="group/brand relative flex items-center gap-2.5">
         <QuietLink
           to="/dashboard"
@@ -76,24 +85,31 @@ export function NavHeader({ workspace, citizen = false }: NavHeaderProps) {
           <p className="mt-2 mb-4 h-5 overflow-hidden text-xs font-medium whitespace-nowrap text-primary transition-[height,margin,opacity] duration-200 group-data-[collapsible=icon]:m-0 group-data-[collapsible=icon]:h-0 group-data-[collapsible=icon]:opacity-0">
             {workspace.label}
           </p>
-          <Button
-            type="button"
-            variant="ghost"
-            size="lg"
-            aria-label="Search CiviCheck navigation"
-            className="h-12 w-full justify-between gap-0 overflow-hidden rounded-[14px] bg-portal-panel text-primary hover:bg-card/80 has-data-[icon=inline-start]:pl-4 group-data-[collapsible=icon]:mt-6 group-data-[collapsible=icon]:w-10.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:has-data-[icon=inline-start]:pl-0"
-            onClick={openCommandPalette}
-          >
-            <span className="flex min-w-0 items-center gap-3">
-              <Search data-icon="inline-start" className="text-portal-ink-2" />
-              <span className="truncate text-sm font-medium transition-opacity duration-150 group-data-[collapsible=icon]:hidden">
-                Search
+          {showSearch && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="lg"
+              aria-label="Search CiviCheck navigation"
+              aria-haspopup="dialog"
+              aria-keyshortcuts="Control+K Meta+K"
+              className="h-12 w-full justify-between gap-0 overflow-hidden rounded-[14px] bg-portal-panel text-primary hover:bg-card/80 has-data-[icon=inline-start]:pl-4 group-data-[collapsible=icon]:mt-6 group-data-[collapsible=icon]:w-10.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:has-data-[icon=inline-start]:pl-0"
+              onClick={() => {
+                setOpenMobile(false);
+                openCommandPalette();
+              }}
+            >
+              <span className="flex min-w-0 items-center gap-3">
+                <Search data-icon="inline-start" className="text-portal-ink-2" />
+                <span className="truncate text-sm font-medium transition-opacity duration-150 group-data-[collapsible=icon]:hidden">
+                  Search
+                </span>
               </span>
-            </span>
-            <Kbd className="bg-card text-primary transition-opacity duration-150 group-data-[collapsible=icon]:hidden">
-              {hotkeyLabel(PALETTE_HOTKEY)}
-            </Kbd>
-          </Button>
+              <Kbd className="bg-card text-primary transition-opacity duration-150 group-data-[collapsible=icon]:hidden">
+                {hotkeyLabel(PALETTE_HOTKEY)}
+              </Kbd>
+            </Button>
+          )}
         </>
       )}
     </SidebarHeader>

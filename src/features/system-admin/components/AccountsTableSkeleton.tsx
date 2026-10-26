@@ -7,7 +7,7 @@ export function AccountsTableSkeleton({
 }: {
   category: AccountCategory;
 }) {
-  const columns = category === "personnel" ? 6 : 4;
+  const columns = category === "personnel" ? 7 : 5;
   return Array.from({ length: 6 }, (_, index) => (
     <TableRow
       key={index}
@@ -15,6 +15,9 @@ export function AccountsTableSkeleton({
       data-accounts-skeleton
       className="h-[68px] border-border-lighter hover:bg-transparent"
     >
+      <TableCell>
+        <Skeleton className="size-4 rounded" />
+      </TableCell>
       <TableCell className="px-6 py-3">
         <div className="flex items-center gap-3.5">
           <Skeleton className="size-10 shrink-0 rounded-full" />
@@ -24,11 +27,11 @@ export function AccountsTableSkeleton({
           </div>
         </div>
       </TableCell>
-      {Array.from({ length: columns - 1 }, (_, column) => (
+      {Array.from({ length: columns - 2 }, (_, column) => (
         <TableCell key={column} className="px-6 py-3">
           <Skeleton
             className={
-              column === columns - 2 ? "ml-auto h-4 w-6" : "h-4 w-24 max-w-full"
+              column === columns - 3 ? "ml-auto h-4 w-6" : "h-4 w-24 max-w-full"
             }
           />
         </TableCell>
