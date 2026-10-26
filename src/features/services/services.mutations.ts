@@ -210,7 +210,10 @@ export const submitRequestFn = createServerFn({ method: "POST" })
     );
     const applicantPathPrefix = `${user.id}/`;
     if (
-      submittedFileUrls.some((path) => !path.startsWith(applicantPathPrefix))
+      submittedFileUrls.some(
+        (path) =>
+          !path.startsWith(applicantPathPrefix) || path.split("/").includes(".."),
+      )
     ) {
       return {
         error: true,
@@ -327,7 +330,11 @@ export const submitRequestFn = createServerFn({ method: "POST" })
     let documentWarning: string | undefined;
     let submittedDocuments: AcknowledgmentPdfData["documents"] = [];
     if (data.documents && data.documents.length > 0) {
-      const { data: savedDocuments, error: docsError } = await supabase.from("requirements_attachments").insert(
+      // Service role for the same reason as the request itself: applicants
+      // have no INSERT policy on attachments, or they could add rows that are
+      // already "approved" or that point at another applicant's file. Every
+      // path and slot was checked above.
+      const { data: savedDocuments, error: docsError } = await getSupabaseAdminClient().from("requirements_attachments").insert(
         data.documents.map((doc) => {
           const key = requirementUploadKey(doc.requirementId, doc.subjectRole);
           const slot = allowedSlotByKey.get(key)!;
@@ -375,7 +382,8 @@ export const submitRequestFn = createServerFn({ method: "POST" })
       });
     }
 
-    const { error: logError } = await supabase.from("application_logs").insert({
+    // Applicants can't write the audit trail themselves; the server records it.
+    const { error: logError } = await getSupabaseAdminClient().from("application_logs").insert({
       request_id: requestId,
       performed_by_profile_id: user.id,
       action_status: "submitted",

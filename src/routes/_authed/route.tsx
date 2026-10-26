@@ -1,42 +1,4 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
-import { getSupabaseServerClient } from "../../utils/supabase";
-
-export const loginFn = createServerFn({ method: "POST" })
-  .validator((d: { email: string; password: string }) => d)
-  .handler(async ({ data }) => {
-    const supabase = getSupabaseServerClient();
-    const { data: authData, error } = await supabase.auth.signInWithPassword({
-      email: data.email,
-      password: data.password,
-    });
-
-    if (error) {
-      return {
-        error: true,
-        message: error.message,
-        role: null,
-      };
-    }
-
-    // Fetch the user's role from profiles
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role, access_status")
-      .eq("id", authData.user.id)
-      .single();
-
-    if ((profile?.access_status ?? "active") !== "active") {
-      await supabase.auth.signOut();
-      return { error: true, message: "This account is not active.", role: null };
-    }
-
-    return {
-      error: false,
-      message: "Success",
-      role: profile?.role ?? "applicant",
-    };
-  });
 
 // Auth-only layer: every signed-in area of the app (the dashboard shell and
 // the apply wizard alike) nests under here for the session + active-account

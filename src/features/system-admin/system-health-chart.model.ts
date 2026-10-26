@@ -4,6 +4,22 @@ import type { HealthCheck } from "./system-admin.types";
 export type HealthChartPoint = { time: UTCTimestamp; value?: number };
 export const MAX_CHART_POINTS = 4096;
 
+/** Missing response times mark failed periods, without inventing a latency. */
+export function healthChartFailureWindows(points: HealthChartPoint[]) {
+  const windows: { from: UTCTimestamp; to: UTCTimestamp }[] = [];
+  let from: UTCTimestamp | undefined;
+  for (const point of points) {
+    if (point.value === undefined && from === undefined) from = point.time;
+    if (point.value !== undefined && from !== undefined) {
+      windows.push({ from, to: point.time });
+      from = undefined;
+    }
+  }
+  const last = points.at(-1);
+  if (from !== undefined && last) windows.push({ from, to: last.time });
+  return windows;
+}
+
 /** Readings are normally ordered. Only sort when a loader supplies older data. */
 export function healthChartPoints(checks: HealthCheck[]): HealthChartPoint[] {
   const unique = new Map<number, HealthChartPoint>();

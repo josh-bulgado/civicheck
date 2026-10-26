@@ -18,7 +18,6 @@ import { CommandPalette } from "~/components/sidebar-01/command-palette";
 import { CityGovernmentIdentity } from "~/components/brand/civic-identity";
 import { ThemeSwitch } from "~/components/theme-switch";
 import { DashboardBreadcrumbs } from "~/components/sidebar-01/dashboard-breadcrumbs";
-import { SystemAdminSearch } from "~/components/sidebar-01/system-admin-search";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { getUnreadNotificationSummaryFn } from "~/features/notifications/notifications.queries";
 import { invalidateNotificationPreview } from "~/features/notifications/notification-preview-cache";
@@ -83,6 +82,7 @@ function refreshPortalCaches() {
 
 function DashboardLayout() {
   const isHealthPage = useRouterState({ select: (state) => state.location.pathname === "/system-admin/health" });
+  const isSecurityPage = useRouterState({ select: (state) => state.location.pathname === "/system-admin/security" });
   const isServiceEditor = useRouterState({
     select: (state) =>
       state.matches.some(
@@ -127,6 +127,7 @@ function DashboardLayout() {
   return (
     <SidebarProvider
       data-health-workspace={isHealthPage || undefined}
+      data-security-workspace={isSecurityPage || undefined}
       // Both shells are a ground, a sidebar on it and one floating panel. The
       // service editor is full screen, so it keeps the plain page.
       className={
@@ -194,18 +195,13 @@ function DashboardLayout() {
                 {/* From md the toggle lives in the sidebar, as in the applicant
                     shell; here it only opens the sheet on a phone. */}
                 <SidebarTrigger className="size-10 shrink-0 rounded-lg border border-border-strong bg-card shadow-xs hover:bg-surface-subtle md:hidden" />
-                {user?.role === "system_admin" && !isHealthPage ? (
-                  <SystemAdminSearch />
-                ) : (
-                  <DashboardBreadcrumbs role={(user?.role ?? "applicant") as Role} />
-                )}
+                <DashboardBreadcrumbs role={(user?.role ?? "applicant") as Role} />
               </div>
               <div className="flex shrink-0 items-center gap-4">
-                {isHealthPage ? <SystemAdminSearch compact className="health-global-search rounded-lg" /> : null}
                 <ThemeSwitch />
                 <CityGovernmentIdentity
                   compact
-                  className="[&>span:first-child]:size-8 max-sm:[&>span:last-child]:hidden"
+                  className={`${isHealthPage ? "health-city-identity " : isSecurityPage ? "security-city-identity " : ""}[&>span:first-child]:size-8 max-sm:[&>span:last-child]:hidden`}
                 />
               </div>
             </header>

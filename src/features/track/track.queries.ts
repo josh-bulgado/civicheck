@@ -1,4 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
+import {
+  allowAttempt,
+  getClientIp,
+  RATE_LIMITS,
+  TOO_MANY_ATTEMPTS,
+} from "~/server/rate-limit";
 import { getSupabaseAdminClient } from "~/utils/supabase";
 
 const NOT_FOUND_MESSAGE =
@@ -15,6 +21,7 @@ const MAX_SIZE = 10 * 1024 * 1024;
  * reveal whether the tracking number exists but the name didn't match.
  */
 async function verifyTrackingAccess(trackingNumberRaw: string, lastNameRaw: string) {
+  if (typeof trackingNumberRaw !== "string" || typeof lastNameRaw !== "string") return null;
   const trackingNumber = trackingNumberRaw.trim().toUpperCase();
   const lastName = lastNameRaw.trim().toLowerCase();
   if (!trackingNumber || !lastName) return null;
@@ -43,7 +50,11 @@ export const trackRequestFn = createServerFn({ method: "POST" })
     // Public, unauthenticated lookup — intentionally crosses the normal
     // "applicants can only see their own requests" RLS boundary, so the
     // admin client is used deliberately here. The tracking number alone is
-    // guessable at scale, so last name is required as a second factor.
+    // guessable at scale, so last name is required as a second factor, and
+    // each visitor gets a bounded number of guesses at the pair.
+    if (!(await allowAttempt("tracking:ip", getClientIp(), RATE_LIMITS.trackingPerIp))) {
+      return { error: true, message: TOO_MANY_ATTEMPTS };
+    }
     const verified = await verifyTrackingAccess(data.trackingNumber, data.lastName);
     if (!verified) return { error: true, message: NOT_FOUND_MESSAGE };
     const { supabase, request } = verified;
@@ -93,6 +104,9 @@ export const resubmitAttachmentFn = createServerFn({ method: "POST" })
     return { file, attachmentId, trackingNumber, lastName };
   })
   .handler(async ({ data }) => {
+    if (!(await allowAttempt("tracking:ip", getClientIp(), RATE_LIMITS.trackingPerIp))) {
+      return { error: true, message: TOO_MANY_ATTEMPTS };
+    }
     const verified = await verifyTrackingAccess(data.trackingNumber, data.lastName);
     if (!verified) return { error: true, message: NOT_FOUND_MESSAGE };
     const { supabase, request } = verified;
@@ -143,7 +157,9 @@ export const resubmitAttachmentFn = createServerFn({ method: "POST" })
       return { error: true, message: updateError.message };
     }
 
-    if (attachment.file_url !== path) {
+    // The service role can delete any file, so only ever one from this
+    // request's own folder.
+    if (attachment.file_url !== path && attachment.file_url.startsWith(`${ownerFolder}/`)) {
       const { error: oldFileError } = await supabase.storage
         .from("request-documents")
         .remove([attachment.file_url]);

@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
 import type { UTCTimestamp } from "lightweight-charts";
-import { healthChartPoints, healthChartStats, planHealthChartUpdate } from "./system-health-chart.model";
+import { healthChartFailureWindows, healthChartPoints, healthChartStats, planHealthChartUpdate } from "./system-health-chart.model";
 
 const point = (time: number, value?: number) => ({ time: time as UTCTimestamp, ...(value === undefined ? {} : { value }) });
 
 describe("chart updates", () => {
+  it("shades failed periods until recovery and retains a trailing single failed check", () => {
+    const windows = healthChartFailureWindows([point(1, 100), point(2), point(3), point(4, 150), point(5)]);
+    expect(windows).toEqual([{ from: 2, to: 4 }, { from: 5, to: 5 }]);
+    expect(healthChartFailureWindows([point(1, 100)])).toEqual([]);
+    expect(healthChartFailureWindows([])).toEqual([]);
+  });
   it("appends only new readings and updates a corrected latest point", () => {
     const previous = [point(1, 10), point(2, 20)];
     const next = [point(1, 10), point(2, 25), point(3, 30)];

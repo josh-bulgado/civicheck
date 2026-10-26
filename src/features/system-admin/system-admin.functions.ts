@@ -3,6 +3,7 @@ import type { User } from "@supabase/supabase-js";
 import { z } from "zod";
 import { getSupabaseAdminClient } from "~/utils/supabase";
 import { requireActiveSession } from "~/server/auth";
+import { listAllAuthUsers } from "~/server/auth-users";
 import { getAppUrl } from "~/utils/app-url";
 import { renderLinkEmail } from "~/utils/email-template";
 import { sendEmail } from "~/utils/resend";
@@ -207,12 +208,11 @@ export const getAccounts = createServerFn({ method: "GET" })
             .eq("role", "admin")
             .eq("access_status", "active")
         : Promise.resolve(null);
-    const usersPromise = admin.auth.admin.listUsers({ page: 1, perPage: 1_000 });
+    const usersPromise = listAllAuthUsers(admin);
     // Email and last sign-in live in auth, not profiles, so searching by
     // email or "never signed in" has to resolve matching ids from the auth
     // users first and hand them to the profiles query.
-    const authUsers =
-      data.q || data.signIn ? (await usersPromise).data.users : [];
+    const authUsers = data.q || data.signIn ? await usersPromise : [];
 
     const categoryRoles = accountCategoryRoles[category];
     let profilesQuery = admin
@@ -260,7 +260,7 @@ export const getAccounts = createServerFn({ method: "GET" })
       { data: profiles, error: profilesError, count },
       departmentsResult,
       candidatesResult,
-      usersResult,
+      allUsers,
       activeAdminResult,
     ] = await Promise.all([
       profilesQuery
@@ -277,11 +277,8 @@ export const getAccounts = createServerFn({ method: "GET" })
       activeAdminPromise,
     ]);
     if (profilesError) throw new Error(profilesError.message);
-    if (usersResult.error) throw new Error(usersResult.error.message);
 
-    const usersById = new Map(
-      usersResult.data.users.map((user) => [user.id, user]),
-    );
+    const usersById = new Map(allUsers.map((user) => [user.id, user]));
     const accounts: AccountSummary[] = (profiles ?? []).map((profile) => {
       const user = usersById.get(profile.id);
       if (!user) throw new Error(`Auth user ${profile.id} is missing.`);

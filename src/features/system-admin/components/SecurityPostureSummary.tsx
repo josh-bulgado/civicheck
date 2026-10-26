@@ -1,142 +1,91 @@
-import type { LucideIcon } from "lucide-react";
+import { ArrowRight, Check, Minus, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Button } from "~/components/ui/button";
 import {
-  Fingerprint,
-  KeyRound,
-  ShieldCheck,
-  Siren,
-  UserRoundCog,
-} from "lucide-react";
-import { Badge } from "~/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
-import { CountUp } from "~/components/motion/count-up";
-import { cn } from "~/lib/utils";
-import { postureContent } from "../security-center.utils";
+  postureBanner,
+  postureMetrics,
+  type PostureBanner,
+  type PostureTone,
+} from "../security-center.utils";
 import type { SecurityCenterDashboard } from "../system-admin.types";
 
-function LedgerMetric({
-  icon: Icon,
-  label,
-  value,
-  detail,
-  className,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: number;
-  detail: string;
-  className?: string;
-}) {
+// Lucide has no bare "!" mark, so this one is drawn the way its stroke icons are.
+function ExclamationMark() {
   return (
-    <div
-      className={cn(
-        "flex min-h-36 min-w-0 flex-col justify-between gap-5 p-5 sm:p-6",
-        className,
-      )}
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
     >
-      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
-        <Icon className="size-4 shrink-0 text-primary" aria-hidden="true" />
-        <span className="truncate">{label}</span>
-      </div>
-      <div>
-        <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
-          <CountUp value={value} />
-        </p>
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p>
-      </div>
-    </div>
+      <path d="M12 5v9" />
+      <path d="M12 19h.01" />
+    </svg>
   );
+}
+
+function MetricIcon({ tone }: { tone: PostureTone }) {
+  if (tone === "ok") return <Check aria-hidden="true" />;
+  if (tone === "neutral") return <Minus aria-hidden="true" />;
+  return <ExclamationMark />;
 }
 
 export function SecurityPostureSummary({
   data,
+  onReview,
 }: {
   data: SecurityCenterDashboard;
+  onReview: (tab: NonNullable<PostureBanner["action"]>["tab"]) => void;
 }) {
-  const posture = postureContent[data.posture];
+  const banner = postureBanner(data);
+  const metrics = postureMetrics(data);
+  const { action } = banner;
+  const Icon = data.posture === "protected" ? ShieldCheck : ShieldAlert;
 
   return (
     <section
       id="security-center-content"
       tabIndex={-1}
-      className="scroll-mt-6 rounded-xl focus-visible:ring-2 focus-visible:ring-ring"
+      className="security-posture"
+      data-tone={banner.tone}
       aria-labelledby="security-posture-title"
     >
-      <Card>
-        <CardHeader className="border-b">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+      <div className="security-posture-status">
+        <span className="security-posture-icon">
+          <Icon aria-hidden="true" />
+        </span>
+        <div className="min-w-0">
+          <p className="security-posture-eyebrow">Current posture</p>
+          <h2 id="security-posture-title" className="security-posture-title">
+            {banner.label}
+          </h2>
+          <p className="security-posture-detail">{banner.detail}</p>
+        </div>
+      </div>
+      <ul className="security-posture-metrics">
+        {metrics.map((metric) => (
+          <li key={metric.key} className="security-metric" data-tone={metric.tone}>
+            <span className="security-metric-icon">
+              <MetricIcon tone={metric.tone} />
+            </span>
             <div className="min-w-0">
-              <CardTitle>
-                <h2 id="security-posture-title" className="text-balance">
-                  Security Posture Ledger
-                </h2>
-              </CardTitle>
-              <CardDescription className="text-pretty">
-                The latest access, authentication, policy, and finding signals.
-              </CardDescription>
+              <strong>{metric.title}</strong>
+              <span>{metric.detail}</span>
             </div>
-            <Badge
-              variant={
-                data.posture === "attention"
-                  ? "destructive"
-                  : data.posture === "protected"
-                    ? "secondary"
-                    : "outline"
-              }
-            >
-              <ShieldCheck data-icon="inline-start" aria-hidden="true" />
-              {posture.label}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="civic-stagger-auto grid p-0 sm:grid-cols-2 xl:grid-cols-[minmax(16rem,1.4fr)_repeat(4,minmax(0,1fr))]">
-          <div className="flex min-h-44 flex-col justify-between gap-8 border-b border-border p-5 sm:col-span-2 sm:p-6 xl:col-span-1 xl:border-r xl:border-b-0">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
-                Current Posture
-              </p>
-              <p className="mt-2 max-w-sm text-3xl font-bold tracking-[-0.04em] text-foreground sm:text-4xl">
-                {posture.label}
-              </p>
-            </div>
-            <p className="max-w-md text-sm leading-6 text-muted-foreground">
-              {posture.detail}
-            </p>
-          </div>
-          <LedgerMetric
-            icon={Siren}
-            label="Urgent findings"
-            value={data.urgentFindingCount}
-            detail={`${data.openFindingCount} unresolved finding${data.openFindingCount === 1 ? "" : "s"} in total.`}
-            className="border-b border-border sm:border-r xl:border-r xl:border-b-0"
-          />
-          <LedgerMetric
-            icon={Fingerprint}
-            label="Rejected sign-ins"
-            value={data.failedSignIns24h}
-            detail="Redacted password failures in the last 24 hours."
-            className="border-b border-border xl:border-r xl:border-b-0"
-          />
-          <LedgerMetric
-            icon={UserRoundCog}
-            label="Privileged accounts"
-            value={data.privilegedAccountCount}
-            detail="System, CCRO, and supervisory assignments under review."
-            className="border-b border-border sm:border-r sm:border-b-0 xl:border-r"
-          />
-          <LedgerMetric
-            icon={KeyRound}
-            label="Controls due"
-            value={data.overdueControlCount}
-            detail="Policy or credential reviews at or past their due date."
-          />
-        </CardContent>
-      </Card>
+          </li>
+        ))}
+      </ul>
+      {action ? (
+        <Button
+          type="button"
+          className="security-posture-action"
+          onClick={() => onReview(action.tab)}
+        >
+          {action.label}
+          <ArrowRight data-icon="inline-end" aria-hidden="true" />
+        </Button>
+      ) : null}
     </section>
   );
 }

@@ -1,5 +1,5 @@
 ﻿import { useState } from "react";
-import { Activity, Archive, Database, Ellipsis, HardDrive, LockKeyhole, Search, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { Activity, Archive, ChevronRight, Database, Ellipsis, HardDrive, LockKeyhole, Search, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "~/components/ui/dropdown-menu";
@@ -7,7 +7,7 @@ import { formatBytes, formatHealthPercent, formatHealthTimestamp, formatResponse
 import type { HealthCheck, HealthSource, HealthStatus, ServiceKey, SystemHealthDashboard } from "../system-admin.types";
 import { HealthMetrics, HealthSourceBlock } from "./HealthFacts";
 import { HealthStatusBadge } from "./HealthStatusBadge";
-import { HealthBars, HealthSparkline } from "./HealthCharts";
+import { HealthSparkline } from "./HealthCharts";
 
 const icons: Record<ServiceKey, LucideIcon> = { database: Database, authentication: LockKeyhole, storage: HardDrive };
 
@@ -18,6 +18,7 @@ type ComponentRow = {
   group: "core" | "platform";
   status: HealthStatus;
   statusLabel?: string;
+  failed?: boolean;
   icon: LucideIcon;
   responseMs: number | null;
   uptime: number | null;
@@ -37,14 +38,13 @@ export function HealthComponentsCard({
 }) {
   const [query, setQuery] = useState("");
   const [group, setGroup] = useState("all");
-  const [status, setStatus] = useState("all");
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const rows: ComponentRow[] = [
     ...data.services.map((service): ComponentRow => ({
-      ...service, group: "core", icon: icons[service.key],
+      ...service, group: "core", icon: icons[service.key], failed: service.outcome === "failed",
       uptime: service.availabilityPercent, checkedAt: service.lastCheckedAt,
       metrics: [
-        { label: "Response time", value: formatResponseTime(service.responseMs) },
+        { label: "Response time", value: service.outcome === "failed" ? "Timed out" : formatResponseTime(service.responseMs) },
         { label: "24h uptime", value: service.availabilityPercent === null ? "No checks" : formatHealthPercent(service.availabilityPercent) },
         { label: "Slow after", value: formatResponseTime(service.slowAfterMs) },
         { label: "Checks (OK / slow / failed)", value: `${service.okCount} / ${service.slowCount} / ${service.failedCount}` },
@@ -53,7 +53,7 @@ export function HealthComponentsCard({
     {
       key: "capacity", name: data.capacity.name, description: data.capacity.description,
       group: "platform", icon: Archive, status: data.capacity.configured ? data.capacity.status : "unknown",
-      statusLabel: data.capacity.configured ? undefined : "Not Configured",
+      statusLabel: data.capacity.configured ? undefined : "Not configured",
       responseMs: null, uptime: null, checkedAt: data.capacity.lastCheckedAt, checks: [], source: data.capacity.source,
       metrics: [
         { label: "Storage used", value: data.capacity.totalBytes === null ? "No reading" : formatBytes(data.capacity.totalBytes) },
@@ -65,7 +65,7 @@ export function HealthComponentsCard({
     {
       key: "monitor", name: data.monitor.name, description: data.monitor.description,
       group: "platform", icon: Activity, status: data.monitor.status,
-      statusLabel: data.monitor.status === "unknown" ? "Not Scheduled" : undefined,
+      statusLabel: data.monitor.status === "unknown" ? "Not scheduled" : undefined,
       responseMs: null, uptime: data.monitor.runs24h ? data.monitor.succeeded24h / data.monitor.runs24h * 100 : null,
       checkedAt: data.monitor.lastRunAt, checks: [], source: data.monitor.source,
       metrics: [
@@ -77,7 +77,7 @@ export function HealthComponentsCard({
     },
   ];
   const visible = rows.filter((row) =>
-    (group === "all" || row.group === group) && (status === "all" || row.status === status) &&
+    (group === "all" || row.group === group) &&
     row.name.toLowerCase().includes(query.trim().toLowerCase()),
   );
   const selected = rows.find((row) => row.key === selectedKey);
@@ -90,46 +90,37 @@ export function HealthComponentsCard({
   return (
     <section className="health-panel health-services" aria-labelledby="service-health-title">
       <div className="health-services-toolbar">
-        <h2 id="service-health-title">Service Health</h2>
-        <div className="health-service-filters">
-          <label className="health-search">
-            <Search className="size-4 shrink-0" aria-hidden="true" />
-            <input aria-label="Search components" placeholder="Search components..." value={query} onChange={(event) => setQuery(event.target.value)} />
-          </label>
-          <select className="health-select" aria-label="Filter by status" value={status} onChange={(event) => setStatus(event.target.value)}>
-            <option value="all">Status</option>
-            <option value="operational">Operational</option>
-            <option value="degraded">Degraded</option>
-            <option value="outage">Outage</option>
-            <option value="unknown">Not configured / unknown</option>
-          </select>
+        <h2 id="service-health-title">Services</h2>
+        <div className="health-service-tabs" role="group" aria-label="Component category">
+          {[["all", "All"], ["core", "Core services"], ["platform", "Platform services"]].map(([value, label]) => (
+            <button key={value} type="button" aria-pressed={group === value} onClick={() => setGroup(value)}>{label}</button>
+          ))}
         </div>
+        <label className="health-search" data-active={query.length > 0 || undefined}>
+          <Search className="size-4 shrink-0" aria-hidden="true" />
+          <input aria-label="Search components" placeholder="Search components" value={query} onChange={(event) => setQuery(event.target.value)} />
+        </label>
       </div>
-      <div className="health-service-tabs" role="group" aria-label="Component category">
-        {[["all", "All"], ["core", "Core Services"], ["platform", "Platform Services"]].map(([value, label]) => (
-          <button key={value} type="button" aria-pressed={group === value} onClick={() => setGroup(value)}>{label}</button>
-        ))}
-      </div>
-      <div className="health-table-scroll" tabIndex={0} role="region" aria-label="Service health components">
+      <div className="health-table-scroll" role="region" aria-label="Service health components">
         <table className="health-table">
           <thead><tr>
-            <th scope="col">Component</th><th scope="col">Status</th><th scope="col">Response Time</th>
-            <th scope="col">Uptime (24h)</th><th scope="col">Trend</th><th scope="col">Last Checked</th><th scope="col" className="text-right">Actions</th>
+            <th scope="col">Component</th><th scope="col">Status</th><th scope="col">Response</th>
+            <th scope="col" title="Availability over the last 24 hours">Uptime</th><th scope="col">Trend</th><th scope="col">Last checked</th><th scope="col"><span className="sr-only">Actions</span></th>
           </tr></thead>
           <tbody>
             {visible.map((row) => (
               <tr key={row.key}>
                 <th scope="row">
                   <button type="button" data-health-row className="health-component-name" onClick={() => showDetails(row.key)}>
-                    <span className="health-component-icon" data-status={row.status}><row.icon aria-hidden="true" /></span>
+                    <span className="health-component-icon" data-status={row.failed ? "outage" : row.status}><row.icon aria-hidden="true" /></span>
                     <span>{row.name}</span>
                   </button>
                 </th>
-                <td>{row.statusLabel ? <span className="health-neutral-badge"><span />{row.statusLabel}</span> : <HealthStatusBadge status={row.status} />}</td>
-                <td><div className="health-response-cell"><strong>{row.responseMs === null ? <span className="health-no-reading" title="Response time is not measured for this component">—</span> : formatResponseTime(row.responseMs)}</strong><HealthBars checks={row.checks} /></div></td>
+                <td>{row.failed ? <HealthStatusBadge status="outage" label="Failed" /> : row.statusLabel ? <span className="health-neutral-badge">{row.statusLabel}</span> : <HealthStatusBadge status={row.status} />}</td>
+                <td className="health-response-cell">{row.failed ? <span className="health-response-failed">Timed out</span> : row.responseMs === null ? <span className="health-no-reading" title="Response time is not measured for this component">—</span> : formatResponseTime(row.responseMs)}</td>
                 <td className="font-semibold tabular-nums">{row.uptime === null ? <span className="health-no-reading">—</span> : <span title={row.key === "monitor" ? "Successful scheduled runs in the last 24 hours" : undefined}>{formatHealthPercent(row.uptime)}</span>}</td>
                 <td><HealthSparkline checks={row.checks} status={row.status} /></td>
-                <td className="health-checked">{row.checkedAt ? <time dateTime={row.checkedAt} title={formatHealthTimestamp(row.checkedAt)}>{healthTimeAgo(row.checkedAt, data.now)}</time> : "—"}</td>
+                <td className="health-checked">{row.checkedAt ? <time dateTime={row.checkedAt} title={formatHealthTimestamp(row.checkedAt)}>{healthTimeAgo(row.checkedAt, data.now).replace(/\bminutes?\b/, "min")}</time> : "—"}</td>
                 <td>
                   <DropdownMenu>
                     <DropdownMenuTrigger nativeButton render={<Button variant="ghost" size="icon" aria-label={`Actions for ${row.name}`} />}><Ellipsis aria-hidden="true" /></DropdownMenuTrigger>
@@ -142,19 +133,19 @@ export function HealthComponentsCard({
                 </td>
               </tr>
             ))}
-            {!visible.length ? <tr><td colSpan={7} className="health-table-empty">No components match your filters. <button type="button" onClick={() => { setQuery(""); setGroup("all"); setStatus("all"); }}>Clear filters</button></td></tr> : null}
+            {!visible.length ? <tr><td colSpan={7} className="health-table-empty">No components match your filters. <button type="button" onClick={() => { setQuery(""); setGroup("all"); }}>Clear filters</button></td></tr> : null}
           </tbody>
         </table>
       </div>
       <div className="health-service-footer">
-        <span>{visible.length} of {rows.length} components</span>
-        <button type="button" onClick={onShowSources}>Data &amp; Privacy</button>
+        <span className="health-component-count" role="status">{visible.length === rows.length ? `${rows.length} components` : `${visible.length} of ${rows.length} components`}</span>
+        <button type="button" onClick={onShowSources}><ChevronRight aria-hidden="true" />Data &amp; privacy</button>
       </div>
       <Dialog open={!!selected} onOpenChange={(open) => { if (!open) showDetails(null); }}>
         <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-xl">
           <DialogHeader><DialogTitle>{selected?.name}</DialogTitle><DialogDescription>{selected?.description}</DialogDescription></DialogHeader>
           {selected ? <>
-            {selected.statusLabel ? <span className="text-sm text-muted-foreground">{selected.statusLabel}</span> : <HealthStatusBadge status={selected.status} />}
+            {selected.failed ? <HealthStatusBadge status="outage" label="Failed" /> : selected.statusLabel ? <span className="text-sm text-muted-foreground">{selected.statusLabel}</span> : <HealthStatusBadge status={selected.status} />}
             <HealthMetrics items={selected.metrics} />
             <HealthSourceBlock source={selected.source}>
               <div className="flex flex-wrap gap-2">

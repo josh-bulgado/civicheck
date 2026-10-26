@@ -7,6 +7,7 @@ import {
 import { NO_SUFFIX, SUFFIXES } from "~/lib/subject-fields";
 import { requireActiveSession } from "~/server/auth";
 import { AVATAR_BUCKET, forgetAvatarUrl } from "~/server/avatar";
+import { allowAttempt, RATE_LIMITS, TOO_MANY_ATTEMPTS } from "~/server/rate-limit";
 import { getSupabaseStatelessClient } from "~/utils/supabase";
 import { recordPasswordChanged } from "./account-audit.server";
 
@@ -150,6 +151,12 @@ export const changeMyPasswordFn = createServerFn({ method: "POST" })
       return { error: true, message: PASSWORD_NUMBER_MESSAGE };
     }
 
+    // The same per-account budget as signing in: a borrowed session must not
+    // become a way to guess the account's password.
+    if (!(await allowAttempt("sign-in:email", user.email, RATE_LIMITS.signInPerEmail))) {
+      return { error: true, message: TOO_MANY_ATTEMPTS };
+    }
+
     // Confirm the current password on a stateless client. Signing in on the
     // cookie-bound client would rewrite the live session; we deliberately do not
     // sign this throwaway client out either, because signOut's default global
@@ -164,7 +171,11 @@ export const changeMyPasswordFn = createServerFn({ method: "POST" })
       return { error: true, message: "Your current password is incorrect." };
     }
 
-    const { error } = await supabase.auth.updateUser({
+    // The new password is set through the session that just proved the old
+    // one. With Supabase's "secure password change" on, a session older than a
+    // day can't change the password without reauthenticating, and the one the
+    // user is browsing with may well be that old.
+    const { error } = await verifier.auth.updateUser({
       password: data.newPassword,
     });
 

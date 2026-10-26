@@ -3,14 +3,15 @@ import { cn } from "~/lib/utils";
 import { healthStatusContent } from "../system-health.constants";
 import type { HealthStatus } from "../system-admin.types";
 
-export function HealthStatusBadge({ status }: { status: HealthStatus }) {
+export function HealthStatusBadge({ status, label }: { status: HealthStatus; label?: string }) {
   const content = healthStatusContent[status];
+  const text = label ?? content.label;
 
   return (
     <Badge
       variant="outline"
       className={cn("gap-1.5 font-semibold", content.className)}
-      aria-label={`${content.label} status`}
+      aria-label={`${text} status`}
     >
       <span
         className={cn(
@@ -19,7 +20,7 @@ export function HealthStatusBadge({ status }: { status: HealthStatus }) {
         )}
         aria-hidden="true"
       />
-      {content.label}
+      {text}
     </Badge>
   );
 }

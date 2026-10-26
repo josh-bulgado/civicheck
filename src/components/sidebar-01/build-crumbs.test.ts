@@ -8,6 +8,13 @@ const at = (path: string, loaderData?: unknown) => [
 ];
 
 describe("buildCrumbs", () => {
+  it("links System Health before the Data & privacy view", () => {
+    expect(buildCrumbs("system_admin", [{ routeId: "/_authed/_dashboard/system-admin/health", search: { view: "data" } }])).toEqual([
+      { label: "System Administration", to: "/dashboard" },
+      { label: "System Health", to: "/system-admin/health" },
+      { label: "Data & privacy" },
+    ]);
+  });
   it("puts the workspace before a top-level page", () => {
     expect(buildCrumbs("admin", at("/admin/services"))).toEqual([
       { label: "CCRO Administration", to: "/dashboard" },

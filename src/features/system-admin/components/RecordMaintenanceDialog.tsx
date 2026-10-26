@@ -251,7 +251,7 @@ export function RecordMaintenanceDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? onOpenChange(true) : requestClose())}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg" overlayClassName="health-dialog-backdrop">
         {open ? (
           <MaintenanceForm
             services={services}

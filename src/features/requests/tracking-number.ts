@@ -1,3 +1,4 @@
+import { randomInt } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const MAX_ATTEMPTS = 5;
@@ -29,7 +30,9 @@ export async function insertRequestWithTrackingNumber(
   let lastErrorMsg = "";
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const randStr = String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
+    // A tracking number is half of what the public tracker asks for, so it
+    // comes from a CSPRNG: Math.random() can be predicted from earlier output.
+    const randStr = String(randomInt(1_000_000)).padStart(6, "0");
     const trackingNumber = `CCRO-${year}-${randStr}`;
 
     const { data: inserted, error } = await supabase

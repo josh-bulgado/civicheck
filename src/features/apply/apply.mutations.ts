@@ -198,7 +198,11 @@ export const deleteRequestDocumentFn = createServerFn({ method: "POST" })
     const { supabase, user } = await requireActiveSession("requests:create");
     const admin = getSupabaseAdminClient();
 
-    if (!data.storagePath.startsWith(`${user.id}/`)) {
+    if (
+      typeof data.storagePath !== "string" ||
+      !data.storagePath.startsWith(`${user.id}/`) ||
+      data.storagePath.split("/").includes("..")
+    ) {
       return { error: true, message: "You can't remove this file." };
     }
 
@@ -222,6 +226,16 @@ export const deleteRequestDocumentFn = createServerFn({ method: "POST" })
       if (fileError || !fileRecord) {
         return { error: true, message: "The staged file could not be verified." };
       }
+    }
+
+    // A file already submitted with a request is the evidence staff review.
+    // The wizard only ever removes files it has not submitted yet.
+    const { count: attachedCount, error: attachedError } = await admin
+      .from("requirements_attachments")
+      .select("id", { count: "exact", head: true })
+      .eq("file_url", data.storagePath);
+    if (attachedError || (attachedCount ?? 0) > 0) {
+      return { error: true, message: "You can't remove this file." };
     }
 
     const { error } = await admin.storage

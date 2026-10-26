@@ -80,7 +80,11 @@ export const resubmitOwnAttachmentFn = createServerFn({ method: "POST" })
       return { error: true, message: uploadError.message };
     }
 
-    const { error: updateError } = await supabase
+    // Applicants have no write access to attachments: a direct write could mark
+    // a document approved or point it at someone else's file. The ownership
+    // check above is what authorizes this one, so it goes through the service
+    // role, and only while the document is still the rejected one we read.
+    const { data: updated, error: updateError } = await admin
       .from("requirements_attachments")
       .update({
         file_url: path,
@@ -88,13 +92,19 @@ export const resubmitOwnAttachmentFn = createServerFn({ method: "POST" })
         rejection_reason: null,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", attachment.id);
-    if (updateError) {
+      .eq("id", attachment.id)
+      .eq("verification_status", "rejected")
+      .select("id");
+    if (updateError || !updated?.length) {
       await admin.storage.from("request-documents").remove([path]);
-      return { error: true, message: updateError.message };
+      return {
+        error: true,
+        message: updateError?.message ?? "This document changed while you were uploading. Refresh and try again.",
+      };
     }
 
-    if (attachment.file_url !== path) {
+    // The service role can delete any file, so only ever the applicant's own.
+    if (attachment.file_url !== path && attachment.file_url.startsWith(`${user.id}/`)) {
       const { error: oldFileError } = await admin.storage
         .from("request-documents")
         .remove([attachment.file_url]);
@@ -103,7 +113,8 @@ export const resubmitOwnAttachmentFn = createServerFn({ method: "POST" })
       }
     }
 
-    const { error: logError } = await supabase.from("application_logs").insert({
+    // Applicants can't write the audit trail themselves; the server records it.
+    const { error: logError } = await admin.from("application_logs").insert({
       request_id: attachment.request_id,
       performed_by_profile_id: user.id,
       action_status: "document_resubmitted",

@@ -52,7 +52,7 @@ export function DashboardBreadcrumbs({ role }: { role: Role }) {
                   </BreadcrumbPage>
                 ) : crumb.to ? (
                   <BreadcrumbLink
-                    render={<QuietLink to={crumb.to} />}
+                    render={crumb.to === "/system-admin/health" ? <QuietLink to="/system-admin/health" search={{ view: undefined }} /> : <QuietLink to={crumb.to} />}
                     className={cn(
                       "whitespace-nowrap",
                       isRoot && "font-semibold text-primary hover:text-primary-hover",

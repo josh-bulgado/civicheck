@@ -22,6 +22,7 @@ export interface Crumb {
 export interface CrumbMatch {
   routeId: string;
   loaderData?: unknown;
+  search?: unknown;
 }
 
 type Trail = (role: Role, loaderData: unknown) => Crumb[];
@@ -77,12 +78,15 @@ const TRAILS: Record<string, Trail> = {
  */
 export function buildCrumbs(role: Role, matches: CrumbMatch[]): Crumb[] {
   for (let index = matches.length - 1; index >= 0; index--) {
-    const { routeId, loaderData } = matches[index];
+    const { routeId, loaderData, search } = matches[index];
     if (!routeId.startsWith(DASHBOARD_PREFIX)) continue;
     const trail = TRAILS[routeId.slice(DASHBOARD_PREFIX.length)];
     if (!trail) continue;
 
-    const crumbs = trail(role, loaderData);
+    const dataView = typeof search === "object" && search !== null && "view" in search && search.view === "data";
+    const crumbs = routeId === `${DASHBOARD_PREFIX}/system-admin/health` && dataView
+      ? [section("system-health", role), { label: "Data & privacy" }]
+      : trail(role, loaderData);
     const workspace = getWorkspaceDetails(role).label;
     // The cashier's workspace and its page share a name; say it once.
     if (crumbs[0]?.label === workspace) return crumbs;

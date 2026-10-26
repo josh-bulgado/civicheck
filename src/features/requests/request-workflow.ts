@@ -42,6 +42,9 @@ export const STAGE_OF: Record<RequestStatus, WorkflowStage> = {
 // mirrors these hops in SQL: ready_for_release only out of processing,
 // incomplete only out of under_validation, rejected only out of an open stage.
 // Change one side without the other and the alerts silently stop.
+// The database guard `guard_request_workflow`
+// (supabase/migrations/20261027120000_security_hardening.sql) also lists every
+// hop, and refuses any other: add a hop here and it must be added there too.
 export const ALLOWED_TRANSITIONS: Record<RequestStatus, RequestStatus[]> = {
   submitted: ["under_validation", "rejected"],
   under_validation: ["incomplete", "processing", "rejected"],

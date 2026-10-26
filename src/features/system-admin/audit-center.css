@@ -4,6 +4,10 @@
   max-width: 100%;
 }
 
+.audit-search [data-slot="input"] {
+  padding-inline-start: 40px;
+}
+
 .audit-toolbar [data-slot="select-trigger"] {
   min-width: 88px;
   padding-right: 14px;

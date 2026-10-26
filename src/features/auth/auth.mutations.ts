@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { User } from "@supabase/supabase-js";
 import {
   clearSessionScope,
   getSupabaseServerClient,
@@ -10,6 +11,13 @@ import { getAppUrl } from "~/utils/app-url";
 import { sendEmail } from "~/utils/resend";
 import { renderOtpEmail, renderVerificationEmail } from "~/utils/email-template";
 import { requireActiveSession } from "~/server/auth";
+import { findAuthUserByEmail } from "~/server/auth-users";
+import {
+  allowAttempt,
+  getClientIp,
+  RATE_LIMITS,
+  TOO_MANY_ATTEMPTS,
+} from "~/server/rate-limit";
 import {
   recordAuthenticationSecurityEvent,
   recordSessionForCurrentUser,
@@ -29,6 +37,7 @@ import {
   clearIssuedOtps,
   describeRejectedOtp,
   recordIssuedOtp,
+  type OtpPurpose,
 } from "./otp-codes.server";
 
 /** Supabase's single error for a code that is wrong, replaced, used or expired. */
@@ -37,6 +46,71 @@ function isRejectedOtpError(error: { code?: string; message?: string }) {
     error.code === "otp_expired" ||
     /expired or is invalid/i.test(error.message ?? "")
   );
+}
+
+/** Each code email lands in someone's inbox and replaces the code they hold. */
+async function allowCodeEmail(email: string) {
+  return (
+    (await allowAttempt("otp-send:email", email, RATE_LIMITS.otpSendPerEmail)) &&
+    (await allowAttempt("otp-send:ip", getClientIp(), RATE_LIMITS.otpSendPerIp))
+  );
+}
+
+/** Bounds guesses at a 6-digit code, per inbox and per visitor. */
+async function allowCodeCheck(purpose: OtpPurpose, email: string) {
+  return (
+    (await allowAttempt(`otp-verify:${purpose}`, email, RATE_LIMITS.otpVerifyPerEmail)) &&
+    (await allowAttempt("otp-verify:ip", getClientIp(), RATE_LIMITS.otpVerifyPerIp))
+  );
+}
+
+/** Bounds password guesses, per account and per visitor. */
+async function allowPasswordCheck(email: string) {
+  return (
+    (await allowAttempt("sign-in:email", email, RATE_LIMITS.signInPerEmail)) &&
+    (await allowAttempt("sign-in:ip", getClientIp(), RATE_LIMITS.signInPerIp))
+  );
+}
+
+/** Matches the code lifetime promised in the verification email. */
+const PENDING_SIGNUP_LIFETIME_MS = 60 * 60 * 1000;
+
+const PENDING_SIGNUP_MESSAGE =
+  "This email is waiting to be verified. Enter the code we emailed you, or sign in with the password you chose to get a new code.";
+
+/**
+ * Whether a repeat sign-up may delete the unconfirmed account already holding
+ * this email and start over. Only ever an applicant's own stalled sign-up:
+ * never a pending staff invitation, and never someone else's sign-up still
+ * inside its code lifetime. Otherwise anyone could recreate a stranger's
+ * pending account with a password of their choosing, and the real owner would
+ * then confirm it with the code we email them.
+ */
+async function canRestartPendingSignup(
+  adminSupabase: ReturnType<typeof getSupabaseAdminClient>,
+  existingUser: User,
+  password: string,
+) {
+  if (existingUser.email_confirmed_at) return false;
+  if (existingUser.user_metadata?.invited_role) return false;
+
+  const { data: profile } = await adminSupabase
+    .from("profiles")
+    .select("role")
+    .eq("id", existingUser.id)
+    .maybeSingle();
+  if (profile && profile.role !== "applicant") return false;
+
+  // Its code has expired, so nobody can be part-way through confirming it.
+  const age = Date.now() - new Date(existingUser.created_at).getTime();
+  if (age > PENDING_SIGNUP_LIFETIME_MS) return true;
+
+  // Still live: only the person who chose its password may start over.
+  const { error } = await getSupabaseStatelessClient().auth.signInWithPassword({
+    email: existingUser.email ?? "",
+    password,
+  });
+  return !!error && /email not confirmed/i.test(error.message ?? "");
 }
 
 /**
@@ -95,6 +169,10 @@ async function sendSignupOtpEmail(
 export const loginWithEmailFn = createServerFn({ method: "POST" })
   .validator(loginInputSchema)
   .handler(async ({ data }) => {
+    if (!(await allowPasswordCheck(data.email))) {
+      return { error: true, message: TOO_MANY_ATTEMPTS };
+    }
+
     const sessionOnly = data.keepSignedIn !== true;
     const supabase = getSupabaseServerClient({ sessionOnly });
     const { data: loginData, error } = await supabase.auth.signInWithPassword({
@@ -175,6 +253,10 @@ export const loginWithOAuthFn = createServerFn({ method: "POST" })
 export const signupFn = createServerFn({ method: "POST" })
   .validator(signupInputSchema)
   .handler(async ({ data }) => {
+    if (!(await allowCodeEmail(data.email))) {
+      return { error: true, message: TOO_MANY_ATTEMPTS };
+    }
+
     const adminSupabase = getSupabaseAdminClient();
     // Already trimmed and checked by the validator; blank means "none". The
     // validator also guarantees a middle name and "has none" never coexist.
@@ -200,20 +282,19 @@ export const signupFn = createServerFn({ method: "POST" })
         signUpResult.error.message.includes("already exists");
 
       if (isAlreadyRegistered) {
-        // Fetch users to check if this existing user is unconfirmed. If the
-        // lookup fails there is no user to find, and the "already registered"
-        // error below is the right answer anyway.
-        const {
-          data: { users },
-        } = await adminSupabase.auth.admin.listUsers({
-          perPage: 1000,
-        });
+        // If the lookup fails there is no user to find, and the "already
+        // registered" error below is the right answer anyway.
+        const existingUser = await findAuthUserByEmail(adminSupabase, data.email);
 
-        const existingUser = users?.find(
-          (u) => u.email?.toLowerCase() === data.email.toLowerCase(),
-        );
+        if (
+          existingUser &&
+          !existingUser.email_confirmed_at &&
+          !(await canRestartPendingSignup(adminSupabase, existingUser, data.password))
+        ) {
+          return { error: true, message: PENDING_SIGNUP_MESSAGE };
+        }
 
-        // If the user exists but has not confirmed their email, delete it so they can retry registration
+        // A stalled sign-up of this applicant's own: start it over.
         if (existingUser && !existingUser.email_confirmed_at) {
           await adminSupabase.auth.admin.deleteUser(existingUser.id);
 
@@ -296,6 +377,10 @@ export const resendSignupOtpFn = createServerFn({ method: "POST" })
   .validator(credentialsSchema)
   .handler(async ({ data }) => {
     const INVALID_CREDENTIALS = "Invalid email or password.";
+    // This checks a password and then sends a code, so it is held to both limits.
+    if (!(await allowPasswordCheck(data.email)) || !(await allowCodeEmail(data.email))) {
+      return { error: true, message: TOO_MANY_ATTEMPTS };
+    }
     const statelessSupabase = getSupabaseStatelessClient();
     const { error: signInError } =
       await statelessSupabase.auth.signInWithPassword({
@@ -311,12 +396,7 @@ export const resendSignupOtpFn = createServerFn({ method: "POST" })
     }
 
     const adminSupabase = getSupabaseAdminClient();
-    const {
-      data: { users },
-    } = await adminSupabase.auth.admin.listUsers({ perPage: 1000 });
-    const existingUser = users?.find(
-      (u) => u.email?.toLowerCase() === data.email.toLowerCase(),
-    );
+    const existingUser = await findAuthUserByEmail(adminSupabase, data.email);
 
     if (!existingUser) {
       return { error: true, message: INVALID_CREDENTIALS };
@@ -373,6 +453,10 @@ export const resendSignupOtpFn = createServerFn({ method: "POST" })
 export const verifySignupOtpFn = createServerFn({ method: "POST" })
   .validator(otpVerificationSchema)
   .handler(async ({ data }) => {
+    if (!(await allowCodeCheck("signup", data.email))) {
+      return { error: true, message: TOO_MANY_ATTEMPTS };
+    }
+
     const supabase = getSupabaseServerClient();
     const { error } = await supabase.auth.verifyOtp({
       email: data.email,
@@ -439,6 +523,10 @@ export const resetPasswordFn = createServerFn({ method: "POST" })
 export const forgotPasswordFn = createServerFn({ method: "POST" })
   .validator(emailOnlySchema)
   .handler(async ({ data }) => {
+    if (!(await allowCodeEmail(data.email))) {
+      return { error: true, message: TOO_MANY_ATTEMPTS };
+    }
+
     const adminSupabase = getSupabaseAdminClient();
 
     // Generate a recovery OTP code
@@ -514,6 +602,10 @@ export const forgotPasswordFn = createServerFn({ method: "POST" })
 export const verifyRecoveryOtpFn = createServerFn({ method: "POST" })
   .validator(otpVerificationSchema)
   .handler(async ({ data }) => {
+    if (!(await allowCodeCheck("recovery", data.email))) {
+      return { error: true, message: TOO_MANY_ATTEMPTS };
+    }
+
     const supabase = getSupabaseServerClient();
     const { error } = await supabase.auth.verifyOtp({
       email: data.email,

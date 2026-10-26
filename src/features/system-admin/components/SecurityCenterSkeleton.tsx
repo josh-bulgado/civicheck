@@ -1,20 +1,22 @@
 import { Skeleton } from "~/components/ui/skeleton";
+import "../security-center.css";
 
 export function SecurityCenterSkeleton() {
   return (
-    <div className="dashboard-page" aria-label="Loading Security Center">
-      <Skeleton className="h-52 rounded-2xl" />
-      <Skeleton className="h-72 rounded-xl" />
-      <div className="flex flex-col gap-3">
-        {Array.from({ length: 3 }, (_, index) => (
-          <Skeleton key={index} className="h-52 rounded-xl" />
-        ))}
+    <div
+      className="dashboard-page security-center-page"
+      aria-label="Loading Security Center"
+    >
+      <div className="security-page-header">
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-8 w-56 rounded-lg" />
+          <Skeleton className="h-4 w-48 rounded-md" />
+        </div>
+        <Skeleton className="h-8 w-32 rounded-full" />
       </div>
-      <div className="grid gap-4 md:grid-cols-2">
-        {Array.from({ length: 4 }, (_, index) => (
-          <Skeleton key={index} className="h-64 rounded-xl" />
-        ))}
-      </div>
+      <Skeleton className="h-32 rounded-[21px]" />
+      <Skeleton className="h-11 w-full max-w-xl rounded-full" />
+      <Skeleton className="h-96 rounded-[21px]" />
     </div>
   );
 }

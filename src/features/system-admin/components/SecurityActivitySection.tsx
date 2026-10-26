@@ -1,13 +1,7 @@
 import { QuietLink as Link } from "~/components/quiet-link";
-import { Fingerprint, History, LogIn, Shield } from "lucide-react";
+import { ChevronRight, Fingerprint, LogIn, Shield } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
+import { buttonVariants } from "~/components/ui/button";
 import {
   Table,
   TableBody,
@@ -17,8 +11,11 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
+import { cn } from "~/lib/utils";
 import {
-  formatSecurityTimestamp,
+  describeActivity,
+  formatSecurityShortTimestamp,
+  severityBadgeVariant,
   severityLabels,
 } from "../security-center.utils";
 import type { SecurityActivity } from "../system-admin.types";
@@ -36,106 +33,74 @@ export function SecurityActivitySection({
   activities: SecurityActivity[];
 }) {
   return (
-    <section
-      className="h-full min-w-0"
-      aria-labelledby="security-activity-title"
-    >
-      <Card className="h-full gap-0 pb-0 [--card-spacing:--spacing(5)]">
-        <CardHeader className="border-b">
-          <div className="flex items-start gap-3">
-            <History className="mt-0.5 size-5 text-primary" aria-hidden="true" />
-            <div className="min-w-0">
-              <CardTitle>
-                <h2 id="security-activity-title" className="text-balance">
-                  Recent Security Activity
-                </h2>
-              </CardTitle>
-              <CardDescription className="text-pretty">
-                Redacted authentication signals, administrator sessions, and
-                sensitive actions from the last 24 hours.{" "}
-                <Link
-                  to="/system-admin/audit"
-                  search={{ page: 1, source: "sign-in" }}
-                  className="font-medium text-primary underline-offset-4 hover:underline"
-                >
-                  View full sign-in history
-                </Link>
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="min-h-0 flex-1 p-0">
-          <Table className="min-w-176">
-            <TableCaption className="sr-only">
-              Recent redacted security events and privileged actions
-            </TableCaption>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="px-6">Activity</TableHead>
-                <TableHead className="px-4">Actor</TableHead>
-                <TableHead className="px-4">Risk</TableHead>
-                <TableHead className="px-6 text-right">Time</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="civic-stagger-auto">
-              {activities.map((activity) => {
-                const content = activityContent[activity.type];
-                const Icon = content.icon;
-                return (
-                  <TableRow key={activity.id}>
-                    <TableCell className="max-w-lg whitespace-normal px-6 py-4">
-                      <div className="flex items-start gap-3">
-                        <Icon
-                          className="mt-0.5 size-4 shrink-0 text-primary"
-                          aria-hidden="true"
-                        />
-                        <div className="min-w-0">
-                          <p className="font-medium text-foreground">
-                            {content.label}
-                          </p>
-                          <p className="mt-1 break-words text-xs leading-5 text-muted-foreground">
-                            {activity.summary}
-                          </p>
-                        </div>
+    <section className="security-card" aria-labelledby="security-activity-title">
+      <div className="security-card-header">
+        <h2 id="security-activity-title">Last 24 hours</h2>
+        <Link
+          to="/system-admin/audit"
+          search={{ page: 1, source: "sign-in" }}
+          className={cn(
+            buttonVariants({ variant: "outline", size: "sm" }),
+            "security-pill-button",
+          )}
+        >
+          <ChevronRight data-icon="inline-start" aria-hidden="true" />
+          View full sign-in history
+        </Link>
+      </div>
+      {activities.length > 0 ? (
+        <Table className="security-table">
+          <TableCaption className="sr-only">
+            Recent redacted security events and privileged actions
+          </TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Activity</TableHead>
+              <TableHead>Actor</TableHead>
+              <TableHead>Risk</TableHead>
+              <TableHead>Time</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {activities.map((activity) => {
+              const content = activityContent[activity.type];
+              const Icon = content.icon;
+              return (
+                <TableRow key={activity.id}>
+                  <TableCell className="security-cell-wrap">
+                    <div className="security-activity-name">
+                      <span className="security-activity-icon">
+                        <Icon aria-hidden="true" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="security-cell-title">{content.label}</p>
+                        <p className="security-cell-sub">
+                          {describeActivity(activity)}
+                        </p>
                       </div>
-                    </TableCell>
-                    <TableCell className="max-w-44 whitespace-normal px-4 py-4 break-words">
-                      {activity.actor}
-                    </TableCell>
-                    <TableCell className="px-4 py-4">
-                      <Badge
-                        variant={
-                          activity.risk === "critical" ||
-                          activity.risk === "high"
-                            ? "destructive"
-                            : "outline"
-                        }
-                      >
-                        {severityLabels[activity.risk]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="px-6 py-4 text-right font-mono text-xs tabular-nums">
-                      <time dateTime={activity.timestamp}>
-                        {formatSecurityTimestamp(activity.timestamp)}
-                      </time>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              {activities.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={4}
-                    className="h-36 text-center text-muted-foreground"
-                  >
-                    No recent security activity was recorded.
+                    </div>
+                  </TableCell>
+                  <TableCell className="security-cell-actor">
+                    {activity.actor}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={severityBadgeVariant(activity.risk)}>
+                      {severityLabels[activity.risk]}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <time dateTime={activity.timestamp}>
+                      {formatSecurityShortTimestamp(activity.timestamp)}
+                    </time>
                   </TableCell>
                 </TableRow>
-              ) : null}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              );
+            })}
+          </TableBody>
+        </Table>
+      ) : (
+        <p className="security-empty">No recent security activity was recorded.</p>
+      )}
     </section>
   );
 }

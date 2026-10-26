@@ -1,12 +1,5 @@
-import { ClockAlert, UserRoundCheck, UserRoundCog } from "lucide-react";
+import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
 import {
   Table,
   TableBody,
@@ -21,7 +14,21 @@ import {
   formatRelativeSecurityTime,
   formatSecurityTimestamp,
 } from "../security-center.utils";
+import { countLabel } from "../system-health.utils";
 import type { PrivilegedAccountSecurity } from "../system-admin.types";
+
+const statusTones = {
+  active: "success",
+  suspended: "danger",
+  deactivated: "neutral",
+} as const;
+
+function initialsOf(name: string) {
+  const parts = name.split(/\s+/).filter(Boolean);
+  const first = parts[0]?.charAt(0) ?? "";
+  const last = parts.length > 1 ? (parts.at(-1)?.charAt(0) ?? "") : "";
+  return `${first}${last}`.toUpperCase();
+}
 
 export function PrivilegedAccessSection({
   accounts,
@@ -34,117 +41,79 @@ export function PrivilegedAccessSection({
 
   return (
     <section
-      className="h-full min-w-0"
+      className="security-card"
       aria-labelledby="privileged-access-title"
     >
-      <Card className="h-full gap-0 pb-0 [--card-spacing:--spacing(5)]">
-        <CardHeader className="border-b">
-          <div className="flex items-start gap-3">
-            <UserRoundCog
-              className="mt-0.5 size-5 shrink-0 text-primary"
-              aria-hidden="true"
-            />
-            <div className="flex min-w-0 flex-1 flex-col justify-between gap-4 sm:flex-row sm:items-start">
-              <div className="min-w-0">
-                <CardTitle>
-                  <h2 id="privileged-access-title" className="text-balance">
-                    Privileged Access Review
-                  </h2>
-                </CardTitle>
-                <CardDescription className="text-pretty">
-                  Active and inactive administrator assignments with sign-in
-                  recency only.
-                </CardDescription>
-              </div>
-              <div className="flex shrink-0 flex-wrap items-center gap-2">
-                <Badge variant="outline">
-                  {accounts.length} account{accounts.length === 1 ? "" : "s"}
-                </Badge>
-                <Badge variant={staleCount > 0 ? "destructive" : "secondary"}>
-                  {staleCount > 0 ? (
-                    <ClockAlert data-icon="inline-start" aria-hidden="true" />
-                  ) : (
-                    <UserRoundCheck
-                      data-icon="inline-start"
-                      aria-hidden="true"
-                    />
-                  )}
-                  {staleCount} stale
-                </Badge>
-              </div>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="min-h-0 flex-1 p-0">
-          <Table className="min-w-176">
-            <TableCaption className="sr-only">
-              Privileged account roles, access status, and sign-in recency
-            </TableCaption>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="px-6">Account</TableHead>
-                <TableHead className="px-4">Role</TableHead>
-                <TableHead className="px-4">Status</TableHead>
-                <TableHead className="px-6 text-right">
-                  Last Sign-In
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="civic-stagger-auto">
-              {accounts.map((account) => (
-                <TableRow key={account.id}>
-                  <TableCell className="max-w-56 whitespace-normal px-6 py-4 break-words font-medium">
-                    {account.name}
-                  </TableCell>
-                  <TableCell className="px-4 py-4">
-                    {roleLabels[account.role]}
-                  </TableCell>
-                  <TableCell className="px-4 py-4">
-                    <div className="flex flex-wrap gap-2">
-                      <Badge
-                        variant={
-                          account.status === "active" ? "outline" : "secondary"
-                        }
-                      >
-                        <span className="capitalize">{account.status}</span>
-                      </Badge>
-                      {account.isStale ? (
-                        <Badge variant="destructive">Review access</Badge>
-                      ) : null}
-                    </div>
-                  </TableCell>
-                  <TableCell className="px-6 py-4 text-right">
-                    <p className="font-mono text-xs tabular-nums">
-                      {formatRelativeSecurityTime(
-                        account.lastSignInAt,
-                        checkedAt,
-                      )}
-                    </p>
-                    {account.lastSignInAt ? (
-                      <time
-                        dateTime={account.lastSignInAt}
-                        className="text-xs text-muted-foreground"
-                      >
-                        {formatSecurityTimestamp(account.lastSignInAt)}
-                      </time>
+      <div className="security-card-header">
+        <h2 id="privileged-access-title">Privileged access review</h2>
+        <div className="security-card-chips">
+          <Badge variant="neutral">{countLabel(accounts.length, "account")}</Badge>
+          <Badge variant={staleCount > 0 ? "destructive" : "success"}>
+            {staleCount} stale
+          </Badge>
+        </div>
+      </div>
+      {accounts.length > 0 ? (
+        <Table className="security-table">
+          <TableCaption className="sr-only">
+            Privileged account roles, access status, and sign-in recency. Active
+            and inactive administrator assignments with sign-in recency only.
+          </TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Account</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Last sign-in</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {accounts.map((account) => (
+              <TableRow key={account.id}>
+                <TableCell>
+                  <div className="security-account">
+                    <Avatar>
+                      <AvatarFallback>{initialsOf(account.name)}</AvatarFallback>
+                    </Avatar>
+                    <span className="min-w-0 wrap-break-word whitespace-normal">
+                      {account.name}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell>{roleLabels[account.role]}</TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className="security-status capitalize"
+                      data-tone={statusTones[account.status]}
+                    >
+                      {account.status}
+                    </span>
+                    {account.isStale ? (
+                      <Badge variant="destructive">Review access</Badge>
                     ) : null}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {accounts.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={4}
-                    className="h-36 text-center text-muted-foreground"
-                  >
-                    No privileged accounts were returned.
-                  </TableCell>
-                </TableRow>
-              ) : null}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <p className="security-cell-title">
+                    {formatRelativeSecurityTime(account.lastSignInAt, checkedAt)}
+                  </p>
+                  {account.lastSignInAt ? (
+                    <time
+                      dateTime={account.lastSignInAt}
+                      className="security-cell-sub block"
+                    >
+                      {formatSecurityTimestamp(account.lastSignInAt)}
+                    </time>
+                  ) : null}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      ) : (
+        <p className="security-empty">No privileged accounts were returned.</p>
+      )}
     </section>
   );
 }

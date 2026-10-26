@@ -1,10 +1,34 @@
 import { createRouter } from '@tanstack/react-router'
+import { getGlobalStartContext } from '@tanstack/react-start'
 import { PageSkeleton } from '~/components/feedback/PageSkeleton'
 import { routeTree } from './routeTree.gen'
 
+/**
+ * The Content-Security-Policy nonce for this response (see src/start.ts). On the
+ * server it comes from the request context; in the browser, from the
+ * `csp-nonce` meta tag the router renders with it. Undefined in development,
+ * where no script policy is sent.
+ */
+function cspNonce(): string | undefined {
+  if (typeof document !== 'undefined') {
+    return (
+      document.querySelector<HTMLMetaElement>('meta[property="csp-nonce"]')
+        ?.content || undefined
+    )
+  }
+  try {
+    const context = getGlobalStartContext() as { cspNonce?: string } | undefined
+    return context?.cspNonce
+  } catch {
+    return undefined
+  }
+}
+
 export function getRouter() {
+  const nonce = cspNonce()
   const router = createRouter({
     routeTree,
+    ssr: nonce ? { nonce } : undefined,
     scrollRestoration: true,
     // Start loading a route's data as soon as the user shows intent (hover or
     // touch-down) rather than waiting for the click. By the time the click
