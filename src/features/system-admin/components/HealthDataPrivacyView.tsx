@@ -70,7 +70,7 @@ export function HealthDataPrivacyView({
           <CardTitle>
             <h2 className="text-lg font-bold">Privacy Boundary</h2>
           </CardTitle>
-          <CardDescription>What this page records, what it never does, and who can see it.</CardDescription>
+          <CardDescription>Charts include five-second session readings while the dashboard is open. Session readings are not retained; historical uptime and incidents come from the background monitor.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-5 md:grid-cols-3 md:gap-0">
           <BoundaryList title="Recorded" items={privacyBoundary.recorded} icon={Check} iconClassName="text-health-success-dot" />

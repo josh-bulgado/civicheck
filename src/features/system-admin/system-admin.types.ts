@@ -148,6 +148,12 @@ export type HealthCheck = {
 
 export type ServiceKey = "database" | "authentication" | "storage";
 
+/** Read-only measurements collected while the health dashboard is visible. */
+export type HealthLiveSample = {
+  at: string;
+  services: { key: ServiceKey; ok: boolean; responseMs: number | null }[];
+};
+
 export type ServiceHealth = {
   key: ServiceKey;
   name: string;

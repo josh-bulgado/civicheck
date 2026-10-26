@@ -23,10 +23,30 @@ export function formatResponseTime(value: number | null) {
   return value < 1 ? "<1 ms" : `${countFormatter.format(value)} ms`;
 }
 
+/** Relative to the server's snapshot time, so the first client render matches SSR. */
+export function healthTimeAgo(value: string | null, now: string) {
+  if (!value) return "Never";
+  const minutes = Math.max(0, Math.floor((new Date(now).getTime() - new Date(value).getTime()) / 60_000));
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} ${minutes === 1 ? "minute" : "minutes"} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} ${days === 1 ? "day" : "days"} ago`;
+}
+
 const clockFormatter = new Intl.DateTimeFormat("en-PH", {
   timeStyle: "short",
   timeZone: "Asia/Manila",
 });
+
+const sampleClockFormatter = new Intl.DateTimeFormat("en-PH", {
+  hour: "numeric", minute: "2-digit", second: "2-digit", timeZone: "Asia/Manila",
+});
+
+export function formatHealthSampleClock(value: string) {
+  return sampleClockFormatter.format(new Date(value));
+}
 
 /** A time of day in the office's time zone, such as "2:46 PM". */
 export function formatHealthClock(value: string) {

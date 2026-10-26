@@ -1,12 +1,11 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useHotkeys } from "@tanstack/react-hotkeys";
-import { Copy, RefreshCw } from "lucide-react";
+import { Activity, ArrowLeft, Copy, RefreshCw, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
-import { Kbd } from "~/components/ui/kbd";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { Spinner } from "~/components/ui/spinner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useHotkeyLabel } from "~/hooks/useHotkeyLabel";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { EditLimitsDialog } from "../components/EditLimitsDialog";
@@ -15,15 +14,19 @@ import { HealthComponentsCard } from "../components/HealthComponentsCard";
 import { HealthDataPrivacyView } from "../components/HealthDataPrivacyView";
 import { HealthIncidentsCard } from "../components/HealthIncidentsCard";
 import { HealthVerdictCard } from "../components/HealthVerdictCard";
-import { RealtimeStatusBadge } from "../components/RealtimeStatusBadge";
+import { HealthActiveIncidents, HealthRecentActivity } from "../components/HealthOverviewCards";
+import { HealthResponseChart } from "../components/HealthResponseChart";
 import { RecordMaintenanceDialog } from "../components/RecordMaintenanceDialog";
 import { SecurityPostureCard } from "../components/SecurityPostureCard";
 import { useHealthActions } from "../hooks/useHealthActions";
-import { headerLine, isOpenIncident, summaryText } from "../system-health.model";
+import { useHealthSampling } from "../hooks/useHealthSampling";
+import { isOpenIncident, summaryText } from "../system-health.model";
+import { formatHealthSampleClock } from "../system-health.utils";
 import type { SystemHealthDashboard } from "../system-admin.types";
+import "../system-health.css";
 
 export type HealthView = "overview" | "data";
-type Dialog = "maintenance" | "limits" | null;
+type HealthDialog = "maintenance" | "limits" | "incidents" | "settings" | null;
 
 const AUDIT_SEARCH = {
   page: 1,
@@ -44,7 +47,7 @@ const WATCHED_TABLES = [
 ];
 
 export function SystemHealthPage({
-  data,
+  data: recordedData,
   view,
   onViewChange,
 }: {
@@ -55,9 +58,12 @@ export function SystemHealthPage({
   const navigate = useNavigate();
   const hotkeyLabel = useHotkeyLabel();
   const actions = useHealthActions();
-  const realtimeStatus = useRealtimeRefresh({ tables: WATCHED_TABLES });
+  useRealtimeRefresh({ tables: WATCHED_TABLES });
+  const sampling = useHealthSampling(recordedData, view === "overview");
+  const data = sampling.data;
   const rowsRef = useRef<HTMLDivElement>(null);
-  const [dialog, setDialog] = useState<Dialog>(null);
+  const [dialog, setDialog] = useState<HealthDialog>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const { canManage } = data;
   const checking = actions.pending === "check";
@@ -97,81 +103,76 @@ export function SystemHealthPage({
       { hotkey: "J", callback: () => view === "overview" && moveRow(1) },
       { hotkey: "K", callback: () => view === "overview" && moveRow(-1) },
     ],
-    { enabled: dialog === null },
+    { enabled: dialog === null && !detailsOpen },
   );
 
   return (
-    <div className="dashboard-page">
-      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-balance text-3xl font-extrabold tracking-[-0.03em] sm:text-4xl">System Health</h1>
-          <p className="text-pretty text-base text-muted-foreground">{headerLine(data)}</p>
+    <div className="dashboard-page system-health-page" data-health-view={view}>
+      <header className="health-page-header">
+        <div className="health-page-heading">
+          <span className="health-title-icon"><Activity aria-hidden="true" /></span>
+          <h1>System Health</h1>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <RealtimeStatusBadge status={realtimeStatus} subject="checks" />
-          <Button type="button" variant="outline" size="lg" onClick={() => void copySummary()}>
+        <div className="health-header-actions">
+          <Button type="button" variant="outline" shape="default" size="lg" title={`Copy summary (${hotkeyLabel("C")})`} onClick={() => void copySummary()}>
             <Copy data-icon="inline-start" aria-hidden="true" />
             Copy Summary
-            <Kbd aria-hidden="true">{hotkeyLabel("C")}</Kbd>
           </Button>
           {canManage ? (
-            <Button type="button" variant="raised" size="lg" disabled={checking} onClick={() => void actions.checkNow()}>
+            <Button type="button" variant="raised" shape="default" size="lg" className="health-check-button" title={`Run a health check (${hotkeyLabel("R")})`} disabled={checking} onClick={() => void actions.checkNow()}>
               {checking ? <Spinner data-icon="inline-start" /> : <RefreshCw data-icon="inline-start" aria-hidden="true" />}
               {checking ? "Checking" : "Check Now"}
-              {!checking ? <Kbd aria-hidden="true">{hotkeyLabel("R")}</Kbd> : null}
             </Button>
           ) : null}
         </div>
       </header>
 
-      <Tabs value={view} onValueChange={(next) => onViewChange(next as HealthView)} className="gap-6">
-        <div className="flex items-end gap-4 border-b border-border-light">
-          <TabsList variant="counted" aria-label="System Health views" className="flex-1 border-b-0">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="data">Data &amp; Privacy</TabsTrigger>
-          </TabsList>
-          <p className="hidden items-center gap-1.5 pb-2 text-sm text-muted-foreground sm:flex">
-            <Kbd aria-hidden="true">{hotkeyLabel("1")}</Kbd>
-            <Kbd aria-hidden="true">{hotkeyLabel("2")}</Kbd>
-            to switch view
-          </p>
-        </div>
-
-        <TabsContent value="overview" className="flex flex-col gap-6">
-          <HealthVerdictCard data={data} />
-          <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)]">
-            <div ref={rowsRef}>
+      {view === "overview" ? (
+        <>
+          <HealthVerdictCard data={data} onShowIncidents={() => setDialog("incidents")} />
+          <div className="health-overview-grid">
+            <div ref={rowsRef} className="min-w-0">
               <HealthComponentsCard
                 data={data}
-                hotkeyLabel={hotkeyLabel}
                 onEditLimits={() => setDialog("limits")}
                 onShowSources={() => onViewChange("data")}
+                onDetailsOpenChange={setDetailsOpen}
               />
             </div>
-            <div className="flex flex-col gap-6">
-              <HealthIncidentsCard
-                data={data}
-                pending={actions.pending}
-                hotkeyLabel={hotkeyLabel}
-                onAcknowledge={(eventId) => void actions.acknowledge(eventId)}
-                onRecordMaintenance={() => setDialog("maintenance")}
-                onCheckNow={() => void actions.checkNow()}
-              />
-              {data.security ? <SecurityPostureCard security={data.security} hotkeyLabel={hotkeyLabel} /> : null}
-              <EmailAlertsCard
-                settings={data.settings}
-                canManage={canManage}
-                pending={actions.pending === "alerts"}
-                onChange={(enabled) => void actions.setAlerts(enabled)}
-              />
-            </div>
+            <aside className="health-overview-aside" aria-label="System health insights">
+              <HealthActiveIncidents data={data} onViewAll={() => setDialog("incidents")} />
+              <HealthResponseChart data={data} />
+              <HealthRecentActivity data={data} onViewAll={() => void navigate({ to: "/system-admin/audit", search: AUDIT_SEARCH })} />
+            </aside>
           </div>
-        </TabsContent>
+          <footer className="health-page-footer">
+            <p role="status">{sampling.error ? "Updates paused · retrying connection" : `Updates every 5 seconds${sampling.sampledAt ? ` · Last reading ${formatHealthSampleClock(sampling.sampledAt)}` : " · Connecting…"}`}</p>
+            <div className="health-footer-actions">
+              <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer" title="TradingView Lightweight Charts™. Copyright (с) 2025 TradingView, Inc.">Charts by TradingView</a>
+              <button type="button" onClick={() => setDialog("settings")}><Settings2 className="size-3.5" aria-hidden="true" />Monitoring settings</button>
+            </div>
+          </footer>
+        </>
+      ) : (
+        <div className="space-y-5">
+          <Button variant="ghost" onClick={() => onViewChange("overview")}><ArrowLeft className="size-4" aria-hidden="true" />Back to overview</Button>
+          <HealthDataPrivacyView data={recordedData} hotkeyLabel={hotkeyLabel} onEditLimits={() => setDialog("limits")} />
+        </div>
+      )}
 
-        <TabsContent value="data">
-          <HealthDataPrivacyView data={data} hotkeyLabel={hotkeyLabel} onEditLimits={() => setDialog("limits")} />
-        </TabsContent>
-      </Tabs>
+      <Dialog open={dialog === "incidents" || dialog === "settings"} onOpenChange={(open) => { if (!open) setDialog(null); }}>
+        <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{dialog === "incidents" ? "System Incidents" : "Monitoring Settings"}</DialogTitle>
+            <DialogDescription>{dialog === "incidents" ? "Review active incidents, history, and planned maintenance." : "Manage health alerts and review your security posture."}</DialogDescription>
+          </DialogHeader>
+          {dialog === "incidents" ? <HealthIncidentsCard data={data} pending={actions.pending} hotkeyLabel={hotkeyLabel} onAcknowledge={(eventId) => void actions.acknowledge(eventId)} onRecordMaintenance={() => setDialog("maintenance")} onCheckNow={() => void actions.checkNow()} /> : <>
+            {data.security ? <SecurityPostureCard security={data.security} hotkeyLabel={hotkeyLabel} /> : null}
+            <EmailAlertsCard settings={data.settings} canManage={canManage} pending={actions.pending === "alerts"} onChange={(enabled) => void actions.setAlerts(enabled)} />
+            {canManage ? <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setDialog("limits")}>Edit Limits</Button><Button variant="outline" onClick={() => setDialog("maintenance")}>Record Maintenance</Button></div> : null}
+          </>}
+        </DialogContent>
+      </Dialog>
 
       <RecordMaintenanceDialog
         open={dialog === "maintenance"}

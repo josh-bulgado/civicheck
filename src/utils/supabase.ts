@@ -189,14 +189,18 @@ export function getSupabaseStatelessClient() {
   );
 }
 
-export function getSupabaseAdminClient() {
+export function getSupabaseAdminClient(options?: { requestTimeoutMs?: number }) {
   const secretKey = process.env.SUPABASE_SECRET_KEY;
+  const requestTimeoutMs = options?.requestTimeoutMs;
   if (!secretKey) {
     throw new Error(
       "SUPABASE_SERVICE_ROLE_KEY is not defined in the environment variables",
     );
   }
   return createClient(process.env.SUPABASE_URL!, secretKey, {
+    global: requestTimeoutMs ? {
+      fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(requestTimeoutMs) }),
+    } : undefined,
     auth: {
       autoRefreshToken: false,
       persistSession: false,

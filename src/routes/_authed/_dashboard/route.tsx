@@ -82,6 +82,7 @@ function refreshPortalCaches() {
 }
 
 function DashboardLayout() {
+  const isHealthPage = useRouterState({ select: (state) => state.location.pathname === "/system-admin/health" });
   const isServiceEditor = useRouterState({
     select: (state) =>
       state.matches.some(
@@ -125,6 +126,7 @@ function DashboardLayout() {
 
   return (
     <SidebarProvider
+      data-health-workspace={isHealthPage || undefined}
       // Both shells are a ground, a sidebar on it and one floating panel. The
       // service editor is full screen, so it keeps the plain page.
       className={
@@ -192,13 +194,14 @@ function DashboardLayout() {
                 {/* From md the toggle lives in the sidebar, as in the applicant
                     shell; here it only opens the sheet on a phone. */}
                 <SidebarTrigger className="size-10 shrink-0 rounded-lg border border-border-strong bg-card shadow-xs hover:bg-surface-subtle md:hidden" />
-                {user?.role === "system_admin" ? (
+                {user?.role === "system_admin" && !isHealthPage ? (
                   <SystemAdminSearch />
                 ) : (
                   <DashboardBreadcrumbs role={(user?.role ?? "applicant") as Role} />
                 )}
               </div>
               <div className="flex shrink-0 items-center gap-4">
+                {isHealthPage ? <SystemAdminSearch compact className="health-global-search rounded-lg" /> : null}
                 <ThemeSwitch />
                 <CityGovernmentIdentity
                   compact
