@@ -49,8 +49,8 @@ const inputOtpSlotVariants = cva(
       },
     },
     defaultVariants: {
-      size: "default",
-      shape: "default",
+      size: "lg",
+      shape: "pill",
     },
   }
 )
@@ -58,8 +58,8 @@ const inputOtpSlotVariants = cva(
 function InputOTPSlot({
   index,
   className,
-  size = "default",
-  shape = "default",
+  size = "lg",
+  shape = "pill",
   ...props
 }: React.ComponentProps<"div"> &
   VariantProps<typeof inputOtpSlotVariants> & {

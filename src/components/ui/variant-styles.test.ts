@@ -85,6 +85,24 @@ describe("pill-shaped controls expose an explicit API", () => {
   });
 });
 
+describe("form and action controls default to large pills", () => {
+  const defaults = [
+    ["button.tsx", ['size = "lg"', 'shape = "pill"']],
+    ["input.tsx", ['fieldSize = "lg"', 'shape = "pill"']],
+    ["input-group.tsx", ['fieldSize = "lg"', 'shape = "pill"']],
+    ["select.tsx", ['size = "lg"', 'shape = "pill"']],
+    ["date-picker.tsx", ['size = "lg"', 'shape = "pill"']],
+    ["toggle.tsx", ['size = "lg"', 'shape = "pill"']],
+    ["toggle-group.tsx", ['size = "lg"', 'shape = "pill"']],
+    ["input-otp.tsx", ['size = "lg"', 'shape = "pill"']],
+  ] as const;
+
+  it.each(defaults)("%s", (file, markers) => {
+    const source = read(file);
+    for (const marker of markers) expect(source).toContain(marker);
+  });
+});
+
 describe("Kbd variants", () => {
   it("keeps the default key surface", () => {
     expect(kbdVariants()).toContain("bg-muted");

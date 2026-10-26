@@ -42,14 +42,24 @@ describe("quiet fills hover without an oklch mix", () => {
 });
 
 describe("pill shape", () => {
+  it("uses a large pill as the default button", () => {
+    const classes = buttonVariants();
+
+    expect(classes).toContain("h-10");
+    expect(classes).toContain("rounded-full!");
+  });
+
   it("rounds every size, not just the default one", () => {
     for (const size of ["xs", "sm", "default", "lg", "xl", "icon-lg"] as const) {
       expect(buttonVariants({ shape: "pill", size })).toContain("rounded-full!");
     }
   });
 
-  it("leaves the default shape alone", () => {
-    expect(buttonVariants({ size: "default" })).not.toContain("rounded-full");
+  it("allows the compact rectangular style as an explicit exception", () => {
+    const classes = buttonVariants({ shape: "default", size: "default" });
+
+    expect(classes).toContain("h-9");
+    expect(classes).not.toContain("rounded-full");
   });
 });
 

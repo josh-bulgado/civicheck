@@ -51,8 +51,8 @@ export function DatePicker({
   disabled,
   invalid,
   clearable = true,
-  size = "default",
-  shape = "default",
+  size = "lg",
+  shape = "pill",
   icon = "chevron",
   className,
 }: DatePickerProps) {

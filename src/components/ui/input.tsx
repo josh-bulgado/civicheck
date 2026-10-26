@@ -9,8 +9,8 @@ import { cn } from "~/lib/utils"
 function Input({
   className,
   type,
-  fieldSize = "default",
-  shape = "default",
+  fieldSize = "lg",
+  shape = "pill",
   variant = "default",
   ...props
 }: React.ComponentProps<"input"> & {

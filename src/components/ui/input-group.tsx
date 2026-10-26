@@ -10,8 +10,8 @@ import { Textarea } from "~/components/ui/textarea"
 
 function InputGroup({
   className,
-  fieldSize = "default",
-  shape = "default",
+  fieldSize = "lg",
+  shape = "pill",
   ...props
 }: React.ComponentProps<"div"> & {
   fieldSize?: React.ComponentProps<typeof Input>["fieldSize"]

@@ -60,8 +60,8 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
 
 function SelectTrigger({
   className,
-  size = "default",
-  shape = "default",
+  size = "lg",
+  shape = "pill",
   children,
   ...props
 }: SelectPrimitive.Trigger.Props & {

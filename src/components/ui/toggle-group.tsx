@@ -101,7 +101,7 @@ type ToggleGroupContextValue = {
 }
 
 const ToggleGroupContext = React.createContext<ToggleGroupContextValue>({
-  size: "default",
+  size: "lg",
   variant: "default",
   spacing: 2,
   orientation: "horizontal",
@@ -152,7 +152,7 @@ function useSlidingIndicator(
 function ToggleGroup({
   className,
   variant,
-  size,
+  size = "lg",
   spacing = 2,
   orientation = "horizontal",
   children,
@@ -202,8 +202,8 @@ function ToggleGroupItem({
   className,
   children,
   variant = "default",
-  size = "default",
-  shape = "default",
+  size = "lg",
+  shape = "pill",
   ...props
 }: TogglePrimitive.Props & VariantProps<typeof toggleVariants>) {
   const context = React.useContext(ToggleGroupContext)
