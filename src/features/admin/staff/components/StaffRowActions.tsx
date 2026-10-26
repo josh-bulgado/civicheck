@@ -39,6 +39,7 @@ export function StaffRowActions({
       <Button
         variant="outline"
         size="lg"
+        shape="pill"
         onClick={() => onManage(staffMember)}
         disabled={staffMember.status !== "active"}
         className="whitespace-nowrap"

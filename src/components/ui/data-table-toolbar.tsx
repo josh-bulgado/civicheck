@@ -47,7 +47,11 @@ export function TableSearch({
   useHotkey(SEARCH_HOTKEY, () => searchRef.current?.focus());
 
   return (
-    <InputGroup size="lg" className="min-w-56 max-w-md flex-1">
+    <InputGroup
+      fieldSize="lg"
+      shape="pill"
+      className="min-w-56 max-w-md flex-1"
+    >
       <InputGroupAddon>
         <Search aria-hidden="true" />
       </InputGroupAddon>
@@ -69,7 +73,9 @@ export function TableSearch({
       />
       {value ? null : (
         <InputGroupAddon align="inline-end">
-          <Kbd aria-hidden="true">{hotkeyLabel(SEARCH_HOTKEY)}</Kbd>
+          <Kbd aria-hidden="true" variant="ghost">
+            {hotkeyLabel(SEARCH_HOTKEY)}
+          </Kbd>
         </InputGroupAddon>
       )}
     </InputGroup>
@@ -111,7 +117,7 @@ export function FilterChips<T extends string>({
         if (next) onValueChange(next);
       }}
       // lg height: the track is 40px, level with the search box and the selects.
-      variant="pill"
+      variant="brand-pill"
       size="lg"
       className="flex-wrap"
     >
@@ -120,7 +126,10 @@ export function FilterChips<T extends string>({
           {option.dotClassName ? (
             <span
               aria-hidden="true"
-              className={cn("size-1.5 shrink-0 rounded-full", option.dotClassName)}
+              className={cn(
+                "size-1.5 shrink-0 rounded-full",
+                option.dotClassName,
+              )}
             />
           ) : null}
           {option.label}
@@ -175,6 +184,7 @@ export function FilterSelect({
       >
         <SelectTrigger
           id={id}
+          shape="pill"
           className={triggerClassName}
           aria-label={`Filter by ${label.toLowerCase()}`}
           size="lg"

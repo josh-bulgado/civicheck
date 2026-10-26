@@ -44,6 +44,7 @@ export function StaffSelectField<TFieldValues extends FieldValues>({
               id={id}
               size="lg"
               className="w-full"
+              shape="pill"
               aria-invalid={fieldState.invalid}
             >
               <SelectValue placeholder={placeholder}>

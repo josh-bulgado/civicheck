@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { kbdVariants } from "~/components/ui/kbd";
 import { tabsListVariants } from "~/components/ui/tabs";
 
 const read = (name: string) =>
@@ -9,7 +10,9 @@ const variantKeys = (source: string, anchor: string) => {
   // cva does not expose its variant map, so read the keys from the source.
   const start = source.indexOf(anchor);
   const block = source.slice(start, source.indexOf("defaultVariants", start));
-  return [...block.matchAll(/^\s{8}([a-z]+):/gm)].map((m) => m[1]);
+  return [...block.matchAll(/^\s{8}(?:"([a-z-]+)"|([a-z]+)):/gm)].map(
+    (match) => match[1] ?? match[2],
+  );
 };
 
 // A variant the list or group paints but whose items never style themselves
@@ -43,13 +46,55 @@ describe("every ToggleGroup variant has item styles", () => {
 
   it("finds the variants", () => {
     expect(keys).toEqual(
-      expect.arrayContaining(["default", "outline", "segmented", "sliding"]),
+      expect.arrayContaining([
+        "default",
+        "outline",
+        "segmented",
+        "brand-pill",
+        "sliding",
+      ]),
     );
   });
 
   it.each(keys.filter((key) => !legacy.includes(key)))("%s", (key) => {
     const items = source.slice(source.indexOf("const toggleGroupItemVariants"));
-    expect(items).toMatch(new RegExp(`^\\s{8}${key}:`, "m"));
+    expect(items).toMatch(new RegExp(`^\\s{8}(?:"${key}"|${key}):`, "m"));
+  });
+});
+
+describe("pill-shaped controls expose an explicit API", () => {
+  const controls = [
+    ["button.tsx", ['pill: "rounded-full!']],
+    ["input.tsx", ["shape?:", "data-[shape=pill]:rounded-full"]],
+    ["input-group.tsx", ["shape?:", "data-[shape=pill]:rounded-full"]],
+    ["toggle.tsx", ["shape: {", 'pill: "rounded-full"']],
+    ["select.tsx", ["shape?:", "data-[shape=pill]:rounded-full"]],
+    ["date-picker.tsx", ["shape?:", "shape={shape}"]],
+    ["command.tsx", ["shape?:", "shape={shape}"]],
+    ["sidebar.tsx", ["shape: {", 'pill: "rounded-full"']],
+    ["kbd.tsx", ["shape: {", 'pill: "rounded-full px-2"']],
+    ["skeleton.tsx", ["shape?:", "data-[shape=pill]:rounded-full"]],
+    ["item.tsx", ["shape: {", 'pill: "rounded-full"']],
+    ["tabs.tsx", ['pill: "gap-1 rounded-full']],
+    ["toggle-group.tsx", ['pill: "gap-0.5 rounded-full']],
+  ] as const;
+
+  it.each(controls)("%s", (file, markers) => {
+    const source = read(file);
+    for (const marker of markers) expect(source).toContain(marker);
+  });
+});
+
+describe("Kbd variants", () => {
+  it("keeps the default key surface", () => {
+    expect(kbdVariants()).toContain("bg-muted");
+    expect(kbdVariants()).toContain("text-muted-foreground");
+  });
+
+  it("supports a transparent ghost surface", () => {
+    const classes = kbdVariants({ variant: "ghost" });
+    expect(classes).toContain("bg-transparent");
+    expect(classes).toContain("text-current");
   });
 });
 

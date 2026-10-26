@@ -114,7 +114,7 @@ export function StaffInviteDialog({
                     <FieldLabel htmlFor="staff-firstName">
                       First Name
                     </FieldLabel>
-                    <InputGroup size="lg">
+                    <InputGroup fieldSize="lg">
                       <InputGroupAddon>
                         <User size={16} aria-hidden="true" />
                       </InputGroupAddon>
@@ -138,7 +138,7 @@ export function StaffInviteDialog({
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel htmlFor="staff-lastName">Last Name</FieldLabel>
-                    <InputGroup size="lg">
+                    <InputGroup fieldSize="lg">
                       <InputGroupInput
                         {...field}
                         id="staff-lastName"
@@ -160,7 +160,7 @@ export function StaffInviteDialog({
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel htmlFor="staff-email">Email</FieldLabel>
-                  <InputGroup size="lg">
+                  <InputGroup fieldSize="lg">
                     <InputGroupAddon>
                       <Mail size={16} aria-hidden="true" />
                     </InputGroupAddon>

@@ -487,10 +487,15 @@ const sidebarMenuButtonVariants = cva(
         sm: "h-7 text-xs",
         lg: "h-12 text-sm",
       },
+      shape: {
+        default: "",
+        pill: "rounded-full",
+      },
     },
     defaultVariants: {
       variant: "default",
       size: "default",
+      shape: "default",
     },
   }
 )
@@ -500,6 +505,7 @@ function SidebarMenuButton({
   isActive = false,
   variant = "default",
   size = "default",
+  shape = "default",
   tooltip,
   className,
   ...props
@@ -513,7 +519,10 @@ function SidebarMenuButton({
     defaultTagName: "button",
     props: mergeProps<"button">(
       {
-        className: cn(sidebarMenuButtonVariants({ variant, size }), className),
+        className: cn(
+          sidebarMenuButtonVariants({ variant, size, shape }),
+          className
+        ),
       },
       props
     ),
@@ -522,6 +531,7 @@ function SidebarMenuButton({
       slot: "sidebar-menu-button",
       sidebar: "menu-button",
       size,
+      shape,
       active: isActive,
     },
   })

@@ -140,7 +140,7 @@ export function ServiceGroupInspector({
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor={`${ids}-fee`}>Fee</Label>
-            <InputGroup size="lg">
+            <InputGroup fieldSize="lg">
               <InputGroupAddon aria-hidden="true">₱</InputGroupAddon>
               <InputGroupInput
                 id={`${ids}-fee`}

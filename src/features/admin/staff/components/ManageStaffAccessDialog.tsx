@@ -130,10 +130,11 @@ function ManageStaffAccessForm({
             size="lg"
             disabled={isPending}
             onClick={onClose}
+            shape="pill"
           >
             Cancel
           </Button>
-          <Button type="submit" size="lg" disabled={isPending}>
+          <Button type="submit" size="lg" shape="pill" disabled={isPending}>
             {isPending ? (
               <>
                 <Spinner />

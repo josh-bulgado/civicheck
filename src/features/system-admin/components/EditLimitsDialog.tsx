@@ -68,7 +68,7 @@ function LimitField({
       render={({ field, fieldState }) => (
         <Field data-invalid={fieldState.invalid}>
           <FieldLabel htmlFor={id}>{label}</FieldLabel>
-          <InputGroup size="lg">
+          <InputGroup fieldSize="lg">
             <InputGroupInput
               {...field}
               id={id}

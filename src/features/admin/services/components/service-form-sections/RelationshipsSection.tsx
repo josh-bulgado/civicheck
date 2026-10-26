@@ -97,7 +97,7 @@ export function RelationshipsSection({
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
               <FieldLabel htmlFor="service-short-name">Short Name</FieldLabel>
-              <InputGroup size="lg">
+              <InputGroup fieldSize="lg">
                 <InputGroupInput
                   {...field}
                   id="service-short-name"

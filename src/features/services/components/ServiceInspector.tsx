@@ -515,6 +515,8 @@ function InspectorBody({
           ) : null}
           <Button
             type="button"
+            shape="pill"
+            size="lg"
             className="relative w-full"
             aria-keyshortcuts={EDIT_SERVICE_HOTKEY}
             onClick={() => onEdit(service)}

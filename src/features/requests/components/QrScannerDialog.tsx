@@ -53,7 +53,11 @@ interface QrScannerDialogProps {
  * dedicated scanner hardware (a keyboard-wedge scanner already "types" into
  * the search box on its own; this covers staff who only have a phone/webcam).
  */
-export function QrScannerDialog({ open, onOpenChange, onDecode }: QrScannerDialogProps) {
+export function QrScannerDialog({
+  open,
+  onOpenChange,
+  onDecode,
+}: QrScannerDialogProps) {
   const cameraInputId = useId();
   const [selectedCameraId, setSelectedCameraId] = useState("");
   const { cameras, canvasRef, error, isStarting, retry, videoRef } =
@@ -89,7 +93,8 @@ export function QrScannerDialog({ open, onOpenChange, onDecode }: QrScannerDialo
         <DialogHeader>
           <DialogTitle>Scan tracking QR</DialogTitle>
           <DialogDescription>
-            Choose a camera, then hold the tracking QR in view. It scans automatically.
+            Choose a camera, then hold the tracking QR in view. It scans
+            automatically.
           </DialogDescription>
         </DialogHeader>
         <FieldGroup>
@@ -103,7 +108,9 @@ export function QrScannerDialog({ open, onOpenChange, onDecode }: QrScannerDialo
               >
                 <SelectTrigger
                   id={cameraInputId}
+                  shape="pill"
                   aria-describedby={`${cameraInputId}-help`}
+                  size="lg"
                   className="min-w-0 flex-1"
                 >
                   <SelectValue />
@@ -121,6 +128,8 @@ export function QrScannerDialog({ open, onOpenChange, onDecode }: QrScannerDialo
               <Button
                 type="button"
                 variant="outline"
+                shape="pill"
+                size="lg"
                 disabled={isStarting}
                 onClick={retry}
               >
@@ -128,7 +137,8 @@ export function QrScannerDialog({ open, onOpenChange, onDecode }: QrScannerDialo
               </Button>
             </div>
             <FieldDescription id={`${cameraInputId}-help`}>
-              For your phone, choose Iriun Webcam and keep Iriun open on both devices.
+              For your phone, choose Iriun Webcam and keep Iriun open on both
+              devices.
             </FieldDescription>
           </Field>
         </FieldGroup>
@@ -143,7 +153,10 @@ export function QrScannerDialog({ open, onOpenChange, onDecode }: QrScannerDialo
         <canvas ref={canvasRef} className="hidden" />
         <p
           role="status"
-          className={cn("text-sm", error ? "text-destructive" : "text-muted-foreground")}
+          className={cn(
+            "text-sm",
+            error ? "text-destructive" : "text-muted-foreground",
+          )}
         >
           {(error ? ERROR_MESSAGES[error] : null) ??
             (isStarting

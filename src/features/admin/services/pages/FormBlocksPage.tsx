@@ -415,7 +415,7 @@ export function FormBlocksPage({
             !railOpen && "lg:hidden",
           )}
         >
-          <InputGroup size="lg">
+          <InputGroup fieldSize="lg">
             <InputGroupAddon>
               <Search aria-hidden="true" />
             </InputGroupAddon>
@@ -528,7 +528,7 @@ export function FormBlocksPage({
                       // The group is the inline surface (borderless until hovered
                       // or focused) so the pencil addon shares the input's fill.
                       <InputGroup
-                        size="lg"
+                        fieldSize="lg"
                         className="border-transparent shadow-none hover:border-input has-[[data-slot=input-group-control]:focus-visible]:bg-background"
                       >
                         <InputGroupInput
@@ -670,7 +670,7 @@ export function FormBlocksPage({
                         control={control}
                         name="blockKey"
                         render={({ field, fieldState }) => (
-                          <InputGroup size="lg">
+                          <InputGroup fieldSize="lg">
                             {!isNew ? (
                               <InputGroupAddon className={PREFIX_CELL}>
                                 <Lock aria-hidden="true" />

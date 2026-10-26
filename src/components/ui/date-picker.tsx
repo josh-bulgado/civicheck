@@ -30,6 +30,7 @@ export type DatePickerProps = {
   clearable?: boolean;
   /** The same scale as Input and SelectTrigger: sm 32px, default 36px, lg 40px. */
   size?: "default" | "sm" | "lg";
+  shape?: React.ComponentProps<typeof Button>["shape"];
   className?: string;
 };
 
@@ -51,6 +52,7 @@ export function DatePicker({
   invalid,
   clearable = true,
   size = "default",
+  shape = "default",
   icon = "chevron",
   className,
 }: DatePickerProps) {
@@ -92,6 +94,7 @@ export function DatePicker({
           <Button
             type="button"
             variant="outline"
+            shape={shape}
             id={id}
             disabled={disabled}
             aria-invalid={invalid}

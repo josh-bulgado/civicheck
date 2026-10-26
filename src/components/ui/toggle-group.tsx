@@ -28,6 +28,9 @@ const toggleGroupVariants = cva(
         segmented: "gap-0.5 rounded-xl bg-muted p-[3px] [--tg-pad:3px]",
         // Fully round track, ink-filled tile.
         pill: "gap-0.5 rounded-full bg-muted p-[3px] [--tg-pad:3px]",
+        // Pill track with the system brand fill on the selected tile.
+        "brand-pill":
+          "gap-0.5 rounded-full bg-muted p-[3px] [--tg-pad:3px]",
         // Hairline track, soft brand tint. Quiet enough to sit beside inputs.
         tinted:
           "gap-0.5 rounded-lg border border-border-strong bg-surface-subtle p-0.5 [--tg-pad:3px]",
@@ -60,6 +63,8 @@ const toggleGroupItemVariants = cva(
         segmented:
           "rounded-[9px] data-pressed:bg-card data-pressed:font-semibold data-pressed:text-foreground data-pressed:shadow-sm data-pressed:ring-1 data-pressed:ring-foreground/10",
         pill: "rounded-full px-3.5 font-semibold text-body-2 data-pressed:bg-foreground data-pressed:text-card",
+        "brand-pill":
+          "rounded-full px-3.5 font-semibold text-body-2 data-pressed:bg-primary-fill data-pressed:text-primary-foreground",
         tinted:
           "rounded-sm data-pressed:bg-primary-soft data-pressed:text-primary data-pressed:ring-1 data-pressed:ring-primary/15 data-pressed:ring-inset",
         accent:
@@ -198,6 +203,7 @@ function ToggleGroupItem({
   children,
   variant = "default",
   size = "default",
+  shape = "default",
   ...props
 }: TogglePrimitive.Props & VariantProps<typeof toggleVariants>) {
   const context = React.useContext(ToggleGroupContext)
@@ -250,6 +256,7 @@ function ToggleGroupItem({
         toggleVariants({
           variant: legacyVariant,
           size: context.size || size,
+          shape,
         }),
         className
       )}

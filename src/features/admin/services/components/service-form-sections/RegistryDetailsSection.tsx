@@ -202,7 +202,7 @@ export function RegistryDetailsSection({
                   error={fieldState.invalid ? fieldState.error : undefined}
                 >
                   <InputGroup
-                    size="lg"
+                    fieldSize="lg"
                     className={isEdit ? "bg-muted/40" : undefined}
                   >
                     {isEdit ? (
@@ -341,7 +341,7 @@ export function RegistryDetailsSection({
                   }
                   error={fieldState.invalid ? fieldState.error : undefined}
                 >
-                  <InputGroup size="lg">
+                  <InputGroup fieldSize="lg">
                     <InputGroupAddon className={PREFIX_CELL}>
                       <PhilippinePeso aria-hidden="true" />
                     </InputGroupAddon>

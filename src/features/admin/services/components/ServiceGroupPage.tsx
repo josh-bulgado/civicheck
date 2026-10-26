@@ -213,7 +213,7 @@ export function ServiceGroupPage({ variants }: { variants: Service[] }) {
             className="min-w-0 overflow-hidden rounded-xl border border-border-strong bg-card"
           >
             <div className="flex flex-wrap items-center gap-3 border-b border-border-light px-4 py-3">
-              <InputGroup size="lg" className="min-w-48 max-w-80 flex-1">
+              <InputGroup fieldSize="lg" className="min-w-48 max-w-80 flex-1">
                 <InputGroupAddon>
                   <Search aria-hidden="true" />
                 </InputGroupAddon>

@@ -52,10 +52,15 @@ const itemVariants = cva(
         sm: "gap-2.5 px-3 py-2.5",
         xs: "gap-2 px-2.5 py-2 in-data-[slot=dropdown-menu-content]:p-0",
       },
+      shape: {
+        default: "",
+        pill: "rounded-full",
+      },
     },
     defaultVariants: {
       variant: "default",
       size: "default",
+      shape: "default",
     },
   }
 )
@@ -64,6 +69,7 @@ function Item({
   className,
   variant = "default",
   size = "default",
+  shape = "default",
   render,
   ...props
 }: useRender.ComponentProps<"div"> & VariantProps<typeof itemVariants>) {
@@ -71,7 +77,7 @@ function Item({
     defaultTagName: "div",
     props: mergeProps<"div">(
       {
-        className: cn(itemVariants({ variant, size, className })),
+        className: cn(itemVariants({ variant, size, shape, className })),
       },
       props
     ),
@@ -80,6 +86,7 @@ function Item({
       slot: "item",
       variant,
       size,
+      shape,
     },
   })
 }

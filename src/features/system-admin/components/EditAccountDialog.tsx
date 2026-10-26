@@ -138,7 +138,7 @@ function TextField({
         <Field data-invalid={fieldState.invalid} className={className}>
           <FieldLabel htmlFor={id}>{label}</FieldLabel>
           <InputGroup
-            size="lg"
+            fieldSize="lg"
             className={cn(
               groupClassName,
               fieldState.isDirty && dirtyFieldClass,

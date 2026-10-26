@@ -36,9 +36,13 @@ export function RequestsPageHeader({
         requestCount === 1 ? "request" : "requests"
       }, ${waitingCount} waiting on staff`}
     >
-
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="ghost" size="lg" onClick={() => setScannerOpen(true)}>
+        <Button
+          variant="ghost"
+          size="lg"
+          shape="pill"
+          onClick={() => setScannerOpen(true)}
+        >
           <QrCode aria-hidden="true" data-icon="inline-start" />
           Scan Tracking QR
         </Button>
