@@ -1,6 +1,6 @@
 import { createRouter } from '@tanstack/react-router'
 import { getGlobalStartContext } from '@tanstack/react-start'
-import { PageSkeleton } from '~/components/feedback/PageSkeleton'
+import { RoutePendingSkeleton } from '~/components/feedback/RoutePendingSkeleton'
 import { routeTree } from './routeTree.gen'
 
 /**
@@ -48,7 +48,7 @@ export function getRouter() {
     // second, which reads as a frozen page. Appear after a short grace period so
     // a fast load never flashes, and then stay long enough to read as a single
     // deliberate state instead of a flicker.
-    defaultPendingComponent: PageSkeleton,
+    defaultPendingComponent: RoutePendingSkeleton,
     defaultPendingMs: 250,
     defaultPendingMinMs: 250,
   })

@@ -11,6 +11,8 @@ import {
 } from "./PageSkeleton";
 import { CashierCounterSkeleton } from "~/features/cashier/components/CashierCounterSkeleton";
 import { LandingPageSkeleton } from "~/features/landing/components/LandingPageSkeleton";
+import { SystemHealthSkeleton } from "~/features/system-admin/components/SystemHealthSkeleton";
+import { SecurityCenterSkeleton } from "~/features/system-admin/components/SecurityCenterSkeleton";
 
 describe("loading UI", () => {
   it.each([
@@ -22,6 +24,8 @@ describe("loading UI", () => {
     ["document", DocumentSkeleton],
     ["cashier", CashierCounterSkeleton],
     ["landing", LandingPageSkeleton],
+    ["system health", SystemHealthSkeleton],
+    ["security center", SecurityCenterSkeleton],
   ] as [string, ComponentType][])(
     "announces the %s loading state with decorative skeletons",
     (_name, component) => {

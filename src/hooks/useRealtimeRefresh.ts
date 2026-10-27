@@ -99,6 +99,13 @@ export function useRealtimeRefresh({
     let lastRefreshAt = 0;
 
     const refreshNow = () => {
+      if (cancelled) return;
+      // Invalidating during a route change restarts its loaders. Let the
+      // destination commit first, then apply any queued background changes.
+      if (routerRef.current.state.isLoading || routerRef.current.state.status === "pending") {
+        scheduleRefresh();
+        return;
+      }
       lastRefreshAt = Date.now();
       if (onRefreshRef.current) onRefreshRef.current();
       else void routerRef.current.invalidate();

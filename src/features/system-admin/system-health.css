@@ -75,6 +75,8 @@
 .health-header-actions > .health-check-button { color: white; background: var(--primary-fill); border-color: var(--primary-fill); }
 .health-header-actions > .health-check-button:hover { background: var(--primary-fill-hover); }
 .health-header-actions > button svg { width: 16px; height: 16px; }
+.health-skeleton-action { display: flex; align-items: center; justify-content: center; gap: 7px; height: 38px; padding-inline: 14px; border: 1px solid var(--health-edge); border-radius: 999px; background: var(--card); }
+.system-health-page[data-page-skeleton] :is(.health-live-status, .health-metric-icon, .health-verdict-badge) { background-color: var(--skeleton); }
 .health-live-status { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 5px 9px; color: var(--health-success-fg); background: var(--health-success-bg); font-size: 13px; white-space: nowrap; }
 .health-live-status > span { width: 6px; height: 6px; border-radius: 50%; background: var(--health-success-dot); }
 .health-live-status[data-paused] { color: var(--health-warning-fg); background: var(--health-warning-bg); }
@@ -197,6 +199,7 @@
 .health-table-scroll { --health-table-heading-height: 32px; --health-table-row-height: min(56px, calc((100cqh - var(--health-table-heading-height) - 8px) / 5)); container-type: size; position: relative; overflow: clip; min-width: 0; min-height: 0; }
 .health-table { width: 100%; min-width: 0; border-collapse: collapse; font-size: 14px; text-align: left; }
 .health-table thead { background: var(--primary-fill); color: white; }
+.system-health-page[data-page-skeleton] .health-table thead { background: var(--health-soft); }
 .health-table thead th { height: 32px; padding: 6px; font-size: 13px; font-weight: 600; white-space: nowrap; }
 .health-table tr > :first-child { padding-left: 14px; }
 .health-table tr > :last-child { padding-right: 10px; }
@@ -357,6 +360,7 @@ html:has(.system-health-page), body:has(.system-health-page) { height: 100%; ove
   .health-page-heading h1 { font-size: 25px; }
   .health-header-actions { position: relative; padding-bottom: 24px; flex-wrap: nowrap; gap: 6px; }
   .health-header-actions > button { width: 34px; height: 34px; padding: 0; }
+  .health-skeleton-action { width: 34px; height: 34px; padding: 0; }
   .health-action-label { display: none; }
   .health-header-actions .health-live-status { position: absolute; right: 0; top: 38px; padding-block: 2px; font-size: 11px; }
   .health-status-history { margin-top: 0; padding-top: 6px; }

@@ -5,9 +5,12 @@ export function SecurityCenterSkeleton() {
   return (
     <div
       className="dashboard-page security-center-page"
+      data-page-skeleton
+      role="status"
+      aria-busy="true"
       aria-label="Loading Security Center"
     >
-      <div className="security-page-header">
+      <div className="security-page-header" aria-hidden="true">
         <div className="flex flex-col gap-2">
           <Skeleton className="h-8 w-56 rounded-lg" />
           <Skeleton className="h-4 w-48 rounded-md" />

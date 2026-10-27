@@ -1,5 +1,4 @@
 import { QuietAnchor } from "~/components/quiet-link";
-import type { CSSProperties } from "react";
 import {
   createFileRoute,
   Outlet,
@@ -18,6 +17,7 @@ import { CommandPalette } from "~/components/sidebar-01/command-palette";
 import { CityGovernmentIdentity } from "~/components/brand/civic-identity";
 import { ThemeSwitch } from "~/components/theme-switch";
 import { DashboardBreadcrumbs } from "~/components/sidebar-01/dashboard-breadcrumbs";
+import { WORKSPACE_SIDEBAR_STYLE } from "~/components/sidebar-01/workspace";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { getUnreadNotificationSummaryFn } from "~/features/notifications/notifications.queries";
 import { invalidateNotificationPreview } from "~/features/notifications/notification-preview-cache";
@@ -31,16 +31,6 @@ import { getNotificationAudience } from "~/features/notifications/notification-a
 import { WelcomeTutorial } from "~/features/onboarding/components/WelcomeTutorial";
 import { getHealthAttention } from "~/features/system-admin/system-health.functions";
 import { hasPermission, type Role } from "~/lib/permissions";
-
-// The sidebar's column, for every role: its own width, the 10px of frame to its
-// left and the 6px gap before the panel. The panel's other three sides get their
-// 10px of frame from the main column's padding. Folded, the column is the icon
-// width plus the same 16px of frame: wide enough for a 54px pill circle with room
-// to spare.
-const SIDEBAR_STYLE = {
-  "--sidebar-width": "calc(clamp(220px, 20vw, 248px) + 1rem)",
-  "--sidebar-width-icon": "4.5rem",
-} as CSSProperties;
 
 // Dashboard-shell layer: sidebar + top bar, for the browse/manage pages that
 // benefit from persistent navigation. The apply wizard deliberately sits
@@ -81,8 +71,10 @@ function refreshPortalCaches() {
 }
 
 function DashboardLayout() {
-  const isHealthPage = useRouterState({ select: (state) => state.location.pathname === "/system-admin/health" });
-  const isSecurityPage = useRouterState({ select: (state) => state.location.pathname === "/system-admin/security" });
+  // The URL changes before the outlet commits. Keep its frame with the page
+  // still on screen, including while a live reading finishes during navigation.
+  const isHealthPage = useRouterState({ select: (state) => state.matches.some((match) => match.routeId === "/_authed/_dashboard/system-admin/health") });
+  const isSecurityPage = useRouterState({ select: (state) => state.matches.some((match) => match.routeId === "/_authed/_dashboard/system-admin/security") });
   const isServiceEditor = useRouterState({
     select: (state) =>
       state.matches.some(
@@ -133,7 +125,7 @@ function DashboardLayout() {
       className={
         isCitizen ? "citizen-portal" : isServiceEditor ? undefined : "workspace-frame"
       }
-      style={isServiceEditor ? undefined : SIDEBAR_STYLE}
+      style={isServiceEditor ? undefined : WORKSPACE_SIDEBAR_STYLE}
     >
       <QuietAnchor
         href="#main-content"

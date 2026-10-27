@@ -1,4 +1,12 @@
+import type { CSSProperties } from "react";
 import type { Role } from "~/lib/permissions";
+
+// The sidebar, its 10px outer frame and the 6px gap before the main panel.
+// Shared with the pending frame so the first login keeps the same tile widths.
+export const WORKSPACE_SIDEBAR_STYLE = {
+  "--sidebar-width": "calc(clamp(220px, 20vw, 248px) + 1rem)",
+  "--sidebar-width-icon": "4.5rem",
+} as CSSProperties;
 
 export type WorkspaceDetails = {
   label: string;
