@@ -2,56 +2,37 @@ import { QuietLink as Link } from "~/components/quiet-link";
 import { CityGovernmentIdentity, CiviCheckIdentity } from "~/components/brand/civic-identity";
 
 const SiteFooter = () => (
-  <footer className="border-t border-border bg-card">
-    <div className="civic-container grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr]">
-      <div className="max-w-md">
+  <footer className="landing-footer">
+    <div className="landing-footer-main">
+      <div className="landing-footer-about">
         <CiviCheckIdentity />
-        {/*
-          The page no longer carries a standalone About section, so the office's
-          own description lands here — it is context for the footer's contact
-          block rather than a section a reader has to scroll past.
-        */}
-        <p className="mt-4 text-sm leading-6 text-muted-foreground">
+        <p>
           The City Civil Registrar Office (CCRO) of Legazpi City registers and
-          issues official birth, marriage, death, and other civil registry
-          records. CiviCheck was built to make that process clearer and faster
-          for residents and staff alike, without changing how the office legally
-          operates.
+          issues official birth, marriage, death, and other civil registry records.
         </p>
       </div>
-
       <div>
-        <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-foreground">Public services</h2>
-        <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
-          <li><Link to="/requirements" className="hover:text-primary">Check requirements</Link></li>
-          <li><Link to="/requirements" className="hover:text-primary">Submit a request</Link></li>
-          <li><Link to="/track" className="hover:text-primary">Track a request</Link></li>
+        <h2>Public services</h2>
+        <ul>
+          <li><Link to="/requirements">Check requirements</Link></li>
+          <li><Link to="/requirements">Submit a request</Link></li>
+          <li><Link to="/track">Track a request</Link></li>
         </ul>
       </div>
-
-      <div>
-        <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-foreground">Office</h2>
-        <p className="mt-4 text-sm leading-6 text-muted-foreground">
-          City Civil Registrar Office<br />City Government of Legazpi
-        </p>
-        <p className="mt-3 text-xs leading-5 text-muted-foreground">
+      <div className="landing-footer-office">
+        <h2>Office</h2>
+        <p>City Civil Registrar Office<br />City Government of Legazpi</p>
+        <p className="landing-office-note">
           Office address, hours, and contact details to be confirmed with CCRO.
         </p>
       </div>
     </div>
-
-    <div className="border-t border-border bg-background">
-      <div className="civic-container flex flex-col items-center justify-between gap-4 py-5 sm:flex-row">
-        <CityGovernmentIdentity />
-        <p className="text-center text-xs text-muted-foreground">
-          CiviCheck · City Civil Registrar Office · Legazpi City
-        </p>
-        <nav
-          aria-label="Legal"
-          className="flex gap-4 text-xs text-muted-foreground"
-        >
-          <Link to="/terms" className="hover:text-primary">Terms of Use</Link>
-          <Link to="/privacy" className="hover:text-primary">Privacy Notice</Link>
+    <div className="landing-footer-bottom">
+      <div className="landing-footer-bottom-inner">
+        <CityGovernmentIdentity className="landing-footer-city" />
+        <nav aria-label="Legal">
+          <Link to="/terms">Terms of Use</Link>
+          <Link to="/privacy">Privacy Notice</Link>
         </nav>
       </div>
     </div>

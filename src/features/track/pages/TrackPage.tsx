@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Search, FileText, Upload } from "lucide-react";
-import { enterDelay } from "~/components/motion/stagger";
+import { FileText, Upload } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
 import {
@@ -93,6 +92,12 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
     },
   });
 
+  const [trackingNumber, lastName] = useWatch({
+    control: form.control,
+    name: ["trackingNumber", "lastName"],
+  });
+  const hasLookupValues = Boolean(trackingNumber?.trim() && lastName?.trim());
+
   async function onSubmit(values: TrackValues) {
     setSubmitting(true);
     setNotFound(null);
@@ -106,6 +111,10 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
       }
       setResult(res.request);
       lookupValuesRef.current = values;
+    } catch {
+      setNotFound("We couldn't check this request right now. Please try again.");
+      setResult(null);
+      lookupValuesRef.current = null;
     } finally {
       setSubmitting(false);
     }
@@ -138,26 +147,21 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
   const payment = result ? getPaymentDetails(result.paymentStatus) : null;
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="public-service-page">
       <SiteHeader />
 
-      <main className="mx-auto w-full max-w-160 flex-1 px-5 py-14 sm:px-8">
-        <div className="civic-enter mb-8 text-center">
-          <h1 className="civic-title text-[clamp(1.75rem,4vw,2.625rem)] leading-tight">
+      <main className="public-track-main">
+          <h1 className="public-page-title">
             Track an existing request
           </h1>
-          <p className="mt-3.5 text-lg leading-relaxed text-body">
-            Enter your tracking number and the last name on the request to check
-            its status.
-          </p>
-        </div>
 
-        <div
-          className="civic-enter rounded-xl border border-border bg-card p-6 sm:p-8"
-          style={enterDelay(90)}
+        <form
+          className="public-tracking-form"
+          onSubmit={form.handleSubmit(onSubmit)}
+          noValidate
         >
           <FieldGroup>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="public-tracking-fields">
               <Controller
                 control={form.control}
                 name="trackingNumber"
@@ -166,14 +170,20 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
                     <FieldLabel htmlFor="trackingNumber">
                       Tracking number
                     </FieldLabel>
-                    <Input
+                    <input
+                      type="text"
+                      className="public-track-input"
                       id="trackingNumber"
                       placeholder="e.g. CCRO-2026-000123"
                       autoCapitalize="characters"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      aria-invalid={fieldState.invalid}
+                      aria-describedby={fieldState.invalid ? "trackingNumberError" : undefined}
                       {...field}
                     />
                     {fieldState.invalid && (
-                      <FieldError errors={[fieldState.error]} />
+                      <FieldError id="trackingNumberError" errors={[fieldState.error]} />
                     )}
                   </Field>
                 )}
@@ -186,13 +196,18 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
                     <FieldLabel htmlFor="lastName">
                       Last name on the request
                     </FieldLabel>
-                    <Input
+                    <input
+                      type="text"
+                      className="public-track-input"
                       id="lastName"
                       placeholder="e.g. Dela Cruz"
+                      autoComplete="family-name"
+                      aria-invalid={fieldState.invalid}
+                      aria-describedby={fieldState.invalid ? "lastNameError" : undefined}
                       {...field}
                     />
                     {fieldState.invalid && (
-                      <FieldError errors={[fieldState.error]} />
+                      <FieldError id="lastNameError" errors={[fieldState.error]} />
                     )}
                   </Field>
                 )}
@@ -201,16 +216,13 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
           </FieldGroup>
 
           <Button
-            type="button"
-            onClick={form.handleSubmit(onSubmit)}
-            disabled={submitting}
-            className="civic-press mt-5 w-full sm:w-auto"
+            type="submit"
+            disabled={submitting || !hasLookupValues}
+            className="public-track-button"
           >
             {submitting ? (
               <Spinner data-icon="inline-start" />
-            ) : (
-              <Search data-icon="inline-start" aria-hidden="true" />
-            )}
+            ) : null}
             {submitting ? "Searching..." : "Track request"}
           </Button>
 
@@ -220,13 +232,13 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
               <AlertDescription>{notFound}</AlertDescription>
             </Alert>
           )}
-        </div>
+        </form>
 
         {submitting ? (
           <PanelSkeleton
             label="Loading request status"
             rows={3}
-            className="mt-6 rounded-xl border border-border bg-card p-6 sm:p-8"
+            className="public-tracking-result mt-6 border border-border bg-card p-6 sm:p-8"
           />
         ) : null}
 
@@ -235,7 +247,7 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
           // the entrance instead of silently swapping the numbers in place.
           <div
             key={result.trackingNumber}
-            className="civic-enter mt-6 rounded-xl border border-border bg-card p-6 sm:p-8"
+            className="public-tracking-result civic-enter mt-6 border border-border bg-card p-6 sm:p-8"
           >
             <div className="mb-5 flex items-start gap-3">
               <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">

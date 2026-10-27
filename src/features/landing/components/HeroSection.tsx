@@ -1,248 +1,165 @@
-import { QuietLink as Link } from "~/components/quiet-link";
-import { ArrowRight, Building2, Clock, Landmark, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Pause, Play } from "lucide-react";
+import { QuietLink as Link } from "~/components/quiet-link";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { FeaturedChecklist } from "../landing.queries";
-import { enterDelay, staggerStyle } from "~/components/motion/stagger";
-import { cn } from "~/lib/utils";
+import { landingAssets } from "../landing-assets";
 
-const trustPoints = [
-  { icon: Landmark, label: "Official CCRO service" },
-  { icon: ShieldCheck, label: "Free to check requirements" },
-  { icon: Clock, label: "No repeat trips" },
+const documentTypes = [
+  { group: "birth_ontime", label: "Birth", title: "Birth Certificate" },
+  { group: "marriage_license", label: "Marriage", title: "Marriage License" },
+  { group: "death_delayed", label: "Death", title: "Death Certificate" },
+  { group: "ctc_issuance", label: "Certified copy", title: "Certified True Copy" },
 ];
 
-/** How long each checklist holds before the card turns over. */
-const HOLD_MS = 5000;
-/** Fade-out duration; the swap happens at the end of it. */
-const FADE_MS = 340;
+const CHECKLIST_INTERVAL_MS = 5000;
 
-/**
- * Drive the hero card's turn-over.
- *
- * The rotation is decorative — it samples the catalogue for a visitor who has
- * not picked a document yet — so it yields to anything that suggests the
- * visitor is actually reading: a hover, a keyboard focus, or a
- * `prefers-reduced-motion` setting. It also stands down entirely when there is
- * only one checklist to show.
- */
-const useChecklistRotation = (count: number) => {
-  const [index, setIndex] = useState(0);
-  const [fading, setFading] = useState(false);
-  const [paused, setPaused] = useState(false);
-  const [reducedMotion, setReducedMotion] = useState(false);
+function ChecklistCard({ checklists }: { checklists: FeaturedChecklist[] }) {
+  const [activeGroup, setActiveGroup] = useState(documentTypes[0].group);
+  const [rotationEnabled, setRotationEnabled] = useState(true);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [pageVisible, setPageVisible] = useState(true);
 
   useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReducedMotion(query.matches);
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setRotationEnabled(!motion.matches);
+    setPageVisible(!document.hidden);
 
-    const onChange = (event: MediaQueryListEvent) => setReducedMotion(event.matches);
-    query.addEventListener("change", onChange);
-    return () => query.removeEventListener("change", onChange);
+    const onMotionChange = (event: MediaQueryListEvent) => setRotationEnabled(!event.matches);
+    const onVisibilityChange = () => setPageVisible(!document.hidden);
+    motion.addEventListener("change", onMotionChange);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      motion.removeEventListener("change", onMotionChange);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, []);
 
-  // Hold the current checklist, then start the fade. Re-running on `index`
-  // restarts the clock for each slide; re-running on `paused` cancels a hold
-  // in progress and gives the visitor a fresh full read when they leave.
+  const canRotate = rotationEnabled && !hovered && !focused && pageVisible;
+
   useEffect(() => {
-    if (count < 2 || paused || reducedMotion) return;
-
-    const hold = window.setTimeout(() => setFading(true), HOLD_MS);
-    return () => window.clearTimeout(hold);
-  }, [count, index, paused, reducedMotion]);
-
-  // Swap at the bottom of the fade. Deliberately not gated on `paused`: a
-  // pause landing mid-fade should finish the transition rather than strand the
-  // card half faded out.
-  useEffect(() => {
-    if (!fading) return;
-
-    const swap = window.setTimeout(() => {
-      setIndex((current) => (current + 1) % count);
-      setFading(false);
-    }, FADE_MS);
-    return () => window.clearTimeout(swap);
-  }, [count, fading]);
-
-  // Clamp rather than reset, so an admin editing the catalogue cannot leave the
-  // card pointing past the end of the list.
-  const safeIndex = count ? index % count : 0;
-
-  return {
-    index: safeIndex,
-    fading,
-    pause: () => setPaused(true),
-    resume: () => setPaused(false),
-  };
-};
-
-const ChecklistCard = ({ checklists }: { checklists: FeaturedChecklist[] }) => {
-  const { index, fading, pause, resume } = useChecklistRotation(checklists.length);
-  const checklist = checklists[index];
-
-  // Applied to every element whose text changes between slides, so the card
-  // crossfades as one piece instead of each part flickering on its own.
-  const swapClass = cn(
-    "transition-[opacity,transform] duration-[340ms] ease-out",
-    fading ? "-translate-y-1.5 opacity-0" : "translate-y-0 opacity-100",
-  );
+    if (!canRotate) return;
+    const timer = window.setTimeout(() => {
+      setActiveGroup((current) => {
+        const index = documentTypes.findIndex((entry) => entry.group === current);
+        return documentTypes[(index + 1) % documentTypes.length].group;
+      });
+    }, CHECKLIST_INTERVAL_MS);
+    return () => window.clearTimeout(timer);
+  }, [activeGroup, canRotate]);
 
   return (
-    <Link
-      to="/requirements"
-      search={{ code: checklist.linkCode }}
-      onMouseEnter={pause}
-      onMouseLeave={resume}
-      onFocus={pause}
-      onBlur={resume}
-      className="civic-card group civic-interactive civic-lift block overflow-hidden shadow-[0_20px_48px_rgba(15,27,45,0.1)] hover:border-primary/30 hover:shadow-[0_24px_56px_rgba(15,27,45,0.14)]"
+    <Tabs
+      value={activeGroup}
+      onValueChange={(value) => {
+        if (typeof value === "string") setActiveGroup(value);
+      }}
+      onPointerEnter={(event) => {
+        if (event.pointerType === "mouse") setHovered(true);
+      }}
+      onPointerLeave={() => setHovered(false)}
+      onFocusCapture={(event) => {
+        const isRotationControl = event.target instanceof HTMLElement &&
+          event.target.closest("[data-rotation-control]") !== null;
+        setFocused(!isRotationControl);
+      }}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
+      }}
+      className="landing-checklist"
     >
-      <div className="flex items-start justify-between gap-3 border-b border-border-light bg-surface-subtle px-5 py-4">
-        <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-2">
-            Requirement checklist
-          </p>
-          {/* Two lines' worth of height reserved so a one-line service name
-              does not make the whole card jump on the turn-over. */}
-          <p
-            className={cn(
-              "mt-1 flex min-h-10.25 items-center text-[15px] font-bold leading-snug text-foreground",
-              swapClass,
-            )}
-          >
-            {checklist.displayName}
-          </p>
-        </div>
-        <span
-          className={cn(
-            "shrink-0 rounded-full bg-primary-soft px-2.5 py-1 text-[11px] font-bold text-primary",
-            swapClass,
-          )}
-        >
-          {checklist.totalCount} total
-        </span>
-      </div>
-
-      <ol className={cn("flex min-h-46.5 flex-col gap-4 px-5 py-5", swapClass)}>
-        {checklist.items.map((item, i) => (
-          <li key={item.name} className="flex items-start gap-3">
-            <span className="mt-px flex size-5 shrink-0 items-center justify-center rounded-full bg-primary-soft font-mono text-[10px] font-bold text-primary">
-              {i + 1}
-            </span>
-            <span className="min-w-0">
-              <span className="block text-sm font-medium leading-5 text-foreground">
-                {item.name}
-              </span>
-              {item.source ? (
-                <span className="mt-1 flex items-start gap-1.5 text-xs leading-4 text-muted-foreground">
-                  <Building2 className="mt-px size-3 shrink-0" />
-                  {item.source}
-                </span>
-              ) : null}
-            </span>
-          </li>
+      <TabsList variant="soft" aria-label="Document requirements" className="landing-document-tabs">
+        {documentTypes.map(({ group, label }) => (
+          <TabsTrigger key={group} value={group} className="landing-document-tab">
+            {label}
+          </TabsTrigger>
         ))}
-      </ol>
+      </TabsList>
 
-      <div className="flex items-center justify-between gap-3 border-t border-border-light bg-surface-subtle px-5 py-3.5">
-        <p className={cn("text-xs font-medium text-muted-2", swapClass)}>
-          {checklist.remainingCount > 0
-            ? `+ ${checklist.remainingCount} more requirements`
-            : "Full checklist"}
-        </p>
+      {documentTypes.filter(({ group }) => group === activeGroup).map(({ group, title }) => {
+        const checklist = checklists.find((entry) => entry.group.toLowerCase() === group);
 
-        {checklists.length > 1 ? (
-          // Decorative: the card is one link, so these cannot be buttons
-          // without nesting interactive elements. They mark position only.
-          <span className="flex items-center gap-1.5" aria-hidden="true">
-            {checklists.map((entry, i) => (
-              <span
-                key={entry.group}
-                className={cn(
-                  "h-1.25 rounded-full transition-[width,background-color] duration-300",
-                  i === index ? "w-4 bg-primary" : "w-1.25 bg-border-strong",
-                )}
-              />
-            ))}
-          </span>
-        ) : null}
-
-        <span className="flex items-center gap-1.5 text-xs font-bold text-primary">
-          View all
-          <ArrowRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-1" />
-        </span>
-      </div>
-    </Link>
-  );
-};
-
-const HeroSection = ({ checklists }: { checklists: FeaturedChecklist[] }) => {
-  const hasChecklists = checklists.length > 0;
-
-  return (
-    <section className="civic-hero-backdrop overflow-hidden">
-      <div
-        className={cn(
-          "civic-container grid grid-cols-1 items-center gap-12 py-16 md:py-24 lg:gap-14",
-          hasChecklists && "lg:grid-cols-[1.12fr_0.88fr]",
-        )}
-      >
-        {/* Above the fold, so this cascades in on load rather than on scroll. */}
-        <div className="civic-stagger-auto flex flex-col gap-6">
-          <p className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-primary-soft px-3.5 py-1.5 text-xs font-bold uppercase tracking-widest text-primary">
-            <span className="size-1.5 rounded-full bg-primary" />
-            City Civil Registrar Office · Legazpi City
-          </p>
-
-          <h1 className="civic-title text-[clamp(2.125rem,3.9vw,3rem)] leading-[1.08]">
-            Know what you need.
-            <br />
-            <span className="text-primary">Before you need it.</span>
-          </h1>
-
-          <p className="max-w-125 text-lg leading-relaxed text-body">
-            CiviCheck shows you the exact requirements for your civil registry
-            document — then tracks your request from submission to release. No
-            more repeat trips to the CCRO.
-          </p>
-
-          <div className="flex flex-wrap gap-3.5 pt-1">
-            <Link
-              to="/requirements"
-              className="group civic-press inline-flex min-h-12 items-center gap-2 rounded-lg bg-primary-fill px-6 text-[15px] font-semibold text-white shadow-[0_8px_20px_rgba(11,77,162,0.22)] hover:bg-primary-hover hover:shadow-[0_10px_26px_rgba(11,77,162,0.3)]"
-            >
-              Check my requirements
-              <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" />
-            </Link>
-            <Link
-              to="/track"
-              className="civic-press inline-flex min-h-12 items-center rounded-lg border border-control-border bg-card px-6 text-[15px] font-semibold text-foreground hover:border-primary/40 hover:text-primary"
-            >
-              Track an existing request
-            </Link>
-          </div>
-
-          <ul className="civic-stagger flex flex-wrap items-center gap-x-6 gap-y-2.5 pt-3">
-            {trustPoints.map(({ icon: Icon, label }, index) => (
-              <li
-                key={label}
-                style={staggerStyle(index, 420)}
-                className="flex items-center gap-2 text-[13px] font-medium text-muted-2"
+        return (
+          <TabsContent key={group} value={group} className="landing-checklist-panel">
+            <div className="landing-checklist-body">
+              <h2>{title}</h2>
+              {checklist ? <p className="sr-only">{checklist.displayName}</p> : null}
+              {checklist ? (
+                <ol className="landing-requirements">
+                  {checklist.items.map((item, index) => (
+                    <li key={item.name}>
+                      <span className="landing-requirement-number" aria-hidden="true">{index + 1}</span>
+                      <span>{item.name}</span>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="landing-checklist-unavailable">
+                  Open the service guide to check the current requirements for this document.
+                </p>
+              )}
+            </div>
+            <div className="landing-checklist-actions">
+              <button
+                type="button"
+                data-rotation-control
+                className="landing-rotation-toggle"
+                aria-label={rotationEnabled ? "Pause automatic rotation" : "Start automatic rotation"}
+                title={rotationEnabled ? "Pause automatic rotation" : "Start automatic rotation"}
+                onClick={() => setRotationEnabled((enabled) => !enabled)}
               >
-                <Icon className="size-4 text-primary/70" />
-                {label}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {hasChecklists ? (
-          <div className="civic-enter" style={enterDelay(260)}>
-            <ChecklistCard checklists={checklists} />
-          </div>
-        ) : null}
-      </div>
-    </section>
+                {rotationEnabled ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
+              </button>
+              {checklist && checklist.remainingCount > 0 ? (
+                <Link
+                  to="/requirements"
+                  search={{ code: checklist.linkCode }}
+                  className="landing-more-requirements"
+                >
+                  + {checklist.remainingCount} more<span className="landing-more-label"> requirements</span>
+                </Link>
+              ) : null}
+              <Link
+                to="/requirements"
+                search={{ code: checklist?.linkCode }}
+                className="landing-button landing-button-primary landing-start-button"
+              >
+                {checklist ? "Start application" : "Check requirements"}
+              </Link>
+            </div>
+          </TabsContent>
+        );
+      })}
+    </Tabs>
   );
-};
+}
+
+const HeroSection = ({ checklists }: { checklists: FeaturedChecklist[] }) => (
+  <section className="landing-hero" aria-labelledby="landing-title">
+    <img className="landing-hero-background" src={landingAssets.background} alt="" aria-hidden="true" />
+    <div className="landing-hero-content">
+      <div className="landing-hero-copy">
+        <h1 id="landing-title">
+          Know what<br />you need.
+          <span>Before you need it.</span>
+        </h1>
+        <div className="landing-hero-actions">
+          <Link to="/requirements" className="landing-button landing-button-primary">
+            Check requirements
+          </Link>
+          <Link to="/track" className="landing-button landing-button-secondary">
+            Track a request
+          </Link>
+        </div>
+      </div>
+      <div className="landing-hero-preview">
+        <img className="landing-certificate-art" src={landingAssets.certificate} alt="" aria-hidden="true" />
+        <img className="landing-id-art" src={landingAssets.id} alt="" aria-hidden="true" />
+        <ChecklistCard checklists={checklists} />
+      </div>
+    </div>
+  </section>
+);
 
 export default HeroSection;
