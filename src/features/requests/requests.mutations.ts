@@ -11,6 +11,7 @@ import {
   getStatusDetails,
   isPaymentSettled,
   isRequestStatus,
+  needsOfficeFinalValidation,
   type RequestStatus,
 } from "~/features/requests/request-workflow";
 import {
@@ -123,7 +124,7 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
     const { data: request, error: fetchError } = await supabase
       .from("requests")
       .select(
-        "id, status, payment_status, tracking_number, services_registry(department_id)",
+        "id, status, payment_status, tracking_number, request_type, services_registry(department_id)",
       )
       .eq("id", data.requestId)
       .single();
@@ -226,7 +227,12 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
       console.error("Failed to write request status audit log", logError);
     }
 
-    const notificationContent = buildStatusChangeEmail(toStatus, request.tracking_number, remarks);
+    const notificationContent = buildStatusChangeEmail(
+      toStatus,
+      request.tracking_number,
+      remarks,
+      request.request_type,
+    );
     await dispatchApplicantNotification(supabase, data.requestId, notificationContent);
 
     return { error: false, status: toStatus, trackingNumber: request.tracking_number };
@@ -329,7 +335,7 @@ export const setAttachmentVerificationFn = createServerFn({ method: "POST" })
     const { data: attachment, error: fetchError } = await supabase
       .from("requirements_attachments")
       .select(
-        "id, request_id, requirement_name, requests(status, tracking_number, services_registry(department_id))",
+        "id, request_id, requirement_name, requests(status, tracking_number, request_type, services_registry(department_id))",
       )
       .eq("id", data.attachmentId)
       .single();
@@ -420,7 +426,10 @@ export const setAttachmentVerificationFn = createServerFn({ method: "POST" })
         siblings.length > 0 &&
         siblings.every((s) => s.verification_status === "approved");
 
-      if (allApproved) {
+      // Not for services with a final office check: "no need to visit yet" would
+      // contradict the go-to-the-office notice sent when staff mark requirements
+      // complete.
+      if (allApproved && !needsOfficeFinalValidation(requestInfo?.request_type)) {
         const trackingNumber = requestInfo?.tracking_number;
         if (trackingNumber) {
           const notificationContent = buildPreValidationCompleteEmail(trackingNumber);

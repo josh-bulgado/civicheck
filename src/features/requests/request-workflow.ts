@@ -74,6 +74,35 @@ export const RETURNABLE_TO_VALIDATION: RequestStatus[] = [
   "ready_for_release",
 ];
 
+/**
+ * Services where "requirements complete" (the move into processing) only
+ * accepts the uploaded copy: the applicant must then visit the office with the
+ * hard copies for staff's final validation, before the request can be marked
+ * ready for release. On-time and delayed marriage, birth and death registration
+ * all work this way.
+ */
+const OFFICE_FINAL_VALIDATION_SERVICE_CODES = [
+  "MARRIAGE_ONTIME",
+  "MARRIAGE_DELAYED",
+  "OTCOLB-MARITAL",
+  "OTCOLB-NONMARITAL",
+  "DCOLB-0079-BRAP",
+  "DCOLB-0079-NORMAL-MARITAL",
+  "DCOLB-0079-NORMAL-NONMARITAL",
+  "DCOLB-80UP-BRAP",
+  "DCOLB-80UP-NORMAL-MARITAL",
+  "DCOLB-80UP-NORMAL-NONMARITAL",
+  "DEATH_ONTIME",
+  "DEATH_DELAYED",
+];
+
+export function needsOfficeFinalValidation(serviceCode: string | null | undefined): boolean {
+  return (
+    !!serviceCode &&
+    OFFICE_FINAL_VALIDATION_SERVICE_CODES.includes(serviceCode.toUpperCase())
+  );
+}
+
 /** Statuses that end the request's life — nothing transitions out of these. */
 export const TERMINAL_STATUSES: RequestStatus[] = ["rejected", "released"];
 

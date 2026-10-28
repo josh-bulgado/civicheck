@@ -2,7 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail } from "~/utils/resend";
 import { getStatusDetails } from "~/features/services/request-status";
 import type { NotificationType } from "~/features/notifications/notifications.queries";
-import type { RequestStatus } from "~/features/requests/request-workflow";
+import {
+  needsOfficeFinalValidation,
+  type RequestStatus,
+} from "~/features/requests/request-workflow";
 
 function escapeHtml(value: string) {
   return value.replace(
@@ -47,7 +50,20 @@ export function buildStatusChangeEmail(
   status: RequestStatus,
   trackingNumber: string,
   remarks?: string | null,
+  serviceCode?: string | null,
 ): NotificationContent {
+  if (status === "processing" && needsOfficeFinalValidation(serviceCode)) {
+    return composeContent(
+      "status_change",
+      `Request ${trackingNumber}: go to the CCRO for final validation`,
+      [
+        `The documents you uploaded for request ${trackingNumber} have been accepted.`,
+        `You can now go to the CCRO office for final validation. Please bring the hard copies of your requirements so staff can check them.`,
+        `Also bring your tracking number (${trackingNumber}): a printout of your acknowledgment from "My Requests", or write it down.`,
+      ],
+      `open "My Requests" for the full details.`,
+    );
+  }
   const label = getStatusDetails(status).label;
   const subject = `Request ${trackingNumber}: now ${label}`;
   const lines = [`Your CiviCheck request ${trackingNumber} is now "${label}".`, remarks || ""].filter(

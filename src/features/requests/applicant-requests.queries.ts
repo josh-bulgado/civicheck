@@ -134,6 +134,7 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
     return {
       id: row.id,
       trackingNumber: row.tracking_number,
+      serviceCode: row.request_type as string | null,
       status: row.status,
       paymentStatus: row.payment_status,
       feesDue: Number(row.fees_due ?? 0),

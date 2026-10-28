@@ -54,6 +54,27 @@ describe("what to do next once a request is ready for release", () => {
     }
   });
 
+  it("sends an on-time marriage applicant to the office with hard copies once requirements are accepted", () => {
+    expect(
+      nextSteps({
+        status: "processing",
+        serviceCode: "MARRIAGE_ONTIME",
+        paymentStatus: "unpaid",
+        feesDue: 0,
+        allowsMessages: false,
+        attachments: [],
+        logs: [],
+      }),
+    ).toEqual({
+      kind: "steps",
+      steps: [
+        "Go to the CCRO office for final validation",
+        "Bring the hard copies of your requirements",
+        "Bring your tracking number (a printout of your acknowledgment, or write it down)",
+      ],
+    });
+  });
+
   it("sends an inquiry to the messages, with no visit and no money", () => {
     expect(ready({ feesDue: 150, paymentStatus: "unpaid", allowsMessages: true })).toEqual({
       kind: "steps",

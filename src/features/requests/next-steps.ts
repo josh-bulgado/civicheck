@@ -1,4 +1,4 @@
-import { getLogNote } from "~/features/requests/request-workflow";
+import { getLogNote, needsOfficeFinalValidation } from "~/features/requests/request-workflow";
 import { formatPesoFee } from "~/features/services/service-utils";
 
 /** What the applicant is told to do next on their request page. */
@@ -8,6 +8,7 @@ export type NextStepsView =
 
 interface NextStepsInput {
   status: string;
+  serviceCode?: string | null;
   paymentStatus: string | null;
   feesDue: number;
   allowsMessages: boolean;
@@ -32,6 +33,18 @@ export function nextSteps(input: NextStepsInput): NextStepsView | null {
   const { status } = input;
 
   if (status === "released" || status === "rejected") return null;
+
+  // Requirements accepted online; the hard copies still need the final check.
+  if (status === "processing" && needsOfficeFinalValidation(input.serviceCode)) {
+    return {
+      kind: "steps",
+      steps: [
+        "Go to the CCRO office for final validation",
+        "Bring the hard copies of your requirements",
+        "Bring your tracking number (a printout of your acknowledgment, or write it down)",
+      ],
+    };
+  }
 
   if (status === "ready_for_release") {
     // An inquiry is answered in the thread: no visit, so no originals.
