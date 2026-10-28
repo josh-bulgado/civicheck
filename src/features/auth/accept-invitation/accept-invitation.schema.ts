@@ -1,9 +1,8 @@
 import { z } from "zod";
+import { strongPasswordSchema } from "../auth.schema";
 
 export const acceptInvitationInputSchema = z.object({
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters."),
+  password: strongPasswordSchema,
 });
 
 export const acceptInvitationFormSchema = acceptInvitationInputSchema

@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { QuietLink as Link } from "~/components/quiet-link";
-import { ArrowRight, ArrowUpRight, CheckCircle2 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
 import {
@@ -129,10 +129,6 @@ export function StepInStrip({ longest, total }: StepInStripProps) {
                           <Badge variant="outline" className="bg-card/70">
                             {getStatusDetails(wait.status).label}
                           </Badge>
-                          <ArrowUpRight
-                            className="size-4.5 text-destructive/60 transition-[transform,color] group-hover/step:text-destructive motion-safe:group-hover/step:translate-x-0.5 motion-safe:group-hover/step:-translate-y-0.5"
-                            aria-hidden="true"
-                          />
                         </span>
                       </span>
                     </Link>
@@ -149,7 +145,6 @@ export function StepInStrip({ longest, total }: StepInStripProps) {
               className="civic-nudge mt-auto inline-flex min-h-11 items-center gap-2 self-start rounded-lg px-1.5 text-base font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               + {formatCount(hidden)} More in the Request Queue
-              <ArrowRight className="size-4" aria-hidden="true" />
             </Link>
           ) : null}
         </CardContent>

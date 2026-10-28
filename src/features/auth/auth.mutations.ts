@@ -33,6 +33,7 @@ import {
   otpVerificationSchema,
   signupInputSchema,
 } from "./auth.schema";
+import { describeWeakPassword } from "./password-error";
 import {
   clearIssuedOtps,
   describeRejectedOtp,
@@ -218,7 +219,13 @@ export const loginWithEmailFn = createServerFn({ method: "POST" })
         method: "password",
       });
     }
-    return { error: false };
+    // Who just signed in, so the first screen can be drawn for them while their
+    // account details are still loading. See `hintCurrentUser`.
+    return {
+      error: false,
+      userId: loginData.user.id,
+      role: (profile?.role as Role | undefined) ?? null,
+    };
   });
 
 export const loginWithOAuthFn = createServerFn({ method: "POST" })
@@ -317,9 +324,11 @@ export const signupFn = createServerFn({ method: "POST" })
     if (signUpResult.error) {
       const isJsonEmpty =
         signUpResult.error.message === "{}" || !signUpResult.error.message;
-      const cleanMessage = isJsonEmpty
-        ? "An unexpected registration error occurred. Please check your SMTP configuration in the Supabase Dashboard."
-        : signUpResult.error.message;
+      const cleanMessage =
+        describeWeakPassword(signUpResult.error) ??
+        (isJsonEmpty
+          ? "An unexpected registration error occurred. Please check your SMTP configuration in the Supabase Dashboard."
+          : signUpResult.error.message);
       return {
         error: true,
         message: cleanMessage,
@@ -505,9 +514,11 @@ export const resetPasswordFn = createServerFn({ method: "POST" })
       }
 
       const isJsonEmpty = error.message === "{}" || !error.message;
-      const cleanMessage = isJsonEmpty
-        ? "An unexpected password reset server error occurred."
-        : error.message;
+      const cleanMessage =
+        describeWeakPassword(error) ??
+        (isJsonEmpty
+          ? "An unexpected password reset server error occurred."
+          : error.message);
       return {
         error: true,
         message: cleanMessage,

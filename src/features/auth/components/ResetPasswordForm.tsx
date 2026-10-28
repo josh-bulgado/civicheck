@@ -1,5 +1,5 @@
 import { QuietLink as Link } from "~/components/quiet-link";
-import { CheckCircle, ArrowRight, AlertCircleIcon, Lock } from "lucide-react";
+import { CheckCircle, AlertCircleIcon, Lock } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { Button, buttonVariants } from "~/components/ui/button";
 import {
@@ -20,21 +20,21 @@ import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Alert, AlertTitle, AlertDescription } from "~/components/ui/alert";
 import { useState } from "react";
-import { AuthDocketPanel } from "./AuthSidePanel";
 import {
   authButtonClass,
   authFieldClass,
   authLabelClass,
-  AuthFormHeading,
-  AuthSplitLayout,
+  AuthCenteredLayout,
+  AuthStepHeading,
 } from "./AuthSplitLayout";
+import { PASSWORD_HINT, strongPasswordSchema } from "../auth.schema";
 import { PasswordToggle } from "./PasswordToggle";
 import { cn } from "~/lib/utils";
 
 const formSchema = z
   .object({
-    password: z.string().min(8, "Password is required"),
-    confirmPassword: z.string().min(8, "Please confirm you password"),
+    password: strongPasswordSchema,
+    confirmPassword: z.string().min(8, "Please confirm your password"),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Password doesn't match",
@@ -75,16 +75,15 @@ const ResetPasswordForm = () => {
   }
 
   return (
-    <AuthSplitLayout panel={<AuthDocketPanel />}>
+    <AuthCenteredLayout>
       <div className="flex flex-col gap-7">
-        <AuthFormHeading
+        <AuthStepHeading
           title={isSuccess ? "Password updated!" : "Set a new password"}
-          description={
-            isSuccess
-              ? "Your password has been reset successfully. You can now sign in with your new password."
-              : "Enter your new password below. Make sure it's at least 8 characters."
-          }
-        />
+        >
+          {isSuccess
+            ? "Your password has been reset successfully. You can now sign in with your new password."
+            : `Enter your new password below. ${PASSWORD_HINT}`}
+        </AuthStepHeading>
 
         {isSuccess ? (
           <div className="civic-enter-scale flex flex-col gap-5">
@@ -105,10 +104,6 @@ const ResetPasswordForm = () => {
               className={cn(buttonVariants(), authButtonClass, "group")}
             >
               Go to sign in
-              <ArrowRight
-                data-icon="inline-end"
-                className="transition-transform duration-200 group-hover:translate-x-1"
-              />
             </Link>
           </div>
         ) : (
@@ -145,7 +140,7 @@ const ResetPasswordForm = () => {
                         {...field}
                         id="password"
                         type={showPassword ? "text" : "password"}
-                        placeholder="At least 8 characters"
+                        placeholder="Enter a new password"
                         aria-invalid={fieldState.invalid}
                         autoComplete="new-password"
                       />
@@ -223,7 +218,7 @@ const ResetPasswordForm = () => {
           </form>
         )}
       </div>
-    </AuthSplitLayout>
+    </AuthCenteredLayout>
   );
 };
 

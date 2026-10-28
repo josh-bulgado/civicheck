@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Maximize2, RotateCcw } from "lucide-react";
+import { QuietAnchor } from "~/components/quiet-link";
 import type { AutoscaleInfoProvider, IChartApi, IPriceLine, ISeriesApi, Time, UTCTimestamp } from "lightweight-charts";
 import type { SystemHealthDashboard } from "../system-admin.types";
 import { formatResponseTime } from "../system-health.utils";
@@ -177,7 +178,7 @@ export const HealthResponseChart = memo(function HealthResponseChart({ data }: {
         </div>
         <div className="health-chart-tools"><button type="button" aria-label="Reset chart view" onClick={resetView}><RotateCcw className="size-3.5" aria-hidden="true" /></button><button type="button" aria-label="Fit all chart data" onClick={() => chart.current?.timeScale().fitContent()}><Maximize2 className="size-3.5" aria-hidden="true" /></button></div>
       </div>
-      <div className="health-chart-controls"><div role="group" aria-label="Chart time range">{RANGES.map(([seconds, label]) => <button type="button" key={seconds} aria-pressed={range === seconds} onClick={() => setRange(seconds)}>{label}</button>)}</div><a href="https://www.tradingview.com/" target="_blank" rel="noreferrer" title="TradingView Lightweight Charts™. Copyright (с) 2025 TradingView, Inc.">Charts by TradingView</a></div>
+      <div className="health-chart-controls"><div role="group" aria-label="Chart time range">{RANGES.map(([seconds, label]) => <button type="button" key={seconds} aria-pressed={range === seconds} onClick={() => setRange(seconds)}>{label}</button>)}</div><QuietAnchor href="https://www.tradingview.com/" target="_blank" rel="noreferrer" title="TradingView Lightweight Charts™. Copyright (с) 2025 TradingView, Inc.">Charts by TradingView</QuietAnchor></div>
     </section>
   );
 });

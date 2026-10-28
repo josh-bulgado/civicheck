@@ -153,11 +153,12 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
     }
 
     // Requirement validation is the whole point of this system — a request
-    // can't skip into processing while an uploaded document is still
-    // pending/rejected. Requests with zero pre-uploaded attachments (walk-ins,
-    // or applicants who didn't pre-upload) have nothing to check here; staff
-    // validated the physical originals directly.
-    if (toStatus === "processing") {
+    // can't move into processing, or on toward release, while an uploaded
+    // document is still pending/rejected. Requests with zero pre-uploaded
+    // attachments (walk-ins, or applicants who didn't pre-upload) have nothing
+    // to check here: a walk-in's papers were checked at the counter, and an
+    // online applicant's originals are checked when they claim the document.
+    if (RETURNABLE_TO_VALIDATION.includes(toStatus) || toStatus === "released") {
       const { data: attachments } = await supabase
         .from("requirements_attachments")
         .select("verification_status")
@@ -405,9 +406,9 @@ export const setAttachmentVerificationFn = createServerFn({ method: "POST" })
     }
 
     // Once nothing's left pending, the applicant's pre-validation is done —
-    // tell them they can finish this in person. This does not advance the
-    // request status: the authoritative in-person recheck still happens
-    // at under_validation.
+    // tell them so, and that there is nothing to bring in until release. This
+    // does not advance the request status: staff still mark requirements
+    // complete, and the originals are matched to these uploads at release.
     if (data.status === "approved") {
       const { data: siblings } = await supabase
         .from("requirements_attachments")
@@ -471,15 +472,29 @@ export const revertAttachmentVerificationFn = createServerFn({ method: "POST" })
       }
     }
 
+    const blockedReason = documentReviewBlockedReason(requestInfo?.status);
+    if (blockedReason) {
+      return { error: true, message: blockedReason };
+    }
+
     const reason = data.reason.trim();
     const previousStatus = attachment.verification_status;
 
-    const { error } = await supabase
+    const { data: reopened, error } = await supabase
       .from("requirements_attachments")
       .update({ verification_status: "pending", rejection_reason: null })
-      .eq("id", data.attachmentId);
+      .eq("id", data.attachmentId)
+      // Only the decision we read; a concurrent change is refreshed, not overwritten.
+      .eq("verification_status", previousStatus)
+      .select("id");
 
     if (error) return { error: true, message: error.message };
+    if (!reopened || reopened.length === 0) {
+      return {
+        error: true,
+        message: "Someone else just updated this document. Refresh and try again.",
+      };
+    }
 
     const { error: logError } = await supabase.from("application_logs").insert({
       request_id: attachment.request_id,

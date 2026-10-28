@@ -8,15 +8,32 @@ import {
   uploadTypeOf,
 } from "~/features/apply/upload-image.utils";
 import {
+  addMissingAttachmentFn,
   getMyAttachmentSignedUrlFn,
   resubmitOwnAttachmentFn,
 } from "~/features/requests/applicant-requests.mutations";
+import type { AddableUpload } from "~/features/requests/missing-uploads";
+import { requirementUploadKey } from "~/features/services/requirement-upload.utils";
 import { AttachmentGroups } from "~/features/requests/components/AttachmentGroups";
 import { AttachmentThumbnail } from "~/features/requests/components/AttachmentThumbnail";
 import { AttachmentViewerDialog } from "~/features/requests/components/AttachmentViewerDialog";
 
 const ACCEPT = "image/jpeg,image/png,application/pdf";
 const MAX_SIZE = 10 * 1024 * 1024;
+
+/** The file ready to send, or null once the applicant has been told why not. */
+async function prepareOrExplain(file: File): Promise<File | null> {
+  if (!ACCEPT.split(",").includes(uploadTypeOf(file))) {
+    toast.error("Only JPG, PNG, or PDF files are accepted.");
+    return null;
+  }
+  const preparedFile = await prepareUploadFile(file);
+  if (preparedFile.size > MAX_SIZE) {
+    toast.error("Files must be 10 MB or smaller.");
+    return null;
+  }
+  return preparedFile;
+}
 
 type AttachmentDoc = {
   id: string;
@@ -33,11 +50,19 @@ type AttachmentDoc = {
  * or sent back wear a badge.
  */
 export function MyRequestDocumentsCard({
+  requestId,
   documents,
+  addable,
+  closed,
   onChanged,
 }: {
+  requestId: string;
   documents: AttachmentDoc[];
-  /** Called after a resubmission lands, so the route can re-run its loader. */
+  /** Checklist documents not uploaded yet; non-empty only while the request is incomplete. */
+  addable: AddableUpload[];
+  /** Released or rejected: the documents are part of the record and can't be replaced. */
+  closed: boolean;
+  /** Called after an upload lands, so the route can re-run its loader. */
   onChanged: () => void;
 }) {
   const allApproved =
@@ -71,23 +96,119 @@ export function MyRequestDocumentsCard({
           <AttachmentGroups
             docs={documents}
             renderRow={(doc, title) => (
-              <AttachmentRow key={doc.id} doc={doc} title={title} onChanged={onChanged} />
+              <AttachmentRow
+                key={doc.id}
+                doc={doc}
+                title={title}
+                canResubmit={!closed}
+                onChanged={onChanged}
+              />
             )}
           />
+        </div>
+      )}
+
+      {addable.length > 0 && (
+        <div className="mt-6 border-t border-border-lighter pt-5">
+          <h3 className="text-[17px] leading-snug font-semibold text-foreground">
+            Add a missing document
+          </h3>
+          <p className="mt-1 text-[15px] leading-[1.45] text-muted-foreground">
+            If staff asked for a document you didn’t upload, add it here. You
+            don’t need to visit the CCRO for it.
+          </p>
+          <div className="mt-3 flex flex-col gap-3">
+            {addable.map((slot) => (
+              <AddDocumentRow
+                key={requirementUploadKey(slot.requirementId, slot.subjectRole)}
+                requestId={requestId}
+                slot={slot}
+                onChanged={onChanged}
+              />
+            ))}
+          </div>
         </div>
       )}
     </section>
   );
 }
 
+function AddDocumentRow({
+  requestId,
+  slot,
+  onChanged,
+}: {
+  requestId: string;
+  slot: AddableUpload;
+  onChanged: () => void;
+}) {
+  const fileInput = useRef<HTMLInputElement | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleFile(file: File) {
+    setSubmitting(true);
+    try {
+      const preparedFile = await prepareOrExplain(file);
+      if (!preparedFile) return;
+
+      const formData = new FormData();
+      formData.set("file", preparedFile);
+      formData.set("requestId", requestId);
+      formData.set("requirementId", slot.requirementId);
+      if (slot.subjectRole) formData.set("subjectRole", slot.subjectRole);
+
+      const res = await addMissingAttachmentFn({ data: formData });
+      if (res.error) {
+        toast.error(res.message);
+        return;
+      }
+      toast.success("Document added for review.");
+      onChanged();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-[20px] border border-border-lighter p-4 sm:flex-row sm:items-center">
+      <p className="min-w-0 flex-1 text-[17px] leading-snug font-semibold text-foreground">
+        {slot.subjectRole ? `${slot.subjectRole}: ` : ""}
+        {slot.requirementName}
+      </p>
+      <Input
+        ref={fileInput}
+        type="file"
+        accept={ACCEPT}
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleFile(file);
+          e.target.value = "";
+        }}
+      />
+      <Button
+        variant="outline"
+        className="h-12 shrink-0 rounded-full px-5 text-base font-semibold"
+        disabled={submitting}
+        onClick={() => fileInput.current?.click()}
+      >
+        <Upload data-icon="inline-start" />
+        {submitting ? "Uploading..." : "Upload"}
+      </Button>
+    </div>
+  );
+}
+
 function AttachmentRow({
   doc,
   title,
+  canResubmit,
   onChanged,
 }: {
   doc: AttachmentDoc;
   /** Overrides the requirement name, e.g. "File 2 of 3" inside a group. */
   title?: string;
+  canResubmit: boolean;
   onChanged: () => void;
 }) {
   const fileInput = useRef<HTMLInputElement | null>(null);
@@ -121,18 +242,10 @@ function AttachmentRow({
   }
 
   async function handleFile(file: File) {
-    if (!ACCEPT.split(",").includes(uploadTypeOf(file))) {
-      toast.error("Only JPG, PNG, or PDF files are accepted.");
-      return;
-    }
-
     setSubmitting(true);
     try {
-      const preparedFile = await prepareUploadFile(file);
-      if (preparedFile.size > MAX_SIZE) {
-        toast.error("Files must be 10 MB or smaller.");
-        return;
-      }
+      const preparedFile = await prepareOrExplain(file);
+      if (!preparedFile) return;
 
       const formData = new FormData();
       formData.set("file", preparedFile);
@@ -185,7 +298,7 @@ function AttachmentRow({
         </div>
       </div>
 
-      {rejected && (
+      {rejected && canResubmit && (
         <>
           <Input
             ref={fileInput}

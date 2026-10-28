@@ -1,6 +1,6 @@
 import { QuietAnchor } from "~/components/quiet-link";
 import * as React from "react";
-import { ArrowRight, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 
 import { Button, buttonVariants } from "~/components/ui/button";
 import {
@@ -130,7 +130,6 @@ export default function Hero01() {
 
         <Button size="lg" className="mt-2 rounded-full px-7">
           Browse the catalog
-          <ArrowRight data-icon="inline-end" />
         </Button>
       </div>
     </section>

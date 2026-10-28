@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { QuietLink as Link } from "~/components/quiet-link";
-import { ArrowLeft } from "lucide-react";
 import { CiviCheckIdentity } from "~/components/brand/civic-identity";
 import { enterDelay } from "~/components/motion/stagger";
 import { ThemeSwitch } from "~/components/theme-switch";
@@ -108,10 +107,6 @@ export function AuthBackLink({
         "group w-fit rounded-full border-border-light bg-card px-3.5 text-[13px] font-semibold text-foreground hover:bg-surface-subtle",
       )}
     >
-      <ArrowLeft
-        className="transition-transform duration-200 group-hover:-translate-x-0.5"
-        aria-hidden="true"
-      />
       {children}
     </Link>
   );

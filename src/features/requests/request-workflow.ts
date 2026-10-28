@@ -38,13 +38,14 @@ export const STAGE_OF: Record<RequestStatus, WorkflowStage> = {
 };
 
 // NOTE: the staff-notification trigger `trg_notify_request_status_changed`
-// (supabase/migrations/20261010121000_add_staff_notification_triggers.sql)
+// (latest: supabase/migrations/20261029121000_route_repaid_release_to_admin.sql)
 // mirrors these hops in SQL: ready_for_release only out of processing,
 // incomplete only out of under_validation, rejected only out of an open stage.
 // Change one side without the other and the alerts silently stop.
 // The database guard `guard_request_workflow`
-// (supabase/migrations/20261027120000_security_hardening.sql) also lists every
-// hop, and refuses any other: add a hop here and it must be added there too.
+// (latest: supabase/migrations/20261029120000_hold_documents_through_release.sql)
+// also lists every hop, and refuses any other: add a hop here and it must be
+// added there too.
 export const ALLOWED_TRANSITIONS: Record<RequestStatus, RequestStatus[]> = {
   submitted: ["under_validation", "rejected"],
   under_validation: ["incomplete", "processing", "rejected"],

@@ -191,6 +191,8 @@ export function getStatusDetails(status: string | null): StatusDetails {
       return { label: "Document Rejected", styles: TONE_STYLES.destructive, dot: "bg-health-error-dot", variant: "destructive" };
     case "document_resubmitted":
       return { label: "Document Resubmitted", styles: TONE_STYLES.warning, dot: "bg-health-neutral-dot", variant: "warning" };
+    case "document_uploaded":
+      return { label: "Document Uploaded", styles: TONE_STYLES.warning, dot: "bg-health-neutral-dot", variant: "warning" };
     case "payment_verified":
       return { label: "Payment Verified", styles: TONE_STYLES.success, dot: "bg-health-neutral-dot", variant: "success" };
     case "document_reverted":

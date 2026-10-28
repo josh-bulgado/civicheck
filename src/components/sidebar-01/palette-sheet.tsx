@@ -3,7 +3,7 @@
 import { Fragment, type ReactNode } from "react";
 import { Command as CommandPrimitive } from "cmdk";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-import { ChevronRight, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { Skeleton } from "~/components/ui/skeleton";
 import {
   Dialog,
@@ -158,16 +158,6 @@ export function PaletteRow({
       </span>
       {trailing}
     </CommandPrimitive.Item>
-  );
-}
-
-/** The arrow at the end of a row that opens something. */
-export function RowChevron() {
-  return (
-    <ChevronRight
-      className="size-4.5 shrink-0 text-[#7a8696] dark:text-muted-foreground"
-      aria-hidden="true"
-    />
   );
 }
 

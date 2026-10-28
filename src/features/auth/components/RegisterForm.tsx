@@ -28,7 +28,11 @@ import {
 } from "~/components/ui/select";
 import { NO_SUFFIX, SUFFIXES } from "~/lib/subject-fields";
 import { LegalDialogLink } from "~/features/legal/components/LegalDialogLink";
-import { checkMiddleNameAnswer, signupFieldsSchema } from "../auth.schema";
+import {
+  checkMiddleNameAnswer,
+  PASSWORD_HINT,
+  signupFieldsSchema,
+} from "../auth.schema";
 import { useSignUp } from "../hooks/useSignUp";
 import { useOAuthLogin } from "../hooks/useOAuthLogin";
 import {
@@ -343,7 +347,7 @@ const RegisterForm = () => {
                     />
                   ) : (
                     <FieldDescription className="text-[13px] leading-5">
-                      At least 8 characters, including one number.
+                      {PASSWORD_HINT}
                     </FieldDescription>
                   )}
                 </div>

@@ -357,7 +357,7 @@ export function DocumentsWorkbench({
     <aside className="dashboard-panel min-w-0 p-5 lg:col-span-2 xl:col-span-1">
       <h2 className="mb-1 text-sm font-bold text-foreground">Submitted details</h2>
       <p className="mb-4 text-xs text-muted-foreground">
-        Compare with the original in hand.
+        Check these against the uploaded document.
       </p>
       <SubmittedDetailsCard request={request} showEmpty bare compact />
     </aside>
@@ -369,8 +369,9 @@ export function DocumentsWorkbench({
         <section className="dashboard-panel p-6">
           <h2 className="text-sm font-bold text-foreground">Documents</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Nothing was pre-uploaded. Validate the physical documents at the
-            counter.
+            {request.isWalkIn
+              ? "Walk-in. Validate the physical documents at the counter."
+              : "Nothing was uploaded. The originals are checked at release."}
           </p>
         </section>
         {details}

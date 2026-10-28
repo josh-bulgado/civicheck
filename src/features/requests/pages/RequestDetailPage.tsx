@@ -143,6 +143,7 @@ export default function RequestDetailPage({
     feesDue: request.feesDue,
     canProcess,
     attachments,
+    isWalkIn: request.isWalkIn,
   };
   const plan = planRequestActions(planInput);
   const summary = describeRequestProgress(planInput);

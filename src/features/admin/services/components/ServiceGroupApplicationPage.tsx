@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useBlocker, useRouter } from "@tanstack/react-router";
 import {
-  ArrowLeft,
-  ArrowRight,
   GitBranch,
   SlidersHorizontal,
 } from "lucide-react";
@@ -361,7 +359,6 @@ export function ServiceGroupApplicationPage({
                       size="lg"
                       onClick={() => showSection(previousSection.id)}
                     >
-                      <ArrowLeft aria-hidden="true" data-icon="inline-start" />
                       Previous
                     </Button>
                   ) : null}
@@ -373,7 +370,6 @@ export function ServiceGroupApplicationPage({
                       onClick={() => showSection(nextSection.id)}
                     >
                       {nextSection.label}
-                      <ArrowRight aria-hidden="true" data-icon="inline-end" />
                     </Button>
                   ) : null}
                 </div>

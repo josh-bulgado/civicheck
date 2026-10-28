@@ -16,7 +16,6 @@ import {
   type PaletteSearchStatus,
   PaletteSheet,
   RequestStatusLabel,
-  RowChevron,
   RowSkeleton,
   SEARCH_FAILED_LINES,
   searchState,
@@ -82,7 +81,6 @@ function ServiceRow({
       value={`service-${service.routeCode}`}
       onSelect={onSelect}
       title={<Highlight text={service.title} term={term} />}
-      trailing={<RowChevron />}
     />
   );
 }
@@ -175,7 +173,7 @@ export function PortalCommandPalette({
               onSelect={() => onSelectRoute("/my-requests")}
               className="flex cursor-default items-center rounded-2xl px-4.5 pt-2.5 pb-0.5 text-[15px] font-semibold text-primary outline-none data-selected:bg-portal-panel"
             >
-              See all requests <span aria-hidden="true">&nbsp;→</span>
+              See all requests
             </CommandPrimitive.Item>
           ) : null}
         </CommandPrimitive.Group>

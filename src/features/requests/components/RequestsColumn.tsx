@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { QuietLink as Link } from "~/components/quiet-link";
-import { ChevronRight } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { SortHeader } from "~/components/ui/data-table-column-header";
 import { formatPesoFee } from "~/features/services/service-utils";
@@ -227,19 +226,6 @@ export function createRequestColumns({
       sortDescFirst: true,
       header: ({ column }) => <SortHeader column={column}>In stage</SortHeader>,
       cell: ({ row }) => <TimeInStage request={row.original} now={now} />,
-    },
-    {
-      id: "open",
-      enableSorting: false,
-      header: () => <span className="sr-only">Open request</span>,
-      cell: () => (
-        <div className="flex justify-end">
-          <ChevronRight
-            aria-hidden="true"
-            className="size-4 text-muted-foreground"
-          />
-        </div>
-      ),
     },
   ];
 }

@@ -78,3 +78,22 @@ describe.each([
     expect(documentReviewBlockedReason("incomplete")).toBeNull();
   });
 });
+
+describe("a closed request's documents", () => {
+  beforeEach(() => {
+    state.serviceCode = "MARRIAGE_LICENSE";
+    vi.clearAllMocks();
+  });
+
+  it.each(["released", "rejected"])("take no decision once the request is %s", async (status) => {
+    state.status = status;
+    const result = await setAttachmentVerificationFn({ data: {
+      attachmentId: "00000000-0000-4000-8000-000000000001", status: "rejected", reason: "Unreadable",
+    } });
+    expect(result).toEqual({
+      error: true, message: "This request is closed. Its documents can no longer change.",
+    });
+    expect(state.writes).not.toHaveBeenCalled();
+    expect(state.notify).not.toHaveBeenCalled();
+  });
+});

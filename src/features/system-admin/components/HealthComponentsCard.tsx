@@ -1,5 +1,5 @@
 ﻿import { useState } from "react";
-import { Activity, Archive, ChevronRight, Database, Ellipsis, HardDrive, LockKeyhole, Search, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { Activity, Archive, Database, Ellipsis, HardDrive, LockKeyhole, Search, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "~/components/ui/dropdown-menu";
@@ -139,7 +139,7 @@ export function HealthComponentsCard({
       </div>
       <div className="health-service-footer">
         <span className="health-component-count" role="status">{visible.length === rows.length ? `${rows.length} components` : `${visible.length} of ${rows.length} components`}</span>
-        <button type="button" onClick={onShowSources}><ChevronRight aria-hidden="true" />Data &amp; privacy</button>
+        <button type="button" onClick={onShowSources}>Data &amp; privacy</button>
       </div>
       <Dialog open={!!selected} onOpenChange={(open) => { if (!open) showDetails(null); }}>
         <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-xl">

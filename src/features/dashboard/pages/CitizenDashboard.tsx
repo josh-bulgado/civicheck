@@ -1,5 +1,5 @@
+import { useEffect, useMemo } from "react";
 import { QuietLink } from "~/components/quiet-link";
-import { ChevronRight } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { pillButton } from "~/components/portal/styles";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
@@ -12,6 +12,7 @@ import { ContinueApplicationCard } from "../components/ContinueApplicationCard";
 import { HeroRequestCard } from "../components/HeroRequestCard";
 import { QuickStartPanel } from "../components/QuickStartPanel";
 import { SeeAllRequestsLink } from "../components/SeeAllRequestsLink";
+import { dashboardShape, rememberDashboardShape } from "../dashboard-shape";
 import { dashboardPlan } from "../hero";
 import type { CitizenDashboardRequest } from "../types";
 
@@ -20,6 +21,8 @@ interface CitizenDashboardProps {
   /** Requests with an update the applicant has not read: the sidebar badge's own source. */
   unreadRequestIds: string[];
   firstName: string;
+  /** Whose dashboard this is: what it looks like is remembered per person. */
+  userId: string;
   welcomeTutorialSeen: boolean;
 }
 
@@ -27,6 +30,7 @@ const CitizenDashboard = ({
   requests,
   unreadRequestIds,
   firstName,
+  userId,
   welcomeTutorialSeen,
 }: CitizenDashboardProps) => {
   // Keeps the page moving with the request; nothing on screen announces it.
@@ -38,10 +42,18 @@ const CitizenDashboard = ({
   const { application, ready } = useContinuableApplication();
 
   const hasRequests = requests.length > 0;
-  const { hero, attention, rows, rowsHeading, hasMore } = dashboardPlan(
-    requests,
-    new Set(unreadRequestIds),
+  const plan = useMemo(
+    () => dashboardPlan(requests, new Set(unreadRequestIds)),
+    [requests, unreadRequestIds],
   );
+  const { hero, attention, rows, rowsHeading, hasMore } = plan;
+
+  // The page's outline, for the skeletons: this one while the page waits to
+  // hydrate, and the next sign-in's before its requests have arrived.
+  const shape = useMemo(() => dashboardShape(hasRequests, plan), [hasRequests, plan]);
+  useEffect(() => {
+    if (userId) rememberDashboardShape(userId, shape);
+  }, [userId, shape]);
 
   return (
     <div className="portal-page flex-1 gap-4.5 md:gap-5" aria-busy={!ready}>
@@ -61,7 +73,7 @@ const CitizenDashboard = ({
         // Held back a beat, so a reload that hydrates straight away never shows
         // it; one that takes longer fades it in.
         <CitizenDashboardBodySkeleton
-          prominent={!hasRequests}
+          shape={shape}
           className="[--skeleton-delay:150ms]"
         />
       ) : (
@@ -136,12 +148,6 @@ function OtherRequests({
                   {service}
                 </span>
                 <StatusPill status={request.status} className="h-8 text-sm" />
-                <span
-                  className="flex size-10 shrink-0 items-center justify-center rounded-full bg-portal-panel text-body-2"
-                  aria-hidden="true"
-                >
-                  <ChevronRight className="size-4.5" />
-                </span>
               </QuietLink>
             </li>
           );

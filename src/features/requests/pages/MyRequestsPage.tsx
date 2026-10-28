@@ -1,5 +1,5 @@
 import { QuietLink } from "~/components/quiet-link";
-import { ChevronRight, FileText, Plus } from "lucide-react";
+import { FileText, Plus } from "lucide-react";
 import { staggerStyle } from "~/components/motion/stagger";
 import { pillButton } from "~/components/portal/styles";
 import { buttonVariants } from "~/components/ui/button";
@@ -173,11 +173,11 @@ export default function MyRequestsPage({ requests, unreadRequestIds }: MyRequest
 }
 
 /**
- * One request: name over tracking number, the four stage segments, the status
- * pill and a chevron. The whole row is the link to the request's detail page.
+ * One request: name over tracking number, the four stage segments and the
+ * status pill. The whole row is the link to the request's detail page.
  *
- * Wide, it is a single line. Narrow, the name and chevron keep the first line
- * and the segments and pill drop under them.
+ * Wide, it is a single line. Narrow, the name keeps the first line and the
+ * segments and pill drop under it.
  *
  * Two things set a row apart, and only these: an update the applicant has not
  * read (a blue wash and a "New" pill), and a request waiting on them (a red
@@ -191,7 +191,7 @@ function RequestRow({ request, isNew }: { request: MyRequest; isNew: boolean }) 
       to="/my-requests/$requestId"
       params={{ requestId: request.id }}
       className={cn(
-        "civic-interactive civic-nudge grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-3.5 px-5 py-4.5 max-md:gap-x-3 max-md:gap-y-2.5 max-md:px-4.5 max-md:py-4 @3xl:grid-cols-[minmax(0,1fr)_auto_auto_auto] @3xl:gap-x-7 @3xl:px-8 @3xl:py-5.5",
+        "civic-interactive civic-nudge grid grid-cols-[minmax(0,1fr)] items-center gap-x-4 gap-y-3.5 px-5 py-4.5 max-md:gap-x-3 max-md:gap-y-2.5 max-md:px-4.5 max-md:py-4 @3xl:grid-cols-[minmax(0,1fr)_auto_auto] @3xl:gap-x-7 @3xl:px-8 @3xl:py-5.5",
         isNew ? "bg-(image:--portal-unread-highlight)" : "hover:bg-foreground/3",
       )}
     >
@@ -223,7 +223,7 @@ function RequestRow({ request, isNew }: { request: MyRequest; isNew: boolean }) 
 
       {/* Wide, this wrapper steps out of the way so its two children sit in the
           row's own columns; narrow, it is the second line. */}
-      <div className="col-span-2 flex flex-wrap items-center gap-x-5 gap-y-2 max-md:col-span-1 max-md:col-start-1 max-md:row-start-2 @3xl:contents">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 @3xl:contents">
         {/* The segments are for a wider row: a phone's has the pill alone. */}
         <span className="max-md:hidden">
           <StageSegments status={request.status} />
@@ -233,13 +233,6 @@ function RequestRow({ request, isNew }: { request: MyRequest; isNew: boolean }) 
           className="max-md:h-8 max-md:px-3.25 max-md:text-sm @3xl:w-50 @3xl:justify-start"
         />
       </div>
-
-      <span
-        className="col-start-2 row-start-1 flex size-11 items-center justify-center rounded-full bg-portal-panel text-body-2 max-md:row-span-2 max-md:size-10 @3xl:col-start-4"
-        aria-hidden="true"
-      >
-        <ChevronRight className="size-4.5" />
-      </span>
     </QuietLink>
   );
 }

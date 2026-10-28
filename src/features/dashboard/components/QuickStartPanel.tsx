@@ -1,4 +1,3 @@
-import { ArrowRight } from "lucide-react";
 import { QuietLink } from "~/components/quiet-link";
 import { pillButton } from "~/components/portal/styles";
 import { cn } from "~/lib/utils";
@@ -41,19 +40,17 @@ export function QuickStartPanel({ prominent = false }: QuickStartPanelProps) {
               onClick={openWelcomeTutorial}
               className={cn(
                 HOW_IT_WORKS,
-                "civic-nudge mt-4 inline-flex items-center gap-1.5 text-[17px] font-bold md:text-lg",
+                "mt-4 inline-flex items-center text-[17px] font-bold md:text-lg",
               )}
             >
               How it works
-              <ArrowRight className="size-4.5" aria-hidden="true" />
             </button>
           </div>
           <QuietLink
             to="/services"
-            className="civic-press civic-nudge inline-flex h-13.5 max-md:w-full shrink-0 items-center justify-center gap-2.5 rounded-full bg-card/78 px-7.5 text-[17px] font-semibold whitespace-nowrap text-foreground hover:bg-card md:h-13"
+            className="civic-press inline-flex h-13.5 max-md:w-full shrink-0 items-center justify-center rounded-full bg-card/78 px-7.5 text-[17px] font-semibold whitespace-nowrap text-foreground hover:bg-card md:h-13"
           >
             See all services
-            <ArrowRight className="size-5" aria-hidden="true" />
           </QuietLink>
         </section>
         <CertificateTiles />

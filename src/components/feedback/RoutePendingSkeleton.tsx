@@ -1,4 +1,6 @@
 import { useRouterState } from "@tanstack/react-router";
+import { peekCurrentUser } from "~/features/auth/current-user";
+import { CitizenPortalFrameSkeleton } from "~/features/dashboard/CitizenPortalFrameSkeleton";
 import { SystemHealthSkeleton } from "~/features/system-admin/components/SystemHealthSkeleton";
 import { SecurityCenterSkeleton } from "~/features/system-admin/components/SecurityCenterSkeleton";
 import { PageSkeleton } from "./PageSkeleton";
@@ -9,6 +11,14 @@ import { WORKSPACE_SIDEBAR_STYLE } from "~/components/sidebar-01/workspace";
 /** Parent loaders (including session restoration) use the destination's tiles. */
 export function RoutePendingSkeleton() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+
+  // Signing in goes to /dashboard, and everyone but an applicant is sent on
+  // from there to their own home. So only an account known to be an applicant's
+  // gets the applicant's frame; anyone else, or no one known yet, keeps the
+  // neutral page rather than a frame that is about to be replaced.
+  if (pathname === "/dashboard" && peekCurrentUser()?.role === "applicant") {
+    return <CitizenPortalFrameSkeleton />;
+  }
 
   const health = pathname === "/system-admin/health";
   const security = pathname === "/system-admin/security";

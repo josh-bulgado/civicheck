@@ -36,7 +36,10 @@ export function WizardShell({
               {title}
             </h1>
             {description ? (
-              <p className="max-w-155 text-base leading-relaxed text-body-2">{description}</p>
+              // No width cap: the intros are one short sentence, and a cap
+              // narrower than the card only left a gap on the right while the
+              // last few words dropped to a second line.
+              <p className="text-base leading-relaxed text-body-2">{description}</p>
             ) : null}
           </div>
           {children}

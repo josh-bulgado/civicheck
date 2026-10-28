@@ -12,7 +12,7 @@ import {
 } from "~/components/ui/input-group";
 import { Label } from "~/components/ui/label";
 import { Separator } from "~/components/ui/separator";
-import { ArrowRight, Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { JSX, SVGProps, useState } from "react";
 import { QuietLink as Link } from "~/components/quiet-link";
 
@@ -135,7 +135,6 @@ export default function Login07() {
 
           <Button className="w-full">
             Sign in
-            <ArrowRight data-icon="inline-end" />
           </Button>
 
           <div className="text-center text-sm">

@@ -11,10 +11,9 @@ import {
   InputGroupInput,
 } from "~/components/ui/input-group";
 import {
-  newPasswordSchema,
   PASSWORD_MIN,
-  PASSWORD_NUMBER_MESSAGE,
-  passwordHasNumber,
+  PASSWORD_RULES,
+  strongPasswordSchema,
 } from "~/features/auth/auth.schema";
 import type { AccountProfile } from "../account.types";
 import { useChangePassword } from "../hooks/useChangePassword";
@@ -28,10 +27,7 @@ import { SettingsPanelBody } from "./SettingsPanelBody";
 const formSchema = z
   .object({
     currentPassword: z.string().min(1, "Enter your current password"),
-    newPassword: newPasswordSchema.refine(
-      passwordHasNumber,
-      PASSWORD_NUMBER_MESSAGE,
-    ),
+    newPassword: strongPasswordSchema,
     confirmPassword: z.string().min(1, "Confirm your new password"),
   })
   .refine((values) => values.newPassword === values.confirmPassword, {
@@ -91,7 +87,7 @@ function PasswordRules({ password }: { password: string }) {
       label: `At least ${PASSWORD_MIN} characters`,
       met: password.length >= PASSWORD_MIN,
     },
-    { label: "At least one number", met: passwordHasNumber(password) },
+    ...PASSWORD_RULES.map(({ label, test }) => ({ label, met: test(password) })),
   ];
 
   return (

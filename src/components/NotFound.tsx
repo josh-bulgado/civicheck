@@ -1,13 +1,7 @@
 import type { ReactNode } from "react";
 import { useLocation, useRouter } from "@tanstack/react-router";
 import { QuietLink as Link } from "~/components/quiet-link";
-import {
-  ArrowLeft,
-  ArrowRight,
-  ClipboardCheck,
-  Search,
-  SearchX,
-} from "lucide-react";
+import { ClipboardCheck, Search, SearchX } from "lucide-react";
 import {
   ErrorPageLayout,
   errorActionClass,
@@ -57,12 +51,10 @@ export function NotFound({ children }: { children?: ReactNode }) {
             className={errorActionClass}
             onClick={() => router.history.back()}
           >
-            <ArrowLeft data-icon="inline-start" />
             Go back
           </Button>
           <Link to={user ? "/dashboard" : "/"} className={errorLinkClass()}>
             {user ? "Go to my dashboard" : "Back to home"}
-            <ArrowRight data-icon="inline-end" />
           </Link>
         </>
       }

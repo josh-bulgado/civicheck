@@ -11,9 +11,7 @@ import {
   type Resolver,
 } from "react-hook-form";
 import {
-  ArrowLeft,
   Blocks,
-  ChevronRight,
   Info,
   Link2,
   ListChecks,
@@ -371,7 +369,6 @@ export function FormBlocksPage({
             to="/admin/services"
             className="inline-flex items-center gap-1.5 self-start text-sm font-medium text-muted-foreground hover:text-foreground"
           >
-            <ArrowLeft aria-hidden="true" className="size-4" />
             Services Registry
           </Link>
           <div>
@@ -591,7 +588,6 @@ export function FormBlocksPage({
                     Live in {usage.length}{" "}
                     {usage.length === 1 ? "form" : "forms"} · {usedServiceCount}{" "}
                     {usedServiceCount === 1 ? "service" : "services"}
-                    <ChevronRight data-icon="inline-end" />
                   </Button>
                 ) : (
                   <p className="text-sm text-muted-foreground">

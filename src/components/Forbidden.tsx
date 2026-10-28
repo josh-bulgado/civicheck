@@ -1,6 +1,6 @@
 import { useRouter } from "@tanstack/react-router";
 import { QuietLink as Link } from "~/components/quiet-link";
-import { ArrowLeft, ArrowRight, LockKeyhole, LogIn } from "lucide-react";
+import { LockKeyhole, LogIn } from "lucide-react";
 import {
   ErrorPageLayout,
   errorActionClass,
@@ -93,12 +93,10 @@ export function Forbidden({
               className={errorActionClass}
               onClick={() => router.history.back()}
             >
-              <ArrowLeft data-icon="inline-start" />
               Go back
             </Button>
             <Link to="/dashboard" className={errorLinkClass()}>
               Go to my dashboard
-              <ArrowRight data-icon="inline-end" />
             </Link>
           </>
         )

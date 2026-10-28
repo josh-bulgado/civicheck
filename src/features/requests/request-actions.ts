@@ -41,6 +41,8 @@ export interface RequestActionInput {
   feesDue: number;
   canProcess: boolean;
   attachments: { verificationStatus: string }[];
+  /** Encoded at the counter: the applicant and their papers are already there. */
+  isWalkIn?: boolean;
 }
 
 const DIALOG_OF: Partial<Record<RequestStatus, TransitionDialog>> = {
@@ -104,7 +106,9 @@ function blockedReason(
   input: RequestActionInput,
   paymentSettled: boolean,
 ): string | undefined {
-  if (to === "processing") {
+  // Processing and everything after it assume every uploaded document is
+  // accepted, the same rule advanceRequestStatusFn enforces.
+  if (to === "processing" || to === "ready_for_release" || to === "released") {
     const { pending, rejected } = documentCounts(input.attachments);
     if (rejected > 0) {
       return `${plural(rejected, "rejected document")} to resolve first`;
@@ -165,28 +169,43 @@ export function planRequestActions(input: RequestActionInput): RequestActionPlan
   return { primary, secondary: [...actions.values()], reject, notice: null };
 }
 
-/** The line under the header: where the request stands and what comes next. */
+/**
+ * The line under the header: where the request stands and what comes next.
+ *
+ * Online applicants visit once, at release (CLAUDE.md §4). Validation is the
+ * online review of their uploads; the originals are matched against those
+ * uploads when the document is claimed. Only a walk-in is at the counter
+ * during validation.
+ */
 export function describeRequestProgress(input: RequestActionInput): string {
   const { pending, rejected, approved, total } = documentCounts(input.attachments);
   switch (input.status) {
     case "submitted":
       return "Nobody has reviewed this yet.";
     case "under_validation":
+      if (input.isWalkIn) {
+        return "Walk-in. Validate the physical documents at the counter.";
+      }
       if (total === 0) {
-        return "Nothing was pre-uploaded. Validate the physical documents at the counter.";
+        return "Nothing was uploaded. Check the submitted details. The originals are checked at release.";
       }
       if (pending === 0 && rejected === 0) {
-        return "Every document is accepted. Compare the originals at the counter, then mark requirements complete.";
+        return "Every document is accepted. Mark requirements complete. The originals are matched to these uploads at release.";
       }
       return `${approved} accepted · ${pending} pending · ${rejected} rejected`;
     case "incomplete":
-      return "Waiting for the applicant to bring or upload what was missing.";
+      return input.isWalkIn
+        ? "Waiting for the applicant to bring what was missing."
+        : "Waiting for the applicant to upload what was missing.";
     case "processing":
       return "Prepare the record, then mark it ready for release.";
     case "ready_for_release":
-      return isPaymentSettled(input.paymentStatus)
-        ? "Paid. Check the claimant’s ID and hand over the document."
-        : "Prepared. Waiting for the cashier to verify payment.";
+      if (!isPaymentSettled(input.paymentStatus)) {
+        return "Prepared. Waiting for the cashier to verify payment.";
+      }
+      return total > 0
+        ? "Paid. Check the claimant’s ID and match the originals to the uploads, then hand over the document."
+        : "Paid. Check the claimant’s ID and hand over the document.";
     case "released":
       return "Released. Nothing left to do.";
     case "rejected":

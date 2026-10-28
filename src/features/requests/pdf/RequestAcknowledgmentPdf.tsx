@@ -49,7 +49,7 @@ function nextAction(status: string) {
     case "incomplete":
       return {
         title: "Action needed: complete your requirements",
-        detail: "Open My Requests to review the missing or incorrect documents flagged by staff. Upload corrected files or bring them as instructed.",
+        detail: "Open My Requests to review the missing or incorrect documents flagged by staff, and upload corrected files there. There is no need to visit until your request is Ready for Release.",
       };
     case "rejected":
       return {
@@ -87,7 +87,7 @@ function visitSteps(departmentName: string | null | undefined, feesDue: number) 
   return [
     {
       title: "Present your QR or number",
-      detail: `Go to ${where} and show the QR code or tracking number on this slip. Bring your original documents.`,
+      detail: `Come once your request is Ready for Release. Go to ${where} and show the QR code or tracking number on this slip. Bring the originals of the documents you uploaded.`,
     },
     feesDue > 0
       ? {

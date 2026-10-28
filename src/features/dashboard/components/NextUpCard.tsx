@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { QuietLink as Link } from "~/components/quiet-link";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
 import { buttonVariants } from "~/components/ui/button";
@@ -121,7 +121,6 @@ export function NextUpCard({ request, total }: NextUpCardProps) {
               className="civic-nudge inline-flex min-h-11 items-center gap-2 rounded-lg px-1.5 text-base font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               See All {formatCount(total)} That Need You
-              <ArrowRight className="size-4" aria-hidden="true" />
             </Link>
           ) : null}
         </div>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
-import { ArrowRight, BadgeCheck, BellRing, HandHeart, ListChecks, Send, X, type LucideIcon } from "lucide-react";
+import { BadgeCheck, BellRing, HandHeart, ListChecks, Send, type LucideIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
@@ -112,20 +112,17 @@ export function WelcomeTutorial() {
   }, [open]);
 
   return (
-    <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
+    // Only the buttons inside close it: a click on the dimmed page behind does
+    // nothing, and there is no corner X.
+    <Dialog
+      open={open}
+      onOpenChange={(next) => (next ? setOpen(true) : close())}
+      disablePointerDismissal
+    >
       <DialogContent
         showCloseButton={false}
         className="max-h-[calc(100dvh-2rem)] gap-0 overflow-y-auto overflow-x-hidden rounded-[20px] p-0 shadow-[0_24px_60px_rgba(15,27,45,0.3)] sm:max-w-[580px] data-open:slide-in-from-bottom-8 data-open:duration-(--duration-slow) data-open:ease-(--ease-civic-emphasized) motion-reduce:data-open:animate-none motion-reduce:data-closed:animate-none"
       >
-        <button
-          type="button"
-          onClick={close}
-          aria-label="Close tutorial"
-          className="absolute top-3.5 right-3.5 z-10 flex size-11 items-center justify-center rounded-full bg-card/85 text-body-strong transition-colors hover:bg-card"
-        >
-          <X className="size-5" aria-hidden="true" />
-        </button>
-
         <div className="overflow-hidden">
           <div
             className="flex transition-transform duration-[380ms] ease-[cubic-bezier(.22,.61,.36,1)] motion-reduce:transition-none"
@@ -200,9 +197,8 @@ export function WelcomeTutorial() {
             <Button type="button" variant="ghost" onClick={back} className="h-13 px-4.5 text-[17px] font-semibold">
               {isFirst ? "Skip" : "Back"}
             </Button>
-            <Button type="button" onClick={next} className="h-13 gap-2 px-5.5 text-[17px] font-bold">
+            <Button type="button" onClick={next} className="h-13 px-5.5 text-[17px] font-bold">
               {isFirst ? "Show me" : isLast ? "Find my document" : "Next"}
-              <ArrowRight className="size-[18px]" aria-hidden="true" />
             </Button>
           </div>
         </div>

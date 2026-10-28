@@ -44,6 +44,7 @@ function RouteComponent() {
       requests={requests}
       unreadRequestIds={unreadRequestIds}
       firstName={user?.firstName ?? ""}
+      userId={user?.id ?? ""}
       welcomeTutorialSeen={user?.welcomeTutorialSeen ?? false}
     />
   );

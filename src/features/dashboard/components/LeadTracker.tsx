@@ -1,11 +1,7 @@
 import { Check } from "lucide-react";
-import {
-  STAGE_LABELS,
-  stageOf,
-  type WorkflowStage,
-} from "~/features/requests/request-workflow";
+import { STAGE_LABELS, type WorkflowStage } from "~/features/requests/request-workflow";
 import { cn } from "~/lib/utils";
-import type { TrackerDetails } from "../hero";
+import { trackerProgress, type TrackerDetails } from "../hero";
 
 const STAGES: WorkflowStage[] = [1, 2, 3, 4];
 
@@ -18,8 +14,8 @@ const STAGES: WorkflowStage[] = [1, 2, 3, 4];
  * progress is the smaller `StageTracker`.
  *
  * A submitted request has finished Submission and nothing is under way yet, so
- * no stage is "here"; any other status is in its own stage, with the ones
- * before it done.
+ * no stage is "here"; a released one has finished all four. Any other status is
+ * in its own stage, with the ones before it done (see `trackerProgress`).
  *
  * `captions` is the line under a stage's label, and `tag` a pill under the
  * stage the request is in. They are too wide for four phone columns, so they
@@ -37,10 +33,7 @@ export function LeadTracker({
   tag?: TrackerDetails["tag"];
   className?: string;
 }) {
-  const submitted = status === "submitted";
-  const current = stageOf(status) ?? 1;
-  const doneThrough = submitted ? 1 : current - 1;
-  const hereStage = submitted ? null : current;
+  const { done: doneThrough, here: hereStage } = trackerProgress(status);
 
   return (
     <ol className={cn("flex", className)} aria-label="Request progress">

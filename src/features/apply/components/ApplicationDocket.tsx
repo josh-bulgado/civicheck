@@ -1,14 +1,14 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Info, MoreHorizontal, X } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
+import { KeepDraftDialog } from "~/features/apply/components/KeepDraftDialog";
 import {
   describeAlsoPayable,
   parseFeeComponents,
@@ -17,149 +17,6 @@ import {
 } from "~/features/services/fee-components";
 import { formatPesoFee, totalFee } from "~/features/services/service-utils";
 import { cn } from "~/lib/utils";
-
-// ─── Change service ──────────────────────────────────────────────────────────
-// The trigger says what it does ("Change service"), never "Cancel": in a wizard
-// "Cancel" reads as "throw my application away". Both ways out lead to Browse
-// Services; the one question is what happens to the draft.
-
-const DIALOG_PANEL =
-  "w-[min(33.75rem,calc(100%-2rem))] max-w-none gap-0 overflow-hidden rounded-[28px] bg-card p-8 pb-7 shadow-portal-dialog ring-0 sm:max-w-none max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:w-full max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none max-sm:px-6";
-
-const PILL_BASE =
-  "civic-press inline-flex h-13.5 min-w-0 flex-1 items-center justify-center rounded-full px-4 text-base font-semibold whitespace-nowrap";
-
-function ChangeServiceDialog({
-  open,
-  onOpenChange,
-  serviceName,
-  onDiscard,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  serviceName: string;
-  onDiscard: () => void;
-}) {
-  const navigate = useNavigate();
-  // "Discard draft" does not delete on the first press: the same panel asks once more.
-  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
-  const keepDraft = useRef<HTMLButtonElement>(null);
-  const goBack = useRef<HTMLButtonElement>(null);
-
-  function close(next: boolean) {
-    onOpenChange(next);
-    if (!next) setConfirmingDiscard(false);
-  }
-
-  function leave() {
-    close(false);
-    void navigate({ to: "/services" });
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={close}>
-      <DialogContent
-        showCloseButton={false}
-        initialFocus={confirmingDiscard ? goBack : keepDraft}
-        overlayClassName="bg-[rgba(15,27,45,0.28)] backdrop-blur-sm"
-        className={cn("apply-wizard", DIALOG_PANEL)}
-      >
-        <DialogClose
-          render={
-            <button
-              type="button"
-              aria-label="Close"
-              className="civic-press absolute top-5 right-5 flex size-10 items-center justify-center rounded-full bg-portal-panel text-foreground hover:bg-border-light"
-            />
-          }
-        >
-          <X className="size-4.5" strokeWidth={2.2} aria-hidden="true" />
-        </DialogClose>
-
-        <DialogTitle className="pr-12 font-sans text-[28px] leading-[1.15] font-semibold tracking-[-0.02em] text-foreground">
-          {confirmingDiscard ? "Discard this draft?" : "Keep your draft?"}
-        </DialogTitle>
-
-        <div className="mt-5 rounded-2xl bg-portal-panel px-4.5 py-3.5">
-          <p className="text-[13px] leading-[normal] font-bold tracking-[0.12em] text-muted-foreground uppercase">
-            Your draft
-          </p>
-          <p className="mt-1 text-lg leading-snug font-bold text-foreground">{serviceName}</p>
-        </div>
-
-        {confirmingDiscard ? (
-          <DialogDescription className="mt-4 text-base leading-snug text-body-2">
-            Your answers and uploaded files will be deleted.
-          </DialogDescription>
-        ) : (
-          <div className="mt-4 flex flex-col gap-2.5">
-            <DialogDescription className="text-base leading-snug text-body-2">
-              Finish it later on this device, or start fresh.
-            </DialogDescription>
-            <p className="flex items-start gap-2 text-[15px] leading-snug text-muted-foreground">
-              <Info className="mt-0.5 size-4.25 shrink-0" aria-hidden="true" />
-              Uploaded documents do not transfer between services.
-            </p>
-          </div>
-        )}
-
-        {/* Side by side from `sm`; on a phone they stack with the safe one on
-            top (the reverse order puts the left button last). */}
-        <div className="mt-6.5 flex flex-col-reverse gap-3 sm:flex-row">
-          {confirmingDiscard ? (
-            <>
-              <button
-                ref={goBack}
-                type="button"
-                onClick={() => setConfirmingDiscard(false)}
-                className={cn(
-                  PILL_BASE,
-                  "border border-border bg-card text-foreground hover:bg-primary-tint focus-visible:ring-4 focus-visible:ring-primary/20",
-                )}
-              >
-                Go back
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  onDiscard();
-                  leave();
-                }}
-                className={cn(PILL_BASE, "bg-destructive text-white dark:text-background hover:bg-destructive/90")}
-              >
-                Discard draft
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={() => setConfirmingDiscard(true)}
-                className={cn(
-                  PILL_BASE,
-                  "border border-border bg-card text-destructive hover:bg-portal-danger-soft",
-                )}
-              >
-                Discard draft
-              </button>
-              <button
-                ref={keepDraft}
-                type="button"
-                onClick={leave}
-                className={cn(
-                  PILL_BASE,
-                  "bg-primary-fill text-white shadow-[0_8px_20px_rgba(11,77,162,0.28)] hover:bg-primary-fill-hover",
-                )}
-              >
-                Keep draft
-              </button>
-            </>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 // ─── Fee ─────────────────────────────────────────────────────────────────────
 
@@ -213,6 +70,11 @@ interface ApplicationDocketProps {
   copies?: number;
   feePerCopy?: boolean;
   selectionPending: boolean;
+  /**
+   * The applicant has entered something worth keeping. Only then does leaving
+   * ask what to do with the draft; with nothing in it there is nothing to ask.
+   */
+  hasProgress: boolean;
   onDiscard: () => void;
 }
 
@@ -229,10 +91,17 @@ export function ApplicationDocket({
   copies = 1,
   feePerCopy = false,
   selectionPending,
+  hasProgress,
   onDiscard,
 }: ApplicationDocketProps) {
+  const navigate = useNavigate();
   const [changing, setChanging] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  function changeService() {
+    if (hasProgress) setChanging(true);
+    else void navigate({ to: "/services" });
+  }
 
   const showCopies = feePerCopy && fee !== undefined && copies > 1;
   // A per-copy service already shows "₱X × n copies"; it carries no breakdown.
@@ -319,7 +188,7 @@ export function ApplicationDocket({
 
         <button
           type="button"
-          onClick={() => setChanging(true)}
+          onClick={changeService}
           className="civic-press hidden h-10 shrink-0 items-center rounded-full border border-border bg-card px-4.5 text-[15px] font-semibold whitespace-nowrap text-body-2 transition-colors duration-150 hover:border-primary hover:text-primary md:inline-flex"
         >
           Change service
@@ -349,7 +218,7 @@ export function ApplicationDocket({
             type="button"
             onClick={() => {
               setMenuOpen(false);
-              setChanging(true);
+              changeService();
             }}
             className="civic-press h-13.5 w-full rounded-full border border-border bg-card text-base font-semibold text-foreground hover:bg-primary-tint"
           >
@@ -358,10 +227,11 @@ export function ApplicationDocket({
         </DialogContent>
       </Dialog>
 
-      <ChangeServiceDialog
+      <KeepDraftDialog
         open={changing}
         onOpenChange={setChanging}
         serviceName={serviceName}
+        destination="/services"
         onDiscard={onDiscard}
       />
     </section>

@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { staggerStyle } from "~/components/motion/stagger";
 import { pillButton } from "~/components/portal/styles";
-import { PortalRequirementsDialog } from "~/features/services/components/PortalRequirementsDialog";
 import { PortalServiceCard } from "~/features/services/components/PortalServiceCard";
 import { ServiceReferenceDesk } from "~/features/services/components/ServiceReferenceDesk";
+import {
+  ServiceEntryDialogs,
+  useServiceEntry,
+} from "~/features/services/components/useServiceEntry";
 import {
   PortalServicesToolbar,
   type CategoryFilter,
@@ -13,7 +15,6 @@ import {
 import type { ServiceSummary } from "~/features/services/services.queries";
 import { getServiceCategory } from "~/features/services/service-utils";
 import type { getMyDepartmentScopeFn } from "~/features/requests/requests.queries";
-import { useResetApplyChoices } from "~/features/apply/hooks/useApplyDraft";
 import { usePermissions } from "~/hooks/usePermissions";
 import { cn } from "~/lib/utils";
 
@@ -41,8 +42,6 @@ export default function ServiceCatalogPage({
   onDismissSelectedService,
 }: ServiceCatalogPageProps) {
   const { role } = usePermissions();
-  const navigate = useNavigate();
-  const resetApplyChoices = useResetApplyChoices();
   const canApply = role === "applicant";
 
   // Department-scoped staff (staff/supervisor) only handle their own
@@ -167,29 +166,37 @@ export default function ServiceCatalogPage({
       </section>
 
       {focusedService && (
-        <PortalRequirementsDialog
-          serviceCode={
-            focusedService.display_group ?? focusedService.service_code
-          }
-          title={focusedService.display_name ?? focusedService.name}
-          fee={focusedService.fee}
-          displayGroup={focusedService.display_group}
-          processingTime={focusedService.processing_time}
-          open
-          onOpenChange={(open) => {
-            if (!open) onDismissSelectedService?.();
-          }}
-          onApply={() => {
-            const serviceCode =
-              focusedService.display_group ?? focusedService.service_code;
-            resetApplyChoices(serviceCode);
-            navigate({
-              to: "/apply/$serviceCode/case",
-              params: { serviceCode },
-            });
-          }}
+        <DeepLinkedService
+          key={focusedService.display_group ?? focusedService.service_code}
+          service={focusedService}
+          onDismiss={onDismissSelectedService}
         />
       )}
     </div>
+  );
+}
+
+/**
+ * A service the command palette deep-linked: its checklist is open on arrival,
+ * and Apply goes through the same "Apply for this document?" confirmation as a
+ * card on the page, with the same way back out of it. Without that, a search
+ * hit was the one way into an application that skipped the confirmation.
+ */
+function DeepLinkedService({
+  service,
+  onDismiss,
+}: {
+  service: ServiceSummary;
+  onDismiss?: () => void;
+}) {
+  const entry = useServiceEntry(service, true, true);
+
+  return (
+    <ServiceEntryDialogs
+      entry={entry}
+      variant="portal"
+      // Closing the checklist is leaving the deep link, so the address drops it.
+      onChecklistClose={onDismiss}
+    />
   );
 }

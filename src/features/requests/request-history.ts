@@ -44,7 +44,7 @@ export function shortRequirementName(name: string) {
   return (cut > 0 ? name.slice(0, cut) : name).trim();
 }
 
-export type DocumentEventKind = "approved" | "rejected" | "reopened" | "resubmitted";
+export type DocumentEventKind = "approved" | "rejected" | "reopened" | "resubmitted" | "uploaded";
 
 interface DocumentLog {
   kind: DocumentEventKind;
@@ -65,6 +65,11 @@ const DOCUMENT_LOGS: { actionStatus: string; kind: DocumentEventKind; pattern: R
     actionStatus: "document_resubmitted",
     kind: "resubmitted",
     pattern: /^Applicant resubmitted "(.+)" after rejection\.?$/s,
+  },
+  {
+    actionStatus: "document_uploaded",
+    kind: "uploaded",
+    pattern: /^Applicant uploaded "(.+)"\.?$/s,
   },
 ];
 
@@ -129,6 +134,7 @@ const DOCUMENT_TONE: Record<DocumentEventKind, HistoryTone> = {
   rejected: "danger",
   reopened: "warning",
   resubmitted: "warning",
+  uploaded: "warning",
 };
 
 function toEvent(log: LogEntry, feesDue: number): HistoryEvent {

@@ -61,6 +61,13 @@
     background: var(--primary-soft);
     color: var(--foreground);
   }
+
+  /* Edge draws its own eye at the end of every password field. Ours already
+     has a "Show" / "Hide" button, so the browser's would be a second, redundant
+     way to do the same thing. Chromium and Firefox have no equivalent. */
+  input::-ms-reveal {
+    display: none;
+  }
 }
 
 @theme inline {

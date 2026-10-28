@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { ArrowRight, ShieldCheck, X } from "lucide-react";
+import { ShieldCheck, X } from "lucide-react";
 import {
   Dialog,
   DialogClose,
@@ -133,10 +133,9 @@ export function ConfirmApplyDialog({
               <button
                 type="button"
                 onClick={onConfirm}
-                className="civic-press inline-flex h-13 items-center gap-2.5 rounded-full bg-primary-fill px-6.5 text-base font-semibold whitespace-nowrap text-white shadow-[0_8px_20px_rgba(11,77,162,0.28)] hover:bg-primary-fill-hover"
+                className="civic-press inline-flex h-13 items-center rounded-full bg-primary-fill px-6.5 text-base font-semibold whitespace-nowrap text-white shadow-[0_8px_20px_rgba(11,77,162,0.28)] hover:bg-primary-fill-hover"
               >
                 Yes, apply
-                <ArrowRight className="size-4.5" aria-hidden="true" />
               </button>
             </div>
           </div>

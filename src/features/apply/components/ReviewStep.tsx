@@ -493,11 +493,12 @@ function WhatHappensNextCard() {
       </div>
       <ol className="flex flex-col gap-4 px-5.5 py-5">
         {[
-          "Staff pre-check your uploads.",
+          "Staff check your uploads online. If one needs fixing, you upload it again here.",
           <>
-            Visit the CCRO with your <strong className="font-bold">original documents</strong>.
+            When it is ready for release, visit the CCRO once with your{" "}
+            <strong className="font-bold">original documents</strong>.
           </>,
-          "Show your tracking number.",
+          "Show your tracking number, pay any fee, and claim it.",
         ].map((step, index) => (
           <li key={index} className="flex items-start gap-3">
             <span className="flex size-6.5 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[13px] font-bold text-primary">

@@ -20,6 +20,7 @@ const ICON: Record<HistoryKind, LucideIcon> = {
   rejected: X,
   reopened: RotateCcw,
   resubmitted: FileUp,
+  uploaded: FileUp,
   payment: Banknote,
 };
 
@@ -28,6 +29,7 @@ const VERB: Partial<Record<HistoryKind, string>> = {
   rejected: "rejected",
   reopened: "reopened",
   resubmitted: "resubmitted",
+  uploaded: "uploaded",
 };
 
 const ICON_TONE: Record<HistoryTone, string> = {

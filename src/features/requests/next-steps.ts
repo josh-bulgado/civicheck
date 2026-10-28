@@ -71,5 +71,9 @@ export function nextSteps(input: NextStepsInput): NextStepsView | null {
     if (note) return { kind: "line", text: note };
   }
 
-  return { kind: "line", text: "We'll notify you when this changes." };
+  // One visit, at release: until then the applicant has nothing to bring in.
+  return {
+    kind: "line",
+    text: "No need to visit yet. We'll notify you when it's ready for release.",
+  };
 }

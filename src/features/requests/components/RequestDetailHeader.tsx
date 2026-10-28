@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ArrowLeft, Check, Copy } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -123,7 +123,6 @@ export function RequestDetailHeader({
             className="-ml-2 text-primary"
             onClick={onBack}
           >
-            <ArrowLeft data-icon="inline-start" aria-hidden="true" />
             Back to the queue <Kbd>Esc</Kbd>
           </Button>
           <div className="flex items-center gap-1">

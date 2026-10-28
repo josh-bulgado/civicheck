@@ -1,5 +1,5 @@
 ﻿import { useState } from "react";
-import { ArrowLeft, CircleCheck, CircleX, LockKeyhole, type LucideIcon } from "lucide-react";
+import { CircleCheck, CircleX, LockKeyhole, type LucideIcon } from "lucide-react";
 import { privacyBoundary } from "../system-health.constants";
 import { formatHealthClock, formatHealthTimestamp } from "../system-health.utils";
 import type { HealthSource, SystemHealthDashboard } from "../system-admin.types";
@@ -32,7 +32,7 @@ export function HealthDataPrivacyView({ data, onBack }: { data: SystemHealthDash
   return (
     <div className="health-privacy-view" data-privacy-panel={panel}>
       <header className="health-privacy-header">
-        <button type="button" className="health-back-button" onClick={onBack}><ArrowLeft aria-hidden="true" />Back to System Health</button>
+        <button type="button" className="health-back-button" onClick={onBack}>Back to System Health</button>
         <h1>Data &amp; privacy</h1>
         <p>Charts include five-second session readings while the dashboard is open. Session readings are not retained; historical uptime and incidents come from the background monitor.</p>
       </header>

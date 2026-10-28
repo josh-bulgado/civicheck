@@ -1,5 +1,4 @@
 import { QuietLink as Link } from "~/components/quiet-link";
-import { ArrowRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { DeskRequestRow } from "~/features/dashboard/components/DeskRequestRow";
 import type { DeskRequest } from "~/features/dashboard/staff-desk";
@@ -43,7 +42,6 @@ export function WaitingNextCard({ requests, hidden }: WaitingNextCardProps) {
             className="civic-nudge mt-auto inline-flex min-h-11 items-center gap-2 self-start rounded-lg px-5 py-2 text-base font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             + {formatCount(hidden)} More in the Request Queue
-            <ArrowRight className="size-4" aria-hidden="true" />
           </Link>
         ) : null}
       </CardContent>

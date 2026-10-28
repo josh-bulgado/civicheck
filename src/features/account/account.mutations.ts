@@ -1,9 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import {
-  newPasswordSchema,
-  PASSWORD_NUMBER_MESSAGE,
-  passwordHasNumber,
-} from "~/features/auth/auth.schema";
+import { strongPasswordSchema } from "~/features/auth/auth.schema";
+import { describeWeakPassword } from "~/features/auth/password-error";
 import { NO_SUFFIX, SUFFIXES } from "~/lib/subject-fields";
 import { requireActiveSession } from "~/server/auth";
 import { AVATAR_BUCKET, forgetAvatarUrl } from "~/server/avatar";
@@ -15,8 +12,8 @@ type UpdateProfileInput = {
   firstName: string;
   middleName: string;
   /**
-   * Sent by the settings form, which asks the question. Onboarding doesn't ask
-   * it, so leaving it out keeps the stored answer and skips the check below.
+   * Sent by the settings form, which asks the question. Leaving it out keeps
+   * the stored answer and skips the check below.
    */
   hasNoMiddleName?: boolean;
   lastName: string;
@@ -143,12 +140,9 @@ export const changeMyPasswordFn = createServerFn({ method: "POST" })
       };
     }
 
-    const rules = newPasswordSchema.safeParse(data.newPassword);
+    const rules = strongPasswordSchema.safeParse(data.newPassword);
     if (!rules.success) {
       return { error: true, message: rules.error.issues[0].message };
-    }
-    if (!passwordHasNumber(data.newPassword)) {
-      return { error: true, message: PASSWORD_NUMBER_MESSAGE };
     }
 
     // The same per-account budget as signing in: a borrowed session must not
@@ -192,9 +186,11 @@ export const changeMyPasswordFn = createServerFn({ method: "POST" })
       const isJsonEmpty = error.message === "{}" || !error.message;
       return {
         error: true,
-        message: isJsonEmpty
-          ? "An unexpected error occurred while updating your password."
-          : error.message,
+        message:
+          describeWeakPassword(error) ??
+          (isJsonEmpty
+            ? "An unexpected error occurred while updating your password."
+            : error.message),
       };
     }
 

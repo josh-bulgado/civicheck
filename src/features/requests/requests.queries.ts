@@ -471,7 +471,10 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       })),
       logs: ((logs.data ?? []) as ActionLogRow[]).map((l) => {
         const actor = one<PersonName>(l.profiles);
-        const fallbackActor = l.action_status === "document_resubmitted" ? "Applicant" : "System";
+        const fallbackActor =
+          l.action_status === "document_resubmitted" || l.action_status === "document_uploaded"
+            ? "Applicant"
+            : "System";
         return {
           id: l.id,
           actionStatus: l.action_status,

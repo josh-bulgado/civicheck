@@ -67,7 +67,9 @@ const UNMEASURED = {
  * Banner pictures for the dashboard's lead card, one per state it can show. A
  * missing file just leaves the gradient behind it showing.
  *
- * Rejected and released are not here: those requests never lead the dashboard.
+ * Rejected is not here: a rejected request never leads the dashboard. Released
+ * borrows the ready-for-release picture (a document with its check mark), which
+ * reads as well for a document that has been handed over.
  */
 const BANNERS: Record<string, Banner> = {
   none: {
@@ -174,7 +176,7 @@ const BANNERS: Record<string, Banner> = {
  * "none" for an applicant with no requests yet.
  */
 export function bannerStyle(status: string): CSSProperties {
-  const banner = BANNERS[status];
+  const banner = BANNERS[status === "released" ? "ready_for_release" : status];
   const measures = banner ?? UNMEASURED;
   return {
     "--banner": banner ? `url("/services/${banner.file}")` : "none",

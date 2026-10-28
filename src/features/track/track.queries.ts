@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { isClosedRequestStatus } from "~/features/requests/document-review";
 import {
   allowAttempt,
   getClientIp,
@@ -121,6 +122,9 @@ export const resubmitAttachmentFn = createServerFn({ method: "POST" })
     if (attachmentError || !attachment) {
       return { error: true, message: NOT_FOUND_MESSAGE };
     }
+    if (isClosedRequestStatus(request.status)) {
+      return { error: true, message: "This request is closed. Its documents can no longer change." };
+    }
     if (attachment.verification_status !== "rejected") {
       return { error: true, message: "Only a rejected document can be resubmitted." };
     }
@@ -143,7 +147,9 @@ export const resubmitAttachmentFn = createServerFn({ method: "POST" })
       return { error: true, message: uploadError.message };
     }
 
-    const { error: updateError } = await supabase
+    // Only while the document is still the rejected one we read, same as the
+    // signed-in resubmit.
+    const { data: updated, error: updateError } = await supabase
       .from("requirements_attachments")
       .update({
         file_url: path,
@@ -151,10 +157,15 @@ export const resubmitAttachmentFn = createServerFn({ method: "POST" })
         rejection_reason: null,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", attachment.id);
-    if (updateError) {
+      .eq("id", attachment.id)
+      .eq("verification_status", "rejected")
+      .select("id");
+    if (updateError || !updated?.length) {
       await supabase.storage.from("request-documents").remove([path]);
-      return { error: true, message: updateError.message };
+      return {
+        error: true,
+        message: updateError?.message ?? "This document changed while you were uploading. Refresh and try again.",
+      };
     }
 
     // The service role can delete any file, so only ever one from this

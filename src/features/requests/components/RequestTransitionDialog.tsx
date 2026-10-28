@@ -53,7 +53,7 @@ function IncompleteForm({ busy, context, onConfirm }: FormProps) {
         <AlertDialogTitle>Mark this request incomplete?</AlertDialogTitle>
         <AlertDialogDescription>
           The applicant sees this message. It is drafted from the documents you
-          rejected. Edit it so it is clear what to bring or fix.
+          rejected. Edit it so it is clear what to fix or upload again.
         </AlertDialogDescription>
       </AlertDialogHeader>
       <div className="flex flex-col gap-2">
@@ -67,7 +67,7 @@ function IncompleteForm({ busy, context, onConfirm }: FormProps) {
           disabled={busy}
           value={note}
           onChange={(event) => setNote(event.target.value)}
-          placeholder="What does the applicant need to bring or fix?"
+          placeholder="What does the applicant need to fix or upload again?"
         />
       </div>
       <AlertDialogFooter>
@@ -115,17 +115,27 @@ function RejectForm({ busy, onConfirm }: FormProps) {
   );
 }
 
-/** Release is final, so the two checks it depends on are ticked on purpose. */
+/**
+ * Release is final, so the checks it depends on are ticked on purpose. It is
+ * also the applicant's one visit, so it is where the originals are matched to
+ * the documents accepted online.
+ */
 function ReleaseForm({ busy, context, onConfirm }: FormProps) {
   const idPrefix = useId();
-  const [checked, setChecked] = useState([false, false]);
   const copies = `${context.copies} ${context.copies === 1 ? "copy" : "copies"}`;
+  const uploads = context.attachments.length;
   const items = [
     `I checked the claimant’s valid ID against the requester, ${context.applicantName}.`,
+    ...(uploads > 0
+      ? [
+          `The original documents match the ${uploads} uploaded ${uploads === 1 ? "file" : "files"} accepted online.`,
+        ]
+      : []),
     context.feesDue > 0
       ? `I am handing over ${copies}. Payment is verified under OR ${context.orNumber ?? "—"}.`
       : `I am handing over ${copies}. The cashier confirmed no fee was due.`,
   ];
+  const [checked, setChecked] = useState(() => items.map(() => false));
 
   return (
     <>

@@ -1,4 +1,4 @@
-import { ArrowRight, Check, Minus, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Check, Minus, ShieldAlert, ShieldCheck } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import {
   postureBanner,
@@ -83,7 +83,6 @@ export function SecurityPostureSummary({
           onClick={() => onReview(action.tab)}
         >
           {action.label}
-          <ArrowRight data-icon="inline-end" aria-hidden="true" />
         </Button>
       ) : null}
     </section>

@@ -11,6 +11,7 @@ import { RequestMessagesCard } from "~/features/requests/components/RequestMessa
 import { RequestStatusHistory } from "~/features/requests/components/RequestStatusHistory";
 import { SubmittedDetailsCard } from "~/features/requests/components/SubmittedDetailsCard";
 import { VerificationFormCard } from "~/features/requests/components/VerificationFormCard";
+import { isClosedRequestStatus } from "~/features/requests/document-review";
 import { nextSteps } from "~/features/requests/next-steps";
 import { getRejectionNotice } from "~/features/requests/request-workflow";
 
@@ -124,7 +125,13 @@ export default function MyRequestDetailPage({
             formData={request.formData}
           />
 
-          <MyRequestDocumentsCard documents={request.attachments} onChanged={onUpdated} />
+          <MyRequestDocumentsCard
+            requestId={request.id}
+            documents={request.attachments}
+            addable={request.addableUploads}
+            closed={isClosedRequestStatus(request.status)}
+            onChanged={onUpdated}
+          />
         </div>
       </div>
     </div>

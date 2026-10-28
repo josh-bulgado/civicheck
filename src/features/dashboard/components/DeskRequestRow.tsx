@@ -1,5 +1,4 @@
 import { QuietLink as Link } from "~/components/quiet-link";
-import { ChevronRight } from "lucide-react";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "~/components/ui/item";
 import { StageStatus } from "~/features/dashboard/components/StageStatus";
 import { WaitPill } from "~/features/dashboard/components/WaitPill";
@@ -25,7 +24,6 @@ export function DeskRequestRow({ request }: { request: DeskRequest }) {
       <ItemActions>
         <StageStatus request={request} className="text-muted-foreground" />
       </ItemActions>
-      <ChevronRight className="size-4.5 text-muted-foreground" aria-hidden="true" />
     </Item>
   );
 }

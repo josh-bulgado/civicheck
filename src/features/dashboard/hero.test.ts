@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { dashboardPlan, heroLead, leadCaptions } from "./hero";
+import {
+  dashboardPlan,
+  heroHeadline,
+  heroLead,
+  heroServiceLabel,
+  leadCaptions,
+  trackerDetails,
+  trackerProgress,
+} from "./hero";
 import type { CitizenDashboardRequest } from "./types";
 
 function request(
@@ -80,6 +88,72 @@ describe("leadCaptions for the other states", () => {
 
   it("says what an incomplete request still needs", () => {
     expect(leadCaptions(request("incomplete"))[2]).toBe("One more document needed");
+  });
+
+  it("dates all four stages of a released request, Release by its own log", () => {
+    const captions = leadCaptions(
+      request("released", [
+        { action_status: "under_validation", created_at: "2026-10-21T02:00:00Z" },
+        { action_status: "processing", created_at: "2026-10-22T03:00:00Z" },
+        { action_status: "ready_for_release", created_at: "2026-10-23T03:00:00Z" },
+        { action_status: "released", created_at: "2026-10-27T03:00:00Z" },
+      ]),
+    );
+
+    expect(Object.keys(captions)).toEqual(["1", "2", "3", "4"]);
+    // The date, not the sentence a request in Release is given.
+    expect(captions[4]).toMatch(/27/);
+    expect(captions[4]).not.toMatch(/released/i);
+  });
+
+  it("leaves Release undated when its log is missing, rather than guessing", () => {
+    const captions = leadCaptions(request("released"));
+
+    expect(captions[1]).toBeTruthy();
+    expect(captions[4]).toBeUndefined();
+  });
+});
+
+describe("trackerProgress", () => {
+  it.each([
+    ["submitted", 1, null],
+    ["under_validation", 1, 2],
+    ["incomplete", 1, 2],
+    ["processing", 2, 3],
+    ["ready_for_release", 3, 4],
+    // Through every stage, so none is "here".
+    ["released", 4, null],
+  ])("draws a %s request with %i stage(s) done, here: %s", (status, done, here) => {
+    expect(trackerProgress(status)).toEqual({ done, here });
+  });
+});
+
+describe("a released request, whichever service it was for", () => {
+  const services = [
+    { label: "a long registry name", short_name: null, name: "Email Assisted-Online Inquiry/Verification for Birth, Death and Marriage Certificates" },
+    { label: "a service with a short name", short_name: "Birth Certificate", name: "On-Time Registration of Certificate of Live Birth" },
+    { label: "a bare request type", short_name: null, name: undefined },
+  ];
+
+  it.each(services)("leads the dashboard, $label", ({ short_name, name }) => {
+    const released = {
+      ...request("released"),
+      short_name,
+      services_registry: name ? { name, display_name: null } : undefined,
+    } as CitizenDashboardRequest;
+
+    const plan = dashboardPlan([released]);
+    expect(plan.hero?.id).toBe("r1");
+    expect(heroServiceLabel(released)).toBeTruthy();
+    expect(heroHeadline("released")).toEqual({ verb: "is", emphasis: "released" });
+  });
+
+  it("says the same for a free request and a paid one", () => {
+    for (const fees_due of [0, 150]) {
+      const plan = dashboardPlan([{ ...request("released"), fees_due, payment_status: "verified" }]);
+      expect(plan.hero?.status).toBe("released");
+      expect(trackerDetails(plan.hero!).tag).toBeNull();
+    }
   });
 });
 
@@ -229,17 +303,46 @@ describe("dashboardPlan: a rejection", () => {
 });
 
 describe("dashboardPlan: nothing in progress", () => {
-  it("shows the latest two finished requests under a Recent heading", () => {
+  it("leads with the latest released request, and lists the finished ones after it", () => {
     const plan = dashboardPlan([
       made("old", "released", 1),
       made("mid", "rejected", 2),
       made("new", "released", 3),
     ]);
 
+    expect(plan.hero?.id).toBe("new");
+    expect(plan.rowsHeading).toBe("Recent requests");
+    expect(ids(plan.rows)).toEqual(["mid", "old"]);
+    expect(plan.hasMore).toBe(false);
+  });
+
+  it("points at the full list when more finished requests are left out", () => {
+    const plan = dashboardPlan([
+      made("a", "released", 1),
+      made("b", "released", 2),
+      made("c", "released", 3),
+      made("d", "released", 4),
+    ]);
+
+    expect(plan.hero?.id).toBe("d");
+    expect(ids(plan.rows)).toEqual(["c", "b"]);
+    expect(plan.hasMore).toBe(true);
+  });
+
+  it("does not lead with a rejected request", () => {
+    const plan = dashboardPlan([made("a", "rejected", 1), made("b", "rejected", 2)]);
+
     expect(plan.hero).toBeNull();
     expect(plan.rowsHeading).toBe("Recent requests");
-    expect(ids(plan.rows)).toEqual(["new", "mid"]);
-    expect(plan.hasMore).toBe(true);
+    expect(ids(plan.rows)).toEqual(["b", "a"]);
+  });
+
+  it("gives way to a request that is moving again", () => {
+    const plan = dashboardPlan([made("done", "released", 1), made("new", "submitted", 5)]);
+
+    expect(plan.hero?.id).toBe("new");
+    expect(plan.rowsHeading).toBe("Your other requests");
+    expect(plan.rows).toEqual([]);
   });
 
   it("has nothing to show for an applicant with no requests", () => {

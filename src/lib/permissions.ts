@@ -57,10 +57,11 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "requests:create",
     "dashboard:applicant",
   ],
+  // Personnel never file online requests: the applicant would be the person
+  // who then validates it. Walk-ins go through "requests:encode_walkin".
   staff: [
     "services:view",
     "requests:view_all",
-    "requests:create",
     "requests:process",
     "requests:encode_walkin",
     "notifications:view_staff",
@@ -69,7 +70,6 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   supervisor: [
     "services:view",
     "requests:view_all",
-    "requests:create",
     "requests:process",
     "requests:reverse_verification",
     "requests:encode_walkin",

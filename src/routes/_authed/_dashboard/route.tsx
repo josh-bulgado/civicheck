@@ -17,7 +17,12 @@ import { CommandPalette } from "~/components/sidebar-01/command-palette";
 import { CityGovernmentIdentity } from "~/components/brand/civic-identity";
 import { ThemeSwitch } from "~/components/theme-switch";
 import { DashboardBreadcrumbs } from "~/components/sidebar-01/dashboard-breadcrumbs";
-import { WORKSPACE_SIDEBAR_STYLE } from "~/components/sidebar-01/workspace";
+import {
+  CITIZEN_INSET_CLASS,
+  CITIZEN_MAIN_CLASS,
+  CITIZEN_PANEL_CLASS,
+  WORKSPACE_SIDEBAR_STYLE,
+} from "~/components/sidebar-01/workspace";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { getUnreadNotificationSummaryFn } from "~/features/notifications/notifications.queries";
 import { invalidateNotificationPreview } from "~/features/notifications/notification-preview-cache";
@@ -149,15 +154,9 @@ function DashboardLayout() {
           <Outlet />
         </main>
       ) : isCitizen ? (
-        // 10px of frame on every side; on desktop the sidebar column already
-        // carries the left one (and the 6px gap), open or folded to icons, so it
-        // is dropped.
-        <SidebarInset className="min-w-0 bg-transparent p-0 md:p-2.5 md:pl-0">
-          {/* From md: one panel, top bar first, filling the space beside the
-              sidebar. No max-width: a cap leaves dead ground on wide screens.
-              On a phone there is no panel: the page sits on the ground with 20px
-              at the sides, and 130px below it for the bottom bar. */}
-          <div className="flex w-full flex-1 flex-col gap-4.5 px-5 pt-4 pb-32.5 md:gap-7 md:rounded-panel md:bg-portal-panel md:px-11 md:pt-7 md:pb-9 md:shadow-portal-panel short:md:gap-5 short:md:pt-5 short:md:pb-6">
+        // The frame's sizes live in workspace.ts, shared with the loading frame.
+        <SidebarInset className={CITIZEN_INSET_CLASS}>
+          <div className={CITIZEN_PANEL_CLASS}>
             <CitizenMobileHeader
               account={user ?? null}
               userId={user?.id ?? ""}
@@ -170,7 +169,7 @@ function DashboardLayout() {
             <main
               id="main-content"
               tabIndex={-1}
-              className="civic-workspace flex flex-1 flex-col text-foreground"
+              className={CITIZEN_MAIN_CLASS}
             >
               <Outlet />
             </main>

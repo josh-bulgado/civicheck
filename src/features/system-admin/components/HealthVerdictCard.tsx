@@ -1,4 +1,4 @@
-﻿import { ChevronRight, CircleDashed, ShieldCheck, TriangleAlert } from "lucide-react";
+﻿import { CircleDashed, ShieldCheck, TriangleAlert } from "lucide-react";
 import { useMemo } from "react";
 import { healthVerdict } from "../system-health.model";
 import { formatHealthPercent, formatResponseTime } from "../system-health.utils";
@@ -49,7 +49,7 @@ export function HealthVerdictCard({ data, onShowIncidents }: { data: SystemHealt
       </div>
       <button type="button" className="health-summary-metric health-summary-incidents" onClick={onShowIncidents} aria-label={`${data.activeCount} active incidents. Review system incidents.`}>
         <span className="health-metric-label">Active incidents</span>
-        <strong className="health-metric-value">{data.activeCount}</strong><ChevronRight className="health-summary-chevron" aria-hidden="true" />
+        <strong className="health-metric-value">{data.activeCount}</strong>
         <HealthSummaryIncidents events={data.events} now={data.now} />
         <span className="health-metric-note health-summary-fallback">Tap to review</span>
       </button>

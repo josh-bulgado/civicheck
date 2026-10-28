@@ -1,8 +1,6 @@
 import { useId, useState, type FormEvent, type Ref } from "react";
 import { QuietLink as Link } from "~/components/quiet-link";
 import {
-  ArrowUpRight,
-  ChevronRight,
   GitBranch,
   ListChecks,
   Undo2,
@@ -108,7 +106,6 @@ export function ServiceGroupInspector({
             className={buttonVariants({ variant: "ghost", size: "sm" })}
           >
             Full editor
-            <ArrowUpRight aria-hidden="true" data-icon="inline-end" />
           </Link>
         </div>
         <h2
@@ -285,10 +282,6 @@ function InspectorLink({
         </span>
         <span className="block text-xs text-muted-foreground">{detail}</span>
       </span>
-      <ChevronRight
-        aria-hidden="true"
-        className="size-4 shrink-0 text-muted-foreground"
-      />
     </Link>
   );
 }

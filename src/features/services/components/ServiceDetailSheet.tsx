@@ -27,7 +27,6 @@ import {
   CircleDollarSign,
   Layers,
   AlertTriangle,
-  ArrowRight,
   FileText,
   ChevronDown,
   ChevronUp,
@@ -269,7 +268,6 @@ export function ServiceDetailSheet({
             >
               <CollapsibleTrigger className="flex items-center justify-between w-full cursor-pointer group/trigger select-none">
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
                   How It Works
                 </h3>
                 <ChevronDown

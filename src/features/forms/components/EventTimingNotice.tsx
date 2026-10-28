@@ -1,4 +1,3 @@
-import { ArrowRight } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { TIMING_NOTICE } from "../event-timing-tone";
 import type { EventTimingBehavior } from "../form-template.types";
@@ -38,10 +37,6 @@ export function EventTimingNotice({
   const tone = TIMING_NOTICE[behavior];
   const buttonClass = cn(CTA, CTA_TONE[tone.variant]);
   const label = ctaLabel.trim();
-  const arrow =
-    behavior === "redirect_confirm" ? (
-      <ArrowRight aria-hidden="true" className="size-4" />
-    ) : null;
 
   return (
     <NoticeAlert
@@ -60,13 +55,9 @@ export function EventTimingNotice({
               className={cn("civic-press", buttonClass)}
             >
               {label}
-              {arrow}
             </button>
           ) : (
-            <span className={buttonClass}>
-              {label}
-              {arrow}
-            </span>
+            <span className={buttonClass}>{label}</span>
           )
         ) : null}
       </span>

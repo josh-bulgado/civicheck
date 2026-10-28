@@ -18,6 +18,8 @@ const read = (file: string) =>
 const HARDENING = read("20261027120000_security_hardening.sql");
 const RATE_LIMITS = read("20261027121000_add_rate_limits.sql");
 const PROFILE_SCOPE = read("20261027122000_scope_personnel_profile_reads.sql");
+const POLICY_RECURSION = read("20261028130000_break_profiles_policy_recursion.sql");
+const DOCUMENTS_HOLD = read("20261029120000_hold_documents_through_release.sql");
 
 const APPLICANT = "a0000000-0000-0000-0000-000000000001";
 const OTHER_APPLICANT = "a0000000-0000-0000-0000-000000000002";
@@ -26,6 +28,7 @@ const STAFF_B = "b0000000-0000-0000-0000-000000000002";
 const SUPERVISOR_A = "b0000000-0000-0000-0000-000000000003";
 const CASHIER = "c0000000-0000-0000-0000-000000000001";
 const ADMIN = "d0000000-0000-0000-0000-000000000001";
+const SYSTEM_ADMIN = "d0000000-0000-0000-0000-000000000002";
 const SUSPENDED_STAFF = "b0000000-0000-0000-0000-000000000009";
 const CITIZEN_WITHOUT_REQUESTS = "a0000000-0000-0000-0000-000000000003";
 
@@ -177,7 +180,22 @@ const BEFORE = `
   alter table public.notifications enable row level security;
   alter table public.services_registry enable row level security;
 
+  alter table public.departments enable row level security;
+  create policy "Authenticated users can view active departments" on public.departments
+    for select to authenticated using (is_active = true);
+  create policy "Admins can manage departments" on public.departments for all to authenticated
+    using ((select role from public.profiles where id = (select auth.uid()))::text = 'admin')
+    with check ((select role from public.profiles where id = (select auth.uid()))::text = 'admin');
+
   create policy "Anyone can view services" on public.services_registry for select using (true);
+  create policy "System administrators can manage services registry" on public.services_registry
+    for all to authenticated
+    using (exists (select 1 from public.profiles profile
+      where profile.id = auth.uid() and profile.role::text = 'system_admin'
+        and profile.access_status = 'active'))
+    with check (exists (select 1 from public.profiles profile
+      where profile.id = auth.uid() and profile.role::text = 'system_admin'
+        and profile.access_status = 'active'));
 
   create policy "Staff and admin can view all profiles" on public.profiles for select
     using (get_user_role() = any (array['admin', 'frontdesk', 'staff', 'archive', 'legal', 'cashier']));
@@ -283,7 +301,7 @@ const SEED = `
     ('${STAFF_A}', 'a@example.com'), ('${STAFF_B}', 'b@example.com'),
     ('${SUPERVISOR_A}', 'sup@example.com'), ('${CASHIER}', 'cash@example.com'),
     ('${ADMIN}', 'admin@example.com'), ('${SUSPENDED_STAFF}', 'gone@example.com'),
-    ('${CITIZEN_WITHOUT_REQUESTS}', 'quiet@example.com');
+    ('${CITIZEN_WITHOUT_REQUESTS}', 'quiet@example.com'), ('${SYSTEM_ADMIN}', 'sys@example.com');
   insert into public.profiles (id, first_name, last_name, role, department_id) values
     ('${APPLICANT}', 'Ana', 'Applicant', 'applicant', null),
     ('${CITIZEN_WITHOUT_REQUESTS}', 'Quinn', 'Quiet', 'applicant', null),
@@ -292,7 +310,8 @@ const SEED = `
     ('${STAFF_B}', 'Dee', 'Deaths', 'staff', 'deaths'),
     ('${SUPERVISOR_A}', 'Sue', 'Births', 'supervisor', 'births'),
     ('${CASHIER}', 'Cash', 'Ier', 'cashier', null),
-    ('${ADMIN}', 'Ada', 'Admin', 'admin', null);
+    ('${ADMIN}', 'Ada', 'Admin', 'admin', null),
+    ('${SYSTEM_ADMIN}', 'Sy', 'Admin', 'system_admin', null);
   insert into public.profiles (id, first_name, last_name, role, department_id, access_status,
     suspended_at, suspended_by, suspension_reason) values
     ('${SUSPENDED_STAFF}', 'Gone', 'Staff', 'staff', 'births', 'deactivated', now(), '${ADMIN}', 'Left');
@@ -349,6 +368,8 @@ beforeAll(async () => {
   await db.exec(HARDENING);
   await db.exec(RATE_LIMITS);
   await db.exec(PROFILE_SCOPE);
+  await db.exec(POLICY_RECURSION);
+  await db.exec(DOCUMENTS_HOLD);
 });
 
 beforeEach(async () => {
@@ -427,6 +448,57 @@ describe("staff document review", () => {
   });
 });
 
+describe("closed requests", () => {
+  it.each(["released", "rejected"])("keeps a %s request's documents as they were", async (status) => {
+    await setRequestA(status, status === "released" ? "verified" : "unpaid");
+    await expect(
+      as(STAFF_A, () =>
+        db.exec(`update public.requirements_attachments set verification_status = 'rejected'
+                 where id = '${ATTACHMENT_A}'`),
+      ),
+    ).rejects.toThrow(/request is closed/);
+    await expect(
+      as(SUPERVISOR_A, () =>
+        db.exec(`update public.requirements_attachments set verification_status = 'pending'
+                 where id = '${ATTACHMENT_A}'`),
+      ),
+    ).rejects.toThrow(/request is closed/);
+
+    // The applicant's resubmission runs on the service role; it is refused too.
+    await db.exec(`set role service_role`);
+    try {
+      await expect(
+        db.exec(`update public.requirements_attachments
+                 set file_url = '${APPLICANT}/resubmissions/new.pdf', verification_status = 'pending'
+                 where id = '${ATTACHMENT_A}'`),
+      ).rejects.toThrow(/request is closed/);
+    } finally {
+      await db.exec(`reset role`);
+    }
+  });
+
+  it("still lets staff decide on an open request's documents", async () => {
+    await setRequestA("incomplete");
+    await as(STAFF_A, () =>
+      db.exec(`update public.requirements_attachments set verification_status = 'approved'
+               where id = '${ATTACHMENT_A}'`),
+    );
+    const [doc] = await rows<{ verification_status: string }>(
+      `select verification_status from public.requirements_attachments where id = '${ATTACHMENT_A}'`,
+    );
+    expect(doc.verification_status).toBe("approved");
+  });
+});
+
+describe("attachment files", () => {
+  it("backs only one request with each file", async () => {
+    await expect(
+      db.exec(`insert into public.requirements_attachments (request_id, requirement_name, file_url)
+               values ('${REQUEST_B}', 'PSA copy', '${FILE_A}')`),
+    ).rejects.toThrow(/duplicate key|unique/);
+  });
+});
+
 describe("profiles", () => {
   it("staff cannot move themselves into another department", async () => {
     await expect(
@@ -475,6 +547,18 @@ describe("profiles", () => {
       rows(`select id from public.profiles where id in ('${STAFF_B}', '${CASHIER}', '${ADMIN}')`),
     );
     expect(seen).toHaveLength(3);
+  });
+
+  // The app's session check, run on every signed-in request.
+  it("every role can read its own profile and department", async () => {
+    for (const userId of [APPLICANT, STAFF_A, CASHIER, ADMIN, SYSTEM_ADMIN]) {
+      const own = await as(userId, () =>
+        rows(`select p.role, d.name from public.profiles p
+              left join public.departments d on d.id = p.department_id
+              where p.id = '${userId}'`),
+      );
+      expect(own).toHaveLength(1);
+    }
   });
 
   it("applicants still see only themselves", async () => {
@@ -551,6 +635,8 @@ describe("request workflow", () => {
       db.exec(`update public.requests set payment_status = 'verified', or_number = 'OR-1'
                where id = '${REQUEST_A}'`),
     );
+    await db.exec(`update public.requirements_attachments set verification_status = 'approved'
+                   where id = '${ATTACHMENT_A}'`);
     await as(STAFF_A, () =>
       db.exec(`update public.requests set status = 'released' where id = '${REQUEST_A}'`),
     );
@@ -559,6 +645,29 @@ describe("request workflow", () => {
       payment_status: "verified",
       or_number: "OR-1",
     });
+  });
+
+  it("stops release while a document is not accepted", async () => {
+    await setRequestA("processing");
+    await expect(
+      as(STAFF_A, () =>
+        db.exec(`update public.requests set status = 'ready_for_release' where id = '${REQUEST_A}'`),
+      ),
+    ).rejects.toThrow(/must be accepted/);
+
+    await setRequestA("ready_for_release", "verified");
+    await expect(
+      as(STAFF_A, () =>
+        db.exec(`update public.requests set status = 'released' where id = '${REQUEST_A}'`),
+      ),
+    ).rejects.toThrow(/must be accepted/);
+
+    await db.exec(`update public.requirements_attachments set verification_status = 'approved'
+                   where id = '${ATTACHMENT_A}'`);
+    await as(STAFF_A, () =>
+      db.exec(`update public.requests set status = 'released' where id = '${REQUEST_A}'`),
+    );
+    expect((await requestA()).status).toBe("released");
   });
 
   it("only lets the cashier verify a request that is ready, and only once", async () => {
@@ -732,6 +841,26 @@ describe("uploaded document storage", () => {
     );
     expect(Number(bucket.file_size_limit)).toBe(10 * 1024 * 1024);
     expect(bucket.allowed_mime_types).toEqual(["image/jpeg", "image/png", "application/pdf"]);
+  });
+});
+
+describe("services registry", () => {
+  // Its system-admin policy used to read profiles directly, which looped back
+  // through the profile and request policies and broke every profile read.
+  it("a system administrator still manages it", async () => {
+    const updated = await as(SYSTEM_ADMIN, () =>
+      rows(`update public.services_registry set department_id = 'deaths'
+            where service_code = 'BIRTH' returning service_code`),
+    );
+    expect(updated).toHaveLength(1);
+  });
+
+  it("staff cannot change it", async () => {
+    const updated = await as(STAFF_A, () =>
+      rows(`update public.services_registry set department_id = 'deaths'
+            where service_code = 'BIRTH' returning service_code`),
+    );
+    expect(updated).toHaveLength(0);
   });
 });
 

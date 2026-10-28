@@ -18,6 +18,7 @@ import {
   InputGroupInput,
 } from "~/components/ui/input-group";
 import { Spinner } from "~/components/ui/spinner";
+import { PASSWORD_HINT } from "../../auth.schema";
 import {
   acceptInvitationFormSchema,
   type AcceptInvitationFormValues,
@@ -96,8 +97,7 @@ export function AcceptInvitationForm() {
                 </InputGroupAddon>
               </InputGroup>
               <FieldDescription id="password-guidance">
-                Use at least 8 characters. A longer, unique password is easier
-                to keep secure.
+                {PASSWORD_HINT}
               </FieldDescription>
               {fieldState.invalid ? (
                 <FieldError errors={[fieldState.error]} />

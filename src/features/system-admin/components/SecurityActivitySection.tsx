@@ -1,5 +1,5 @@
 import { QuietLink as Link } from "~/components/quiet-link";
-import { ChevronRight, Fingerprint, LogIn, Shield } from "lucide-react";
+import { Fingerprint, LogIn, Shield } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { buttonVariants } from "~/components/ui/button";
 import {
@@ -44,7 +44,6 @@ export function SecurityActivitySection({
             "security-pill-button",
           )}
         >
-          <ChevronRight data-icon="inline-start" aria-hidden="true" />
           View full sign-in history
         </Link>
       </div>

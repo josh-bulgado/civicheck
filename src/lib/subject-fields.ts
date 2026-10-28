@@ -104,6 +104,35 @@ export function subjectFullName(subject: SubjectFields | undefined): string {
  * there's more than one subject, so a single-subject service's `form_data`
  * stays byte-for-byte identical to before this feature existed.
  */
+/**
+ * Reads back the people `flattenSubjects` wrote into `form_data`. A lone
+ * subject's role is not stored, so it comes from `roles` (the service's party
+ * roles) by position, the way the wizard assigned it.
+ */
+export function subjectsFromFormData(
+  formData: Record<string, unknown>,
+  roles: string[],
+): SubjectFields[] {
+  const text = (key: string) => {
+    const value = formData[key];
+    return typeof value === "string" ? value : "";
+  };
+  const subjects: SubjectFields[] = [];
+  for (let index = 0; ; index++) {
+    const prefix = index === 0 ? "subject" : `party${index + 1}`;
+    if (!(`${prefix}_first_name` in formData) && !(`${prefix}_last_name` in formData)) break;
+    subjects.push({
+      role: text(`${prefix}_role`) || roles[index] || "Subject",
+      firstName: text(`${prefix}_first_name`),
+      middleName: text(`${prefix}_middle_name`),
+      lastName: text(`${prefix}_last_name`),
+      suffix: text(`${prefix}_suffix`),
+      sex: text(`${prefix}_sex`),
+    });
+  }
+  return subjects;
+}
+
 export function flattenSubjects(subjects: SubjectFields[]): Record<string, string> {
   const out: Record<string, string> = {};
   const multi = subjects.length > 1;

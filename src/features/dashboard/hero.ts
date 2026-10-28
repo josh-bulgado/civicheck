@@ -21,7 +21,10 @@ const isActive = (r: CitizenDashboardRequest) =>
 /**
  * The one request the dashboard leads with: one waiting on the applicant
  * (incomplete), then one waiting at the cashier (ready for release), then the
- * newest of the rest that is still moving. Null when nothing is in progress.
+ * newest of the rest that is still moving. With nothing moving, the newest one
+ * that was released: the whole journey, finished, rather than a bare notice that
+ * the page has nothing on it. Null when there is neither (a rejected request
+ * never leads: it reaches the applicant through the attention card).
  */
 export function pickHeroRequest(
   requests: CitizenDashboardRequest[],
@@ -32,6 +35,7 @@ export function pickHeroRequest(
     sorted.find((r) => r.status === "incomplete") ??
     sorted.find((r) => r.status === "ready_for_release") ??
     sorted.find(isActive) ??
+    sorted.find((r) => r.status === "released") ??
     null
   );
 }
@@ -54,8 +58,8 @@ export interface DashboardPlan {
   hero: CitizenDashboardRequest | null;
   attention: AttentionItem[];
   /**
-   * Under the hero: the other requests still moving. With no hero there is
-   * nothing moving, so: the latest finished ones.
+   * Under the hero: the other requests still moving. When nothing is moving
+   * (no hero, or a finished one), the latest finished ones instead.
    */
   rows: CitizenDashboardRequest[];
   rowsHeading: "Your other requests" | "Recent requests";
@@ -70,13 +74,17 @@ export interface DashboardPlan {
  * then a rejection they have not opened yet (`unreadRequestIds` is the same
  * unread state the sidebar badge reads, cleared when the request is opened).
  * What is left fills two rows, still-moving requests only. Finished requests
- * appear only when nothing is moving, so they never crowd out one that is.
+ * appear only when nothing is moving (the hero is then the latest released one,
+ * or there is none), so they never crowd out one that is.
  */
 export function dashboardPlan(
   requests: CitizenDashboardRequest[],
   unreadRequestIds: ReadonlySet<string> = new Set(),
 ): DashboardPlan {
   const hero = pickHeroRequest(requests);
+  // A hero that is finished means nothing else is moving either: it would have
+  // led otherwise.
+  const nothingMoving = hero === null || !isActive(hero);
   // The hero already speaks for its own request, so only the others are listed.
   const others = newestFirst(requests).filter((request) => request.id !== hero?.id);
 
@@ -116,7 +124,7 @@ export function dashboardPlan(
   // it had no room for rejoins the rows if it is still moving.
   const named = new Set(attention.map((item) => item.request.id));
   const pool = others.filter(
-    (request) => !named.has(request.id) && (hero === null || isActive(request)),
+    (request) => !named.has(request.id) && (nothingMoving || isActive(request)),
   );
   const rows = pool.slice(0, OTHER_REQUESTS_SHOWN);
 
@@ -129,7 +137,7 @@ export function dashboardPlan(
     hero,
     attention,
     rows,
-    rowsHeading: hero ? "Your other requests" : "Recent requests",
+    rowsHeading: nothingMoving ? "Recent requests" : "Your other requests",
     hasMore: pool.length > rows.length || droppedRejection,
   };
 }
@@ -233,23 +241,46 @@ export interface TrackerDetails {
 }
 
 /**
+ * How the lead tracker is drawn for a status: how many stages are finished (the
+ * first that many, solid), and the stage the request is in (a ring), if any.
+ *
+ * A submitted request has finished Submission and nothing is under way yet, so
+ * no stage is "here". A released one has been through all four, so none is
+ * either. Any other status is in its own stage, with the ones before it done.
+ */
+export function trackerProgress(status: string): {
+  done: number;
+  here: WorkflowStage | null;
+} {
+  if (status === "submitted") return { done: 1, here: null };
+  if (status === "released") return { done: 4, here: null };
+  const current = stageOf(status) ?? 1;
+  return { done: current - 1, here: current };
+}
+
+/**
  * Submission is complete the day it is made. Every later stage is complete the
  * first time the log shows the request in a stage after it (validation ends
- * when processing starts). No log entry, no date: better blank than guessed.
+ * when processing starts). Release is complete when it was released, which only
+ * a released request has to show. No log entry, no date: better blank than
+ * guessed.
  */
 function stageDates(request: CitizenDashboardRequest): TrackerDetails["dates"] {
-  const current = stageOf(request.status) ?? 1;
+  // `stageOf` puts a released request in Release, which is finished, not under way.
+  const current = request.status === "released" ? 5 : (stageOf(request.status) ?? 1);
   const logs = [...(request.application_logs ?? [])].sort(
     (a, b) => Date.parse(a.created_at) - Date.parse(b.created_at),
   );
   const dates: TrackerDetails["dates"] = {};
 
-  for (const stage of [1, 2, 3] as const) {
+  for (const stage of [1, 2, 3, 4] as const) {
     if (stage >= current) break;
     const reached =
       stage === 1
         ? request.created_at
-        : logs.find((log) => (stageOf(log.action_status) ?? 0) > stage)?.created_at;
+        : stage === 4
+          ? [...logs].reverse().find((log) => log.action_status === "released")?.created_at
+          : logs.find((log) => (stageOf(log.action_status) ?? 0) > stage)?.created_at;
     const date = reached ? formatShortDate(reached) : "";
     if (date) dates[stage] = date;
   }
@@ -297,7 +328,9 @@ export function leadCaptions(
   const { dates, note } = details;
   const captions: Partial<Record<WorkflowStage, string>> = { ...dates };
   const stage = stageOf(request.status);
-  if (stage && note) captions[stage] = note;
+  // A released request is past Release, not in it: the date it was released
+  // stays under the stage, and the note is left to the phone's line.
+  if (stage && note && request.status !== "released") captions[stage] = note;
   return captions;
 }
 

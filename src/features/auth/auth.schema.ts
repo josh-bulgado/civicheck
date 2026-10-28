@@ -37,10 +37,33 @@ export const newPasswordSchema = z
     `Password is too long. Use ${PASSWORD_MAX_BYTES} characters or fewer`,
   );
 
-/** The extra rule signup and password changes add on top of the above. */
-export const PASSWORD_NUMBER_MESSAGE =
-  "Password must include at least one number";
-export const passwordHasNumber = (value: string) => /\d/.test(value);
+/**
+ * Beyond length, Supabase Auth turns away a password that lacks any of these
+ * four kinds of character. They are asked for up front, so the person is told
+ * in a line instead of by its rejection after the round trip. The symbols are
+ * the ones Supabase counts; anything else (a space, "é") does not satisfy it.
+ */
+export const PASSWORD_RULES = [
+  { label: "An uppercase letter", test: (value: string) => /[A-Z]/.test(value) },
+  { label: "A lowercase letter", test: (value: string) => /[a-z]/.test(value) },
+  { label: "A number", test: (value: string) => /\d/.test(value) },
+  {
+    label: "A symbol, like ! @ # or .",
+    test: (value: string) => /[!@#$%^&*()_+\-=[\]{};'\\:"|<>?,./`~]/.test(value),
+  },
+] as const;
+
+export const PASSWORD_HINT = `At least ${PASSWORD_MIN} characters, with upper and lowercase letters, a number and a symbol.`;
+export const PASSWORD_RULES_MESSAGE =
+  "Use upper and lowercase letters, a number and a symbol.";
+export const passwordMeetsRules = (value: string) =>
+  PASSWORD_RULES.every((rule) => rule.test(value));
+
+/** A password being chosen at signup, reset or change: the length and character rules. */
+export const strongPasswordSchema = newPasswordSchema.refine(
+  passwordMeetsRules,
+  PASSWORD_RULES_MESSAGE,
+);
 
 /**
  * A password being entered to sign in. Only bounded, never held to the creation
@@ -80,10 +103,7 @@ export const signupFieldsSchema = z.object({
       "Choose a suffix from the list",
     ),
   email: emailSchema,
-  password: newPasswordSchema.refine(
-    passwordHasNumber,
-    PASSWORD_NUMBER_MESSAGE,
-  ),
+  password: strongPasswordSchema,
 });
 
 /**
@@ -139,4 +159,4 @@ export const otpVerificationSchema = z.object({
 
 export const emailOnlySchema = z.object({ email: emailSchema });
 
-export const newPasswordInputSchema = z.object({ password: newPasswordSchema });
+export const newPasswordInputSchema = z.object({ password: strongPasswordSchema });

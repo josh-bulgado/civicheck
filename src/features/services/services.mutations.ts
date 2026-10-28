@@ -224,9 +224,6 @@ export const submitRequestFn = createServerFn({ method: "POST" })
     const stagedPathPrefix = data.uploadDraftId
       ? `${user.id}/drafts/${data.uploadDraftId}/`
       : null;
-    const hasStagedPaths = submittedFileUrls.some((path) =>
-      path.startsWith(`${user.id}/drafts/`),
-    );
     const stagedFilesByPath = new Map<
       string,
       { requirement_id: string | null; subject_role: string | null }
@@ -259,15 +256,18 @@ export const submitRequestFn = createServerFn({ method: "POST" })
       for (const file of stagedFiles ?? []) {
         stagedFilesByPath.set(file.storage_path, file);
       }
-    } else if (hasStagedPaths) {
+    } else if (submittedFileUrls.length > 0) {
       return {
         error: true,
         message: "The document upload session is missing. Add the files again.",
       };
     }
 
+    // Every document has to be a file the server staged in this application's
+    // own draft. Any other path — one never uploaded, or a file already
+    // attached to another request — would tick a mandatory requirement off
+    // without a document behind it.
     const stagedFileMismatch = (data.documents ?? []).some((document) => {
-      if (!document.fileUrl.startsWith(`${user.id}/drafts/`)) return false;
       if (!stagedPathPrefix || !document.fileUrl.startsWith(stagedPathPrefix)) {
         return true;
       }
@@ -354,6 +354,15 @@ export const submitRequestFn = createServerFn({ method: "POST" })
           .eq("id", requestId)
           .eq("applicant_id", user.id);
         if (!rollbackError) {
+          // A file can back only one request (unique file_url), so this is the
+          // same application sent twice, e.g. from a second tab.
+          if (docsError.code === "23505") {
+            return {
+              error: true,
+              message:
+                "This application was already submitted. Check My Requests for its tracking number.",
+            };
+          }
           return {
             error: true,
             message:

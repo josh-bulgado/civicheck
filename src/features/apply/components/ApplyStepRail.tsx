@@ -22,6 +22,11 @@ function formatSavedAt(updatedAt: string | null) {
 interface ApplyStepRailProps {
   currentStep: 1 | 2 | 3 | 4;
   draftUpdatedAt: string | null;
+  /**
+   * Given when there is a draft worth keeping: the mark then asks what to do
+   * with it instead of leaving. Without it the mark simply goes to the dashboard.
+   */
+  onLeave?: () => void;
 }
 
 /**
@@ -31,6 +36,7 @@ interface ApplyStepRailProps {
 export function ApplyStepRail({
   currentStep,
   draftUpdatedAt,
+  onLeave,
 }: ApplyStepRailProps) {
   const savedLabel = formatSavedAt(draftUpdatedAt);
 
@@ -40,6 +46,13 @@ export function ApplyStepRail({
         to="/dashboard"
         aria-label="CiviCheck, back to your dashboard"
         className="flex shrink-0 items-center gap-2.5 text-foreground md:w-60"
+        onClick={(event) => {
+          // A plain click asks first. Opening it in a new tab (ctrl, cmd, shift)
+          // leaves this page, and the draft, exactly where they are.
+          if (!onLeave || event.ctrlKey || event.metaKey || event.shiftKey) return;
+          event.preventDefault();
+          onLeave();
+        }}
       >
         {/* Text stand-in: the official emblem isn't cleared for use yet. */}
         <span

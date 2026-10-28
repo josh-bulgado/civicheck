@@ -1,5 +1,5 @@
 import { QuietLink as Link } from "~/components/quiet-link";
-import { ChevronRight, UserRound, Wallet, type LucideIcon } from "lucide-react";
+import { UserRound, Wallet, type LucideIcon } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import type { HeldRequests } from "~/features/dashboard/staff-desk";
 import { formatCount } from "~/features/admin/overview/overview-formatters";
@@ -56,10 +56,9 @@ function HeldRow({ icon: Icon, tone, title, empty, reason, held, search }: HeldR
     <Link
       to="/requests"
       search={search}
-      className="civic-interactive grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 px-5 py-3 outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+      className="civic-interactive grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 px-5 py-3 outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
     >
       {body}
-      <ChevronRight className="size-4.5 text-muted-foreground" aria-hidden="true" />
     </Link>
   );
 }

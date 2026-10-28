@@ -1,5 +1,4 @@
 import { useState, type CSSProperties } from "react";
-import { ArrowRight } from "lucide-react";
 import { QuietLink } from "~/components/quiet-link";
 import { staggerStyle } from "~/components/motion/stagger";
 import { cn } from "~/lib/utils";
@@ -162,15 +161,6 @@ export function CertificateTiles({
               >
                 {tile.blurb}
               </span>
-            </span>
-            <span
-              aria-hidden="true"
-              className={cn(
-                "grid size-10 shrink-0 place-items-center rounded-full border border-border bg-card text-foreground transition-colors duration-200 group-hover/tile:border-primary group-hover/tile:bg-primary group-hover/tile:text-primary-foreground max-md:hidden",
-                strip && "md:hidden",
-              )}
-            >
-              <ArrowRight className="size-4.5" />
             </span>
           </span>
         </QuietLink>

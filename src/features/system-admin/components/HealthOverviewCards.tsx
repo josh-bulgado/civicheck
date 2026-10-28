@@ -1,4 +1,4 @@
-﻿import { CheckCheck, ChevronRight, TriangleAlert } from "lucide-react";
+﻿import { CheckCheck, TriangleAlert } from "lucide-react";
 import { isOpenIncident } from "../system-health.model";
 import { formatHealthTimestamp, healthTimeAgo } from "../system-health.utils";
 import type { SystemHealthDashboard } from "../system-admin.types";
@@ -11,7 +11,7 @@ export function HealthActiveIncidents({ data, onViewAll }: { data: SystemHealthD
     <section className="health-panel health-incidents" aria-labelledby="active-incidents-title">
       <div className="health-card-heading"><h2 id="active-incidents-title">Active Incidents</h2><button type="button" className="health-text-action" onClick={onViewAll}>View All</button></div>
       <div className="health-incident-list">
-        {data.monitor.status === "degraded" ? <button type="button" className="health-incident" onClick={onViewAll}><span className="health-incident-icon"><TriangleAlert aria-hidden="true" /></span><span className="health-incident-copy"><strong>Scheduled checks need attention</strong><HealthStatusBadge status="degraded" /></span><ChevronRight className="size-4 shrink-0" aria-hidden="true" /></button> : null}
+        {data.monitor.status === "degraded" ? <button type="button" className="health-incident" onClick={onViewAll}><span className="health-incident-icon"><TriangleAlert aria-hidden="true" /></span><span className="health-incident-copy"><strong>Scheduled checks need attention</strong><HealthStatusBadge status="degraded" /></span></button> : null}
         {incidents.slice(0, 2).map((event) => {
           const service = data.services.find((item) => item.key === event.componentKey);
           const status = event.severity === "critical" ? "outage" : "degraded";
@@ -20,7 +20,7 @@ export function HealthActiveIncidents({ data, onViewAll }: { data: SystemHealthD
               <span className="health-incident-icon"><TriangleAlert aria-hidden="true" /></span>
               <span className="health-incident-copy"><strong>{event.title}</strong><HealthStatusBadge status={status} /></span>
               {service ? <HealthSparkline checks={service.checks} status={status} /> : null}
-              <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
+              
             </button>
           );
         })}

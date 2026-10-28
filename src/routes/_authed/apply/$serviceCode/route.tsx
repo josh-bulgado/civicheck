@@ -1,9 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   createFileRoute,
   Outlet,
+  redirect,
   useMatches,
 } from "@tanstack/react-router";
+import { hasPermission } from "~/lib/permissions";
 import { getServiceDetail } from "~/features/services/services.queries";
 import {
   redirectToServiceSlug,
@@ -12,8 +14,9 @@ import {
 import { discardRequestUploadDraftFn } from "~/features/apply/apply.mutations";
 import { ApplicationDocket } from "~/features/apply/components/ApplicationDocket";
 import { ApplyStepRail } from "~/features/apply/components/ApplyStepRail";
+import { KeepDraftDialog } from "~/features/apply/components/KeepDraftDialog";
 import { WizardPageSkeleton } from "~/features/apply/components/WizardPageSkeleton";
-import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
+import { draftHasProgress, useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
 
 // The session + active-account check now lives on the parent `/_authed`
 // layer, shared with the dashboard shell — this route only needs its own
@@ -27,7 +30,12 @@ export const Route = createFileRoute("/_authed/apply/$serviceCode")({
       serviceCode: toServiceSlug(serviceCode),
     }),
   },
-  beforeLoad: ({ params, location }) => {
+  beforeLoad: ({ context, params, location }) => {
+    // Only applicants file online requests; the server functions refuse
+    // anyone else, so personnel are sent back rather than shown a dead form.
+    if (!context.user || !hasPermission(context.user.role, "requests:create")) {
+      throw redirect({ to: "/dashboard" });
+    }
     redirectToServiceSlug(location, "/apply/", params.serviceCode);
   },
   loader: ({ params }) => getServiceDetail({ data: params.serviceCode }),
@@ -46,7 +54,11 @@ const STEP_PATHS = ["case", "details", "documents", "review"] as const;
 
 function ApplyLayout() {
   const { routeCode, displayName, isGroup, services } = Route.useLoaderData();
-  const { draft, update, clear, hydrated } = useApplyDraft(routeCode);
+  const { draft, update, discard, hydrated } = useApplyDraft(routeCode);
+  // The CiviCheck mark in the rail leads to the dashboard; with something to
+  // lose, it asks what to do with the draft first.
+  const [leavingToDashboard, setLeavingToDashboard] = useState(false);
+  const hasProgress = hydrated && draftHasProgress(draft);
 
   // Remember what this application is called, so the dashboard can offer to
   // continue it by name. Only once the draft holds something: a cleared draft
@@ -78,7 +90,7 @@ function ApplyLayout() {
 
   function handleDiscard() {
     const uploadDraftId = draft.uploadDraftId;
-    clear();
+    discard();
     if (uploadDraftId) {
       discardRequestUploadDraftFn({ data: { uploadDraftId } }).catch(() => {});
     }
@@ -89,6 +101,14 @@ function ApplyLayout() {
       <ApplyStepRail
         currentStep={currentStep}
         draftUpdatedAt={hydrated ? draft.updatedAt : null}
+        onLeave={hasProgress ? () => setLeavingToDashboard(true) : undefined}
+      />
+      <KeepDraftDialog
+        open={leavingToDashboard}
+        onOpenChange={setLeavingToDashboard}
+        serviceName={serviceName}
+        destination="/dashboard"
+        onDiscard={handleDiscard}
       />
 
       {/* The progress rail scrolls away with the page; the selected service
@@ -106,6 +126,7 @@ function ApplyLayout() {
           copies={draft.copies}
           feePerCopy={selectedService?.fee_per_copy === true}
           selectionPending={selectionPending}
+          hasProgress={hasProgress}
           onDiscard={handleDiscard}
         />
       </div>

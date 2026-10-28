@@ -5,6 +5,7 @@ import {
   parseFormTemplateDefinition,
   templateFieldLabels,
 } from "~/features/forms/form-template.utils";
+import { loadAddableUploads } from "~/features/requests/missing-uploads.server";
 import { readRequestMessages } from "~/features/requests/request-messages.server";
 import { loadServiceCatalogue } from "~/features/services/services.catalogue";
 
@@ -98,7 +99,7 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
     const [attachments, logs] = await Promise.all([
       supabase
         .from("requirements_attachments")
-        .select("id, requirement_name, subject_role, verification_status, rejection_reason, uploaded_at")
+        .select("id, requirement_id, requirement_name, subject_role, verification_status, rejection_reason, uploaded_at")
         .eq("request_id", data.requestId)
         .order("uploaded_at", { ascending: true }),
       supabase
@@ -115,6 +116,20 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
     const messages = allowsMessages
       ? await readRequestMessages(supabase, data.requestId)
       : [];
+
+    // Offered only while staff have the request marked incomplete, the one
+    // time addMissingAttachmentFn takes a new document.
+    const addableUploads =
+      row.status === "incomplete"
+        ? await loadAddableUploads(
+            row,
+            (attachments.data ?? []).map((a) => ({
+              requirementId: a.requirement_id,
+              requirementName: a.requirement_name,
+              subjectRole: a.subject_role,
+            })),
+          )
+        : [];
 
     return {
       id: row.id,
@@ -142,6 +157,7 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
         verificationStatus: a.verification_status,
         rejectionReason: a.rejection_reason,
       })),
+      addableUploads,
       logs: (logs.data ?? []).map((l) => ({
         id: l.id,
         actionStatus: l.action_status,

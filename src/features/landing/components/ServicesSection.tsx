@@ -65,9 +65,6 @@ const ServicesSection = () => {
             className="group inline-flex items-center gap-1.5 text-base font-bold text-primary hover:text-primary-hover"
           >
             See all services
-            <span className="transition-transform group-hover:translate-x-0.5">
-              →
-            </span>
           </Link>
         </div>
 
@@ -114,7 +111,6 @@ const ServicesSection = () => {
                     cards whose requirement lists wrap to different heights. */}
                 <p className="civic-nudge mt-auto flex items-center gap-1 text-[13px] font-semibold text-primary">
                   View requirements
-                  <span data-nudge>→</span>
                 </p>
               </Link>
             </Reveal>

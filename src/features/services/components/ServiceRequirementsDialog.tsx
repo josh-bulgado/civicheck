@@ -1,4 +1,4 @@
-import { ArrowRight, Clock, Wallet } from "lucide-react";
+import { Clock, Wallet } from "lucide-react";
 import {
   Dialog,
   DialogClose,
@@ -194,7 +194,6 @@ export function ServiceRequirementsDialog({
                 onClick={onApply}
               >
                 Apply
-                <ArrowRight data-icon="inline-end" aria-hidden="true" />
               </Button>
             )}
           </div>

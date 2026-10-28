@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { QuietLink as Link } from "~/components/quiet-link";
 import { useHotkeys } from "@tanstack/react-hotkeys";
-import { ArrowLeft, ArrowRight, FileSliders, Search } from "lucide-react";
+import { FileSliders, Search } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { buttonVariants } from "~/components/ui/button";
 import {
@@ -138,7 +138,6 @@ export function ServiceGroupPage({ variants }: { variants: Service[] }) {
           to="/admin/services"
           className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft aria-hidden="true" className="size-4" />
           Services Registry
         </Link>
 
@@ -203,7 +202,6 @@ export function ServiceGroupPage({ variants }: { variants: Service[] }) {
             className={buttonVariants({ size: "lg" })}
           >
             Edit shared application
-            <ArrowRight aria-hidden="true" data-icon="inline-end" />
           </Link>
         </section>
 

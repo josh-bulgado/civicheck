@@ -72,9 +72,11 @@ export function buildNewMessageEmail(trackingNumber: string): NotificationConten
 
 export function buildPreValidationCompleteEmail(trackingNumber: string): NotificationContent {
   const subject = `Request ${trackingNumber}: pre-validation complete`;
+  // One visit, at release: accepted uploads mean there is nothing to bring in
+  // yet, and the cashier can't take payment before Ready for Release anyway.
   const lines = [
-    `All the documents you pre-uploaded for request ${trackingNumber} have been reviewed and approved.`,
-    `You may now visit the CCRO in person to finish your request. Please bring the physical original copies of the documents you uploaded, along with payment for the applicable fee.`,
+    `All the documents you uploaded for request ${trackingNumber} have been checked and accepted.`,
+    `You don't need to visit the CCRO yet. We'll notify you when your document is ready for release. Then visit once: bring the original copies of the documents you uploaded so staff can match them, pay any fee at the counter, and claim your document.`,
   ];
   return composeContent(
     "pre_validation_complete",

@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { QuietLink as Link } from "~/components/quiet-link";
-import { ArrowUpRight, Check, ChevronLeft, CircleCheck, Clock, TriangleAlert } from "lucide-react";
+import { Check, ChevronLeft, CircleCheck, Clock, TriangleAlert } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Kbd } from "~/components/ui/kbd";
@@ -168,7 +168,7 @@ export function HealthIncidentsCard({ data, pending, hotkeyLabel, onAcknowledge,
         <div className="health-incident-footer-actions">
           {page > 0 ? <Button type="button" size="sm" variant="outline" aria-label="Previous incidents" onClick={() => setPages((previous) => ({ ...previous, [tab]: page - 1 }))}><ChevronLeft aria-hidden="true" /></Button> : null}
           {end < total ? <Button type="button" size="sm" variant="outline" onClick={() => setPages((previous) => ({ ...previous, [tab]: page + 1 }))}>Show more</Button> : null}
-          <Link to="/system-admin/audit" search={AUDIT_SEARCH} className="health-dialog-link" title={`Open Audit Center (${hotkeyLabel("A")})`}><ArrowUpRight aria-hidden="true" />Open Audit Center</Link>
+          <Link to="/system-admin/audit" search={AUDIT_SEARCH} className="health-dialog-link" title={`Open Audit Center (${hotkeyLabel("A")})`}>Open Audit Center</Link>
         </div>
       </footer>
     </section>

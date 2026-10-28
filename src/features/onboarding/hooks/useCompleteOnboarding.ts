@@ -1,26 +1,22 @@
 import { useRouter } from "@tanstack/react-router";
-import { toast } from "sonner";
 import { useMutation } from "~/hooks/useMutation";
-import { updateMyProfileFn } from "~/features/account/account.mutations";
 import { clearCurrentUser } from "~/features/auth/current-user";
+import { completeOnboardingFn } from "../onboarding.mutations";
 
 export function useCompleteOnboarding() {
   const router = useRouter();
 
   return useMutation({
-    fn: updateMyProfileFn,
+    fn: completeOnboardingFn,
     onSuccess: async (ctx) => {
-      if (ctx.data?.error) {
-        toast.error("Unable to save your name", {
-          description: ctx.data.message,
-        });
-        return;
-      }
+      // OnboardingPage shows a refused save inline.
+      if (ctx.data?.error) return;
 
       // The sidebar/header read the display name straight off the cached
       // identity, so it has to go before the redirect reads fresh data.
       clearCurrentUser();
-      await router.navigate({ to: "/dashboard" });
+      // Replaced, so Back doesn't return to a page that only redirects away.
+      await router.navigate({ to: "/dashboard", replace: true });
     },
   });
 }

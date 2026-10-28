@@ -451,13 +451,18 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         min={
                           definitionField.dateDirection === "future" ? toDateKey() : undefined
                         }
-                        placeholder={
-                          definitionField.placeholder ??
-                          `Select ${definitionField.label.toLowerCase()}`
-                        }
+                        // The label is right above, so without a placeholder of its
+                        // own the picker says "Select a date" instead of repeating
+                        // it: a long label ("Date of the event on the record") ran
+                        // past the field and was cut off.
+                        placeholder={definitionField.placeholder || undefined}
                         invalid={fieldState.invalid}
                         icon="calendar"
-                        className={WIZARD_CONTROL_CLASS}
+                        // The wizard's 56px height only reaches a Button. An Input
+                        // or Select keeps its own 40px (their size selectors
+                        // outrank it), so the picker takes that size too, or it
+                        // stands taller than the fields beside it.
+                        className={cn(WIZARD_CONTROL_CLASS, "h-10 px-3")}
                       />
                     ) : definitionField.type === "select" ? (
                       <Select

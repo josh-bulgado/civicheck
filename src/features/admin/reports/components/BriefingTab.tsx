@@ -1,5 +1,5 @@
 import { QuietLink as Link } from "~/components/quiet-link";
-import { ArrowRight, ClipboardList } from "lucide-react";
+import { ClipboardList } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
 import { Button, buttonVariants } from "~/components/ui/button";
@@ -288,7 +288,6 @@ function SentBackQuestion({
           className={cn(buttonVariants({ variant: "link", size: "lg" }), "h-auto px-0 text-base")}
         >
           See Requests Marked Incomplete
-          <ArrowRight aria-hidden="true" data-icon="inline-end" />
         </Link>
       </div>
     </ReportPanel>
@@ -340,7 +339,6 @@ function TopServicesQuestion({
         {rest > 0 ? (
           <Button variant="link" size="lg" className="h-auto px-0 text-base" onClick={onViewServices}>
             See {rest} More {pluralize(rest, "Service")}
-            <ArrowRight aria-hidden="true" data-icon="inline-end" />
           </Button>
         ) : null}
       </div>

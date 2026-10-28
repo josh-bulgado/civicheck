@@ -36,6 +36,24 @@ describe("what to do next once a request is ready for release", () => {
     });
   });
 
+  it("tells the applicant not to visit while staff are still working", () => {
+    for (const status of ["submitted", "under_validation", "processing"]) {
+      expect(
+        nextSteps({
+          status,
+          paymentStatus: "unpaid",
+          feesDue: 150,
+          allowsMessages: false,
+          attachments: [],
+          logs: [],
+        }),
+      ).toEqual({
+        kind: "line",
+        text: "No need to visit yet. We'll notify you when it's ready for release.",
+      });
+    }
+  });
+
   it("sends an inquiry to the messages, with no visit and no money", () => {
     expect(ready({ feesDue: 150, paymentStatus: "unpaid", allowsMessages: true })).toEqual({
       kind: "steps",

@@ -1,9 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { QuietLink as Link } from "~/components/quiet-link";
 import { Controller, useForm } from "react-hook-form";
-import { UserRound } from "lucide-react";
+import { AlertCircleIcon, UserRound } from "lucide-react";
 import z from "zod";
 import { CiviCheckIdentity } from "~/components/brand/civic-identity";
+import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import {
   Field,
@@ -37,17 +38,19 @@ export function OnboardingPage({ user }: { user: AccountProfile }) {
 
   async function onSubmit(data: FormValues) {
     await completeOnboarding.mutate({
-      data: {
-        firstName: data.firstName,
-        middleName: "",
-        lastName: data.lastName,
-        suffix: "",
-        dateOfBirth: "",
-        sex: "",
-        phoneNumber: "",
-      },
+      data: { firstName: data.firstName, lastName: data.lastName },
     });
   }
+
+  const isSaving = completeOnboarding.status === "pending";
+  // A thrown error (no connection, an expired session) used to leave the
+  // button looking like it did nothing.
+  const saveError =
+    completeOnboarding.status === "error"
+      ? "We couldn't save your name. Check your connection and try again."
+      : completeOnboarding.status === "success" && completeOnboarding.data?.error
+        ? completeOnboarding.data.message
+        : null;
 
   return (
     <div className="auth-page flex min-h-dvh items-center justify-center bg-background px-5 py-10 sm:px-8">
@@ -74,6 +77,13 @@ export function OnboardingPage({ user }: { user: AccountProfile }) {
             onSubmit={form.handleSubmit(onSubmit)}
             className="flex flex-col gap-5"
           >
+            {saveError && (
+              <Alert variant="destructive" className="civic-enter-sm">
+                <AlertCircleIcon />
+                <AlertDescription>{saveError}</AlertDescription>
+              </Alert>
+            )}
+
             <FieldGroup className="gap-4">
               <Controller
                 control={form.control}
@@ -123,8 +133,8 @@ export function OnboardingPage({ user }: { user: AccountProfile }) {
               />
             </FieldGroup>
 
-            <Button type="submit" disabled={completeOnboarding.status === "pending"}>
-              {completeOnboarding.status === "pending" ? (
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? (
                 <span className="flex items-center gap-2">
                   <Spinner className="size-4" />
                   Saving...
@@ -135,6 +145,19 @@ export function OnboardingPage({ user }: { user: AccountProfile }) {
             </Button>
           </form>
         </div>
+
+        {/* Every signed-in page sends a nameless account back here, so this is
+            the only way out for someone on the wrong Google account. */}
+        <p className="mt-5 text-center text-sm text-muted-foreground">
+          Signed in as{" "}
+          <span className="font-medium text-foreground">{user.email}</span>.{" "}
+          <Link
+            to="/logout"
+            className="font-semibold text-primary underline-offset-4 hover:underline"
+          >
+            Sign out
+          </Link>
+        </p>
       </section>
     </div>
   );

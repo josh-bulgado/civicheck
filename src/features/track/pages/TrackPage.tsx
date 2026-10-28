@@ -27,6 +27,7 @@ import {
   getPaymentDetails,
 } from "~/features/services/request-status";
 import { formatFee } from "~/features/services/service-utils";
+import { isClosedRequestStatus } from "~/features/requests/document-review";
 
 const ACCEPT = "image/jpeg,image/png,application/pdf";
 const MAX_SIZE = 10 * 1024 * 1024;
@@ -304,6 +305,7 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
                       doc={doc}
                       trackingNumber={result.trackingNumber}
                       lastName={form.getValues("lastName")}
+                      canResubmit={!isClosedRequestStatus(result.status)}
                       onResubmitted={refreshResult}
                     />
                   ))}
@@ -323,11 +325,14 @@ function AttachmentTrackRow({
   doc,
   trackingNumber,
   lastName,
+  canResubmit,
   onResubmitted,
 }: {
   doc: TrackAttachment;
   trackingNumber: string;
   lastName: string;
+  /** False once the request is released or rejected. */
+  canResubmit: boolean;
   onResubmitted: () => Promise<void>;
 }) {
   const fileInput = useRef<HTMLInputElement | null>(null);
@@ -381,7 +386,7 @@ function AttachmentTrackRow({
         )}
       </div>
 
-      {doc.verificationStatus === "rejected" && (
+      {doc.verificationStatus === "rejected" && canResubmit && (
         <>
           <Input
             ref={fileInput}

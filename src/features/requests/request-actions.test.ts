@@ -20,6 +20,22 @@ function input(overrides: Partial<RequestActionInput> = {}): RequestActionInput 
 }
 
 describe("planning the actions on a request", () => {
+  it("holds release while a document is not accepted", () => {
+    const ready = planRequestActions(
+      input({ status: "processing", attachments: [doc("approved"), doc("pending")] }),
+    );
+    expect(ready.primary).toMatchObject({ to: "ready_for_release", blocked: "1 document still needs a decision" });
+
+    const release = planRequestActions(
+      input({
+        status: "ready_for_release",
+        paymentStatus: "verified",
+        attachments: [doc("rejected")],
+      }),
+    );
+    expect(release.primary).toMatchObject({ to: "released", blocked: "1 rejected document to resolve first" });
+  });
+
   it("offers nothing to a role that can only view", () => {
     const plan = planRequestActions(input({ canProcess: false }));
 
@@ -146,16 +162,25 @@ describe("describing where a request stands", () => {
     ).toBe("1 accepted · 1 pending · 1 rejected");
   });
 
-  it("points to the counter once every document is accepted", () => {
-    expect(
-      describeRequestProgress(input({ attachments: [doc("approved")] })),
-    ).toMatch(/Compare the originals at the counter/);
+  it("leaves the originals for release once every upload is accepted", () => {
+    const line = describeRequestProgress(input({ attachments: [doc("approved")] }));
+    expect(line).toMatch(/Mark requirements complete/);
+    expect(line).toMatch(/at release/);
+    expect(line).not.toMatch(/counter/);
   });
 
-  it("says so when there was nothing to pre-check", () => {
+  it("says so when an online request had nothing to pre-check", () => {
     expect(describeRequestProgress(input({ attachments: [] }))).toMatch(
-      /Nothing was pre-uploaded/,
+      /Nothing was uploaded.*at release/,
     );
+  });
+
+  it("keeps a walk-in's check at the counter", () => {
+    expect(describeRequestProgress(input({ isWalkIn: true }))).toMatch(/at the counter/);
+    expect(
+      describeRequestProgress(input({ status: "incomplete", isWalkIn: true })),
+    ).toMatch(/bring/);
+    expect(describeRequestProgress(input({ status: "incomplete" }))).toMatch(/upload/);
   });
 
   it("does not claim payment can be taken before release", () => {
@@ -172,6 +197,13 @@ describe("describing where a request stands", () => {
     expect(describeRequestProgress({ ...base, paymentStatus: "verified" })).toMatch(
       /hand over the document/,
     );
+    expect(
+      describeRequestProgress({
+        ...base,
+        paymentStatus: "verified",
+        attachments: [doc("approved")],
+      }),
+    ).toMatch(/match the originals to the uploads/);
   });
 });
 

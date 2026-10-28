@@ -11,8 +11,6 @@ import {
 } from "react-hook-form";
 import {
   ClipboardCheck,
-  ArrowLeft,
-  ArrowRight,
   FileText,
   GitBranch,
   Link2,
@@ -1128,10 +1126,6 @@ export function ServiceFormPage({
                         }
                         onClick={() => void revealSection(previousTab.id)}
                       >
-                        <ArrowLeft
-                          aria-hidden="true"
-                          data-icon="inline-start"
-                        />
                         Previous
                         {keyboardShortcuts ? (
                           <Kbd aria-hidden="true" className="hidden sm:inline-flex">
@@ -1159,7 +1153,6 @@ export function ServiceFormPage({
                             {hotkeyLabel(NEXT_SECTION_HOTKEY)}
                           </Kbd>
                         ) : null}
-                        <ArrowRight aria-hidden="true" data-icon="inline-end" />
                       </Button>
                     ) : null}
                   </div>

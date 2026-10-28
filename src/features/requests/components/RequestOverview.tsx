@@ -43,9 +43,11 @@ function RequestSummary({ request }: { request: RequestDetail }) {
 
 function DocumentsSummary({
   attachments,
+  isWalkIn,
   onOpenDocument,
 }: {
   attachments: Attachment[];
+  isWalkIn: boolean;
   onOpenDocument: (id: string) => void;
 }) {
   const accepted = attachments.filter((doc) => doc.verificationStatus === "approved").length;
@@ -62,7 +64,9 @@ function DocumentsSummary({
       </div>
       {attachments.length === 0 ? (
         <p className="px-4 py-3 text-sm text-muted-foreground">
-          Nothing was pre-uploaded. Validate the physical documents at the counter.
+          {isWalkIn
+            ? "Walk-in. Validate the physical documents at the counter."
+            : "Nothing was uploaded. The originals are checked at release."}
         </p>
       ) : (
         <ul className="divide-y divide-border-light">
@@ -125,7 +129,11 @@ export function RequestOverview({
         </div>
       </div>
       <div className="flex min-w-0 flex-col gap-4">
-        <DocumentsSummary attachments={attachments} onOpenDocument={onOpenDocument} />
+        <DocumentsSummary
+          attachments={attachments}
+          isWalkIn={request.isWalkIn}
+          onOpenDocument={onOpenDocument}
+        />
         {children}
       </div>
     </div>

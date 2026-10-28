@@ -1,4 +1,4 @@
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useLayoutEffect, useSyncExternalStore } from "react";
 import { useRouteContext } from "@tanstack/react-router";
 import type { SubjectFields } from "~/lib/subject-fields";
 import type { TemplateAnswers } from "~/features/forms/form-template.types";
@@ -240,6 +240,56 @@ function writeDraft(key: string, next: ApplyDraft) {
   notifyDraftChange(key, next);
 }
 
+export type DraftPatch =
+  | Partial<ApplyDraft>
+  | ((prev: ApplyDraft) => Partial<ApplyDraft>);
+
+/**
+ * Applications the applicant has just discarded. The wizard stays mounted until
+ * the page they are heading to has loaded, and in that gap a step can still
+ * write: the one that selects a service's only option as soon as the draft is
+ * empty, or an upload that was on its way and lands after the click. Either
+ * would bring the draft back, and with it "Continue your application". A
+ * discarded application takes no more writes until the wizard is opened again.
+ */
+const discardedKeys = new Set<string>();
+
+/** Applies a patch. False when the application was discarded, so nothing was written. */
+export function updateDraftAt(key: string, patch: DraftPatch): boolean {
+  if (discardedKeys.has(key)) return false;
+  const prev = readDraft(key);
+  const resolved = typeof patch === "function" ? patch(prev) : patch;
+  writeDraft(key, {
+    ...prev,
+    ...resolved,
+    updatedAt: new Date().toISOString(),
+  });
+  return true;
+}
+
+function clearDraftAt(key: string) {
+  draftCache.delete(key);
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    // ignore
+  }
+  // A fresh object — see the note in `readDraft` on why this can't be the
+  // `SERVER_DRAFT` singleton.
+  notifyDraftChange(key, { ...DEFAULT_APPLY_DRAFT });
+}
+
+/** Removes the application and refuses writes to it until `reopenDraftAt`. */
+export function discardDraftAt(key: string) {
+  discardedKeys.add(key);
+  clearDraftAt(key);
+}
+
+/** The wizard is open on this application again: it takes writes. */
+export function reopenDraftAt(key: string) {
+  discardedKeys.delete(key);
+}
+
 function subscribeToDraft(key: string, onStoreChange: () => void) {
   function handleDraftChange(event: Event) {
     const { detail } = event as CustomEvent<ApplyDraftEventDetail>;
@@ -327,14 +377,30 @@ export interface ContinuableApplication {
   updatedAt: string;
 }
 
-/** A draft worth offering to continue: something was chosen, typed or uploaded. */
-function hasContent(draft: ApplyDraft): boolean {
+const DEFAULT_PURPOSE = DEFAULT_APPLY_DRAFT.answers.purpose;
+
+function hasName(person: { firstName: string; lastName: string }) {
+  return person.firstName.trim() !== "" || person.lastName.trim() !== "";
+}
+
+/**
+ * Whether a draft holds anything of the applicant's own: a variant they chose,
+ * an answer or name they typed, a file they uploaded. What the wizard fills in
+ * by itself does not count. A service with a single option has it selected the
+ * moment the wizard opens, and that alone is no reason to offer "Continue your
+ * application", or to ask whether to keep a draft on the way out.
+ */
+export function draftHasProgress(draft: ApplyDraft): boolean {
+  if (draft.updatedAt === null) return false;
   return (
-    draft.updatedAt !== null &&
-    (draft.selectedServiceCode !== null ||
-      Object.keys(draft.caseSelectorAnswers).length > 0 ||
-      draft.documents.length > 0 ||
-      draft.subjects.some((subject) => subject.firstName.trim() || subject.lastName.trim()))
+    Object.keys(draft.caseSelectorAnswers).length > 0 ||
+    draft.documents.length > 0 ||
+    draft.subjects.some(hasName) ||
+    Object.entries(draft.answers).some(([key, value]) =>
+      typeof value === "string"
+        ? value.trim() !== "" && !(key === "purpose" && value === DEFAULT_PURPOSE)
+        : value.some(hasName),
+    )
   );
 }
 
@@ -347,7 +413,7 @@ function readContinuableApplication(owner: string | null): ContinuableApplicatio
       const key = window.localStorage.key(index);
       if (!key?.startsWith(prefix)) continue;
       const draft = readDraft(key);
-      if (!hasContent(draft) || !draft.updatedAt) continue;
+      if (!draftHasProgress(draft) || !draft.updatedAt) continue;
       if (!latest || draft.updatedAt > latest.updatedAt) {
         latest = {
           routeCode: key.slice(prefix.length),
@@ -433,30 +499,39 @@ export function useApplyDraft(groupOrCode: string) {
   // component has taken the client's `getSnapshot` branch.
   const hydrated = draft !== SERVER_DRAFT;
 
-  const update = useCallback(
-    (patch: Partial<ApplyDraft> | ((prev: ApplyDraft) => Partial<ApplyDraft>)) => {
-      const prev = readDraft(key);
-      const resolved = typeof patch === "function" ? patch(prev) : patch;
-      writeDraft(key, {
-        ...prev,
-        ...resolved,
-        updatedAt: new Date().toISOString(),
-      });
-    },
-    [key],
-  );
-
-  const clear = useCallback(() => {
-    draftCache.delete(key);
-    try {
-      window.localStorage.removeItem(key);
-    } catch {
-      // ignore
-    }
-    // A fresh object — see the note in `readDraft` on why this can't be the
-    // `SERVER_DRAFT` singleton.
-    notifyDraftChange(key, { ...DEFAULT_APPLY_DRAFT });
+  // A wizard that opens is a fresh session on this application, so an earlier
+  // discard no longer blocks it. Every layout effect in the tree runs before any
+  // effect that writes the draft, so this is lifted in time for the first step.
+  useLayoutEffect(() => {
+    reopenDraftAt(key);
   }, [key]);
 
-  return { draft, update, clear, hydrated };
+  /** False when the application was just discarded and nothing was written. */
+  const update = useCallback((patch: DraftPatch) => updateDraftAt(key, patch), [key]);
+
+  /** Empties the draft once it is done with: submitted, or handed to another track. */
+  const clear = useCallback(() => clearDraftAt(key), [key]);
+
+  /** The applicant threw the application away: it stays gone until the wizard reopens. */
+  const discard = useCallback(() => discardDraftAt(key), [key]);
+
+  return { draft, update, clear, discard, hydrated };
+}
+
+/**
+ * Discards an application from outside its wizard (the dashboard's card).
+ * Returns the id of its staged uploads, for the caller to have the server drop
+ * the files, or null when it had none.
+ */
+export function useDiscardApplication() {
+  const owner = useApplyDraftOwner();
+  return useCallback(
+    (groupOrCode: string) => {
+      const key = storageKey(owner, groupOrCode);
+      const uploadDraftId = readDraft(key).uploadDraftId;
+      clearDraftAt(key);
+      return uploadDraftId;
+    },
+    [owner],
+  );
 }

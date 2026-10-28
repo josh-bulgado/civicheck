@@ -53,11 +53,19 @@ export const badgeToneClasses = {
  * densities, and so is the back-out behaviour between them, so the state lives
  * here rather than being written twice. Pair the returned object with
  * `<ServiceEntryDialogs entry={...} />` to mount the dialogs themselves.
+ *
+ * `startOnChecklist` opens the checklist as soon as the entry mounts, for a
+ * service the applicant arrived at from a search hit rather than by clicking
+ * its card.
  */
-export function useServiceEntry(service: ServiceEntryProps, canApply = true) {
+export function useServiceEntry(
+  service: ServiceEntryProps,
+  canApply = true,
+  startOnChecklist = false,
+) {
   const navigate = useNavigate();
   const resetApplyChoices = useResetApplyChoices();
-  const [requirementsOpen, setRequirementsOpen] = useState(false);
+  const [requirementsOpen, setRequirementsOpen] = useState(startOnChecklist);
   const [confirmOpen, setConfirmOpen] = useState(false);
   // Applying from inside the checklist popup closes it. If the applicant backs
   // out of the confirmation, put them back where they were instead of dropping
@@ -158,9 +166,16 @@ export type ServiceEntry = ReturnType<typeof useServiceEntry>;
 export function ServiceEntryDialogs({
   entry,
   variant = "dashboard",
+  onChecklistClose,
 }: {
   entry: ServiceEntry;
   variant?: "dashboard" | "portal";
+  /**
+   * The applicant closed the checklist themselves. Not called when Apply takes
+   * it down on the way to the confirmation, nor when backing out of that
+   * brings it back.
+   */
+  onChecklistClose?: () => void;
 }) {
   const Checklist =
     variant === "portal" ? PortalRequirementsDialog : ServiceRequirementsDialog;
@@ -174,7 +189,10 @@ export function ServiceEntryDialogs({
         displayGroup={entry.service.display_group}
         processingTime={entry.service.processing_time}
         open={entry.requirementsOpen}
-        onOpenChange={entry.setRequirementsOpen}
+        onOpenChange={(open) => {
+          entry.setRequirementsOpen(open);
+          if (!open) onChecklistClose?.();
+        }}
         onApply={entry.canApply ? entry.applyFromChecklist : undefined}
       />
 

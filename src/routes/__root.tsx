@@ -54,13 +54,20 @@ const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
   }
 
   // Fetch role and personal details from profiles table
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select(
       "role, first_name, middle_name, has_no_middle_name, last_name, suffix, date_of_birth, sex, phone_number, access_status, sessions_revoked_at, created_at, last_login_at, welcome_tutorial_seen, avatar_path",
     )
     .eq("id", user.id)
     .single();
+
+  // Without the profile there is no role, status or name to go on. Filling in
+  // an active applicant with a blank name sent a failed read to onboarding,
+  // where saving failed the same way, and let a suspended account through.
+  if (profileError || !profile) {
+    throw new Error("Your account details could not be loaded.");
+  }
 
   // An administrator signed this account out: treat it as signed out here and
   // drop the cookies so the next page load lands on the login screen.

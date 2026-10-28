@@ -460,7 +460,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
       }
 
       if (uploadedDocuments.length > 0) {
-        update((prev) => ({
+        const kept = update((prev) => ({
           uploadDraftId: activeUploadDraftId,
           documents: [
             ...(prev.uploadDraftId &&
@@ -471,6 +471,12 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
             ...uploadedDocuments,
           ],
         }));
+        if (!kept) {
+          // The application was discarded while these were on their way, so
+          // nothing refers to them: take them back out.
+          discardLanded();
+          return;
+        }
       }
       if (notes.length > 0) {
         setRowError((prev) => ({ ...prev, [slot.key]: notes.join(" ") }));
@@ -933,7 +939,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
     <WizardShell
       step={3}
       title="Upload your documents"
-      description="Take photos one at a time, or choose or drag in several JPG, PNG, or PDF files, up to 10 MB each."
+      description="Take photos one at a time, or choose or drag in several JPG, PNG, or PDF files, up to 10&nbsp;MB each."
       sidebar={
         summaryRows.length > 0 ? <RequestSummaryCard rows={summaryRows} /> : null
       }

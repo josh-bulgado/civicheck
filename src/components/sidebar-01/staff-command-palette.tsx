@@ -15,7 +15,6 @@ import {
   type PaletteSearchStatus,
   PaletteSheet,
   RequestStatusLabel,
-  RowChevron,
   RowSkeleton,
   SEARCH_FAILED_LINES,
   searchState,
@@ -81,7 +80,6 @@ function ServiceRow({
       onSelect={onSelect}
       title={<Highlight text={service.title} term={term} />}
       subtitle={meta}
-      trailing={<RowChevron />}
     />
   );
 }
@@ -103,7 +101,6 @@ function PageRow({
       onSelect={onSelect}
       icon={<Icon className="size-5 shrink-0 text-muted-2" aria-hidden="true" />}
       title={<Highlight text={page.title} term={term} />}
-      trailing={<RowChevron />}
     />
   );
 }

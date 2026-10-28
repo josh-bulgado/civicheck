@@ -12,6 +12,7 @@ import { staggerStyle } from "~/components/motion/stagger";
 import { useLogin } from "~/features/auth/hooks/useLogin";
 import { useOAuthLogin } from "~/features/auth/hooks/useOAuthLogin";
 import { setPendingVerification } from "~/features/auth/pending-verification";
+import { PERSISTENT_SESSION_MAX_AGE_SECONDS } from "~/features/auth/session-scope";
 import {
   Field,
   FieldError,
@@ -47,6 +48,12 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const INVALID_CREDENTIALS = "Wrong Email and Password";
+
+// Read from the cookie policy, so the sentence under the checkbox cannot drift
+// from what the cookies actually do.
+const KEEP_SIGNED_IN_DAYS = Math.round(
+  PERSISTENT_SESSION_MAX_AGE_SECONDS / (24 * 60 * 60),
+);
 
 /** Only actual sign-in failures belong on this page; verification has its own step. */
 function describeSignInError(
@@ -234,6 +241,17 @@ export function LoginForm({
                 Forgot password
               </Link>
             </div>
+
+            {/* Only said once the box is ticked, so the form stays quiet for
+                everyone who leaves it alone. */}
+            {keepSignedIn && (
+              <p
+                role="status"
+                className="civic-enter-sm -mt-2 text-[13px] leading-5 text-muted-foreground"
+              >
+                You&apos;ll stay signed in on this device for {KEEP_SIGNED_IN_DAYS} days.
+              </p>
+            )}
 
             <div style={staggerStyle(3)} className="flex flex-col gap-3">
               <Button
