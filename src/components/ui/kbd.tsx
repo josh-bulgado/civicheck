@@ -14,6 +14,8 @@ const kbdVariants = cva(
       shape: {
         default: "",
         pill: "rounded-full px-2",
+        soft: "rounded-md px-1.5",
+        split: "rounded-md px-1.5",
       },
     },
     defaultVariants: {

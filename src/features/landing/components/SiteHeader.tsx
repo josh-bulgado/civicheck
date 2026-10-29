@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { CiviCheckIdentity } from "~/components/brand/civic-identity";
 import { staggerStyle } from "~/components/motion/stagger";
 import { ThemeSwitch } from "~/components/theme-switch";
-import { Button } from "~/components/ui/button";
+import { Button, buttonVariants } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 
 const publicLinks = [
@@ -30,19 +30,43 @@ const SiteHeader = () => {
           <CiviCheckIdentity compact className="landing-header-brand" />
         </Link>
 
-        <nav className="hidden items-center gap-5 lg:flex" aria-label="Primary navigation">
+        <nav
+          className="hidden items-center gap-5 lg:flex"
+          aria-label="Primary navigation"
+        >
           {publicLinks.map((item) => (
-            <Link key={item.label} to={item.to} activeOptions={{ exact: true, includeSearch: false }} activeProps={{ className: "public-nav-active" }} className="text-base font-medium text-body-strong transition-colors hover:text-primary">
+            <Link
+              key={item.label}
+              to={item.to}
+              activeOptions={{ exact: true, includeSearch: false }}
+              activeProps={{ className: "public-nav-active" }}
+              className="text-base font-medium text-body-strong transition-colors hover:text-primary"
+            >
               {item.label}
             </Link>
           ))}
           <ThemeSwitch />
-          <Link to="/login" className="landing-button landing-sign-in">
-            Sign in
-          </Link>
-          <Link to="/signup" className="landing-button landing-button-primary landing-get-started">
-            Get started
-          </Link>
+          <div className="space-x-2">
+            <Link
+              to="/login"
+              className={buttonVariants({
+                size: "xl",
+                shape: "soft",
+                variant: "outline",
+              })}
+            >
+              Sign in
+            </Link>
+            <Link
+              to="/signup"
+              className={buttonVariants({
+                size: "xl",
+                shape: "soft",
+              })}
+            >
+              Get started
+            </Link>
+          </div>
         </nav>
 
         <div className="flex items-center gap-2 lg:hidden">
@@ -61,13 +85,17 @@ const SiteHeader = () => {
               <X
                 className={cn(
                   "absolute size-5 transition-[opacity,transform] duration-200 ease-out",
-                  mobileMenuOpen ? "rotate-0 opacity-100" : "-rotate-45 opacity-0",
+                  mobileMenuOpen
+                    ? "rotate-0 opacity-100"
+                    : "-rotate-45 opacity-0",
                 )}
               />
               <Menu
                 className={cn(
                   "absolute size-5 transition-[opacity,transform] duration-200 ease-out",
-                  mobileMenuOpen ? "rotate-45 opacity-0" : "rotate-0 opacity-100",
+                  mobileMenuOpen
+                    ? "rotate-45 opacity-0"
+                    : "rotate-0 opacity-100",
                 )}
               />
             </span>
@@ -96,8 +124,20 @@ const SiteHeader = () => {
               </Link>
             ))}
             <div className="my-2 h-px bg-border" />
-            <Link to="/login" className="rounded-lg px-3 py-3 text-center text-sm font-semibold text-primary" onClick={() => setMobileMenuOpen(false)}>Sign in</Link>
-            <Link to="/signup" className="rounded-lg bg-primary-fill px-3 py-3 text-center text-sm font-semibold text-white" onClick={() => setMobileMenuOpen(false)}>Get started</Link>
+            <Link
+              to="/login"
+              className="rounded-lg px-3 py-3 text-center text-sm font-semibold text-primary"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Sign in
+            </Link>
+            <Link
+              to="/signup"
+              className="rounded-lg bg-primary-fill px-3 py-3 text-center text-sm font-semibold text-white"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Get started
+            </Link>
           </div>
         </nav>
       ) : null}

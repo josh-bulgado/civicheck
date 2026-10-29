@@ -15,7 +15,7 @@ function Input({
   ...props
 }: React.ComponentProps<"input"> & {
   fieldSize?: "default" | "lg" | "touch"
-  shape?: "default" | "pill"
+  shape?: "default" | "pill" | "soft" | "split"
   variant?: "default" | "inline"
 }) {
   return (
@@ -26,7 +26,7 @@ function Input({
       data-shape={shape}
       data-variant={variant}
       className={cn(
-        "h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-2.5 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm data-[field-size=lg]:h-10 data-[field-size=lg]:px-3 data-[field-size=touch]:h-11 data-[field-size=touch]:rounded-xl data-[field-size=touch]:px-3.5 data-[field-size=touch]:focus-visible:ring-4 data-[field-size=touch]:focus-visible:ring-ring/25 data-[variant=inline]:h-10 data-[variant=inline]:border-transparent data-[variant=inline]:px-2.5 data-[variant=inline]:text-xl data-[variant=inline]:font-extrabold data-[variant=inline]:tracking-[-0.02em] data-[variant=inline]:shadow-none data-[variant=inline]:hover:border-input data-[variant=inline]:focus-visible:bg-background data-[variant=inline]:md:text-xl data-[shape=pill]:rounded-full",
+        "h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-2.5 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm data-[field-size=lg]:h-10 data-[field-size=lg]:px-3 data-[field-size=touch]:h-11 data-[field-size=touch]:rounded-xl data-[field-size=touch]:px-3.5 data-[field-size=touch]:focus-visible:ring-4 data-[field-size=touch]:focus-visible:ring-ring/25 data-[variant=inline]:h-10 data-[variant=inline]:border-transparent data-[variant=inline]:px-2.5 data-[variant=inline]:text-xl data-[variant=inline]:font-extrabold data-[variant=inline]:tracking-[-0.02em] data-[variant=inline]:shadow-none data-[variant=inline]:hover:border-input data-[variant=inline]:focus-visible:bg-background data-[variant=inline]:md:text-xl data-[shape=pill]:rounded-full data-[shape=soft]:rounded-xl! data-[shape=soft]:data-[field-size=lg]:rounded-2xl! data-[shape=soft]:data-[field-size=touch]:rounded-2xl! data-[shape=split]:rounded-xl!",
         className
       )}
       {...props}

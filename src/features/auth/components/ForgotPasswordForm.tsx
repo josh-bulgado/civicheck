@@ -43,7 +43,8 @@ const ForgotPasswordForm = () => {
   const result = forgotPasswordMutation.data;
   // A server-reported failure still resolves the mutation, so "success" alone
   // would show the code-entry step for a request that never sent anything.
-  const codeSent = forgotPasswordMutation.status === "success" && !result?.error;
+  const codeSent =
+    forgotPasswordMutation.status === "success" && !result?.error;
   const requestError = result?.error
     ? result.message
     : forgotPasswordMutation.status === "error"
@@ -128,10 +129,13 @@ const ForgotPasswordForm = () => {
                       style={staggerStyle(0)}
                       className="gap-1.75"
                     >
-                      <FieldLabel htmlFor="email" className={authStepLabelClass}>
+                      <FieldLabel
+                        htmlFor="email"
+                        className={authStepLabelClass}
+                      >
                         Email address
                       </FieldLabel>
-                      <InputGroup className={`${authFieldClass} px-0`}>
+                      <InputGroup fieldSize="touch" shape="split">
                         <InputGroupAddon>
                           <Mail size={16} aria-hidden="true" />
                         </InputGroupAddon>
@@ -153,7 +157,8 @@ const ForgotPasswordForm = () => {
 
                 <Button
                   type="submit"
-                  className={cn(authButtonClass, "rounded-full")}
+                  size="touch"
+                  shape="split"
                   style={staggerStyle(1)}
                   disabled={forgotPasswordMutation.status === "pending"}
                 >

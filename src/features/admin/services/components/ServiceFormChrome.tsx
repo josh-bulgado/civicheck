@@ -300,7 +300,7 @@ export function ServiceFormActionBar({
       <Button
         type="submit"
         variant="raised"
-        shape="pill"
+        shape="split"
         size="lg"
         disabled={isDisabled}
         aria-keyshortcuts={saveShortcut?.ariaKeyShortcuts}

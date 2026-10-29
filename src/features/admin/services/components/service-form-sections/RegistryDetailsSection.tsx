@@ -179,6 +179,7 @@ export function RegistryDetailsSection({
                     {...field}
                     id="service-name"
                     fieldSize="lg"
+                    shape="split"
                     placeholder="Issuance of Certified True Copies of Civil Registry Records…"
                     autoComplete="off"
                     aria-invalid={fieldState.invalid}
@@ -203,6 +204,7 @@ export function RegistryDetailsSection({
                 >
                   <InputGroup
                     fieldSize="lg"
+                    shape="split"
                     className={isEdit ? "bg-muted/40" : undefined}
                   >
                     {isEdit ? (

@@ -55,6 +55,8 @@ const itemVariants = cva(
       shape: {
         default: "",
         pill: "rounded-full",
+        soft: "rounded-xl",
+        split: "rounded-xl",
       },
     },
     defaultVariants: {

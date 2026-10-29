@@ -13,12 +13,12 @@ import { toggleVariants } from "~/components/ui/toggle"
  * `default` and `outline` are the original shadcn looks: each item is its own
  * Toggle. Every other variant is drawn by the group and its items together,
  * the way TabsList and TabsTrigger do it, so a screen picks a look with one prop.
- * They share one outer height (`size`: sm 32, default 36, lg 40) so a group
+ * They share one outer height (`size`: sm 32, default 36, lg 40, touch 44) so a group
  * lines up with an input or select beside it. They are built for a horizontal
  * group.
  */
 const toggleGroupVariants = cva(
-  "group/toggle-group flex w-fit flex-row items-center gap-[--spacing(var(--gap))] rounded-md [--tg-h:calc(var(--spacing)*9)] data-[size=lg]:[--tg-h:calc(var(--spacing)*10)] data-[size=sm]:[--tg-h:calc(var(--spacing)*8)] data-[spacing=0]:data-[variant=outline]:shadow-xs data-vertical:flex-col data-vertical:items-stretch",
+  "group/toggle-group flex w-fit flex-row items-center gap-[--spacing(var(--gap))] rounded-md [--tg-h:calc(var(--spacing)*9)] data-[size=lg]:[--tg-h:calc(var(--spacing)*10)] data-[size=touch]:[--tg-h:calc(var(--spacing)*11)] data-[size=sm]:[--tg-h:calc(var(--spacing)*8)] data-[spacing=0]:data-[variant=outline]:shadow-xs data-vertical:flex-col data-vertical:items-stretch",
   {
     variants: {
       variant: {
@@ -28,6 +28,8 @@ const toggleGroupVariants = cva(
         segmented: "gap-0.5 rounded-xl bg-muted p-[3px] [--tg-pad:3px]",
         // Fully round track, ink-filled tile.
         pill: "gap-0.5 rounded-full bg-muted p-[3px] [--tg-pad:3px]",
+        // The pill without the full round: a 16px track around 12px tiles.
+        rounded: "gap-0.5 rounded-2xl bg-muted p-[3px] [--tg-pad:3px]",
         // Pill track with the system brand fill on the selected tile.
         "brand-pill":
           "gap-0.5 rounded-full bg-muted p-[3px] [--tg-pad:3px]",
@@ -63,6 +65,8 @@ const toggleGroupItemVariants = cva(
         segmented:
           "rounded-[9px] data-pressed:bg-card data-pressed:font-semibold data-pressed:text-foreground data-pressed:shadow-sm data-pressed:ring-1 data-pressed:ring-foreground/10",
         pill: "rounded-full px-3.5 font-semibold text-body-2 data-pressed:bg-foreground data-pressed:text-card",
+        rounded:
+          "rounded-xl px-3.5 font-semibold text-body-2 data-pressed:bg-foreground data-pressed:text-card",
         "brand-pill":
           "rounded-full px-3.5 font-semibold text-body-2 data-pressed:bg-primary-fill data-pressed:text-primary-foreground",
         tinted:

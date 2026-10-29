@@ -125,7 +125,6 @@ export function WalkInIntakeDialog({
         type="button"
         variant="raised"
         size="lg"
-        shape="pill"
         onClick={() => setOpen(true)}
         disabled={services.length === 0}
       >

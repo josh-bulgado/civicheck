@@ -161,7 +161,7 @@ export function LoginForm({
                   <FieldLabel htmlFor="email" className={authLabelClass}>
                     Email address
                   </FieldLabel>
-                  <InputGroup className={`${authFieldClass} px-0`}>
+                  <InputGroup shape="split" fieldSize="touch">
                     <InputGroupAddon>
                       <Mail size={16} aria-hidden="true" />
                     </InputGroupAddon>
@@ -193,7 +193,7 @@ export function LoginForm({
                   <FieldLabel htmlFor="password" className={authLabelClass}>
                     Password
                   </FieldLabel>
-                  <InputGroup className={`${authFieldClass} px-0`}>
+                  <InputGroup shape="split" fieldSize="touch">
                     <InputGroupAddon>
                       <Lock size={16} aria-hidden="true" />
                     </InputGroupAddon>
@@ -231,7 +231,9 @@ export function LoginForm({
                     setKeepSignedIn(checked === true)
                   }
                 />
-                <FieldLabel htmlFor="keep-signed-in">Keep me signed in</FieldLabel>
+                <FieldLabel htmlFor="keep-signed-in">
+                  Keep me signed in
+                </FieldLabel>
               </Field>
 
               <Link
@@ -249,14 +251,16 @@ export function LoginForm({
                 role="status"
                 className="civic-enter-sm -mt-2 text-[13px] leading-5 text-muted-foreground"
               >
-                You&apos;ll stay signed in on this device for {KEEP_SIGNED_IN_DAYS} days.
+                You&apos;ll stay signed in on this device for{" "}
+                {KEEP_SIGNED_IN_DAYS} days.
               </p>
             )}
 
             <div style={staggerStyle(3)} className="flex flex-col gap-3">
               <Button
                 type="submit"
-                className={authButtonClass}
+                shape="soft"
+                size="touch"
                 disabled={isSigningIn}
               >
                 {isSigningIn ? (
@@ -271,9 +275,13 @@ export function LoginForm({
 
               <Button
                 variant="outline"
-                className={`${authButtonClass} justify-center gap-2.5 text-sm font-medium`}
+                shape="soft"
+                size="touch"
                 onClick={() =>
-                  oauthLoginMutation.mutate({ provider: "google", keepSignedIn })
+                  oauthLoginMutation.mutate({
+                    provider: "google",
+                    keepSignedIn,
+                  })
                 }
                 disabled={oauthLoginMutation.redirecting}
               >

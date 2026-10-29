@@ -44,9 +44,6 @@ import { Button } from "~/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { AuthProgressPanel } from "./AuthSidePanel";
 import {
-  authButtonClass,
-  authFilledFieldClass,
-  authFilledGroupClass,
   authLabelClass,
   authLinkClass,
   AuthFormDivider,
@@ -160,10 +157,11 @@ const RegisterForm = () => {
                 <Input
                   {...field}
                   id="firstName"
-                  className={authFilledFieldClass}
                   placeholder="Juan"
                   aria-invalid={fieldState.invalid}
                   autoComplete="given-name"
+                  fieldSize="touch"
+                  shape="split"
                 />
                 <SignupFieldError error={fieldState.error} />
               </Field>
@@ -186,10 +184,11 @@ const RegisterForm = () => {
                   <Input
                     {...field}
                     id="lastName"
-                    className={authFilledFieldClass}
                     placeholder="Dela Cruz"
                     aria-invalid={fieldState.invalid}
                     autoComplete="family-name"
+                    fieldSize="touch"
+                    shape="split"
                   />
                   <SignupFieldError error={fieldState.error} />
                 </Field>
@@ -211,10 +210,7 @@ const RegisterForm = () => {
                       field.onChange(value === NO_SUFFIX ? "" : value)
                     }
                   >
-                    <SelectTrigger
-                      id="suffix"
-                      className={`${authFilledFieldClass} w-full data-[size=default]:h-11`}
-                    >
+                    <SelectTrigger id="suffix" size="touch" shape="split">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -250,11 +246,12 @@ const RegisterForm = () => {
                   <Input
                     {...field}
                     id="middleName"
-                    className={authFilledFieldClass}
                     placeholder="Santos"
                     disabled={hasNoMiddleName}
                     aria-invalid={fieldState.invalid}
                     autoComplete="additional-name"
+                    fieldSize="touch"
+                    shape="split"
                   />
                   <SignupFieldError error={fieldState.error} />
                 </>
@@ -295,7 +292,7 @@ const RegisterForm = () => {
                 <FieldLabel htmlFor="email" className={authLabelClass}>
                   Email <RequiredMark />
                 </FieldLabel>
-                <InputGroup className={`${authFilledGroupClass} px-0`}>
+                <InputGroup fieldSize="touch" shape="split">
                   <InputGroupAddon>
                     <Mail size={16} aria-hidden="true" />
                   </InputGroupAddon>
@@ -321,7 +318,7 @@ const RegisterForm = () => {
                 <FieldLabel htmlFor="password" className={authLabelClass}>
                   Password <RequiredMark />
                 </FieldLabel>
-                <InputGroup className={`${authFilledGroupClass} px-0`}>
+                <InputGroup fieldSize="touch" shape="split">
                   <InputGroupAddon>
                     <Lock size={16} aria-hidden="true" />
                   </InputGroupAddon>
@@ -398,7 +395,8 @@ const RegisterForm = () => {
           <div className="flex flex-col gap-3.5">
             <Button
               type="submit"
-              className={authButtonClass}
+              size="touch"
+              shape="split"
               disabled={signupMutation.status === "pending" || !isComplete}
             >
               {signupMutation.status === "pending" ? (
@@ -415,7 +413,8 @@ const RegisterForm = () => {
 
             <Button
               variant="outline"
-              className={`${authButtonClass} justify-center gap-2.5 text-sm font-medium`}
+              size="touch"
+              shape="split"
               onClick={() => oauthLoginMutation.mutate({ provider: "google" })}
               disabled={oauthLoginMutation.redirecting}
             >

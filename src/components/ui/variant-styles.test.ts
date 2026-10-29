@@ -85,6 +85,27 @@ describe("pill-shaped controls expose an explicit API", () => {
   });
 });
 
+describe("soft and split shapes step the radius with the height", () => {
+  const controls = [
+    ["button.tsx", ['soft: ""', 'split: ""', "rounded-2xl!"]],
+    ["input.tsx", ["data-[shape=soft]:rounded-xl!", "data-[shape=split]:rounded-xl!"]],
+    ["input-group.tsx", ["data-[shape=soft]:rounded-xl!", "data-[shape=split]:rounded-xl!"]],
+    ["select.tsx", ["data-[shape=soft]:rounded-xl!", "data-[shape=split]:rounded-xl!"]],
+    ["toggle.tsx", ['soft: ""', 'split: ""', "rounded-2xl"]],
+    ["kbd.tsx", ['soft: "rounded-md px-1.5"', 'split: "rounded-md px-1.5"']],
+    ["item.tsx", ['soft: "rounded-xl"', 'split: "rounded-xl"']],
+    ["input-otp.tsx", ['soft: "rounded-xl"', 'split: "rounded-xl"']],
+    ["sidebar.tsx", ['soft: "rounded-xl"', 'split: "rounded-xl"']],
+    ["tabs.tsx", ['rounded: "gap-1 rounded-2xl']],
+    ["toggle-group.tsx", ['rounded: "gap-0.5 rounded-2xl']],
+  ] as const;
+
+  it.each(controls)("%s", (file, markers) => {
+    const source = read(file);
+    for (const marker of markers) expect(source).toContain(marker);
+  });
+});
+
 describe("form and action controls default to large pills", () => {
   const defaults = [
     ["button.tsx", ['size = "lg"', 'shape = "pill"']],
