@@ -1,10 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
 import {
-  getCoreRowModel,
   flexRender,
-  getSortedRowModel,
-  useReactTable,
+  useTable,
   type PaginationState,
   type SortingState,
 } from "@tanstack/react-table";
@@ -33,6 +31,7 @@ import type {
 } from "../system-admin.types";
 import { AccountConfirmDialog } from "./AccountConfirmDialog";
 import { AccountHistoryDialog } from "./AccountHistoryDialog";
+import { appTableFeatures } from "~/lib/table";
 import { createAccountColumns } from "./AccountsColumn";
 import { AccountsTableToolbar } from "./AccountsTableToolbar";
 import { AccountsTableSkeleton } from "./AccountsTableSkeleton";
@@ -173,14 +172,13 @@ export function AccountsDataTable({
     ],
   );
 
-  const table = useReactTable({
+  const table = useTable({
+    features: appTableFeatures,
     data,
     getRowId: (account) => account.id,
     columns,
     state: { sorting, pagination },
     onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     manualPagination: true,
     pageCount,
   });

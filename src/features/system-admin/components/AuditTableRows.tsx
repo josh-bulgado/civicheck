@@ -1,10 +1,11 @@
 import { memo, useCallback, useLayoutEffect, useRef, useState } from "react";
-import { flexRender, type Row } from "@tanstack/react-table";
+import { flexRender } from "@tanstack/react-table";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import { TableBody, TableCell, TableRow } from "~/components/ui/table";
 import type { NormalizedAuditEvent } from "../system-admin.types";
+import type { AppRow } from "~/lib/table";
 
-type AuditRow = Row<NormalizedAuditEvent>;
+type AuditRow = AppRow<NormalizedAuditEvent>;
 
 function AuditRowCells({ row }: { row: AuditRow }) {
   return row.getVisibleCells().map((cell) => (

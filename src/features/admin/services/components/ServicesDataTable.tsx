@@ -1,13 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ColumnFiltersState,
-  SortingState,
-  VisibilityState,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
+  useTable,
+  type ColumnFiltersState,
+  type ColumnVisibilityState,
+  type SortingState,
 } from "@tanstack/react-table";
 import { DataTableCard } from "~/components/ui/data-table-card";
 import {
@@ -32,6 +28,7 @@ import {
   neighbourCode,
   type ClassificationFilter,
 } from "../services-table.utils";
+import { appTableFeatures } from "~/lib/table";
 
 interface ServicesDataTableProps {
   data: ServiceDossier[];
@@ -43,8 +40,8 @@ interface ServicesDataTableProps {
 /** Wide enough to dock the detail panel beside the table. */
 const DOCK_QUERY = "(min-width: 1280px)";
 
-const ALL_COLUMNS: VisibilityState = {};
-const DOCKED_COLUMNS: VisibilityState = { department: false, fee: false };
+const ALL_COLUMNS: ColumnVisibilityState = {};
+const DOCKED_COLUMNS: ColumnVisibilityState = { department: false, fee: false };
 
 export function ServicesDataTable({
   data,
@@ -70,19 +67,16 @@ export function ServicesDataTable({
     [],
   );
 
-  const table = useReactTable({
+  const table = useTable({
+    features: appTableFeatures,
     data,
     columns,
     state: { sorting, columnFilters, globalFilter, columnVisibility },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     initialState: {
-      pagination: { pageSize: 20 },
+      pagination: { pageIndex: 0, pageSize: 20 },
     },
     globalFilterFn: (row, _columnId, filterValue: string) =>
       matchesSearch(row.original, filterValue),
@@ -129,7 +123,7 @@ export function ServicesDataTable({
   // The sheet steps through every row the filters leave, in the order the table
   // shows them, not just the rows on the current page.
   const orderedKeys = table
-    .getPrePaginationRowModel()
+      .getPrePaginatedRowModel()
     .rows.map((row) => row.original.dossier_key);
   const selected = data.find((row) => row.dossier_key === selectedKey) ?? null;
   const selectedIndex = selected
@@ -176,7 +170,7 @@ export function ServicesDataTable({
   // page has to bring that page and row along.
   useEffect(() => {
     if (!docked || selectedKey === null || selectedIndex < 0) return;
-    const { pageIndex, pageSize } = table.getState().pagination;
+    const { pageIndex, pageSize } = table.state.pagination;
     const page = Math.floor(selectedIndex / pageSize);
     if (page !== pageIndex) table.setPageIndex(page);
     const frame = requestAnimationFrame(() => {

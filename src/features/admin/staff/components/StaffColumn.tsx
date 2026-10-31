@@ -1,4 +1,4 @@
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "~/lib/table";
 import { Check, Copy, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -69,7 +69,7 @@ export function createStaffColumns({
   onCancel: (staffMember: StaffMember) => void;
   onRemove: (staffMember: StaffMember) => void;
   onReactivate: (staffMember: StaffMember) => void;
-}): ColumnDef<StaffMember>[] {
+}): AppColumnDef<StaffMember>[] {
   return [
     {
       id: "member",

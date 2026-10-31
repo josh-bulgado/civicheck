@@ -1,4 +1,4 @@
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "~/lib/table";
 import { CenterSortHeader, centerSelectionColumn } from "./CenterTableControls";
 import { AuditRowActions } from "./AuditRowActions";
 import { formatAuditEventType } from "../audit-event.utils";
@@ -18,7 +18,7 @@ const auditTime = new Intl.DateTimeFormat("en-US", {
   second: "2-digit",
 });
 
-export const auditColumns: ColumnDef<NormalizedAuditEvent>[] = [
+export const auditColumns: AppColumnDef<NormalizedAuditEvent>[] = [
   centerSelectionColumn<NormalizedAuditEvent>(
     (event) => `${formatAuditEventType(event.eventType)} at ${event.timestamp}`,
   ),

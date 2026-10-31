@@ -1,4 +1,4 @@
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "~/lib/table";
 import { QuietLink as Link } from "~/components/quiet-link";
 import { Eye, Pencil } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
@@ -118,7 +118,7 @@ type ServicesTableMeta = {
   onView?: (service: ServiceDossier) => void;
 };
 
-export const columns: ColumnDef<ServiceDossier>[] = [
+export const columns: AppColumnDef<ServiceDossier>[] = [
   {
     // Title and code share one column: the title is what people read, the code
     // is what staff search for, so it sits under the title instead of taking a

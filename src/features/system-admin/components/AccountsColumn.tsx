@@ -1,4 +1,4 @@
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "~/lib/table";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { departmentLabel } from "~/features/admin/staff/staff-table.utils";
@@ -110,7 +110,7 @@ export function createAccountColumns({
   category: AccountCategory;
   departments: SystemAdminDepartment[];
   pendingAccountId: string | null;
-} & AccountActionHandlers): ColumnDef<AccountSummary>[] {
+} & AccountActionHandlers): AppColumnDef<AccountSummary>[] {
   const departmentNames = new Map(
     departments.map((department) => [department.id, department.name]),
   );
@@ -171,7 +171,7 @@ export function createAccountColumns({
                 {roleLabels[row.original.role]}
               </span>
             ),
-          } satisfies ColumnDef<AccountSummary>,
+          } satisfies AppColumnDef<AccountSummary>,
           {
             id: "department",
             accessorFn: (account) =>
@@ -204,7 +204,7 @@ export function createAccountColumns({
                 </span>
               );
             },
-          } satisfies ColumnDef<AccountSummary>,
+          } satisfies AppColumnDef<AccountSummary>,
         ]
       : []),
     {
