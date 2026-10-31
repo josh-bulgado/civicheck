@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouteContext } from "@tanstack/react-router";
 import {
   Controller,
   useFieldArray,
@@ -129,7 +129,7 @@ function MiddleNameField({
   return (
     <Field>
       <FieldLabel htmlFor={inputId} className={WIZARD_LABEL_CLASS}>
-        Middle name {required ? <RequiredMark /> : null}
+        Middle Name {required ? <RequiredMark /> : null}
       </FieldLabel>
       <Controller
         control={control}
@@ -197,6 +197,7 @@ function MiddleNameField({
  * sit on the same columns and an unequal field count leaves nothing stranded.
  */
 function SubjectFieldGrid({
+  husband = false,
   control,
   setValue,
   index,
@@ -207,6 +208,7 @@ function SubjectFieldGrid({
   setValue: UseFormSetValue<DetailsValues>;
   index: number;
   role: string;
+  husband?: boolean;
   requireMiddleName?: boolean;
 }) {
   const watchedSex = useWatch({ control, name: `subjects.${index}.sex` });
@@ -220,7 +222,7 @@ function SubjectFieldGrid({
         rules={{ required: "First name is required" }}
         render={({ field, fieldState }) => (
           <Field data-invalid={fieldState.invalid}>
-            <FieldLabel htmlFor={`subject-${index}-firstName`} className={WIZARD_LABEL_CLASS}>First name <RequiredMark /></FieldLabel>
+            <FieldLabel htmlFor={`subject-${index}-firstName`} className={WIZARD_LABEL_CLASS}>First Name <RequiredMark /></FieldLabel>
             <Input
               id={`subject-${index}-firstName`}
               placeholder="Juan"
@@ -246,7 +248,7 @@ function SubjectFieldGrid({
         rules={{ required: "Last name is required" }}
         render={({ field, fieldState }) => (
           <Field data-invalid={fieldState.invalid}>
-            <FieldLabel htmlFor={`subject-${index}-lastName`} className={WIZARD_LABEL_CLASS}>Last name <RequiredMark /></FieldLabel>
+            <FieldLabel htmlFor={`subject-${index}-lastName`} className={WIZARD_LABEL_CLASS}>Last Name <RequiredMark /></FieldLabel>
             <Input
               id={`subject-${index}-lastName`}
               placeholder="Dela Cruz"
@@ -294,7 +296,7 @@ function SubjectFieldGrid({
           )}
         />
       )}
-      {showSex && (
+      {showSex && !husband && (
         <Controller
           control={control}
           name={`subjects.${index}.sex`}
@@ -350,6 +352,7 @@ interface DetailsStepProps {
 
 export function DetailsStep({ serviceCode, requirements, services }: DetailsStepProps) {
   const navigate = useNavigate();
+  const { user } = useRouteContext({ from: "/_authed" });
   const { draft, update, hydrated } = useApplyDraft(serviceCode);
   const selectedService =
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
@@ -357,6 +360,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   const detailsFields = fieldsForStep(definition, "details");
   const personGroupField = detailsFields.find((field) => field.type === "person_group");
   const hasPersonGroup = Boolean(personGroupField);
+  const isEmailMarriage = selectedService.service_code === "EMAIL_INQUIRY" && draft.answers.record_type === "marriage";
   const requireMiddleName = personGroupField?.requireMiddleName === true;
   const roles = selectedService?.party_roles?.length
     ? selectedService.party_roles
@@ -403,6 +407,30 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
         : [],
     },
   });
+
+  const requesterPrefilled = useRef(false);
+  useEffect(() => {
+    if (!hydrated || !user || requesterPrefilled.current) return;
+    // The requester is the signed-in applicant, even when the record belongs to someone else.
+    if (selectedService.service_code !== "EMAIL_INQUIRY") return;
+    requesterPrefilled.current = true;
+    const current = form.getValues();
+    // Preserve saved names and anything already typed, including a married name.
+    if (current.requester_first_name || current.requester_middle_name || current.requester_last_name) return;
+    // The form's reactive values come from the draft. Persist the prefill there
+    // so draft hydration or subject reconciliation cannot reset it to blanks.
+    update((previous) => {
+      if (previous.answers.requester_first_name || previous.answers.requester_middle_name || previous.answers.requester_last_name) return {};
+      return {
+        answers: {
+          ...previous.answers,
+          requester_first_name: user.firstName,
+          requester_middle_name: user.hasNoMiddleName ? NONE_ANSWER : user.middleName,
+          requester_last_name: user.lastName,
+        },
+      };
+    });
+  }, [hydrated, user, selectedService.service_code, form, update]);
 
   const subjectFields = useFieldArray({ control: form.control, name: "subjects" });
   const showRoleLabels = hasPersonGroup && subjectFields.fields.length > 1;
@@ -484,7 +512,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
         subject?.firstName?.trim() &&
           subject.lastName?.trim() &&
           (!requireMiddleName || subject.middleName?.trim() || subject.noMiddleName) &&
-          (impliedSex(field.role) !== null || subject.sex),
+          (isEmailMarriage || impliedSex(field.role) !== null || subject.sex),
       );
     });
   const hasRequiredAnswers =
@@ -498,7 +526,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     // Hidden suffix/sex controls are unregistered by React Hook Form. Convert
     // the submitted rows back to complete SubjectFields objects before saving
     // them in either `subjects` location in the draft.
-    const subjects = reconcileSubjects(values.subjects, roles);
+    const subjects = reconcileSubjects(values.subjects, roles).map((subject) => isEmailMarriage ? { ...subject, sex: "male" } : subject);
     const dynamicValues = Object.fromEntries(
       detailsFields
         .filter((field) => field.type !== "person_group")
@@ -560,6 +588,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
               setValue={form.setValue}
               index={index}
               role={subjectField.role}
+              husband={isEmailMarriage}
               requireMiddleName={requireMiddleName}
             />
           </PartySection>
@@ -576,6 +605,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
               setValue={form.setValue}
               index={index}
               role={subjectField.role}
+              husband={isEmailMarriage}
               requireMiddleName={requireMiddleName}
             />
           </div>
@@ -586,6 +616,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
               setValue={form.setValue}
               index={index}
               role={subjectField.role}
+              husband={isEmailMarriage}
               requireMiddleName={requireMiddleName}
             />
           </FieldGroup>

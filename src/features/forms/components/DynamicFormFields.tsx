@@ -283,6 +283,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
         className={cn(
           "flex flex-col gap-3",
           setApart && "mt-8 border-t border-border-light pt-12 sm:mt-10 sm:pt-14",
+          !setApart && step === "details" && sectionIndex > 0 && "pt-2",
         )}
       >
         {titled ? (

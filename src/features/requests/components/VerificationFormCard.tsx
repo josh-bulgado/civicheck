@@ -10,14 +10,14 @@ interface VerificationFormCardProps extends VerificationFormPdfData {
 
 /**
  * Offers the printable Verification Form, filled in from the request's answers.
- * Only requests that collected the requester's name (the certified true copy
- * form) have one, so for other services this renders nothing.
+ * Available for CTC and email assisted requests that collected requester details.
  */
 export function VerificationFormCard({
   variant = "portal",
   ...data
 }: VerificationFormCardProps) {
   const { download, downloading } = useVerificationFormPdfDownload();
+  const isEmailInquiry = typeof data.formData.what_to_verify === "string";
   const hasForm = typeof data.formData.requester_first_name === "string";
   if (!hasForm) return null;
 
@@ -42,8 +42,9 @@ export function VerificationFormCard({
         <div className="min-w-0 flex-1">
           <h2 className="text-lg font-bold text-foreground">Verification form</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            The CCRO application, filled in from this request. Print it for the
-            requester to sign.
+            {isEmailInquiry
+              ? "The verification form, filled in from this online inquiry. No signature or office visit is needed for this form."
+              : "The CCRO application, filled in from this request. Print it for the requester to sign."}
           </p>
         </div>
         {button}
@@ -58,8 +59,9 @@ export function VerificationFormCard({
           Verification form
         </h2>
         <p className="mt-1.5 text-[15px] leading-[1.45] text-muted-foreground">
-          Your application form, already filled in. Print it and sign it at the
-          CCRO.
+          {isEmailInquiry
+            ? "Your verification form, already filled in. No signature or office visit is needed. Sign your Email Request Letter and, when required, have the owner sign the Authorization Letter."
+            : "Your application form, already filled in. Print it and sign it at the CCRO."}
         </p>
       </div>
       {button}

@@ -221,8 +221,25 @@ export interface VerificationFormPdfProps {
 
 export function VerificationFormPdf({ data, qrDataUrl, generatedAt }: VerificationFormPdfProps) {
   const answers = data.formData;
+  const isEmailInquiry = typeof answers.what_to_verify === "string";
   const recordType = text(answers, "record_type");
-  const owner = ownerRows(answers, recordType);
+  const owner = ownerRows(isEmailInquiry ? {
+    ...answers,
+    death_date: answers.event_date,
+    death_place: answers.event_place,
+    marriage_date: answers.event_date,
+    marriage_place: answers.event_place,
+  } : answers, recordType);
+  if (isEmailInquiry) {
+    owner.showsLateRegistration = true;
+    owner.rows = owner.rows.filter((row) => ![
+      "Maiden Name of Mother", "Name of Father",
+    ].includes(row.label));
+    const sex = text(answers, "subject_sex");
+    if (recordType !== "marriage" && (sex === "male" || sex === "female")) {
+      owner.rows.push({ label: "Sex", value: sex === "male" ? "Male" : "Female" });
+    }
+  }
 
   const requesterName = nameText(
     text(answers, "requester_first_name"),
@@ -230,7 +247,9 @@ export function VerificationFormPdf({ data, qrDataUrl, generatedAt }: Verificati
     text(answers, "requester_last_name"),
   );
   const relationshipKey = text(answers, "requester_relationship");
-  const relationship = RELATIONSHIPS[relationshipKey] ?? relationshipKey;
+  const relationship = isEmailInquiry
+    ? (text(answers, "is_record_owner") === "yes" ? "Owner (self)" : "On behalf of the owner")
+    : RELATIONSHIPS[relationshipKey] ?? relationshipKey;
   const contact = text(answers, "contact_number");
   const registeredLate = text(answers, "registered_late");
 
@@ -253,7 +272,7 @@ export function VerificationFormPdf({ data, qrDataUrl, generatedAt }: Verificati
         <Text style={styles.headerOffice}>OFFICE OF THE CITY CIVIL REGISTRAR</Text>
         <Text style={styles.headerCity}>Legazpi City</Text>
 
-        <Text style={styles.title}>APPLICATION FOR CERTIFIED TRUE XEROX COPY</Text>
+        <Text style={styles.title}>{isEmailInquiry ? "EMAIL ASSISTED INQUIRY / VERIFICATION FORM" : "APPLICATION FOR CERTIFIED TRUE XEROX COPY"}</Text>
         <Text style={styles.recordType}>{recordTitle(answers, recordType)}</Text>
 
         <View style={styles.split}>
@@ -282,7 +301,7 @@ export function VerificationFormPdf({ data, qrDataUrl, generatedAt }: Verificati
 
           <View style={styles.right}>
             <Text style={[styles.sectionHeading, { opacity: 0 }]}>.</Text>
-            <Field label="No. Copies" value={String(data.copies)} />
+            {!isEmailInquiry ? <Field label="No. Copies" value={String(data.copies)} /> : null}
           </View>
         </View>
 
@@ -292,7 +311,7 @@ export function VerificationFormPdf({ data, qrDataUrl, generatedAt }: Verificati
             <Field label="Full Name" value={requesterName} />
             <Field label="Relationship to the Owner" value={relationship} />
             <Field label="Address" value={text(answers, "requester_address")} />
-            <Field label="Purpose (pls. specify)" value={text(answers, "purpose_of_request")} />
+            {!isEmailInquiry ? <Field label="Purpose (pls. specify)" value={text(answers, "purpose_of_request")} /> : null}
           </View>
           <View style={styles.right}>
             <Text style={[styles.sectionHeading, { opacity: 0 }]}>.</Text>
@@ -303,14 +322,28 @@ export function VerificationFormPdf({ data, qrDataUrl, generatedAt }: Verificati
           </View>
         </View>
 
-        <Text style={styles.certify}>I hereby certify that the above information is true and correct.</Text>
+        {isEmailInquiry ? (
+          <View>
+            <Text style={styles.sectionHeading}>Inquiry details:</Text>
+            <Field label="Registry number" value={text(answers, "reference_number")} />
+            <Field label="What to verify" value={text(answers, "what_to_verify")} />
+            <Field label="Additional notes" value={text(answers, "additional_notes")} />
+          </View>
+        ) : null}
 
-        <View style={styles.signatureWrap} wrap={false}>
-          <View style={styles.signatureLine} />
-          <Text style={styles.signatureLabel}>Signature of the Requester</Text>
-        </View>
+        {!isEmailInquiry ? (
+          <>
+            <Text style={styles.certify}>I hereby certify that the above information is true and correct.</Text>
+            <View style={styles.signatureWrap} wrap={false}>
+              <View style={styles.signatureLine} />
+              <Text style={styles.signatureLabel}>Signature of the Requester</Text>
+            </View>
+          </>
+        ) : null}
 
-        <View style={styles.remarks} wrap={false}>
+        {isEmailInquiry ? (
+          <Text style={styles.remarks}>Sign your Email Request Letter. If you are requesting on behalf of the document owner, also submit their signed Authorization Letter. This generated verification form does not require a signature or a visit to the CCRO.</Text>
+        ) : <View style={styles.remarks} wrap={false}>
           <Text>
             Remarks: Authorization letter with I.D bearing the signature of the authorizing party is
             required if the person is not any of the ff:
@@ -328,7 +361,7 @@ export function VerificationFormPdf({ data, qrDataUrl, generatedAt }: Verificati
               <Text>5. The Institution-in-charge</Text>
             </View>
           </View>
-        </View>
+        </View>}
 
         <View style={styles.footer} fixed>
           <Text>

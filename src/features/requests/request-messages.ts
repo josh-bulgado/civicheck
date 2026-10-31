@@ -54,7 +54,9 @@ export function isFlooded(recentCount: number): boolean {
  * Starting points staff can drop into the reply box and edit, picked by where
  * the request stands. Nothing is sent until staff press Send.
  */
-export function quickReplies(status: string, feesDue: number): string[] {
+export function quickReplies(status: string, feesDue: number, serviceCode?: string): string[] {
+  // Email inquiries are handled online; the physical-document prompts do not apply.
+  if (serviceCode === "EMAIL_INQUIRY") return [];
   switch (status) {
     case "submitted":
     case "under_validation":

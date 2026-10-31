@@ -20,6 +20,17 @@ function input(overrides: Partial<RequestActionInput> = {}): RequestActionInput 
 }
 
 describe("planning the actions on a request", () => {
+  it("completes email inquiries online while keeping the cashier gate", () => {
+    const pending = input({serviceCode: "EMAIL_INQUIRY", status: "ready_for_release", feesDue: 0});
+    expect(planRequestActions(pending).primary).toMatchObject({
+      label: "Complete inquiry", dialog: "release", to: "released",
+      blocked: "Waiting for the cashier to confirm this fee-free request",
+    });
+    const ready = {...pending, paymentStatus: "verified"};
+    expect(planRequestActions(ready).primary?.blocked).toBeUndefined();
+    expect(describeRequestProgress(ready)).toContain("Complete the inquiry online");
+  });
+
   it("holds release while a document is not accepted", () => {
     const ready = planRequestActions(
       input({ status: "processing", attachments: [doc("approved"), doc("pending")] }),

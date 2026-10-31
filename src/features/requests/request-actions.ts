@@ -36,6 +36,7 @@ export interface RequestActionPlan {
 }
 
 export interface RequestActionInput {
+  serviceCode?: string;
   status: string | null;
   paymentStatus: string | null;
   feesDue: number;
@@ -142,8 +143,16 @@ export function planRequestActions(input: RequestActionInput): RequestActionPlan
   const paymentSettled = isPaymentSettled(input.paymentStatus);
   const make = (to: RequestStatus): PlannedAction => ({
     to,
-    label: getTransitionLabel(input.status, to),
-    effect: effectOf(input.status, to, paymentSettled),
+    label: input.serviceCode === "EMAIL_INQUIRY" && to === "released"
+      ? "Complete inquiry"
+      : input.serviceCode === "EMAIL_INQUIRY" && to === "ready_for_release"
+        ? "Mark inquiry ready"
+        : getTransitionLabel(input.status, to),
+    effect: input.serviceCode === "EMAIL_INQUIRY" && to === "released"
+      ? "Confirm the cashier's fee check, then complete the inquiry. Completion cannot be undone."
+      : input.serviceCode === "EMAIL_INQUIRY" && to === "ready_for_release"
+        ? "Mark the archive check ready for completion after the cashier's fee confirmation."
+        : effectOf(input.status, to, paymentSettled),
     blocked: blockedReason(to, input, paymentSettled),
     dialog: DIALOG_OF[to],
   });
@@ -178,6 +187,16 @@ export function planRequestActions(input: RequestActionInput): RequestActionPlan
  * during validation.
  */
 export function describeRequestProgress(input: RequestActionInput): string {
+  if (input.serviceCode === "EMAIL_INQUIRY") {
+    if (input.status === "processing") return "Check the archive, then mark the inquiry ready.";
+    if (input.status === "ready_for_release") return isPaymentSettled(input.paymentStatus)
+      ? "The cashier's fee check is confirmed. Complete the inquiry online."
+      : "Waiting for the cashier's fee confirmation before completing the inquiry.";
+    if (input.status === "released") return "Inquiry completed. Nothing left to do.";
+    if (input.status === "under_validation" && input.attachments.every((doc) => doc.verificationStatus === "approved"))
+      return "Check the submitted details and accepted uploads, then mark requirements complete.";
+  }
+
   const { pending, rejected, approved, total } = documentCounts(input.attachments);
   switch (input.status) {
     case "submitted":

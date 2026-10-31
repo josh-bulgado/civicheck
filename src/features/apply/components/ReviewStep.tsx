@@ -61,7 +61,7 @@ export function ReviewStep({
     trackingNumber: string;
     documentWarning?: string;
     pdfData: AcknowledgmentPdfData;
-    /** Set only for services that collect the requester's name (the CTC form). */
+    /** Set for services that collect requester details for the Verification Form. */
     verificationData: VerificationFormPdfData | null;
   } | null>(null);
   const { download: downloadAcknowledgmentPdf, downloading: downloadingPdf } =

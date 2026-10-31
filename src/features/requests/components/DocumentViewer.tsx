@@ -33,6 +33,7 @@ export const STATUS_LABEL: Record<string, string> = {
   approved: "Accepted",
   rejected: "Rejected",
   pending: "Pending",
+  generated: "Generated",
 };
 
 function statusBadgeVariant(status: string) {

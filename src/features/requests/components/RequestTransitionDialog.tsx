@@ -23,6 +23,7 @@ import {
 import { REQUEST_REJECTION_REASONS } from "~/features/requests/rejection-reasons";
 
 interface RequestContext {
+  serviceCode: string;
   applicantName: string;
   copies: number;
   feesDue: number;
@@ -122,27 +123,38 @@ function RejectForm({ busy, onConfirm }: FormProps) {
  */
 function ReleaseForm({ busy, context, onConfirm }: FormProps) {
   const idPrefix = useId();
+  const isEmailInquiry = context.serviceCode === "EMAIL_INQUIRY";
   const copies = `${context.copies} ${context.copies === 1 ? "copy" : "copies"}`;
   const uploads = context.attachments.length;
   const items = [
-    `I checked the claimant’s valid ID against the requester, ${context.applicantName}.`,
+    isEmailInquiry
+      ? `I verified that the uploaded valid ID belongs to the requester, ${context.applicantName}.`
+      : `I checked the claimant’s valid ID against the requester, ${context.applicantName}.`,
     ...(uploads > 0
       ? [
-          `The original documents match the ${uploads} uploaded ${uploads === 1 ? "file" : "files"} accepted online.`,
+          isEmailInquiry
+            ? `I reviewed the ${uploads} uploaded ${uploads === 1 ? "file" : "files"} and confirmed ${uploads === 1 ? "it supports" : "they support"} this inquiry.`
+            : `The original documents match the ${uploads} uploaded ${uploads === 1 ? "file" : "files"} accepted online.`,
         ]
       : []),
-    context.feesDue > 0
-      ? `I am handing over ${copies}. Payment is verified under OR ${context.orNumber ?? "—"}.`
-      : `I am handing over ${copies}. The cashier confirmed no fee was due.`,
+    isEmailInquiry
+      ? context.feesDue > 0
+        ? `Payment is verified under OR ${context.orNumber ?? "-"}.`
+        : "The cashier confirmed no fee was due."
+      : context.feesDue > 0
+        ? `I am handing over ${copies}. Payment is verified under OR ${context.orNumber ?? "-"}.`
+        : `I am handing over ${copies}. The cashier confirmed no fee was due.`,
   ];
   const [checked, setChecked] = useState(() => items.map(() => false));
 
   return (
     <>
       <AlertDialogHeader>
-        <AlertDialogTitle>Release this document?</AlertDialogTitle>
+        <AlertDialogTitle>{isEmailInquiry ? "Complete this inquiry?" : "Release this document?"}</AlertDialogTitle>
         <AlertDialogDescription>
-          Release is final and goes on the record under your name.
+          {isEmailInquiry
+            ? "Completion is final and goes on the record under your name."
+            : "Release is final and goes on the record under your name."}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <div className="flex flex-col gap-3">
@@ -171,7 +183,7 @@ function ReleaseForm({ busy, context, onConfirm }: FormProps) {
           disabled={busy || !checked.every(Boolean)}
           onClick={() => onConfirm("")}
         >
-          Release document
+          {isEmailInquiry ? "Complete inquiry" : "Release document"}
         </AlertDialogAction>
       </AlertDialogFooter>
     </>
