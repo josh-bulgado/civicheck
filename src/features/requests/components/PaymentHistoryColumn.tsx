@@ -1,4 +1,4 @@
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "~/lib/table";
 import { SortHeader } from "~/components/ui/data-table-column-header";
 import { formatPeso } from "~/lib/peso";
 import type { PaymentHistoryRow } from "../requests.queries";
@@ -20,7 +20,7 @@ function formatVerifiedTime(value: string) {
   });
 }
 
-export const paymentHistoryColumns: ColumnDef<PaymentHistoryRow>[] = [
+export const paymentHistoryColumns: AppColumnDef<PaymentHistoryRow>[] = [
   {
     accessorKey: "trackingNumber",
     header: ({ column }) => <SortHeader column={column}>Tracking No.</SortHeader>,

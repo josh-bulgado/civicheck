@@ -1,5 +1,5 @@
 import type { ComponentProps, ReactNode } from "react";
-import { flexRender, type Row, type Table as TableInstance } from "@tanstack/react-table";
+import { flexRender, type RowData } from "@tanstack/react-table";
 import { SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { DataTablePagination } from "~/components/ui/data-table-pagination";
@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { cn } from "~/lib/utils";
+import type { AppRow, AppTable } from "~/lib/table";
 
 const ARIA_SORT: Record<string, "ascending" | "descending" | undefined> = {
   asc: "ascending",
@@ -22,8 +23,8 @@ type RowProps = ComponentProps<"tr"> & {
   [attribute: `data-${string}`]: string | undefined;
 };
 
-interface DataTableCardProps<TData> {
-  table: TableInstance<TData>;
+interface DataTableCardProps<TData extends RowData> {
+  table: AppTable<TData>;
   /** Search, chips and selects. Sits above the table behind a hairline. */
   toolbar: ReactNode;
   /** Names the table for screen readers, e.g. "Requests". */
@@ -35,7 +36,7 @@ interface DataTableCardProps<TData> {
   /** Replaces the client-side pagination footer, for tables paged by the server. */
   footer?: ReactNode;
   /** Per-row attributes: click handlers, data attributes, extra classes. */
-  getRowProps?: (row: Row<TData>) => RowProps;
+  getRowProps?: (row: AppRow<TData>) => RowProps;
   cellClassName?: string;
   className?: string;
 }
@@ -45,7 +46,7 @@ interface DataTableCardProps<TData> {
  * shape of the Services, Staff and Request Queue pages. The page owns the
  * `table` instance, so sorting, filtering and columns stay where they differ.
  */
-export function DataTableCard<TData>({
+export function DataTableCard<TData extends RowData>({
   table,
   toolbar,
   label,

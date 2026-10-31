@@ -1,11 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
 import {
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
+  useTable,
   type ColumnFiltersState,
   type SortingState,
 } from "@tanstack/react-table";
@@ -33,6 +29,7 @@ import {
   type RoleFilter,
   type StatusFilter,
 } from "../staff-table.utils";
+import { appTableFeatures } from "~/lib/table";
 
 export function StaffDataTable({
   data,
@@ -149,18 +146,15 @@ export function StaffDataTable({
     [data, roleFilter, statusFilter],
   );
 
-  const table = useReactTable({
+  const table = useTable({
+    features: appTableFeatures,
     data: rows,
     columns,
     state: { sorting, columnFilters, globalFilter },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 20 } },
+    initialState: { pagination: { pageIndex: 0, pageSize: 20 } },
     globalFilterFn: (row, _id, value: string) =>
       matchesSearch(row.original, value),
   });

@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import type { DisplayHotkey } from "@tanstack/react-hotkeys";
 import { QuietLink as Link } from "~/components/quiet-link";
 import { Check, ChevronLeft, CircleCheck, Clock, TriangleAlert } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
@@ -32,7 +33,7 @@ function ActiveIncident({
   event: HealthEvent;
   canManage: boolean;
   pending: boolean;
-  hotkeyLabel: (hotkey: string) => string;
+  hotkeyLabel: (hotkey: DisplayHotkey) => string;
   onAcknowledge: (eventId: string) => void;
   onRecordMaintenance: () => void;
 }) {
@@ -124,7 +125,7 @@ type IncidentTab = "active" | "history" | "planned";
 export function HealthIncidentsCard({ data, pending, hotkeyLabel, onAcknowledge, onRecordMaintenance, onCheckNow }: {
   data: SystemHealthDashboard;
   pending: "acknowledge" | "check" | "maintenance" | "limits" | "alerts" | null;
-  hotkeyLabel: (hotkey: string) => string;
+  hotkeyLabel: (hotkey: DisplayHotkey) => string;
   onAcknowledge: (eventId: string) => void;
   onRecordMaintenance: () => void;
   onCheckNow: () => void;
