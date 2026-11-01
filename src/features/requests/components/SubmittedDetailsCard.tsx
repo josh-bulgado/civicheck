@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { isEstimatedDate } from "~/features/forms/estimated-date";
 import { groupFormData } from "~/features/requests/form-data-groups";
 
 /** The slice of a request (applicant or staff view) this card reads. */
@@ -44,6 +45,7 @@ const DATE_KEYS = new Set([
 function formatValue(key: string, value: string | number | boolean) {
   if (value === "") return "—";
   if (DATE_KEYS.has(key)) {
+    if (isEstimatedDate(String(value))) return String(value);
     const date = new Date(String(value));
     if (!Number.isNaN(date.getTime())) {
       return date.toLocaleDateString("en-US", {

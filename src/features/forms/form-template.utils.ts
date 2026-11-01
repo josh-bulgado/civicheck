@@ -2,6 +2,7 @@ import { ageInYears, diffInDays, fromDateKey, toDateKey } from "~/lib/date";
 import { flattenSubjects, type SubjectFields } from "~/lib/subject-fields";
 import { addressAreas, addressCities } from "~/lib/requester-address";
 import { countryOptions } from "~/lib/countries";
+import { isEstimatedDate, validateEstimatedDate } from "./estimated-date";
 import {
   conditionRuleSchema,
   formTemplateDefinitionSchema,
@@ -831,6 +832,11 @@ export function validateTemplateAnswers(
         return { success: false, message: blockingNotice.description };
       }
       if (field.type === "date") {
+        if (field.allowEstimate && isEstimatedDate(value)) {
+          const result = validateEstimatedDate(value, todayKey);
+          if (result !== true) return { success: false, message: result };
+          continue;
+        }
         if (!fromDateKey(value)) {
           return { success: false, message: `${field.label} must be a valid date.` };
         }

@@ -163,6 +163,7 @@ export const formFieldDefinitionSchema = z.object({
   helpText: z.string().max(500).optional(),
   options: z.array(formOptionSchema).max(100).optional(),
   dateDirection: z.enum(["past", "future", "any"]).optional(),
+  allowEstimate: z.boolean().optional(),
   visibleWhen: formConditionSchema.optional(),
   /**
    * In a single-column step, keep this field beside its neighbours instead of on

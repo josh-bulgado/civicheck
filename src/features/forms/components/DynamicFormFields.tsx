@@ -11,6 +11,9 @@ import {
 import { Checkbox } from "~/components/ui/checkbox";
 import { Phone } from "lucide-react";
 import { DatePicker } from "~/components/ui/date-picker";
+import { EstimatedDateField } from "./EstimatedDateField";
+import { isEstimatedDate, validateEstimatedDate } from "../estimated-date";
+import { todayKeyInTimeZone } from "../form-template.utils";
 import {
   Field,
   FieldDescription,
@@ -329,6 +332,9 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                   : false,
                 validate: (value) => {
                   if (!value) return true;
+                  if (definitionField.type === "date" && definitionField.allowEstimate && isEstimatedDate(value)) {
+                    return validateEstimatedDate(value, todayKeyInTimeZone());
+                  }
                   if (definitionField.type === "phone" && !/^9\d{9}$/.test(value)) {
                     return "Enter a valid 10-digit mobile number, e.g. 9171234567";
                   }
@@ -475,6 +481,18 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         className={WIZARD_TEXTAREA_CLASS}
                       />
                     ) : definitionField.type === "date" ? (
+                      definitionField.allowEstimate ? (
+                        <EstimatedDateField
+                          id={`dynamic-${definitionField.key}`}
+                          value={field.value ?? ""}
+                          onChange={(value) => {
+                            field.onChange(value);
+                            onDateChange?.(definitionField.key, value);
+                          }}
+                          onBlur={field.onBlur}
+                          invalid={fieldState.invalid}
+                        />
+                      ) : (
                       <DatePicker
                         id={`dynamic-${definitionField.key}`}
                         value={field.value ?? ""}
@@ -502,6 +520,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         // stands taller than the fields beside it.
                         className={cn(WIZARD_CONTROL_CLASS, "h-10 px-3")}
                       />
+                      )
                     ) : definitionField.type === "select" ? (
                       <Select
                         items={definitionField.options ?? []}
