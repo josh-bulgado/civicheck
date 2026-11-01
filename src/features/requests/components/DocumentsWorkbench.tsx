@@ -1,7 +1,7 @@
 import { documentReviewBlockedReason } from "../document-review";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys, type HotkeyChord } from "@tanstack/react-hotkeys";
-import { CheckCircle2, Circle, XCircle } from "lucide-react";
+import { CheckCircle2, Circle, FileText, XCircle } from "lucide-react";
 import { Kbd } from "~/components/ui/kbd";
 import {
   AlertDialog,
@@ -32,6 +32,10 @@ import type {
   Decision,
   QueuedDecisions,
 } from "~/features/requests/hooks/useQueuedDecisions";
+
+import { buildVerificationFormPdf } from "~/features/requests/pdf/useVerificationFormPdfDownload";
+
+const GENERATED_FORM_ID = "generated-verification-form";
 
 type Attachment = RequestDetail["attachments"][number];
 
@@ -112,9 +116,22 @@ export function DocumentsWorkbench({
   const { attachments } = request;
   const blockedReason = documentReviewBlockedReason(request.status);
 
+  const hasVerificationForm = typeof request.formData.requester_first_name === "string";
+  const generatedEntry = useMemo(() => hasVerificationForm ? [{
+    doc: {
+      id: GENERATED_FORM_ID,
+      requirementName: "Verification Form",
+      subjectRole: null,
+      fileUrl: "",
+      verificationStatus: "generated",
+      rejectionReason: null,
+    } satisfies Attachment,
+    label: "Verification Form",
+  }] : [], [hasVerificationForm]);
+
   const entries = useMemo(
     () =>
-      groupByRequirement(attachments).flatMap((group) =>
+      [...groupByRequirement(attachments).flatMap((group) =>
         group.docs.map((doc, index) => ({
           doc,
           label:
@@ -122,8 +139,8 @@ export function DocumentsWorkbench({
               ? `${group.title} · file ${index + 1} of ${group.docs.length}`
               : group.title,
         })),
-      ),
-    [attachments],
+      ), ...generatedEntry],
+    [attachments, generatedEntry],
   );
 
   const verdictOf = (doc: Attachment): Verdict =>
@@ -184,6 +201,26 @@ export function DocumentsWorkbench({
   const selectedDocId = selected?.doc.id;
   useEffect(() => {
     if (!active || !selectedDocId) return;
+    if (selectedDocId === GENERATED_FORM_ID) {
+      let cancelled = false;
+      let objectUrl: string | undefined;
+      setLink({ id: selectedDocId });
+      void buildVerificationFormPdf({
+        trackingNumber: request.trackingNumber,
+        copies: request.copies,
+        formData: request.formData,
+      }).then((blob) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setLink({ id: selectedDocId, url: `${objectUrl}#verification.pdf` });
+      }).catch(() => {
+        if (!cancelled) setLink({ id: selectedDocId, error: "Could not prepare the verification form. Select it again to retry." });
+      });
+      return () => {
+        cancelled = true;
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+      };
+    }
     const cached = links.current.get(selectedDocId);
     if (cached && Date.now() - cached.at < LINK_REUSE_MS) {
       setLink({ id: selectedDocId, url: cached.url });
@@ -209,7 +246,7 @@ export function DocumentsWorkbench({
     return () => {
       cancelled = true;
     };
-  }, [active, selectedDocId]);
+  }, [active, selectedDocId, request.trackingNumber, request.copies, request.formData]);
 
   function decide(doc: Attachment, status: Decision, reason?: string) {
     if (!canProcess || blockedReason || verdictOf(doc).status !== "pending") return;
@@ -270,7 +307,7 @@ export function DocumentsWorkbench({
   const rejectingSelected = selected != null && rejectingId === selected.doc.id;
 
   const controls: DecisionControls | null =
-    selected && selectedVerdict
+    selected && selectedVerdict && selected.doc.id !== GENERATED_FORM_ID
       ? {
           docId: selected.doc.id,
           status: selectedVerdict.status,
@@ -333,7 +370,7 @@ export function DocumentsWorkbench({
     {
       hotkey: UNDO_HOTKEY,
       callback: () => decisions.cancelLast(),
-      options: { enabled: shortcuts },
+      options: { enabled: shortcuts && selected?.doc.id !== GENERATED_FORM_ID },
     },
     {
       hotkey: "Escape",
@@ -385,20 +422,20 @@ export function DocumentsWorkbench({
         <div className="flex items-center justify-between gap-2 border-b border-border-light px-4 py-3">
           <h2 className="text-sm font-bold text-foreground">Documents</h2>
           <span className="text-xs text-muted-foreground tabular-nums">
-            {accepted} of {entries.length} accepted
+            {accepted} of {attachments.length} accepted
           </span>
         </div>
         <div
           role="progressbar"
           aria-label="Documents accepted"
           aria-valuemin={0}
-          aria-valuemax={entries.length}
+          aria-valuemax={attachments.length}
           aria-valuenow={accepted}
           className="h-1 bg-muted"
         >
           <div
             className="h-full origin-left bg-success transition-transform duration-200 motion-reduce:transition-none"
-            style={{ transform: `scaleX(${accepted / entries.length})` }}
+            style={{ transform: `scaleX(${attachments.length ? accepted / attachments.length : 0})` }}
           />
         </div>
         <ul className="divide-y divide-border-light">
@@ -414,7 +451,9 @@ export function DocumentsWorkbench({
                   className="flex w-full items-start gap-2.5 border-l-[3px] border-transparent px-4 py-2.5 text-left transition-colors hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50 focus-visible:outline-none aria-[current=true]:border-primary-fill aria-[current=true]:bg-primary-tint"
                 >
                   <span className="mt-0.5">
-                    <StatusIcon status={verdict.status} />
+                    {doc.id === GENERATED_FORM_ID
+                      ? <FileText className="size-4 text-primary" aria-hidden="true" />
+                      : <StatusIcon status={verdict.status} />}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-semibold text-foreground">
@@ -440,7 +479,7 @@ export function DocumentsWorkbench({
           <span className="flex items-center gap-1">
             <Kbd>{hotkeyLabel(EXPAND_HOTKEY)}</Kbd> expand
           </span>
-          {canProcess && (
+          {canProcess && selected?.doc.id !== GENERATED_FORM_ID && (
             <>
               <span className="flex items-center gap-1">
                 <Kbd>{hotkeyLabel(ACCEPT_HOTKEY)}</Kbd> accept
@@ -458,7 +497,7 @@ export function DocumentsWorkbench({
         </p>
       </section>
 
-      {selected && selectedVerdict && controls && (
+      {selected && selectedVerdict && (
         // On a wide screen the viewer stays put while the list and details
         // scroll, and fills the height of the screen, so the file is as large
         // as it can be with accept and reject always in reach.
@@ -483,7 +522,7 @@ export function DocumentsWorkbench({
               )}
             </div>
           </div>
-          {!expanded && (
+          {!expanded && controls && (
             <DocumentDecisionBar
               controls={controls}
               className="max-h-[60%] shrink-0 overflow-y-auto rounded-b-xl max-lg:sticky max-lg:bottom-0 max-lg:z-10"
@@ -492,7 +531,7 @@ export function DocumentsWorkbench({
         </section>
       )}
 
-      {selected && selectedVerdict && controls && (
+      {selected && selectedVerdict && (
         <ExpandedDocumentView
           open={expanded}
           onOpenChange={setExpanded}
@@ -511,7 +550,7 @@ export function DocumentsWorkbench({
               className="h-full"
             />
           }
-          decision={<DocumentDecisionBar controls={controls} />}
+          decision={controls ? <DocumentDecisionBar controls={controls} /> : null}
           details={<SubmittedDetailsCard request={request} showEmpty bare />}
           position={`${selectedIndex + 1} of ${entries.length}`}
           onStep={step}

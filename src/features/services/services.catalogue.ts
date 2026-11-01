@@ -36,7 +36,9 @@ import {
 import { toServiceSlug } from "~/features/services/service-slug";
 import { sortChecklist } from "~/features/services/service-utils";
 
-const TTL_MS = 5 * 60 * 1000;
+// Show external template edits immediately when refreshing the local app.
+// Production retains the shared five-minute catalogue cache.
+const TTL_MS = process.env.NODE_ENV === "development" ? 0 : 5 * 60 * 1000;
 
 export interface ServiceCatalogue {
   services: Service[];

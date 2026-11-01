@@ -120,7 +120,7 @@ describe("form and action controls expose their intended defaults", () => {
     ["button.tsx", ['size = "lg"', 'shape = "pill"']],
     ["input.tsx", ['fieldSize = "lg"', 'shape = "split"']],
     ["input-group.tsx", ['fieldSize = "lg"', 'shape = "split"']],
-    ["select.tsx", ['size = "lg"', 'shape = "pill"']],
+    ["select.tsx", ['size = "lg"', 'shape = "split"']],
     ["date-picker.tsx", ['size = "lg"', 'shape = "pill"']],
     ["toggle.tsx", ['size = "lg"', 'shape = "pill"']],
     ["toggle-group.tsx", ['size = "lg"', 'shape = "pill"']],

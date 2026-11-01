@@ -1,4 +1,7 @@
+import { formatFieldLabel } from "~/features/forms/field-label";
 import type { ReactNode } from "react";
+import { addressDescendants } from "~/lib/requester-address";
+import { AddressLocationField } from "./AddressLocationField";
 import {
   Controller,
   type Control,
@@ -8,6 +11,9 @@ import {
 import { Checkbox } from "~/components/ui/checkbox";
 import { Phone } from "lucide-react";
 import { DatePicker } from "~/components/ui/date-picker";
+import { EstimatedDateField } from "./EstimatedDateField";
+import { isEstimatedDate, validateEstimatedDate } from "../estimated-date";
+import { todayKeyInTimeZone } from "../form-template.utils";
 import {
   Field,
   FieldDescription,
@@ -225,6 +231,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
   control,
   values,
   onDateChange,
+  onFieldChange,
   showRequiredMarks = false,
   showSectionTitles = false,
   singleColumn = false,
@@ -239,6 +246,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
   control: Control<TFieldValues>;
   values: DynamicFieldValues;
   onDateChange?: (fieldKey: string, value: string) => void;
+  onFieldChange?: (fieldKey: string, value: string) => void;
   /** Adds an asterisk to required labels; the caller owns the legend. */
   showRequiredMarks?: boolean;
   /**
@@ -288,6 +296,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
           "flex flex-col gap-3",
           setApart &&
             "mt-8 border-t border-border-light pt-12 sm:mt-10 sm:pt-14",
+          !setApart && step === "details" && sectionIndex > 0 && "pt-2",
         )}
       >
         {titled ? (
@@ -326,10 +335,17 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
               name={definitionField.key as Path<TFieldValues>}
               rules={{
                 required: definitionField.required
-                  ? `${definitionField.label} is required`
+                  ? `${formatFieldLabel(definitionField.label)} is required`
                   : false,
                 validate: (value) => {
                   if (!value) return true;
+                  if (
+                    definitionField.type === "date" &&
+                    definitionField.allowEstimate &&
+                    isEstimatedDate(value)
+                  ) {
+                    return validateEstimatedDate(value, todayKeyInTimeZone());
+                  }
                   if (
                     definitionField.type === "phone" &&
                     !/^9\d{9}$/.test(value)
@@ -340,10 +356,22 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                 },
                 maxLength: {
                   value: definitionField.type === "textarea" ? 2_000 : 240,
-                  message: `${definitionField.label} is too long`,
+                  message: `${formatFieldLabel(definitionField.label)} is too long`,
                 },
               }}
               render={({ field, fieldState }) => {
+                const addressLevel = definitionField.philippineAddressLevel;
+                const locationLevel = definitionField.countrySelect ? "country" : addressLevel;
+
+                // Start a fresh dropdown when its province or city changes.
+                let locationKey = definitionField.key;
+                if (addressLevel === "city" || addressLevel === "barangay") {
+                  locationKey += ":" + values.requester_province;
+                }
+                if (addressLevel === "barangay") {
+                  locationKey += ":" + values.requester_city;
+                }
+
                 const selectedNotice =
                   definitionField.type === "select"
                     ? definitionField.options?.find(
@@ -376,7 +404,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                 const options = definitionField.options ?? [];
                 const legendLabel = (
                   <>
-                    {definitionField.label}
+                    {formatFieldLabel(definitionField.label)}
                     {!definitionField.required ? " (optional)" : ""}
                     {showRequiredMarks && definitionField.required ? (
                       <>
@@ -444,7 +472,27 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                       {legendLabel}
                     </FieldLabel>
 
-                    {definitionField.type === "textarea" ? (
+                    {locationLevel ? (
+                      <AddressLocationField
+                        key={locationKey}
+                        level={locationLevel}
+                        area={values.requester_province ?? ""}
+                        city={values.requester_city ?? ""}
+                        value={field.value ?? ""}
+                        onChange={(value) => {
+                          field.onChange(value);
+                          if (value !== field.value && addressLevel) {
+                            for (const key of addressDescendants(addressLevel)) {
+                              onFieldChange?.(key, "");
+                            }
+                          }
+                        }}
+                        onBlur={field.onBlur}
+                        inputRef={field.ref}
+                        id={`dynamic-${definitionField.key}`}
+                        invalid={fieldState.invalid}
+                      />
+                    ) : definitionField.type === "textarea" ? (
                       <Textarea
                         {...field}
                         id={`dynamic-${definitionField.key}`}
@@ -455,38 +503,51 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         className={WIZARD_TEXTAREA_CLASS}
                       />
                     ) : definitionField.type === "date" ? (
-                      <DatePicker
-                        shape="split"
-                        id={`dynamic-${definitionField.key}`}
-                        value={field.value ?? ""}
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          onDateChange?.(definitionField.key, value);
-                        }}
-                        onBlur={field.onBlur}
-                        max={
-                          definitionField.dateDirection === "past"
-                            ? toDateKey()
-                            : undefined
-                        }
-                        min={
-                          definitionField.dateDirection === "future"
-                            ? toDateKey()
-                            : undefined
-                        }
-                        // The label is right above, so without a placeholder of its
-                        // own the picker says "Select a date" instead of repeating
-                        // it: a long label ("Date of the event on the record") ran
-                        // past the field and was cut off.
-                        placeholder={definitionField.placeholder || undefined}
-                        invalid={fieldState.invalid}
-                        icon="calendar"
-                        // The wizard's 56px height only reaches a Button. An Input
-                        // or Select keeps its own 40px (their size selectors
-                        // outrank it), so the picker takes that size too, or it
-                        // stands taller than the fields beside it.
-                        className={cn(WIZARD_CONTROL_CLASS, "h-10 px-3")}
-                      />
+                      definitionField.allowEstimate ? (
+                        <EstimatedDateField
+                          id={`dynamic-${definitionField.key}`}
+                          value={field.value ?? ""}
+                          onChange={(value) => {
+                            field.onChange(value);
+                            onDateChange?.(definitionField.key, value);
+                          }}
+                          onBlur={field.onBlur}
+                          invalid={fieldState.invalid}
+                        />
+                      ) : (
+                        <DatePicker
+                          shape="split"
+                          id={`dynamic-${definitionField.key}`}
+                          value={field.value ?? ""}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            onDateChange?.(definitionField.key, value);
+                          }}
+                          onBlur={field.onBlur}
+                          max={
+                            definitionField.dateDirection === "past"
+                              ? toDateKey()
+                              : undefined
+                          }
+                          min={
+                            definitionField.dateDirection === "future"
+                              ? toDateKey()
+                              : undefined
+                          }
+                          // The label is right above, so without a placeholder of its
+                          // own the picker says "Select a date" instead of repeating
+                          // it: a long label ("Date of the event on the record") ran
+                          // past the field and was cut off.
+                          placeholder={definitionField.placeholder || undefined}
+                          invalid={fieldState.invalid}
+                          icon="calendar"
+                          // The wizard's 56px height only reaches a Button. An Input
+                          // or Select keeps its own 40px (their size selectors
+                          // outrank it), so the picker takes that size too, or it
+                          // stands taller than the fields beside it.
+                          className={cn(WIZARD_CONTROL_CLASS, "h-10 px-3")}
+                        />
+                      )
                     ) : definitionField.type === "select" ? (
                       <Select
                         items={definitionField.options ?? []}

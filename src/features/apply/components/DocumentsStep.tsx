@@ -984,7 +984,9 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
               <ClipboardCheck className="mt-0.5 size-5.5 shrink-0 text-primary" />
               <div className="min-w-0">
                 <h2 className="text-lg font-bold text-foreground">
-                  Complete at the CCRO — no upload needed
+                  {selectedService.service_code === "EMAIL_INQUIRY"
+                    ? "Prepared for you - no upload needed"
+                    : "Complete at the CCRO - no upload needed"}
                 </h2>
                 <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-[15px] text-body-2">
                   {inPersonRequirements.map((requirement) => (

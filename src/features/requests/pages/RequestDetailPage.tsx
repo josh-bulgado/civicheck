@@ -138,6 +138,7 @@ export default function RequestDetailPage({
       : doc;
   });
   const planInput = {
+    serviceCode: request.serviceCode,
     status: request.status,
     paymentStatus: request.paymentStatus,
     feesDue: request.feesDue,
@@ -151,7 +152,7 @@ export default function RequestDetailPage({
   const accepted = attachments.filter((doc) => doc.verificationStatus === "approved").length;
   const pending = attachments.filter((doc) => doc.verificationStatus === "pending").length;
   const lastMessage = request.messages.at(-1);
-  const suggestions = quickReplies(request.status, request.feesDue);
+  const suggestions = quickReplies(request.status, request.feesDue, request.serviceCode);
   const waitingForReply = hasChat && lastMessage?.senderRole === "applicant";
   // The URL names the tab, so a link or a reload lands where staff were. With
   // none named, open on the documents when there are any to review.
@@ -359,6 +360,7 @@ export default function RequestDetailPage({
         type={dialog}
         busy={busy}
         context={{
+          serviceCode: request.serviceCode,
           applicantName: request.applicantName,
           copies: request.copies,
           feesDue: request.feesDue,

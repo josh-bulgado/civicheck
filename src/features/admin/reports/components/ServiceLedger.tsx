@@ -1,10 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import {
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
+  useTable,
   type SortingState,
 } from "@tanstack/react-table";
 import { Download } from "lucide-react";
@@ -33,6 +29,7 @@ import {
   servicesToCsv,
 } from "~/features/admin/reports/services-ledger";
 import { downloadCsv } from "~/lib/csv";
+import { appTableFeatures, type AppColumnDef } from "~/lib/table";
 
 interface ServiceLedgerProps {
   rows: ReadonlyArray<ServiceReportRow>;
@@ -91,7 +88,7 @@ export function ServiceLedger({
     [rows],
   );
 
-  const columns = useMemo<ColumnDef<ServiceReportRow>[]>(
+  const columns = useMemo<AppColumnDef<ServiceReportRow>[]>(
     () => [
       {
         id: "label",
@@ -207,16 +204,14 @@ export function ServiceLedger({
     [departmentName, maxTotal, onSelect, selectedKey, totalRequests],
   );
 
-  const table = useReactTable({
+  const table = useTable({
+    features: appTableFeatures,
     data: visibleRows as ServiceReportRow[],
     columns,
     state: { sorting },
     onSortingChange: setSorting,
     getRowId: (row) => row.key,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: PAGE_SIZE } },
+    initialState: { pagination: { pageIndex: 0, pageSize: PAGE_SIZE } },
   });
 
   const chips = useMemo<FilterChipOption<string>[]>(() => {

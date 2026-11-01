@@ -1,3 +1,4 @@
+import { formatFieldLabel } from "~/features/forms/field-label";
 import { useNavigate } from "@tanstack/react-router";
 import { QuietLink } from "~/components/quiet-link";
 import { useMemo, useState, type ReactNode } from "react";
@@ -61,7 +62,7 @@ export function ReviewStep({
     trackingNumber: string;
     documentWarning?: string;
     pdfData: AcknowledgmentPdfData;
-    /** Set only for services that collect the requester's name (the CTC form). */
+    /** Set for services that collect requester details for the Verification Form. */
     verificationData: VerificationFormPdfData | null;
   } | null>(null);
   const { download: downloadAcknowledgmentPdf, downloading: downloadingPdf } =
@@ -477,7 +478,7 @@ function ReviewBlock({
 function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex min-w-0 justify-between gap-4 text-base">
-      <span className="shrink-0 text-muted-foreground">{label}</span>
+      <span className="shrink-0 text-muted-foreground">{formatFieldLabel(label)}</span>
       <span className="min-w-0 text-right font-bold wrap-break-word text-foreground">
         {value}
       </span>

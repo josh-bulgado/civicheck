@@ -1,10 +1,11 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { useTable } from "@tanstack/react-table";
 import { describe, expect, it } from "vitest";
 import { auditColumns } from "./AuditColumn";
 import { AuditTableRows } from "./AuditTableRows";
 import type { NormalizedAuditEvent } from "../system-admin.types";
+import { appTableFeatures } from "~/lib/table";
 
 function AuditRowsPreview({ count }: { count: number }) {
   const data: NormalizedAuditEvent[] = Array.from(
@@ -22,10 +23,11 @@ function AuditRowsPreview({ count }: { count: number }) {
       maskedIpAddress: "127.0.0.0",
     }),
   );
-  const table = useReactTable({
+  const table = useTable({
+    features: appTableFeatures,
     data,
     columns: auditColumns,
-    getCoreRowModel: getCoreRowModel(),
+    manualPagination: true,
   });
   return createElement(
     "table",

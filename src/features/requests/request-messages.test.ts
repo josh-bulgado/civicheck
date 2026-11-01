@@ -2,6 +2,15 @@ import { describe, expect, it } from "vitest";
 import { quickReplies } from "./request-messages";
 
 describe("quickReplies", () => {
+  it("does not offer office or pickup prompts for email inquiries", () => {
+    for (const status of ["submitted", "under_validation", "incomplete", "processing", "ready_for_release"]) {
+      expect(quickReplies(status, 0, "EMAIL_INQUIRY")).toEqual([]);
+    }
+    expect(quickReplies("ready_for_release", 0, "CTC-LOCAL")).toEqual([
+      "Your document is ready for pickup.",
+    ]);
+  });
+
   it("asks for the original while documents are being checked", () => {
     for (const status of ["submitted", "under_validation", "incomplete"]) {
       expect(quickReplies(status, 240)).toEqual([

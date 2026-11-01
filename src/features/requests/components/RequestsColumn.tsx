@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { AppColumnDef } from "~/lib/table";
 import { QuietLink as Link } from "~/components/quiet-link";
 import { Badge } from "~/components/ui/badge";
 import { SortHeader } from "~/components/ui/data-table-column-header";
@@ -129,7 +129,7 @@ interface RequestColumnOptions {
 export function createRequestColumns({
   now,
   showDepartment,
-}: RequestColumnOptions): ColumnDef<StaffRequestRow>[] {
+}: RequestColumnOptions): AppColumnDef<StaffRequestRow>[] {
   return [
     {
       id: "trackingNumber",

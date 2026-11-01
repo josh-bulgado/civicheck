@@ -154,12 +154,16 @@ export const formFieldDefinitionSchema = z.object({
     .max(64)
     .regex(/^[a-z][a-z0-9_]*$/, "Use lowercase letters, numbers, and underscores"),
   type: formFieldTypeSchema,
+  // Choose which Philippine location list to show in this field.
+  philippineAddressLevel: z.enum(["province", "city", "barangay"]).optional(),
+  countrySelect: z.boolean().optional(),
   label: z.string().min(1).max(160),
   required: z.boolean().default(false),
   placeholder: z.string().max(240).optional(),
   helpText: z.string().max(500).optional(),
   options: z.array(formOptionSchema).max(100).optional(),
   dateDirection: z.enum(["past", "future", "any"]).optional(),
+  allowEstimate: z.boolean().optional(),
   visibleWhen: formConditionSchema.optional(),
   /**
    * In a single-column step, keep this field beside its neighbours instead of on

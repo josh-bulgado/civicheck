@@ -1,4 +1,4 @@
-import { type Table } from "@tanstack/react-table";
+import { type RowData } from "@tanstack/react-table";
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,9 +13,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import type { AppTable } from "~/lib/table";
 
-interface DataTablePaginationProps<TData> {
-  table: Table<TData>;
+interface DataTablePaginationProps<TData extends RowData> {
+  table: AppTable<TData>;
   pageSizeOptions?: number[];
   // server-side overrides — provide these for server-side pagination
   pageCount?: number;
@@ -25,7 +26,7 @@ interface DataTablePaginationProps<TData> {
   onPageSizeChange?: (size: number) => void;
 }
 
-export function DataTablePagination<TData>({
+export function DataTablePagination<TData extends RowData>({
   table,
   pageSizeOptions = [10, 20, 50],
   pageCount: serverPageCount,
@@ -33,7 +34,7 @@ export function DataTablePagination<TData>({
   onPageChange,
   onPageSizeChange,
 }: DataTablePaginationProps<TData>) {
-  const { pageIndex, pageSize } = table.getState().pagination;
+  const { pageIndex, pageSize } = table.state.pagination;
 
   // server-side mode uses the provided pageCount, client-side uses table's
   const pageCount = serverPageCount ?? table.getPageCount();

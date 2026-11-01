@@ -1,11 +1,7 @@
 import { useDeferredValue, useState } from "react";
 import {
-  SortingState,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
+  useTable,
+  type SortingState,
 } from "@tanstack/react-table";
 import { Receipt } from "lucide-react";
 import { DataTableCard } from "~/components/ui/data-table-card";
@@ -13,6 +9,7 @@ import type { PaymentRange } from "../payment-history";
 import type { PaymentHistoryRow } from "../requests.queries";
 import { paymentHistoryColumns } from "./PaymentHistoryColumn";
 import { PaymentHistoryToolbar } from "./PaymentHistoryToolbar";
+import { appTableFeatures } from "~/lib/table";
 
 interface PaymentHistoryDataTableProps {
   data: PaymentHistoryRow[];
@@ -32,16 +29,13 @@ export function PaymentHistoryDataTable({
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
 
-  const table = useReactTable({
+  const table = useTable({
+    features: appTableFeatures,
     data,
     columns: paymentHistoryColumns,
     state: { sorting, globalFilter: deferredSearch },
     onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 20 } },
+    initialState: { pagination: { pageIndex: 0, pageSize: 20 } },
     globalFilterFn: (row, _columnId, filterValue: string) => {
       const term = filterValue.toLowerCase();
       const { trackingNumber, applicantName, serviceName, orNumber, verifiedBy } =

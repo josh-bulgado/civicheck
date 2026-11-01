@@ -1,4 +1,4 @@
-import type { Column, ColumnDef, RowData, Table } from "@tanstack/react-table";
+import type { RowData } from "@tanstack/react-table";
 import {
   ArrowDown,
   ArrowUp,
@@ -17,12 +17,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import type { AppColumn, AppColumnDef, AppTable } from "~/lib/table";
 
 export function CenterSortHeader<TData extends RowData>({
   column,
   label,
 }: {
-  column: Column<TData>;
+  column: AppColumn<TData>;
   label: string;
 }) {
   const sorted = column.getIsSorted();
@@ -43,7 +44,7 @@ export function CenterSortHeader<TData extends RowData>({
 
 export function centerSelectionColumn<TData extends RowData>(
   label: (row: TData) => string,
-): ColumnDef<TData> {
+): AppColumnDef<TData> {
   return {
     id: "select",
     enableSorting: false,
@@ -51,7 +52,9 @@ export function centerSelectionColumn<TData extends RowData>(
       <Checkbox
         aria-label="Select all rows on this page"
         checked={table.getIsAllPageRowsSelected()}
-        indeterminate={table.getIsSomePageRowsSelected()}
+        indeterminate={
+          table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()
+        }
         onCheckedChange={(checked) => table.toggleAllPageRowsSelected(checked)}
       />
     ),
@@ -65,7 +68,7 @@ export function centerSelectionColumn<TData extends RowData>(
   };
 }
 
-export function CenterTablePagination<TData>({
+export function CenterTablePagination<TData extends RowData>({
   table,
   total,
   pageCount: suppliedPageCount,
@@ -74,7 +77,7 @@ export function CenterTablePagination<TData>({
   onPageSizeChange,
   disabled = false,
 }: {
-  table: Table<TData>;
+  table: AppTable<TData>;
   total: number;
   pageCount?: number;
   pageSizeOptions?: number[];
@@ -82,7 +85,7 @@ export function CenterTablePagination<TData>({
   onPageSizeChange: (size: number) => void;
   disabled?: boolean;
 }) {
-  const { pageIndex, pageSize } = table.getState().pagination;
+  const { pageIndex, pageSize } = table.state.pagination;
   const pageCount = Math.max(1, suppliedPageCount ?? table.getPageCount());
   const pages = Array.from(
     new Set([

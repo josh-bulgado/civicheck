@@ -2,10 +2,7 @@ import { useDeferredValue, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useHotkeys, type HotkeyChord } from "@tanstack/react-hotkeys";
 import {
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
+  useTable,
   type SortingState,
 } from "@tanstack/react-table";
 import { DataTableCard } from "~/components/ui/data-table-card";
@@ -23,6 +20,7 @@ import {
 import type { StaffRequestRow } from "../requests.queries";
 import { IN_STAGE_COLUMN, createRequestColumns } from "./RequestsColumn";
 import { RequestsTableToolbar } from "./RequestsTableToolbar";
+import { appTableFeatures } from "~/lib/table";
 
 /** Longest wait first: the oldest thing someone is waiting on is row one. */
 const DEFAULT_SORTING: SortingState = [{ id: IN_STAGE_COLUMN, desc: true }];
@@ -112,15 +110,13 @@ export function RequestsDataTable({
     [now, scopedDepartmentName],
   );
 
-  const table = useReactTable({
+  const table = useTable({
+    features: appTableFeatures,
     data: rows,
     columns,
     state: { sorting },
     onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 20 } },
+    initialState: { pagination: { pageIndex: 0, pageSize: 20 } },
   });
 
   const hasActiveFilters =

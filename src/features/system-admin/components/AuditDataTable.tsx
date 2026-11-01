@@ -2,10 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
 import {
   flexRender,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
+  useTable,
   type SortingState,
 } from "@tanstack/react-table";
 import { Search, X } from "lucide-react";
@@ -24,6 +21,7 @@ import { AuditTableToolbar, type AuditFilterValues } from "./AuditTableToolbar";
 import { AuditTableSkeleton } from "./AuditTableSkeleton";
 import { AuditTableRows } from "./AuditTableRows";
 import { CenterTablePagination } from "./CenterTableControls";
+import { appTableFeatures } from "~/lib/table";
 
 export function AuditDataTable({
   data,
@@ -67,16 +65,14 @@ export function AuditDataTable({
     ],
   );
 
-  const table = useReactTable({
+  const table = useTable({
+    features: appTableFeatures,
     data,
     columns: auditColumns,
     getRowId: (event) => `${event.source}:${event.id}`,
     state: { sorting, pagination: { pageIndex, pageSize } },
     autoResetPageIndex: false,
     onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
   });
 
   const applyFilters = useCallback(

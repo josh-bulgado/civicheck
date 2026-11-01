@@ -1,3 +1,4 @@
+import { formatFieldLabel } from "~/features/forms/field-label";
 import { Button } from "~/components/ui/button";
 import { Sheet, SheetClose, SheetContent } from "~/components/ui/sheet";
 import type { FormStep, FormTemplateDefinition } from "../form-template.types";
@@ -52,7 +53,7 @@ export function PublishedFormPreviewSheet({
                         key={field.key}
                         className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 rounded-xl bg-surface-subtle px-3 py-2.5 text-sm ring-1 ring-border ring-inset"
                       >
-                        <b className="font-semibold">{field.label}</b>
+                        <b className="font-semibold">{formatFieldLabel(field.label)}</b>
                         <FieldTypeChip type={field.type} />
                         <FieldRequiredChip required={field.required} />
                         <span className="text-[13px] text-muted-foreground">

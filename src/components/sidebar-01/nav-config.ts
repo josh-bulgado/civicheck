@@ -182,7 +182,7 @@ const PERSONNEL_LAYOUT: GroupLayout[] = [
 
 /**
  * Every role's layout. Admin keeps Overview first, then its operational
- * groups, with Notifications last. Applicants also finish on Notifications;
+ * groups, with Notifications last. Applicants and cashiers also finish on Notifications;
  * the remaining workspaces use their role-specific groups below.
  */
 const ROLE_LAYOUTS: Record<Role, GroupLayout[]> = {
@@ -195,8 +195,8 @@ const ROLE_LAYOUTS: Record<Role, GroupLayout[]> = {
   staff: PERSONNEL_LAYOUT,
   supervisor: PERSONNEL_LAYOUT,
   cashier: [
-    { id: "home", itemIds: ["notifications"] },
     { id: "payments", label: "Payments", itemIds: ["cashier-counter", "payment-history"] },
+    { id: "notifications", itemIds: ["notifications"] },
   ],
   admin: [
     { id: "home", itemIds: ["admin-overview"] },
