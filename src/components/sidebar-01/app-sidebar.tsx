@@ -17,7 +17,7 @@ import { getWorkspaceDetails } from "./workspace";
  *
  * Every role gets the same frame: no box, the sidebar sitting directly on the
  * page's ground (a sheet below `md`), folding to an icon rail on desktop.
- * All roles share the portal's pills, branding and account card. Internal
+ * All roles share the portal's pills, branding and account card. Selected
  * workspaces add search; CCRO administrators have inline navigation groups.
  */
 export function AppSidebar({
@@ -43,7 +43,7 @@ export function AppSidebar({
       <NavHeader
         workspace={workspace}
         citizen={citizen}
-        showSearch={role !== "system_admin"}
+        showSearch={role !== "system_admin" && role !== "cashier"}
       />
       {/* The padding gives the active pill's shadow room: this container
           scrolls on a short screen, and overflow clips whatever leaves it. The
