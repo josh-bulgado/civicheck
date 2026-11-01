@@ -314,7 +314,7 @@ export function VerificationFormPdf({ data, qrDataUrl, generatedAt }: Verificati
             <Field label="Full Name" value={requesterName} />
             <Field label="Relationship to the Owner" value={relationship} />
             <Field label="Address" value={formatRequesterAddress(answers)} />
-            {!isEmailInquiry ? <Field label="Purpose (pls. specify)" value={text(answers, "purpose_of_request")} /> : null}
+            {!isEmailInquiry ? <Field label="Purpose (pls. specify)" value={text(answers, "purpose_of_request") === "Other" ? text(answers, "purpose_of_request_other") : text(answers, "purpose_of_request")} /> : null}
           </View>
           <View style={styles.right}>
             <Text style={[styles.sectionHeading, { opacity: 0 }]}>.</Text>
