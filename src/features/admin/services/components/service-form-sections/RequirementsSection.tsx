@@ -412,6 +412,7 @@ export function RequirementsSection({
                   name="requirements_search"
                   autoComplete="off"
                   fieldSize="lg"
+                  shape="pill"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Search requirements…"

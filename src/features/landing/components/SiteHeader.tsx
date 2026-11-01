@@ -51,7 +51,7 @@ const SiteHeader = () => {
               to="/login"
               className={buttonVariants({
                 size: "xl",
-                shape: "soft",
+                shape: "pill",
                 variant: "outline",
               })}
             >
@@ -61,7 +61,7 @@ const SiteHeader = () => {
               to="/signup"
               className={buttonVariants({
                 size: "xl",
-                shape: "soft",
+                shape: "pill",
               })}
             >
               Get started
