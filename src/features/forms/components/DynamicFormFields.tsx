@@ -106,7 +106,10 @@ function TextWithNoneOption({
         maxLength={240}
         disabled={none}
         aria-invalid={invalid}
-        className={cn(WIZARD_CONTROL_CLASS, none && "border-border-light bg-portal-panel")}
+        className={cn(
+          WIZARD_CONTROL_CLASS,
+          none && "border-border-light bg-portal-panel",
+        )}
       />
       <label className="-mt-2.5 flex min-h-11 cursor-pointer items-center gap-2.5 text-[15px] leading-none text-portal-ink-2">
         <Checkbox
@@ -194,7 +197,8 @@ function planFieldSpans(
   // Consecutive plain inputs form a run; a run of exactly three (or six) fills
   // rows of three, any other length pairs up two by two.
   const closeRun = () => {
-    const span: FieldSpan = run.length > 0 && run.length % 3 === 0 ? "third" : "half";
+    const span: FieldSpan =
+      run.length > 0 && run.length % 3 === 0 ? "third" : "half";
     for (const key of run) spans.set(key, span);
     run = [];
   };
@@ -206,10 +210,7 @@ function planFieldSpans(
         : null;
     if (placement) {
       closeRun();
-      spans.set(
-        field.key,
-        placement === "full" ? "full" : placement,
-      );
+      spans.set(field.key, placement === "full" ? "full" : placement);
     } else if (field.type === "textarea") {
       closeRun();
       spans.set(field.key, "full");
@@ -263,7 +264,9 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
    */
   renderSectionLead?: (section: FormSectionDefinition) => ReactNode;
 }) {
-  const sections = definition.sections.filter((section) => section.step === step);
+  const sections = definition.sections.filter(
+    (section) => section.step === step,
+  );
 
   return sections.map((section, sectionIndex) => {
     const fields = conditionMatches(section, values).filter(
@@ -278,7 +281,8 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
     // one line.
     const stacked = singleColumn || section.singleColumn === true;
     if (stacked) {
-      for (const field of fields) spans.set(field.key, field.inline ? "inline" : "full");
+      for (const field of fields)
+        spans.set(field.key, field.inline ? "inline" : "full");
     }
     const titled = showSectionTitles || sections.length > 1;
     // Stacked sections after the first are set apart with a rule and generous
@@ -290,7 +294,8 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
         key={section.key}
         className={cn(
           "flex flex-col gap-3",
-          setApart && "mt-8 border-t border-border-light pt-12 sm:mt-10 sm:pt-14",
+          setApart &&
+            "mt-8 border-t border-border-light pt-12 sm:mt-10 sm:pt-14",
           !setApart && step === "details" && sectionIndex > 0 && "pt-2",
         )}
       >
@@ -306,7 +311,9 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
               {section.title}
             </h2>
             {section.description ? (
-              <p className="text-xs text-muted-foreground">{section.description}</p>
+              <p className="text-xs text-muted-foreground">
+                {section.description}
+              </p>
             ) : null}
           </div>
         ) : null}
@@ -332,10 +339,17 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                   : false,
                 validate: (value) => {
                   if (!value) return true;
-                  if (definitionField.type === "date" && definitionField.allowEstimate && isEstimatedDate(value)) {
+                  if (
+                    definitionField.type === "date" &&
+                    definitionField.allowEstimate &&
+                    isEstimatedDate(value)
+                  ) {
                     return validateEstimatedDate(value, todayKeyInTimeZone());
                   }
-                  if (definitionField.type === "phone" && !/^9\d{9}$/.test(value)) {
+                  if (
+                    definitionField.type === "phone" &&
+                    !/^9\d{9}$/.test(value)
+                  ) {
                     return "Enter a valid 10-digit mobile number, e.g. 9171234567";
                   }
                   return true;
@@ -367,7 +381,9 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                 const common = (
                   <>
                     {definitionField.helpText ? (
-                      <FieldDescription>{definitionField.helpText}</FieldDescription>
+                      <FieldDescription>
+                        {definitionField.helpText}
+                      </FieldDescription>
                     ) : null}
                     {selectedNotice ? (
                       <div aria-live="polite">
@@ -401,9 +417,13 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
 
                 // Short pick-one lists show every choice as tiles, matching the
                 // service-routing questions; long lists keep the dropdown.
-                if (definitionField.type === "select" && isChoiceGroup(options)) {
+                if (
+                  definitionField.type === "select" &&
+                  isChoiceGroup(options)
+                ) {
                   const legendId = `dynamic-${definitionField.key}-legend`;
-                  const placement = choicePlacements.get(definitionField.key) ?? "full";
+                  const placement =
+                    choicePlacements.get(definitionField.key) ?? "full";
                   return (
                     <FieldSet
                       data-invalid={fieldState.invalid}
@@ -440,7 +460,9 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                       SPAN_CLASS[spans.get(definitionField.key) ?? "half"],
                       // The tiles above a free-text box sit tight against its
                       // label; a few extra pixels keep them apart.
-                      stacked && definitionField.type === "textarea" && "mt-2 sm:mt-3",
+                      stacked &&
+                        definitionField.type === "textarea" &&
+                        "mt-2 sm:mt-3",
                     )}
                   >
                     <FieldLabel
@@ -493,33 +515,38 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                           invalid={fieldState.invalid}
                         />
                       ) : (
-                      <DatePicker
-                        id={`dynamic-${definitionField.key}`}
-                        value={field.value ?? ""}
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          onDateChange?.(definitionField.key, value);
-                        }}
-                        onBlur={field.onBlur}
-                        max={
-                          definitionField.dateDirection === "past" ? toDateKey() : undefined
-                        }
-                        min={
-                          definitionField.dateDirection === "future" ? toDateKey() : undefined
-                        }
-                        // The label is right above, so without a placeholder of its
-                        // own the picker says "Select a date" instead of repeating
-                        // it: a long label ("Date of the event on the record") ran
-                        // past the field and was cut off.
-                        placeholder={definitionField.placeholder || undefined}
-                        invalid={fieldState.invalid}
-                        icon="calendar"
-                        // The wizard's 56px height only reaches a Button. An Input
-                        // or Select keeps its own 40px (their size selectors
-                        // outrank it), so the picker takes that size too, or it
-                        // stands taller than the fields beside it.
-                        className={cn(WIZARD_CONTROL_CLASS, "h-10 px-3")}
-                      />
+                        <DatePicker
+                          shape="split"
+                          id={`dynamic-${definitionField.key}`}
+                          value={field.value ?? ""}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            onDateChange?.(definitionField.key, value);
+                          }}
+                          onBlur={field.onBlur}
+                          max={
+                            definitionField.dateDirection === "past"
+                              ? toDateKey()
+                              : undefined
+                          }
+                          min={
+                            definitionField.dateDirection === "future"
+                              ? toDateKey()
+                              : undefined
+                          }
+                          // The label is right above, so without a placeholder of its
+                          // own the picker says "Select a date" instead of repeating
+                          // it: a long label ("Date of the event on the record") ran
+                          // past the field and was cut off.
+                          placeholder={definitionField.placeholder || undefined}
+                          invalid={fieldState.invalid}
+                          icon="calendar"
+                          // The wizard's 56px height only reaches a Button. An Input
+                          // or Select keeps its own 40px (their size selectors
+                          // outrank it), so the picker takes that size too, or it
+                          // stands taller than the fields beside it.
+                          className={cn(WIZARD_CONTROL_CLASS, "h-10 px-3")}
+                        />
                       )
                     ) : definitionField.type === "select" ? (
                       <Select
@@ -537,7 +564,10 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         <SelectContent>
                           <SelectGroup>
                             {(definitionField.options ?? []).map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
                                 {option.label}
                               </SelectItem>
                             ))}
@@ -583,6 +613,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         maxLength={240}
                         aria-invalid={fieldState.invalid}
                         className={WIZARD_CONTROL_CLASS}
+                        fieldSize="touch"
                       />
                     )}
                     {common}

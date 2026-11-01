@@ -161,7 +161,7 @@ export function LoginForm({
                   <FieldLabel htmlFor="email" className={authLabelClass}>
                     Email address
                   </FieldLabel>
-                  <InputGroup fieldSize="touch">
+                  <InputGroup fieldSize="touch" shape="pill">
                     <InputGroupAddon>
                       <Mail size={16} aria-hidden="true" />
                     </InputGroupAddon>
@@ -193,7 +193,7 @@ export function LoginForm({
                   <FieldLabel htmlFor="password" className={authLabelClass}>
                     Password
                   </FieldLabel>
-                  <InputGroup shape="split" fieldSize="touch">
+                  <InputGroup shape="pill" fieldSize="touch">
                     <InputGroupAddon>
                       <Lock size={16} aria-hidden="true" />
                     </InputGroupAddon>
