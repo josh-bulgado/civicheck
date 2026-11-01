@@ -58,23 +58,13 @@
 }
 
 .center-table {
-  table-layout: fixed;
   font-size: 14px;
   color: var(--foreground);
-}
-
-.center-table thead {
-  background: var(--primary-fill);
-}
-
-.center-table thead tr {
-  border-color: transparent;
 }
 
 .center-table th {
   height: 42px;
   padding: 0 14px;
-  color: var(--primary-foreground);
   font-size: 13px;
   font-weight: 600;
 }
@@ -104,18 +94,6 @@
 .center-table tbody tr {
   height: 56px;
   border-color: var(--border-lighter);
-}
-
-.center-table tbody tr:nth-child(even) {
-  background: color-mix(in srgb, var(--primary-tint) 65%, var(--card));
-}
-
-.center-table tbody tr:hover {
-  background: var(--primary-soft);
-}
-
-.center-table tbody tr[data-state="selected"] {
-  background: var(--primary-soft);
 }
 
 .center-table [data-slot="checkbox"] {

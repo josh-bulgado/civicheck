@@ -251,6 +251,7 @@ export function AccountsDataTable({
         <Table
           className="accounts-directory-table center-table"
           aria-label={tableLabel}
+          variant="entity"
         >
           <colgroup>
             <col style={{ width: 48 }} />

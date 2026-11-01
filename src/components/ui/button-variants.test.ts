@@ -63,6 +63,29 @@ describe("pill shape", () => {
   });
 });
 
+describe("split shape", () => {
+  it("keeps the same field-like radius at every size", () => {
+    for (const size of ["xs", "sm", "default", "lg", "touch", "xl"] as const) {
+      const classes = buttonVariants({ shape: "split", size });
+      expect(classes).toContain("rounded-xl!");
+      expect(classes).not.toContain("rounded-2xl!");
+      expect(classes).not.toContain("rounded-3xl!");
+    }
+  });
+
+  it("keeps soft as the size-stepped shape", () => {
+    expect(buttonVariants({ shape: "soft", size: "sm" })).toContain(
+      "rounded-lg!",
+    );
+    expect(buttonVariants({ shape: "soft", size: "lg" })).toContain(
+      "rounded-2xl!",
+    );
+    expect(buttonVariants({ shape: "soft", size: "xl" })).toContain(
+      "rounded-3xl!",
+    );
+  });
+});
+
 describe("the search pill", () => {
   it("is tonal, pill, xl", () => {
     const classes = buttonVariants({ variant: "tonal", shape: "pill", size: "xl" });

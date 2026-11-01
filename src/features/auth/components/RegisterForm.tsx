@@ -188,7 +188,6 @@ const RegisterForm = () => {
                     aria-invalid={fieldState.invalid}
                     autoComplete="family-name"
                     fieldSize="touch"
-                    shape="split"
                   />
                   <SignupFieldError error={fieldState.error} />
                 </Field>
@@ -210,7 +209,7 @@ const RegisterForm = () => {
                       field.onChange(value === NO_SUFFIX ? "" : value)
                     }
                   >
-                    <SelectTrigger id="suffix" size="touch" shape="split">
+                    <SelectTrigger id="suffix" size="touch">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -396,7 +395,6 @@ const RegisterForm = () => {
             <Button
               type="submit"
               size="touch"
-              shape="split"
               disabled={signupMutation.status === "pending" || !isComplete}
             >
               {signupMutation.status === "pending" ? (
@@ -414,7 +412,6 @@ const RegisterForm = () => {
             <Button
               variant="outline"
               size="touch"
-              shape="split"
               onClick={() => oauthLoginMutation.mutate({ provider: "google" })}
               disabled={oauthLoginMutation.redirecting}
             >

@@ -193,6 +193,7 @@ export function StaffDataTable({
     <>
       <DataTableCard
         table={table}
+        variant="log"
         cellClassName="py-3"
         toolbar={
           <StaffTableToolbar

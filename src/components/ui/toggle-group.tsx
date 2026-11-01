@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Toggle as TogglePrimitive } from "@base-ui/react/toggle"
-import { ToggleGroup as ToggleGroupPrimitive } from "@base-ui/react/toggle-group"
-import { cva, type VariantProps } from "class-variance-authority"
-import { Check } from "lucide-react"
+import * as React from "react";
+import { Toggle as TogglePrimitive } from "@base-ui/react/toggle";
+import { ToggleGroup as ToggleGroupPrimitive } from "@base-ui/react/toggle-group";
+import { cva, type VariantProps } from "class-variance-authority";
+import { Check } from "lucide-react";
 
-import { cn } from "~/lib/utils"
-import { toggleVariants } from "~/components/ui/toggle"
+import { cn } from "~/lib/utils";
+import { toggleVariants } from "~/components/ui/toggle";
 
 /*
  * `default` and `outline` are the original shadcn looks: each item is its own
@@ -31,8 +31,7 @@ const toggleGroupVariants = cva(
         // The pill without the full round: a 16px track around 12px tiles.
         rounded: "gap-0.5 rounded-2xl bg-muted p-[3px] [--tg-pad:3px]",
         // Pill track with the system brand fill on the selected tile.
-        "brand-pill":
-          "gap-0.5 rounded-full bg-muted p-[3px] [--tg-pad:3px]",
+        "brand-pill": "gap-0.5 rounded-full bg-muted p-[3px] [--tg-pad:3px]",
         // Hairline track, soft brand tint. Quiet enough to sit beside inputs.
         tinted:
           "gap-0.5 rounded-lg border border-border-strong bg-surface-subtle p-0.5 [--tg-pad:3px]",
@@ -54,8 +53,8 @@ const toggleGroupVariants = cva(
     defaultVariants: {
       variant: "default",
     },
-  }
-)
+  },
+);
 
 const toggleGroupItemVariants = cva(
   "group/tg-item relative inline-flex h-[calc(var(--tg-h)-2*var(--tg-pad,0px))] shrink-0 items-center justify-center gap-2 rounded-md border border-transparent px-3 text-sm font-medium whitespace-nowrap text-muted-foreground outline-none transition-[color,background-color,border-color,box-shadow,scale] not-data-pressed:hover:text-foreground focus-visible:z-10 focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -83,74 +82,76 @@ const toggleGroupItemVariants = cva(
           "h-auto flex-col items-start justify-start gap-1 rounded-xl border-border-strong bg-card p-3.5 text-left whitespace-normal text-body-2 not-data-pressed:hover:border-primary/40 data-pressed:border-primary data-pressed:bg-primary-tint data-pressed:text-foreground data-pressed:ring-1 data-pressed:ring-primary",
       },
     },
-  }
-)
+  },
+);
 
 type ToggleGroupVariant = NonNullable<
   VariantProps<typeof toggleGroupVariants>["variant"]
->
-type GroupOwnedVariant = Exclude<ToggleGroupVariant, "default" | "outline">
+>;
+type GroupOwnedVariant = Exclude<ToggleGroupVariant, "default" | "outline">;
 
 function isGroupOwned(
-  variant: ToggleGroupVariant | undefined | null
+  variant: ToggleGroupVariant | undefined | null,
 ): variant is GroupOwnedVariant {
-  return !!variant && variant !== "default" && variant !== "outline"
+  return !!variant && variant !== "default" && variant !== "outline";
 }
 
 type ToggleGroupContextValue = {
-  variant?: ToggleGroupVariant | null
-  size?: VariantProps<typeof toggleVariants>["size"]
-  spacing?: number
-  orientation?: "horizontal" | "vertical"
-}
+  variant?: ToggleGroupVariant | null;
+  size?: VariantProps<typeof toggleVariants>["size"];
+  spacing?: number;
+  orientation?: "horizontal" | "vertical";
+};
 
 const ToggleGroupContext = React.createContext<ToggleGroupContextValue>({
   size: "lg",
   variant: "default",
   spacing: 2,
   orientation: "horizontal",
-})
+});
 
 // Points the sliding tile at the pressed item. Reading the DOM keeps it right
 // for controlled and uncontrolled groups alike, and it never re-renders React.
 function useSlidingIndicator(
   ref: React.RefObject<HTMLDivElement | null>,
-  enabled: boolean
+  enabled: boolean,
 ) {
   React.useLayoutEffect(() => {
-    const group = ref.current
-    if (!enabled || !group) return
+    const group = ref.current;
+    if (!enabled || !group) return;
 
     const update = () => {
       const items = Array.from(
-        group.querySelectorAll<HTMLElement>('[data-slot="toggle-group-item"]')
-      )
-      const index = items.findIndex((item) => item.hasAttribute("data-pressed"))
-      group.style.setProperty("--tg-n", String(Math.max(items.length, 1)))
-      group.style.setProperty("--tg-i", String(Math.max(index, 0)))
-      group.dataset.indicator = index >= 0 ? "on" : "off"
-    }
+        group.querySelectorAll<HTMLElement>('[data-slot="toggle-group-item"]'),
+      );
+      const index = items.findIndex((item) =>
+        item.hasAttribute("data-pressed"),
+      );
+      group.style.setProperty("--tg-n", String(Math.max(items.length, 1)));
+      group.style.setProperty("--tg-i", String(Math.max(index, 0)));
+      group.dataset.indicator = index >= 0 ? "on" : "off";
+    };
 
-    update()
-    const observer = new MutationObserver(update)
+    update();
+    const observer = new MutationObserver(update);
     observer.observe(group, {
       subtree: true,
       childList: true,
       attributes: true,
       attributeFilter: ["data-pressed"],
-    })
+    });
     // Turn the glide on only after the first position is set, so the tile
     // does not slide in from the left on mount.
     const frame = requestAnimationFrame(() =>
-      group.setAttribute("data-ready", "")
-    )
+      group.setAttribute("data-ready", ""),
+    );
 
     return () => {
-      observer.disconnect()
-      cancelAnimationFrame(frame)
-      group.removeAttribute("data-ready")
-    }
-  }, [ref, enabled])
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+      group.removeAttribute("data-ready");
+    };
+  }, [ref, enabled]);
 }
 
 function ToggleGroup({
@@ -163,23 +164,24 @@ function ToggleGroup({
   ref,
   ...props
 }: Omit<ToggleGroupPrimitive.Props, "ref"> & {
-  ref?: React.Ref<HTMLDivElement>
-  variant?: ToggleGroupVariant | null
-  size?: VariantProps<typeof toggleVariants>["size"]
-  spacing?: number
-  orientation?: "horizontal" | "vertical"
+  ref?: React.Ref<HTMLDivElement>;
+  variant?: ToggleGroupVariant | null;
+  size?: VariantProps<typeof toggleVariants>["size"];
+  spacing?: number;
+  orientation?: "horizontal" | "vertical";
 }) {
-  const innerRef = React.useRef<HTMLDivElement | null>(null)
-  useSlidingIndicator(innerRef, variant === "sliding")
+  const innerRef = React.useRef<HTMLDivElement | null>(null);
+  useSlidingIndicator(innerRef, variant === "sliding");
 
   const setRef = React.useCallback(
     (node: HTMLDivElement | null) => {
-      innerRef.current = node
-      if (typeof ref === "function") ref(node)
-      else if (ref) (ref as React.RefObject<HTMLDivElement | null>).current = node
+      innerRef.current = node;
+      if (typeof ref === "function") ref(node);
+      else if (ref)
+        (ref as React.RefObject<HTMLDivElement | null>).current = node;
     },
-    [ref]
-  )
+    [ref],
+  );
 
   return (
     <ToggleGroupPrimitive
@@ -199,7 +201,7 @@ function ToggleGroup({
         {children}
       </ToggleGroupContext.Provider>
     </ToggleGroupPrimitive>
-  )
+  );
 }
 
 function ToggleGroupItem({
@@ -210,15 +212,18 @@ function ToggleGroupItem({
   shape = "pill",
   ...props
 }: TogglePrimitive.Props & VariantProps<typeof toggleVariants>) {
-  const context = React.useContext(ToggleGroupContext)
-  const groupVariant = context.variant
+  const context = React.useContext(ToggleGroupContext);
+  const groupVariant = context.variant;
 
   if (isGroupOwned(groupVariant)) {
     return (
       <TogglePrimitive
         data-slot="toggle-group-item"
         data-variant={groupVariant}
-        className={cn(toggleGroupItemVariants({ variant: groupVariant }), className)}
+        className={cn(
+          toggleGroupItemVariants({ variant: groupVariant }),
+          className,
+        )}
         {...props}
       >
         {groupVariant === "chips" ? (
@@ -244,10 +249,11 @@ function ToggleGroupItem({
           </span>
         ) : null}
       </TogglePrimitive>
-    )
+    );
   }
 
-  const legacyVariant = (groupVariant as "default" | "outline" | null | undefined) || variant
+  const legacyVariant =
+    (groupVariant as "default" | "outline" | null | undefined) || variant;
 
   return (
     <TogglePrimitive
@@ -262,13 +268,13 @@ function ToggleGroupItem({
           size: context.size || size,
           shape,
         }),
-        className
+        className,
       )}
       {...props}
     >
       {children}
     </TogglePrimitive>
-  )
+  );
 }
 
 // The icon tile at the top of a `cards` item. It turns brand blue when the
@@ -283,11 +289,16 @@ function ToggleGroupCardIcon({
       data-slot="toggle-group-card-icon"
       className={cn(
         "mb-1.5 grid size-8.5 place-items-center rounded-[9px] bg-muted text-body-2 transition-colors group-data-pressed/tg-item:bg-primary-fill group-data-pressed/tg-item:text-primary-foreground",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
-export { ToggleGroup, ToggleGroupItem, ToggleGroupCardIcon, toggleGroupVariants }
+export {
+  ToggleGroup,
+  ToggleGroupItem,
+  ToggleGroupCardIcon,
+  toggleGroupVariants,
+};

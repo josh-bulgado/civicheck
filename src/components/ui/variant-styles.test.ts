@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { inputVariants } from "~/components/ui/input";
 import { kbdVariants } from "~/components/ui/kbd";
+import { tableVariants } from "~/components/ui/table";
 import { tabsListVariants } from "~/components/ui/tabs";
 
 const read = (name: string) =>
@@ -65,7 +67,7 @@ describe("every ToggleGroup variant has item styles", () => {
 describe("pill-shaped controls expose an explicit API", () => {
   const controls = [
     ["button.tsx", ['pill: "rounded-full!']],
-    ["input.tsx", ["shape?:", "data-[shape=pill]:rounded-full"]],
+    ["input.tsx", ["const inputVariants", 'pill: "rounded-full"']],
     ["input-group.tsx", ["shape?:", "data-[shape=pill]:rounded-full"]],
     ["toggle.tsx", ["shape: {", 'pill: "rounded-full"']],
     ["select.tsx", ["shape?:", "data-[shape=pill]:rounded-full"]],
@@ -85,10 +87,17 @@ describe("pill-shaped controls expose an explicit API", () => {
   });
 });
 
-describe("soft and split shapes step the radius with the height", () => {
+describe("soft and split shapes expose their intended radii", () => {
   const controls = [
-    ["button.tsx", ['soft: ""', 'split: ""', "rounded-2xl!"]],
-    ["input.tsx", ["data-[shape=soft]:rounded-xl!", "data-[shape=split]:rounded-xl!"]],
+    [
+      "button.tsx",
+      [
+        'soft: ""',
+        'split: "rounded-xl! in-data-[slot=button-group]:rounded-xl!"',
+        "rounded-2xl!",
+      ],
+    ],
+    ["input.tsx", ['soft: "rounded-xl!"', 'split: "rounded-xl!"']],
     ["input-group.tsx", ["data-[shape=soft]:rounded-xl!", "data-[shape=split]:rounded-xl!"]],
     ["select.tsx", ["data-[shape=soft]:rounded-xl!", "data-[shape=split]:rounded-xl!"]],
     ["toggle.tsx", ['soft: ""', 'split: ""', "rounded-2xl"]],
@@ -106,11 +115,11 @@ describe("soft and split shapes step the radius with the height", () => {
   });
 });
 
-describe("form and action controls default to large pills", () => {
+describe("form and action controls expose their intended defaults", () => {
   const defaults = [
     ["button.tsx", ['size = "lg"', 'shape = "pill"']],
-    ["input.tsx", ['fieldSize = "lg"', 'shape = "pill"']],
-    ["input-group.tsx", ['fieldSize = "lg"', 'shape = "pill"']],
+    ["input.tsx", ['fieldSize = "lg"', 'shape = "split"']],
+    ["input-group.tsx", ['fieldSize = "lg"', 'shape = "split"']],
     ["select.tsx", ['size = "lg"', 'shape = "pill"']],
     ["date-picker.tsx", ['size = "lg"', 'shape = "pill"']],
     ["toggle.tsx", ['size = "lg"', 'shape = "pill"']],
@@ -124,6 +133,55 @@ describe("form and action controls default to large pills", () => {
   });
 });
 
+describe("Input variants", () => {
+  it("keeps the current large split defaults", () => {
+    const classes = inputVariants();
+    expect(classes).toContain("h-10");
+    expect(classes).toContain("rounded-xl!");
+  });
+
+  it("groups touch and inline styles by their props", () => {
+    const classes = inputVariants({
+      fieldSize: "touch",
+      shape: "pill",
+      variant: "inline",
+    });
+    expect(classes).toContain("h-11");
+    expect(classes).toContain("rounded-full");
+    expect(classes).toContain("border-transparent");
+  });
+
+  it("keeps the larger soft radius for tall fields", () => {
+    expect(inputVariants({ fieldSize: "lg", shape: "soft" })).toContain(
+      "rounded-2xl!",
+    );
+  });
+});
+
+describe("InputGroup composition", () => {
+  const source = read("input-group.tsx");
+  const css = readFileSync(
+    new URL("../../styles/app.css", import.meta.url),
+    "utf8",
+  );
+
+  it("keeps the inner input square so the group owns the radius", () => {
+    expect(source).toContain(
+      'Omit<React.ComponentProps<typeof Input>, "shape">',
+    );
+    expect(source).toContain('shape="default"');
+    expect(source).toContain("flex-1 rounded-none");
+  });
+
+  it("carries the autofill surface across the whole group", () => {
+    expect(css).toContain(
+      '[data-slot="input-group"]:has(\n    > [data-slot="input-group-control"]:autofill',
+    );
+    expect(css).toContain("box-shadow: inset 0 0 0 1000px var(--primary-soft)");
+    expect(css).toContain("-webkit-text-fill-color: var(--foreground)");
+  });
+});
+
 describe("Kbd variants", () => {
   it("keeps the default key surface", () => {
     expect(kbdVariants()).toContain("bg-muted");
@@ -134,6 +192,21 @@ describe("Kbd variants", () => {
     const classes = kbdVariants({ variant: "ghost" });
     expect(classes).toContain("bg-transparent");
     expect(classes).toContain("text-current");
+  });
+});
+
+describe("Table variants", () => {
+  const source = read("table.tsx");
+
+  it("uses CVA for the table's own variant styles", () => {
+    expect(tableVariants({ variant: "entity" })).toContain("text-foreground");
+    expect(tableVariants({ variant: "log" })).toContain("tabular-nums");
+  });
+
+  it("exposes the variant to headers and rows", () => {
+    expect(source).toContain("data-table-variant={variant}");
+    expect(source).toContain("in-data-[table-variant=entity]");
+    expect(source).toContain("in-data-[table-variant=log]");
   });
 });
 

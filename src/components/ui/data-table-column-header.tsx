@@ -23,7 +23,7 @@ export function SortHeader({
       <Button
         variant="ghost"
         size="sm"
-        className="px-0 text-xs font-semibold text-muted-foreground hover:bg-transparent hover:text-foreground"
+        className="px-0 text-xs font-semibold text-current hover:bg-transparent hover:text-current"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         {children}

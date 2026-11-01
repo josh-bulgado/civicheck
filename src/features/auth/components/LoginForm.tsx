@@ -161,7 +161,7 @@ export function LoginForm({
                   <FieldLabel htmlFor="email" className={authLabelClass}>
                     Email address
                   </FieldLabel>
-                  <InputGroup shape="split" fieldSize="touch">
+                  <InputGroup fieldSize="touch">
                     <InputGroupAddon>
                       <Mail size={16} aria-hidden="true" />
                     </InputGroupAddon>
@@ -259,7 +259,7 @@ export function LoginForm({
             <div style={staggerStyle(3)} className="flex flex-col gap-3">
               <Button
                 type="submit"
-                shape="soft"
+                shape="pill"
                 size="touch"
                 disabled={isSigningIn}
               >
@@ -275,7 +275,7 @@ export function LoginForm({
 
               <Button
                 variant="outline"
-                shape="soft"
+                shape="pill"
                 size="touch"
                 onClick={() =>
                   oauthLoginMutation.mutate({

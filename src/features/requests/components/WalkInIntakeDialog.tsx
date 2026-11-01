@@ -123,7 +123,7 @@ export function WalkInIntakeDialog({
     <>
       <Button
         type="button"
-        variant="raised"
+        shape="pill"
         size="lg"
         onClick={() => setOpen(true)}
         disabled={services.length === 0}
@@ -159,7 +159,11 @@ export function WalkInIntakeDialog({
                       value={serviceCode}
                       onValueChange={(value) => setServiceCode(value ?? "")}
                     >
-                      <SelectTrigger id="walkin-service" className="flex-1">
+                      <SelectTrigger
+                        id="walkin-service"
+                        className="flex-1"
+                        shape="split"
+                      >
                         <SelectValue placeholder="Select a department service" />
                       </SelectTrigger>
                       <SelectContent>
@@ -179,6 +183,7 @@ export function WalkInIntakeDialog({
                     <Button
                       type="button"
                       variant="outline"
+                      shape="soft"
                       disabled={!selectedService}
                       onClick={() => setRequirementsOpen(true)}
                     >

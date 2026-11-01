@@ -145,7 +145,8 @@ export function AuditDataTable({
         </div>
       ) : null}
       <Table
-        className="audit-events-table center-table"
+        variant="log"
+        className="audit-events-table center-table table-fixed"
         aria-label="Audit events"
         aria-rowcount={data.length + 1}
       >

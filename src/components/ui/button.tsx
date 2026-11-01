@@ -43,8 +43,8 @@ const buttonVariants = cva(
         xs: "h-6 gap-1 rounded-[min(var(--radius-md),8px)] px-2 text-xs in-data-[slot=button-group]:rounded-md has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
         sm: "h-8 gap-1 rounded-[min(var(--radius-md),10px)] px-2.5 in-data-[slot=button-group]:rounded-md has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5",
         lg: "h-10 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        // 44px target. With a soft or split shape the corner is 16 like lg
-        // (compound rule below); `default` shape keeps its own 12px.
+        // 44px target. With a soft shape the corner is 16 like lg (compound
+        // rule below); `default` and `split` keep their own 12px.
         touch:
           "h-11 gap-2 rounded-xl px-4 in-data-[slot=button-group]:rounded-xl has-data-[icon=inline-end]:pr-3.5 has-data-[icon=inline-start]:pl-3.5",
         // 50px, the applicant top bar's round bell and seal.
@@ -62,36 +62,35 @@ const buttonVariants = cva(
       shape: {
         default: "",
         pill: "rounded-full! in-data-[slot=button-group]:rounded-full!",
-        // Not fully round: the radius steps with the height, so a tall button
-        // is softer than a short one. `split` is the same on buttons; it only
-        // differs on fields, which sit one step lower.
+        // Not fully round: `soft` steps with the height. `split` stays at the
+        // same 12px radius as split fields, regardless of button size.
         soft: "",
-        split: "",
+        split: "rounded-xl! in-data-[slot=button-group]:rounded-xl!",
       },
     },
     compoundVariants: [
       {
-        shape: ["soft", "split"],
+        shape: "soft",
         size: "xl",
         className: "rounded-3xl! in-data-[slot=button-group]:rounded-3xl!",
       },
       {
-        shape: ["soft", "split"],
+        shape: "soft",
         size: ["lg", "touch", "icon-lg", "icon-touch"],
         className: "rounded-2xl! in-data-[slot=button-group]:rounded-2xl!",
       },
       {
-        shape: ["soft", "split"],
+        shape: "soft",
         size: ["default", "icon"],
         className: "rounded-xl! in-data-[slot=button-group]:rounded-xl!",
       },
       {
-        shape: ["soft", "split"],
+        shape: "soft",
         size: ["sm", "icon-sm"],
         className: "rounded-lg! in-data-[slot=button-group]:rounded-lg!",
       },
       {
-        shape: ["soft", "split"],
+        shape: "soft",
         size: ["xs", "icon-xs"],
         className: "rounded-md! in-data-[slot=button-group]:rounded-md!",
       },
@@ -99,7 +98,7 @@ const buttonVariants = cva(
     defaultVariants: {
       variant: "default",
       size: "lg",
-      shape: "soft",
+      shape: "pill",
     },
   },
 );
