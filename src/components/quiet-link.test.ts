@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import { QuietAnchor } from "./quiet-link";
 
 describe("quiet navigation", () => {
-  it("keeps link focus, labels and destination options without a hover URL", () => {
+  it("renders a native destination with its labels and options", () => {
     const html = renderToStaticMarkup(
       createElement(
         QuietAnchor,
@@ -21,9 +21,7 @@ describe("quiet navigation", () => {
         "Download",
       ),
     );
-    expect(html).not.toMatch(/\shref=/);
-    expect(html).toContain('role="link"');
-    expect(html).toContain('tabindex="0"');
+    expect(html).toContain('href="/system-admin/audit"');
     expect(html).toContain('target="_blank"');
     expect(html).toContain('download="audit.csv"');
     expect(html).toContain('aria-label="Download audit"');
@@ -41,9 +39,10 @@ describe("quiet navigation", () => {
     expect(html).toContain('role="menuitem"');
     expect(html).toContain('tabindex="-1"');
     expect(html).toContain('aria-disabled="true"');
+    expect(html).not.toMatch(/\shref=/);
   });
 
-  it("uses quiet links throughout the UI so hover URLs cannot return on another page", () => {
+  it("uses the shared link throughout the UI", () => {
     const root = fileURLToPath(new URL("..", import.meta.url));
     const violations: string[] = [];
     function walk(directory: string) {

@@ -66,7 +66,7 @@ function SelectTrigger({
   ...props
 }: SelectPrimitive.Trigger.Props & {
   size?: "sm" | "default" | "lg" | "touch"
-  shape?: "default" | "pill"
+  shape?: "default" | "pill" | "soft" | "split"
 }) {
   return (
     <SelectPrimitive.Trigger
@@ -74,7 +74,7 @@ function SelectTrigger({
       data-size={size}
       data-shape={shape}
       className={cn(
-        "flex w-fit items-center justify-between gap-1.5 rounded-md border border-input bg-transparent py-2 pr-2 pl-2.5 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-9 data-[size=sm]:h-8 data-[size=lg]:h-10 data-[size=lg]:pl-3 data-[size=touch]:h-11 data-[size=touch]:rounded-xl data-[size=touch]:pr-3 data-[size=touch]:pl-3.5 data-[size=touch]:focus-visible:ring-4 data-[size=touch]:focus-visible:ring-ring/25 data-[shape=pill]:rounded-full *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "flex w-fit items-center justify-between gap-1.5 rounded-md border border-input bg-transparent py-2 pr-2 pl-2.5 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-9 data-[size=sm]:h-8 data-[size=lg]:h-10 data-[size=lg]:pl-3 data-[size=touch]:h-11 data-[size=touch]:rounded-xl data-[size=touch]:pr-3 data-[size=touch]:pl-3.5 data-[size=touch]:focus-visible:ring-4 data-[size=touch]:focus-visible:ring-ring/25 data-[shape=pill]:rounded-full data-[shape=soft]:rounded-xl! data-[shape=soft]:data-[size=sm]:rounded-lg! data-[shape=soft]:data-[size=lg]:rounded-2xl! data-[shape=soft]:data-[size=touch]:rounded-2xl! data-[shape=split]:rounded-xl! data-[shape=split]:data-[size=sm]:rounded-lg! *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}

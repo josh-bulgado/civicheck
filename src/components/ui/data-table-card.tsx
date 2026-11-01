@@ -39,6 +39,8 @@ interface DataTableCardProps<TData extends RowData> {
   getRowProps?: (row: AppRow<TData>) => RowProps;
   cellClassName?: string;
   className?: string;
+  /** Visual treatment shared by the table header and rows. */
+  variant?: ComponentProps<typeof Table>["variant"];
 }
 
 /**
@@ -57,6 +59,7 @@ export function DataTableCard<TData extends RowData>({
   getRowProps,
   cellClassName,
   className,
+  variant = "entity",
 }: DataTableCardProps<TData>) {
   const rows = table.getRowModel().rows;
 
@@ -70,8 +73,8 @@ export function DataTableCard<TData extends RowData>({
       <div className="border-b border-border px-5 py-4">{toolbar}</div>
 
       <div className="overflow-x-auto">
-        <Table aria-label={label}>
-          <TableHeader className="border-b border-border bg-surface-subtle">
+        <Table variant={variant} aria-label={label}>
+          <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
                 key={headerGroup.id}
@@ -103,7 +106,7 @@ export function DataTableCard<TData extends RowData>({
                     key={row.id}
                     {...rowProps}
                     className={cn(
-                      "hover:bg-surface-subtle [&>:first-child]:pl-5 [&>:last-child]:pr-5",
+                      "[&>:first-child]:pl-5 [&>:last-child]:pr-5",
                       rowClassName,
                     )}
                   >

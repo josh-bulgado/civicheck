@@ -5,7 +5,8 @@ function Skeleton({
   shape = "default",
   ...props
 }: React.ComponentProps<"div"> & {
-  shape?: "default" | "pill"
+  // `soft` and `split` keep the default `rounded-md`: a skeleton is a small part.
+  shape?: "default" | "pill" | "soft" | "split"
 }) {
   return (
     <div

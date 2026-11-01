@@ -46,6 +46,8 @@ const inputOtpSlotVariants = cva(
       shape: {
         default: "rounded-lg",
         pill: "rounded-full",
+        soft: "rounded-xl",
+        split: "rounded-xl",
       },
     },
     defaultVariants: {

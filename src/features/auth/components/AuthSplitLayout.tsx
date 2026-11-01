@@ -103,7 +103,7 @@ export function AuthBackLink({
     <Link
       to={to}
       className={cn(
-        buttonVariants({ variant: "outline", size: "sm" }),
+        buttonVariants({ variant: "ghost", size: "sm" }),
         "group w-fit rounded-full border-border-light bg-card px-3.5 text-[13px] font-semibold text-foreground hover:bg-surface-subtle",
       )}
     >
