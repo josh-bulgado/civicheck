@@ -161,7 +161,7 @@ const RegisterForm = () => {
                   aria-invalid={fieldState.invalid}
                   autoComplete="given-name"
                   fieldSize="touch"
-                  shape="split"
+                  shape="pill"
                 />
                 <SignupFieldError error={fieldState.error} />
               </Field>
@@ -188,6 +188,7 @@ const RegisterForm = () => {
                     aria-invalid={fieldState.invalid}
                     autoComplete="family-name"
                     fieldSize="touch"
+                    shape="pill"
                   />
                   <SignupFieldError error={fieldState.error} />
                 </Field>
@@ -209,7 +210,7 @@ const RegisterForm = () => {
                       field.onChange(value === NO_SUFFIX ? "" : value)
                     }
                   >
-                    <SelectTrigger id="suffix" size="touch">
+                    <SelectTrigger id="suffix" size="touch" shape="pill">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -250,7 +251,7 @@ const RegisterForm = () => {
                     aria-invalid={fieldState.invalid}
                     autoComplete="additional-name"
                     fieldSize="touch"
-                    shape="split"
+                    shape="pill"
                   />
                   <SignupFieldError error={fieldState.error} />
                 </>
@@ -291,7 +292,7 @@ const RegisterForm = () => {
                 <FieldLabel htmlFor="email" className={authLabelClass}>
                   Email <RequiredMark />
                 </FieldLabel>
-                <InputGroup fieldSize="touch" shape="split">
+                <InputGroup fieldSize="touch" shape="pill">
                   <InputGroupAddon>
                     <Mail size={16} aria-hidden="true" />
                   </InputGroupAddon>
@@ -317,7 +318,7 @@ const RegisterForm = () => {
                 <FieldLabel htmlFor="password" className={authLabelClass}>
                   Password <RequiredMark />
                 </FieldLabel>
-                <InputGroup fieldSize="touch" shape="split">
+                <InputGroup fieldSize="touch" shape="pill">
                   <InputGroupAddon>
                     <Lock size={16} aria-hidden="true" />
                   </InputGroupAddon>
@@ -395,6 +396,7 @@ const RegisterForm = () => {
             <Button
               type="submit"
               size="touch"
+              shape="pill"
               disabled={signupMutation.status === "pending" || !isComplete}
             >
               {signupMutation.status === "pending" ? (
@@ -412,6 +414,7 @@ const RegisterForm = () => {
             <Button
               variant="outline"
               size="touch"
+              shape="pill"
               onClick={() => oauthLoginMutation.mutate({ provider: "google" })}
               disabled={oauthLoginMutation.redirecting}
             >
