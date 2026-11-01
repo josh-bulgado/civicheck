@@ -1,3 +1,4 @@
+import { formatFieldLabel } from "~/features/forms/field-label";
 import { useEffect, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { FieldLegend, FieldSet } from "~/components/ui/field";
@@ -414,7 +415,7 @@ function ConfiguredCaseSelector({
               {repeatsTitle ? null : (
                 <FieldLegend variant="label" className={choiceLegendClass}>
                   {visibleQuestions.length > 1 ? `${index + 1}. ` : ""}
-                  {question.label} <RequiredMark />
+                  {formatFieldLabel(question.label)} <RequiredMark />
                 </FieldLegend>
               )}
               {question.description ? (

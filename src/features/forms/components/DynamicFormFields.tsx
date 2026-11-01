@@ -1,3 +1,4 @@
+import { formatFieldLabel } from "~/features/forms/field-label";
 import type { ReactNode } from "react";
 import { addressDescendants } from "~/lib/requester-address";
 import { AddressLocationField } from "./AddressLocationField";
@@ -324,7 +325,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
               name={definitionField.key as Path<TFieldValues>}
               rules={{
                 required: definitionField.required
-                  ? `${definitionField.label} is required`
+                  ? `${formatFieldLabel(definitionField.label)} is required`
                   : false,
                 validate: (value) => {
                   if (!value) return true;
@@ -335,7 +336,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                 },
                 maxLength: {
                   value: definitionField.type === "textarea" ? 2_000 : 240,
-                  message: `${definitionField.label} is too long`,
+                  message: `${formatFieldLabel(definitionField.label)} is too long`,
                 },
               }}
               render={({ field, fieldState }) => {
@@ -381,7 +382,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                 const options = definitionField.options ?? [];
                 const legendLabel = (
                   <>
-                    {definitionField.label}
+                    {formatFieldLabel(definitionField.label)}
                     {!definitionField.required ? " (optional)" : ""}
                     {showRequiredMarks && definitionField.required ? (
                       <>

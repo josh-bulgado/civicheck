@@ -1,3 +1,4 @@
+import { formatFieldLabel } from "~/features/forms/field-label";
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { useNavigate, useRouteContext } from "@tanstack/react-router";
 import {
@@ -98,7 +99,7 @@ function PartySection({ role, children }: { role: string; children: ReactNode })
   return (
     <div role="group" aria-labelledby={headingId} className="flex flex-col gap-4">
       <h2 id={headingId} className="text-xl leading-[normal] font-bold text-foreground">
-        {role}
+        {formatFieldLabel(role)}
       </h2>
       {children}
     </div>
@@ -600,7 +601,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
         ownerLabel ? (
           // A heading that names whose name this is ("Full name of the deceased").
           <div key={subjectField.id} className="flex flex-col gap-3">
-            <span className={WIZARD_LABEL_CLASS}>{ownerLabel}</span>
+            <span className={WIZARD_LABEL_CLASS}>{formatFieldLabel(ownerLabel)}</span>
             <SubjectFieldGrid
               control={form.control}
               setValue={form.setValue}
