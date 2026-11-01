@@ -1,5 +1,6 @@
 import { Document, Font, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { VerificationFormPdfData } from "~/features/requests/pdf/types";
+import { formatRequesterAddress } from "~/lib/requester-address";
 
 // Wrap whole words instead of splitting them with a hyphen ("regis-tered"), so
 // names and places stay readable. Set globally, and again on each answer below
@@ -310,7 +311,7 @@ export function VerificationFormPdf({ data, qrDataUrl, generatedAt }: Verificati
             <Text style={styles.sectionHeading}>Requester&apos;s Information:</Text>
             <Field label="Full Name" value={requesterName} />
             <Field label="Relationship to the Owner" value={relationship} />
-            <Field label="Address" value={text(answers, "requester_address")} />
+            <Field label="Address" value={formatRequesterAddress(answers)} />
             {!isEmailInquiry ? <Field label="Purpose (pls. specify)" value={text(answers, "purpose_of_request")} /> : null}
           </View>
           <View style={styles.right}>

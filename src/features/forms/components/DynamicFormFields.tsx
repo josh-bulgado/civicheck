@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { addressDescendants } from "~/lib/requester-address";
+import { AddressLocationField } from "./AddressLocationField";
 import {
   Controller,
   type Control,
@@ -224,6 +226,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
   control,
   values,
   onDateChange,
+  onFieldChange,
   showRequiredMarks = false,
   showSectionTitles = false,
   singleColumn = false,
@@ -238,6 +241,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
   control: Control<TFieldValues>;
   values: DynamicFieldValues;
   onDateChange?: (fieldKey: string, value: string) => void;
+  onFieldChange?: (fieldKey: string, value: string) => void;
   /** Adds an asterisk to required labels; the caller owns the legend. */
   showRequiredMarks?: boolean;
   /**
@@ -335,6 +339,18 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                 },
               }}
               render={({ field, fieldState }) => {
+                const addressLevel = definitionField.philippineAddressLevel;
+                const locationLevel = definitionField.countrySelect ? "country" : addressLevel;
+
+                // Start a fresh dropdown when its province or city changes.
+                let locationKey = definitionField.key;
+                if (addressLevel === "city" || addressLevel === "barangay") {
+                  locationKey += ":" + values.requester_province;
+                }
+                if (addressLevel === "barangay") {
+                  locationKey += ":" + values.requester_city;
+                }
+
                 const selectedNotice =
                   definitionField.type === "select"
                     ? definitionField.options?.find(
@@ -427,7 +443,27 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                       {legendLabel}
                     </FieldLabel>
 
-                    {definitionField.type === "textarea" ? (
+                    {locationLevel ? (
+                      <AddressLocationField
+                        key={locationKey}
+                        level={locationLevel}
+                        area={values.requester_province ?? ""}
+                        city={values.requester_city ?? ""}
+                        value={field.value ?? ""}
+                        onChange={(value) => {
+                          field.onChange(value);
+                          if (value !== field.value && addressLevel) {
+                            for (const key of addressDescendants(addressLevel)) {
+                              onFieldChange?.(key, "");
+                            }
+                          }
+                        }}
+                        onBlur={field.onBlur}
+                        inputRef={field.ref}
+                        id={`dynamic-${definitionField.key}`}
+                        invalid={fieldState.invalid}
+                      />
+                    ) : definitionField.type === "textarea" ? (
                       <Textarea
                         {...field}
                         id={`dynamic-${definitionField.key}`}

@@ -443,6 +443,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   // Fields here can depend on an answer from the case step (the record type), so
   // visibility is worked out from those earlier answers plus what is typed here.
   const visibilityValues = {
+    ...draft.caseSelectorAnswers,
     ...Object.fromEntries(
       Object.entries(draft.answers).filter(([, value]) => typeof value === "string"),
     ),
@@ -645,6 +646,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
           showRequiredMarks
           showSectionTitles={detailSections.length > 1}
           control={form.control}
+          onFieldChange={(key, value) => form.setValue(key, value, { shouldDirty: true, shouldValidate: true })}
           values={visibilityValues}
           renderSectionLead={
             ownerBlockInSection

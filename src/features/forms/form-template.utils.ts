@@ -1,5 +1,7 @@
 import { ageInYears, diffInDays, fromDateKey, toDateKey } from "~/lib/date";
 import { flattenSubjects, type SubjectFields } from "~/lib/subject-fields";
+import { addressAreas, addressCities } from "~/lib/requester-address";
+import { countryOptions } from "~/lib/countries";
 import {
   conditionRuleSchema,
   formTemplateDefinitionSchema,
@@ -784,6 +786,25 @@ export function validateTemplateAnswers(
         return { success: false, message: `${field.label} is required.` };
       }
       if (!value) continue;
+
+      if (field.countrySelect && !countryOptions.some((country) => country.name === value)) {
+        return { success: false, message: "Select a valid country." };
+      }
+
+      if (field.philippineAddressLevel === "province") {
+        const provinceExists = addressAreas.some((area) => area.name === value);
+        if (!provinceExists) {
+          return { success: false, message: `Select a valid ${field.label.toLowerCase()}.` };
+        }
+      }
+      if (field.philippineAddressLevel === "city") {
+        const province = answerString(effectiveAnswers, "requester_province");
+        const cities = addressCities(province);
+        const cityExists = cities.some((city) => city.name === value);
+        if (!cityExists) {
+          return { success: false, message: `Select a valid ${field.label.toLowerCase()}.` };
+        }
+      }
 
       const maxLength = field.type === "textarea" ? 2_000 : 240;
       if (value.length > maxLength) {
