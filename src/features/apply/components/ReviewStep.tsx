@@ -1,3 +1,5 @@
+import { SignaturePad } from "./SignaturePad";
+import { requiresVerificationSignature } from "../verification-signature";
 import { formatFieldLabel } from "~/features/forms/field-label";
 import { useNavigate } from "@tanstack/react-router";
 import { QuietLink } from "~/components/quiet-link";
@@ -58,6 +60,7 @@ export function ReviewStep({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [signature, setSignature] = useState("");
   const [result, setResult] = useState<{
     trackingNumber: string;
     documentWarning?: string;
@@ -104,6 +107,7 @@ export function ReviewStep({
     ...draft.caseSelectorAnswers,
     ...personGroupAnswers,
   });
+  const needsSignature = requiresVerificationSignature(selectedService.service_code, answerBag.record_type);
   const activeDocumentKeys = new Set(
     expandRequirementUploadSlots(
       requirements.filter((requirement) =>
@@ -150,7 +154,7 @@ export function ReviewStep({
   });
 
   async function handleSubmit() {
-    if (!selectedService) return;
+    if (!selectedService || !confirmed || (needsSignature && !signature) || submitting) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -160,6 +164,7 @@ export function ReviewStep({
           templateVersionId: selectedService.form_template?.versionId ?? null,
           uploadDraftId: draft.uploadDraftId,
           answers: answerBag,
+          signature: needsSignature ? signature : undefined,
           copies: feePerCopy ? copies : undefined,
           documents: activeDocuments.map((d) => ({
             requirementId: d.requirementId,
@@ -188,7 +193,7 @@ export function ReviewStep({
           ? {
               trackingNumber: res.trackingNumber!,
               copies,
-              formData: { ...textAnswers, ...flattenSubjects(subjects) },
+              formData: { ...textAnswers, ...flattenSubjects(subjects), ...(needsSignature ? { requester_signature: signature } : {}) },
             }
           : null;
 
@@ -388,6 +393,8 @@ export function ReviewStep({
           )}
         </ReviewBlock>
 
+        {needsSignature && <SignaturePad onChange={setSignature} disabled={submitting} />}
+
         <div className="flex items-start gap-3">
           <Checkbox
             id="confirm-application-details"
@@ -439,7 +446,7 @@ export function ReviewStep({
         onContinue={handleSubmit}
         continueLabel="Submit request"
         pendingLabel="Submitting…"
-        continueDisabled={!confirmed}
+        continueDisabled={!confirmed || (needsSignature && !signature)}
         continuePending={submitting}
       />
     </WizardShell>

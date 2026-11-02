@@ -1,3 +1,4 @@
+import { requiresVerificationSignature } from "~/features/apply/verification-signature";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { finalizeRequestUploadDraft } from "~/features/apply/apply-upload-drafts.server";
@@ -46,6 +47,7 @@ const submitRequestSchema = z.object({
   templateVersionId: z.string().uuid().nullable(),
   uploadDraftId: z.string().uuid().nullable(),
   answers: answersSchema,
+  signature: z.string().max(100_000).regex(/^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/).optional(),
   // Only honoured for per-copy services; every other service charges once.
   copies: z.number().int().min(1).max(MAX_COPIES).optional(),
   documents: z
@@ -307,6 +309,18 @@ export const submitRequestFn = createServerFn({ method: "POST" })
     }
 
     const formData = flattenTemplateAnswers(definition, answerBag);
+    if (requiresVerificationSignature(data.serviceCode, answerBag.record_type)) {
+      if (!data.signature) {
+        return { error: true, message: "Sign the verification form before submitting." };
+      }
+      const png = Buffer.from(data.signature.split(",")[1], "base64");
+      if (png.length < 33 || png.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a" ||
+          png.readUInt32BE(16) !== 600 || png.readUInt32BE(20) !== 200) {
+        return { error: true, message: "Clear your signature and sign again." };
+      }
+      formData.requester_signature = data.signature;
+      formData.requester_signed_at = new Date().toISOString();
+    }
 
     // Created with the service-role client on purpose. Everything above is the
     // only place an online request is validated (active form version, case and

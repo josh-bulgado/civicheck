@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
+  Download,
   Maximize2,
   Undo2,
   XCircle,
@@ -59,6 +60,7 @@ export function DocumentViewerHeader({
   url,
   onExpand,
   expandLabel,
+  downloadName,
   asDialogTitle = false,
   className,
 }: {
@@ -68,6 +70,7 @@ export function DocumentViewerHeader({
   onExpand?: () => void;
   /** The expand button's shortcut, named in its label. */
   expandLabel?: string;
+  downloadName?: string;
   asDialogTitle?: boolean;
   className?: string;
 }) {
@@ -89,6 +92,13 @@ export function DocumentViewerHeader({
         <Badge variant={statusBadgeVariant(status)}>
           {STATUS_LABEL[status] ?? status}
         </Badge>
+        {url && downloadName && (
+          <Button variant="ghost" size="icon-sm" nativeButton={false}
+            aria-label="Download verification form" title="Download verification form"
+            render={<QuietAnchor href={url.split("#")[0]} download={downloadName} />}>
+            <Download aria-hidden="true" />
+          </Button>
+        )}
         {url && (
           <Button
             variant="ghost"

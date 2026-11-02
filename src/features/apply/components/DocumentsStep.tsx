@@ -1,3 +1,4 @@
+import { requiresVerificationSignature } from "~/features/apply/verification-signature";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Camera, Check, ClipboardCheck, Files, FileText, FileX, X } from "lucide-react";
@@ -116,6 +117,10 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
   const selectedService =
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
   const definition = selectedService.form_template!.definition;
+  const signsVerificationOnline = requiresVerificationSignature(
+    selectedService.service_code,
+    draft.caseSelectorAnswers.record_type ?? draft.answers.record_type,
+  );
   const legacyPurpose =
     draft.caseAnswers.purpose === "Other"
       ? draft.caseAnswers.otherPurpose
@@ -984,14 +989,18 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
               <ClipboardCheck className="mt-0.5 size-5.5 shrink-0 text-primary" />
               <div className="min-w-0">
                 <h2 className="text-lg font-bold text-foreground">
-                  {selectedService.service_code === "EMAIL_INQUIRY"
+                  {signsVerificationOnline
+                    ? "Sign online - no upload needed"
+                    : selectedService.service_code === "EMAIL_INQUIRY"
                     ? "Prepared for you - no upload needed"
                     : "Complete at the CCRO - no upload needed"}
                 </h2>
                 <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-[15px] text-body-2">
                   {inPersonRequirements.map((requirement) => (
                     <li key={requirement.id}>
-                      {parseRequirementName(requirement.requirement_name).primary}
+                      {signsVerificationOnline && requirement.requirement_name.startsWith("Verification Form")
+                        ? "Verification Form: sign online in the next step. No printing needed."
+                        : parseRequirementName(requirement.requirement_name).primary}
                     </li>
                   ))}
                 </ul>

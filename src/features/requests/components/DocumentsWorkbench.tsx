@@ -506,6 +506,7 @@ export function DocumentsWorkbench({
             label={selected.label}
             status={selectedVerdict.status}
             url={shownLink?.url}
+            downloadName={selected.doc.id === GENERATED_FORM_ID ? `verification-form-${request.trackingNumber}.pdf` : undefined}
             onExpand={() => setExpanded(true)}
             expandLabel={hotkeyLabel(EXPAND_HOTKEY)}
             className="rounded-t-xl border-b border-border-light"
@@ -541,6 +542,7 @@ export function DocumentsWorkbench({
               label={selected.label}
               status={selectedVerdict.status}
               url={shownLink?.url}
+            downloadName={selected.doc.id === GENERATED_FORM_ID ? `verification-form-${request.trackingNumber}.pdf` : undefined}
             />
           }
           preview={

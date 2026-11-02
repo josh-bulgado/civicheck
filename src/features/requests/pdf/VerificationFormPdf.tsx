@@ -314,7 +314,7 @@ export function VerificationFormPdf({ data, qrDataUrl, generatedAt }: Verificati
             <Field label="Full Name" value={requesterName} />
             <Field label="Relationship to the Owner" value={relationship} />
             <Field label="Address" value={formatRequesterAddress(answers)} />
-            {!isEmailInquiry ? <Field label="Purpose (pls. specify)" value={text(answers, "purpose_of_request") === "Other" ? text(answers, "purpose_of_request_other") : text(answers, "purpose_of_request")} /> : null}
+            {!isEmailInquiry ? <Field label="Purpose" value={text(answers, "purpose_of_request") === "Other" ? text(answers, "purpose_of_request_other") : text(answers, "purpose_of_request")} /> : null}
           </View>
           <View style={styles.right}>
             <Text style={[styles.sectionHeading, { opacity: 0 }]}>.</Text>
@@ -338,7 +338,11 @@ export function VerificationFormPdf({ data, qrDataUrl, generatedAt }: Verificati
           <>
             <Text style={styles.certify}>I hereby certify that the above information is true and correct.</Text>
             <View style={styles.signatureWrap} wrap={false}>
-              <View style={styles.signatureLine} />
+              <View style={[styles.signatureLine, answers.requester_signature ? { height: 66, alignItems: "center" } : {}]}>
+                {typeof answers.requester_signature === "string" && answers.requester_signature.startsWith("data:image/png;base64,") ? (
+                  <Image src={answers.requester_signature} style={{ width: 195, height: 65, objectFit: "contain" }} />
+                ) : null}
+              </View>
               <Text style={styles.signatureLabel}>Signature of the Requester</Text>
             </View>
           </>

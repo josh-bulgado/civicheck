@@ -18,6 +18,7 @@ export function VerificationFormCard({
 }: VerificationFormCardProps) {
   const { download, downloading } = useVerificationFormPdfDownload();
   const isEmailInquiry = typeof data.formData.what_to_verify === "string";
+  const isSigned = typeof data.formData.requester_signature === "string" && data.formData.requester_signature.startsWith("data:image/png;base64,");
   const hasForm = typeof data.formData.requester_first_name === "string";
   if (!hasForm) return null;
 
@@ -44,7 +45,7 @@ export function VerificationFormCard({
           <p className="mt-1 text-sm text-muted-foreground">
             {isEmailInquiry
               ? "The verification form, filled in from this online inquiry. No signature or office visit is needed for this form."
-              : "The CCRO application, filled in from this request. Print it for the requester to sign."}
+              : isSigned ? "The completed and signed verification form is saved with this request." : "The CCRO application, filled in from this request. Print it for the requester to sign."}
           </p>
         </div>
         {button}
@@ -61,7 +62,7 @@ export function VerificationFormCard({
         <p className="mt-1.5 text-[15px] leading-[1.45] text-muted-foreground">
           {isEmailInquiry
             ? "Your verification form, already filled in. No signature or office visit is needed. Sign your Email Request Letter and, when required, have the owner sign the Authorization Letter."
-            : "Your application form, already filled in. Print it and sign it at the CCRO."}
+            : isSigned ? "Your signed verification form is saved with your request for staff to access. Downloading a copy is optional. Bring your required supporting documents for final validation." : "Your application form, already filled in. Print it and sign it at the CCRO."}
         </p>
       </div>
       {button}

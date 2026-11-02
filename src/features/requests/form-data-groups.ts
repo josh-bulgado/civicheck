@@ -57,7 +57,7 @@ export function groupFormData(
   const pick = (keys: string[]) =>
     keys.flatMap((key) => (key in formData && keep(formData[key]) ? [rowFor(key, formData[key])] : []));
 
-  const claimed = new Set<string>();
+  const claimed = new Set<string>(["requester_signature", "requester_signed_at"]);
 
   // One group per person. `subject_*` is the first party, `partyN_*` the rest.
   const parties = new Map<number, Record<string, FormValue>>();

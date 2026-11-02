@@ -31,6 +31,11 @@ const LIGHT_ONLY = [
 // One-off signed-in lines that are light on purpose, by `file: text`.
 const ALLOWED: Array<[file: string, includes: string, why: string]> = [
   [
+    "features/apply/components/SignaturePad.tsx",
+    "bg-white",
+    "Black signature ink stays visible on a paper-like canvas in either theme.",
+  ],
+  [
     "features/admin/reports/components/ReportSheet.tsx",
     "bg-white",
     "The report sheet is paper: white in either theme, so it looks the way it prints.",
