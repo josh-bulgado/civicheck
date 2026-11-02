@@ -1,3 +1,4 @@
+import { onTimeRegistrationNotice } from "./on-time-registration";
 import { getLogNote, needsOfficeFinalValidation } from "~/features/requests/request-workflow";
 import { formatPesoFee } from "~/features/services/service-utils";
 
@@ -9,6 +10,7 @@ export type NextStepsView =
 interface NextStepsInput {
   status: string;
   serviceCode?: string | null;
+  formData?: Record<string, unknown>;
   paymentStatus: string | null;
   feesDue: number;
   allowsMessages: boolean;
@@ -33,6 +35,14 @@ export function nextSteps(input: NextStepsInput): NextStepsView | null {
   const { status } = input;
 
   if (status === "released" || status === "rejected") return null;
+
+  const registrationNotice = onTimeRegistrationNotice(input.serviceCode, input.formData);
+  if (
+    (status === "submitted" || status === "under_validation" || status === "processing") &&
+    registrationNotice
+  ) {
+    return { kind: "line", text: registrationNotice };
+  }
 
   // Requirements accepted online; the hard copies still need the final check.
   if (status === "processing" && needsOfficeFinalValidation(input.serviceCode)) {
@@ -74,15 +84,17 @@ export function nextSteps(input: NextStepsInput): NextStepsView | null {
     );
     if (rejected) {
       const role = rejected.subjectRole ? `${rejected.subjectRole}: ` : "";
-      return { kind: "line", text: `${role}${rejected.requirementName}` };
+      return { kind: "line", text: `${role}${rejected.requirementName}${registrationNotice ? `. ${registrationNotice}` : ""}` };
     }
     // Nothing was rejected file by file, so say what staff said.
     const sentBack = [...input.logs]
       .reverse()
       .find((log) => log.actionStatus === "incomplete");
     const note = getLogNote("incomplete", sentBack?.remarks ?? null, "applicant");
-    if (note) return { kind: "line", text: note };
+    if (note) return { kind: "line", text: registrationNotice ? `${note} ${registrationNotice}` : note };
   }
+
+  if (registrationNotice && status === "incomplete") return { kind: "line", text: registrationNotice };
 
   // One visit, at release: until then the applicant has nothing to bring in.
   return {

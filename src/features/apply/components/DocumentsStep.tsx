@@ -609,7 +609,12 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
 
   function renderUploadSlot(slot: (typeof uploadSlots)[number]) {
     const req = slot.requirement;
-    const { primary } = parseRequirementName(req.requirement_name);
+    const isOnTimeColb =
+      ["BIRTH_ONTIME", "OTCOLB-MARITAL", "OTCOLB-NONMARITAL"].includes(selectedService.service_code) &&
+      /certificate of live birth/i.test(req.requirement_name);
+    const primary = isOnTimeColb
+      ? "Certificate of Live Birth (COLB)"
+      : parseRequirementName(req.requirement_name).primary;
     const documents = documentsByRequirement.get(slot.key) ?? [];
     const isPending = pendingAction?.slotKey === slot.key;
     const uploading = isPending && pendingAction.type === "upload";
@@ -718,6 +723,8 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
               >
                 {isDropTarget
                   ? "Drop to add to this document."
+                  : isOnTimeColb
+                    ? "Required · upload one copy (all pages). Bring 4 physical copies to CCRO."
                   : pageCount > 0
                     ? "Keep photos in reading order. A multi-page PDF can stay as one file."
                     : "Required · add a PDF or photograph each page."}

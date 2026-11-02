@@ -1,3 +1,4 @@
+import { RegistrationNoticeText } from "./RegistrationNoticeText";
 import { cn } from "~/lib/utils";
 import { StageTracker } from "~/features/dashboard/components/StageTracker";
 import type { NextStepsView } from "~/features/requests/next-steps";
@@ -60,7 +61,7 @@ export function NextStepsCard({
             </ol>
           ) : (
             <p className="mt-4 rounded-[20px] bg-card/78 px-5 py-4 text-[19px] leading-snug font-semibold text-foreground">
-              {next.text}
+              <RegistrationNoticeText text={next.text} />
             </p>
           )}
         </div>

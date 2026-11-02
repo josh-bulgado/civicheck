@@ -99,7 +99,7 @@ function PartySection({ role, children }: { role: string; children: ReactNode })
   return (
     <div role="group" aria-labelledby={headingId} className="flex flex-col gap-4">
       <h2 id={headingId} className="text-xl leading-[normal] font-bold text-foreground">
-        {formatFieldLabel(role)}
+        {role.trim().toLowerCase() === "mother" ? "Mother’s Maiden Name" : formatFieldLabel(role)}
       </h2>
       {children}
     </div>

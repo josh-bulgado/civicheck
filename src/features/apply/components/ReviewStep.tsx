@@ -1,3 +1,5 @@
+import { RegistrationNoticeText } from "~/features/requests/components/RegistrationNoticeText";
+import { onTimeRegistrationNotice } from "~/features/requests/on-time-registration";
 import { SignaturePad } from "./SignaturePad";
 import { requiresVerificationSignature } from "../verification-signature";
 import { formatFieldLabel } from "~/features/forms/field-label";
@@ -64,6 +66,7 @@ export function ReviewStep({
   const [signature, setSignature] = useState("");
   const [result, setResult] = useState<{
     trackingNumber: string;
+    registrationNotice: string | null;
     documentWarning?: string;
     pdfData: AcknowledgmentPdfData;
     /** Set for services that collect requester details for the Verification Form. */
@@ -200,6 +203,7 @@ export function ReviewStep({
 
       setResult({
         trackingNumber: res.trackingNumber!,
+        registrationNotice: onTimeRegistrationNotice(selectedService.service_code, answerBag),
         documentWarning: res.documentWarning,
         pdfData: res.pdfData!,
         verificationData,
@@ -235,6 +239,13 @@ export function ReviewStep({
               <p className="text-2xl font-bold text-foreground">{result.trackingNumber}</p>
             </div>
           </div>
+          {result.registrationNotice && (
+            <div role="note" className="w-full rounded-xl border border-warning-strong/25 bg-card p-4">
+              <p className="mt-1 text-sm leading-relaxed text-body-strong">
+                <RegistrationNoticeText text={result.registrationNotice} />
+              </p>
+            </div>
+          )}
           {result.documentWarning && (
             <p className="text-sm text-warning-strong">{result.documentWarning}</p>
           )}
@@ -334,7 +345,7 @@ export function ReviewStep({
   const detailRows = rowsForStep("details");
 
   return (
-    <WizardShell step={4} title="Check everything before you send" sidebar={<WhatHappensNextCard />}>
+    <WizardShell step={4} title="Check everything before you send" sidebar={<WhatHappensNextCard registrationNotice={onTimeRegistrationNotice(selectedService.service_code, answerBag)} />}>
       <div className="flex flex-col gap-5">
         {caseRows.length > 0 ? (
           <ReviewBlock
@@ -498,26 +509,26 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function WhatHappensNextCard() {
+function WhatHappensNextCard({ registrationNotice }: { registrationNotice: string | null }) {
   return (
     <div className="overflow-hidden rounded-[24px] bg-card shadow-portal-card">
       <div className="border-b border-border-light px-5.5 py-4 text-[17px] font-bold text-foreground">
         What happens next
       </div>
       <ol className="flex flex-col gap-4 px-5.5 py-5">
-        {[
+        {(registrationNotice ? [registrationNotice, "Keep your tracking number for your visit to the CCRO."] : [
           "Staff check your uploads online. If one needs fixing, you upload it again here.",
           <>
             When it is ready for release, visit the CCRO once with your{" "}
             <strong className="font-bold">original documents</strong>.
           </>,
           "Show your tracking number, pay any fee, and claim it.",
-        ].map((step, index) => (
+        ]).map((step, index) => (
           <li key={index} className="flex items-start gap-3">
             <span className="flex size-6.5 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[13px] font-bold text-primary">
               {index + 1}
             </span>
-            <p className="pt-0.5 text-[15px] leading-snug text-body-strong">{step}</p>
+            <p className="pt-0.5 text-[15px] leading-snug text-body-strong">{typeof step === "string" ? <RegistrationNoticeText text={step} /> : step}</p>
           </li>
         ))}
       </ol>

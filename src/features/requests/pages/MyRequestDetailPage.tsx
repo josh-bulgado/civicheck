@@ -44,6 +44,7 @@ export default function MyRequestDetailPage({
   const next = nextSteps({
     status: request.status,
     serviceCode: request.serviceCode,
+    formData: request.formData,
     paymentStatus: request.paymentStatus,
     feesDue: request.feesDue,
     allowsMessages: request.allowsMessages,

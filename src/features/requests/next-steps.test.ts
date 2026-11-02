@@ -1,3 +1,4 @@
+import { onTimeRegistrationNotice } from "./on-time-registration";
 import { describe, expect, it } from "vitest";
 import { nextSteps } from "./next-steps";
 
@@ -54,11 +55,11 @@ describe("what to do next once a request is ready for release", () => {
     }
   });
 
-  it("sends an on-time marriage applicant to the office with hard copies once requirements are accepted", () => {
+  it("sends a delayed marriage applicant to the office with hard copies once requirements are accepted", () => {
     expect(
       nextSteps({
         status: "processing",
-        serviceCode: "MARRIAGE_ONTIME",
+        serviceCode: "MARRIAGE_DELAYED",
         paymentStatus: "unpaid",
         feesDue: 0,
         allowsMessages: false,
@@ -81,4 +82,23 @@ describe("what to do next once a request is ready for release", () => {
       steps: ["Read CCRO's reply in the messages"],
     });
   });
+});
+
+describe("on-time registration deadline", () => {
+  it.each(["BIRTH_ONTIME", "OTCOLB-MARITAL", "OTCOLB-NONMARITAL", "MARRIAGE_ONTIME", "DEATH_ONTIME"])(
+    "keeps the CCRO deadline visible for %s after submission",
+    (serviceCode) => {
+      for (const status of ["submitted", "under_validation", "processing"]) {
+        expect(nextSteps({
+          status,
+          serviceCode,
+          paymentStatus: "unpaid",
+          feesDue: 0,
+          allowsMessages: false,
+          attachments: [],
+          logs: [],
+        })).toEqual({ kind: "line", text: onTimeRegistrationNotice(serviceCode) });
+      }
+    },
+  );
 });
