@@ -361,7 +361,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   const detailsFields = fieldsForStep(definition, "details");
   const personGroupField = detailsFields.find((field) => field.type === "person_group");
   const hasPersonGroup = Boolean(personGroupField);
-  const isEmailMarriage = selectedService.service_code === "EMAIL_INQUIRY" && draft.answers.record_type === "marriage";
+  const isMarriageRecord = draft.answers.record_type === "marriage";
   const requireMiddleName = personGroupField?.requireMiddleName === true;
   const roles = selectedService?.party_roles?.length
     ? selectedService.party_roles
@@ -413,7 +413,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   useEffect(() => {
     if (!hydrated || !user || requesterPrefilled.current) return;
     // The requester is the signed-in applicant, even when the record belongs to someone else.
-    if (selectedService.service_code !== "EMAIL_INQUIRY") return;
+    if (!detailsFields.some((field) => field.key === "requester_first_name")) return;
     requesterPrefilled.current = true;
     const current = form.getValues();
     // Preserve saved names and anything already typed, including a married name.
@@ -431,7 +431,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
         },
       };
     });
-  }, [hydrated, user, selectedService.service_code, form, update]);
+  }, [hydrated, user, detailsFields, form, update]);
 
   const subjectFields = useFieldArray({ control: form.control, name: "subjects" });
   const showRoleLabels = hasPersonGroup && subjectFields.fields.length > 1;
@@ -468,7 +468,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   const requesterLast = textOf(watchedValues.requester_last_name);
   useEffect(() => {
     if (!hasPersonGroup || roles.length !== 1) return;
-    if (relationship !== "owner") {
+    if (isMarriageRecord || relationship !== "owner") {
       mirroredOwner.current = null;
       return;
     }
@@ -502,7 +502,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     mirroredOwner.current = next;
     // `form`, `roles` and `hasPersonGroup` are stable for a given service.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [relationship, requesterFirst, requesterMiddle, requesterLast]);
+  }, [isMarriageRecord, relationship, requesterFirst, requesterMiddle, requesterLast]);
 
   // The role comes from the field array, not the watched values: `role` has no
   // input of its own, so `shouldUnregister` drops it from the watched rows.
@@ -514,7 +514,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
         subject?.firstName?.trim() &&
           subject.lastName?.trim() &&
           (!requireMiddleName || subject.middleName?.trim() || subject.noMiddleName) &&
-          (isEmailMarriage || impliedSex(field.role) !== null || subject.sex),
+          (isMarriageRecord || impliedSex(field.role) !== null || subject.sex),
       );
     });
   const hasRequiredAnswers =
@@ -528,7 +528,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     // Hidden suffix/sex controls are unregistered by React Hook Form. Convert
     // the submitted rows back to complete SubjectFields objects before saving
     // them in either `subjects` location in the draft.
-    const subjects = reconcileSubjects(values.subjects, roles).map((subject) => isEmailMarriage ? { ...subject, sex: "male" } : subject);
+    const subjects = reconcileSubjects(values.subjects, roles).map((subject) => isMarriageRecord ? { ...subject, sex: "male" } : subject);
     const dynamicValues = Object.fromEntries(
       detailsFields
         .filter((field) => field.type !== "person_group")
@@ -590,7 +590,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
               setValue={form.setValue}
               index={index}
               role={subjectField.role}
-              husband={isEmailMarriage}
+              husband={isMarriageRecord}
               requireMiddleName={requireMiddleName}
             />
           </PartySection>
@@ -607,7 +607,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
               setValue={form.setValue}
               index={index}
               role={subjectField.role}
-              husband={isEmailMarriage}
+              husband={isMarriageRecord}
               requireMiddleName={requireMiddleName}
             />
           </div>
@@ -618,7 +618,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
               setValue={form.setValue}
               index={index}
               role={subjectField.role}
-              husband={isEmailMarriage}
+              husband={isMarriageRecord}
               requireMiddleName={requireMiddleName}
             />
           </FieldGroup>

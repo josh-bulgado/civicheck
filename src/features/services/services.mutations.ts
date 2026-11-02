@@ -418,6 +418,7 @@ export const submitRequestFn = createServerFn({ method: "POST" })
 
     return {
       error: false,
+      requestId,
       trackingNumber,
       documentWarning,
       pdfData: {

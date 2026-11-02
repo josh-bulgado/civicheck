@@ -16,6 +16,7 @@ import { ApplicationDocket } from "~/features/apply/components/ApplicationDocket
 import { ApplyStepRail } from "~/features/apply/components/ApplyStepRail";
 import { KeepDraftDialog } from "~/features/apply/components/KeepDraftDialog";
 import { WizardPageSkeleton } from "~/features/apply/components/WizardPageSkeleton";
+import { SubmittedRequestRedirect } from "~/features/apply/components/SubmittedRequestRedirect";
 import { draftHasProgress, useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
 
 // The session + active-account check now lives on the parent `/_authed`
@@ -94,6 +95,10 @@ function ApplyLayout() {
     if (uploadDraftId) {
       discardRequestUploadDraftFn({ data: { uploadDraftId } }).catch(() => {});
     }
+  }
+
+  if (hydrated && draft.submittedRequestId && activePath !== "review") {
+    return <SubmittedRequestRedirect requestId={draft.submittedRequestId} />;
   }
 
   return (

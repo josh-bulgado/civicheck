@@ -23,6 +23,7 @@ export interface ApplyDraftDocument {
 }
 
 export interface ApplyDraft {
+  submittedRequestId?: string | null;
   /**
    * What to call this application on the dashboard ("Marriage License"). Written
    * by the wizard once the draft has anything in it; null until then.
@@ -258,6 +259,7 @@ const discardedKeys = new Set<string>();
 export function updateDraftAt(key: string, patch: DraftPatch): boolean {
   if (discardedKeys.has(key)) return false;
   const prev = readDraft(key);
+  if (prev.submittedRequestId) return false;
   const resolved = typeof patch === "function" ? patch(prev) : patch;
   writeDraft(key, {
     ...prev,
@@ -277,6 +279,10 @@ function clearDraftAt(key: string) {
   // A fresh object — see the note in `readDraft` on why this can't be the
   // `SERVER_DRAFT` singleton.
   notifyDraftChange(key, { ...DEFAULT_APPLY_DRAFT });
+}
+
+export function completeDraftAt(key: string, requestId: string) {
+  writeDraft(key, { ...DEFAULT_APPLY_DRAFT, submittedRequestId: requestId });
 }
 
 /** Removes the application and refuses writes to it until `reopenDraftAt`. */
@@ -343,6 +349,10 @@ export function useSeedDraftForGroup() {
 function resetApplyChoices(owner: string | null, groupOrCode: string) {
   const key = storageKey(owner, groupOrCode);
   const previous = readDraft(key);
+  if (previous.submittedRequestId) {
+    clearDraftAt(key);
+    return;
+  }
   const hasChoices =
     previous.selectedServiceCode !== null ||
     Object.keys(previous.caseSelectorAnswers).length > 0 ||
@@ -512,10 +522,15 @@ export function useApplyDraft(groupOrCode: string) {
   /** Empties the draft once it is done with: submitted, or handed to another track. */
   const clear = useCallback(() => clearDraftAt(key), [key]);
 
+  // Keep only the submitted request ID so old wizard pages can redirect.
+  const complete = useCallback((requestId: string) => {
+    completeDraftAt(key, requestId);
+  }, [key]);
+
   /** The applicant threw the application away: it stays gone until the wizard reopens. */
   const discard = useCallback(() => discardDraftAt(key), [key]);
 
-  return { draft, update, clear, discard, hydrated };
+  return { draft, update, clear, complete, discard, hydrated };
 }
 
 /**

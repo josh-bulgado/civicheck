@@ -2,6 +2,7 @@ import { SignaturePad } from "./SignaturePad";
 import { requiresVerificationSignature } from "../verification-signature";
 import { formatFieldLabel } from "~/features/forms/field-label";
 import { useNavigate } from "@tanstack/react-router";
+import { SubmittedRequestRedirect } from "./SubmittedRequestRedirect";
 import { QuietLink } from "~/components/quiet-link";
 import { useMemo, useState, type ReactNode } from "react";
 import { Check, CheckCircle2, Download } from "lucide-react";
@@ -56,7 +57,7 @@ export function ReviewStep({
   requirements,
 }: ReviewStepProps) {
   const navigate = useNavigate();
-  const { draft, clear } = useApplyDraft(serviceCode);
+  const { draft, complete } = useApplyDraft(serviceCode);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
@@ -203,7 +204,7 @@ export function ReviewStep({
         pdfData: res.pdfData!,
         verificationData,
       });
-      clear();
+      complete(res.requestId!);
     } catch (err) {
       setSubmitError(
         err instanceof Error
@@ -213,6 +214,10 @@ export function ReviewStep({
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (draft.submittedRequestId && !result) {
+    return <SubmittedRequestRedirect requestId={draft.submittedRequestId} />;
   }
 
   if (result) {
@@ -304,7 +309,7 @@ export function ReviewStep({
                   />
                 )),
                 ...subjects
-                  .filter((subject) => impliedSex(subject.role) === null)
+                  .filter((subject) => answerBag.record_type !== "marriage" && impliedSex(subject.role) === null)
                   .map((subject, index) => (
                     <ReviewRow
                       key={`${field.key}-sex-${index}`}

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_APPLY_DRAFT,
+  completeDraftAt,
   discardDraftAt,
   draftHasProgress,
   reopenDraftAt,
@@ -102,6 +103,20 @@ describe("discarding an application", () => {
   it("takes writes until it is discarded", () => {
     expect(updateDraftAt(KEY, { selectedServiceCode: "BIRTH_ONTIME" })).toBe(true);
     expect(JSON.parse(store.get(KEY)!)).toMatchObject({ selectedServiceCode: "BIRTH_ONTIME" });
+  });
+
+  it("keeps the submitted request destination without keeping an unfinished application", () => {
+    updateDraftAt(KEY, { answers: { requester_first_name: "Ana" } });
+    completeDraftAt(KEY, "request-123");
+    const completed = JSON.parse(store.get(KEY)!);
+    expect(completed.submittedRequestId).toBe("request-123");
+    expect(completed.answers.requester_first_name).toBeUndefined();
+    expect(completed.documents).toEqual([]);
+    expect(draftHasProgress(completed)).toBe(false);
+    reopenDraftAt(KEY);
+    expect(updateDraftAt(KEY, { selectedServiceCode: "BIRTH_ONTIME" })).toBe(false);
+    discardDraftAt(KEY);
+    reopenDraftAt(KEY);
   });
 
   it("stays gone when the step writes its default back afterwards", () => {

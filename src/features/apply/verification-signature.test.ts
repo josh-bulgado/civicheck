@@ -6,8 +6,11 @@ describe("verification signatures", () => {
   it.each(["CTC-LOCAL", "CTC-ABROAD", "CTC_ISSUANCE"])("requires a signature for %s birth", (code) => {
     expect(requiresVerificationSignature(code, "birth")).toBe(true);
   });
+  it.each(["CTC-LOCAL", "CTC-ABROAD", "CTC_ISSUANCE"])("requires a signature for %s marriage", (code) => {
+    expect(requiresVerificationSignature(code, "marriage")).toBe(true);
+  });
   it.each([
-    ["CTC-LOCAL", "marriage"], ["CTC-ABROAD", "death"],
+    ["EMAIL_INQUIRY", "marriage"], ["CTC-ABROAD", "death"],
     ["EMAIL_INQUIRY", "birth"], ["BIRTH_ONTIME", "birth"],
     ["CTC-LOCAL", undefined],
   ])("leaves other cases unchanged: %s %s", (code, record) => {
