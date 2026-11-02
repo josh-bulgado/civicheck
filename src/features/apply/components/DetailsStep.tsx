@@ -361,7 +361,8 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   const detailsFields = fieldsForStep(definition, "details");
   const personGroupField = detailsFields.find((field) => field.type === "person_group");
   const hasPersonGroup = Boolean(personGroupField);
-  const isMarriageRecord = draft.answers.record_type === "marriage";
+  const recordType = draft.caseSelectorAnswers.record_type ?? draft.answers.record_type;
+  const isMarriageRecord = recordType === "marriage";
   const requireMiddleName = personGroupField?.requireMiddleName === true;
   const roles = selectedService?.party_roles?.length
     ? selectedService.party_roles
