@@ -113,6 +113,7 @@ export const eventTimingMismatchSchema = z.enum([
  * there is no month-length or leap-year ambiguity.
  */
 export const eventTimingRuleSchema = z.object({
+  appliesWhen: formConditionSchema.optional(),
   /** Key of the date field in this template that starts the clock. */
   triggerField: z.string().min(1).max(64),
   windowDays: z.number().int().min(0).max(3660),

@@ -398,6 +398,8 @@ export function evaluateTemplateEventTiming(
 ): { rule: EventTimingRule; evaluation: EventTimingEvaluation } | null {
   const rule = definition.eventTiming;
   if (!rule) return null;
+  if (rule.appliesWhen && !conditionMatches(rule.appliesWhen, answers)) return null;
+  if (rule.windowDaysByAnswer && !answerString(answers, rule.windowDaysByAnswer.field)) return null;
   return {
     rule,
     evaluation: evaluateEventTiming(

@@ -1,4 +1,5 @@
 import { onTimeRegistrationNotice } from "./on-time-registration";
+import { marriagePostingMessage, needsMarriagePosting } from "./marriage-posting";
 import { getLogNote, needsOfficeFinalValidation } from "~/features/requests/request-workflow";
 import { formatPesoFee } from "~/features/services/service-utils";
 
@@ -8,6 +9,7 @@ export type NextStepsView =
   | { kind: "line"; text: string };
 
 interface NextStepsInput {
+  postingStartDate?: string | null;
   status: string;
   serviceCode?: string | null;
   formData?: Record<string, unknown>;
@@ -35,6 +37,10 @@ export function nextSteps(input: NextStepsInput): NextStepsView | null {
   const { status } = input;
 
   if (status === "released" || status === "rejected") return null;
+
+  if (status === "processing" && needsMarriagePosting(input.serviceCode) && input.postingStartDate) {
+    return { kind: "line", text: `${marriagePostingMessage(input.postingStartDate)} We'll notify you when the certificate is ready for collection.` };
+  }
 
   const registrationNotice = onTimeRegistrationNotice(input.serviceCode, input.formData);
   if (

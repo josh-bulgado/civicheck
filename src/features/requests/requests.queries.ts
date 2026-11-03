@@ -127,6 +127,8 @@ interface PaymentLogRow {
 
 /** A `requests` row as `getRequestDetailFn` selects it. */
 interface RequestDetailRow {
+  posting_start_date: string | null;
+  posting_end_date: string | null;
   id: string;
   tracking_number: string;
   request_type: string | null;
@@ -394,7 +396,7 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       .from("requests")
       .select(
         `id, tracking_number, request_type, status, payment_status, or_number,
-         fees_due, copies, form_data, applicant_id, created_at, updated_at,
+         fees_due, copies, form_data, applicant_id, created_at, updated_at, posting_start_date, posting_end_date,
          services_registry(name, display_name, processing_time, department_id, departments(id, name),
            event_date_label, event_place_label, reference_number_label, allows_messages),
          profiles(first_name, last_name),
@@ -442,6 +444,8 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       status: row.status,
       paymentStatus: row.payment_status,
       orNumber: row.or_number,
+      postingStartDate: row.posting_start_date,
+      postingEndDate: row.posting_end_date,
       feesDue: Number(row.fees_due ?? 0),
       copies: Number(row.copies ?? 1),
       // Narrowed to primitives: TanStack's server-fn return validator rejects

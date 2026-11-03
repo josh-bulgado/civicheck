@@ -363,6 +363,9 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   const hasPersonGroup = Boolean(personGroupField);
   const recordType = draft.caseSelectorAnswers.record_type ?? draft.answers.record_type;
   const isMarriageRecord = recordType === "marriage";
+  const useSpouseLabels =
+    selectedService.service_code === "MARRIAGE_ONTIME" ||
+    selectedService.service_code === "MARRIAGE_DELAYED";
   const requireMiddleName = personGroupField?.requireMiddleName === true;
   const roles = selectedService?.party_roles?.length
     ? selectedService.party_roles
@@ -584,8 +587,22 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       // Each party is its own headed section, stacked, so its name parts
       // can run across the card instead of sharing narrow columns.
       <div className="flex flex-col gap-7.5">
-        {subjectFields.fields.map((subjectField, index) => (
-          <PartySection key={subjectField.id} role={subjectField.role}>
+        {subjectFields.fields
+          .map((subjectField, index) => ({ subjectField, index }))
+          .sort((a, b) =>
+            useSpouseLabels
+              ? Number(b.subjectField.role === "Groom") - Number(a.subjectField.role === "Groom")
+              : a.index - b.index,
+          )
+          .map(({ subjectField, index }) => (
+          <PartySection
+            key={subjectField.id}
+            role={
+              useSpouseLabels
+                ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[subjectField.role] ?? subjectField.role)
+                : subjectField.role
+            }
+          >
             <SubjectFieldGrid
               control={form.control}
               setValue={form.setValue}

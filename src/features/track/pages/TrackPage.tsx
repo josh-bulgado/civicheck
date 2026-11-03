@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { MarriagePostingPanel } from "~/features/requests/components/MarriagePostingPanel";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -61,6 +62,9 @@ type TrackAttachment = {
 };
 
 type TrackResult = {
+  serviceCode: string;
+  postingStartDate: string | null;
+  postingEndDate: string | null;
   trackingNumber: string;
   serviceName: string;
   status: string | null;
@@ -293,6 +297,10 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
               </div>
             </div>
 
+            <div className="mt-5">
+              <MarriagePostingPanel serviceCode={result.serviceCode} status={result.status}
+                postingStartDate={result.postingStartDate} postingEndDate={result.postingEndDate} />
+            </div>
             {result.attachments.length > 0 && (
               <div className="mt-6 border-t border-border-lighter pt-5">
                 <h2 className="mb-3 text-sm font-bold text-foreground">

@@ -1,4 +1,5 @@
 import { Download } from "lucide-react";
+import { MarriagePostingPanel } from "../components/MarriagePostingPanel";
 import { Button } from "~/components/ui/button";
 import { staggerStyle } from "~/components/motion/stagger";
 import { useAcknowledgmentPdfDownload } from "~/features/requests/pdf/useAcknowledgmentPdfDownload";
@@ -42,6 +43,7 @@ export default function MyRequestDetailPage({
   }
 
   const next = nextSteps({
+    postingStartDate: request.postingStartDate,
     status: request.status,
     serviceCode: request.serviceCode,
     formData: request.formData,
@@ -64,6 +66,8 @@ export default function MyRequestDetailPage({
       <div className="civic-stagger grid grid-cols-1 items-start gap-6 md:gap-7 lg:grid-cols-[minmax(0,1fr)_30rem]">
         <div style={staggerStyle(0)} className="flex flex-col gap-6 md:gap-7">
           <NextStepsCard status={request.status} next={next} />
+          <MarriagePostingPanel serviceCode={request.serviceCode} status={request.status}
+            postingStartDate={request.postingStartDate} postingEndDate={request.postingEndDate} />
           <RequestStatusHistory logs={request.logs} />
         </div>
 

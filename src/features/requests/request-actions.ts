@@ -6,6 +6,7 @@
  * shows that reason beside a disabled button. The rules mirror the checks in
  * `advanceRequestStatusFn`; the server stays the authority.
  */
+import { marriagePostingBlockedReason, marriagePostingMessage, needsMarriagePosting } from "./marriage-posting";
 import {
   getStatusDetails,
   getTransitionLabel,
@@ -36,6 +37,8 @@ export interface RequestActionPlan {
 }
 
 export interface RequestActionInput {
+  postingStartDate?: string | null;
+  today?: string;
   serviceCode?: string;
   status: string | null;
   paymentStatus: string | null;
@@ -117,6 +120,10 @@ function blockedReason(
     if (pending > 0) {
       return `${plural(pending, "document")} still ${pending === 1 ? "needs" : "need"} a decision`;
     }
+  }
+  if (needsMarriagePosting(input.serviceCode) && (to === "ready_for_release" || to === "released")) {
+    const blocked = marriagePostingBlockedReason(input.postingStartDate, input.today);
+    if (blocked) return blocked;
   }
   if (to === "released" && !paymentSettled) {
     return input.feesDue > 0
@@ -217,7 +224,9 @@ export function describeRequestProgress(input: RequestActionInput): string {
         ? "Waiting for the applicant to bring what was missing."
         : "Waiting for the applicant to upload what was missing.";
     case "processing":
-      return "Prepare the record, then mark it ready for release.";
+      return needsMarriagePosting(input.serviceCode)
+        ? marriagePostingMessage(input.postingStartDate, input.today)
+        : "Prepare the record, then mark it ready for release.";
     case "ready_for_release":
       if (!isPaymentSettled(input.paymentStatus)) {
         return "Prepared. Waiting for the cashier to verify payment.";

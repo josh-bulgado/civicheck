@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { documentReviewBlockedReason } from "./document-review";
+import { marriagePostingBlockedReason, needsMarriagePosting, postingToday } from "./marriage-posting";
+import { fromDateKey } from "~/lib/date";
 import { requireActiveSession } from "~/server/auth";
 import { isDepartmentScopedRole } from "~/lib/permissions";
 import {
@@ -124,7 +126,7 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
     const { data: request, error: fetchError } = await supabase
       .from("requests")
       .select(
-        "id, status, payment_status, tracking_number, request_type, services_registry(department_id)",
+        "id, status, payment_status, tracking_number, request_type, posting_start_date, services_registry(department_id)",
       )
       .eq("id", data.requestId)
       .single();
@@ -186,6 +188,12 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
       };
     }
 
+    if (needsMarriagePosting(request.request_type) &&
+      (toStatus === "ready_for_release" || toStatus === "released")) {
+      const blocked = marriagePostingBlockedReason(request.posting_start_date);
+      if (blocked) return { error: true, message: blocked };
+    }
+
     const remarks = data.remarks?.trim();
     if (REASON_REQUIRED.includes(toStatus) && !remarks) {
       return {
@@ -238,9 +246,48 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
     return { error: false, status: toStatus, trackingNumber: request.tracking_number };
   });
 
-// No department check needed here: "requests:collect_payment" is only ever
-// granted to the cashier, who isn't department-scoped. Admin deliberately
-// lacks it — the admin releases, the cashier verifies, never the same person.
+export const saveMarriagePostingFn = createServerFn({ method: "POST" })
+  .validator(z.object({
+    requestId: z.string().uuid(),
+    postingStartDate: z.string().refine((value) => Boolean(fromDateKey(value)), "Enter a valid posting date"),
+    expectedUpdatedAt: z.string(),
+  }))
+  .handler(async ({ data }) => {
+    const { supabase, user, role, departmentId } = await requireActiveSession("requests:process");
+    const { data: request, error } = await supabase.from("requests")
+      .select("id, request_type, status, created_at, updated_at, services_registry(department_id)")
+      .eq("id", data.requestId).single();
+    const service = Array.isArray(request?.services_registry)
+      ? request.services_registry[0] : request?.services_registry;
+    if (error || !request ||
+      (isDepartmentScopedRole(role) && service?.department_id !== departmentId)) {
+      return { error: true, message: "That request no longer exists." };
+    }
+    if (!needsMarriagePosting(request.request_type) || request.status !== "processing") {
+      return { error: true, message: "Record the posting date during Processing for delayed marriage or reconstruction." };
+    }
+    if (data.postingStartDate > postingToday()) {
+      return { error: true, message: "The posting date cannot be in the future." };
+    }
+    if (data.postingStartDate < postingToday(new Date(request.created_at))) {
+      return { error: true, message: "The posting date cannot precede the request." };
+    }
+    const { data: updated, error: updateError } = await supabase.from("requests")
+      .update({ posting_start_date: data.postingStartDate })
+      .eq("id", data.requestId).eq("status", "processing")
+      .eq("updated_at", data.expectedUpdatedAt).select("id");
+    if (updateError) return { error: true, message: updateError.message };
+    if (!updated?.length) return { error: true, message: "This request changed. Refresh and try again." };
+    const { error: logError } = await supabase.from("application_logs").insert({
+      request_id: data.requestId, performed_by_profile_id: user.id,
+      action_status: "posting_updated",
+      remarks: `Notice-posting date recorded: ${data.postingStartDate}. Posting lasts 10 calendar days.`,
+    });
+    if (logError) console.error("Failed to record posting audit log", logError);
+    return { error: false };
+  });
+
+// Payment verification belongs to the cashier, who is not department-scoped.
 export const verifyPaymentFn = createServerFn({ method: "POST" })
   .validator(verifyPaymentSchema)
   .handler(async ({ data }) => {
