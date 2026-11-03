@@ -46,11 +46,11 @@ export function CitizenMobileHeader({
   const name = account ? getDisplayName(account) : "CiviCheck User";
 
   return (
-    <header className="flex items-center gap-2.5 md:hidden">
+    <header className="flex w-full min-w-0 max-w-full items-center gap-2.5 md:hidden">
       <QuietLink
         to="/dashboard"
         aria-label="CiviCheck, back to your dashboard"
-        className="flex min-w-0 flex-1 items-center gap-2.5 text-foreground"
+        className="flex min-w-0 flex-1 items-center gap-2.5 text-foreground max-[420px]:gap-0"
       >
         {/* Text stand-in: the official emblem isn't cleared for use yet. */}
         <span
@@ -59,7 +59,9 @@ export function CitizenMobileHeader({
         >
           CCRO
         </span>
-        <span className="truncate text-[21px] font-semibold tracking-[-0.02em]">CiviCheck</span>
+        <span className="truncate text-[21px] font-semibold tracking-[-0.02em] max-[420px]:hidden">
+          CiviCheck
+        </span>
       </QuietLink>
 
       {pathname === "/dashboard" ? (

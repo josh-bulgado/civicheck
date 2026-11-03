@@ -59,7 +59,7 @@ export function QuickStartPanel({ prominent = false }: QuickStartPanelProps) {
   }
 
   return (
-    <section className="flex flex-col gap-3.5 md:gap-2.5">
+    <section className="flex min-w-0 max-w-full flex-col gap-3.5 md:gap-2.5">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
         <h2 className="px-1.5 text-xl leading-[normal] font-semibold text-foreground md:text-[15px] md:text-muted-foreground">
           Start a new request
