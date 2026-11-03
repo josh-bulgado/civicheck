@@ -26,9 +26,7 @@ const SiteFooter = () => (
           Office address, hours, and contact details to be confirmed with CCRO.
         </p>
       </div>
-    </div>
-    <div className="landing-footer-bottom">
-      <div className="landing-footer-bottom-inner">
+      <div className="landing-footer-government">
         <CityGovernmentIdentity className="landing-footer-city" />
         <nav aria-label="Legal">
           <Link to="/terms">Terms of Use</Link>

@@ -167,20 +167,53 @@ function renderCodePanel(code: string) {
                 </table>`;
 }
 
-/** Minimal confirmation email shared by signup and resend. */
+const VERIFICATION_EMAIL_COPY = {
+  heading: "Verify your email for CiviCheck",
+  introduction:
+    "We received a request to create a CiviCheck account using this email address.",
+  instructions:
+    "Enter the following code on the CiviCheck email verification page to continue:",
+  expiry: "This code can be used once and expires 1 hour after it was requested.",
+  security: "Keep this code private. CiviCheck will never ask you to share it by email.",
+  ignore: "If you did not request this account, you can ignore this email.",
+};
+
+/** Plain text and HTML carry the same signup instructions and code. */
+export function renderVerificationEmailText(code: string) {
+  return [
+    VERIFICATION_EMAIL_COPY.heading,
+    "Hello,",
+    VERIFICATION_EMAIL_COPY.introduction,
+    VERIFICATION_EMAIL_COPY.instructions,
+    code,
+    VERIFICATION_EMAIL_COPY.expiry,
+    VERIFICATION_EMAIL_COPY.security,
+    VERIFICATION_EMAIL_COPY.ignore,
+    "CiviCheck",
+  ].join("\n\n");
+}
+
+/** Simple, visible account-confirmation message shared by signup and resend. */
 export function renderVerificationEmail(code: string) {
-  const heading = "Confirm your email address";
-
-  return renderEmailShell({
-    preheader: heading,
-    heading,
-    includeOrganizationFooter: false,
-    footerNote: "If you did not request this, you can safely ignore this email.",
-    contentHtml: `${renderHeading(heading)}
-                ${renderCodePanel(code)}
-
-                <p style="margin:0;text-align:center;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:${COLORS.muted};">This code expires in 1 hour.</p>`,
-  });
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${escapeHtml(VERIFICATION_EMAIL_COPY.heading)}</title>
+  </head>
+  <body style="margin:0;padding:24px;background-color:#ffffff;font-family:${FONT_STACK};font-size:16px;line-height:1.6;color:#202124;">
+    <h1 style="margin:0 0 24px;font-size:22px;line-height:1.4;">${escapeHtml(VERIFICATION_EMAIL_COPY.heading)}</h1>
+    <p style="margin:0 0 16px;">Hello,</p>
+    <p style="margin:0 0 16px;">${escapeHtml(VERIFICATION_EMAIL_COPY.introduction)}</p>
+    <p style="margin:0 0 16px;">${escapeHtml(VERIFICATION_EMAIL_COPY.instructions)}</p>
+    <p style="margin:0 0 24px;font-family:${CODE_FONT_STACK};font-size:28px;font-weight:700;letter-spacing:2px;">${escapeHtml(code)}</p>
+    <p style="margin:0 0 16px;">${escapeHtml(VERIFICATION_EMAIL_COPY.expiry)}</p>
+    <p style="margin:0 0 16px;">${escapeHtml(VERIFICATION_EMAIL_COPY.security)}</p>
+    <p style="margin:0 0 24px;">${escapeHtml(VERIFICATION_EMAIL_COPY.ignore)}</p>
+    <p style="margin:0;">CiviCheck</p>
+  </body>
+</html>`;
 }
 
 type OtpEmailOptions = {

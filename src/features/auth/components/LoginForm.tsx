@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { QuietLink as Link } from "~/components/quiet-link";
 import { Button } from "~/components/ui/button";
 
-import { AlertCircleIcon, Lock, Mail } from "lucide-react";
+import { AlertCircleIcon, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
@@ -22,23 +22,14 @@ import {
 import {
   InputGroup,
   InputGroupAddon,
+  InputGroupButton,
   InputGroupInput,
 } from "~/components/ui/input-group";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Spinner } from "~/components/ui/spinner";
 import { Alert, AlertDescription } from "~/components/ui/alert";
-import { AuthDocketPanel } from "./AuthSidePanel";
-import {
-  authButtonClass,
-  authFieldClass,
-  authLabelClass,
-  authLinkClass,
-  AuthFormFooter,
-  AuthFormHeading,
-  AuthSplitLayout,
-} from "./AuthSplitLayout";
 import { GoogleIcon } from "./GoogleIcon";
-import { PasswordToggle } from "./PasswordToggle";
+import { LoginLayout } from "./LoginLayout";
 
 const formSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -125,13 +116,9 @@ export function LoginForm({
   );
 
   return (
-    <AuthSplitLayout panel={<AuthDocketPanel />}>
-      <div className="flex flex-col gap-7">
-        <AuthFormHeading
-          title="Welcome back"
-          description="Please enter your details"
-          className="text-[34px] font-extrabold"
-        />
+    <LoginLayout>
+      <div className="login-form-content">
+        <h1 className="login-title">Welcome back</h1>
 
         {signInError && (
           <Alert variant="destructive" className="civic-enter-sm">
@@ -148,7 +135,7 @@ export function LoginForm({
         )}
 
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <FieldGroup className="civic-stagger gap-4">
+          <FieldGroup className="login-fields civic-stagger">
             <Controller
               control={form.control}
               name="email"
@@ -156,12 +143,16 @@ export function LoginForm({
                 <Field
                   data-invalid={fieldState.invalid}
                   style={staggerStyle(0)}
-                  className="gap-1.75"
+                  className="login-field"
                 >
-                  <FieldLabel htmlFor="email" className={authLabelClass}>
+                  <FieldLabel htmlFor="email" className="sr-only">
                     Email address
                   </FieldLabel>
-                  <InputGroup fieldSize="touch" shape="pill">
+                  <InputGroup
+                    fieldSize="touch"
+                    shape="pill"
+                    className="login-input"
+                  >
                     <InputGroupAddon>
                       <Mail size={16} aria-hidden="true" />
                     </InputGroupAddon>
@@ -169,13 +160,21 @@ export function LoginForm({
                       {...field}
                       id="email"
                       type="email"
-                      placeholder="juan.delacruz@email.com"
+                      placeholder="Email address"
                       aria-invalid={fieldState.invalid}
+                      aria-required="true"
+                      aria-describedby={
+                        fieldState.invalid ? "email-error" : undefined
+                      }
                       autoComplete="email"
                     />
                   </InputGroup>
                   {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
+                    <FieldError
+                      id="email-error"
+                      className="login-field-error"
+                      errors={[fieldState.error]}
+                    />
                   )}
                 </Field>
               )}
@@ -188,12 +187,16 @@ export function LoginForm({
                 <Field
                   data-invalid={fieldState.invalid}
                   style={staggerStyle(1)}
-                  className="gap-1.75"
+                  className="login-field"
                 >
-                  <FieldLabel htmlFor="password" className={authLabelClass}>
+                  <FieldLabel htmlFor="password" className="sr-only">
                     Password
                   </FieldLabel>
-                  <InputGroup shape="pill" fieldSize="touch">
+                  <InputGroup
+                    shape="pill"
+                    fieldSize="touch"
+                    className="login-input"
+                  >
                     <InputGroupAddon>
                       <Lock size={16} aria-hidden="true" />
                     </InputGroupAddon>
@@ -201,17 +204,37 @@ export function LoginForm({
                       {...field}
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
+                      placeholder="Password"
                       aria-invalid={fieldState.invalid}
+                      aria-required="true"
+                      aria-describedby={
+                        fieldState.invalid ? "password-error" : undefined
+                      }
                       autoComplete="current-password"
                     />
-                    <PasswordToggle
-                      shown={showPassword}
-                      onToggle={() => setShowPassword(!showPassword)}
-                    />
+                    <InputGroupAddon align="inline-end">
+                      <InputGroupButton
+                        type="button"
+                        className="login-password-toggle"
+                        aria-label={
+                          showPassword ? "Hide password" : "Show password"
+                        }
+                        onClick={() => setShowPassword((shown) => !shown)}
+                      >
+                        {showPassword ? (
+                          <EyeOff aria-hidden="true" />
+                        ) : (
+                          <Eye aria-hidden="true" />
+                        )}
+                      </InputGroupButton>
+                    </InputGroupAddon>
                   </InputGroup>
                   {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
+                    <FieldError
+                      id="password-error"
+                      className="login-field-error"
+                      errors={[fieldState.error]}
+                    />
                   )}
                 </Field>
               )}
@@ -219,48 +242,45 @@ export function LoginForm({
 
             {/* Session length and the recovery route are the two decisions left
                 before submitting, so they share one line under the fields. */}
-            <div
-              style={staggerStyle(2)}
-              className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 pt-0.5"
-            >
+            <div style={staggerStyle(2)} className="login-options">
               <Field orientation="horizontal" className="w-auto">
                 <Checkbox
                   id="keep-signed-in"
                   checked={keepSignedIn}
+                  aria-describedby={
+                    keepSignedIn ? "login-session-note" : undefined
+                  }
                   onCheckedChange={(checked) =>
                     setKeepSignedIn(checked === true)
                   }
                 />
-                <FieldLabel htmlFor="keep-signed-in">
-                  Keep me signed in
-                </FieldLabel>
+                <div className="login-session-label">
+                  <FieldLabel htmlFor="keep-signed-in">
+                    Keep me signed in
+                  </FieldLabel>
+                  {keepSignedIn && (
+                    <p
+                      id="login-session-note"
+                      role="status"
+                      className="login-session-note"
+                    >
+                      Stay signed in for {KEEP_SIGNED_IN_DAYS} days.
+                    </p>
+                  )}
+                </div>
               </Field>
 
-              <Link
-                to="/forgot-password"
-                className={`${authLinkClass} text-sm`}
-              >
-                Forgot password
+              <Link to="/forgot-password" className="login-link">
+                Forgot password?
               </Link>
             </div>
 
-            {/* Only said once the box is ticked, so the form stays quiet for
-                everyone who leaves it alone. */}
-            {keepSignedIn && (
-              <p
-                role="status"
-                className="civic-enter-sm -mt-2 text-[13px] leading-5 text-muted-foreground"
-              >
-                You&apos;ll stay signed in on this device for{" "}
-                {KEEP_SIGNED_IN_DAYS} days.
-              </p>
-            )}
-
-            <div style={staggerStyle(3)} className="flex flex-col gap-3">
+            <div style={staggerStyle(3)} className="login-actions">
               <Button
                 type="submit"
                 shape="pill"
                 size="touch"
+                className="login-submit"
                 disabled={isSigningIn}
               >
                 {isSigningIn ? (
@@ -273,10 +293,18 @@ export function LoginForm({
                 )}
               </Button>
 
+              <div className="login-divider" aria-hidden="true">
+                <span />
+                or
+                <span />
+              </div>
+
               <Button
+                type="button"
                 variant="outline"
                 shape="pill"
                 size="touch"
+                className="login-google"
                 onClick={() =>
                   oauthLoginMutation.mutate({
                     provider: "google",
@@ -292,8 +320,8 @@ export function LoginForm({
                   </>
                 ) : (
                   <>
-                    <GoogleIcon className="size-4.5" />
-                    Sign in with Google
+                    <GoogleIcon className="login-google-icon" />
+                    Continue with Google
                   </>
                 )}
               </Button>
@@ -301,13 +329,13 @@ export function LoginForm({
           </FieldGroup>
         </form>
 
-        <AuthFormFooter>
-          Don&apos;t have an account?
-          <Link to="/signup" className={authLinkClass}>
-            Sign up
+        <div className="login-footer">
+          New to CiviCheck?
+          <Link to="/signup" className="login-link">
+            Create an account
           </Link>
-        </AuthFormFooter>
+        </div>
       </div>
-    </AuthSplitLayout>
+    </LoginLayout>
   );
 }

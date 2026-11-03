@@ -98,7 +98,11 @@ async function sendAlert(admin: ReturnType<typeof createClient>, outcome: RunOut
   const html =
     `<p>System Health recorded a change.</p><ul>${titles.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul>` +
     (appUrl ? `<p><a href="${escapeHtml(appUrl)}/system-admin/health">Open System Health</a></p>` : "");
-  const from = Deno.env.get("HEALTH_ALERT_FROM") ?? "CiviCheck <noreply@civicheck.abrdns.com>";
+  const from =
+    Deno.env.get("HEALTH_ALERT_FROM")?.trim() ||
+    Deno.env.get("RESEND_FROM_EMAIL")?.trim() ||
+    "CiviCheck <noreply@civicheck.abrdns.com>";
+  const replyTo = Deno.env.get("RESEND_REPLY_TO")?.trim() || undefined;
 
   // One message per person, so nobody sees the other addresses.
   await Promise.allSettled(
@@ -106,7 +110,7 @@ async function sendAlert(admin: ReturnType<typeof createClient>, outcome: RunOut
       fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({ from, to, subject, html }),
+        body: JSON.stringify({ from, to, subject, html, reply_to: replyTo }),
       }),
     ),
   );

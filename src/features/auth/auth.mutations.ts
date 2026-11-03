@@ -9,7 +9,11 @@ import {
 } from "~/utils/supabase";
 import { getAppUrl } from "~/utils/app-url";
 import { sendEmail } from "~/utils/resend";
-import { renderOtpEmail, renderVerificationEmail } from "~/utils/email-template";
+import {
+  renderOtpEmail,
+  renderVerificationEmail,
+  renderVerificationEmailText,
+} from "~/utils/email-template";
 import { requireActiveSession } from "~/server/auth";
 import { findAuthUserByEmail } from "~/server/auth-users";
 import {
@@ -150,8 +154,9 @@ async function sendSignupOtpEmail(
   try {
     await sendEmail({
       to: params.email,
-      subject: "Confirm your CiviCheck account",
+      subject: "Your CiviCheck email verification code",
       html: renderVerificationEmail(otp),
+      text: renderVerificationEmailText(otp),
     });
   } catch (sendError) {
     console.error("Resend sending error:", sendError);

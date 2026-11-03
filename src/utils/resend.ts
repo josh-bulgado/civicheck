@@ -2,17 +2,21 @@ interface SendEmailOptions {
   to: string;
   subject: string;
   html: string;
+  text?: string;
 }
 
-export async function sendEmail({ to, subject, html }: SendEmailOptions) {
+export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     throw new Error("RESEND_API_KEY is not defined in the environment variables");
   }
 
-  // Use the verified domain address if configured, or fallback to onboarding@resend.dev for testing.
-  // Note: onboarding@resend.dev can only send to the email address that created the Resend account.
-  const fromAddress = "CiviCheck <noreply@civicheck.abrdns.com>";
+  // The address must use a sending domain verified in this Resend account.
+  // Keep the existing sender until a replacement is explicitly configured.
+  const fromAddress =
+    process.env.RESEND_FROM_EMAIL?.trim() ||
+    "CiviCheck <noreply@civicheck.abrdns.com>";
+  const replyTo = process.env.RESEND_REPLY_TO?.trim() || undefined;
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -25,6 +29,8 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions) {
       to,
       subject,
       html,
+      text,
+      reply_to: replyTo,
     }),
   });
 

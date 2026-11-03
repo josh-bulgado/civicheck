@@ -73,7 +73,11 @@ QR-verification only — the CCRO cashier handles the actual transaction.
    | `SUPABASE_PUBLISHABLE_KEY` | Supabase publishable (anon) key |
    | `SUPABASE_SECRET_KEY` | Supabase service-role/secret key |
    | `RESEND_API_KEY` | API key for transactional email notifications |
+   | `RESEND_FROM_EMAIL` | Optional sender, e.g. `CiviCheck <accounts@your-verified-domain.example>`; defaults to the existing CiviCheck sender |
+   | `RESEND_REPLY_TO` | Optional monitored mailbox for replies; omit until that mailbox exists |
    | `APP_URL` | Base URL of the app (used in emails, redirects, etc.) |
+
+   For Gmail bounces, see [email delivery investigation and recovery](docs/email-deliverability.md).
 
 3. Apply database migrations to your Supabase project (see `supabase/migrations`):
 
