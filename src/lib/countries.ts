@@ -1,4 +1,6 @@
-import countries from "i18n-iso-countries";
+// The package's Node entry dynamically requires every locale, which Nitro
+// cannot trace into the server bundle. Import the locale-neutral core instead.
+import countries from "i18n-iso-countries/index";
 import english from "i18n-iso-countries/langs/en.json";
 
 countries.registerLocale(english);
