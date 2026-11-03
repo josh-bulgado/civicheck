@@ -1,16 +1,31 @@
 import { createServerFn } from "@tanstack/react-start";
+import { strongPasswordSchema } from "~/features/auth/auth.schema";
+import { describeWeakPassword } from "~/features/auth/password-error";
+import { NO_SUFFIX, SUFFIXES } from "~/lib/subject-fields";
 import { requireActiveSession } from "~/server/auth";
+import { AVATAR_BUCKET, forgetAvatarUrl } from "~/server/avatar";
+import { allowAttempt, RATE_LIMITS, TOO_MANY_ATTEMPTS } from "~/server/rate-limit";
 import { getSupabaseStatelessClient } from "~/utils/supabase";
+import { recordPasswordChanged } from "./account-audit.server";
 
 type UpdateProfileInput = {
   firstName: string;
   middleName: string;
+  /**
+   * Sent by the settings form, which asks the question. Leaving it out keeps
+   * the stored answer and skips the check below.
+   */
+  hasNoMiddleName?: boolean;
   lastName: string;
   suffix: string;
   dateOfBirth: string;
   sex: "" | "male" | "female";
   phoneNumber: string;
 };
+
+const SUFFIX_VALUES: string[] = SUFFIXES.filter(
+  (suffix) => suffix.value !== NO_SUFFIX,
+).map((suffix) => suffix.value);
 
 function nullIfBlank(value: string) {
   const trimmed = value.trim();
@@ -26,6 +41,29 @@ export const updateMyProfileFn = createServerFn({ method: "POST" })
     const lastName = data.lastName.trim();
     if (!firstName || !lastName) {
       return { error: true, message: "First name and last name are required." };
+    }
+
+    // Same rule as signup: a middle name is given or declared absent, never
+    // both and never neither, so a blank field is not mistaken for "none".
+    const middleName = data.middleName.trim();
+    if (data.hasNoMiddleName !== undefined) {
+      if (data.hasNoMiddleName && middleName) {
+        return {
+          error: true,
+          message: "Clear the middle name or untick the box.",
+        };
+      }
+      if (!data.hasNoMiddleName && !middleName) {
+        return {
+          error: true,
+          message:
+            "Enter your middle name, or tick the box if you don't have one.",
+        };
+      }
+    }
+
+    if (data.suffix && !SUFFIX_VALUES.includes(data.suffix)) {
+      return { error: true, message: "Choose a suffix from the list." };
     }
 
     const phoneNumber = data.phoneNumber.trim();
@@ -61,7 +99,13 @@ export const updateMyProfileFn = createServerFn({ method: "POST" })
       .from("profiles")
       .update({
         first_name: firstName,
-        middle_name: nullIfBlank(data.middleName),
+        middle_name: nullIfBlank(middleName),
+        // Giving a middle name withdraws any earlier "I don't have one".
+        ...(data.hasNoMiddleName !== undefined
+          ? { has_no_middle_name: data.hasNoMiddleName }
+          : middleName
+            ? { has_no_middle_name: false }
+            : {}),
         last_name: lastName,
         suffix: nullIfBlank(data.suffix),
         date_of_birth: nullIfBlank(dateOfBirth),
@@ -96,12 +140,15 @@ export const changeMyPasswordFn = createServerFn({ method: "POST" })
       };
     }
 
-    if (data.newPassword.length < 8 || !/\d/.test(data.newPassword)) {
-      return {
-        error: true,
-        message:
-          "Your new password must be at least 8 characters and include a number.",
-      };
+    const rules = strongPasswordSchema.safeParse(data.newPassword);
+    if (!rules.success) {
+      return { error: true, message: rules.error.issues[0].message };
+    }
+
+    // The same per-account budget as signing in: a borrowed session must not
+    // become a way to guess the account's password.
+    if (!(await allowAttempt("sign-in:email", user.email, RATE_LIMITS.signInPerEmail))) {
+      return { error: true, message: TOO_MANY_ATTEMPTS };
     }
 
     // Confirm the current password on a stateless client. Signing in on the
@@ -118,7 +165,11 @@ export const changeMyPasswordFn = createServerFn({ method: "POST" })
       return { error: true, message: "Your current password is incorrect." };
     }
 
-    const { error } = await supabase.auth.updateUser({
+    // The new password is set through the session that just proved the old
+    // one. With Supabase's "secure password change" on, a session older than a
+    // day can't change the password without reauthenticating, and the one the
+    // user is browsing with may well be that old.
+    const { error } = await verifier.auth.updateUser({
       password: data.newPassword,
     });
 
@@ -135,11 +186,108 @@ export const changeMyPasswordFn = createServerFn({ method: "POST" })
       const isJsonEmpty = error.message === "{}" || !error.message;
       return {
         error: true,
-        message: isJsonEmpty
-          ? "An unexpected error occurred while updating your password."
-          : error.message,
+        message:
+          describeWeakPassword(error) ??
+          (isJsonEmpty
+            ? "An unexpected error occurred while updating your password."
+            : error.message),
       };
     }
 
+    // Whoever else holds a session on this account (a shared office PC, a
+    // device that was lost) is signed out. This session stays.
+    const { error: signOutError } = await supabase.auth.signOut({
+      scope: "others",
+    });
+    if (signOutError) {
+      console.error("Other sessions could not be signed out", signOutError);
+    }
+
+    await recordPasswordChanged(user.id);
+
     return { error: false, message: "Password updated." };
   });
+
+const AVATAR_FILE = /^[A-Za-z0-9_-]+\.(?:jpg|png|webp)$/;
+
+/**
+ * Points the profile at a photo the browser has already uploaded to its own
+ * folder, then deletes the one it replaces. The upload itself goes straight to
+ * storage under the bucket's per-user policies; this is where it becomes the
+ * person's photo.
+ */
+export const setMyAvatarFn = createServerFn({ method: "POST" })
+  .validator((d: { path: string }) => d)
+  .handler(async ({ data }) => {
+    const { supabase, user } = await requireActiveSession();
+
+    const [folder, file, ...rest] = data.path.split("/");
+    if (folder !== user.id || !file || rest.length || !AVATAR_FILE.test(file)) {
+      return { error: true, message: "That photo could not be used." };
+    }
+
+    // The path must be a file that is really there, not just a plausible name.
+    const { data: found, error: lookupError } = await supabase.storage
+      .from(AVATAR_BUCKET)
+      .list(user.id, { search: file, limit: 10 });
+    if (lookupError || !found?.some((entry) => entry.name === file)) {
+      return { error: true, message: "The photo did not finish uploading." };
+    }
+
+    const { data: current } = await supabase
+      .from("profiles")
+      .select("avatar_path")
+      .eq("id", user.id)
+      .single();
+    const previous = current?.avatar_path as string | null | undefined;
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ avatar_path: data.path, updated_at: new Date().toISOString() })
+      .eq("id", user.id);
+    if (error) {
+      // The upload is orphaned if it can't be attached, so clean it up.
+      await supabase.storage.from(AVATAR_BUCKET).remove([data.path]);
+      return {
+        error: true,
+        message: "An unexpected error occurred while saving your photo.",
+      };
+    }
+
+    if (previous && previous !== data.path) {
+      await supabase.storage.from(AVATAR_BUCKET).remove([previous]);
+      forgetAvatarUrl(previous);
+    }
+
+    return { error: false, message: "Profile photo updated." };
+  });
+
+export const removeMyAvatarFn = createServerFn({ method: "POST" }).handler(
+  async () => {
+    const { supabase, user } = await requireActiveSession();
+
+    const { data: current } = await supabase
+      .from("profiles")
+      .select("avatar_path")
+      .eq("id", user.id)
+      .single();
+    const previous = current?.avatar_path as string | null | undefined;
+    if (!previous) return { error: false, message: "Profile photo removed." };
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ avatar_path: null, updated_at: new Date().toISOString() })
+      .eq("id", user.id);
+    if (error) {
+      return {
+        error: true,
+        message: "An unexpected error occurred while removing your photo.",
+      };
+    }
+
+    await supabase.storage.from(AVATAR_BUCKET).remove([previous]);
+    forgetAvatarUrl(previous);
+
+    return { error: false, message: "Profile photo removed." };
+  },
+);

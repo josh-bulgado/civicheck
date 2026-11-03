@@ -1,4 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
+import { isClosedRequestStatus } from "~/features/requests/document-review";
+import {
+  allowAttempt,
+  getClientIp,
+  RATE_LIMITS,
+  TOO_MANY_ATTEMPTS,
+} from "~/server/rate-limit";
 import { getSupabaseAdminClient } from "~/utils/supabase";
 
 const NOT_FOUND_MESSAGE =
@@ -15,6 +22,7 @@ const MAX_SIZE = 10 * 1024 * 1024;
  * reveal whether the tracking number exists but the name didn't match.
  */
 async function verifyTrackingAccess(trackingNumberRaw: string, lastNameRaw: string) {
+  if (typeof trackingNumberRaw !== "string" || typeof lastNameRaw !== "string") return null;
   const trackingNumber = trackingNumberRaw.trim().toUpperCase();
   const lastName = lastNameRaw.trim().toLowerCase();
   if (!trackingNumber || !lastName) return null;
@@ -43,7 +51,11 @@ export const trackRequestFn = createServerFn({ method: "POST" })
     // Public, unauthenticated lookup — intentionally crosses the normal
     // "applicants can only see their own requests" RLS boundary, so the
     // admin client is used deliberately here. The tracking number alone is
-    // guessable at scale, so last name is required as a second factor.
+    // guessable at scale, so last name is required as a second factor, and
+    // each visitor gets a bounded number of guesses at the pair.
+    if (!(await allowAttempt("tracking:ip", getClientIp(), RATE_LIMITS.trackingPerIp))) {
+      return { error: true, message: TOO_MANY_ATTEMPTS };
+    }
     const verified = await verifyTrackingAccess(data.trackingNumber, data.lastName);
     if (!verified) return { error: true, message: NOT_FOUND_MESSAGE };
     const { supabase, request } = verified;
@@ -93,6 +105,9 @@ export const resubmitAttachmentFn = createServerFn({ method: "POST" })
     return { file, attachmentId, trackingNumber, lastName };
   })
   .handler(async ({ data }) => {
+    if (!(await allowAttempt("tracking:ip", getClientIp(), RATE_LIMITS.trackingPerIp))) {
+      return { error: true, message: TOO_MANY_ATTEMPTS };
+    }
     const verified = await verifyTrackingAccess(data.trackingNumber, data.lastName);
     if (!verified) return { error: true, message: NOT_FOUND_MESSAGE };
     const { supabase, request } = verified;
@@ -106,6 +121,9 @@ export const resubmitAttachmentFn = createServerFn({ method: "POST" })
 
     if (attachmentError || !attachment) {
       return { error: true, message: NOT_FOUND_MESSAGE };
+    }
+    if (isClosedRequestStatus(request.status)) {
+      return { error: true, message: "This request is closed. Its documents can no longer change." };
     }
     if (attachment.verification_status !== "rejected") {
       return { error: true, message: "Only a rejected document can be resubmitted." };
@@ -129,7 +147,9 @@ export const resubmitAttachmentFn = createServerFn({ method: "POST" })
       return { error: true, message: uploadError.message };
     }
 
-    const { error: updateError } = await supabase
+    // Only while the document is still the rejected one we read, same as the
+    // signed-in resubmit.
+    const { data: updated, error: updateError } = await supabase
       .from("requirements_attachments")
       .update({
         file_url: path,
@@ -137,13 +157,20 @@ export const resubmitAttachmentFn = createServerFn({ method: "POST" })
         rejection_reason: null,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", attachment.id);
-    if (updateError) {
+      .eq("id", attachment.id)
+      .eq("verification_status", "rejected")
+      .select("id");
+    if (updateError || !updated?.length) {
       await supabase.storage.from("request-documents").remove([path]);
-      return { error: true, message: updateError.message };
+      return {
+        error: true,
+        message: updateError?.message ?? "This document changed while you were uploading. Refresh and try again.",
+      };
     }
 
-    if (attachment.file_url !== path) {
+    // The service role can delete any file, so only ever one from this
+    // request's own folder.
+    if (attachment.file_url !== path && attachment.file_url.startsWith(`${ownerFolder}/`)) {
       const { error: oldFileError } = await supabase.storage
         .from("request-documents")
         .remove([attachment.file_url]);

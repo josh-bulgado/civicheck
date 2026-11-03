@@ -11,14 +11,24 @@ import { createServerFn } from "@tanstack/react-start";
 import * as React from "react";
 import { DefaultCatchBoundary } from "../components/DefaultCatchBoundary";
 import { NotFound } from "../components/NotFound";
+import { ThemeScope } from "~/components/theme-scope";
+import { OfflineBanner } from "~/components/errors/OfflineBanner";
 import appCss from "../styles/app.css?url";
+// Link public-page styles explicitly so they are present on the first server render.
+import landingCss from "../features/landing/landing.css?url";
+import publicPagesCss from "../styles/public-pages.css?url";
 import { seo } from "../utils/seo";
-import { getSupabaseServerClient } from "../utils/supabase";
+import {
+  clearSessionScope,
+  getSupabaseServerClient,
+  limitSessionToBrowser,
+} from "../utils/supabase";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import type { AccountProfile } from "~/features/account/account.types";
-import type { AccountStatus, Role } from "~/lib/permissions";
-import { getVerifiedSessionUser } from "~/server/auth";
+import { isInternalRole, type AccountStatus, type Role } from "~/lib/permissions";
+import { getVerifiedSessionUser, isSessionRevoked } from "~/server/auth";
+import { getAvatarUrl } from "~/server/avatar";
 import { loadCurrentUser } from "~/features/auth/current-user";
 
 const PUBLIC_ROUTES = new Set([
@@ -44,13 +54,40 @@ const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
   }
 
   // Fetch role and personal details from profiles table
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select(
-      "role, first_name, middle_name, last_name, suffix, date_of_birth, sex, phone_number, access_status, created_at, last_login_at",
+      "role, first_name, middle_name, has_no_middle_name, last_name, suffix, date_of_birth, sex, phone_number, access_status, sessions_revoked_at, created_at, last_login_at, welcome_tutorial_seen, avatar_path",
     )
     .eq("id", user.id)
     .single();
+
+  // Without the profile there is no role, status or name to go on. Filling in
+  // an active applicant with a blank name sent a failed read to onboarding,
+  // where saving failed the same way, and let a suspended account through.
+  if (profileError || !profile) {
+    throw new Error("Your account details could not be loaded.");
+  }
+
+  // An administrator signed this account out: treat it as signed out here and
+  // drop the cookies so the next page load lands on the login screen.
+  if (isSessionRevoked(user, profile?.sessions_revoked_at)) {
+    await supabase.auth.signOut({ scope: "local" });
+    clearSessionScope();
+    return null;
+  }
+
+  // Every way into the app lands here, so this is where a session that belongs
+  // to an internal role is held to the browser's lifetime — including sessions
+  // issued before the rule existed. If that can't be done the session is ended
+  // rather than left long-lived.
+  if (profile?.role && isInternalRole(profile.role as Role)) {
+    const restricted = await limitSessionToBrowser(
+      supabase,
+      user.sessionId ?? user.id,
+    );
+    if (!restricted) return null;
+  }
 
   return {
     id: user.id,
@@ -58,6 +95,7 @@ const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
     role: (profile?.role ?? "applicant") as Role,
     firstName: profile?.first_name ?? "",
     middleName: profile?.middle_name ?? "",
+    hasNoMiddleName: profile?.has_no_middle_name ?? false,
     lastName: profile?.last_name ?? "",
     suffix: profile?.suffix ?? "",
     dateOfBirth: profile?.date_of_birth ?? "",
@@ -66,6 +104,8 @@ const fetchUser = createServerFn({ method: "GET" }).handler(async () => {
     accountStatus: (profile?.access_status ?? "active") as AccountStatus,
     createdAt: profile?.created_at ?? "",
     lastLoginAt: profile?.last_login_at ?? null,
+    welcomeTutorialSeen: profile?.welcome_tutorial_seen ?? false,
+    avatarUrl: await getAvatarUrl(supabase, user.id, profile?.avatar_path),
   } satisfies AccountProfile;
 });
 
@@ -100,6 +140,8 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "stylesheet", href: landingCss },
+      { rel: "stylesheet", href: publicPagesCss },
       {
         rel: "apple-touch-icon",
         sizes: "180x180",
@@ -159,39 +201,16 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { user } = Route.useRouteContext();
-
-  React.useEffect(() => {
-    document.documentElement.classList.remove("dark");
-    document.documentElement.style.colorScheme = "light";
-  }, []);
-
-  // Add in-page console (Eruda) for debugging when the real console is hidden
-  React.useEffect(() => {
-    if (import.meta.env.DEV) {
-      const script = document.createElement("script");
-      script.src = "https://cdn.jsdelivr.net/npm/eruda";
-      script.onload = () => {
-        if ((window as any).eruda) {
-          (window as any).eruda.init();
-        }
-      };
-      document.head.appendChild(script);
-    }
-  }, []);
-
   return (
+    // The `dark` class on <html> is owned by ThemeScope below, for every page.
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{document.documentElement.classList.remove('dark');document.documentElement.style.colorScheme='light'}catch(e){}})()`,
-          }}
-        />
         <HeadContent />
       </head>
       <body suppressHydrationWarning>
+        <ThemeScope />
         <TooltipProvider>{children}</TooltipProvider>
+        <OfflineBanner />
         <Scripts />
       </body>
     </html>

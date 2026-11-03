@@ -42,16 +42,27 @@ const itemVariants = cva(
         default: "border-transparent",
         outline: "border-border",
         muted: "border-transparent bg-muted/50",
+        // A pickable row in a list; render it as a button and set
+        // aria-current="true" on the chosen one.
+        selectable:
+          "border-transparent text-left hover:bg-card aria-[current=true]:border-primary aria-[current=true]:bg-card aria-[current=true]:shadow-xs",
       },
       size: {
         default: "gap-3.5 px-4 py-3.5",
         sm: "gap-2.5 px-3 py-2.5",
         xs: "gap-2 px-2.5 py-2 in-data-[slot=dropdown-menu-content]:p-0",
       },
+      shape: {
+        default: "",
+        pill: "rounded-full",
+        soft: "rounded-xl",
+        split: "rounded-xl",
+      },
     },
     defaultVariants: {
       variant: "default",
       size: "default",
+      shape: "default",
     },
   }
 )
@@ -60,6 +71,7 @@ function Item({
   className,
   variant = "default",
   size = "default",
+  shape = "default",
   render,
   ...props
 }: useRender.ComponentProps<"div"> & VariantProps<typeof itemVariants>) {
@@ -67,7 +79,7 @@ function Item({
     defaultTagName: "div",
     props: mergeProps<"div">(
       {
-        className: cn(itemVariants({ variant, size, className })),
+        className: cn(itemVariants({ variant, size, shape, className })),
       },
       props
     ),
@@ -76,6 +88,7 @@ function Item({
       slot: "item",
       variant,
       size,
+      shape,
     },
   })
 }

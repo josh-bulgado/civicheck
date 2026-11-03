@@ -1,16 +1,17 @@
 import { useState } from "react";
-import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { usePermissions } from "~/hooks/usePermissions";
-import { verifyPaymentFn } from "~/features/requests/requests.mutations";
+import { submitPaymentVerification } from "~/features/requests/verify-payment";
 import { getStatusDetails } from "~/features/requests/request-workflow";
 
 export function PaymentVerificationPanel({
   requestId,
   status,
   feesDue,
+  copies = 1,
   paymentStatus,
   orNumber,
   onVerified,
@@ -18,6 +19,8 @@ export function PaymentVerificationPanel({
   requestId: string;
   status: string;
   feesDue: number;
+  /** Shown beside the fee so the cashier can see what the total covers. */
+  copies?: number;
   paymentStatus: string;
   orNumber: string | null;
   onVerified: () => void;
@@ -27,18 +30,21 @@ export function PaymentVerificationPanel({
   const isReadyForRelease = status === "ready_for_release";
 
   const [value, setValue] = useState("");
+  const [noFeeConfirmed, setNoFeeConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const isFree = feesDue <= 0;
 
   async function handleVerifyPayment() {
     setBusy(true);
     try {
-      const res = await verifyPaymentFn({ data: { requestId, orNumber: value } });
-      if (res.error) {
-        toast.error("Could not verify payment", { description: res.message });
-        return;
-      }
-      toast.success("Payment verified");
+      const recorded = await submitPaymentVerification(
+        isFree
+          ? { requestId, free: true, confirmNoFee: noFeeConfirmed }
+          : { requestId, free: false, orNumber: value },
+      );
+      if (!recorded) return;
       setValue("");
+      setNoFeeConfirmed(false);
       onVerified();
     } finally {
       setBusy(false);
@@ -46,20 +52,50 @@ export function PaymentVerificationPanel({
   }
 
   return (
-    <section className="rounded-xl border border-border bg-white p-6">
+    <section className="rounded-xl border border-border bg-card p-6">
       <h2 className="mb-1 text-lg font-bold text-foreground">Payment</h2>
-      <p className="mb-4 text-sm text-muted-foreground">Fee due: ₱{feesDue.toFixed(2)}</p>
+      <p className="mb-4 text-sm text-muted-foreground">
+        Fee due: ₱{feesDue.toFixed(2)}
+        {copies > 1 ? ` · ${copies} copies` : ""}
+      </p>
 
       {paymentStatus === "verified" ? (
-        <p className="text-sm text-foreground">
-          Verified against OR <span className="font-bold">{orNumber ?? "—"}</span>.
-        </p>
+        isFree ? (
+          <p className="text-sm text-foreground">
+            No fee was due — this request is cleared for release.
+          </p>
+        ) : (
+          <p className="text-sm text-foreground">
+            Verified against OR{" "}
+            <span className="font-bold">{orNumber ?? "—"}</span>.
+          </p>
+        )
       ) : !isReadyForRelease ? (
         <p className="text-sm italic text-muted-foreground">
           Payment can't be collected yet — this request is still{" "}
-          {getStatusDetails(status).label.toLowerCase()}. It needs to be
-          approved for release first.
+          {getStatusDetails(status).label.toLowerCase()}. It needs to be marked
+          ready for release first.
         </p>
+      ) : canCollect && isFree ? (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="no-fee-confirmed"
+              checked={noFeeConfirmed}
+              onCheckedChange={(checked) => setNoFeeConfirmed(checked === true)}
+              className="mt-0.5"
+            />
+            <Label htmlFor="no-fee-confirmed" className="leading-snug">
+              Confirm that no fee is due for this request
+            </Label>
+          </div>
+          <Button
+            disabled={busy || !noFeeConfirmed}
+            onClick={handleVerifyPayment}
+          >
+            Confirm fee-free request
+          </Button>
+        </div>
       ) : canCollect ? (
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-2">
@@ -68,16 +104,21 @@ export function PaymentVerificationPanel({
               id="or-number"
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              placeholder="OR-000123"
+              placeholder="000123"
             />
           </div>
-          <Button disabled={busy || !value.trim()} onClick={handleVerifyPayment}>
+          <Button
+            disabled={busy || !value.trim()}
+            onClick={handleVerifyPayment}
+          >
             Verify payment
           </Button>
         </div>
       ) : (
         <p className="text-sm italic text-muted-foreground">
-          The cashier records payment against the official receipt.
+          {isFree
+            ? "The cashier confirms fee-free requests before release."
+            : "The cashier records payment against the official receipt."}
         </p>
       )}
     </section>

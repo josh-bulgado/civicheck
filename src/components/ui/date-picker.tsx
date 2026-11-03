@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CalendarIcon, X } from "lucide-react";
+import { CalendarIcon, ChevronDownIcon, X } from "lucide-react";
 
 import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
@@ -24,11 +24,21 @@ export type DatePickerProps = {
   placeholder?: string;
   disabled?: boolean;
   invalid?: boolean;
+  /** The glyph at the right of the trigger. Defaults to a chevron. */
+  icon?: "chevron" | "calendar" | "none";
   /** Shows a Clear action — leave off for required fields. */
   clearable?: boolean;
-  size?: "default" | "sm";
+  /** The same scale as Input and SelectTrigger: sm 32px, default 36px, lg 40px. */
+  size?: "default" | "sm" | "lg";
+  shape?: React.ComponentProps<typeof Button>["shape"];
   className?: string;
 };
+
+const triggerSizeClasses = {
+  sm: "h-8 text-xs",
+  default: "h-9",
+  lg: "h-10 px-3",
+} as const;
 
 export function DatePicker({
   id,
@@ -41,7 +51,9 @@ export function DatePicker({
   disabled,
   invalid,
   clearable = true,
-  size = "default",
+  size = "lg",
+  shape = "pill",
+  icon = "chevron",
   className,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
@@ -82,28 +94,41 @@ export function DatePicker({
           <Button
             type="button"
             variant="outline"
+            shape={shape}
             id={id}
             disabled={disabled}
             aria-invalid={invalid}
             className={cn(
-              "w-full justify-start border-input px-2.5 font-normal shadow-xs",
-              size === "sm" ? "h-8 text-xs" : "h-9",
+              // Same surface as Input/SelectTrigger: the outline variant's
+              // bg-background is a tinted gray in light mode, so reset it.
+              "w-full justify-between border-input bg-transparent px-2.5 text-left font-normal shadow-xs",
+              triggerSizeClasses[size],
               !selected && "text-muted-foreground",
               className,
             )}
           />
         }
       >
-        <CalendarIcon
-          className={cn("shrink-0 text-muted-foreground", size === "sm" && "size-3.5")}
-          aria-hidden="true"
-        />
         <span className="truncate">
           {selected ? formatDateKey(value) : placeholder}
         </span>
+        {icon === "calendar" ? (
+          <CalendarIcon
+            data-icon="inline-end"
+            className={cn("text-muted-foreground", size === "sm" && "size-3.5")}
+            aria-hidden="true"
+          />
+        ) : icon === "chevron" ? (
+          <ChevronDownIcon
+            data-icon="inline-end"
+            className={cn("text-muted-foreground", size === "sm" && "size-3.5")}
+            aria-hidden="true"
+          />
+        ) : null}
       </PopoverTrigger>
 
-      <PopoverContent align="start" className="w-auto p-3">
+      {/* Calendar already pads itself, so the popover adds none. */}
+      <PopoverContent align="start" className="w-auto p-0">
         <Calendar
           mode="single"
           captionLayout="dropdown"
@@ -121,7 +146,7 @@ export function DatePicker({
           autoFocus
         />
         {(todayInRange || (clearable && value)) && (
-          <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3">
+          <div className="flex items-center justify-between gap-2 border-t border-border p-3">
             {todayInRange ? (
               <Button
                 type="button"

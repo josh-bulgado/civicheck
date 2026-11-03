@@ -1,72 +1,113 @@
+import { useEffect, useRef, useState } from "react";
 import {
-  ChevronDown,
-  ChevronUp,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type Announcements,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
+  ArrowDown,
+  ArrowUp,
+  Blocks,
+  Copy,
   Eye,
+  GripVertical,
+  MoreHorizontal,
+  Pencil,
   Plus,
   Trash2,
 } from "lucide-react";
-import { Badge } from "~/components/ui/badge";
+import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
-import { Checkbox } from "~/components/ui/checkbox";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "~/components/ui/collapsible";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
+import { Empty, EmptyDescription } from "~/components/ui/empty";
 import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "~/components/ui/field";
-import { Input } from "~/components/ui/input";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
+import { cn } from "~/lib/utils";
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
+  listInsertableBlocksFn,
+  type FormFieldBlockRecord,
+} from "../form-field-block.functions";
+import { detachBlock, insertBlock } from "../form-field-block.utils";
 import type {
   FormFieldDefinition,
-  FormFieldType,
+  FormOption,
   FormStep,
   FormTemplateDefinition,
 } from "../form-template.types";
-
-const FIELD_TYPES: Array<{ value: FormFieldType; label: string }> = [
-  { value: "text", label: "Short text" },
-  { value: "textarea", label: "Long text" },
-  { value: "date", label: "Date" },
-  { value: "phone", label: "Philippine mobile number" },
-  { value: "select", label: "Dropdown" },
-  { value: "person_group", label: "Person name group" },
-];
+import {
+  optionUsage,
+  restoreOption,
+  type ConditionRef,
+} from "../form-option-usage";
+import {
+  EDITOR_ROW_MENU_TRIGGER,
+} from "./EditorSheetParts";
+import { FormFieldInspector } from "./FormFieldInspector";
+import { FIELD_TYPES, FormFieldIcon } from "./form-field-types";
+import {
+  FieldRequiredChip,
+  FieldTypeChip,
+  describeVisibility,
+  fieldsInStep,
+} from "./form-field-summary";
+import { PublishedFormPreviewSheet } from "./PublishedFormPreviewSheet";
 
 const STEPS: Array<{ value: FormStep; label: string }> = [
   { value: "case", label: "Case details" },
   { value: "details", label: "Personal details" },
 ];
 
-function fieldsInStep(definition: FormTemplateDefinition, step: FormStep) {
-  return definition.sections
-    .filter((section) => section.step === step)
-    .flatMap((section) => section.fields);
-}
+const TOOLBAR_BUTTON = "h-9 gap-2 rounded-[10px] px-3.5 text-[13.5px]";
+const HEAD_CELL =
+  "h-auto px-3 py-[11px] text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase";
+const BODY_CELL = "p-2.5";
 
 function withStepFields(
   definition: FormTemplateDefinition,
   step: FormStep,
   fields: FormFieldDefinition[],
 ): FormTemplateDefinition {
-  const firstIndex = definition.sections.findIndex((section) => section.step === step);
+  const firstIndex = definition.sections.findIndex(
+    (section) => section.step === step,
+  );
   if (firstIndex === -1) {
     return {
       ...definition,
       sections: [
         ...definition.sections,
-        { key: step, step, title: step === "case" ? "Case details" : "Your details", fields },
+        {
+          key: step,
+          step,
+          title: step === "case" ? "Case details" : "Your details",
+          fields,
+        },
       ],
     };
   }
@@ -74,58 +115,272 @@ function withStepFields(
   return {
     ...definition,
     sections: definition.sections.map((section, index) =>
-        index === firstIndex
-          ? { ...section, fields }
-          : section.step === step
-            ? { ...section, fields: [] }
-            : section,
-      ),
+      index === firstIndex
+        ? { ...section, fields }
+        : section.step === step
+          ? { ...section, fields: [] }
+          : section,
+    ),
   };
 }
 
+const COPY_SUFFIX = " (copy)";
+
 function nextFieldKey(definition: FormTemplateDefinition) {
-  const used = new Set(definition.sections.flatMap((section) => section.fields.map((field) => field.key)));
+  const used = new Set(
+    definition.sections.flatMap((section) =>
+      section.fields.map((field) => field.key),
+    ),
+  );
   let index = 1;
   while (used.has(`custom_field_${index}`)) index += 1;
   return `custom_field_${index}`;
+}
+
+/**
+ * Keys of the questions whose trigger question sits below them. A question
+ * can only react to an answer the applicant has already given.
+ */
+function misorderedKeys(fields: FormFieldDefinition[]) {
+  const position = new Map(fields.map((field, index) => [field.key, index]));
+  const keys = new Set<string>();
+  fields.forEach((field, index) => {
+    const source = field.visibleWhen
+      ? position.get(field.visibleWhen.field)
+      : undefined;
+    if (source !== undefined && source > index) keys.add(field.key);
+  });
+  return keys;
 }
 
 export function FormTemplateBuilder({
   definition,
   onChange,
   immutableKeys = [],
+  steps: visibleSteps,
+  allowPersonGroup = true,
+  allowSharedBlocks = true,
+  externalConditions,
+  edgeToEdge = false,
+  version = 0,
 }: {
   definition: FormTemplateDefinition;
   onChange: (definition: FormTemplateDefinition) => void;
   immutableKeys?: string[];
+  /** Restrict the editor to some steps (the block editor edits just one). */
+  steps?: FormStep[];
+  /** A shared block can't contain the person name group. */
+  allowPersonGroup?: boolean;
+  /** Hide shared-block insertion (a block can't include other blocks). */
+  allowSharedBlocks?: boolean;
+  /** Conditions outside this form (requirements) that point at its dropdown options. */
+  externalConditions?: readonly ConditionRef[];
+  /**
+   * Each step becomes a divided band that bleeds past the card's side padding
+   * (px-6, sm:px-8), like the service editor's other sections.
+   */
+  edgeToEdge?: boolean;
+  /** The live version, shown in the preview sheet. 0 when unpublished. */
+  version?: number;
 }) {
   const immutableKeySet = new Set(immutableKeys);
+  const fieldTypes = FIELD_TYPES.filter(
+    (type) => allowPersonGroup || type.value !== "person_group",
+  );
+  const stepsToShow = STEPS.filter(
+    (step) => !visibleSteps || visibleSteps.includes(step.value),
+  );
+  const [blocks, setBlocks] = useState<FormFieldBlockRecord[]>([]);
+  const [selected, setSelected] = useState<{
+    step: FormStep;
+    id: string;
+  } | null>(null);
+  const [liveMessage, setLiveMessage] = useState("");
+  const [previewOpen, setPreviewOpen] = useState(false);
+  // The control that opened the inspector sheet, so closing it can hand focus
+  // back there. Null when the sheet opened some other way (Add Field).
+  const openerRef = useRef<HTMLElement | null>(null);
+
+  // Questions have no id of their own and their key is editable, so rows get a
+  // client-only id. It keeps a row's identity (and focus) through key edits and
+  // reordering. Any change this component did not make resets a step's ids.
+  const idCounter = useRef(0);
+  const idsByStep = useRef<Partial<Record<FormStep, string[]>>>({});
+  const latestDefinition = useRef(definition);
+  latestDefinition.current = definition;
+
+  function mintId(step: FormStep) {
+    idCounter.current += 1;
+    return `${step}-row-${idCounter.current}`;
+  }
+
+  function rowIdsFor(step: FormStep, count: number) {
+    const current = idsByStep.current[step];
+    if (current && current.length === count) return current;
+    const next = Array.from({ length: count }, () => mintId(step));
+    idsByStep.current[step] = next;
+    return next;
+  }
+
+  // Shared blocks only power the insert menu and the badge names; the builder
+  // is fully usable without them, so a failed load is not worth an error toast.
+  useEffect(() => {
+    if (!allowSharedBlocks) return;
+    let cancelled = false;
+    listInsertableBlocksFn()
+      .then((loaded) => {
+        if (!cancelled) setBlocks(loaded);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [allowSharedBlocks]);
+
+  const blockNameByKey = new Map(
+    blocks.map((block) => [block.blockKey, block.name]),
+  );
+  const includedBlockKeys = new Set(
+    definition.sections.flatMap((section) =>
+      section.fields.flatMap((field) =>
+        field.blockKey ? [field.blockKey] : [],
+      ),
+    ),
+  );
+
+  function addBlock(block: FormFieldBlockRecord) {
+    const result = insertBlock(definition, block);
+    if (!result.ok) {
+      toast.error("Can't add this shared block.", {
+        description: result.reason,
+      });
+      return;
+    }
+    onChange(result.definition);
+  }
+
+  function detach(blockKey: string) {
+    onChange(detachBlock(definition, blockKey));
+    toast.success("Detached from the shared block.", {
+      description:
+        "These questions are now local to this form and won't change with the block.",
+    });
+  }
 
   function updateField(
     step: FormStep,
     index: number,
     patch: Partial<FormFieldDefinition>,
   ) {
-    const fields = fieldsInStep(definition, step);
+    // Always build from the latest definition: this also runs from toast
+    // actions that were created before later edits.
+    const current = latestDefinition.current;
+    const fields = fieldsInStep(current, step);
     fields[index] = { ...fields[index], ...patch };
-    onChange(withStepFields(definition, step, fields));
+    onChange(withStepFields(current, step, fields));
+  }
+
+  /**
+   * Undo for a removed dropdown option. The field is found by its key in the
+   * latest definition, never by the sheet's selection, so this cannot write
+   * into another field or revert other edits. Returns where the option landed,
+   * or null when the field is gone or is no longer a dropdown.
+   */
+  function restoreDropdownOption(
+    fieldKey: string,
+    index: number,
+    option: FormOption,
+  ): number | null {
+    const current = latestDefinition.current;
+    const target = current.sections
+      .flatMap((section) => section.fields)
+      .find((field) => field.key === fieldKey);
+    if (!target || target.type !== "select") return null;
+    const result = restoreOption(target.options ?? [], index, option);
+    onChange({
+      ...current,
+      sections: current.sections.map((section) => ({
+        ...section,
+        fields: section.fields.map((field) =>
+          field.key === fieldKey
+            ? { ...field, options: result.options }
+            : field,
+        ),
+      })),
+    });
+    return result.index;
   }
 
   function removeField(step: FormStep, index: number) {
-    const fields = fieldsInStep(definition, step);
-    onChange(withStepFields(definition, step, fields.filter((_, fieldIndex) => fieldIndex !== index)));
+    const fields = fieldsInStep(latestDefinition.current, step);
+    const removed = fields[index];
+    if (!removed) return;
+    const ids = rowIdsFor(step, fields.length);
+    const removedId = ids[index];
+    idsByStep.current[step] = ids.filter((_, itemIndex) => itemIndex !== index);
+    setSelected((current) => (current?.id === removedId ? null : current));
+    onChange(
+      withStepFields(
+        latestDefinition.current,
+        step,
+        fields.filter((_, itemIndex) => itemIndex !== index),
+      ),
+    );
+
+    toast(`Removed “${removed.label}”`, {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          const current = fieldsInStep(latestDefinition.current, step);
+          if (current.some((field) => field.key === removed.key)) return;
+          const at = Math.min(index, current.length);
+          const restoredIds = [...rowIdsFor(step, current.length)];
+          restoredIds.splice(at, 0, removedId);
+          idsByStep.current[step] = restoredIds;
+          const restored = [...current];
+          restored.splice(at, 0, removed);
+          onChange(withStepFields(latestDefinition.current, step, restored));
+        },
+      },
+    });
   }
 
-  function moveField(step: FormStep, index: number, direction: -1 | 1) {
+  /** Moves a question, unless that would put it above its own trigger. */
+  function reorderField(step: FormStep, from: number, to: number) {
     const fields = fieldsInStep(definition, step);
-    const target = index + direction;
-    if (target < 0 || target >= fields.length) return;
-    [fields[index], fields[target]] = [fields[target], fields[index]];
-    onChange(withStepFields(definition, step, fields));
+    if (from === to || to < 0 || to >= fields.length) return;
+
+    const next = arrayMove(fields, from, to);
+    const before = misorderedKeys(fields);
+    const introduced = [...misorderedKeys(next)].filter(
+      (key) => !before.has(key),
+    );
+    if (introduced.length > 0) {
+      const dependent = next.find((field) => field.key === introduced[0]);
+      const source = next.find(
+        (field) => field.key === dependent?.visibleWhen?.field,
+      );
+      const message = `“${dependent?.label}” only appears after “${source?.label}” is answered, so “${source?.label}” has to stay above it.`;
+      toast.error("That question can't go there.", { description: message });
+      setLiveMessage(message);
+      return;
+    }
+
+    idsByStep.current[step] = arrayMove(
+      rowIdsFor(step, fields.length),
+      from,
+      to,
+    );
+    onChange(withStepFields(definition, step, next));
+    setLiveMessage(
+      `Moved ${fields[from].label} to position ${to + 1} of ${fields.length}.`,
+    );
   }
 
-  function addField(step: FormStep) {
+  function addField(step: FormStep, opener: HTMLElement | null) {
     const fields = fieldsInStep(definition, step);
+    const id = mintId(step);
+    idsByStep.current[step] = [...rowIdsFor(step, fields.length), id];
     onChange(
       withStepFields(definition, step, [
         ...fields,
@@ -137,390 +392,540 @@ export function FormTemplateBuilder({
         },
       ]),
     );
+    // Closing returns focus to the Add Field button; Safari does not focus a
+    // button on click, so the library would otherwise drop focus to <body>.
+    openerRef.current = opener;
+    setSelected({ step, id });
   }
 
+  function duplicateField(step: FormStep, index: number) {
+    const current = latestDefinition.current;
+    const fields = fieldsInStep(current, step);
+    const source = fields[index];
+    if (!source || source.blockKey || source.type === "person_group") return;
+
+    // Deep copy so editing the copy (options, visibility) never touches the
+    // original. A copy is always a local question, never a shared-block member.
+    const copy = structuredClone(source);
+    delete copy.blockKey;
+    copy.key = nextFieldKey(current);
+    copy.label = `${source.label.slice(0, 160 - COPY_SUFFIX.length)}${COPY_SUFFIX}`;
+
+    const ids = rowIdsFor(step, fields.length);
+    idsByStep.current[step] = [
+      ...ids.slice(0, index + 1),
+      mintId(step),
+      ...ids.slice(index + 1),
+    ];
+    onChange(
+      withStepFields(current, step, [
+        ...fields.slice(0, index + 1),
+        copy,
+        ...fields.slice(index + 1),
+      ]),
+    );
+    setLiveMessage(
+      `Duplicated ${source.label}. The copy is at position ${index + 2} of ${fields.length + 1}.`,
+    );
+  }
+
+  function openField(step: FormStep, id: string, opener: HTMLElement | null) {
+    openerRef.current = opener;
+    setSelected({ step, id });
+  }
+
+  function handleInspectorOpenChange(open: boolean) {
+    if (open) return;
+    setSelected(null);
+    const opener = openerRef.current;
+    openerRef.current = null;
+    if (!opener) return;
+    // Base UI only returns focus to whatever was focused when the sheet
+    // mounted. That is wrong for the row menu (the menu item is gone by then)
+    // and for Safari, which does not focus a button on click. Wait a frame so
+    // we run after the close has been committed; the library then sees focus
+    // already outside the sheet and leaves it alone.
+    requestAnimationFrame(() => {
+      if (opener.isConnected) opener.focus({ preventScroll: true });
+    });
+  }
+
+  const selectedFields = selected
+    ? fieldsInStep(definition, selected.step)
+    : [];
+  const selectedIndex = selected
+    ? rowIdsFor(selected.step, selectedFields.length).indexOf(selected.id)
+    : -1;
+  const selectedField =
+    selectedIndex >= 0 ? (selectedFields[selectedIndex] ?? null) : null;
+
   return (
-    <div className="flex flex-col gap-5">
-      {STEPS.map((step) => {
+    <div className={cn("flex flex-col", !edgeToEdge && "gap-5")}>
+      <p role="status" aria-live="polite" className="sr-only">
+        {liveMessage}
+      </p>
+
+      {stepsToShow.map((step) => {
         const fields = fieldsInStep(definition, step.value);
+        const ids = rowIdsFor(step.value, fields.length);
+        const stepBlocks = allowSharedBlocks
+          ? blocks.filter((block) => block.step === step.value)
+          : [];
+
         return (
-          <section key={step.value} className="flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex flex-col gap-1">
-                <h3 className="text-sm font-semibold text-foreground">{step.label}</h3>
-                <p className="text-xs text-muted-foreground">
+          <section
+            key={step.value}
+            aria-labelledby={`${step.value}-step-heading`}
+            className={cn(
+              "flex flex-col gap-3.5",
+              edgeToEdge &&
+                "-mx-6 border-t px-6 pt-[22px] pb-6 sm:-mx-8 sm:px-8",
+            )}
+          >
+            <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2.5">
+              <div className="flex flex-col">
+                <h3
+                  id={`${step.value}-step-heading`}
+                  className="text-base font-semibold tracking-tight text-foreground"
+                >
+                  {step.label}
+                </h3>
+                <p className="text-[13px] text-muted-foreground">
                   {fields.length} {fields.length === 1 ? "field" : "fields"}
                 </p>
               </div>
-              <Button type="button" variant="outline" size="sm" onClick={() => addField(step.value)}>
-                <Plus data-icon="inline-start" />
-                Add field
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                {stepBlocks.length > 0 ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      nativeButton
+                      render={
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={TOOLBAR_BUTTON}
+                        />
+                      }
+                    >
+                      <Blocks data-icon="inline-start" />
+                      Insert Shared Block
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" variant="roomy">
+                      <DropdownMenuGroup>
+                        <DropdownMenuLabel className="px-3 pt-2 pb-1 text-xs font-semibold tracking-[0.06em] uppercase">
+                          Shared blocks
+                        </DropdownMenuLabel>
+                        {stepBlocks.map((block) => {
+                          const included = includedBlockKeys.has(
+                            block.blockKey,
+                          );
+                          return (
+                            <DropdownMenuItem
+                              key={block.blockKey}
+                              disabled={included}
+                              onClick={() => addBlock(block)}
+                            >
+                              <Blocks
+                                aria-hidden="true"
+                                className="text-muted-foreground"
+                              />
+                              {block.name}
+                              {included ? (
+                                <span className="ml-auto pl-3 text-xs font-normal text-muted-foreground">
+                                  Already added
+                                </span>
+                              ) : null}
+                            </DropdownMenuItem>
+                          );
+                        })}
+                      </DropdownMenuGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
+                <Button
+                  type="button"
+                  variant="raised"
+                  className={TOOLBAR_BUTTON}
+                  onClick={(event) => addField(step.value, event.currentTarget)}
+                >
+                  <Plus data-icon="inline-start" />
+                  Add Field
+                </Button>
+              </div>
             </div>
 
-            <div className="flex flex-col gap-2">
-              {fields.map((field, index) => (
-                <Collapsible key={`${step.value}-${field.key}-${index}`}>
-                  <div className="rounded-lg border border-border bg-background">
-                    <div className="flex items-center gap-2 p-3">
-                      <CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-2 text-left">
-                        <ChevronDown className="shrink-0" aria-hidden="true" />
-                        <span className="truncate text-sm font-medium">{field.label}</span>
-                        <Badge variant="secondary">{FIELD_TYPES.find((item) => item.value === field.type)?.label}</Badge>
-                        {field.required ? <Badge>Required</Badge> : null}
-                        {field.visibleWhen ? <Badge variant="outline">Conditional</Badge> : null}
-                      </CollapsibleTrigger>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        disabled={index === 0}
-                        onClick={() => moveField(step.value, index, -1)}
-                        aria-label={`Move ${field.label} up`}
-                      >
-                        <ChevronUp />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        disabled={index === fields.length - 1}
-                        onClick={() => moveField(step.value, index, 1)}
-                        aria-label={`Move ${field.label} down`}
-                      >
-                        <ChevronDown />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        disabled={field.type === "person_group"}
-                        onClick={() => removeField(step.value, index)}
-                        aria-label={`Remove ${field.label}`}
-                      >
-                        <Trash2 />
-                      </Button>
-                    </div>
-
-                    <CollapsibleContent className="border-t border-border p-4">
-                      <FieldGroup>
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                          <Field>
-                            <FieldLabel htmlFor={`${step.value}-${index}-label`}>Label</FieldLabel>
-                            <Input
-                              id={`${step.value}-${index}-label`}
-                              value={field.label}
-                              onChange={(event) =>
-                                updateField(step.value, index, { label: event.target.value })
-                              }
-                            />
-                          </Field>
-                          <Field>
-                            <FieldLabel htmlFor={`${step.value}-${index}-key`}>Stable field key</FieldLabel>
-                            <Input
-                              id={`${step.value}-${index}-key`}
-                              value={field.key}
-                              disabled={immutableKeySet.has(field.key)}
-                              onChange={(event) =>
-                                updateField(step.value, index, {
-                                  key: event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"),
-                                })
-                              }
-                            />
-                            <FieldDescription>
-                              {immutableKeySet.has(field.key)
-                                ? "Locked because this key exists in a published version."
-                                : "The key becomes locked after the first publication."}
-                            </FieldDescription>
-                          </Field>
-                          <Field>
-                            <FieldLabel htmlFor={`${step.value}-${index}-type`}>Field type</FieldLabel>
-                            <Select
-                              items={FIELD_TYPES.filter(
-                                (type) =>
-                                  type.value !== "person_group" ||
-                                  field.type === "person_group" ||
-                                  !fields.some((candidate) => candidate.type === "person_group"),
-                              )}
-                              value={field.type}
-                              onValueChange={(value) =>
-                                updateField(step.value, index, {
-                                  type: value as FormFieldType,
-                                  options:
-                                    value === "select"
-                                      ? field.options?.length
-                                        ? field.options
-                                        : [{ value: "option_1", label: "Option 1" }]
-                                      : undefined,
-                                })
-                              }
-                            >
-                              <SelectTrigger id={`${step.value}-${index}-type`} className="w-full">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectGroup>
-                                  {FIELD_TYPES.filter(
-                                    (type) =>
-                                      type.value !== "person_group" ||
-                                      field.type === "person_group" ||
-                                      !fields.some((candidate) => candidate.type === "person_group"),
-                                  ).map((type) => (
-                                    <SelectItem key={type.value} value={type.value}>
-                                      {type.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectGroup>
-                              </SelectContent>
-                            </Select>
-                          </Field>
-                          <Field>
-                            <FieldLabel htmlFor={`${step.value}-${index}-placeholder`}>Placeholder</FieldLabel>
-                            <Input
-                              id={`${step.value}-${index}-placeholder`}
-                              value={field.placeholder ?? ""}
-                              onChange={(event) =>
-                                updateField(step.value, index, { placeholder: event.target.value })
-                              }
-                            />
-                          </Field>
-                        </div>
-
-                        <Field orientation="horizontal">
-                          <Checkbox
-                            id={`${step.value}-${index}-required`}
-                            checked={field.required}
-                            onCheckedChange={(checked) =>
-                              updateField(step.value, index, { required: checked === true })
-                            }
-                          />
-                          <FieldLabel htmlFor={`${step.value}-${index}-required`}>
-                            Applicant must answer this field
-                          </FieldLabel>
-                        </Field>
-
-                        {field.type === "date" ? (
-                          <Field>
-                            <FieldLabel>Date restriction</FieldLabel>
-                            <Select
-                              items={[
-                                { value: "past", label: "Past dates only" },
-                                { value: "future", label: "Future dates only" },
-                                { value: "any", label: "Any date" },
-                              ]}
-                              value={field.dateDirection ?? "any"}
-                              onValueChange={(value) =>
-                                updateField(step.value, index, {
-                                  dateDirection: value as "past" | "future" | "any",
-                                })
-                              }
-                            >
-                              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                              <SelectContent><SelectGroup>
-                                <SelectItem value="past">Past dates only</SelectItem>
-                                <SelectItem value="future">Future dates only</SelectItem>
-                                <SelectItem value="any">Any date</SelectItem>
-                              </SelectGroup></SelectContent>
-                            </Select>
-                          </Field>
-                        ) : null}
-
-                        {field.type === "select" ? (
-                          <div className="flex flex-col gap-2">
-                            <FieldLabel>Dropdown options</FieldLabel>
-                            {(field.options ?? []).map((option, optionIndex) => (
-                              <div key={`${option.value}-${optionIndex}`} className="grid grid-cols-[1fr_1fr_auto] gap-2">
-                                <Input
-                                  value={option.value}
-                                  aria-label={`Option ${optionIndex + 1} value`}
-                                  onChange={(event) => {
-                                    const options = [...(field.options ?? [])];
-                                    options[optionIndex] = { ...option, value: event.target.value };
-                                    updateField(step.value, index, { options });
-                                  }}
-                                />
-                                <Input
-                                  value={option.label}
-                                  aria-label={`Option ${optionIndex + 1} label`}
-                                  onChange={(event) => {
-                                    const options = [...(field.options ?? [])];
-                                    options[optionIndex] = { ...option, label: event.target.value };
-                                    updateField(step.value, index, { options });
-                                  }}
-                                />
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon-sm"
-                                  onClick={() =>
-                                    updateField(step.value, index, {
-                                      options: (field.options ?? []).filter((_, itemIndex) => itemIndex !== optionIndex),
-                                    })
-                                  }
-                                  aria-label={`Remove option ${optionIndex + 1}`}
-                                >
-                                  <Trash2 />
-                                </Button>
-                              </div>
-                            ))}
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="self-start"
-                              onClick={() =>
-                                updateField(step.value, index, {
-                                  options: [
-                                    ...(field.options ?? []),
-                                    { value: `option_${(field.options?.length ?? 0) + 1}`, label: `Option ${(field.options?.length ?? 0) + 1}` },
-                                  ],
-                                })
-                              }
-                            >
-                              <Plus data-icon="inline-start" /> Add option
-                            </Button>
-                          </div>
-                        ) : null}
-
-                        {field.visibleWhen ? (
-                          <FieldGroup className="gap-3 rounded-lg border border-border p-3">
-                            <div>
-                              <p className="text-sm font-semibold text-foreground">
-                                Conditional visibility
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                Reveal this question only after the applicant selects the matching answer.
-                              </p>
-                            </div>
-                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                            <Field>
-                              <FieldLabel>Earlier question</FieldLabel>
-                              <Select
-                                items={fields.slice(0, index).filter((candidate) => candidate.type === "select").map((candidate) => ({ value: candidate.key, label: candidate.label }))}
-                                value={field.visibleWhen.field}
-                                onValueChange={(value) => {
-                                  const source = fields.find((candidate) => candidate.key === value);
-                                  updateField(step.value, index, {
-                                    visibleWhen: {
-                                      ...field.visibleWhen!,
-                                      field: value ?? "",
-                                      value: source?.options?.[0]?.value ?? "",
-                                    },
-                                  });
-                                }}
-                              >
-                                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                                <SelectContent><SelectGroup>
-                                  {fields.slice(0, index).filter((candidate) => candidate.type === "select").map((candidate) => (
-                                    <SelectItem key={candidate.key} value={candidate.key}>{candidate.label}</SelectItem>
-                                  ))}
-                                </SelectGroup></SelectContent>
-                              </Select>
-                            </Field>
-                            <Field>
-                              <FieldLabel>Comparison</FieldLabel>
-                              <Select
-                                items={[{ value: "equals", label: "Equals" }, { value: "not_equals", label: "Does not equal" }]}
-                                value={field.visibleWhen.operator}
-                                onValueChange={(value) => updateField(step.value, index, { visibleWhen: { ...field.visibleWhen!, operator: value as "equals" | "not_equals" } })}
-                              >
-                                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                                <SelectContent><SelectGroup>
-                                  <SelectItem value="equals">Equals</SelectItem>
-                                  <SelectItem value="not_equals">Does not equal</SelectItem>
-                                </SelectGroup></SelectContent>
-                              </Select>
-                            </Field>
-                            <Field>
-                              <FieldLabel>Selected answer</FieldLabel>
-                              {fields.find((candidate) => candidate.key === field.visibleWhen?.field)?.options?.length ? (
-                                <Select
-                                  value={field.visibleWhen.value}
-                                  onValueChange={(value) =>
-                                    updateField(step.value, index, {
-                                      visibleWhen: { ...field.visibleWhen!, value: value ?? "" },
-                                    })
-                                  }
-                                >
-                                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                                  <SelectContent><SelectGroup>
-                                    {fields.find((candidate) => candidate.key === field.visibleWhen?.field)?.options?.map((option) => (
-                                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                                    ))}
-                                  </SelectGroup></SelectContent>
-                                </Select>
-                              ) : (
-                                <Input
-                                  value={field.visibleWhen.value}
-                                  onChange={(event) => updateField(step.value, index, { visibleWhen: { ...field.visibleWhen!, value: event.target.value } })}
-                                />
-                              )}
-                            </Field>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="self-start"
-                              onClick={() => updateField(step.value, index, { visibleWhen: undefined })}
-                            >
-                              Remove condition
-                            </Button>
-                          </FieldGroup>
-                        ) : fields.slice(0, index).some(
-                            (candidate) => candidate.type === "select",
-                          ) && field.type !== "person_group" ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="self-start"
-                            onClick={() => {
-                              const source = fields.slice(0, index).find((candidate) => candidate.type === "select")!;
-                              updateField(step.value, index, {
-                                visibleWhen: {
-                                  field: source.key,
-                                  operator: "equals",
-                                  value: source.options?.[0]?.value ?? "",
-                                },
-                              });
-                            }}
-                          >
-                            Show this question conditionally
-                          </Button>
-                        ) : null}
-                      </FieldGroup>
-                    </CollapsibleContent>
-                  </div>
-                </Collapsible>
-              ))}
-            </div>
+            {fields.length === 0 ? (
+              <Empty className="border border-dashed border-border py-6">
+                <EmptyDescription>
+                  No questions in this step yet. Add a field to start.
+                </EmptyDescription>
+              </Empty>
+            ) : (
+              <StepFieldTable
+                stepLabel={step.label}
+                step={step.value}
+                fields={fields}
+                ids={ids}
+                selectedId={selected?.step === step.value ? selected.id : null}
+                blockNameByKey={blockNameByKey}
+                onOpen={(id, opener) => openField(step.value, id, opener)}
+                onReorder={(from, to) => reorderField(step.value, from, to)}
+                onDuplicate={(index) => duplicateField(step.value, index)}
+                onRemove={(index) => removeField(step.value, index)}
+              />
+            )}
           </section>
         );
       })}
 
-      <Collapsible>
-        <CollapsibleTrigger className="flex items-center gap-2 text-sm font-semibold text-primary">
-          <Eye aria-hidden="true" /> Preview published form structure
-        </CollapsibleTrigger>
-        <CollapsibleContent className="pt-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {STEPS.map((step) => (
-              <div key={step.value} className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-4">
-                <p className="text-sm font-semibold">{step.label}</p>
-                {fieldsInStep(definition, step.value).map((field) => (
-                  <div key={field.key} className="flex items-center justify-between gap-2 text-xs">
-                    <span>{field.label}</span>
-                    <span className="text-muted-foreground">
-                      {field.required ? "Required" : "Optional"}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
+      <FormFieldInspector
+        open={selectedField !== null}
+        onOpenChange={handleInspectorOpenChange}
+        field={selectedField}
+        fieldId={selected?.id}
+        fields={selectedFields}
+        index={selectedIndex}
+        fieldTypes={fieldTypes}
+        immutableKeys={immutableKeySet}
+        blockNameByKey={blockNameByKey}
+        onUpdate={(patch) => {
+          if (selected && selectedIndex >= 0) {
+            updateField(selected.step, selectedIndex, patch);
+          }
+        }}
+        onDetach={detach}
+        onRestoreOption={restoreDropdownOption}
+        optionUsageFor={(fieldKey, value) =>
+          optionUsage(definition, fieldKey, value, externalConditions)
+        }
+      />
+
+      <div
+        className={cn(
+          "flex",
+          edgeToEdge && "-mx-6 border-t px-6 pt-[22px] sm:-mx-8 sm:px-8",
+        )}
+      >
+        <button
+          type="button"
+          onClick={() => setPreviewOpen(true)}
+          className="flex min-h-10 items-center gap-2 rounded-[10px] px-1 font-semibold text-primary outline-none hover:underline hover:underline-offset-4 focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <Eye aria-hidden="true" className="size-[18px]" />
+          Preview Published Form Structure
+        </button>
+      </div>
+
+      <PublishedFormPreviewSheet
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        definition={definition}
+        steps={stepsToShow}
+        version={version}
+      />
     </div>
+  );
+}
+
+function StepFieldTable({
+  stepLabel,
+  step,
+  fields,
+  ids,
+  selectedId,
+  blockNameByKey,
+  onOpen,
+  onReorder,
+  onDuplicate,
+  onRemove,
+}: {
+  stepLabel: string;
+  step: FormStep;
+  fields: FormFieldDefinition[];
+  ids: string[];
+  selectedId: string | null;
+  blockNameByKey: Map<string, string>;
+  onOpen: (id: string, opener: HTMLElement | null) => void;
+  onReorder: (from: number, to: number) => void;
+  onDuplicate: (index: number) => void;
+  onRemove: (index: number) => void;
+}) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const labelOf = (id: string | number) =>
+    fields[ids.indexOf(String(id))]?.label ?? "Question";
+  const positionOf = (id: string | number) => ids.indexOf(String(id)) + 1;
+  const announcements: Announcements = {
+    onDragStart: ({ active }) =>
+      `Picked up ${labelOf(active.id)}, position ${positionOf(active.id)} of ${fields.length}.`,
+    onDragOver: ({ active, over }) =>
+      over
+        ? `${labelOf(active.id)} is over position ${positionOf(over.id)} of ${fields.length}.`
+        : undefined,
+    onDragEnd: ({ active, over }) =>
+      over
+        ? `Dropped ${labelOf(active.id)} at position ${positionOf(over.id)} of ${fields.length}.`
+        : `Dropped ${labelOf(active.id)}.`,
+    onDragCancel: ({ active }) =>
+      `Reordering cancelled. ${labelOf(active.id)} stays at position ${positionOf(active.id)}.`,
+  };
+
+  function handleDragEnd({ active, over }: DragEndEvent) {
+    if (!over || active.id === over.id) return;
+    onReorder(ids.indexOf(String(active.id)), ids.indexOf(String(over.id)));
+  }
+
+  return (
+    <DndContext
+      id={`fields-${step}`}
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+      accessibility={{ announcements }}
+    >
+      <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+        <div className="overflow-hidden rounded-2xl border border-border-strong">
+          <Table aria-label={`${stepLabel} questions`}>
+            <TableHeader className="bg-surface-subtle">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className={cn(HEAD_CELL, "w-9 pr-0")}>
+                  <span className="sr-only">Reorder</span>
+                </TableHead>
+                <TableHead className={HEAD_CELL}>Question</TableHead>
+                <TableHead className={cn(HEAD_CELL, "hidden md:table-cell")}>
+                  Key
+                </TableHead>
+                <TableHead className={cn(HEAD_CELL, "hidden sm:table-cell")}>
+                  Type
+                </TableHead>
+                <TableHead className={HEAD_CELL}>Required</TableHead>
+                <TableHead className={cn(HEAD_CELL, "hidden lg:table-cell")}>
+                  Visibility
+                </TableHead>
+                <TableHead className={cn(HEAD_CELL, "w-[52px]")}>
+                  <span className="sr-only">Actions</span>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {fields.map((field, index) => (
+                <FieldRow
+                  key={ids[index]}
+                  id={ids[index]}
+                  field={field}
+                  fields={fields}
+                  index={index}
+                  selected={ids[index] === selectedId}
+                  blockName={
+                    field.blockKey
+                      ? (blockNameByKey.get(field.blockKey) ?? field.blockKey)
+                      : null
+                  }
+                  onOpen={(opener) => onOpen(ids[index], opener)}
+                  onMoveBy={(direction) => onReorder(index, index + direction)}
+                  onDuplicate={() => onDuplicate(index)}
+                  onRemove={() => onRemove(index)}
+                />
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </SortableContext>
+    </DndContext>
+  );
+}
+
+function FieldRow({
+  id,
+  field,
+  fields,
+  index,
+  selected,
+  blockName,
+  onOpen,
+  onMoveBy,
+  onDuplicate,
+  onRemove,
+}: {
+  id: string;
+  field: FormFieldDefinition;
+  fields: FormFieldDefinition[];
+  index: number;
+  selected: boolean;
+  blockName: string | null;
+  onOpen: (opener: HTMLElement | null) => void;
+  onMoveBy: (direction: -1 | 1) => void;
+  onDuplicate: () => void;
+  onRemove: () => void;
+}) {
+  const nameButtonRef = useRef<HTMLButtonElement>(null);
+  const locked = Boolean(field.blockKey);
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id, disabled: locked });
+  const visibility = describeVisibility(field, fields, index);
+
+  return (
+    <TableRow
+      ref={setNodeRef}
+      data-state={selected ? "selected" : undefined}
+      style={{
+        // Rows only travel vertically; the table owns the horizontal layout.
+        transform: CSS.Translate.toString(
+          transform ? { ...transform, x: 0 } : null,
+        ),
+        transition,
+      }}
+      className={cn(
+        "hover:bg-surface-subtle",
+        isDragging && "relative z-10 bg-background shadow-md",
+      )}
+    >
+      <TableCell className={cn(BODY_CELL, "w-9 pr-0")}>
+        <Button
+          type="button"
+          variant="ghost"
+          ref={setActivatorNodeRef}
+          disabled={locked}
+          title={locked ? "Part of a shared block" : undefined}
+          aria-label={`Reorder ${field.label}`}
+          className="relative h-8 w-6 touch-none cursor-grab rounded-md p-0 text-muted-foreground opacity-55 after:absolute after:-inset-1 hover:bg-transparent hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical aria-hidden="true" className="fill-current" />
+        </Button>
+      </TableCell>
+
+      <TableCell className={cn(BODY_CELL, "p-0 whitespace-normal")}>
+        <button
+          type="button"
+          ref={nameButtonRef}
+          aria-current={selected ? "true" : undefined}
+          onClick={(event) => onOpen(event.currentTarget)}
+          className="group/name flex min-h-11 w-full items-center gap-3 rounded-xl p-2.5 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-[11px] bg-primary-soft text-primary">
+            <FormFieldIcon type={field.type} />
+          </span>
+          <span className="flex min-w-0 flex-col">
+            <span className="text-[14.5px] font-semibold break-words text-foreground underline-offset-[3px] group-hover/name:text-primary group-hover/name:underline">
+              {field.label}
+            </span>
+            {blockName ? (
+              <span className="flex items-center gap-1.5 text-[12.5px] text-muted-foreground">
+                <Blocks aria-hidden="true" className="size-[13px]" />
+                Shared · {blockName}
+              </span>
+            ) : null}
+          </span>
+        </button>
+      </TableCell>
+
+      <TableCell className={cn(BODY_CELL, "hidden md:table-cell")}>
+        <span
+          translate="no"
+          className="font-mono text-[12.5px] text-muted-foreground"
+        >
+          {field.key}
+        </span>
+      </TableCell>
+
+      <TableCell className={cn(BODY_CELL, "hidden sm:table-cell")}>
+        <FieldTypeChip type={field.type} />
+      </TableCell>
+
+      <TableCell className={BODY_CELL}>
+        <FieldRequiredChip required={field.required} />
+      </TableCell>
+
+      <TableCell
+        className={cn(BODY_CELL, "hidden whitespace-normal lg:table-cell")}
+      >
+        {visibility?.misordered ? (
+          <span className="block max-w-64 text-[13px] break-words text-destructive">
+            Depends on a question below: {visibility.text}
+          </span>
+        ) : visibility ? (
+          <span
+            title={`Shown when ${visibility.text}`}
+            className="inline-block max-w-[220px] truncate align-middle text-[13px] font-medium text-primary"
+          >
+            Shown when {visibility.text}
+          </span>
+        ) : (
+          <span className="text-[13px] whitespace-nowrap text-muted-foreground">
+            Always shown
+          </span>
+        )}
+      </TableCell>
+
+      <TableCell className={cn(BODY_CELL, "text-right")}>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            nativeButton
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                className={EDITOR_ROW_MENU_TRIGGER}
+                aria-label={`Actions for ${field.label}`}
+              />
+            }
+          >
+            <MoreHorizontal aria-hidden="true" className="fill-current" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" variant="roomy">
+            <DropdownMenuItem
+              onClick={() => onOpen(nameButtonRef.current)}
+            >
+              <Pencil aria-hidden="true" className="text-muted-foreground" />
+              Edit Question
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={locked || index === 0}
+              onClick={() => onMoveBy(-1)}
+            >
+              <ArrowUp aria-hidden="true" className="text-muted-foreground" />
+              Move Up
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={locked || index === fields.length - 1}
+              onClick={() => onMoveBy(1)}
+            >
+              <ArrowDown aria-hidden="true" className="text-muted-foreground" />
+              Move Down
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={locked || field.type === "person_group"}
+              onClick={onDuplicate}
+            >
+              <Copy aria-hidden="true" className="text-muted-foreground" />
+              Duplicate
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              disabled={locked || field.type === "person_group"}
+              className="text-destructive focus:text-destructive"
+              onClick={onRemove}
+            >
+              <Trash2 aria-hidden="true" />
+              Remove
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
   );
 }

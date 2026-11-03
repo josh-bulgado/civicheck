@@ -1,0 +1,74 @@
+.audit-search {
+  position: relative;
+  width: 330px;
+  max-width: 100%;
+}
+
+.audit-search [data-slot="input"] {
+  padding-inline-start: 40px;
+}
+
+.audit-toolbar [data-slot="select-trigger"] {
+  min-width: 88px;
+  padding-right: 14px;
+  padding-left: 14px;
+}
+
+.audit-events-table {
+  min-width: 1080px;
+}
+
+.audit-events-table time {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.audit-event-date {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.audit-event-time,
+.audit-device-address {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+.audit-source {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: var(--primary-fill);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.audit-source[data-source="system"] {
+  background: #5d6a7c;
+}
+.audit-source[data-source="request"] {
+  background: #65509a;
+}
+
+.audit-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.audit-row-actions [data-slot="button"] {
+  color: var(--body);
+}
+
+@media (max-width: 639px) {
+  .audit-search {
+    width: 100%;
+  }
+}

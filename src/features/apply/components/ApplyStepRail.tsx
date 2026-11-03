@@ -1,6 +1,6 @@
-import { Link } from "@tanstack/react-router";
+import { QuietLink } from "~/components/quiet-link";
 import { Check } from "lucide-react";
-import { CiviCheckIdentity } from "~/components/brand/civic-identity";
+import { cn } from "~/lib/utils";
 
 const STEPS = [
   { step: 1, label: "About your case" },
@@ -22,36 +22,54 @@ function formatSavedAt(updatedAt: string | null) {
 interface ApplyStepRailProps {
   currentStep: 1 | 2 | 3 | 4;
   draftUpdatedAt: string | null;
+  /**
+   * Given when there is a draft worth keeping: the mark then asks what to do
+   * with it instead of leaving. Without it the mark simply goes to the dashboard.
+   */
+  onLeave?: () => void;
 }
 
+/**
+ * The wizard's only chrome above the card: the mark at the left, the four steps
+ * centred, nothing at the right. It sits straight on the gradient ground.
+ */
 export function ApplyStepRail({
   currentStep,
   draftUpdatedAt,
+  onLeave,
 }: ApplyStepRailProps) {
   const savedLabel = formatSavedAt(draftUpdatedAt);
 
   return (
-    <header className="border-b border-border-light bg-white">
-      <div className="flex items-center justify-between gap-4 px-5 py-3 sm:px-8">
-        <div className="flex min-w-0 items-center gap-3">
-          <Link to="/dashboard" aria-label="Back to your dashboard" className="shrink-0">
-            <CiviCheckIdentity compact className="[&>span:last-child]:hidden" />
-          </Link>
-          <span className="hidden text-lg font-bold text-foreground sm:inline">CiviCheck</span>
-          <div className="hidden h-4.5 w-px shrink-0 bg-border-light sm:block" />
-          <span className="truncate text-sm text-muted-foreground">
-            Application draft
-          </span>
-        </div>
-        <div className="flex shrink-0 items-center gap-4.5">
-          {savedLabel && (
-            <span className="hidden text-sm text-muted-foreground sm:inline">{savedLabel}</span>
-          )}
-        </div>
-      </div>
+    <header className="flex flex-col gap-4 px-5 pt-5 pb-4 sm:px-8 md:flex-row md:items-center md:gap-6 md:px-14 md:pt-7 md:pb-6.5">
+      <QuietLink
+        to="/dashboard"
+        aria-label="CiviCheck, back to your dashboard"
+        className="flex shrink-0 items-center gap-2.5 text-foreground md:w-60"
+        onClick={(event) => {
+          // A plain click asks first. Opening it in a new tab (ctrl, cmd, shift)
+          // leaves this page, and the draft, exactly where they are.
+          if (!onLeave || event.ctrlKey || event.metaKey || event.shiftKey) return;
+          event.preventDefault();
+          onLeave();
+        }}
+      >
+        {/* Text stand-in: the official emblem isn't cleared for use yet. */}
+        <span
+          className="flex size-10.5 shrink-0 items-center justify-center rounded-full border-2 border-brand-gold bg-card text-[10px] font-extrabold tracking-[0.02em] text-primary"
+          aria-hidden="true"
+        >
+          CCRO
+        </span>
+        <span className="text-[23px] font-semibold tracking-[-0.02em]">CiviCheck</span>
+      </QuietLink>
 
-      <nav aria-label="Application progress">
-        <ol className="flex items-center gap-2 px-5 py-3 sm:gap-3 sm:px-8">
+      {/* Kept for assistive tech only: the draft-saved status is tracked and
+          announced to screen readers, but not shown on screen. */}
+      {savedLabel && <span className="sr-only">{savedLabel}</span>}
+
+      <nav aria-label="Application progress" className="min-w-0 md:flex-1">
+        <ol className="flex items-center gap-2 md:mx-auto md:max-w-245 md:gap-3.5">
           {STEPS.map(({ step, label }, index) => {
             const isDone = step < currentStep;
             const isCurrent = step === currentStep;
@@ -59,21 +77,23 @@ export function ApplyStepRail({
               <li
                 key={step}
                 aria-current={isCurrent ? "step" : undefined}
-                className="flex flex-1 items-center gap-3 last:flex-initial"
+                className="flex flex-1 items-center gap-2 last:flex-initial md:gap-3.5"
               >
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2.5">
                   <span
-                    className={`flex size-5.5 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-[background-color,color,border-color,transform] duration-300 ease-out motion-reduce:transition-none ${
+                    className={cn(
+                      "flex size-8.5 shrink-0 items-center justify-center rounded-full border-2 text-[15px] font-bold transition-[background-color,color,border-color] duration-300 ease-out motion-reduce:transition-none",
                       isDone
-                        ? "bg-success text-white"
+                        ? "border-success bg-success text-white dark:text-background"
                         : isCurrent
-                          ? "bg-primary text-white scale-110"
-                          : "border border-control-border text-disabled"
-                    }`}
+                          ? "border-primary-fill bg-primary-fill text-white"
+                          : "border-[#b9c7de] dark:border-border-strong bg-card text-muted-foreground",
+                    )}
                   >
                     {isDone ? (
                       <Check
-                        className="civic-enter-scale size-3"
+                        className="civic-enter-scale size-4"
+                        strokeWidth={3}
                         aria-hidden="true"
                       />
                     ) : (
@@ -81,17 +101,15 @@ export function ApplyStepRail({
                     )}
                   </span>
                   {/* Full labels reflow the rail into an overflowing single line
-                      below `sm` — the "Step X of 4" heading inside the wizard
-                      card already carries this text there, so the rail can drop
-                      to circles-and-connectors only instead of duplicating it. */}
+                      below `sm`, so the rail drops to circles-and-connectors
+                      there; the wizard card's title names the step instead. */}
                   <span
-                    className={`sr-only whitespace-nowrap text-sm transition-colors duration-300 motion-reduce:transition-none sm:not-sr-only ${
+                    className={cn(
+                      "sr-only text-[17px] whitespace-nowrap transition-colors duration-300 motion-reduce:transition-none md:not-sr-only",
                       isCurrent
                         ? "font-bold text-foreground"
-                        : isDone
-                          ? "text-body-strong"
-                          : "text-disabled"
-                    }`}
+                        : "font-medium text-muted-foreground",
+                    )}
                   >
                     {label}
                   </span>
@@ -102,12 +120,13 @@ export function ApplyStepRail({
                   // and an overlay scales across it, so nothing reflows.
                   <div
                     aria-hidden="true"
-                    className="relative h-0.75 flex-1 overflow-hidden rounded-full bg-border-light"
+                    className="relative h-0.75 flex-1 overflow-hidden rounded-full bg-[#cfd8e8] dark:bg-border-strong"
                   >
                     <div
-                      className={`absolute inset-0 origin-left rounded-full bg-success transition-transform duration-500 ease-out motion-reduce:transition-none ${
-                        isDone ? "scale-x-100" : "scale-x-0"
-                      }`}
+                      className={cn(
+                        "absolute inset-0 origin-left rounded-full bg-success transition-transform duration-500 ease-out motion-reduce:transition-none",
+                        isDone ? "scale-x-100" : "scale-x-0",
+                      )}
                     />
                   </div>
                 )}
@@ -116,6 +135,9 @@ export function ApplyStepRail({
           })}
         </ol>
       </nav>
+
+      {/* Balances the mark, so the steps stay centred under the card. */}
+      <span className="hidden md:block md:w-60" aria-hidden="true" />
     </header>
   );
 }

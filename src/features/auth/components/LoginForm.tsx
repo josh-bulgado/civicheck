@@ -1,8 +1,9 @@
-import { JSX, SVGProps, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { Button } from "~/components/ui/button";
 
-import { AlertCircleIcon, Lock, Mail } from "lucide-react";
+import { AlertCircleIcon, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
@@ -10,9 +11,8 @@ import { Controller, useForm } from "react-hook-form";
 import { staggerStyle } from "~/components/motion/stagger";
 import { useLogin } from "~/features/auth/hooks/useLogin";
 import { useOAuthLogin } from "~/features/auth/hooks/useOAuthLogin";
-import { useVerifySignupOtp } from "~/features/auth/hooks/useVerifySignupOtp";
-import { useResendSignupOtp } from "~/features/auth/hooks/useResendSignupOtp";
-import { VerifyEmailNotice } from "./VerifyEmailNotice";
+import { setPendingVerification } from "~/features/auth/pending-verification";
+import { PERSISTENT_SESSION_MAX_AGE_SECONDS } from "~/features/auth/session-scope";
 import {
   Field,
   FieldError,
@@ -22,22 +22,14 @@ import {
 import {
   InputGroup,
   InputGroupAddon,
+  InputGroupButton,
   InputGroupInput,
 } from "~/components/ui/input-group";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Spinner } from "~/components/ui/spinner";
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { AuthEmblemPanel } from "./AuthSidePanel";
-import {
-  authButtonClass,
-  authFieldClass,
-  authLabelClass,
-  authLinkClass,
-  AuthFormFooter,
-  AuthFormHeading,
-  AuthSplitLayout,
-} from "./AuthSplitLayout";
-import { PasswordToggle } from "./PasswordToggle";
+import { Alert, AlertDescription } from "~/components/ui/alert";
+import { GoogleIcon } from "./GoogleIcon";
+import { LoginLayout } from "./LoginLayout";
 
 const formSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -46,10 +38,15 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-const INVALID_CREDENTIALS =
-  "Invalid email or password. Please check your credentials and try again.";
+const INVALID_CREDENTIALS = "Wrong Email and Password";
 
-/** Keeps the applicant on this page with a readable reason for every failure. */
+// Read from the cookie policy, so the sentence under the checkbox cannot drift
+// from what the cookies actually do.
+const KEEP_SIGNED_IN_DAYS = Math.round(
+  PERSISTENT_SESSION_MAX_AGE_SECONDS / (24 * 60 * 60),
+);
+
+/** Only actual sign-in failures belong on this page; verification has its own step. */
 function describeSignInError(
   result: { error?: boolean; message?: string } | undefined,
   requestFailed: boolean,
@@ -66,18 +63,10 @@ function describeSignInError(
     return INVALID_CREDENTIALS;
   }
   if (/email not confirmed/i.test(message)) {
-    return "Please confirm your email address first — check your inbox for the verification code.";
+    return null;
   }
   return message;
 }
-
-const GoogleIcon = (
-  props: JSX.IntrinsicAttributes & SVGProps<SVGSVGElement>,
-) => (
-  <svg fill="currentColor" viewBox="0 0 24 24" {...props}>
-    <path d="M3.06364 7.50914C4.70909 4.24092 8.09084 2 12 2C14.6954 2 16.959 2.99095 18.6909 4.60455L15.8227 7.47274C14.7864 6.48185 13.4681 5.97727 12 5.97727C9.39542 5.97727 7.19084 7.73637 6.40455 10.1C6.2045 10.7 6.09086 11.3409 6.09086 12C6.09086 12.6591 6.2045 13.3 6.40455 13.9C7.19084 16.2636 9.39542 18.0227 12 18.0227C13.3454 18.0227 14.4909 17.6682 15.3864 17.0682C16.4454 16.3591 17.15 15.3 17.3818 14.05H12V10.1818H21.4181C21.5364 10.8363 21.6 11.5182 21.6 12.2273C21.6 15.2727 20.5091 17.8363 18.6181 19.5773C16.9636 21.1046 14.7 22 12 22C8.09084 22 4.70909 19.7591 3.06364 16.4909C2.38638 15.1409 2 13.6136 2 12C2 10.3864 2.38638 8.85911 3.06364 7.50914Z" />
-  </svg>
-);
 
 export function LoginForm({
   redirect: redirectTo,
@@ -87,19 +76,12 @@ export function LoginForm({
   error?: string;
 }) {
   const [showPassword, setShowPassword] = useState(false);
-  const [keepSignedIn, setKeepSignedIn] = useState(true);
+  // Opt-in: a session that outlives the browser should be a deliberate choice,
+  // since the next person on a shared computer would land in this account.
+  const [keepSignedIn, setKeepSignedIn] = useState(false);
+  const navigate = useNavigate();
   const loginMutation = useLogin(redirectTo);
   const oauthLoginMutation = useOAuthLogin();
-  const verifyOtpMutation = useVerifySignupOtp();
-  const resendOtpMutation = useResendSignupOtp();
-  // Set when a sign-in attempt fails specifically because the account was
-  // never confirmed — the credentials themselves were correct, so this skips
-  // straight to a fresh code instead of sending the applicant back to their
-  // inbox to dig up (or request again) whatever the signup flow originally sent.
-  const [unconfirmed, setUnconfirmed] = useState<{
-    email: string;
-    password: string;
-  } | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -111,57 +93,36 @@ export function LoginForm({
   });
 
   async function onSubmit(data: FormValues) {
-    const result = await loginMutation.mutate({ data });
+    const result = await loginMutation.mutate({
+      data: { ...data, keepSignedIn },
+    });
+    // Open code entry as soon as the credentials identify an unconfirmed
+    // account. The verification page sends the code without delaying navigation.
     if (result?.error && /email not confirmed/i.test(result.message ?? "")) {
-      setUnconfirmed({ email: data.email, password: data.password });
-      resendOtpMutation.mutate({ data });
+      setPendingVerification({
+        email: data.email,
+        password: data.password,
+        sendCodeOnArrival: true,
+      });
+      await navigate({ to: "/verify-email" });
     }
   }
+
+  const isSigningIn = form.formState.isSubmitting;
 
   const signInError = describeSignInError(
     loginMutation.data,
     loginMutation.status === "error",
   );
 
-  const otpError = verifyOtpMutation.data?.error
-    ? verifyOtpMutation.data.message
-    : verifyOtpMutation.status === "error"
-      ? "We could not reach the account service. Please try again in a moment."
-      : null;
-
   return (
-    <AuthSplitLayout panel={<AuthEmblemPanel />}>
-      <VerifyEmailNotice
-        open={unconfirmed !== null}
-        email={unconfirmed?.email ?? ""}
-        isVerifying={verifyOtpMutation.status === "pending"}
-        isResending={resendOtpMutation.status === "pending"}
-        errorMessage={otpError}
-        onVerify={(token) => {
-          if (!unconfirmed) return;
-          verifyOtpMutation.mutate({
-            data: { email: unconfirmed.email, token },
-          });
-        }}
-        onResend={() => {
-          if (!unconfirmed) return;
-          resendOtpMutation.mutate({ data: unconfirmed });
-        }}
-        onUseDifferentEmail={() => setUnconfirmed(null)}
-        dismissLabel="Wrong account? Try again"
-      />
-
-      <div className="flex flex-col gap-7">
-        <AuthFormHeading
-          title="Welcome back"
-          description="Please enter your details"
-          className="text-[34px] font-extrabold"
-        />
+    <LoginLayout>
+      <div className="login-form-content">
+        <h1 className="login-title">Welcome back</h1>
 
         {signInError && (
           <Alert variant="destructive" className="civic-enter-sm">
             <AlertCircleIcon />
-            <AlertTitle>Sign in failed</AlertTitle>
             <AlertDescription>{signInError}</AlertDescription>
           </Alert>
         )}
@@ -174,7 +135,7 @@ export function LoginForm({
         )}
 
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <FieldGroup className="civic-stagger gap-4">
+          <FieldGroup className="login-fields civic-stagger">
             <Controller
               control={form.control}
               name="email"
@@ -182,12 +143,16 @@ export function LoginForm({
                 <Field
                   data-invalid={fieldState.invalid}
                   style={staggerStyle(0)}
-                  className="gap-1.75"
+                  className="login-field"
                 >
-                  <FieldLabel htmlFor="email" className={authLabelClass}>
+                  <FieldLabel htmlFor="email" className="sr-only">
                     Email address
                   </FieldLabel>
-                  <InputGroup className={`${authFieldClass} px-0`}>
+                  <InputGroup
+                    fieldSize="touch"
+                    shape="pill"
+                    className="login-input"
+                  >
                     <InputGroupAddon>
                       <Mail size={16} aria-hidden="true" />
                     </InputGroupAddon>
@@ -195,13 +160,21 @@ export function LoginForm({
                       {...field}
                       id="email"
                       type="email"
-                      placeholder="juan.delacruz@email.com"
+                      placeholder="Email address"
                       aria-invalid={fieldState.invalid}
+                      aria-required="true"
+                      aria-describedby={
+                        fieldState.invalid ? "email-error" : undefined
+                      }
                       autoComplete="email"
                     />
                   </InputGroup>
                   {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
+                    <FieldError
+                      id="email-error"
+                      className="login-field-error"
+                      errors={[fieldState.error]}
+                    />
                   )}
                 </Field>
               )}
@@ -214,12 +187,16 @@ export function LoginForm({
                 <Field
                   data-invalid={fieldState.invalid}
                   style={staggerStyle(1)}
-                  className="gap-1.75"
+                  className="login-field"
                 >
-                  <FieldLabel htmlFor="password" className={authLabelClass}>
+                  <FieldLabel htmlFor="password" className="sr-only">
                     Password
                   </FieldLabel>
-                  <InputGroup className={`${authFieldClass} px-0`}>
+                  <InputGroup
+                    shape="pill"
+                    fieldSize="touch"
+                    className="login-input"
+                  >
                     <InputGroupAddon>
                       <Lock size={16} aria-hidden="true" />
                     </InputGroupAddon>
@@ -227,17 +204,37 @@ export function LoginForm({
                       {...field}
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
+                      placeholder="Password"
                       aria-invalid={fieldState.invalid}
+                      aria-required="true"
+                      aria-describedby={
+                        fieldState.invalid ? "password-error" : undefined
+                      }
                       autoComplete="current-password"
                     />
-                    <PasswordToggle
-                      shown={showPassword}
-                      onToggle={() => setShowPassword(!showPassword)}
-                    />
+                    <InputGroupAddon align="inline-end">
+                      <InputGroupButton
+                        type="button"
+                        className="login-password-toggle"
+                        aria-label={
+                          showPassword ? "Hide password" : "Show password"
+                        }
+                        onClick={() => setShowPassword((shown) => !shown)}
+                      >
+                        {showPassword ? (
+                          <EyeOff aria-hidden="true" />
+                        ) : (
+                          <Eye aria-hidden="true" />
+                        )}
+                      </InputGroupButton>
+                    </InputGroupAddon>
                   </InputGroup>
                   {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
+                    <FieldError
+                      id="password-error"
+                      className="login-field-error"
+                      errors={[fieldState.error]}
+                    />
                   )}
                 </Field>
               )}
@@ -245,33 +242,48 @@ export function LoginForm({
 
             {/* Session length and the recovery route are the two decisions left
                 before submitting, so they share one line under the fields. */}
-            <div
-              style={staggerStyle(2)}
-              className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 pt-0.5"
-            >
+            <div style={staggerStyle(2)} className="login-options">
               <Field orientation="horizontal" className="w-auto">
                 <Checkbox
                   id="keep-signed-in"
                   checked={keepSignedIn}
+                  aria-describedby={
+                    keepSignedIn ? "login-session-note" : undefined
+                  }
                   onCheckedChange={(checked) =>
                     setKeepSignedIn(checked === true)
                   }
                 />
-                <FieldLabel htmlFor="keep-signed-in">Keep me signed in</FieldLabel>
+                <div className="login-session-label">
+                  <FieldLabel htmlFor="keep-signed-in">
+                    Keep me signed in
+                  </FieldLabel>
+                  {keepSignedIn && (
+                    <p
+                      id="login-session-note"
+                      role="status"
+                      className="login-session-note"
+                    >
+                      Stay signed in for {KEEP_SIGNED_IN_DAYS} days.
+                    </p>
+                  )}
+                </div>
               </Field>
 
-              <Link to="/forgot-password" className={authLinkClass}>
-                Forgot password
+              <Link to="/forgot-password" className="login-link">
+                Forgot password?
               </Link>
             </div>
 
-            <div style={staggerStyle(3)} className="flex flex-col gap-3">
+            <div style={staggerStyle(3)} className="login-actions">
               <Button
                 type="submit"
-                className={authButtonClass}
-                disabled={loginMutation.status === "pending"}
+                shape="pill"
+                size="touch"
+                className="login-submit"
+                disabled={isSigningIn}
               >
-                {loginMutation.status === "pending" ? (
+                {isSigningIn ? (
                   <>
                     <Spinner />
                     Signing in
@@ -281,28 +293,49 @@ export function LoginForm({
                 )}
               </Button>
 
+              <div className="login-divider" aria-hidden="true">
+                <span />
+                or
+                <span />
+              </div>
+
               <Button
+                type="button"
                 variant="outline"
-                className={`${authButtonClass} justify-center gap-2.5 text-sm font-medium`}
+                shape="pill"
+                size="touch"
+                className="login-google"
                 onClick={() =>
-                  oauthLoginMutation.mutate({ provider: "google" })
+                  oauthLoginMutation.mutate({
+                    provider: "google",
+                    keepSignedIn,
+                  })
                 }
-                disabled={oauthLoginMutation.status === "pending"}
+                disabled={oauthLoginMutation.redirecting}
               >
-                <GoogleIcon className="size-4.5" />
-                Sign in with Google
+                {oauthLoginMutation.redirecting ? (
+                  <>
+                    <Spinner />
+                    Redirecting to Google…
+                  </>
+                ) : (
+                  <>
+                    <GoogleIcon className="login-google-icon" />
+                    Continue with Google
+                  </>
+                )}
               </Button>
             </div>
           </FieldGroup>
         </form>
 
-        <AuthFormFooter>
-          Don&apos;t have an account?
-          <Link to="/signup" className={authLinkClass}>
-            Sign up
+        <div className="login-footer">
+          New to CiviCheck?
+          <Link to="/signup" className="login-link">
+            Create an account
           </Link>
-        </AuthFormFooter>
+        </div>
       </div>
-    </AuthSplitLayout>
+    </LoginLayout>
   );
 }

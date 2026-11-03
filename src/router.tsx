@@ -1,9 +1,34 @@
 import { createRouter } from '@tanstack/react-router'
+import { getGlobalStartContext } from '@tanstack/react-start'
+import { RoutePendingSkeleton } from '~/components/feedback/RoutePendingSkeleton'
 import { routeTree } from './routeTree.gen'
 
+/**
+ * The Content-Security-Policy nonce for this response (see src/start.ts). On the
+ * server it comes from the request context; in the browser, from the
+ * `csp-nonce` meta tag the router renders with it. Undefined in development,
+ * where no script policy is sent.
+ */
+function cspNonce(): string | undefined {
+  if (typeof document !== 'undefined') {
+    return (
+      document.querySelector<HTMLMetaElement>('meta[property="csp-nonce"]')
+        ?.content || undefined
+    )
+  }
+  try {
+    const context = getGlobalStartContext() as { cspNonce?: string } | undefined
+    return context?.cspNonce
+  } catch {
+    return undefined
+  }
+}
+
 export function getRouter() {
+  const nonce = cspNonce()
   const router = createRouter({
     routeTree,
+    ssr: nonce ? { nonce } : undefined,
     scrollRestoration: true,
     // Start loading a route's data as soon as the user shows intent (hover or
     // touch-down) rather than waiting for the click. By the time the click
@@ -18,6 +43,14 @@ export function getRouter() {
     // Treat freshly preloaded data as good enough to serve the navigation that
     // follows, instead of refetching it the moment the click arrives.
     defaultPreloadStaleTime: 30_000,
+    // What a route shows while its loader runs, unless it declares its own
+    // `pendingComponent`. The router's default is to show nothing for a full
+    // second, which reads as a frozen page. Appear after a short grace period so
+    // a fast load never flashes, and then stay long enough to read as a single
+    // deliberate state instead of a flicker.
+    defaultPendingComponent: RoutePendingSkeleton,
+    defaultPendingMs: 250,
+    defaultPendingMinMs: 250,
   })
 
   return router

@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from "~/utils/supabase";
 import type { Service, ServiceRequirement } from "./services.types";
 import { requireActiveSession } from "~/server/auth";
 import { parseConditionRule } from "~/features/forms/form-template.utils";
+import { sortChecklist } from "~/features/services/service-utils";
 
 export type { ServiceRequirement } from "./services.types";
 
@@ -16,7 +17,13 @@ export const getAdminServices = createServerFn({ method: "GET" }).handler(
       .order("name", { ascending: true });
 
     if (error) throw new Error(error.message);
-    return (data || []).map((row: any) => {
+    // `select("*, departments(id, name)")`: every service column, plus the
+    // department it belongs to as an embed.
+    type DepartmentEmbed = { id: string; name: string };
+    type ServiceWithDepartment = Omit<Service, "department_name"> & {
+      departments?: DepartmentEmbed | DepartmentEmbed[] | null;
+    };
+    return ((data ?? []) as ServiceWithDepartment[]).map((row) => {
       const { departments, ...service } = row;
       const department = Array.isArray(departments) ? departments[0] : departments;
       return { ...service, department_name: department?.name ?? null } as Service;
@@ -49,27 +56,10 @@ export const getServiceChecklist = createServerFn({ method: "GET" })
       .order("is_mandatory", { ascending: false });
 
     if (error) throw new Error(error.message);
-    return (rows ?? []).map((requirement) => ({
-      ...requirement,
-      applies_when: parseConditionRule(requirement.applies_when),
-    })) as ServiceRequirement[];
-  });
-
-export const getServiceRequirements = createServerFn({ method: "GET" })
-  .validator((d: string) => d)
-  .handler(async ({ data: requirementGroupOrServiceCode }) => {
-    const supabase = getSupabaseServerClient();
-    const { data, error } = await supabase
-      .from("service_requirements_metadata")
-      .select("*")
-      .or(
-        `requirement_group.eq.${requirementGroupOrServiceCode},service_code.eq.${requirementGroupOrServiceCode}`
-      )
-      .order("is_mandatory", { ascending: false });
-
-    if (error) throw new Error(error.message);
-    return (data ?? []).map((requirement) => ({
-      ...requirement,
-      applies_when: parseConditionRule(requirement.applies_when),
-    })) as ServiceRequirement[];
+    return sortChecklist(
+      (rows ?? []).map((requirement) => ({
+        ...requirement,
+        applies_when: parseConditionRule(requirement.applies_when),
+      })) as ServiceRequirement[],
+    );
   });

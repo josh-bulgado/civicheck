@@ -22,7 +22,11 @@ export type Permission =
   | "requests:archive"
   | "requests:legal"
   | "requests:collect_payment"
+  | "requests:view_payments"
   | "requests:encode_walkin"
+
+  // notifications
+  | "notifications:view_staff"
 
   // CCRO personnel administration
   | "users:invite_staff"
@@ -36,6 +40,7 @@ export type Permission =
   | "accounts:replace_admin"
   | "audit:view"
   | "health:view"
+  | "health:manage"
   | "security:view"
   | "security:manage"
 
@@ -52,24 +57,30 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "requests:create",
     "dashboard:applicant",
   ],
+  // Personnel never file online requests: the applicant would be the person
+  // who then validates it. Walk-ins go through "requests:encode_walkin".
   staff: [
     "services:view",
     "requests:view_all",
-    "requests:create",
     "requests:process",
     "requests:encode_walkin",
+    "notifications:view_staff",
     "dashboard:staff",
   ],
   supervisor: [
     "services:view",
     "requests:view_all",
-    "requests:create",
     "requests:process",
     "requests:reverse_verification",
     "requests:encode_walkin",
+    "notifications:view_staff",
     "dashboard:staff",
   ],
-  cashier: ["requests:collect_payment", "dashboard:staff"],
+  cashier: [
+    "requests:collect_payment",
+    "requests:view_payments",
+    "notifications:view_staff",
+  ],
   admin: [
     "services:view",
     "services:manage",
@@ -78,22 +89,24 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "requests:reverse_verification",
     "requests:archive",
     "requests:legal",
-    "requests:collect_payment",
     "requests:encode_walkin",
+    // Read-only oversight: the admin can see what the cashier verified, to
+    // check the office's money side, but can't verify a payment itself.
+    "requests:view_payments",
+    "notifications:view_staff",
     "users:invite_staff",
     "users:update_operational_roles",
     "users:deactivate_staff",
     "dashboard:admin",
   ],
   system_admin: [
-    "services:view",
-    "services:manage",
     "accounts:view_all",
     "accounts:suspend",
     "accounts:edit_details",
     "accounts:replace_admin",
     "audit:view",
     "health:view",
+    "health:manage",
     "security:view",
     "security:manage",
     "dashboard:system_admin",

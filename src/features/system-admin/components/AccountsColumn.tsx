@@ -1,23 +1,25 @@
-import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown } from "lucide-react";
+import type { AppColumnDef } from "~/lib/table";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
-import { roleLabels } from "../system-admin.constants";
-import type { AccountCategory, AccountSummary } from "../system-admin.types";
-import { AccountRowActions } from "./AccountRowActions";
-
-const headerClassName =
-  "text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground";
-
-const ONLINE_THRESHOLD_MS = 15 * 60 * 1000;
+import { departmentLabel } from "~/features/admin/staff/staff-table.utils";
+import { accountStatusLabels, roleLabels } from "../system-admin.constants";
+import { CenterSortHeader, centerSelectionColumn } from "./CenterTableControls";
+import type {
+  AccountCategory,
+  AccountSummary,
+  SystemAdminDepartment,
+} from "../system-admin.types";
+import {
+  AccountRowActions,
+  type AccountActionHandlers,
+} from "./AccountRowActions";
 
 function getInitials(account: AccountSummary) {
   const initials = `${account.firstName.charAt(0)}${account.lastName.charAt(0)}`;
   return initials.toUpperCase() || account.email.charAt(0).toUpperCase();
 }
 
-function formatLastSeen(lastSignInAt: string) {
+function formatRelative(lastSignInAt: string) {
   const diffMinutes = Math.round(
     (Date.now() - new Date(lastSignInAt).getTime()) / 60_000,
   );
@@ -28,71 +30,102 @@ function formatLastSeen(lastSignInAt: string) {
   return `${Math.round(diffHours / 24)}d ago`;
 }
 
-function PresenceBadge({ lastSignInAt }: { lastSignInAt: string | null }) {
-  if (!lastSignInAt) {
+/**
+ * Where the account stands. A suspended or deactivated account stays that
+ * even if its invitation was never accepted, so the three never overlap.
+ */
+function accountState(account: AccountSummary) {
+  if (account.status !== "active") {
+    return {
+      label: accountStatusLabels[account.status],
+      tone: "inactive",
+    };
+  }
+  if (account.invitePending) {
+    return { label: "Setup pending", tone: "pending" };
+  }
+  return { label: accountStatusLabels.active, tone: "active" };
+}
+
+function StatusCell({ account }: { account: AccountSummary }) {
+  const { label, tone } = accountState(account);
+
+  return (
+    <div className="account-status-cell">
+      <span className="account-status" data-tone={tone}>
+        {label}
+      </span>
+      {account.suspensionReason ? (
+        <p className="account-status-reason line-clamp-2">
+          {account.suspensionReason}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Sign-in recency, not live presence: Supabase only records when a session was
+ * created, so this cannot tell whether someone is using the system right now.
+ */
+function LastSignInCell({ account }: { account: AccountSummary }) {
+  const { lastSignInAt } = account;
+
+  // Sending and cancelling the invitation is the CCRO Administrator's job, so
+  // this is visibility only.
+  if (account.invitePending && account.invitedAt) {
     return (
-      <Badge variant="neutral" className="gap-1.5">
-        <span
-          className="size-1.5 rounded-full bg-muted-foreground/50"
-          aria-hidden="true"
-        />
-        Never signed in
-      </Badge>
+      <span className="whitespace-nowrap text-sm text-muted-foreground">
+        Invite sent {formatRelative(account.invitedAt)}
+      </span>
     );
   }
 
-  const isOnline =
-    Date.now() - new Date(lastSignInAt).getTime() < ONLINE_THRESHOLD_MS;
-
-  if (isOnline) {
-    return (
-      <Badge variant="success" className="gap-1.5">
-        <span
-          className="size-1.5 rounded-full bg-success-dot ring-2 ring-success/20"
-          aria-hidden="true"
-        />
-        Active now
-      </Badge>
-    );
+  if (!lastSignInAt) {
+    return <Badge variant="neutral">Never signed in</Badge>;
   }
 
   return (
-    <Badge variant="neutral" className="gap-1.5">
-      <span
-        className="size-1.5 rounded-full bg-muted-foreground/50"
-        aria-hidden="true"
-      />
-      Last seen {formatLastSeen(lastSignInAt)}
-    </Badge>
+    <span
+      className="whitespace-nowrap text-sm text-muted-foreground"
+      title={new Date(lastSignInAt).toLocaleString()}
+    >
+      {formatRelative(lastSignInAt)}
+    </span>
   );
 }
 
 export function createAccountColumns({
   category,
+  departments,
   pendingAccountId,
   onEdit,
   onSuspend,
   onReactivate,
+  onViewHistory,
+  onSendPasswordReset,
+  onResendVerification,
+  onRevokeSessions,
 }: {
   category: AccountCategory;
+  departments: SystemAdminDepartment[];
   pendingAccountId: string | null;
-  onEdit: (account: AccountSummary) => void;
-  onSuspend: (account: AccountSummary) => void;
-  onReactivate: (account: AccountSummary) => void;
-}): ColumnDef<AccountSummary>[] {
+} & AccountActionHandlers): AppColumnDef<AccountSummary>[] {
+  const departmentNames = new Map(
+    departments.map((department) => [department.id, department.name]),
+  );
+
   return [
+    centerSelectionColumn<AccountSummary>(
+      (account) =>
+        `${account.firstName} ${account.lastName}`.trim() || account.email,
+    ),
     {
-      accessorKey: "firstName",
+      id: "member",
+      accessorFn: (account) =>
+        `${account.firstName} ${account.lastName}`.trim(),
       header: ({ column }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className={`${headerClassName} -ml-3 h-8 hover:bg-transparent hover:text-foreground`}
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Account
-          <ArrowUpDown className="size-3" />
-        </Button>
+        <CenterSortHeader label="Member" column={column} />
       ),
       cell: ({ row }) => {
         const account = row.original;
@@ -101,17 +134,23 @@ export function createAccountColumns({
           "Unnamed account";
 
         return (
-          <div className="flex min-w-72 items-center gap-3.5">
-            <Avatar size="lg" className="bg-primary">
-              <AvatarFallback className="bg-primary font-semibold text-white">
+          <div className="account-member">
+            <Avatar className="after:border-0" aria-hidden="true">
+              <AvatarFallback className="bg-primary-soft font-semibold text-primary">
                 {getInitials(account)}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <p className="truncate font-medium text-foreground">
+              <p
+                className="truncate font-medium text-foreground"
+                title={fullName}
+              >
                 {fullName}
               </p>
-              <p className="mt-0.5 truncate text-sm text-muted-foreground">
+              <p
+                className="account-member-email truncate"
+                title={account.email}
+              >
                 {account.email}
               </p>
             </div>
@@ -119,80 +158,87 @@ export function createAccountColumns({
         );
       },
     },
-    {
-      accessorKey: "role",
-      header: () => <span className={headerClassName}>Role</span>,
-      cell: ({ row }) => (
-        <span className="text-sm font-medium text-foreground/80">
-          {roleLabels[row.original.role]}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "status",
-      header: () => <span className={headerClassName}>Status</span>,
-      cell: ({ row }) => (
-        <div className="max-w-64">
-          <Badge
-            variant={
-              row.original.status === "active" ? "secondary" : "destructive"
-            }
-            className="capitalize"
-          >
-            {row.original.status}
-          </Badge>
-          {row.original.suspensionReason ? (
-            <p className="mt-1.5 line-clamp-2 text-xs text-muted-foreground">
-              {row.original.suspensionReason}
-            </p>
-          ) : null}
-        </div>
-      ),
-    },
     ...(category === "personnel"
       ? [
           {
-            id: "presence",
-            header: () => <span className={headerClassName}>Presence</span>,
-            cell: ({ row }) => (
-              <PresenceBadge lastSignInAt={row.original.lastSignInAt} />
+            id: "role",
+            accessorFn: (account) => roleLabels[account.role],
+            header: ({ column }) => (
+              <CenterSortHeader label="Role" column={column} />
             ),
-          } satisfies ColumnDef<AccountSummary>,
+            cell: ({ row }) => (
+              <span className="text-sm font-medium text-foreground/80">
+                {roleLabels[row.original.role]}
+              </span>
+            ),
+          } satisfies AppColumnDef<AccountSummary>,
+          {
+            id: "department",
+            accessorFn: (account) =>
+              account.role === "admin"
+                ? "All departments"
+                : (departmentNames.get(account.departmentId ?? "") ?? ""),
+            header: ({ column }) => (
+              <CenterSortHeader label="Department" column={column} />
+            ),
+            cell: ({ row }) => {
+              const { role, departmentId } = row.original;
+              const label = departmentLabel({
+                role,
+                departmentName: departmentId
+                  ? (departmentNames.get(departmentId) ?? null)
+                  : null,
+              });
+
+              return (
+                <span
+                  className={
+                    label === "Unassigned" || label === "Not applicable"
+                      ? "text-sm text-muted-foreground"
+                      : "text-sm text-foreground/80"
+                  }
+                >
+                  {label === "Unassigned" || label === "Not applicable"
+                    ? "—"
+                    : label}
+                </span>
+              );
+            },
+          } satisfies AppColumnDef<AccountSummary>,
         ]
       : []),
     {
-      accessorKey: "createdAt",
+      id: "status",
+      accessorFn: (account) => accountState(account).label,
       header: ({ column }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className={`${headerClassName} -ml-3 h-8 hover:bg-transparent hover:text-foreground`}
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Created
-          <ArrowUpDown className="size-3" />
-        </Button>
+        <CenterSortHeader label="Status" column={column} />
       ),
-      cell: ({ row }) => (
-        <span className="whitespace-nowrap text-sm text-muted-foreground">
-          {new Date(row.original.createdAt).toLocaleDateString()}
-        </span>
+      cell: ({ row }) => <StatusCell account={row.original} />,
+    },
+    {
+      id: "lastSignIn",
+      accessorFn: (account) => account.lastSignInAt,
+      header: ({ column }) => (
+        <CenterSortHeader label="Last sign-in" column={column} />
       ),
+      cell: ({ row }) => <LastSignInCell account={row.original} />,
     },
     {
       id: "actions",
       enableSorting: false,
-      header: () => <span className="sr-only">Actions</span>,
+      header: "Actions",
       cell: ({ row }) => (
-        <div className="flex justify-end">
-          <AccountRowActions
-            account={row.original}
-            isPending={pendingAccountId === row.original.id}
-            onEdit={onEdit}
-            onSuspend={onSuspend}
-            onReactivate={onReactivate}
-          />
-        </div>
+        <AccountRowActions
+          account={row.original}
+          isPending={pendingAccountId === row.original.id}
+          onEdit={onEdit}
+          onSuspend={onSuspend}
+          onReactivate={onReactivate}
+          onViewHistory={onViewHistory}
+          onSendPasswordReset={onSendPasswordReset}
+          onResendVerification={onResendVerification}
+          onRevokeSessions={onRevokeSessions}
+        />
       ),
     },
   ];

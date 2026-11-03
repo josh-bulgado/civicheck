@@ -1,9 +1,15 @@
-import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
+import { EditorPageSkeleton, PageSkeleton } from "~/components/feedback/PageSkeleton";
+import { createFileRoute, notFound } from "@tanstack/react-router";
 import { ServiceGroupApplicationPage } from "~/features/admin/services/components/ServiceGroupApplicationPage";
 import { ServiceGroupPage } from "~/features/admin/services/components/ServiceGroupPage";
 import { getAdminServices } from "~/features/admin/services/services.queries";
+import {
+  redirectToServiceSlug,
+  toServiceSlug,
+} from "~/features/services/service-slug";
 import { hasPermission } from "~/lib/permissions";
 import type { Role } from "~/lib/permissions";
+import { denyAccess } from "~/lib/access";
 
 export const Route = createFileRoute(
   "/_authed/_dashboard/admin/services_/groups/$displayGroup",
@@ -11,30 +17,71 @@ export const Route = createFileRoute(
   validateSearch: (search: Record<string, unknown>) => ({
     scope: search.scope === "application" ? search.scope : undefined,
   }),
-  beforeLoad: ({ context }) => {
+  // Links pass the group key; the address bar shows its slug.
+  params: {
+    stringify: ({ displayGroup }) => ({
+      displayGroup: toServiceSlug(displayGroup),
+    }),
+  },
+  beforeLoad: ({ context, location, params }) => {
     const role = (context.user?.role ?? "applicant") as Role;
     if (!hasPermission(role, "services:manage")) {
-      throw redirect({ to: "/dashboard" });
+      denyAccess(location);
     }
+    redirectToServiceSlug(
+      location,
+      "/admin/services/groups/",
+      params.displayGroup,
+    );
   },
-  loader: async ({ params: { displayGroup } }) => {
+  loader: async ({ params }) => {
     const services = await getAdminServices();
+    const displayGroup = services.find(
+      (service) =>
+        service.display_group &&
+        toServiceSlug(service.display_group) === params.displayGroup,
+    )?.display_group;
     const variants = services.filter(
-      (service) => service.display_group === displayGroup,
+      (service) => displayGroup && service.display_group === displayGroup,
     );
     if (variants.length < 2) throw notFound();
-    return { variants };
+
+    // Every service card a timing mismatch can route to: one entry per display
+    // group, plus each standalone service keyed by its own code.
+    const targetOptions = new Map<string, string>();
+    for (const service of services) {
+      const key = service.display_group ?? service.service_code;
+      if (targetOptions.has(key)) continue;
+      targetOptions.set(key, service.display_name ?? service.name);
+    }
+
+    return {
+      variants,
+      targetOptions: [...targetOptions].map(([value, label]) => ({
+        value,
+        label,
+      })),
+    };
   },
+  pendingComponent: ServiceGroupPending,
   component: ServiceGroupRoute,
 });
 
 function ServiceGroupRoute() {
-  const { variants } = Route.useLoaderData();
+  const { variants, targetOptions } = Route.useLoaderData();
   const { scope } = Route.useSearch();
 
   return scope === "application" ? (
-    <ServiceGroupApplicationPage variants={variants} />
+    <ServiceGroupApplicationPage
+      variants={variants}
+      targetOptions={targetOptions}
+    />
   ) : (
     <ServiceGroupPage variants={variants} />
   );
+}
+
+function ServiceGroupPending() {
+  const { scope } = Route.useSearch();
+  return scope === "application" ? <EditorPageSkeleton /> : <PageSkeleton label="Loading service group" />;
 }

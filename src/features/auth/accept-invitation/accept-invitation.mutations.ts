@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { describeWeakPassword } from "../password-error";
 import { acceptInvitationInputSchema } from "./accept-invitation.schema";
 import { isOperationalRole, requireActiveSession } from "~/server/auth";
 
@@ -27,7 +28,10 @@ export const acceptStaffInvitationFn = createServerFn({ method: "POST" })
     });
 
     if (error) {
-      return { error: true, message: error.message };
+      return {
+        error: true,
+        message: describeWeakPassword(error) ?? error.message,
+      };
     }
 
     return {

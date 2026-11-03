@@ -1,4 +1,6 @@
 "use client";
+import { QuietAnchor } from "~/components/quiet-link";
+
 import {
   Collapsible,
   CollapsibleContent,
@@ -38,7 +40,7 @@ export function NavCollapsible({
                 <SidebarMenu>
                   {favorites.map((item) => (
                     <SidebarMenuItem key={item.id}>
-                      <SidebarMenuButton render={<a href={item.href} className="flex items-center gap-3" />}><div
+                      <SidebarMenuButton render={<QuietAnchor href={item.href} className="flex items-center gap-3" />}><div
                                                       className={`h-3 w-3 rounded ${item.color}`}
                                                     ></div><span>{item.title}</span></SidebarMenuButton>
                     </SidebarMenuItem>

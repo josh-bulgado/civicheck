@@ -1,0 +1,19 @@
+-- Applicants can no longer insert into `requests` directly.
+--
+-- Online requests are created by the submit server function
+-- (src/features/services/services.mutations.ts), which validates the active
+-- form version, the case and timing gates and the required documents, then
+-- inserts with the service-role client. The old "Applicants can create
+-- requests" policy only checked `auth.uid() = applicant_id`, so anyone holding
+-- a session could skip that function and write a row — including its answers
+-- and `form_template_version_id` — straight through PostgREST, bypassing every
+-- one of those checks.
+--
+-- Staff walk-in encoding is unaffected: it is covered by the separate
+-- "Department personnel can create requests" policy. Applicants still read
+-- their own requests through "Applicants can view own requests".
+--
+-- DEPLOY ORDER: apply this only once the code that inserts with the
+-- service-role client is running. Code that still inserts as the applicant
+-- fails once this policy is gone.
+drop policy if exists "Applicants can create requests" on public.requests;

@@ -1,8 +1,9 @@
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { CityGovernmentIdentity, CiviCheckIdentity } from "~/components/brand/civic-identity";
+import { CiviCheckIdentity } from "~/components/brand/civic-identity";
 import { staggerStyle } from "~/components/motion/stagger";
+import { ThemeSwitch } from "~/components/theme-switch";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 
@@ -23,67 +24,89 @@ const SiteHeader = () => {
   }, []);
 
   return (
-    <header className="civic-enter-fade sticky top-0 z-50 border-b border-border bg-white/95 backdrop-blur-md">
-      <div className="hidden border-b border-border-light bg-background sm:block">
-        <div className="civic-container flex h-9 items-center justify-between">
-          <p className="text-[13px] font-bold uppercase tracking-[0.09em] text-muted-2">
-            Official civil registry service
-          </p>
-          <CityGovernmentIdentity compact className="[&>span:first-child]:size-5.5" />
-        </div>
-      </div>
-
-      <div className="civic-container flex h-16 items-center justify-between">
+    <header className="landing-header">
+      <div className="landing-header-inner">
         <Link to="/" aria-label="CiviCheck home">
-          <CiviCheckIdentity />
+          <CiviCheckIdentity compact className="landing-header-brand" />
         </Link>
 
-        <nav className="hidden items-center gap-5 md:flex" aria-label="Primary navigation">
+        <nav
+          className="hidden items-center gap-5 lg:flex"
+          aria-label="Primary navigation"
+        >
           {publicLinks.map((item) => (
-            <Link key={item.label} to={item.to} className="text-base font-medium text-body-strong transition-colors hover:text-primary">
+            <Link
+              key={item.label}
+              to={item.to}
+              activeOptions={{ exact: true, includeSearch: false }}
+              activeProps={{ className: "public-nav-active" }}
+              className="text-base font-medium text-body-strong transition-colors hover:text-primary"
+            >
               {item.label}
             </Link>
           ))}
-          <span className="h-6 w-px bg-border-light" aria-hidden="true" />
-          <Link to="/login" className="text-base font-bold text-primary hover:text-primary-hover">
-            Sign in
-          </Link>
-          <Link to="/signup" className={buttonVariants({ size: "lg" })}>
-            Get started
-          </Link>
+          <ThemeSwitch />
+          <div className="space-x-2">
+            <Link
+              to="/login"
+              className={buttonVariants({
+                size: "xl",
+                shape: "pill",
+                variant: "outline",
+              })}
+            >
+              Sign in
+            </Link>
+            <Link
+              to="/signup"
+              className={buttonVariants({
+                size: "xl",
+                shape: "pill",
+              })}
+            >
+              Get started
+            </Link>
+          </div>
         </nav>
 
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-lg"
-          onClick={() => setMobileMenuOpen((open) => !open)}
-          className="md:hidden"
-          aria-expanded={mobileMenuOpen}
-          aria-controls="mobile-navigation"
-          aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
-        >
-          <span className="relative flex size-5 items-center justify-center">
-            <X
-              className={cn(
-                "absolute size-5 transition-[opacity,transform] duration-200 ease-out",
-                mobileMenuOpen ? "rotate-0 opacity-100" : "-rotate-45 opacity-0",
-              )}
-            />
-            <Menu
-              className={cn(
-                "absolute size-5 transition-[opacity,transform] duration-200 ease-out",
-                mobileMenuOpen ? "rotate-45 opacity-0" : "rotate-0 opacity-100",
-              )}
-            />
-          </span>
-        </Button>
+        <div className="flex items-center gap-2 lg:hidden">
+          <ThemeSwitch />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-lg"
+            onClick={() => setMobileMenuOpen((open) => !open)}
+            className="lg:hidden"
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-navigation"
+            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+          >
+            <span className="relative flex size-5 items-center justify-center">
+              <X
+                className={cn(
+                  "absolute size-5 transition-[opacity,transform] duration-200 ease-out",
+                  mobileMenuOpen
+                    ? "rotate-0 opacity-100"
+                    : "-rotate-45 opacity-0",
+                )}
+              />
+              <Menu
+                className={cn(
+                  "absolute size-5 transition-[opacity,transform] duration-200 ease-out",
+                  mobileMenuOpen
+                    ? "rotate-45 opacity-0"
+                    : "rotate-0 opacity-100",
+                )}
+              />
+            </span>
+          </Button>
+        </div>
       </div>
 
       {mobileMenuOpen ? (
         <nav
           id="mobile-navigation"
-          className="civic-enter-sm civic-stagger border-t border-border bg-white px-5 py-4 md:hidden"
+          className="civic-enter-sm civic-stagger border-t border-border bg-card px-5 py-4 lg:hidden"
           aria-label="Mobile navigation"
         >
           <div className="mx-auto flex max-w-6xl flex-col gap-1">
@@ -91,6 +114,8 @@ const SiteHeader = () => {
               <Link
                 key={item.label}
                 to={item.to}
+                activeOptions={{ exact: true, includeSearch: false }}
+                activeProps={{ className: "public-nav-active" }}
                 style={staggerStyle(index)}
                 className="civic-interactive rounded-lg px-3 py-3 text-sm font-medium hover:bg-primary-soft hover:text-primary"
                 onClick={() => setMobileMenuOpen(false)}
@@ -99,8 +124,20 @@ const SiteHeader = () => {
               </Link>
             ))}
             <div className="my-2 h-px bg-border" />
-            <Link to="/login" className="rounded-lg px-3 py-3 text-center text-sm font-semibold text-primary" onClick={() => setMobileMenuOpen(false)}>Sign in</Link>
-            <Link to="/signup" className="rounded-lg bg-primary px-3 py-3 text-center text-sm font-semibold text-white" onClick={() => setMobileMenuOpen(false)}>Get started</Link>
+            <Link
+              to="/login"
+              className="rounded-lg px-3 py-3 text-center text-sm font-semibold text-primary"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Sign in
+            </Link>
+            <Link
+              to="/signup"
+              className="rounded-lg bg-primary-fill px-3 py-3 text-center text-sm font-semibold text-white"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Get started
+            </Link>
           </div>
         </nav>
       ) : null}

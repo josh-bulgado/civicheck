@@ -1,27 +1,12 @@
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
 import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
+  useTable,
   type ColumnFiltersState,
   type SortingState,
 } from "@tanstack/react-table";
-import { SlidersHorizontal, UserPlus } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "~/components/ui/button";
-import { DataTablePagination } from "~/components/ui/data-table-pagination";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/components/ui/table";
+import { DataTableCard } from "~/components/ui/data-table-card";
 import type { Department, StaffMember } from "../staff.types";
 import {
   useCancelStaffInvitation,
@@ -35,8 +20,16 @@ import { CancelStaffInvitationDialog } from "./CancelStaffInvitationDialog";
 import { createStaffColumns } from "./StaffColumn";
 import { ManageStaffAccessDialog } from "./ManageStaffAccessDialog";
 import { RemoveStaffMemberDialog } from "./RemoveStaffMemberDialog";
-import { StaffInviteDialog } from "./StaffInviteDialog";
 import { StaffTableToolbar } from "./StaffTableToolbar";
+import {
+  countByRole,
+  matchesRole,
+  matchesSearch,
+  matchesStatus,
+  type RoleFilter,
+  type StatusFilter,
+} from "../staff-table.utils";
+import { appTableFeatures } from "~/lib/table";
 
 export function StaffDataTable({
   data,
@@ -49,7 +42,8 @@ export function StaffDataTable({
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
-  const [inviteOpen, setInviteOpen] = useState(false);
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [checkingStaffId, setCheckingStaffId] = useState<string | null>(null);
   const [manageTarget, setManageTarget] = useState<StaffMember | null>(null);
   const [cancelTarget, setCancelTarget] = useState<StaffMember | null>(null);
@@ -64,11 +58,12 @@ export function StaffDataTable({
       ? (resendInvitation.variables?.data.staffId ?? null)
       : null;
 
+  const resend = resendInvitation.mutate;
   const handleResend = useCallback(
     (staffMember: StaffMember) => {
-      void resendInvitation.mutate({ data: { staffId: staffMember.id } });
+      void resend({ data: { staffId: staffMember.id } });
     },
-    [resendInvitation.mutate],
+    [resend],
   );
 
   const handleCancelRequest = useCallback((staffMember: StaffMember) => {
@@ -101,6 +96,7 @@ export function StaffDataTable({
     setRemoveTarget(staffMember);
   }, []);
 
+  const reactivate = reactivateStaff.mutate;
   const columns = useMemo(
     () =>
       createStaffColumns({
@@ -112,7 +108,7 @@ export function StaffDataTable({
         onCancel: handleCancelRequest,
         onRemove: handleRemoveRequest,
         onReactivate: (staffMember) =>
-          void reactivateStaff.mutate({ data: { staffId: staffMember.id } }),
+          void reactivate({ data: { staffId: staffMember.id } }),
       }),
     [
       checkingStaffId,
@@ -122,29 +118,52 @@ export function StaffDataTable({
       handleRemoveRequest,
       handleResend,
       resendingStaffId,
-      reactivateStaff.mutate,
+      reactivate,
     ],
   );
 
-  const table = useReactTable({
-    data,
+  // The role chips count the rows the search and status filter leave, so a chip
+  // never promises more than the table will show.
+  const roleCounts = useMemo(
+    () =>
+      countByRole(
+        data.filter(
+          (staffMember) =>
+            matchesSearch(staffMember, globalFilter) &&
+            matchesStatus(staffMember, statusFilter),
+        ),
+      ),
+    [data, globalFilter, statusFilter],
+  );
+
+  const rows = useMemo(
+    () =>
+      data.filter(
+        (staffMember) =>
+          matchesRole(staffMember, roleFilter) &&
+          matchesStatus(staffMember, statusFilter),
+      ),
+    [data, roleFilter, statusFilter],
+  );
+
+  const table = useTable({
+    features: appTableFeatures,
+    data: rows,
     columns,
     state: { sorting, columnFilters, globalFilter },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 20 } },
+    initialState: { pagination: { pageIndex: 0, pageSize: 20 } },
     globalFilterFn: (row, _id, value: string) =>
-      `${row.original.firstName} ${row.original.lastName} ${row.original.email} ${row.original.role} ${row.original.departmentName ?? ""} ${row.original.employmentType}`
-        .toLowerCase()
-        .includes(value.trim().toLowerCase()),
+      matchesSearch(row.original, value),
   });
 
-  const filteredCount = table.getFilteredRowModel().rows.length;
+  const handleClearFilters = () => {
+    setGlobalFilter("");
+    setRoleFilter("all");
+    setStatusFilter("all");
+  };
 
   async function confirmCancellation() {
     if (!cancelTarget) return;
@@ -165,88 +184,27 @@ export function StaffDataTable({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <StaffTableToolbar value={globalFilter} onChange={setGlobalFilter} />
-        <Button onClick={() => setInviteOpen(true)} className="sm:shrink-0">
-          <UserPlus className="size-4" />
-          Invite Staff
-        </Button>
-      </div>
-
-      <div className="overflow-hidden rounded-xl border border-border-strong bg-white">
-        <Table>
-          <TableHeader className="bg-surface-subtle">
-            {table.getHeaderGroups().map((group) => (
-              <TableRow key={group.id} className="hover:bg-transparent">
-                {group.headers.map((header) => (
-                  <TableHead key={header.id} className="h-12 px-5">
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody className="civic-stagger-auto">
-            {table.getRowModel().rows.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  className="h-[76px] hover:bg-surface-subtle"
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="px-5 py-3">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-40 text-center text-muted-foreground"
-                >
-                  <SlidersHorizontal className="mx-auto mb-3 size-7 opacity-40" />
-                  <p className="text-sm font-medium">No staff members found.</p>
-                  {globalFilter ? (
-                    <Button
-                      variant="link"
-                      size="sm"
-                      onClick={() => setGlobalFilter("")}
-                      className="mt-1 h-auto p-0 text-xs"
-                    >
-                      Clear filter
-                    </Button>
-                  ) : null}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-
-        <div className="border-t px-5 py-4 text-sm text-muted-foreground">
-          {filteredCount === data.length
-            ? `${data.length} staff member${data.length === 1 ? "" : "s"}`
-            : `${filteredCount} of ${data.length} staff members`}
-        </div>
-      </div>
-
-      {table.getPageCount() > 1 ? <DataTablePagination table={table} /> : null}
-
-      <StaffInviteDialog
-        open={inviteOpen}
-        onOpenChange={setInviteOpen}
-        departments={departments}
+    <>
+      <DataTableCard
+        table={table}
+        variant="log"
+        cellClassName="py-3"
+        toolbar={
+          <StaffTableToolbar
+            globalFilter={globalFilter}
+            onGlobalFilterChange={setGlobalFilter}
+            roleFilter={roleFilter}
+            onRoleFilterChange={setRoleFilter}
+            roleCounts={roleCounts}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+          />
+        }
+        label="Staff members"
+        emptyLabel="No staff members found matching your filters."
+        onClearFilters={handleClearFilters}
       />
+
       <ManageStaffAccessDialog
         staffMember={manageTarget}
         departments={departments}
@@ -274,6 +232,6 @@ export function StaffDataTable({
         }}
         onConfirm={() => void confirmRemoval()}
       />
-    </div>
+    </>
   );
 }

@@ -1,17 +1,7 @@
 import { useState } from "react";
-import { Check, CircleCheck, ShieldAlert } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Check, CircleCheck, ShieldCheck } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -21,12 +11,22 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { Spinner } from "~/components/ui/spinner";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useSecurityCenterActions } from "../hooks/useSecurityCenterActions";
 import {
   findingCategoryLabels,
-  findingStatusLabels,
-  formatSecurityTimestamp,
+  formatSecurityClock,
+  formatSecurityDate,
+  severityBadgeVariant,
   severityLabels,
 } from "../security-center.utils";
 import type {
@@ -37,15 +37,13 @@ import { ResolveSecurityFindingDialog } from "./ResolveSecurityFindingDialog";
 
 type FindingFilter = "active" | "all" | "resolved";
 
-function severityVariant(severity: SecurityFinding["severity"]) {
-  return severity === "critical" || severity === "high"
-    ? "destructive"
-    : severity === "medium"
-      ? "secondary"
-      : "outline";
-}
+const filterCountLabels: Record<FindingFilter, string> = {
+  active: "unresolved",
+  all: "total",
+  resolved: "resolved",
+};
 
-function FindingCard({
+function FindingRow({
   finding,
   assignees,
   isPending,
@@ -60,61 +58,43 @@ function FindingCard({
   onAssign: (assigneeId: string) => void;
   onResolve: () => void;
 }) {
+  const isResolved = finding.status === "resolved";
   const assigneeItems = assignees.map((assignee) => ({
     value: assignee.id,
     label: assignee.name,
   }));
 
   return (
-    <Card size="sm">
-      <CardHeader>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={severityVariant(finding.severity)}>
-            {severityLabels[finding.severity]}
-          </Badge>
-          <Badge variant="outline">
-            {findingCategoryLabels[finding.category]}
-          </Badge>
-          <Badge
-            variant={finding.status === "resolved" ? "secondary" : "outline"}
-          >
-            {findingStatusLabels[finding.status]}
-          </Badge>
-        </div>
-        <CardTitle>
-          <h3 className="mt-1 text-base font-bold">{finding.title}</h3>
-        </CardTitle>
-        <CardDescription className="max-w-3xl leading-6">
-          {finding.summary}
-        </CardDescription>
-        <CardAction>
-          <time
-            dateTime={finding.lastSeenAt}
-            className="hidden font-mono text-xs tabular-nums text-muted-foreground sm:block"
-          >
-            {formatSecurityTimestamp(finding.lastSeenAt)}
-          </time>
-        </CardAction>
-      </CardHeader>
-      <CardContent className="grid gap-3 text-xs text-muted-foreground sm:grid-cols-2">
-        <p>
-          <span className="font-semibold text-foreground">Subject:</span>{" "}
-          {finding.subjectLabel ?? "Aggregate security signal"}
-        </p>
-        <p>
-          <span className="font-semibold text-foreground">Assigned to:</span>{" "}
-          {finding.assignedToLabel ?? "Unassigned"}
-        </p>
-      </CardContent>
-      {finding.status === "resolved" ? (
-        <CardFooter className="border-t">
-          <p className="text-xs leading-5 text-muted-foreground">
+    <TableRow>
+      <TableCell>
+        <Badge variant={severityBadgeVariant(finding.severity)}>
+          {severityLabels[finding.severity]}
+        </Badge>
+      </TableCell>
+      <TableCell className="security-cell-wrap">
+        <p className="security-cell-title">{finding.title}</p>
+        <p className="security-cell-sub">{finding.summary}</p>
+        {finding.subjectLabel ? (
+          <p className="security-cell-sub">Subject: {finding.subjectLabel}</p>
+        ) : null}
+        {isResolved && finding.resolutionNote ? (
+          <p className="security-cell-sub">
             <span className="font-semibold text-foreground">Resolution:</span>{" "}
             {finding.resolutionNote}
           </p>
-        </CardFooter>
-      ) : (
-        <CardFooter className="flex flex-col items-stretch justify-between gap-3 border-t sm:flex-row sm:items-center">
+        ) : null}
+      </TableCell>
+      <TableCell>
+        <Badge variant="neutral">
+          {findingCategoryLabels[finding.category]}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        {isResolved ? (
+          <span className="security-assignee-none">
+            {finding.assignedToLabel ?? "Unassigned"}
+          </span>
+        ) : (
           <Select
             items={assigneeItems}
             value={finding.assignedToId}
@@ -123,8 +103,12 @@ function FindingCard({
             }}
             disabled={isPending || assignees.length === 0}
           >
-            <SelectTrigger size="sm" className="w-full sm:w-56">
-              <SelectValue placeholder="Assign finding" />
+            <SelectTrigger
+              size="sm"
+              className="security-assignee"
+              aria-label={`Assign "${finding.title}"`}
+            >
+              <SelectValue placeholder="Unassigned" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
@@ -136,30 +120,54 @@ function FindingCard({
               </SelectGroup>
             </SelectContent>
           </Select>
-          <div className="flex flex-wrap justify-end gap-2">
-            {finding.status === "open" ? (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={isPending}
-                onClick={onAcknowledge}
-              >
-                {isPending ? (
-                  <Spinner data-icon="inline-start" />
-                ) : (
-                  <Check data-icon="inline-start" />
-                )}
-                Acknowledge
+        )}
+      </TableCell>
+      <TableCell>
+        <time dateTime={finding.lastSeenAt}>
+          <span className="security-cell-title block">
+            {formatSecurityDate(finding.lastSeenAt)}
+          </span>
+          <span className="security-cell-sub block">
+            {formatSecurityClock(finding.lastSeenAt)}
+          </span>
+        </time>
+      </TableCell>
+      <TableCell>
+        <div className="security-actions">
+          {isResolved ? (
+            <Badge variant="success">
+              <CircleCheck data-icon="inline-start" aria-hidden="true" />
+              Resolved
+            </Badge>
+          ) : (
+            <>
+              {finding.status === "open" ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="security-pill-button"
+                  disabled={isPending}
+                  onClick={onAcknowledge}
+                >
+                  {isPending ? (
+                    <Spinner data-icon="inline-start" />
+                  ) : (
+                    <Check data-icon="inline-start" />
+                  )}
+                  Acknowledge
+                </Button>
+              ) : (
+                <Badge variant="info">Acknowledged</Badge>
+              )}
+              <Button size="sm" disabled={isPending} onClick={onResolve}>
+                <CircleCheck data-icon="inline-start" />
+                Resolve
               </Button>
-            ) : null}
-            <Button size="sm" disabled={isPending} onClick={onResolve}>
-              <CircleCheck data-icon="inline-start" />
-              Resolve
-            </Button>
-          </div>
-        </CardFooter>
-      )}
-    </Card>
+            </>
+          )}
+        </div>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -182,63 +190,65 @@ export function SecurityFindingsSection({
   });
 
   return (
-    <section aria-labelledby="security-findings-title">
-      <div className="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-end">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
-            Action queue
-          </p>
-          <h2
-            id="security-findings-title"
-            className="mt-1 text-xl font-bold tracking-tight"
-          >
-            Security findings
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Acknowledge, assign, and resolve metadata-only findings.
-          </p>
-        </div>
-      </div>
-
+    <section aria-label="Security findings" className="security-card">
       <Tabs
         value={filter}
         onValueChange={(value) => setFilter(value as FindingFilter)}
+        className="gap-0"
       >
-        <TabsList aria-label="Filter security findings">
-          <TabsTrigger value="active">Active</TabsTrigger>
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="resolved">Resolved</TabsTrigger>
-        </TabsList>
-        <TabsContent value={filter} className="mt-3">
+        <div className="security-card-header">
+          <TabsList
+            aria-label="Filter security findings"
+            className="security-segmented"
+          >
+            <TabsTrigger value="active">Active</TabsTrigger>
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="resolved">Resolved</TabsTrigger>
+          </TabsList>
+          <p className="security-toolbar-count" aria-live="polite">
+            {visibleFindings.length} {filterCountLabels[filter]}
+          </p>
+        </div>
+        <TabsContent value={filter}>
           {visibleFindings.length > 0 ? (
-            <div className="civic-stagger-auto flex flex-col gap-3">
-              {visibleFindings.map((finding) => {
-                const isPending =
-                  pendingAction?.type === "finding" &&
-                  pendingAction.id === finding.id;
-                return (
-                  <FindingCard
+            <Table className="security-table">
+              <TableCaption className="sr-only">
+                Security findings with severity, owner, and available actions
+              </TableCaption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Severity</TableHead>
+                  <TableHead>Finding</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Assigned to</TableHead>
+                  <TableHead>Reported</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visibleFindings.map((finding) => (
+                  <FindingRow
                     key={finding.id}
                     finding={finding}
                     assignees={assignees}
-                    isPending={isPending}
+                    isPending={
+                      pendingAction?.type === "finding" &&
+                      pendingAction.id === finding.id
+                    }
                     onAcknowledge={() => void acknowledge(finding.id)}
                     onAssign={(assigneeId) =>
                       void assign(finding.id, assigneeId)
                     }
                     onResolve={() => setFindingToResolve(finding)}
                   />
-                );
-              })}
-            </div>
+                ))}
+              </TableBody>
+            </Table>
           ) : (
-            <Alert variant="success" role="status">
-              <ShieldAlert aria-hidden="true" />
-              <AlertTitle>No findings in this view</AlertTitle>
-              <AlertDescription>
-                There are no security findings matching the selected status.
-              </AlertDescription>
-            </Alert>
+            <div className="security-empty" role="status">
+              <ShieldCheck aria-hidden="true" />
+              <p>No security findings match this view.</p>
+            </div>
           )}
         </TabsContent>
       </Tabs>

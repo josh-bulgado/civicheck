@@ -1,19 +1,28 @@
+import { requiresVerificationSignature } from "~/features/apply/verification-signature";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { finalizeRequestUploadDraft } from "~/features/apply/apply-upload-drafts.server";
 import { requireActiveSession } from "~/server/auth";
 import { insertRequestWithTrackingNumber } from "~/features/requests/tracking-number";
-import { isRequirementApplicable } from "~/features/services/service-utils";
-import { loadServiceCatalogue, resolveServices } from "~/features/services/services.catalogue";
+import {
+  isRequirementApplicable,
+  MAX_COPIES,
+  totalFee,
+} from "~/features/services/service-utils";
+import {
+  loadServiceCatalogue,
+  resolveServices,
+} from "~/features/services/services.catalogue";
 import {
   expandRequirementUploadSlots,
   requirementUploadKey,
 } from "~/features/services/requirement-upload.utils";
 import type { SubjectFields } from "~/lib/subject-fields";
+import type { AcknowledgmentPdfData } from "~/features/requests/pdf/types";
 import { getSupabaseAdminClient } from "~/utils/supabase";
 import {
   buildLegacyFormDefinition,
-  deriveTemplateAnswers,
+  canonicalizeTemplateAnswers,
   flattenTemplateAnswers,
   parseFormTemplateDefinition,
   validateCaseSelectorAnswers,
@@ -38,6 +47,9 @@ const submitRequestSchema = z.object({
   templateVersionId: z.string().uuid().nullable(),
   uploadDraftId: z.string().uuid().nullable(),
   answers: answersSchema,
+  signature: z.string().max(100_000).regex(/^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/).optional(),
+  // Only honoured for per-copy services; every other service charges once.
+  copies: z.number().int().min(1).max(MAX_COPIES).optional(),
   documents: z
     .array(
       z.object({
@@ -68,7 +80,17 @@ export const submitRequestFn = createServerFn({ method: "POST" })
     if (resolvedServices.length === 0) {
       return { error: true, message: "Unknown service." };
     }
+    // A group code is not a service: with several variants the first one in
+    // code order would be charged, whatever the applicant meant. The wizard
+    // always submits the variant it resolved.
+    if (isGroup && resolvedServices.length > 1) {
+      return { error: true, message: "Select the specific service you are applying for." };
+    }
     const selectedService = resolvedServices[0];
+    // The server owns the quantity: it is ignored unless the service is
+    // charged per copy, and the total is never taken from the client.
+    const copies = selectedService.fee_per_copy ? (data.copies ?? 1) : 1;
+    const feesDue = totalFee(selectedService.fee, copies, selectedService.fee_per_copy);
     const requirementKey = isGroup
       ? resolvedServices[0].display_group!
       : (resolvedServices[0].requirement_group ?? data.serviceCode);
@@ -107,6 +129,25 @@ export const submitRequestFn = createServerFn({ method: "POST" })
       ) {
         return { error: true, message: "This application form version is not valid." };
       }
+      // Older versions stay published so existing requests keep their pinned
+      // form, but only the active one may be submitted against. Otherwise a
+      // superseded version, which lacks later questions and rules, would let a
+      // request skip the current case checks.
+      const templateResult = await supabase
+        .from("form_templates")
+        .select("active_version_id")
+        .eq("id", bindingResult.data.template_id)
+        .maybeSingle();
+      if (templateResult.error || !templateResult.data) {
+        return { error: true, message: "The application form could not be verified." };
+      }
+      if (templateResult.data.active_version_id !== version.id) {
+        return {
+          error: true,
+          message:
+            "This application form was updated while you were filling it in. Reload the page, review your answers, and submit again.",
+        };
+      }
       try {
         definition = parseFormTemplateDefinition(version.definition);
       } catch {
@@ -117,7 +158,10 @@ export const submitRequestFn = createServerFn({ method: "POST" })
       return { error: true, message: "This service is not bound to that application form." };
     }
 
-    const answerBag = deriveTemplateAnswers(definition, data.answers);
+    // Hidden questions are dropped before anything reads the bag, so a value
+    // sent for a question the applicant was never shown cannot decide which
+    // documents are required.
+    const answerBag = canonicalizeTemplateAnswers(definition, data.answers);
     const selectorValidation = validateCaseSelectorAnswers(
       definition,
       answerBag,
@@ -168,7 +212,10 @@ export const submitRequestFn = createServerFn({ method: "POST" })
     );
     const applicantPathPrefix = `${user.id}/`;
     if (
-      submittedFileUrls.some((path) => !path.startsWith(applicantPathPrefix))
+      submittedFileUrls.some(
+        (path) =>
+          !path.startsWith(applicantPathPrefix) || path.split("/").includes(".."),
+      )
     ) {
       return {
         error: true,
@@ -179,9 +226,6 @@ export const submitRequestFn = createServerFn({ method: "POST" })
     const stagedPathPrefix = data.uploadDraftId
       ? `${user.id}/drafts/${data.uploadDraftId}/`
       : null;
-    const hasStagedPaths = submittedFileUrls.some((path) =>
-      path.startsWith(`${user.id}/drafts/`),
-    );
     const stagedFilesByPath = new Map<
       string,
       { requirement_id: string | null; subject_role: string | null }
@@ -214,15 +258,18 @@ export const submitRequestFn = createServerFn({ method: "POST" })
       for (const file of stagedFiles ?? []) {
         stagedFilesByPath.set(file.storage_path, file);
       }
-    } else if (hasStagedPaths) {
+    } else if (submittedFileUrls.length > 0) {
       return {
         error: true,
         message: "The document upload session is missing. Add the files again.",
       };
     }
 
+    // Every document has to be a file the server staged in this application's
+    // own draft. Any other path — one never uploaded, or a file already
+    // attached to another request — would tick a mandatory requirement off
+    // without a document behind it.
     const stagedFileMismatch = (data.documents ?? []).some((document) => {
-      if (!document.fileUrl.startsWith(`${user.id}/drafts/`)) return false;
       if (!stagedPathPrefix || !document.fileUrl.startsWith(stagedPathPrefix)) {
         return true;
       }
@@ -262,12 +309,31 @@ export const submitRequestFn = createServerFn({ method: "POST" })
     }
 
     const formData = flattenTemplateAnswers(definition, answerBag);
+    if (requiresVerificationSignature(data.serviceCode, answerBag.record_type)) {
+      if (!data.signature) {
+        return { error: true, message: "Sign the verification form before submitting." };
+      }
+      const png = Buffer.from(data.signature.split(",")[1], "base64");
+      if (png.length < 33 || png.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a" ||
+          png.readUInt32BE(16) !== 600 || png.readUInt32BE(20) !== 200) {
+        return { error: true, message: "Clear your signature and sign again." };
+      }
+      formData.requester_signature = data.signature;
+      formData.requester_signed_at = new Date().toISOString();
+    }
 
-    const created = await insertRequestWithTrackingNumber(supabase, {
+    // Created with the service-role client on purpose. Everything above is the
+    // only place an online request is validated (active form version, case and
+    // timing gates, required documents), so applicants have no INSERT policy on
+    // `requests`: otherwise they could skip this function and write a row — and
+    // its answers and form version — straight through PostgREST. `applicant_id`
+    // comes from the session, never from the payload.
+    const created = await insertRequestWithTrackingNumber(getSupabaseAdminClient(), {
       applicant_id: user.id,
       request_type: data.serviceCode,
       form_data: formData,
-      fees_due: Number(selectedService.fee),
+      fees_due: feesDue,
+      copies,
       form_template_version_id: templateVersionId,
     });
     if (created.error) {
@@ -276,8 +342,13 @@ export const submitRequestFn = createServerFn({ method: "POST" })
     const { requestId, trackingNumber } = created;
 
     let documentWarning: string | undefined;
+    let submittedDocuments: AcknowledgmentPdfData["documents"] = [];
     if (data.documents && data.documents.length > 0) {
-      const { error: docsError } = await supabase.from("requirements_attachments").insert(
+      // Service role for the same reason as the request itself: applicants
+      // have no INSERT policy on attachments, or they could add rows that are
+      // already "approved" or that point at another applicant's file. Every
+      // path and slot was checked above.
+      const { data: savedDocuments, error: docsError } = await getSupabaseAdminClient().from("requirements_attachments").insert(
         data.documents.map((doc) => {
           const key = requirementUploadKey(doc.requirementId, doc.subjectRole);
           const slot = allowedSlotByKey.get(key)!;
@@ -289,7 +360,7 @@ export const submitRequestFn = createServerFn({ method: "POST" })
             file_url: doc.fileUrl,
           };
         }),
-      );
+      ).select("id, requirement_name, subject_role, verification_status, rejection_reason");
       if (docsError) {
         const { error: rollbackError } = await getSupabaseAdminClient()
           .from("requests")
@@ -297,6 +368,15 @@ export const submitRequestFn = createServerFn({ method: "POST" })
           .eq("id", requestId)
           .eq("applicant_id", user.id);
         if (!rollbackError) {
+          // A file can back only one request (unique file_url), so this is the
+          // same application sent twice, e.g. from a second tab.
+          if (docsError.code === "23505") {
+            return {
+              error: true,
+              message:
+                "This application was already submitted. Check My Requests for its tracking number.",
+            };
+          }
           return {
             error: true,
             message:
@@ -305,6 +385,14 @@ export const submitRequestFn = createServerFn({ method: "POST" })
         }
         documentWarning =
           "Your request was submitted, but we couldn't attach your uploaded documents. Please bring them with you to the CCRO.";
+      } else {
+        submittedDocuments = (savedDocuments ?? []).map((document) => ({
+          id: document.id,
+          requirementName: document.requirement_name,
+          subjectRole: document.subject_role,
+          verificationStatus: document.verification_status,
+          rejectionReason: document.rejection_reason,
+        }));
       }
     }
 
@@ -317,7 +405,8 @@ export const submitRequestFn = createServerFn({ method: "POST" })
       });
     }
 
-    const { error: logError } = await supabase.from("application_logs").insert({
+    // Applicants can't write the audit trail themselves; the server records it.
+    const { error: logError } = await getSupabaseAdminClient().from("application_logs").insert({
       request_id: requestId,
       performed_by_profile_id: user.id,
       action_status: "submitted",
@@ -327,5 +416,21 @@ export const submitRequestFn = createServerFn({ method: "POST" })
       console.error("Failed to write submission audit log", logError);
     }
 
-    return { error: false, trackingNumber, documentWarning };
+    return {
+      error: false,
+      requestId,
+      trackingNumber,
+      documentWarning,
+      pdfData: {
+        trackingNumber,
+        serviceName: selectedService.display_name || selectedService.name,
+        status: "submitted",
+        submittedAt: new Date().toISOString(),
+        feesDue,
+        copies,
+        processingTime: selectedService.processing_time,
+        documents: submittedDocuments,
+        documentWarning,
+      } satisfies AcknowledgmentPdfData,
+    };
   });

@@ -18,6 +18,7 @@ import {
   InputGroupInput,
 } from "~/components/ui/input-group";
 import { Spinner } from "~/components/ui/spinner";
+import { PASSWORD_HINT } from "../../auth.schema";
 import {
   acceptInvitationFormSchema,
   type AcceptInvitationFormValues,
@@ -71,7 +72,7 @@ export function AcceptInvitationForm() {
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
               <FieldLabel htmlFor="invitation-password">Password</FieldLabel>
-              <InputGroup className="h-11 bg-white">
+              <InputGroup shape="pill" className="h-11 bg-card">
                 <InputGroupAddon>
                   <Lock aria-hidden="true" />
                 </InputGroupAddon>
@@ -96,8 +97,7 @@ export function AcceptInvitationForm() {
                 </InputGroupAddon>
               </InputGroup>
               <FieldDescription id="password-guidance">
-                Use at least 8 characters. A longer, unique password is easier
-                to keep secure.
+                {PASSWORD_HINT}
               </FieldDescription>
               {fieldState.invalid ? (
                 <FieldError errors={[fieldState.error]} />
@@ -114,7 +114,7 @@ export function AcceptInvitationForm() {
               <FieldLabel htmlFor="invitation-confirm-password">
                 Confirm password
               </FieldLabel>
-              <InputGroup className="h-11 bg-white">
+              <InputGroup shape="pill" className="h-11 bg-card">
                 <InputGroupAddon>
                   <Lock aria-hidden="true" />
                 </InputGroupAddon>
@@ -154,7 +154,8 @@ export function AcceptInvitationForm() {
       <Button
         type="submit"
         size="lg"
-        className="w-full bg-primary text-white hover:bg-primary-hover"
+        shape="pill"
+        className="w-full bg-primary-fill text-white hover:bg-primary-fill-hover"
         disabled={isPending}
       >
         {isPending ? (

@@ -1,6 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requirePermission } from "~/middleware/auth";
+import {
+  assertFormFitsRegistry,
+  recordServiceAudit,
+  runSaveServiceConfiguration,
+} from "~/features/admin/services/service-configuration.server";
 import { invalidateServiceCatalogue } from "~/features/services/services.catalogue";
 import {
   formTemplateDefinitionSchema,
@@ -72,119 +77,46 @@ const publishTemplateSchema = z.object({
   serviceCode: serviceCodeSchema,
   templateName: z.string().trim().min(1).max(160),
   definition: formTemplateDefinitionSchema,
+  /** Active version the editor loaded; null when the service has no form yet. */
+  expectedVersionId: z.string().uuid().nullable(),
 });
 
-function templateKeyForService(serviceCode: string) {
-  return `service-${serviceCode.toLowerCase().replace(/[^a-z0-9_-]+/g, "-")}`;
-}
-
-/** Publish an immutable version and make it active for every bound service. */
+/**
+ * Publish an immutable version and make it active for every bound service.
+ *
+ * Goes through the same database function as the service editor's save, so the
+ * new version and its activation commit together, and a publish that would
+ * overwrite another admin's newer version is refused instead.
+ */
 export const publishServiceFormTemplateFn = createServerFn({ method: "POST" })
   .middleware([requirePermission("services:manage")])
   .validator(publishTemplateSchema)
   .handler(async ({ data, context }) => {
-    let { data: binding, error: bindingError } = await context.supabase
-      .from("service_form_templates")
-      .select("template_id")
-      .eq("service_code", data.serviceCode)
-      .maybeSingle();
+    await assertFormFitsRegistry(
+      context.supabase,
+      data.serviceCode,
+      data.definition,
+    );
 
-    if (bindingError) throw new Error(bindingError.message);
-
-    if (!binding) {
-      const { data: createdTemplate, error: createTemplateError } = await context.supabase
-        .from("form_templates")
-        .insert({
-          template_key: templateKeyForService(data.serviceCode),
-          name: data.templateName,
-          created_by: context.user.id,
-        })
-        .select("id")
-        .single();
-      if (createTemplateError || !createdTemplate) {
-        throw new Error(createTemplateError?.message ?? "Could not create form template");
-      }
-
-      const { data: createdBinding, error: createBindingError } = await context.supabase
-        .from("service_form_templates")
-        .insert({ service_code: data.serviceCode, template_id: createdTemplate.id })
-        .select("template_id")
-        .single();
-      if (createBindingError || !createdBinding) {
-        throw new Error(createBindingError?.message ?? "Could not attach form template");
-      }
-      binding = createdBinding;
-    }
-
-    if (data.definition.caseSelector) {
-      const { data: boundServices, error: boundServicesError } = await context.supabase
-        .from("service_form_templates")
-        .select("service_code")
-        .eq("template_id", binding.template_id);
-      if (boundServicesError) throw new Error(boundServicesError.message);
-
-      const allowedCodes = new Set(
-        (boundServices ?? []).map((service) => service.service_code),
-      );
-      const outcomeCodes = new Set(
-        data.definition.caseSelector.outcomes.map(
-          (outcome) => outcome.serviceCode,
-        ),
-      );
-      const invalidCode = [...outcomeCodes].find(
-        (serviceCode) => !allowedCodes.has(serviceCode),
-      );
-      if (invalidCode) {
-        throw new Error(
-          `Case routing outcome "${invalidCode}" is not bound to this form template.`,
-        );
-      }
-      const missingCode = [...allowedCodes].find(
-        (serviceCode) => !outcomeCodes.has(serviceCode),
-      );
-      if (missingCode) {
-        throw new Error(
-          `Case routing does not include the internal variant "${missingCode}".`,
-        );
-      }
-    }
-
-    const { data: latest } = await context.supabase
-      .from("form_template_versions")
-      .select("version")
-      .eq("template_id", binding.template_id)
-      .order("version", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const nextVersion = (latest?.version ?? 0) + 1;
-
-    const { data: published, error: publishError } = await context.supabase
-      .from("form_template_versions")
-      .insert({
-        template_id: binding.template_id,
-        version: nextVersion,
-        status: "published",
+    const { form } = await runSaveServiceConfiguration(context.supabase, {
+      serviceCode: data.serviceCode,
+      create: false,
+      service: null,
+      requirements: null,
+      form: {
+        templateName: data.templateName,
         definition: data.definition,
-        created_by: context.user.id,
-        published_by: context.user.id,
-        published_at: new Date().toISOString(),
-      })
-      .select("id, version")
-      .single();
-    if (publishError || !published) {
-      throw new Error(publishError?.message ?? "Could not publish form template");
-    }
-
-    const { error: activateError } = await context.supabase
-      .from("form_templates")
-      .update({
-        name: data.templateName,
-        active_version_id: published.id,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", binding.template_id);
-    if (activateError) throw new Error(activateError.message);
+        expectedVersionId: data.expectedVersionId,
+      },
+    });
+    if (!form) throw new Error("Could not publish form template");
 
     invalidateServiceCatalogue();
-    return { versionId: published.id, version: published.version };
+    if (form.published) {
+      await recordServiceAudit(context.user.id, "service_form_published", {
+        service_code: data.serviceCode,
+        form_version: String(form.version),
+      });
+    }
+    return form;
   });

@@ -16,11 +16,24 @@ const toggleVariants = cva(
           "h-9 min-w-9 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
         sm: "h-8 min-w-8 px-2.5 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5",
         lg: "h-10 min-w-10 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
+        touch: "h-11 min-w-11 px-3 has-data-[icon=inline-end]:pr-2.5 has-data-[icon=inline-start]:pl-2.5",
+      },
+      shape: {
+        default: "",
+        pill: "rounded-full",
+        soft: "",
+        split: "",
       },
     },
+    compoundVariants: [
+      { shape: ["soft", "split"], size: ["lg", "touch"], className: "rounded-2xl" },
+      { shape: ["soft", "split"], size: "default", className: "rounded-xl" },
+      { shape: ["soft", "split"], size: "sm", className: "rounded-lg" },
+    ],
     defaultVariants: {
       variant: "default",
-      size: "default",
+      size: "lg",
+      shape: "pill",
     },
   }
 )
@@ -28,13 +41,14 @@ const toggleVariants = cva(
 function Toggle({
   className,
   variant = "default",
-  size = "default",
+  size = "lg",
+  shape = "pill",
   ...props
 }: TogglePrimitive.Props & VariantProps<typeof toggleVariants>) {
   return (
     <TogglePrimitive
       data-slot="toggle"
-      className={cn(toggleVariants({ variant, size, className }))}
+      className={cn(toggleVariants({ variant, size, shape, className }))}
       {...props}
     />
   )

@@ -12,6 +12,7 @@ import {
 import { getEncodableServicesFn } from "~/features/requests/walk-in-intake.queries";
 import {
   parseDepartmentFilter,
+  parseNeedsFilter,
   parsePaymentFilter,
   parseRequestStatus,
   parseWorkflowStage,
@@ -20,6 +21,7 @@ import {
 import RequestsPage from "~/features/requests/pages/RequestsPage";
 import { RequestsPageSkeleton } from "~/features/requests/pages/RequestsPageSkeleton";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
+import { denyAccess } from "~/lib/access";
 
 export const Route = createFileRoute("/_authed/_dashboard/requests/")({
   validateSearch: (search: Record<string, unknown>): RequestQueueFilters => ({
@@ -27,13 +29,14 @@ export const Route = createFileRoute("/_authed/_dashboard/requests/")({
     status: parseRequestStatus(search.status),
     payment: parsePaymentFilter(search.payment),
     department: parseDepartmentFilter(search.department),
+    needs: parseNeedsFilter(search.needs),
   }),
-  beforeLoad: ({ context }) => {
+  beforeLoad: ({ context, location }) => {
     if (
       !context.user ||
       !hasPermission(context.user.role as Role, "requests:view_all")
     )
-      throw new Error("Forbidden");
+      denyAccess(location);
   },
   loader: async ({ context }) => {
     const role = context.user!.role as Role;
@@ -46,7 +49,9 @@ export const Route = createFileRoute("/_authed/_dashboard/requests/")({
       canEncode ? getEncodableServicesFn() : Promise.resolve([]),
     ]);
 
-    return { requests, departments, scope, services, canEncode };
+    // Read once here so the server render and the browser agree on every age
+    // in the In stage column.
+    return { requests, departments, scope, services, canEncode, now: Date.now() };
   },
   staleTime: 15_000,
   pendingMs: 250,
@@ -56,7 +61,7 @@ export const Route = createFileRoute("/_authed/_dashboard/requests/")({
 });
 
 function RequestQueueRoute() {
-  const { requests, departments, scope, services, canEncode } =
+  const { requests, departments, scope, services, canEncode, now } =
     Route.useLoaderData();
   const filters = Route.useSearch();
   const navigate = useNavigate({ from: "/requests/" });
@@ -73,6 +78,7 @@ function RequestQueueRoute() {
         scopedDepartmentName={scope.isScoped ? scope.departmentName : null}
         encodableServices={canEncode ? services : null}
         onWalkInEncoded={() => router.invalidate()}
+        now={now}
       />
     </div>
   );

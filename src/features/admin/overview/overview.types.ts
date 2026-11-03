@@ -3,5 +3,3 @@ import type { getCcroAdminOverview } from "~/features/admin/overview/overview.qu
 export type AdminOverviewData = Awaited<
   ReturnType<typeof getCcroAdminOverview>
 >;
-
-export type RequestOverview = AdminOverviewData["requests"];

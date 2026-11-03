@@ -1,47 +1,42 @@
-import { ScrollText } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
 import { AuditDataTable } from "../components/AuditDataTable";
-import { SystemAdminPageHeader } from "../components/SystemAdminPageHeader";
 import type { AuditFilters, NormalizedAuditEvent } from "../system-admin.types";
+import "../center-tables.css";
+import "../audit-center.css";
 
 export function AuditPage({
   events,
   total,
   filters,
+  isLoading = false,
+  error = null,
+  onRetry,
 }: {
   events: NormalizedAuditEvent[];
   total: number;
   filters: AuditFilters;
+  isLoading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
 }) {
   return (
-    <div className="dashboard-page">
-      <SystemAdminPageHeader
-        icon={ScrollText}
-        title="Audit Center"
-        description="Review metadata-only account and request activity. Citizen form data and documents are never included."
-      />
-      <section aria-labelledby="audit-events-title">
-        <Card>
-          <CardHeader className="border-b">
-            <CardTitle>
-              <h2 id="audit-events-title" className="text-pretty">
-                System &amp; Request Audit Events
-              </h2>
-            </CardTitle>
-            <CardDescription>
-              Filter activity by actor, event, source, or date range.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <AuditDataTable data={events} total={total} filters={filters} />
-          </CardContent>
-        </Card>
+    <div className="dashboard-page audit-center-page">
+      <header className="space-y-1.5">
+        <h1 className="text-3xl font-extrabold tracking-[-0.03em] sm:text-4xl">
+          Audit Center
+        </h1>
+        <p className="text-sm leading-6 text-muted-foreground">
+          Metadata only. Citizen form data and documents are never included.
+        </p>
+      </header>
+      <section aria-label="Audit events">
+        <AuditDataTable
+          data={events}
+          total={total}
+          filters={filters}
+          isLoading={isLoading}
+          error={error}
+          onRetry={onRetry}
+        />
       </section>
     </div>
   );

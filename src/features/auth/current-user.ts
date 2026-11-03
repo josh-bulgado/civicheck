@@ -15,12 +15,37 @@
 // change made somewhere that forgot to clear could linger.
 
 import type { AccountProfile } from "~/features/account/account.types";
+import { clearFileCache } from "~/lib/file-preview-cache";
+import { clearAuditEventsCache } from "~/features/system-admin/audit-events.cache";
+import type { Role } from "~/lib/permissions";
 
 type CurrentUser = AccountProfile | null;
 
 const TTL_MS = 30_000;
 
 let entry: { promise: Promise<CurrentUser>; expiresAt: number } | null = null;
+
+/**
+ * Who the page being loaded is for, known before the identity has finished
+ * loading: a fresh sign-in already knows its own account, but the lookup behind
+ * the first page still takes a round trip. A loading frame reads this so it can
+ * be drawn for the right kind of account from its first paint, instead of a
+ * neutral placeholder that is swapped for it. A hint, never an authorization
+ * input: nothing is shown or allowed because of it.
+ */
+export type IdentityHint = { id: string | null; role: Role };
+
+// Client-only, like the cache: on the server a module-level value is shared by
+// every request the process handles.
+let hint: IdentityHint | null = null;
+
+export function hintCurrentUser(next: IdentityHint): void {
+  if (typeof window !== "undefined") hint = next;
+}
+
+export function peekCurrentUser(): IdentityHint | null {
+  return typeof window === "undefined" ? null : hint;
+}
 
 /**
  * Resolve the current user, reusing the cached result when it is still fresh.
@@ -48,6 +73,16 @@ export function loadCurrentUser(
   });
 
   entry = { promise, expiresAt: Date.now() + TTL_MS };
+  // Registered before the caller's own wait, so the hint is already the real
+  // identity by the time the page that needed it starts loading.
+  void promise.then(
+    (user) => {
+      if (entry?.promise === promise) {
+        hint = user ? { id: user.id, role: user.role } : null;
+      }
+    },
+    () => {},
+  );
   return promise;
 }
 
@@ -58,4 +93,9 @@ export function loadCurrentUser(
  */
 export function clearCurrentUser(): void {
   entry = null;
+  hint = null;
+  // Documents and audit metadata belong to the signed-in account. They must
+  // not outlive that identity in this tab.
+  clearFileCache();
+  clearAuditEventsCache();
 }

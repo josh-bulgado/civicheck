@@ -1,12 +1,18 @@
-import { Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Check, CheckCircle2 } from "lucide-react";
+import { RegistrationNoticeText } from "~/features/requests/components/RegistrationNoticeText";
+import { onTimeRegistrationNotice } from "~/features/requests/on-time-registration";
+import { SignaturePad } from "./SignaturePad";
+import { requiresVerificationSignature } from "../verification-signature";
+import { formatFieldLabel } from "~/features/forms/field-label";
+import { useNavigate } from "@tanstack/react-router";
+import { SubmittedRequestRedirect } from "./SubmittedRequestRedirect";
+import { QuietLink } from "~/components/quiet-link";
+import { useMemo, useState, type ReactNode } from "react";
+import { Check, CheckCircle2, Download } from "lucide-react";
 import { Checkbox } from "~/components/ui/checkbox";
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, buttonVariants } from "~/components/ui/button";
-import { Field, FieldLabel } from "~/components/ui/field";
+import { RequiredMark } from "~/components/ui/required-mark";
 import {
-  formatFee,
+  clampCopies,
   isRequirementApplicable,
 } from "~/features/services/service-utils";
 import {
@@ -14,44 +20,31 @@ import {
   requirementUploadKey,
 } from "~/features/services/requirement-upload.utils";
 import { submitRequestFn } from "~/features/services/services.mutations";
-import { discardRequestUploadDraftFn } from "~/features/apply/apply.mutations";
+import { useAcknowledgmentPdfDownload } from "~/features/requests/pdf/useAcknowledgmentPdfDownload";
+import { useVerificationFormPdfDownload } from "~/features/requests/pdf/useVerificationFormPdfDownload";
+import type {
+  AcknowledgmentPdfData,
+  VerificationFormPdfData,
+} from "~/features/requests/pdf/types";
 import type { ServiceDetail } from "~/features/services/services.queries";
 import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
-import { ChangeServiceButton } from "~/features/apply/components/ApplicationDocket";
+import { DocumentPreview } from "~/features/apply/components/DocumentPreview";
 import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
+import { useDocumentPreviewUrls } from "~/features/apply/hooks/useDocumentPreviewUrls";
 import {
-  deriveTemplateAnswers,
+  canonicalizeTemplateAnswers,
   isFieldVisible,
   visibleCaseSelectorQuestions,
 } from "~/features/forms/form-template.utils";
-import type {
-  FormFieldDefinition,
-  TemplateAnswers,
-} from "~/features/forms/form-template.types";
-import { impliedSex, subjectFullName } from "~/lib/subject-fields";
-
-const REVIEW_DATE_FORMATTER = new Intl.DateTimeFormat("en-PH", {
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-});
-
-function formatReviewDate(value: string) {
-  if (!value) return "—";
-  const date = new Date(value + "T00:00:00");
-  return Number.isNaN(date.getTime()) ? value : REVIEW_DATE_FORMATTER.format(date);
-}
-
-function formatFieldAnswer(field: FormFieldDefinition, value: string) {
-  if (!value) return "—";
-  if (field.type === "date") return formatReviewDate(value);
-  if (field.type === "phone") return `+63 ${value}`;
-  if (field.type === "select") {
-    return field.options?.find((option) => option.value === value)?.label ?? value;
-  }
-  return value;
-}
+import { formatFieldAnswer } from "~/features/forms/answer-format";
+import type { TemplateAnswers } from "~/features/forms/form-template.types";
+import {
+  flattenSubjects,
+  impliedSex,
+  reconcileSubjects,
+  subjectFullName,
+} from "~/lib/subject-fields";
 
 interface ReviewStepProps {
   serviceCode: string;
@@ -62,33 +55,47 @@ interface ReviewStepProps {
 
 export function ReviewStep({
   serviceCode,
-  displayName,
   services,
   requirements,
 }: ReviewStepProps) {
   const navigate = useNavigate();
-  const { draft, clear } = useApplyDraft(serviceCode);
+  const { draft, complete } = useApplyDraft(serviceCode);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
-  const [result, setResult] = useState<{ trackingNumber: string; documentWarning?: string } | null>(
-    null,
-  );
-
-  function handleDiscard() {
-    const uploadDraftId = draft.uploadDraftId;
-    clear();
-    if (uploadDraftId) {
-      discardRequestUploadDraftFn({ data: { uploadDraftId } }).catch(() => {});
-    }
-  }
+  const [signature, setSignature] = useState("");
+  const [result, setResult] = useState<{
+    trackingNumber: string;
+    registrationNotice: string | null;
+    documentWarning?: string;
+    pdfData: AcknowledgmentPdfData;
+    /** Set for services that collect requester details for the Verification Form. */
+    verificationData: VerificationFormPdfData | null;
+  } | null>(null);
+  const { download: downloadAcknowledgmentPdf, downloading: downloadingPdf } =
+    useAcknowledgmentPdfDownload();
+  const {
+    download: downloadVerificationForm,
+    downloading: downloadingVerificationForm,
+  } = useVerificationFormPdfDownload();
 
   const selectedService = useMemo(
     () => services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0],
     [services, draft.selectedServiceCode],
   );
+  const roles = selectedService?.party_roles?.length
+    ? selectedService.party_roles
+    : ["Subject"];
+  // Also normalize here so drafts saved before this fix can be submitted
+  // directly from the review page without making the applicant re-enter data.
+  const subjects = reconcileSubjects(draft.subjects, roles);
 
-  const showRoleLabels = draft.subjects.length > 1;
+  // Mirrors the server: quantity only counts for a per-copy service, and the
+  // server recomputes the same total on submit.
+  const feePerCopy = selectedService?.fee_per_copy === true;
+  const copies = feePerCopy ? clampCopies(draft.copies) : 1;
+
+  const showRoleLabels = subjects.length > 1;
   const sexLabel = (sex: string) =>
     sex === "male" ? "Male" : sex === "female" ? "Female" : "—";
 
@@ -97,13 +104,14 @@ export function ReviewStep({
     definition.sections
       .flatMap((section) => section.fields)
       .filter((field) => field.type === "person_group")
-      .map((field) => [field.key, draft.subjects]),
+      .map((field) => [field.key, subjects]),
   );
-  const answerBag: TemplateAnswers = deriveTemplateAnswers(definition, {
+  const answerBag: TemplateAnswers = canonicalizeTemplateAnswers(definition, {
     ...draft.answers,
     ...draft.caseSelectorAnswers,
     ...personGroupAnswers,
   });
+  const needsSignature = requiresVerificationSignature(selectedService.service_code, answerBag.record_type);
   const activeDocumentKeys = new Set(
     expandRequirementUploadSlots(
       requirements.filter((requirement) =>
@@ -113,7 +121,7 @@ export function ReviewStep({
           answerBag,
         ),
       ),
-      draft.subjects,
+      subjects,
     ).map((slot) => slot.key),
   );
   const activeDocuments = draft.documents.filter((document) =>
@@ -121,6 +129,11 @@ export function ReviewStep({
       requirementUploadKey(document.requirementId, document.subjectRole),
     ),
   );
+  const { urls: previewUrls, refresh: refreshPreviewUrl } =
+    useDocumentPreviewUrls(
+      draft.uploadDraftId,
+      activeDocuments.map((document) => document.storagePath),
+    );
   const documentTotals = new Map<string, number>();
   for (const document of activeDocuments) {
     const key = requirementUploadKey(
@@ -145,7 +158,7 @@ export function ReviewStep({
   });
 
   async function handleSubmit() {
-    if (!selectedService) return;
+    if (!selectedService || !confirmed || (needsSignature && !signature) || submitting) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -155,6 +168,8 @@ export function ReviewStep({
           templateVersionId: selectedService.form_template?.versionId ?? null,
           uploadDraftId: draft.uploadDraftId,
           answers: answerBag,
+          signature: needsSignature ? signature : undefined,
+          copies: feePerCopy ? copies : undefined,
           documents: activeDocuments.map((d) => ({
             requirementId: d.requirementId,
             requirementName: d.requirementName,
@@ -172,8 +187,28 @@ export function ReviewStep({
         return;
       }
 
-      setResult({ trackingNumber: res.trackingNumber!, documentWarning: res.documentWarning });
-      clear();
+      // The printable Verification Form is filled in from the same answers the
+      // request was saved with (text answers plus the flattened name keys).
+      const textAnswers = Object.fromEntries(
+        Object.entries(answerBag).filter(([, value]) => typeof value === "string"),
+      ) as Record<string, string>;
+      const verificationData: VerificationFormPdfData | null =
+        typeof textAnswers.requester_first_name === "string"
+          ? {
+              trackingNumber: res.trackingNumber!,
+              copies,
+              formData: { ...textAnswers, ...flattenSubjects(subjects), ...(needsSignature ? { requester_signature: signature } : {}) },
+            }
+          : null;
+
+      setResult({
+        trackingNumber: res.trackingNumber!,
+        registrationNotice: onTimeRegistrationNotice(selectedService.service_code, answerBag),
+        documentWarning: res.documentWarning,
+        pdfData: res.pdfData!,
+        verificationData,
+      });
+      complete(res.requestId!);
     } catch (err) {
       setSubmitError(
         err instanceof Error
@@ -185,6 +220,10 @@ export function ReviewStep({
     }
   }
 
+  if (draft.submittedRequestId && !result) {
+    return <SubmittedRequestRedirect requestId={draft.submittedRequestId} />;
+  }
+
   if (result) {
     return (
       <WizardShell
@@ -192,7 +231,7 @@ export function ReviewStep({
         title="Request submitted"
         description="CCRO staff will pre-check your documents. You'll be notified in-system and by email as your request moves forward."
       >
-        <div className="flex flex-col items-start gap-5 rounded-xl border border-success/25 bg-success-soft-2 p-6">
+        <div className="flex flex-col items-start gap-5 rounded-[20px] border border-success/25 bg-success-soft-2 p-6">
           <div className="flex items-center gap-3">
             <CheckCircle2 className="size-8 text-success" />
             <div>
@@ -200,187 +239,219 @@ export function ReviewStep({
               <p className="text-2xl font-bold text-foreground">{result.trackingNumber}</p>
             </div>
           </div>
+          {result.registrationNotice && (
+            <div role="note" className="w-full rounded-xl border border-warning-strong/25 bg-card p-4">
+              <p className="mt-1 text-sm leading-relaxed text-body-strong">
+                <RegistrationNoticeText text={result.registrationNotice} />
+              </p>
+            </div>
+          )}
           {result.documentWarning && (
             <p className="text-sm text-warning-strong">{result.documentWarning}</p>
           )}
           <div className="flex flex-wrap gap-3">
-            <Link
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-13 rounded-full px-6 text-base font-semibold"
+              disabled={downloadingPdf}
+              onClick={() => downloadAcknowledgmentPdf(result.pdfData)}
+            >
+              <Download data-icon="inline-start" />
+              {downloadingPdf ? "Preparing PDF..." : "Download Acknowledgment PDF"}
+            </Button>
+            {result.verificationData ? (
+              <Button
+                size="lg"
+                variant="outline"
+                className="h-13 rounded-full px-6 text-base font-semibold"
+                disabled={downloadingVerificationForm}
+                onClick={() => downloadVerificationForm(result.verificationData!)}
+              >
+                <Download data-icon="inline-start" />
+                {downloadingVerificationForm ? "Preparing PDF..." : "Download Verification Form"}
+              </Button>
+            ) : null}
+            <QuietLink
               to="/my-requests"
-              className={buttonVariants({ size: "lg" })}
+              className={buttonVariants({
+                size: "lg",
+                className: "h-13 rounded-full px-6 text-base font-semibold",
+              })}
             >
               View my requests
-            </Link>
+            </QuietLink>
           </div>
         </div>
       </WizardShell>
     );
   }
 
-  return (
-    <WizardShell
-      step={4}
-      title="Check everything before you send"
-      description="Staff pre-check your file before you visit the CCRO counter. You can still edit any section."
-      sidebar={<WhatHappensNextCard />}
-    >
-      <div className="flex flex-col gap-5">
-        <EditSection
-          title="Selected service"
-          action={
-            selectedService ? (
-              <ChangeServiceButton
-                serviceName={selectedService.name}
-                onDiscard={handleDiscard}
-                label="Change"
-              />
-            ) : null
-          }
-        >
-          <ReviewRow
-            label="Service"
-            value={selectedService?.name ?? displayName}
-          />
-          {selectedService && selectedService.name !== displayName ? (
-            <ReviewRow label="Service family" value={displayName} />
-          ) : null}
-          <ReviewRow
-            label="Fee at cashier"
-            value={selectedService ? formatFee(selectedService.fee) : "—"}
-          />
-          {visibleCaseSelectorQuestions(definition, answerBag).map(
-            (question) => {
-              const answer = answerBag[question.key];
-              const value = typeof answer === "string" ? answer : "";
-              return (
-                <ReviewRow
-                  key={question.key}
-                  label={question.label}
-                  value={
-                    question.options.find((option) => option.value === value)
-                      ?.label ?? (value || "—")
-                  }
-                />
-              );
-            },
-          )}
-        </EditSection>
+  // Everything the applicant said, in the two places they said it. The service
+  // and its fee are in the docket above, so they are not repeated here.
+  const caseQuestions = visibleCaseSelectorQuestions(definition, answerBag).map((question) => {
+    const answer = answerBag[question.key];
+    const value = typeof answer === "string" ? answer : "";
+    return (
+      <ReviewRow
+        key={question.key}
+        label={question.label}
+        value={
+          question.options.find((option) => option.value === value)?.label ?? (value || "—")
+        }
+      />
+    );
+  });
 
-        {definition.sections.map((section) => (
-          <EditSection
-            key={section.key}
-            title={section.title}
+  const rowsForStep = (step: "case" | "details") =>
+    definition.sections
+      .filter((section) => (step === "case" ? section.step === "case" : section.step !== "case"))
+      .flatMap((section) =>
+        section.fields
+          .filter((field) => isFieldVisible(field, answerBag))
+          .flatMap((field) => {
+            if (field.type === "person_group") {
+              return [
+                ...subjects.map((subject, index) => (
+                  <ReviewRow
+                    key={`${field.key}-name-${index}`}
+                    label={showRoleLabels ? subject.role : field.label}
+                    value={subjectFullName(subject) || "—"}
+                  />
+                )),
+                ...subjects
+                  .filter((subject) => answerBag.record_type !== "marriage" && impliedSex(subject.role) === null)
+                  .map((subject, index) => (
+                    <ReviewRow
+                      key={`${field.key}-sex-${index}`}
+                      label={showRoleLabels ? `${subject.role}'s sex` : "Sex"}
+                      value={sexLabel(subject.sex)}
+                    />
+                  )),
+              ];
+            }
+            const answer = answerBag[field.key];
+            return [
+              <ReviewRow
+                key={field.key}
+                label={field.label}
+                value={formatFieldAnswer(field, typeof answer === "string" ? answer : "")}
+              />,
+            ];
+          }),
+      );
+
+  const caseRows = [...caseQuestions, ...rowsForStep("case")];
+  const detailRows = rowsForStep("details");
+
+  return (
+    <WizardShell step={4} title="Check everything before you send" sidebar={<WhatHappensNextCard registrationNotice={onTimeRegistrationNotice(selectedService.service_code, answerBag)} />}>
+      <div className="flex flex-col gap-5">
+        {caseRows.length > 0 ? (
+          <ReviewBlock
+            title="About your case"
             onEdit={() =>
-              navigate({
-                to:
-                  section.step === "case"
-                    ? "/apply/$serviceCode/case"
-                    : "/apply/$serviceCode/details",
-                params: { serviceCode },
-              })
+              navigate({ to: "/apply/$serviceCode/case", params: { serviceCode } })
             }
           >
-            {section.fields
-              .filter((field) => isFieldVisible(field, answerBag))
-              .flatMap((field) => {
-                if (field.type === "person_group") {
-                  return [
-                    ...draft.subjects.map((subject, index) => (
-                      <ReviewRow
-                        key={`${field.key}-name-${index}`}
-                        label={showRoleLabels ? subject.role : field.label}
-                        value={subjectFullName(subject) || "—"}
-                      />
-                    )),
-                    ...draft.subjects
-                      .filter((subject) => impliedSex(subject.role) === null)
-                      .map((subject, index) => (
-                        <ReviewRow
-                          key={`${field.key}-sex-${index}`}
-                          label={showRoleLabels ? `${subject.role}'s sex` : "Sex"}
-                          value={sexLabel(subject.sex)}
-                        />
-                      )),
-                  ];
-                }
-                const answer = answerBag[field.key];
-                return [
-                  <ReviewRow
-                    key={field.key}
-                    label={field.label}
-                    value={formatFieldAnswer(
-                      field,
-                      typeof answer === "string" ? answer : "",
-                    )}
-                  />,
-                ];
-              })}
-          </EditSection>
-        ))}
+            {caseRows}
+          </ReviewBlock>
+        ) : null}
 
-        <EditSection
-          title={`Documents · ${activeDocuments.length} uploaded`}
+        {detailRows.length > 0 ? (
+          <ReviewBlock
+            title="Your details"
+            onEdit={() =>
+              navigate({ to: "/apply/$serviceCode/details", params: { serviceCode } })
+            }
+          >
+            {detailRows}
+          </ReviewBlock>
+        ) : null}
+
+        <ReviewBlock
+          title="Documents"
           onEdit={() =>
             navigate({ to: "/apply/$serviceCode/documents", params: { serviceCode } })
           }
         >
           {activeDocuments.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No documents uploaded yet.</p>
+            <p className="text-base text-muted-foreground sm:col-span-2">
+              No documents uploaded yet.
+            </p>
           ) : (
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-3.5 sm:col-span-2">
               {activeDocumentsWithPositions.map(
-                ({ document: doc, fileNumber, fileTotal }) => (
-                  <div
-                    key={doc.storagePath}
-                    className="flex items-center gap-2.5 text-sm"
-                  >
-                    <span className="flex size-4.5 shrink-0 items-center justify-center rounded-[5px] bg-success text-[10px] font-bold text-white">
-                      <Check className="size-2.5" aria-hidden="true" />
-                    </span>
-                    <span className="min-w-0 break-words text-foreground">
-                      {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
-                      {doc.requirementName}
-                      {fileTotal > 1
-                        ? ` · file ${fileNumber} of ${fileTotal}`
-                        : ""}{" "}
-                      — {doc.fileName}
-                    </span>
-                  </div>
-                ),
+                ({ document: doc, fileNumber, fileTotal }) => {
+                  const name = doc.requirementName.replace(/\s*[—–]\s*/g, " - ");
+                  const suffix = fileTotal > 1 ? ` · file ${fileNumber} of ${fileTotal}` : "";
+                  return (
+                    <div key={doc.storagePath} className="flex items-center gap-3.5">
+                      <span className="flex size-5.5 shrink-0 items-center justify-center rounded-md bg-success text-white dark:text-background">
+                        <Check className="size-3.5" strokeWidth={3} aria-hidden="true" />
+                      </span>
+                      <DocumentPreview
+                        fileName={doc.fileName}
+                        url={previewUrls[doc.storagePath]}
+                        label={`${name}${suffix}`}
+                        onUrlError={() => refreshPreviewUrl(doc.storagePath)}
+                      />
+                      <span className="min-w-0 text-base leading-snug font-medium wrap-break-word text-foreground">
+                        {doc.subjectRole ? `${doc.subjectRole}: ` : ""}
+                        {name}
+                        {suffix}
+                      </span>
+                    </div>
+                  );
+                },
               )}
             </div>
           )}
-        </EditSection>
+        </ReviewBlock>
 
-        <div className="flex items-center justify-between gap-5 rounded-[10px] border border-control-border bg-primary-tint px-4.5 py-4">
-          <div>
-            <p className="text-base font-bold text-foreground">Nothing is paid online</p>
-            <p className="text-sm leading-relaxed text-body">
-              Bring {selectedService ? formatFee(selectedService.fee) : "the fee"} in cash to the
-              CCRO cashier when you visit.
-            </p>
-          </div>
-          <p className="whitespace-nowrap text-2xl font-bold text-foreground">
-            {selectedService ? formatFee(selectedService.fee) : "—"}
-          </p>
-        </div>
+        {needsSignature && <SignaturePad onChange={setSignature} disabled={submitting} />}
 
-        <Field orientation="horizontal">
+        <div className="flex items-start gap-3">
           <Checkbox
             id="confirm-application-details"
             checked={confirmed}
             onCheckedChange={(checked) => setConfirmed(checked === true)}
+            className="mt-px size-6.5 rounded-lg border-[1.5px] border-[#b9c7de] dark:border-border-strong shadow-none data-checked:border-primary [&_svg]:size-4.5"
           />
-          <FieldLabel htmlFor="confirm-application-details">
-            I confirm the selected service and details above are correct, and I
-            will bring the original documents.
-          </FieldLabel>
-        </Field>
+          <label
+            htmlFor="confirm-application-details"
+            className="cursor-pointer text-base leading-[1.6] font-semibold text-foreground"
+          >
+            I confirm these details are correct. <RequiredMark />
+          </label>
+        </div>
 
         {submitError && (
-          <Alert variant="destructive">
-            <AlertTitle>Unable to submit request</AlertTitle>
-            <AlertDescription>{submitError}</AlertDescription>
-          </Alert>
+          <div
+            role="alert"
+            className="flex flex-col gap-3 rounded-[18px] bg-portal-danger-soft px-5 py-4"
+          >
+            <p className="text-[15px] leading-snug font-semibold text-destructive">
+              {submitError}
+            </p>
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="civic-press h-12 rounded-full bg-primary-fill px-6 text-base font-semibold text-white hover:bg-primary-fill-hover disabled:opacity-60"
+              >
+                Try again
+              </button>
+              <button
+                type="button"
+                onClick={() => setSubmitError(null)}
+                className="civic-press rounded-full px-1 py-2 text-[15px] font-semibold text-body-2 hover:text-foreground"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         )}
       </div>
 
@@ -390,77 +461,77 @@ export function ReviewStep({
         }
         onContinue={handleSubmit}
         continueLabel="Submit request"
-        continueDisabled={!confirmed}
+        pendingLabel="Submitting…"
+        continueDisabled={!confirmed || (needsSignature && !signature)}
         continuePending={submitting}
       />
     </WizardShell>
   );
 }
 
-function EditSection({
+/** One of the review's three blocks: its name, an Edit link, and the answers in two columns. */
+function ReviewBlock({
   title,
   onEdit,
-  action,
   children,
 }: {
   title: string;
-  onEdit?: () => void;
-  action?: React.ReactNode;
-  children: React.ReactNode;
+  onEdit: () => void;
+  children: ReactNode;
 }) {
   return (
-    <div className="overflow-hidden rounded-[10px] border border-border-light">
-      <div className="flex items-center justify-between gap-3 border-b border-border-light bg-background px-4.5 py-3">
-        <span className="text-sm font-bold text-foreground">{title}</span>
-        {action ??
-          (onEdit ? (
-            <Button
-              type="button"
-              variant="link"
-              size="sm"
-              onClick={onEdit}
-            >
-              Edit
-            </Button>
-          ) : null)}
+    <section className="overflow-hidden rounded-[18px] border border-border-light">
+      <div className="flex items-center justify-between gap-3 bg-portal-panel px-5.5 py-3.5">
+        <h2 className="text-[17px] leading-[normal] font-bold text-foreground">{title}</h2>
+        <button
+          type="button"
+          onClick={onEdit}
+          className="civic-press rounded-full px-1 py-1 text-[15px] font-semibold text-primary hover:text-primary-hover"
+        >
+          Edit
+        </button>
       </div>
-      <div className="grid grid-cols-1 gap-2.5 px-4.5 py-3.5 sm:grid-cols-2">{children}</div>
-    </div>
+      <div className="grid grid-cols-1 gap-x-10 gap-y-3 px-5.5 py-4.5 sm:grid-cols-2">
+        {children}
+      </div>
+    </section>
   );
 }
 
 function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex min-w-0 justify-between gap-3 text-sm">
-      <span className="shrink-0 text-muted-foreground">{label}</span>
-      <span className="min-w-0 break-words text-right font-bold text-foreground">
+    <div className="flex min-w-0 justify-between gap-4 text-base">
+      <span className="shrink-0 text-muted-foreground">{formatFieldLabel(label)}</span>
+      <span className="min-w-0 text-right font-bold wrap-break-word text-foreground">
         {value}
       </span>
     </div>
   );
 }
 
-function WhatHappensNextCard() {
-  const steps = [
-    "Staff pre-check your uploads within 1 working day.",
-    "Visit the CCRO counter with your original documents — no appointment needed.",
-    "Present your tracking number at the counter when you arrive.",
-  ];
+function WhatHappensNextCard({ registrationNotice }: { registrationNotice: string | null }) {
   return (
-    <div className="civic-card overflow-hidden">
-      <div className="border-b border-border-light px-4.5 py-3.5 text-base font-bold text-foreground">
+    <div className="overflow-hidden rounded-[24px] bg-card shadow-portal-card">
+      <div className="border-b border-border-light px-5.5 py-4 text-[17px] font-bold text-foreground">
         What happens next
       </div>
-      <div className="flex flex-col gap-3.5 px-4.5 py-4">
-        {steps.map((step, index) => (
-          <div key={step} className="flex items-start gap-3">
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-bold text-primary">
+      <ol className="flex flex-col gap-4 px-5.5 py-5">
+        {(registrationNotice ? [registrationNotice, "Keep your tracking number for your visit to the CCRO."] : [
+          "Staff check your uploads online. If one needs fixing, you upload it again here.",
+          <>
+            When it is ready for release, visit the CCRO once with your{" "}
+            <strong className="font-bold">original documents</strong>.
+          </>,
+          "Show your tracking number, pay any fee, and claim it.",
+        ]).map((step, index) => (
+          <li key={index} className="flex items-start gap-3">
+            <span className="flex size-6.5 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[13px] font-bold text-primary">
               {index + 1}
             </span>
-            <p className="text-sm leading-relaxed text-body-strong">{step}</p>
-          </div>
+            <p className="pt-0.5 text-[15px] leading-snug text-body-strong">{typeof step === "string" ? <RegistrationNoticeText text={step} /> : step}</p>
+          </li>
         ))}
-      </div>
+      </ol>
     </div>
   );
 }

@@ -1,22 +1,33 @@
-import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Search, FileText, Upload } from "lucide-react";
-import { enterDelay, staggerStyle } from "~/components/motion/stagger";
+import { FileText, Upload } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
-import { Field, FieldError, FieldGroup, FieldLabel } from "~/components/ui/field";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Spinner } from "~/components/ui/spinner";
+import { PanelSkeleton } from "~/components/feedback/PageSkeleton";
 import SiteHeader from "~/features/landing/components/SiteHeader";
 import SiteFooter from "~/features/landing/components/SiteFooter";
-import { trackRequestFn, resubmitAttachmentFn } from "~/features/track/track.queries";
-import { getStatusDetails, getPaymentDetails } from "~/features/services/request-status";
+import {
+  trackRequestFn,
+  resubmitAttachmentFn,
+} from "~/features/track/track.queries";
+import {
+  getStatusDetails,
+  getPaymentDetails,
+} from "~/features/services/request-status";
 import { formatFee } from "~/features/services/service-utils";
+import { isClosedRequestStatus } from "~/features/requests/document-review";
 
 const ACCEPT = "image/jpeg,image/png,application/pdf";
 const MAX_SIZE = 10 * 1024 * 1024;
@@ -76,8 +87,17 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
   const form = useForm<TrackValues>({
     resolver: zodResolver(trackSchema),
     mode: "onBlur",
-    defaultValues: { trackingNumber: initialTrackingNumber ?? "", lastName: "" },
+    defaultValues: {
+      trackingNumber: initialTrackingNumber ?? "",
+      lastName: "",
+    },
   });
+
+  const [trackingNumber, lastName] = useWatch({
+    control: form.control,
+    name: ["trackingNumber", "lastName"],
+  });
+  const hasLookupValues = Boolean(trackingNumber?.trim() && lastName?.trim());
 
   async function onSubmit(values: TrackValues) {
     setSubmitting(true);
@@ -92,6 +112,10 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
       }
       setResult(res.request);
       lookupValuesRef.current = values;
+    } catch {
+      setNotFound("We couldn't check this request right now. Please try again.");
+      setResult(null);
+      lookupValuesRef.current = null;
     } finally {
       setSubmitting(false);
     }
@@ -124,39 +148,44 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
   const payment = result ? getPaymentDetails(result.paymentStatus) : null;
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="public-service-page">
       <SiteHeader />
 
-      <main className="mx-auto w-full max-w-160 flex-1 px-5 py-14 sm:px-8">
-        <div className="civic-enter mb-8 text-center">
-          <h1 className="civic-title text-[clamp(1.75rem,4vw,2.625rem)] leading-tight">
+      <main className="public-track-main">
+          <h1 className="public-page-title">
             Track an existing request
           </h1>
-          <p className="mt-3.5 text-lg leading-relaxed text-body">
-            Enter your tracking number and the last name on the request to
-            check its status.
-          </p>
-        </div>
 
-        <div
-          className="civic-enter rounded-xl border border-border bg-white p-6 sm:p-8"
-          style={enterDelay(90)}
+        <form
+          className="public-tracking-form"
+          onSubmit={form.handleSubmit(onSubmit)}
+          noValidate
         >
           <FieldGroup>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="public-tracking-fields">
               <Controller
                 control={form.control}
                 name="trackingNumber"
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="trackingNumber">Tracking number</FieldLabel>
-                    <Input
+                    <FieldLabel htmlFor="trackingNumber">
+                      Tracking number
+                    </FieldLabel>
+                    <input
+                      type="text"
+                      className="public-track-input"
                       id="trackingNumber"
                       placeholder="e.g. CCRO-2026-000123"
                       autoCapitalize="characters"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      aria-invalid={fieldState.invalid}
+                      aria-describedby={fieldState.invalid ? "trackingNumberError" : undefined}
                       {...field}
                     />
-                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                    {fieldState.invalid && (
+                      <FieldError id="trackingNumberError" errors={[fieldState.error]} />
+                    )}
                   </Field>
                 )}
               />
@@ -165,9 +194,22 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
                 name="lastName"
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="lastName">Last name on the request</FieldLabel>
-                    <Input id="lastName" placeholder="e.g. Dela Cruz" {...field} />
-                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                    <FieldLabel htmlFor="lastName">
+                      Last name on the request
+                    </FieldLabel>
+                    <input
+                      type="text"
+                      className="public-track-input"
+                      id="lastName"
+                      placeholder="e.g. Dela Cruz"
+                      autoComplete="family-name"
+                      aria-invalid={fieldState.invalid}
+                      aria-describedby={fieldState.invalid ? "lastNameError" : undefined}
+                      {...field}
+                    />
+                    {fieldState.invalid && (
+                      <FieldError id="lastNameError" errors={[fieldState.error]} />
+                    )}
                   </Field>
                 )}
               />
@@ -175,16 +217,13 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
           </FieldGroup>
 
           <Button
-            type="button"
-            onClick={form.handleSubmit(onSubmit)}
-            disabled={submitting}
-            className="civic-press mt-5 w-full sm:w-auto"
+            type="submit"
+            disabled={submitting || !hasLookupValues}
+            className="public-track-button"
           >
             {submitting ? (
               <Spinner data-icon="inline-start" />
-            ) : (
-              <Search data-icon="inline-start" aria-hidden="true" />
-            )}
+            ) : null}
             {submitting ? "Searching..." : "Track request"}
           </Button>
 
@@ -194,14 +233,22 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
               <AlertDescription>{notFound}</AlertDescription>
             </Alert>
           )}
-        </div>
+        </form>
 
-        {result && status && payment && (
+        {submitting ? (
+          <PanelSkeleton
+            label="Loading request status"
+            rows={3}
+            className="public-tracking-result mt-6 border border-border bg-card p-6 sm:p-8"
+          />
+        ) : null}
+
+        {!submitting && result && status && payment && (
           // Keyed on the tracking number so looking up a second request replays
           // the entrance instead of silently swapping the numbers in place.
           <div
             key={result.trackingNumber}
-            className="civic-enter mt-6 rounded-xl border border-border bg-white p-6 sm:p-8"
+            className="public-tracking-result civic-enter mt-6 border border-border bg-card p-6 sm:p-8"
           >
             <div className="mb-5 flex items-start gap-3">
               <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
@@ -211,7 +258,9 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
                 <p className="font-mono text-sm font-semibold text-muted-foreground">
                   {result.trackingNumber}
                 </p>
-                <p className="text-lg font-bold text-foreground">{result.serviceName}</p>
+                <p className="text-lg font-bold text-foreground">
+                  {result.serviceName}
+                </p>
               </div>
             </div>
 
@@ -246,7 +295,9 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
 
             {result.attachments.length > 0 && (
               <div className="mt-6 border-t border-border-lighter pt-5">
-                <h2 className="mb-3 text-sm font-bold text-foreground">Your documents</h2>
+                <h2 className="mb-3 text-sm font-bold text-foreground">
+                  Your documents
+                </h2>
                 <div className="flex flex-col gap-3">
                   {result.attachments.map((doc) => (
                     <AttachmentTrackRow
@@ -254,6 +305,7 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
                       doc={doc}
                       trackingNumber={result.trackingNumber}
                       lastName={form.getValues("lastName")}
+                      canResubmit={!isClosedRequestStatus(result.status)}
                       onResubmitted={refreshResult}
                     />
                   ))}
@@ -273,11 +325,14 @@ function AttachmentTrackRow({
   doc,
   trackingNumber,
   lastName,
+  canResubmit,
   onResubmitted,
 }: {
   doc: TrackAttachment;
   trackingNumber: string;
   lastName: string;
+  /** False once the request is released or rejected. */
+  canResubmit: boolean;
   onResubmitted: () => Promise<void>;
 }) {
   const fileInput = useRef<HTMLInputElement | null>(null);
@@ -331,7 +386,7 @@ function AttachmentTrackRow({
         )}
       </div>
 
-      {doc.verificationStatus === "rejected" && (
+      {doc.verificationStatus === "rejected" && canResubmit && (
         <>
           <Input
             ref={fileInput}

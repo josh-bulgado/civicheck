@@ -133,7 +133,7 @@ relational design, not a document store.
   files for each role (no `admin-dashboard`, `staff-dashboard`, `citizen-dashboard`
   routes). Role-specific UI components live in the feature folder (e.g.
   `features/dashboard/AdminDashboard.tsx`, `features/dashboard/StaffDashboard.tsx`,
-  `features/dashboard/CitizenDashboard.tsx`) and the route file switches between them
+  `features/dashboard/pages/CitizenDashboard.tsx`) and the route file switches between them
   using the RBAC role from the auth session.
 
   ```tsx

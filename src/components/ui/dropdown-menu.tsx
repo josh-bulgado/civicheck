@@ -16,18 +16,46 @@ function DropdownMenuTrigger({ ...props }: MenuPrimitive.Trigger.Props) {
   return <MenuPrimitive.Trigger nativeButton={false} data-slot="dropdown-menu-trigger" {...props} />
 }
 
+/**
+ * "roomy" is the menu used next to size="lg" and size="touch" controls: a wider
+ * panel with taller, more rounded items. The items and separators read it from
+ * context, so only the content needs the prop.
+ */
+type DropdownMenuContentVariant = "default" | "roomy"
+
+const CONTENT_VARIANT_CLASS: Record<DropdownMenuContentVariant, string> = {
+  default: "",
+  roomy: "min-w-[200px] rounded-[14px] p-1.5",
+}
+
+const ITEM_VARIANT_CLASS: Record<DropdownMenuContentVariant, string> = {
+  default: "",
+  roomy: "min-h-10 gap-2.5 rounded-[9px] px-3 font-medium",
+}
+
+const SEPARATOR_VARIANT_CLASS: Record<DropdownMenuContentVariant, string> = {
+  default: "",
+  roomy: "mx-1.5",
+}
+
+const DropdownMenuContentVariantContext =
+  React.createContext<DropdownMenuContentVariant>("default")
+
 function DropdownMenuContent({
   align = "start",
   alignOffset = 0,
   side = "bottom",
   sideOffset = 4,
+  variant = "default",
   className,
   ...props
 }: MenuPrimitive.Popup.Props &
   Pick<
     MenuPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
-  >) {
+  > & {
+    variant?: DropdownMenuContentVariant
+  }) {
   return (
     <MenuPrimitive.Portal>
       <MenuPrimitive.Positioner
@@ -37,11 +65,14 @@ function DropdownMenuContent({
         side={side}
         sideOffset={sideOffset}
       >
-        <MenuPrimitive.Popup
-          data-slot="dropdown-menu-content"
-          className={cn("z-50 max-h-(--available-height) w-(--anchor-width) min-w-32 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-md bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 outline-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:overflow-hidden data-closed:fade-out-0 data-closed:zoom-out-95", className )}
-          {...props}
-        />
+        <DropdownMenuContentVariantContext.Provider value={variant}>
+          <MenuPrimitive.Popup
+            data-slot="dropdown-menu-content"
+            data-variant={variant}
+            className={cn("z-50 max-h-(--available-height) w-(--anchor-width) min-w-32 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-md bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 outline-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:overflow-hidden data-closed:fade-out-0 data-closed:zoom-out-95", CONTENT_VARIANT_CLASS[variant], className )}
+            {...props}
+          />
+        </DropdownMenuContentVariantContext.Provider>
       </MenuPrimitive.Positioner>
     </MenuPrimitive.Portal>
   )
@@ -80,6 +111,7 @@ function DropdownMenuItem({
   inset?: boolean
   variant?: "default" | "destructive"
 }) {
+  const contentVariant = React.useContext(DropdownMenuContentVariantContext)
   return (
     <MenuPrimitive.Item
       data-slot="dropdown-menu-item"
@@ -87,6 +119,7 @@ function DropdownMenuItem({
       data-variant={variant}
       className={cn(
         "group/dropdown-menu-item relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-inset:pl-8 data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-destructive",
+        ITEM_VARIANT_CLASS[contentVariant],
         className
       )}
       {...props}
@@ -222,10 +255,15 @@ function DropdownMenuSeparator({
   className,
   ...props
 }: MenuPrimitive.Separator.Props) {
+  const contentVariant = React.useContext(DropdownMenuContentVariantContext)
   return (
     <MenuPrimitive.Separator
       data-slot="dropdown-menu-separator"
-      className={cn("-mx-1 my-1 h-px bg-border", className)}
+      className={cn(
+        "-mx-1 my-1 h-px bg-border",
+        SEPARATOR_VARIANT_CLASS[contentVariant],
+        className
+      )}
       {...props}
     />
   )

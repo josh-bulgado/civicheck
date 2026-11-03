@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { Baby, Gem, Heart, ScrollText } from "lucide-react";
 import { Reveal } from "~/components/motion/reveal";
 
@@ -47,7 +47,7 @@ const services = [
 
 const ServicesSection = () => {
   return (
-    <section className="border-b border-border-light bg-white">
+    <section className="border-b border-border-light bg-card">
       <div className="civic-container civic-section">
         <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -65,9 +65,6 @@ const ServicesSection = () => {
             className="group inline-flex items-center gap-1.5 text-base font-bold text-primary hover:text-primary-hover"
           >
             See all services
-            <span className="transition-transform group-hover:translate-x-0.5">
-              →
-            </span>
           </Link>
         </div>
 
@@ -114,7 +111,6 @@ const ServicesSection = () => {
                     cards whose requirement lists wrap to different heights. */}
                 <p className="civic-nudge mt-auto flex items-center gap-1 text-[13px] font-semibold text-primary">
                   View requirements
-                  <span data-nudge>→</span>
                 </p>
               </Link>
             </Reveal>

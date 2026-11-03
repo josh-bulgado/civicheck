@@ -2,16 +2,12 @@ import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
 import {
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useReactTable,
+  useTable,
   type PaginationState,
   type SortingState,
 } from "@tanstack/react-table";
-import { SlidersHorizontal } from "lucide-react";
+import { Search } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import { DataTablePagination } from "~/components/ui/data-table-pagination";
 import {
   Table,
   TableBody,
@@ -20,19 +16,55 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
-import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
+import { CenterTablePagination } from "./CenterTableControls";
 import { useAccountActions } from "../hooks/useAccountActions";
+import {
+  accountPageSizes,
+  defaultAccountPageSize,
+} from "../system-admin.constants";
 import type {
   AccountCategory,
+  AccountFilters,
   AccountSummary,
   AdminCandidate,
   SystemAdminDepartment,
 } from "../system-admin.types";
+import { AccountConfirmDialog } from "./AccountConfirmDialog";
+import { AccountHistoryDialog } from "./AccountHistoryDialog";
+import { appTableFeatures } from "~/lib/table";
 import { createAccountColumns } from "./AccountsColumn";
 import { AccountsTableToolbar } from "./AccountsTableToolbar";
+import { AccountsTableSkeleton } from "./AccountsTableSkeleton";
 import { EditAccountDialog } from "./EditAccountDialog";
 import { ReplaceCcroAdminDialog } from "./ReplaceCcroAdminDialog";
+import { ResendVerificationDialog } from "./ResendVerificationDialog";
 import { SuspendAccountDialog } from "./SuspendAccountDialog";
+
+const passwordResetCopy = {
+  title: "Send password reset link?",
+  description: (account: AccountSummary) =>
+    `${account.email} will receive an email with a single-use link to choose a new password. Their current password keeps working until they use it.`,
+  confirmLabel: "Send reset link",
+  pendingLabel: "Sending",
+};
+
+const revokeSessionsCopy = {
+  title: "Sign out of all sessions?",
+  description: (account: AccountSummary) =>
+    `${account.email} will be signed out on every device and asked to sign in again. Use this for a lost device or suspected compromise.`,
+  confirmLabel: "Sign out everywhere",
+  pendingLabel: "Signing out",
+  destructive: true,
+};
+
+const accountCopy = {
+  personnel: { noun: "personnel account", label: "Personnel accounts" },
+  citizens: { noun: "citizen account", label: "Citizen accounts" },
+  "platform-admins": {
+    noun: "platform administrator",
+    label: "Platform administrators",
+  },
+} satisfies Record<AccountCategory, { noun: string; label: string }>;
 
 export function AccountsDataTable({
   data,
@@ -40,36 +72,56 @@ export function AccountsDataTable({
   departments,
   hasActiveAdmin,
   category,
+  filters,
   page,
   pageSize,
   total,
   hasNextPage,
+  replacementOpen,
+  onReplacementOpenChange,
+  isLoading = false,
+  error = null,
+  onRefresh,
 }: {
   data: AccountSummary[];
   adminCandidates: AdminCandidate[];
   departments: SystemAdminDepartment[];
   hasActiveAdmin: boolean;
   category: AccountCategory;
+  filters: AccountFilters;
   page: number;
   pageSize: number;
   total: number;
   hasNextPage: boolean;
+  replacementOpen: boolean;
+  onReplacementOpenChange: (open: boolean) => void;
+  isLoading?: boolean;
+  error?: string | null;
+  onRefresh?: () => void;
 }) {
   const router = useRouter();
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState("");
   const [suspendTarget, setSuspendTarget] = useState<AccountSummary | null>(
     null,
   );
   const [editTarget, setEditTarget] = useState<AccountSummary | null>(null);
-  const [replacementOpen, setReplacementOpen] = useState(false);
+  const [historyTarget, setHistoryTarget] = useState<AccountSummary | null>(
+    null,
+  );
+  const [resetTarget, setResetTarget] = useState<AccountSummary | null>(null);
+  const [revokeTarget, setRevokeTarget] = useState<AccountSummary | null>(null);
+  const [verificationTarget, setVerificationTarget] =
+    useState<AccountSummary | null>(null);
   const {
     pendingAction,
     suspend,
     reactivate,
     updateDetails,
+    sendPasswordReset,
+    revokeSessions,
+    resendVerification,
     replaceAdministrator,
-  } = useAccountActions();
+  } = useAccountActions(onRefresh);
 
   const pendingAccountId =
     pendingAction && "accountId" in pendingAction
@@ -100,13 +152,19 @@ export function AccountsDataTable({
     () =>
       createAccountColumns({
         category,
+        departments,
         pendingAccountId,
         onEdit: handleEditRequest,
         onSuspend: handleSuspendRequest,
         onReactivate: handleReactivate,
+        onViewHistory: setHistoryTarget,
+        onSendPasswordReset: setResetTarget,
+        onResendVerification: setVerificationTarget,
+        onRevokeSessions: setRevokeTarget,
       }),
     [
       category,
+      departments,
       handleEditRequest,
       handleReactivate,
       handleSuspendRequest,
@@ -114,143 +172,201 @@ export function AccountsDataTable({
     ],
   );
 
-  const table = useReactTable({
+  const table = useTable({
+    features: appTableFeatures,
     data,
+    getRowId: (account) => account.id,
     columns,
-    state: { sorting, globalFilter, pagination },
+    state: { sorting, pagination },
     onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     manualPagination: true,
     pageCount,
-    globalFilterFn: (row, _columnId, value: string) =>
-      `${row.original.firstName} ${row.original.lastName} ${row.original.email} ${row.original.role} ${row.original.status}`
-        .toLowerCase()
-        .includes(value.trim().toLowerCase()),
   });
 
-  function navigate(nextPage: number) {
+  // Filters live in the URL and are applied by the server, so they span every
+  // page rather than only the rows currently loaded. The default page size is
+  // left out of the URL.
+  function navigate(
+    nextPage: number,
+    nextFilters: AccountFilters = filters,
+    nextPageSize: number = pageSize,
+    replace = false,
+  ) {
     return router.navigate({
       to: "/system-admin/accounts",
-      search: { category, page: nextPage },
+      search: {
+        category,
+        page: nextPage,
+        pageSize:
+          nextPageSize === defaultAccountPageSize ? undefined : nextPageSize,
+        ...nextFilters,
+      },
+      replace,
+      resetScroll: false,
     });
   }
 
-  const filteredCount = table.getFilteredRowModel().rows.length;
-  const accountNoun =
-    category === "personnel"
-      ? "personnel account"
-      : category === "citizens"
-        ? "citizen account"
-        : "platform administrator";
-  const suspendPending =
-    pendingAction?.type === "suspend" &&
-    pendingAction.accountId === suspendTarget?.id;
-  const editPending =
-    pendingAction?.type === "edit-details" &&
-    pendingAction.accountId === editTarget?.id;
-  // Every account mutation — edit, suspend, reactivate, admin replacement —
-  // writes a profiles row, so one subscription covers the whole directory.
-  const realtimeStatus = useRealtimeRefresh({ tables: ["profiles"] });
+  const hasFilters = Object.values(filters).some(Boolean);
+  const { noun: accountNoun, label: tableLabel } = accountCopy[category];
+  const pendingFor = (
+    type: NonNullable<typeof pendingAction>["type"],
+    id?: string,
+  ) =>
+    pendingAction?.type === type &&
+    "accountId" in pendingAction &&
+    pendingAction.accountId === id;
+  const suspendPending = pendingFor("suspend", suspendTarget?.id);
+  const editPending = pendingFor("edit-details", editTarget?.id);
 
   return (
-    <div className="space-y-4">
-      <AccountsTableToolbar
-        value={globalFilter}
-        onChange={setGlobalFilter}
-        placeholder={`Filter ${accountNoun}s`}
-        realtimeStatus={realtimeStatus}
-        onReplaceAdministrator={
-          category === "personnel"
-            ? () => setReplacementOpen(true)
-            : undefined
-        }
-        replaceAdministratorLabel={
-          hasActiveAdmin
-            ? "Replace CCRO Administrator"
-            : "Appoint CCRO Administrator"
-        }
-      />
-
-      <div className="overflow-hidden rounded-xl border border-border-strong bg-white">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-surface-subtle">
-              {table.getHeaderGroups().map((group) => (
-                <TableRow key={group.id} className="hover:bg-transparent">
-                  {group.headers.map((header) => (
-                    <TableHead key={header.id} className="h-12 px-5">
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
-                    </TableHead>
+    <>
+      <div
+        className="accounts-directory-card center-table-card"
+        aria-busy={isLoading}
+      >
+        <AccountsTableToolbar
+          category={category}
+          filters={filters}
+          departments={departments}
+          onFiltersChange={(next) => void navigate(1, next, pageSize, true)}
+        />
+        {error ? (
+          <div
+            role="alert"
+            className="flex flex-wrap items-center justify-between gap-3 border-b border-border-lighter px-6 py-4 text-sm"
+          >
+            <p>{error}</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onRefresh}
+            >
+              Try again
+            </Button>
+          </div>
+        ) : null}
+        <Table
+          className="accounts-directory-table center-table"
+          aria-label={tableLabel}
+          variant="entity"
+        >
+          <colgroup>
+            <col style={{ width: 48 }} />
+            {category === "personnel" ? (
+              <>
+                <col className="w-[25%]" />
+                <col className="w-[17%]" />
+                <col className="w-[14%]" />
+                <col className="w-[16%]" />
+                <col className="w-[12%]" />
+                <col className="w-[16%]" />
+              </>
+            ) : (
+              <>
+                <col className="w-[40%]" />
+                <col className="w-[23%]" />
+                <col className="w-[20%]" />
+                <col className="w-[17%]" />
+              </>
+            )}
+          </colgroup>
+          <TableHeader>
+            {table.getHeaderGroups().map((group) => (
+              <TableRow
+                key={group.id}
+                className="border-border-lighter hover:bg-transparent"
+              >
+                {group.headers.map((header) => (
+                  <TableHead
+                    key={header.id}
+                    className="h-12 px-6 text-xs font-semibold text-muted-foreground"
+                    aria-sort={
+                      header.column.getIsSorted() === "asc"
+                        ? "ascending"
+                        : header.column.getIsSorted() === "desc"
+                          ? "descending"
+                          : undefined
+                    }
+                  >
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <AccountsTableSkeleton category={category} />
+            ) : table.getRowModel().rows.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() ? "selected" : undefined}
+                  className="h-[68px] border-border-lighter hover:bg-surface-subtle/60"
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id} className="px-6 py-3">
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
+                    </TableCell>
                   ))}
                 </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody className="civic-stagger-auto">
-              {table.getRowModel().rows.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    className="h-[76px] hover:bg-surface-subtle"
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="px-5 py-3">
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-40 text-center text-muted-foreground"
-                  >
-                    <SlidersHorizontal className="mx-auto mb-3 size-7 opacity-40" />
-                    <p className="text-sm font-medium">
-                      No {accountNoun}s found.
-                    </p>
-                    {globalFilter ? (
-                      <Button
-                        variant="link"
-                        size="sm"
-                        onClick={() => setGlobalFilter("")}
-                        className="mt-1 h-auto p-0 text-xs"
-                      >
-                        Clear filter
-                      </Button>
-                    ) : null}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        <div className="border-t px-5 py-4 text-sm text-muted-foreground">
-          {globalFilter
-            ? `${filteredCount} of ${data.length} ${accountNoun}${data.length === 1 ? "" : "s"} on this page`
-            : `${total} ${accountNoun}${total === 1 ? "" : "s"}`}
-        </div>
-      </div>
-
-      {pageCount > 1 ? (
-        <DataTablePagination
+              ))
+            ) : !error ? (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-48 px-5 text-center"
+                >
+                  <Search
+                    className="mx-auto mb-3 size-6 text-muted-foreground/50"
+                    aria-hidden="true"
+                  />
+                  <p className="font-medium">
+                    {hasFilters
+                      ? `No ${accountNoun}s match these filters.`
+                      : `No ${accountNoun}s yet.`}
+                  </p>
+                  {hasFilters ? (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="mt-1"
+                      onClick={() => void navigate(1, {})}
+                    >
+                      Clear filters
+                    </Button>
+                  ) : null}
+                </TableCell>
+              </TableRow>
+            ) : null}
+          </TableBody>
+        </Table>
+        <CenterTablePagination
           table={table}
           pageCount={pageCount}
-          pageSizeOptions={[pageSize]}
+          total={total}
+          pageSizeOptions={[...accountPageSizes]}
           onPageChange={(pageIndex) => void navigate(pageIndex + 1)}
+          onPageSizeChange={(size) => void navigate(1, filters, size)}
+          disabled={isLoading || !!error}
         />
-      ) : null}
+      </div>
+      <p role="status" className="sr-only">
+        {isLoading
+          ? `Loading ${tableLabel.toLowerCase()}`
+          : error
+            ? "Accounts could not be loaded"
+            : `${total} accounts`}
+      </p>
 
       <SuspendAccountDialog
         account={suspendTarget}
@@ -273,6 +389,47 @@ export function AccountsDataTable({
         }}
         onConfirm={updateDetails}
       />
+      <AccountHistoryDialog
+        account={historyTarget}
+        onOpenChange={(open) => {
+          if (!open) setHistoryTarget(null);
+        }}
+      />
+      <AccountConfirmDialog
+        account={resetTarget}
+        copy={passwordResetCopy}
+        isPending={pendingFor("password-reset", resetTarget?.id)}
+        onOpenChange={(open) => {
+          if (!open && !pendingFor("password-reset", resetTarget?.id)) {
+            setResetTarget(null);
+          }
+        }}
+        onConfirm={(account) => sendPasswordReset(account.id)}
+      />
+      <AccountConfirmDialog
+        account={revokeTarget}
+        copy={revokeSessionsCopy}
+        isPending={pendingFor("revoke-sessions", revokeTarget?.id)}
+        onOpenChange={(open) => {
+          if (!open && !pendingFor("revoke-sessions", revokeTarget?.id)) {
+            setRevokeTarget(null);
+          }
+        }}
+        onConfirm={(account) => revokeSessions(account.id)}
+      />
+      <ResendVerificationDialog
+        account={verificationTarget}
+        isPending={pendingFor("resend-verification", verificationTarget?.id)}
+        onOpenChange={(open) => {
+          if (
+            !open &&
+            !pendingFor("resend-verification", verificationTarget?.id)
+          ) {
+            setVerificationTarget(null);
+          }
+        }}
+        onConfirm={(account, email) => resendVerification(account.id, email)}
+      />
       {category === "personnel" ? (
         <ReplaceCcroAdminDialog
           open={replacementOpen}
@@ -282,12 +439,12 @@ export function AccountsDataTable({
           isPending={pendingAction?.type === "replace-admin"}
           onOpenChange={(open) => {
             if (pendingAction?.type !== "replace-admin") {
-              setReplacementOpen(open);
+              onReplacementOpenChange(open);
             }
           }}
           onConfirm={replaceAdministrator}
         />
       ) : null}
-    </div>
+    </>
   );
 }

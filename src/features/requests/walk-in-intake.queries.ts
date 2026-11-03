@@ -6,6 +6,8 @@ export interface EncodableService {
   serviceCode: string;
   name: string;
   fee: number;
+  /** True when `fee` is charged per copy, so intake asks how many copies. */
+  feePerCopy: boolean;
   displayGroup: string | null;
   processingTime: string;
   /** Who this service asks about, e.g. ["Subject"] or ["Bride", "Groom"]. */
@@ -21,7 +23,7 @@ export const getEncodableServicesFn = createServerFn({ method: "GET" }).handler(
     let query = supabase
       .from("services_registry")
       .select(
-        "service_code, name, display_name, fee, department_id, display_group, processing_time, party_roles",
+        "service_code, name, display_name, fee, fee_per_copy, department_id, display_group, processing_time, party_roles",
       )
       .order("name", { ascending: true });
 
@@ -37,6 +39,7 @@ export const getEncodableServicesFn = createServerFn({ method: "GET" }).handler(
       serviceCode: service.service_code,
       name: service.display_name || service.name,
       fee: Number(service.fee ?? 0),
+      feePerCopy: service.fee_per_copy === true,
       displayGroup: service.display_group,
       processingTime: service.processing_time,
       partyRoles: service.party_roles?.length ? service.party_roles : ["Subject"],

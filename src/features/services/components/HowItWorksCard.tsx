@@ -17,7 +17,7 @@ export function HowItWorksCard({ steps }: HowItWorksCardProps) {
   if (cleanedSteps.length === 0) return null;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border-strong bg-white">
+    <div className="overflow-hidden rounded-xl border border-border-strong bg-card">
       <div className="border-b border-border-light px-5 py-4 text-base font-bold text-foreground">
         How it works
       </div>

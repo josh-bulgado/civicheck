@@ -2,6 +2,7 @@ import type {
   ConditionRule,
   PublishedFormTemplate,
 } from "~/features/forms/form-template.types";
+import type { FeeComponent } from "~/features/services/fee-components";
 
 // ─── Enums (mirroring DB check constraints) ─────────────────────────────────
 
@@ -19,10 +20,22 @@ export interface Service {
   name: string;
   classification: ServiceClassification | null;
   fee: number;
+  /**
+   * Itemized charges behind `fee`. Included ones add up to it; the rest are
+   * payable on top. Empty when the service has no breakdown.
+   */
+  fee_components?: FeeComponent[];
+  /** When true the fee is charged per copy, so the applicant picks a quantity. */
+  fee_per_copy?: boolean;
   processing_time: string;
   steps_description: string[] | null;
   display_group: string | null;
   display_name: string | null;
+  /**
+   * A short title for the applicant's service cards and dashboard headline.
+   * Empty = use `display_name`. Absent until the column exists in the database.
+   */
+  short_name?: string | null;
   requirement_group: string | null;
   /** Owning CCRO department — what the request queue's Department column reads. */
   department_id: string | null;
@@ -41,6 +54,8 @@ export interface Service {
   asks_purpose: boolean;
   /** Whether the case step asks for the informant and whether birth was at a hospital or at home. */
   asks_birth_details: boolean;
+  /** Whether applicants and staff can exchange messages on requests for this service. */
+  allows_messages: boolean;
   /** Active, published application form resolved through service_form_templates. */
   form_template?: PublishedFormTemplate;
 }
@@ -54,6 +69,7 @@ export interface CreateServiceInput {
   steps_description?: string[];
   display_group?: string | null;
   display_name?: string | null;
+  short_name?: string | null;
   requirement_group?: string | null;
   department_id?: string | null;
   party_roles?: string[];
@@ -63,6 +79,9 @@ export interface CreateServiceInput {
   reference_number_label?: string | null;
   asks_purpose?: boolean;
   asks_birth_details?: boolean;
+  allows_messages?: boolean;
+  fee_per_copy?: boolean;
+  fee_components?: FeeComponent[];
 }
 
 export interface UpdateServiceInput {
@@ -73,6 +92,7 @@ export interface UpdateServiceInput {
   steps_description?: string[];
   display_group?: string | null;
   display_name?: string | null;
+  short_name?: string | null;
   requirement_group?: string | null;
   department_id?: string | null;
   party_roles?: string[];
@@ -82,6 +102,9 @@ export interface UpdateServiceInput {
   reference_number_label?: string | null;
   asks_purpose?: boolean;
   asks_birth_details?: boolean;
+  allows_messages?: boolean;
+  fee_per_copy?: boolean;
+  fee_components?: FeeComponent[];
 }
 
 // ─── service_requirements_metadata ───────────────────────────────────────────
@@ -99,6 +122,8 @@ export interface ServiceRequirement {
   requires_upload: boolean;
   upload_scope: RequirementUploadScope;
   subject_role: string | null;
+  /** Position within its checklist, as arranged in the admin service editor. */
+  sort_order?: number;
 }
 
 export interface CreateServiceRequirementInput {
@@ -124,16 +149,4 @@ export interface UpdateServiceRequirementInput {
   requires_upload?: boolean;
   upload_scope?: RequirementUploadScope;
   subject_role?: string | null;
-}
-
-// ─── Combined create (service + its checklist in one call) ───────────────────
-
-export interface CreateServiceWithRequirementsInput extends CreateServiceInput {
-  requirements: Omit<CreateServiceRequirementInput, "service_code">[];
-}
-
-export interface UpdateServiceWithRequirementsInput {
-  service_code: string;
-  updates: UpdateServiceInput;
-  requirements: Omit<CreateServiceRequirementInput, "service_code">[];
 }

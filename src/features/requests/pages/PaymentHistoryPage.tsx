@@ -1,77 +1,65 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/components/ui/table";
+import { Download } from "lucide-react";
+import { Button } from "~/components/ui/button";
+import { PageHeaderCard } from "~/components/ui/page-header-card";
+import { downloadCsv } from "~/lib/csv";
+import { formatDateKey } from "~/lib/date";
 import type { PaymentHistoryRow } from "~/features/requests/requests.queries";
-
-function formatTime(value: string) {
-  return new Date(value).toLocaleString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+import { PaymentHistoryDataTable } from "~/features/requests/components/PaymentHistoryDataTable";
+import { formatPeso } from "~/lib/peso";
+import { paymentsToCsv, type PaymentRange } from "~/features/requests/payment-history";
 
 interface PaymentHistoryPageProps {
   payments: PaymentHistoryRow[];
+  range: PaymentRange;
+  /** Who is looking: the office for the admin, the counter for the cashier. */
+  scopeLabel: string;
+  onRangeChange: (range: PaymentRange) => void;
 }
 
-export default function PaymentHistoryPage({ payments }: PaymentHistoryPageProps) {
-  return (
-    <div className="dashboard-page max-w-5xl">
-      <header className="dashboard-hero">
-        <div className="relative z-10">
-          <p className="mb-3 text-xs font-bold uppercase tracking-[0.13em] text-brand-gold">
-            Counter operations
-          </p>
-          <h1 className="text-3xl font-extrabold tracking-[-0.03em] text-white sm:text-4xl">
-            Payment History
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/75">
-            Payments verified today, for reconciling against the cashiering ledger.
-          </p>
-        </div>
-      </header>
+function describeRange({ from, to }: PaymentRange) {
+  return from === to
+    ? formatDateKey(from)
+    : `${formatDateKey(from)} – ${formatDateKey(to)}`;
+}
 
-      <div className="mt-8 rounded-xl border border-border bg-white">
-        {payments.length === 0 ? (
-          <p className="civic-enter-sm p-8 text-center text-sm italic text-muted-foreground">
-            No payments verified yet today.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tracking #</TableHead>
-                  <TableHead>Applicant</TableHead>
-                  <TableHead>Service</TableHead>
-                  <TableHead>OR #</TableHead>
-                  <TableHead className="text-right">Fee</TableHead>
-                  <TableHead>Verified at</TableHead>
-                  <TableHead>Verified by</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody className="civic-stagger-auto">
-                {payments.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.trackingNumber}</TableCell>
-                    <TableCell>{p.applicantName}</TableCell>
-                    <TableCell>{p.serviceName}</TableCell>
-                    <TableCell>{p.orNumber ?? "—"}</TableCell>
-                    <TableCell className="text-right">₱{p.feesDue.toFixed(2)}</TableCell>
-                    <TableCell>{formatTime(p.verifiedAt)}</TableCell>
-                    <TableCell>{p.verifiedBy}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </div>
+function exportPayments(payments: PaymentHistoryRow[], { from, to }: PaymentRange) {
+  downloadCsv(
+    paymentsToCsv(payments),
+    `payments-${from}${from === to ? "" : `-to-${to}`}.csv`,
+  );
+}
+
+export default function PaymentHistoryPage({
+  payments,
+  range,
+  scopeLabel,
+  onRangeChange,
+}: PaymentHistoryPageProps) {
+  const total = payments.reduce((sum, payment) => sum + payment.feesDue, 0);
+
+  return (
+    <div className="dashboard-page">
+      <PageHeaderCard
+        title="Payment History"
+        description={`${scopeLabel}, ${describeRange(range)}, ${payments.length} ${
+          payments.length === 1 ? "payment" : "payments"
+        }, ${formatPeso(total)} verified`}
+      >
+        <Button
+          variant="raised"
+          size="lg"
+          disabled={payments.length === 0}
+          onClick={() => exportPayments(payments, range)}
+        >
+          <Download aria-hidden="true" data-icon="inline-start" />
+          Export CSV
+        </Button>
+      </PageHeaderCard>
+      <PaymentHistoryDataTable
+        data={payments}
+        range={range}
+        onRangeChange={onRangeChange}
+      />
     </div>
   );
 }

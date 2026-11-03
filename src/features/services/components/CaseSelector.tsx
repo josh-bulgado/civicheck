@@ -1,21 +1,15 @@
+import { formatFieldLabel } from "~/features/forms/field-label";
 import { useEffect, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
-import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
+import { FieldLegend, FieldSet } from "~/components/ui/field";
+import { RequiredMark } from "~/components/ui/required-mark";
 import {
-  Field,
-  FieldContent,
-  FieldLabel,
-  FieldLegend,
-  FieldSet,
-} from "~/components/ui/field";
+  ChoiceGroup,
+  choiceLegendClass,
+} from "~/features/forms/components/ChoiceGroup";
 import type { CaseSelectorDefinition } from "~/features/forms/form-template.types";
 import { conditionRuleMatches } from "~/features/forms/form-template.utils";
-
-const choiceGroupClass =
-  "grid grid-cols-1 gap-0 overflow-hidden rounded-lg border border-border bg-white divide-y divide-border-light sm:grid-cols-2 sm:divide-x sm:divide-y-0";
-
-const choiceLabelClass =
-  "cursor-pointer has-[>[data-slot=field]]:rounded-none has-[>[data-slot=field]]:border-0 transition-colors hover:bg-primary-tint focus-within:bg-primary-tint has-data-checked:bg-primary-soft/70";
+import { formatPesoFee } from "~/features/services/service-utils";
 
 interface Service {
   service_code: string;
@@ -89,6 +83,36 @@ function matches(name: string, age: string | null, program: string | null, marit
   return true;
 }
 
+/** Compares two sentences ignoring case, spacing, and trailing punctuation. */
+function sameSentence(a: string, b: string) {
+  const normalize = (value: string) =>
+    value.trim().replace(/[\s]+/g, " ").replace(/[?.!:]+$/, "").toLowerCase();
+  return normalize(a) === normalize(b);
+}
+
+/**
+ * Quiet confirmation of the service the answers resolved to. The docket above
+ * the form already carries the name and fee, so this stays a single muted line
+ * (and the live region still announces the result to screen readers).
+ */
+function SelectedServiceNote({ name }: { name: string }) {
+  return (
+    <p
+      role="status"
+      aria-live="polite"
+      className="civic-enter-sm flex items-start gap-2 text-sm text-muted-foreground"
+    >
+      <CheckCircle2
+        className="mt-0.5 size-4 shrink-0 text-success"
+        aria-hidden="true"
+      />
+      <span>
+        Selected: <span className="font-medium text-foreground">{name}</span>
+      </span>
+    </p>
+  );
+}
+
 function LegacyCaseSelector({
   services,
   selectedCode,
@@ -146,10 +170,17 @@ function LegacyCaseSelector({
     }
   };
 
+  // Names that carry none of the age/program/marital tokens give this selector
+  // nothing to ask. Falling through to `matches` would then accept every
+  // service and silently pick whichever sorts first, so such a group is picked
+  // from directly below instead.
+  const hasDimensions = steps.hasAge || steps.hasProgram || steps.hasMarital;
+
   // Edge case (not hit by today's groups, all of which also have a Program
   // dimension): both age and marital arrived preset and nothing else needs
   // asking — resolve immediately instead of leaving the selector blank.
   useEffect(() => {
+    if (!hasDimensions) return;
     if (selectedCode || showAge || steps.hasProgram || showMarital) return;
     const match = services.find((s) => matches(s.name, age, program, marital));
     if (match) onSelect(match.service_code);
@@ -171,127 +202,99 @@ function LegacyCaseSelector({
       <div>
         <h2
           id="case-selector-title"
-          className="text-pretty text-lg font-bold text-foreground"
+          className="text-pretty text-lg leading-tight font-bold text-foreground"
         >
           Find the right service
         </h2>
-        <p className="mt-1 max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground">
+        <p className="mt-0.5 max-w-2xl text-pretty text-sm leading-snug text-muted-foreground">
           Choose the answers that match this case. We&rsquo;ll select the correct
           service.
         </p>
       </div>
 
       <div className="mt-6 flex flex-col gap-6">
+        {/* No question can tell these variants apart, so let the applicant pick one. */}
+        {!hasDimensions && (
+          <FieldSet className="civic-enter-sm gap-3">
+            <FieldLegend variant="label" className={choiceLegendClass}>
+              Which service do you need? <RequiredMark />
+            </FieldLegend>
+            <ChoiceGroup
+              wide
+              idPrefix="service"
+              value={selectedCode ?? ""}
+              onValueChange={onSelect}
+              options={services.map((service) => ({
+                value: service.service_code,
+                label: service.name,
+                description: `Fee at cashier: ${formatPesoFee(service.fee)}`,
+              }))}
+            />
+          </FieldSet>
+        )}
+
         {/* Step 1: Age */}
         {showAge && (
           <FieldSet className="civic-enter-sm gap-3">
-            <FieldLegend variant="label">
-              {stepPrefix(true)}Age of the person to be registered
+            <FieldLegend variant="label" className={choiceLegendClass}>
+              {stepPrefix(true)}Age of the person to be registered <RequiredMark />
             </FieldLegend>
-            <RadioGroup
+            <ChoiceGroup
+              wide
+              idPrefix="age"
               value={age ?? ""}
               onValueChange={handleAge}
-              className={choiceGroupClass}
-            >
-              {steps.ages.map((a) => (
-                <FieldLabel
-                  key={a}
-                  htmlFor={`age-${a}`}
-                  className={choiceLabelClass}
-                >
-                  <Field orientation="horizontal" className="min-h-14">
-                    <RadioGroupItem value={a} id={`age-${a}`} />
-                    <FieldContent>
-                      {a === "0-79" ? "0 – 79 years old" : "80 years old and above"}
-                    </FieldContent>
-                  </Field>
-                </FieldLabel>
-              ))}
-            </RadioGroup>
+              options={steps.ages.map((a) => ({
+                value: a,
+                label: a === "0-79" ? "0 – 79 years old" : "80 years old and above",
+              }))}
+            />
           </FieldSet>
         )}
 
         {/* Step 2: Program (only after age picked) */}
         {steps.hasProgram && age && (
           <FieldSet className="civic-enter-sm gap-3">
-            <FieldLegend variant="label">
-              {stepPrefix(true)}Registration program
+            <FieldLegend variant="label" className={choiceLegendClass}>
+              {stepPrefix(true)}Registration program <RequiredMark />
             </FieldLegend>
-            <RadioGroup
+            <ChoiceGroup
+              wide
+              idPrefix="prog"
               value={program ?? ""}
               onValueChange={handleProgram}
-              className={choiceGroupClass}
-            >
-              {steps.programs.map((p) => (
-                <FieldLabel
-                  key={p}
-                  htmlFor={`prog-${p}`}
-                  className={choiceLabelClass}
-                >
-                  <Field orientation="horizontal" className="min-h-16">
-                    <RadioGroupItem value={p} id={`prog-${p}`} />
-                    <FieldContent>
-                      <span className="font-medium">
-                        {p === "brap"
-                          ? "BRAP-assisted registration"
-                          : "Standard registration"}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {p === "brap"
-                          ? "PSA-assisted program"
-                          : "Regular filing process"}
-                      </span>
-                    </FieldContent>
-                  </Field>
-                </FieldLabel>
-              ))}
-            </RadioGroup>
+              options={steps.programs.map((p) => ({
+                value: p,
+                label:
+                  p === "brap" ? "BRAP-assisted registration" : "Standard registration",
+                description:
+                  p === "brap" ? "PSA-assisted program" : "Regular filing process",
+              }))}
+            />
           </FieldSet>
         )}
 
         {/* Step 3: Marital status — shown after program=normal, OR directly if no age/program steps */}
         {showMarital && (program === "normal" || (!steps.hasAge && !steps.hasProgram)) && (
           <FieldSet className="civic-enter-sm gap-3">
-            <FieldLegend variant="label">
-              {stepPrefix(true)}Are the child&rsquo;s parents legally married?
+            <FieldLegend variant="label" className={choiceLegendClass}>
+              {stepPrefix(true)}Are the child&rsquo;s parents legally married?{" "}
+              <RequiredMark />
             </FieldLegend>
-            <RadioGroup
+            <ChoiceGroup
+              wide
+              idPrefix="marital"
               value={marital ?? ""}
               onValueChange={handleMarital}
-              className={choiceGroupClass}
-            >
-              {steps.maritalStatuses.map((m) => (
-                <FieldLabel
-                  key={m}
-                  htmlFor={`marital-${m}`}
-                  className={choiceLabelClass}
-                >
-                  <Field orientation="horizontal" className="min-h-14">
-                    <RadioGroupItem value={m} id={`marital-${m}`} />
-                    <FieldContent>
-                      <span className="font-medium">
-                        {m === "marital" ? "Yes" : "No"}
-                      </span>
-                    </FieldContent>
-                  </Field>
-                </FieldLabel>
-              ))}
-            </RadioGroup>
+              options={steps.maritalStatuses.map((m) => ({
+                value: m,
+                label: m === "marital" ? "Yes" : "No",
+              }))}
+            />
           </FieldSet>
         )}
 
-        {/* The exact service and fee are shown in the selected-service strip above. */}
-        {selectedService && (
-          <div
-            role="status"
-            aria-live="polite"
-            className="civic-enter-sm flex items-center gap-2 border-t border-success/20 pt-4 text-sm font-semibold text-success"
-          >
-            <CheckCircle2 className="size-4.5 shrink-0" aria-hidden="true" />
-            Service selected. Complete the case details below before continuing.
-            <span className="sr-only">{selectedService.name}</span>
-          </div>
-        )}
+        {selectedService && <SelectedServiceNote name={selectedService.name} />}
       </div>
     </section>
   );
@@ -381,64 +384,61 @@ function ConfiguredCaseSelector({
       <div>
         <h2
           id="case-selector-title"
-          className="text-pretty text-lg font-bold text-foreground"
+          className="text-pretty text-lg leading-tight font-bold text-foreground"
         >
           {definition.title}
+          {/* A lone question that repeats the title has no legend of its own,
+              so the heading is what the applicant answers. */}
+          {visibleQuestions.length === 1 &&
+          sameSentence(visibleQuestions[0].label, definition.title) ? (
+            <>
+              {" "}
+              <RequiredMark />
+            </>
+          ) : null}
         </h2>
-        <p className="mt-1 max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground">
+        <p className="mt-0.5 max-w-2xl text-pretty text-sm leading-snug text-muted-foreground">
           {definition.description ??
             "Choose the answers that match this case. We’ll select the correct service."}
         </p>
       </div>
 
       <div className="mt-6 flex flex-col gap-6">
-        {visibleQuestions.map((question, index) => (
-          <FieldSet key={question.key} className="civic-enter-sm gap-3">
-            <FieldLegend variant="label">
-              {visibleQuestions.length > 1 ? `${index + 1}. ` : ""}
-              {question.label}
-            </FieldLegend>
-            {question.description ? (
-              <p className="text-xs text-muted-foreground">
-                {question.description}
-              </p>
-            ) : null}
-            <RadioGroup
-              value={answers[question.key] ?? ""}
-              onValueChange={(value) =>
-                publishAnswers({ ...answers, [question.key]: value })
-              }
-              className={choiceGroupClass}
-            >
-              {question.options.map((option) => (
-                <FieldLabel
-                  key={option.value}
-                  htmlFor={`case-${question.key}-${option.value}`}
-                  className={choiceLabelClass}
-                >
-                  <Field orientation="horizontal" className="min-h-14">
-                    <RadioGroupItem
-                      value={option.value}
-                      id={`case-${question.key}-${option.value}`}
-                    />
-                    <FieldContent>{option.label}</FieldContent>
-                  </Field>
-                </FieldLabel>
-              ))}
-            </RadioGroup>
-          </FieldSet>
-        ))}
+        {visibleQuestions.map((question, index) => {
+          // A lone question that just restates the section title would show the
+          // same sentence twice in a row, so the title names the group instead.
+          const repeatsTitle =
+            visibleQuestions.length === 1 &&
+            sameSentence(question.label, definition.title);
+          return (
+            <FieldSet key={question.key} className="civic-enter-sm gap-3">
+              {repeatsTitle ? null : (
+                <FieldLegend variant="label" className={choiceLegendClass}>
+                  {visibleQuestions.length > 1 ? `${index + 1}. ` : ""}
+                  {formatFieldLabel(question.label)} <RequiredMark />
+                </FieldLegend>
+              )}
+              {question.description ? (
+                <p className="text-xs text-muted-foreground">
+                  {question.description}
+                </p>
+              ) : null}
+              <ChoiceGroup
+                wide
+                idPrefix={`case-${question.key}`}
+                value={answers[question.key] ?? ""}
+                onValueChange={(value) =>
+                  publishAnswers({ ...answers, [question.key]: value })
+                }
+                options={question.options}
+                labelledBy={repeatsTitle ? "case-selector-title" : undefined}
+              />
+            </FieldSet>
+          );
+        })}
 
         {selectedService ? (
-          <div
-            role="status"
-            aria-live="polite"
-            className="civic-enter-sm flex items-center gap-2 border-t border-success/20 pt-4 text-sm font-semibold text-success"
-          >
-            <CheckCircle2 className="size-4.5 shrink-0" aria-hidden="true" />
-            Service selected. Complete the case details below before continuing.
-            <span className="sr-only">{selectedService.name}</span>
-          </div>
+          <SelectedServiceNote name={selectedService.name} />
         ) : null}
       </div>
     </section>

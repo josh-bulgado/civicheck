@@ -1,13 +1,5 @@
-import type { ComponentType } from "react";
-import { LayoutGrid, Rows3, Search } from "lucide-react";
-import { Badge } from "~/components/ui/badge";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "~/components/ui/input-group";
+import { Search } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
-import { cn } from "~/lib/utils";
 import {
   Select,
   SelectContent,
@@ -16,169 +8,142 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { SERVICE_CATEGORY_LABELS, type ServiceCategory } from "~/features/services/service-utils";
-import type { ServiceView } from "~/features/services/hooks/useServiceView";
+import {
+  SERVICE_CATEGORY_LABELS,
+  type ServiceCategory,
+} from "~/features/services/service-utils";
 
-export type CategoryFilter = "all" | ServiceCategory | "one-visit";
-export type SortOption = "az" | "fee";
+export type CategoryFilter = "all" | ServiceCategory;
+/** `popular` (most requested first) is the applicant directory's default. */
+export type SortOption = "popular" | "az" | "fee";
 
-const CATEGORY_FILTERS: { value: CategoryFilter; label: string }[] = [
-  { value: "birth", label: SERVICE_CATEGORY_LABELS.birth },
-  { value: "marriage", label: SERVICE_CATEGORY_LABELS.marriage },
-  { value: "death", label: SERVICE_CATEGORY_LABELS.death },
-  { value: "copies", label: SERVICE_CATEGORY_LABELS.copies },
-  { value: "corrections", label: SERVICE_CATEGORY_LABELS.corrections },
-  { value: "one-visit", label: "Finished in one visit" },
-];
-
-const SORT_OPTIONS: { value: SortOption; label: string }[] = [
-  { value: "az", label: "A–Z" },
-  { value: "fee", label: "Lowest fee first" },
-];
-
-const VIEW_OPTIONS: {
-  value: ServiceView;
+// `shortLabel` drives the <640px chip label so long categories like
+// "Copies & endorsements" don't each take a whole line of the wrap.
+const CATEGORY_FILTERS: {
+  value: CategoryFilter;
   label: string;
-  hint: string;
-  icon: ComponentType<{ className?: string }>;
+  shortLabel: string;
 }[] = [
+  { value: "all", label: "All", shortLabel: "All" },
   {
-    value: "cards",
-    label: "Cards",
-    hint: "Show services as compact cards",
-    icon: LayoutGrid,
+    value: "birth",
+    label: SERVICE_CATEGORY_LABELS.birth,
+    shortLabel: "Birth",
   },
   {
-    value: "rows",
-    label: "List",
-    hint: "Show services as a one-line-each list",
-    icon: Rows3,
+    value: "marriage",
+    label: SERVICE_CATEGORY_LABELS.marriage,
+    shortLabel: "Marriage",
+  },
+  {
+    value: "death",
+    label: SERVICE_CATEGORY_LABELS.death,
+    shortLabel: "Death",
+  },
+  {
+    value: "copies",
+    label: SERVICE_CATEGORY_LABELS.copies,
+    shortLabel: "Copies",
+  },
+  {
+    value: "corrections",
+    label: SERVICE_CATEGORY_LABELS.corrections,
+    shortLabel: "Corrections",
   },
 ];
 
-interface ServicesToolbarProps {
+interface PortalServicesToolbarProps {
+  /** The phone's page-level search; from `md` the top bar's search does this. */
   searchTerm: string;
   onSearchTermChange: (value: string) => void;
   category: CategoryFilter;
   onCategoryChange: (value: CategoryFilter) => void;
   sort: SortOption;
   onSortChange: (value: SortOption) => void;
-  view: ServiceView;
-  onViewChange: (value: ServiceView) => void;
-  categoryCounts: Record<CategoryFilter, number>;
 }
 
-export function ServicesToolbar({
+const PORTAL_SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: "popular", label: "Most used first" },
+  { value: "az", label: "A to Z" },
+  { value: "fee", label: "Lowest fee" },
+];
+
+/**
+ * The applicant portal's toolbar: category pills on the left, the sort as a
+ * plain text control on the right. No search (the top bar's already finds
+ * services), no layout toggle and no counts.
+ */
+export function PortalServicesToolbar({
   searchTerm,
   onSearchTermChange,
   category,
   onCategoryChange,
   sort,
   onSortChange,
-  view,
-  onViewChange,
-  categoryCounts,
-}: ServicesToolbarProps) {
+}: PortalServicesToolbarProps) {
   return (
-    <div className="flex flex-col gap-4">
-      <InputGroup className="h-12">
-        <InputGroupInput
+    <div className="flex flex-col gap-4.5 md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-x-6 md:gap-y-3">
+      {/* Phone only. A desktop has the search in its top bar, so two fields are
+          not shown there. */}
+      <label className="flex h-13 items-center gap-3 rounded-full bg-card px-5 text-base text-muted-2 shadow-portal-card md:hidden">
+        <Search className="size-5 shrink-0" aria-hidden="true" />
+        <input
+          type="search"
           value={searchTerm}
-          onChange={(e) => onSearchTermChange(e.target.value)}
-          placeholder="Search a service or document"
+          onChange={(event) => onSearchTermChange(event.target.value)}
+          placeholder="Search a service"
+          aria-label="Search a service"
+          autoComplete="off"
+          className="min-w-0 flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-muted-2"
         />
-        <InputGroupAddon>
-          <Search aria-hidden="true" />
-        </InputGroupAddon>
-      </InputGroup>
+      </label>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Tabs
-          value={category}
-          onValueChange={(value) => onCategoryChange(value as CategoryFilter)}
-          className="min-w-0"
-        >
-          <TabsList variant="accent" className="max-w-full overflow-x-auto">
-            <TabsTrigger value="all">
-              All
-              <Badge
-                variant="secondary"
-                className={cn(
-                  "ml-2",
-                  category === "all" && "bg-white/20 text-primary-foreground",
-                )}
-              >
-                {categoryCounts.all}
-              </Badge>
-            </TabsTrigger>
-            {CATEGORY_FILTERS.map((filter) => (
-              <TabsTrigger key={filter.value} value={filter.value}>
-                {filter.label}
-                {categoryCounts[filter.value] > 0 && (
-                  <Badge
-                    variant="info"
-                    className={cn(
-                      "ml-2",
-                      category === filter.value &&
-                        "bg-white/20 text-primary-foreground ring-0",
-                    )}
-                  >
-                    {categoryCounts[filter.value]}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-          <ToggleGroup
-            aria-label="Service layout"
-            value={[view]}
-            onValueChange={(values: string[]) => {
-              const nextView = values[0] as ServiceView | undefined;
-              if (nextView) onViewChange(nextView);
-            }}
-            variant="outline"
-            size="sm"
-            spacing={0}
+      {/* A phone's pills scroll sideways, out to the edge of the screen; a
+          desktop's wrap, so every category is on screen at once. */}
+      <ToggleGroup
+        aria-label="Filter services by category"
+        value={[category]}
+        onValueChange={(values: string[]) => {
+          // Pressing the active pill would clear the group; a category is always chosen.
+          const next = values[0] as CategoryFilter | undefined;
+          if (next) onCategoryChange(next);
+        }}
+        variant="chips"
+        className="[--tg-h:calc(var(--spacing)*10.5)] max-md:-mx-5 max-md:w-auto max-md:flex-nowrap max-md:overflow-x-auto max-md:px-5 max-md:[scrollbar-width:none] md:gap-2.5 md:[--tg-h:calc(var(--spacing)*12)]"
+      >
+        {CATEGORY_FILTERS.map((filter) => (
+          <ToggleGroupItem
+            key={filter.value}
+            value={filter.value}
+            className="civic-press border-transparent bg-card px-4.5 text-[15px] font-semibold text-portal-ink-2 shadow-portal-card not-data-pressed:hover:bg-primary-tint data-pressed:border-transparent data-pressed:bg-primary-fill data-pressed:text-white data-pressed:shadow-[0_6px_16px_rgba(11,77,162,0.25)] md:px-5.5 md:text-base"
           >
-            {VIEW_OPTIONS.map((option) => (
-              <ToggleGroupItem
-                key={option.value}
-                value={option.value}
-                title={option.hint}
-              >
-                <option.icon data-icon="inline-start" aria-hidden="true" />
-                {option.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+            <span className="sm:hidden">{filter.shortLabel}</span>
+            <span className="hidden sm:inline">{filter.label}</span>
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
 
-          <div className="flex items-center gap-2">
-            <span className="text-[15px] text-muted-foreground">Sort</span>
-            <Select
-              items={SORT_OPTIONS}
-              value={sort}
-              onValueChange={(value) => onSortChange(value as SortOption)}
-            >
-              <SelectTrigger className="h-9 rounded-lg border-control-border text-[15px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {SORT_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
+      <Select
+        items={PORTAL_SORT_OPTIONS}
+        value={sort}
+        onValueChange={(value) => onSortChange(value as SortOption)}
+      >
+        <SelectTrigger
+          aria-label="Sort services"
+          className="gap-1.5 border-0 max-md:hidden bg-transparent px-2 text-[15px] text-muted-foreground shadow-none hover:text-foreground data-[size=default]:h-10"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent align="end">
+          <SelectGroup>
+            {PORTAL_SORT_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
     </div>
   );
 }

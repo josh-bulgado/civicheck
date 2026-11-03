@@ -1,117 +1,117 @@
 "use client";
 
 import { Search } from "lucide-react";
-import * as React from "react";
-import { useEffect } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
-import { CiviCheckIdentity } from "~/components/brand/civic-identity";
+import { QuietLink } from "~/components/quiet-link";
 import { Button } from "~/components/ui/button";
 import { Kbd } from "~/components/ui/kbd";
-
 import {
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "~/components/ui/command";
-import { SidebarHeader, useSidebar } from "~/components/ui/sidebar";
+  SidebarHeader,
+  SidebarTrigger,
+  useSidebar,
+} from "~/components/ui/sidebar";
+import { useHotkeyLabel } from "~/hooks/useHotkeyLabel";
 import { cn } from "~/lib/utils";
-import type { NavItem } from "~/components/sidebar-01/types";
+import {
+  openCommandPalette,
+  PALETTE_HOTKEY,
+} from "~/components/sidebar-01/command-palette";
 import type { WorkspaceDetails } from "~/components/sidebar-01/workspace";
 
 interface NavHeaderProps {
-  items: NavItem[];
   workspace: WorkspaceDetails;
+  /** Applicant search lives in the page's top bar. */
+  citizen?: boolean;
+  /** System administration search sits above the main page heading. */
+  showSearch?: boolean;
 }
 
-export function NavHeader({ items, workspace }: NavHeaderProps) {
-  const [open, setOpen] = React.useState(false);
-  const { state } = useSidebar();
-  const navigate = useNavigate();
+function RailToggle() {
+  const { state, isMobile } = useSidebar();
   const isCollapsed = state === "collapsed";
 
-  useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setOpen((open) => !open);
-      }
-    };
-    document.addEventListener("keydown", down);
-    return () => document.removeEventListener("keydown", down);
-  }, []);
+  if (isMobile) return null;
 
   return (
-    <>
-      <SidebarHeader className="border-b border-sidebar-border p-2.5 group-data-[collapsible=icon]:px-2">
-        <Link
+    <SidebarTrigger
+      aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+      aria-expanded={!isCollapsed}
+      className={cn(
+        "z-10 size-9 shrink-0 rounded-full text-portal-ink-2 hover:bg-card/60 hover:text-foreground active:not-aria-[haspopup]:translate-y-0 [&_svg]:size-5",
+        "group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:top-0 group-data-[collapsible=icon]:left-0 group-data-[collapsible=icon]:size-10.5 group-data-[collapsible=icon]:border-2 group-data-[collapsible=icon]:border-brand-gold group-data-[collapsible=icon]:bg-card group-data-[collapsible=icon]:text-primary group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:transition-opacity group-data-[collapsible=icon]:duration-150",
+        "group-data-[collapsible=icon]:group-hover/brand:opacity-100 group-data-[collapsible=icon]:focus-visible:opacity-100",
+      )}
+    />
+  );
+}
+
+/** Shared branding for every role; internal workspaces also have a search pill. */
+export function NavHeader({
+  workspace,
+  citizen = false,
+  showSearch = true,
+}: NavHeaderProps) {
+  const hotkeyLabel = useHotkeyLabel();
+  const { setOpenMobile } = useSidebar();
+
+  return (
+    <SidebarHeader
+      className={cn("gap-0 px-2.5 pt-2 pb-10", !citizen && "pb-6")}
+    >
+      <div className="group/brand relative flex items-center gap-2.5">
+        <QuietLink
           to="/dashboard"
-          className={cn(
-            "mb-1 flex min-h-14 w-full items-center gap-3 rounded-xl px-2 text-sidebar-foreground transition-colors hover:bg-sidebar-accent",
-            isCollapsed && "mx-auto justify-center px-0",
-          )}
+          aria-label="CiviCheck home"
+          className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl text-sidebar-foreground"
         >
-          <CiviCheckIdentity
-            compact
+          {/* Text stand-in for the official emblem. */}
+          <span
             className={cn(
-              isCollapsed &&
-                "mx-auto justify-center gap-0 [&>span:first-child]:size-8 [&>span:last-child]:hidden",
+              "flex size-10.5 shrink-0 items-center justify-center rounded-full border-2 border-brand-gold bg-card text-[10px] font-extrabold tracking-[0.02em] text-primary transition-opacity duration-150",
+              "group-data-[collapsible=icon]:group-hover/brand:opacity-0 group-data-[collapsible=icon]:group-has-focus-visible/brand:opacity-0",
             )}
-          />
-        </Link>
-        {!isCollapsed && (
-          <p className="px-2 pb-1 text-xs font-semibold text-primary">
+            aria-hidden="true"
+          >
+            CCRO
+          </span>
+          <span className="truncate text-[23px] font-semibold tracking-[-0.02em] transition-opacity duration-150 group-data-[collapsible=icon]:text-clip group-data-[collapsible=icon]:opacity-0">
+            CiviCheck
+          </span>
+        </QuietLink>
+        <RailToggle />
+      </div>
+
+      {!citizen && (
+        <>
+          <p className="mt-2 mb-4 h-5 overflow-hidden text-xs font-medium whitespace-nowrap text-primary transition-[height,margin,opacity] duration-200 group-data-[collapsible=icon]:m-0 group-data-[collapsible=icon]:h-0 group-data-[collapsible=icon]:opacity-0">
             {workspace.label}
           </p>
-        )}
-        <Button
-          type="button"
-          variant="ghost"
-          size="lg"
-          aria-label="Search CiviCheck navigation"
-          className={cn(
-            "w-full justify-between overflow-hidden",
-            isCollapsed ? "justify-center" : "justify-between",
-          )}
-          onClick={() => setOpen(true)}
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <Search data-icon="inline-start" />
-            {!isCollapsed && (
-              <span className="truncate text-sm font-medium">
-                Search
+          {showSearch && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="lg"
+              aria-label="Search CiviCheck navigation"
+              aria-haspopup="dialog"
+              aria-keyshortcuts="Control+K Meta+K"
+              className="h-12 w-full justify-between gap-0 overflow-hidden rounded-[14px] bg-portal-panel text-primary hover:bg-card/80 has-data-[icon=inline-start]:pl-4 group-data-[collapsible=icon]:mt-6 group-data-[collapsible=icon]:w-10.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:has-data-[icon=inline-start]:pl-0"
+              onClick={() => {
+                setOpenMobile(false);
+                openCommandPalette();
+              }}
+            >
+              <span className="flex min-w-0 items-center gap-3">
+                <Search data-icon="inline-start" className="text-portal-ink-2" />
+                <span className="truncate text-sm font-medium transition-opacity duration-150 group-data-[collapsible=icon]:hidden">
+                  Search
+                </span>
               </span>
-            )}
-          </div>
-          {!isCollapsed && (
-            <Kbd>⌘K</Kbd>
+              <Kbd className="bg-card text-primary transition-opacity duration-150 group-data-[collapsible=icon]:hidden">
+                {hotkeyLabel(PALETTE_HOTKEY)}
+              </Kbd>
+            </Button>
           )}
-        </Button>
-      </SidebarHeader>
-
-      <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Search everything..." />
-        <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
-          <CommandGroup heading="Navigation">
-            {items.map((item) => (
-              <CommandItem
-                className="py-2!"
-                key={item.id}
-                onSelect={() => {
-                  setOpen(false);
-                  navigate({ to: item.url });
-                }}
-              >
-                <item.icon className="mr-2 h-4 w-4" />
-                <span>{item.title}</span>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        </CommandList>
-      </CommandDialog>
-    </>
+        </>
+      )}
+    </SidebarHeader>
   );
 }

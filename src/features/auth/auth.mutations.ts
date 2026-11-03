@@ -1,15 +1,122 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { User } from "@supabase/supabase-js";
 import {
+  clearSessionScope,
   getSupabaseServerClient,
   getSupabaseAdminClient,
   getSupabaseStatelessClient,
+  setSessionScope,
 } from "~/utils/supabase";
 import { getAppUrl } from "~/utils/app-url";
 import { sendEmail } from "~/utils/resend";
-import { renderOtpEmail } from "~/utils/email-template";
-import { requireActiveSession, isOperationalRole } from "~/server/auth";
-import { recordAuthenticationSecurityEvent } from "~/features/system-admin/security-center.server";
+import {
+  renderOtpEmail,
+  renderVerificationEmail,
+  renderVerificationEmailText,
+} from "~/utils/email-template";
+import { requireActiveSession } from "~/server/auth";
+import { findAuthUserByEmail } from "~/server/auth-users";
+import {
+  allowAttempt,
+  getClientIp,
+  RATE_LIMITS,
+  TOO_MANY_ATTEMPTS,
+} from "~/server/rate-limit";
+import {
+  recordAuthenticationSecurityEvent,
+  recordSessionForCurrentUser,
+  recordSessionStarted,
+} from "~/features/system-admin/security-center.server";
 import type { Role } from "~/lib/permissions";
+import {
+  credentialsSchema,
+  emailOnlySchema,
+  loginInputSchema,
+  newPasswordInputSchema,
+  oauthProviderSchema,
+  otpVerificationSchema,
+  signupInputSchema,
+} from "./auth.schema";
+import { describeWeakPassword } from "./password-error";
+import {
+  clearIssuedOtps,
+  describeRejectedOtp,
+  recordIssuedOtp,
+  type OtpPurpose,
+} from "./otp-codes.server";
+
+/** Supabase's single error for a code that is wrong, replaced, used or expired. */
+function isRejectedOtpError(error: { code?: string; message?: string }) {
+  return (
+    error.code === "otp_expired" ||
+    /expired or is invalid/i.test(error.message ?? "")
+  );
+}
+
+/** Each code email lands in someone's inbox and replaces the code they hold. */
+async function allowCodeEmail(email: string) {
+  return (
+    (await allowAttempt("otp-send:email", email, RATE_LIMITS.otpSendPerEmail)) &&
+    (await allowAttempt("otp-send:ip", getClientIp(), RATE_LIMITS.otpSendPerIp))
+  );
+}
+
+/** Bounds guesses at a 6-digit code, per inbox and per visitor. */
+async function allowCodeCheck(purpose: OtpPurpose, email: string) {
+  return (
+    (await allowAttempt(`otp-verify:${purpose}`, email, RATE_LIMITS.otpVerifyPerEmail)) &&
+    (await allowAttempt("otp-verify:ip", getClientIp(), RATE_LIMITS.otpVerifyPerIp))
+  );
+}
+
+/** Bounds password guesses, per account and per visitor. */
+async function allowPasswordCheck(email: string) {
+  return (
+    (await allowAttempt("sign-in:email", email, RATE_LIMITS.signInPerEmail)) &&
+    (await allowAttempt("sign-in:ip", getClientIp(), RATE_LIMITS.signInPerIp))
+  );
+}
+
+/** Matches the code lifetime promised in the verification email. */
+const PENDING_SIGNUP_LIFETIME_MS = 60 * 60 * 1000;
+
+const PENDING_SIGNUP_MESSAGE =
+  "This email is waiting to be verified. Enter the code we emailed you, or sign in with the password you chose to get a new code.";
+
+/**
+ * Whether a repeat sign-up may delete the unconfirmed account already holding
+ * this email and start over. Only ever an applicant's own stalled sign-up:
+ * never a pending staff invitation, and never someone else's sign-up still
+ * inside its code lifetime. Otherwise anyone could recreate a stranger's
+ * pending account with a password of their choosing, and the real owner would
+ * then confirm it with the code we email them.
+ */
+async function canRestartPendingSignup(
+  adminSupabase: ReturnType<typeof getSupabaseAdminClient>,
+  existingUser: User,
+  password: string,
+) {
+  if (existingUser.email_confirmed_at) return false;
+  if (existingUser.user_metadata?.invited_role) return false;
+
+  const { data: profile } = await adminSupabase
+    .from("profiles")
+    .select("role")
+    .eq("id", existingUser.id)
+    .maybeSingle();
+  if (profile && profile.role !== "applicant") return false;
+
+  // Its code has expired, so nobody can be part-way through confirming it.
+  const age = Date.now() - new Date(existingUser.created_at).getTime();
+  if (age > PENDING_SIGNUP_LIFETIME_MS) return true;
+
+  // Still live: only the person who chose its password may start over.
+  const { error } = await getSupabaseStatelessClient().auth.signInWithPassword({
+    email: existingUser.email ?? "",
+    password,
+  });
+  return !!error && /email not confirmed/i.test(error.message ?? "");
+}
 
 /**
  * Generates a fresh signup OTP for a user that was just created (or
@@ -47,43 +154,43 @@ async function sendSignupOtpEmail(
   try {
     await sendEmail({
       to: params.email,
-      subject: "Confirm your CiviCheck account",
-      html: renderOtpEmail({
-        preheader: "Use this code to confirm your CiviCheck account.",
-        label: "Email verification",
-        greeting: `Hello ${params.firstName.trim()},`,
-        heading: "Confirm your email address",
-        paragraphs: [
-          "Thanks for creating a CiviCheck account. Enter the code below to activate it — you can then file civil registry requests online and follow them from submission to release.",
-        ],
-        code: otp,
-        noteLines: [
-          "This code expires in 1 hour and can only be used once.",
-          "You will not be able to sign in until your email is confirmed.",
-        ],
-        footerNote:
-          "If you did not create a CiviCheck account, you can safely ignore this email.",
-      }),
+      subject: "Your CiviCheck email verification code",
+      html: renderVerificationEmail(otp),
+      text: renderVerificationEmailText(otp),
     });
-  } catch (sendError: any) {
+  } catch (sendError) {
     console.error("Resend sending error:", sendError);
     return {
       error: true,
-      message: `Failed to send the verification code: ${sendError.message}`,
+      message: `Failed to send the verification code: ${
+        sendError instanceof Error ? sendError.message : String(sendError)
+      }`,
     };
   }
 
+  await recordIssuedOtp(params.email, "signup", otp);
   return { error: false };
 }
 
 export const loginWithEmailFn = createServerFn({ method: "POST" })
-  .validator((d: { email: string; password: string }) => d)
+  .validator(loginInputSchema)
   .handler(async ({ data }) => {
-    const supabase = getSupabaseServerClient();
+    if (!(await allowPasswordCheck(data.email))) {
+      return { error: true, message: TOO_MANY_ATTEMPTS };
+    }
+
+    const sessionOnly = data.keepSignedIn !== true;
+    const supabase = getSupabaseServerClient({ sessionOnly });
     const { data: loginData, error } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
     });
+
+    // An unconfirmed account goes on to verify its email from the login form,
+    // and that verification opens the session — so it needs the choice too.
+    if (!error || /email not confirmed/i.test(error.message ?? "")) {
+      setSessionScope(sessionOnly);
+    }
 
     if (error) {
       await recordAuthenticationSecurityEvent({
@@ -107,26 +214,33 @@ export const loginWithEmailFn = createServerFn({ method: "POST" })
       .single();
     if ((profile?.access_status ?? "active") !== "active") {
       await supabase.auth.signOut();
+      clearSessionScope();
       return { error: true, message: "This account is not active." };
     }
-    if (profile?.role === "admin" || profile?.role === "system_admin") {
-      await recordAuthenticationSecurityEvent({
-        type: "admin_session_started",
+    if (profile?.role) {
+      await recordSessionStarted({
         actorProfileId: loginData.user.id,
-      });
-    } else if (profile?.role && isOperationalRole(profile.role as Role)) {
-      await recordAuthenticationSecurityEvent({
-        type: "staff_session_started",
-        actorProfileId: loginData.user.id,
+        role: profile.role as Role,
+        method: "password",
       });
     }
-    return { error: false };
+    // Who just signed in, so the first screen can be drawn for them while their
+    // account details are still loading. See `hintCurrentUser`.
+    return {
+      error: false,
+      userId: loginData.user.id,
+      role: (profile?.role as Role | undefined) ?? null,
+    };
   });
 
 export const loginWithOAuthFn = createServerFn({ method: "POST" })
-  .validator((d: { provider: "google" | "apple" }) => d)
+  .validator(oauthProviderSchema)
   .handler(async ({ data }) => {
-    const supabase = getSupabaseServerClient();
+    // The session is opened later, by /auth/callback, so the choice rides
+    // along as the marker cookie that request will read.
+    const sessionOnly = data.keepSignedIn !== true;
+    setSessionScope(sessionOnly);
+    const supabase = getSupabaseServerClient({ sessionOnly });
 
     const redirectTo = `${getAppUrl()}/auth/callback`;
 
@@ -149,18 +263,18 @@ export const loginWithOAuthFn = createServerFn({ method: "POST" })
   });
 
 export const signupFn = createServerFn({ method: "POST" })
-  .validator(
-    (d: {
-      email: string;
-      password: string;
-      firstName: string;
-      lastName: string;
-      middleName?: string;
-    }) => d,
-  )
+  .validator(signupInputSchema)
   .handler(async ({ data }) => {
+    if (!(await allowCodeEmail(data.email))) {
+      return { error: true, message: TOO_MANY_ATTEMPTS };
+    }
+
     const adminSupabase = getSupabaseAdminClient();
-    const middleName = data.middleName?.trim() || undefined;
+    // Already trimmed and checked by the validator; blank means "none". The
+    // validator also guarantees a middle name and "has none" never coexist.
+    const middleName = data.middleName || undefined;
+    const hasNoMiddleName = data.hasNoMiddleName;
+    const suffix = data.suffix || undefined;
     let signUpResult = await adminSupabase.auth.admin.createUser({
       email: data.email,
       password: data.password,
@@ -169,6 +283,8 @@ export const signupFn = createServerFn({ method: "POST" })
         first_name: data.firstName,
         last_name: data.lastName,
         middle_name: middleName,
+        has_no_middle_name: hasNoMiddleName,
+        suffix,
       },
     });
 
@@ -178,19 +294,19 @@ export const signupFn = createServerFn({ method: "POST" })
         signUpResult.error.message.includes("already exists");
 
       if (isAlreadyRegistered) {
-        // Fetch users to check if this existing user is unconfirmed
-        const {
-          data: { users },
-          error: listError,
-        } = await adminSupabase.auth.admin.listUsers({
-          perPage: 1000,
-        });
+        // If the lookup fails there is no user to find, and the "already
+        // registered" error below is the right answer anyway.
+        const existingUser = await findAuthUserByEmail(adminSupabase, data.email);
 
-        const existingUser = users?.find(
-          (u) => u.email?.toLowerCase() === data.email.toLowerCase(),
-        );
+        if (
+          existingUser &&
+          !existingUser.email_confirmed_at &&
+          !(await canRestartPendingSignup(adminSupabase, existingUser, data.password))
+        ) {
+          return { error: true, message: PENDING_SIGNUP_MESSAGE };
+        }
 
-        // If the user exists but has not confirmed their email, delete it so they can retry registration
+        // A stalled sign-up of this applicant's own: start it over.
         if (existingUser && !existingUser.email_confirmed_at) {
           await adminSupabase.auth.admin.deleteUser(existingUser.id);
 
@@ -202,6 +318,8 @@ export const signupFn = createServerFn({ method: "POST" })
               first_name: data.firstName,
               last_name: data.lastName,
               middle_name: middleName,
+              has_no_middle_name: hasNoMiddleName,
+              suffix,
             },
           });
         }
@@ -211,9 +329,11 @@ export const signupFn = createServerFn({ method: "POST" })
     if (signUpResult.error) {
       const isJsonEmpty =
         signUpResult.error.message === "{}" || !signUpResult.error.message;
-      const cleanMessage = isJsonEmpty
-        ? "An unexpected registration error occurred. Please check your SMTP configuration in the Supabase Dashboard."
-        : signUpResult.error.message;
+      const cleanMessage =
+        describeWeakPassword(signUpResult.error) ??
+        (isJsonEmpty
+          ? "An unexpected registration error occurred. Please check your SMTP configuration in the Supabase Dashboard."
+          : signUpResult.error.message);
       return {
         error: true,
         message: cleanMessage,
@@ -221,12 +341,17 @@ export const signupFn = createServerFn({ method: "POST" })
     }
 
     // The profile row is created by a trigger that only reads the first and last
-    // name out of the metadata, so the middle name has to be written onto it.
+    // name out of the metadata, so the middle name, the "no middle name" answer
+    // and the suffix have to be written onto it.
     const newProfileId = signUpResult.data?.user?.id;
-    if (newProfileId && middleName) {
+    if (newProfileId && (middleName || hasNoMiddleName || suffix)) {
       await adminSupabase
         .from("profiles")
-        .update({ middle_name: middleName })
+        .update({
+          middle_name: middleName ?? null,
+          has_no_middle_name: hasNoMiddleName,
+          suffix: suffix ?? null,
+        })
         .eq("id", newProfileId);
     }
 
@@ -238,6 +363,8 @@ export const signupFn = createServerFn({ method: "POST" })
         first_name: data.firstName,
         last_name: data.lastName,
         middle_name: middleName,
+        has_no_middle_name: hasNoMiddleName,
+        suffix,
       },
     });
 
@@ -261,9 +388,13 @@ export const signupFn = createServerFn({ method: "POST" })
  * choosing and take the account over before its real owner ever confirms it.
  */
 export const resendSignupOtpFn = createServerFn({ method: "POST" })
-  .validator((d: { email: string; password: string }) => d)
+  .validator(credentialsSchema)
   .handler(async ({ data }) => {
     const INVALID_CREDENTIALS = "Invalid email or password.";
+    // This checks a password and then sends a code, so it is held to both limits.
+    if (!(await allowPasswordCheck(data.email)) || !(await allowCodeEmail(data.email))) {
+      return { error: true, message: TOO_MANY_ATTEMPTS };
+    }
     const statelessSupabase = getSupabaseStatelessClient();
     const { error: signInError } =
       await statelessSupabase.auth.signInWithPassword({
@@ -279,12 +410,7 @@ export const resendSignupOtpFn = createServerFn({ method: "POST" })
     }
 
     const adminSupabase = getSupabaseAdminClient();
-    const {
-      data: { users },
-    } = await adminSupabase.auth.admin.listUsers({ perPage: 1000 });
-    const existingUser = users?.find(
-      (u) => u.email?.toLowerCase() === data.email.toLowerCase(),
-    );
+    const existingUser = await findAuthUserByEmail(adminSupabase, data.email);
 
     if (!existingUser) {
       return { error: true, message: INVALID_CREDENTIALS };
@@ -294,6 +420,8 @@ export const resendSignupOtpFn = createServerFn({ method: "POST" })
     const firstName =
       (userMetadata.first_name as string | undefined) || "there";
     const middleName = userMetadata.middle_name as string | undefined;
+    const hasNoMiddleName = userMetadata.has_no_middle_name === true;
+    const suffix = userMetadata.suffix as string | undefined;
 
     // Recreate rather than update: Supabase Auth has no admin call to mint a
     // fresh unconfirmed state for an existing user, so this mirrors the same
@@ -317,10 +445,14 @@ export const resendSignupOtpFn = createServerFn({ method: "POST" })
       };
     }
 
-    if (middleName) {
+    if (middleName || hasNoMiddleName || suffix) {
       await adminSupabase
         .from("profiles")
-        .update({ middle_name: middleName })
+        .update({
+          middle_name: middleName ?? null,
+          has_no_middle_name: hasNoMiddleName,
+          suffix: suffix ?? null,
+        })
         .eq("id", created.user.id);
     }
 
@@ -333,8 +465,12 @@ export const resendSignupOtpFn = createServerFn({ method: "POST" })
   });
 
 export const verifySignupOtpFn = createServerFn({ method: "POST" })
-  .validator((d: { email: string; token: string }) => d)
+  .validator(otpVerificationSchema)
   .handler(async ({ data }) => {
+    if (!(await allowCodeCheck("signup", data.email))) {
+      return { error: true, message: TOO_MANY_ATTEMPTS };
+    }
+
     const supabase = getSupabaseServerClient();
     const { error } = await supabase.auth.verifyOtp({
       email: data.email,
@@ -343,6 +479,13 @@ export const verifySignupOtpFn = createServerFn({ method: "POST" })
     });
 
     if (error) {
+      if (isRejectedOtpError(error)) {
+        return {
+          error: true,
+          message: await describeRejectedOtp(data.email, "signup", data.token),
+        };
+      }
+
       const isJsonEmpty = error.message === "{}" || !error.message;
       const cleanMessage = isJsonEmpty
         ? "An unexpected verification error occurred."
@@ -353,11 +496,12 @@ export const verifySignupOtpFn = createServerFn({ method: "POST" })
       };
     }
 
+    await clearIssuedOtps(data.email, "signup");
     return { error: false };
   });
 
 export const resetPasswordFn = createServerFn({ method: "POST" })
-  .validator((d: { password: string }) => d)
+  .validator(newPasswordInputSchema)
   .handler(async ({ data }) => {
     const { supabase } = await requireActiveSession();
     const { error } = await supabase.auth.updateUser({
@@ -375,9 +519,11 @@ export const resetPasswordFn = createServerFn({ method: "POST" })
       }
 
       const isJsonEmpty = error.message === "{}" || !error.message;
-      const cleanMessage = isJsonEmpty
-        ? "An unexpected password reset server error occurred."
-        : error.message;
+      const cleanMessage =
+        describeWeakPassword(error) ??
+        (isJsonEmpty
+          ? "An unexpected password reset server error occurred."
+          : error.message);
       return {
         error: true,
         message: cleanMessage,
@@ -391,8 +537,12 @@ export const resetPasswordFn = createServerFn({ method: "POST" })
   });
 
 export const forgotPasswordFn = createServerFn({ method: "POST" })
-  .validator((d: { email: string }) => d)
+  .validator(emailOnlySchema)
   .handler(async ({ data }) => {
+    if (!(await allowCodeEmail(data.email))) {
+      return { error: true, message: TOO_MANY_ATTEMPTS };
+    }
+
     const adminSupabase = getSupabaseAdminClient();
 
     // Generate a recovery OTP code
@@ -437,7 +587,6 @@ export const forgotPasswordFn = createServerFn({ method: "POST" })
         subject: "Reset your CiviCheck password",
         html: renderOtpEmail({
           preheader: "Use this code to reset your CiviCheck password.",
-          label: "Password reset",
           heading: "Reset your password",
           paragraphs: [
             "We received a request to reset the password for your CiviCheck account. Enter the code below to continue.",
@@ -448,13 +597,17 @@ export const forgotPasswordFn = createServerFn({ method: "POST" })
             "If you did not request a password reset, you can safely ignore this email — your password stays the same.",
         }),
       });
-    } catch (sendError: any) {
+    } catch (sendError) {
       console.error("Resend sending error:", sendError);
       return {
         error: true,
-        message: `Failed to send the password reset code: ${sendError.message}`,
+        message: `Failed to send the password reset code: ${
+          sendError instanceof Error ? sendError.message : String(sendError)
+        }`,
       };
     }
+
+    await recordIssuedOtp(data.email, "recovery", otp);
 
     return {
       error: false,
@@ -463,8 +616,12 @@ export const forgotPasswordFn = createServerFn({ method: "POST" })
   });
 
 export const verifyRecoveryOtpFn = createServerFn({ method: "POST" })
-  .validator((d: { email: string; token: string }) => d)
+  .validator(otpVerificationSchema)
   .handler(async ({ data }) => {
+    if (!(await allowCodeCheck("recovery", data.email))) {
+      return { error: true, message: TOO_MANY_ATTEMPTS };
+    }
+
     const supabase = getSupabaseServerClient();
     const { error } = await supabase.auth.verifyOtp({
       email: data.email,
@@ -473,6 +630,13 @@ export const verifyRecoveryOtpFn = createServerFn({ method: "POST" })
     });
 
     if (error) {
+      if (isRejectedOtpError(error)) {
+        return {
+          error: true,
+          message: await describeRejectedOtp(data.email, "recovery", data.token),
+        };
+      }
+
       const isJsonEmpty = error.message === "{}" || !error.message;
       const cleanMessage = isJsonEmpty
         ? "An unexpected verification error occurred."
@@ -483,5 +647,8 @@ export const verifyRecoveryOtpFn = createServerFn({ method: "POST" })
       };
     }
 
+    await clearIssuedOtps(data.email, "recovery");
+    // A verified recovery code opens a session without a password check.
+    await recordSessionForCurrentUser(supabase, "password reset");
     return { error: false };
   });

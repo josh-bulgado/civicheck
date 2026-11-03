@@ -33,8 +33,12 @@ import {
   parseConditionRule,
   parseFormTemplateDefinition,
 } from "~/features/forms/form-template.utils";
+import { toServiceSlug } from "~/features/services/service-slug";
+import { sortChecklist } from "~/features/services/service-utils";
 
-const TTL_MS = 5 * 60 * 1000;
+// Show external template edits immediately when refreshing the local app.
+// Production retains the shared five-minute catalogue cache.
+const TTL_MS = process.env.NODE_ENV === "development" ? 0 : 5 * 60 * 1000;
 
 export interface ServiceCatalogue {
   services: Service[];
@@ -50,7 +54,30 @@ export interface ServiceCatalogue {
   /** Every service in a `display_group`, in `service_code` order. */
   servicesByGroup: Map<string, Service[]>;
   servicesByCode: Map<string, Service>;
+  /** URL slug (`toServiceSlug`) back to the group or service code it names. */
+  routeCodesBySlug: Map<string, string>;
   formTemplatesByService: Map<string, PublishedFormTemplate>;
+}
+
+// What the three form-template queries in `fetchCatalogue` select.
+interface TemplateRow {
+  id: string;
+  template_key: string;
+  name: string;
+  active_version_id: string | null;
+}
+
+interface TemplateVersionRow {
+  id: string;
+  template_id: string;
+  version: number;
+  status: string;
+  definition: unknown;
+}
+
+interface TemplateBindingRow {
+  service_code: string;
+  template_id: string;
 }
 
 let entry: { promise: Promise<ServiceCatalogue>; expiresAt: number } | null =
@@ -104,10 +131,12 @@ async function fetchCatalogue(): Promise<ServiceCatalogue> {
   }
 
   const services = (servicesResult.data ?? []) as Service[];
-  const requirements = (requirementsResult.data ?? []).map((requirement) => ({
-    ...requirement,
-    applies_when: parseConditionRule(requirement.applies_when),
-  })) as ServiceRequirement[];
+  const requirements = sortChecklist(
+    (requirementsResult.data ?? []).map((requirement) => ({
+      ...requirement,
+      applies_when: parseConditionRule(requirement.applies_when),
+    })) as ServiceRequirement[],
+  );
 
   // Build the lookups once here instead of re-scanning the arrays on every read.
   const requirementsByKey = new Map<string, ServiceRequirement[]>();
@@ -144,19 +173,36 @@ async function fetchCatalogue(): Promise<ServiceCatalogue> {
     bucket.sort((a, b) => a.service_code.localeCompare(b.service_code));
   }
 
+  // Groups are written last so they win a slug clash with a service code, the
+  // same precedence `resolveServices` gives them.
+  const routeCodesBySlug = new Map<string, string>();
+  for (const code of servicesByCode.keys()) {
+    routeCodesBySlug.set(toServiceSlug(code), code);
+  }
+  for (const group of servicesByGroup.keys()) {
+    routeCodesBySlug.set(toServiceSlug(group), group);
+  }
+
   const versionById = new Map(
-    (versionsResult.data ?? []).map((version: any) => [version.id, version]),
+    ((versionsResult.data ?? []) as TemplateVersionRow[]).map((version) => [
+      version.id,
+      version,
+    ]),
   );
   const templateById = new Map(
-    (templatesResult.data ?? []).map((template: any) => [template.id, template]),
+    ((templatesResult.data ?? []) as TemplateRow[]).map((template) => [
+      template.id,
+      template,
+    ]),
   );
   const formTemplatesByService = new Map<string, PublishedFormTemplate>();
-  for (const binding of bindingsResult.data ?? []) {
-    const template = templateById.get((binding as any).template_id) as any;
-    const version = template ? (versionById.get(template.active_version_id) as any) : null;
+  for (const binding of (bindingsResult.data ?? []) as TemplateBindingRow[]) {
+    const template = templateById.get(binding.template_id);
+    const version =
+      template?.active_version_id ? versionById.get(template.active_version_id) : null;
     if (!template || !version) continue;
     try {
-      formTemplatesByService.set((binding as any).service_code, {
+      formTemplatesByService.set(binding.service_code, {
         templateId: template.id,
         templateKey: template.template_key,
         templateName: template.name,
@@ -177,6 +223,7 @@ async function fetchCatalogue(): Promise<ServiceCatalogue> {
     requirementsByGroup,
     servicesByGroup,
     servicesByCode,
+    routeCodesBySlug,
     formTemplatesByService,
   };
 }
@@ -218,6 +265,25 @@ export function resolveServices(
 
   const single = catalogue.servicesByCode.get(codeOrGroup);
   return { services: single ? [single] : [], isGroup: false };
+}
+
+/**
+ * Turn the `/apply/:serviceCode` URL segment back into the group or service
+ * code it stands for. Accepts the exact code too, so links written before the
+ * URLs were slugged keep resolving. Unknown input is returned unchanged and
+ * fails the lookup that follows.
+ */
+export function canonicalRouteCode(
+  catalogue: ServiceCatalogue,
+  slugOrCode: string,
+): string {
+  if (
+    catalogue.servicesByGroup.has(slugOrCode) ||
+    catalogue.servicesByCode.has(slugOrCode)
+  ) {
+    return slugOrCode;
+  }
+  return catalogue.routeCodesBySlug.get(toServiceSlug(slugOrCode)) ?? slugOrCode;
 }
 
 /**

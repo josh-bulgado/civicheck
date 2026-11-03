@@ -1,223 +1,83 @@
 "use client";
 
-import { Sidebar, SidebarContent } from "~/components/ui/sidebar";
-import {
-  Activity,
-  BarChart3,
-  Bell,
-  ClipboardCheck,
-  Gauge,
-  History,
-  LayoutDashboard,
-  ListChecks,
-  Shield,
-  ShieldAlert,
-  UserPlus,
-} from "lucide-react";
+import { Sidebar, SidebarContent, useSidebar } from "~/components/ui/sidebar";
 import { NavFooter } from "~/components/sidebar-01/nav-footer";
 import { NavHeader } from "~/components/sidebar-01/nav-header";
 import { NavMain } from "~/components/sidebar-01/nav-main";
+import { AdminNav } from "~/components/sidebar-01/admin-nav";
 import { usePermissions } from "~/hooks/usePermissions";
+import { cn } from "~/lib/utils";
 import type { AccountProfile } from "~/features/account/account.types";
-import type { NavGroup, NavItem } from "./types";
+import { buildNavGroups, type NavItemId } from "./nav-config";
 import { getWorkspaceDetails } from "./workspace";
 
-function createCcroAdminGroups(items: NavItem[]): NavGroup[] {
-  const itemsById = new Map(items.map((item) => [item.id, item]));
-  const selectItems = (ids: string[]) =>
-    ids.flatMap((id) => {
-      const item = itemsById.get(id);
-      return item ? [item] : [];
-    });
-
-  return [
-    { id: "overview", items: selectItems(["admin-overview"]) },
-    {
-      id: "operations",
-      label: "Operations",
-      items: selectItems(["request-queue"]),
-    },
-    {
-      id: "management",
-      label: "Management",
-      items: selectItems(["admin-services", "admin-staff"]),
-    },
-    {
-      id: "insights",
-      label: "Insights",
-      items: selectItems(["admin-reports"]),
-    },
-  ].filter((group) => group.items.length > 0);
-}
-
+/**
+ * What goes in the sidebar, and how it's grouped, lives in `nav-config.ts`.
+ * To add a link or move one between sections, edit that file.
+ *
+ * Every role gets the same frame: no box, the sidebar sitting directly on the
+ * page's ground (a sheet below `md`), folding to an icon rail on desktop.
+ * All roles share the portal's pills, branding and account card. Selected
+ * workspaces add search; CCRO administrators have inline navigation groups.
+ */
 export function AppSidebar({
   user,
   unreadNotifications = 0,
+  attentionIds,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   user?: AccountProfile | null;
   unreadNotifications?: number;
+  attentionIds?: readonly NavItemId[];
 }) {
   const { can, role } = usePermissions();
+  const { isMobile } = useSidebar();
   const workspace = getWorkspaceDetails(role);
+  const citizen = role === "applicant";
+  const admin = role === "admin";
 
-  // Build navMain dynamically based on permissions
-  const navMain: NavItem[] = [];
+  const navGroups = buildNavGroups(role, can, unreadNotifications, attentionIds);
 
-  if (can("health:view")) {
-    navMain.push({
-      id: "system-health",
-      title: "System Health",
-      url: "/system-admin/health",
-      icon: Activity,
-    });
-  }
-
-  if (can("security:view")) {
-    navMain.push({
-      id: "system-security",
-      title: "Security Center",
-      url: "/system-admin/security",
-      icon: ShieldAlert,
-    });
-  }
-
-  if (can("dashboard:admin")) {
-    navMain.push({
-      id: "admin-overview",
-      title: "Overview",
-      url: "/admin",
-      icon: Gauge,
-    });
-    navMain.push({
-      id: "admin-reports",
-      title: "Reports",
-      url: "/admin/reports",
-      icon: BarChart3,
-    });
-  }
-
-  if (can("services:manage")) {
-    navMain.push({
-      id: "admin-services",
-      title: "Services Registry",
-      url: "/admin/services",
-      icon: LayoutDashboard,
-    });
-  }
-
-  if (can("users:invite_staff")) {
-    navMain.push({
-      id: "admin-staff",
-      title: "Staff Management",
-      url: "/admin/staff",
-      icon: UserPlus,
-    });
-  }
-
-  if (can("accounts:view_all")) {
-    navMain.push({
-      id: "system-accounts",
-      title: "Accounts Center",
-      url: "/system-admin/accounts",
-      icon: Shield,
-    });
-  }
-
-  if (can("audit:view")) {
-    navMain.push({
-      id: "system-audit",
-      title: "Audit Center",
-      url: "/system-admin/audit",
-      icon: History,
-    });
-  }
-
-  if (can("dashboard:staff")) {
-    navMain.push({
-      id: "staff-dashboard",
-      title: role === "cashier" ? "Cashier Dashboard" : "Staff Dashboard",
-      url: "/staff-dashboard",
-      icon: LayoutDashboard,
-    });
-  }
-
-  if (can("dashboard:applicant")) {
-    navMain.push({
-      id: "applicant-dashboard",
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: LayoutDashboard,
-    });
-  }
-
-  if (can("services:view")) {
-    navMain.push({
-      id: "services",
-      title:
-        role === "admin"
-          ? "Preview Citizen Services"
-          : role === "staff" || role === "supervisor"
-            ? "Service Reference"
-            : "Browse Services",
-      url: "/services",
-      icon: ListChecks,
-    });
-  }
-
-  if (can("requests:view_own")) {
-    navMain.push({
-      id: "my-requests",
-      title: "My Requests",
-      url: "/my-requests",
-      icon: ClipboardCheck,
-    });
-    navMain.push({
-      id: "notifications",
-      title: "Notifications",
-      url: "/notifications",
-      icon: Bell,
-      badge: unreadNotifications,
-    });
-  }
-
-  if (can("requests:view_all")) {
-    navMain.push({
-      id: "request-queue",
-      title: "Request Queue",
-      url: "/requests",
-      icon: ListChecks,
-    });
-  }
-
-  if (can("requests:collect_payment")) {
-    navMain.push({
-      id: "cashier-counter",
-      title: "Cashier Counter",
-      url: "/cashier",
-      icon: ClipboardCheck,
-    });
-    navMain.push({
-      id: "payment-history",
-      title: "Payment History",
-      url: "/payment-history",
-      icon: History,
-    });
-  }
-
-  const navGroups =
-    role === "admin"
-      ? createCcroAdminGroups(navMain)
-      : [{ id: "navigation", label: "Navigation", items: navMain }];
-  const searchableItems = navGroups.flatMap((group) => group.items);
-
-  return (
-    <Sidebar collapsible="icon" variant="sidebar" {...props}>
-      <NavHeader items={searchableItems} workspace={workspace} />
-      <SidebarContent>
-        <NavMain groups={navGroups} />
+  const sections = (
+    <>
+      <NavHeader
+        workspace={workspace}
+        citizen={citizen}
+        showSearch={role !== "system_admin" && role !== "cashier"}
+      />
+      {/* The padding gives the active pill's shadow room: this container
+          scrolls on a short screen, and overflow clips whatever leaves it. The
+          negative margins cancel it out so the pills sit where the grid says. */}
+      <SidebarContent className="-mx-3.5 -my-6 px-3.5 py-6">
+        {admin ? (
+          <AdminNav groups={navGroups} />
+        ) : (
+          <NavMain groups={navGroups} label={workspace.label} />
+        )}
       </SidebarContent>
       <NavFooter account={user ?? null} />
+    </>
+  );
+
+  return (
+    <Sidebar
+      collapsible="icon"
+      variant="floating"
+      // The frame: 10px of ground above, below and to the left, and the 6px
+      // gap before the panel on the right. Together they make up the
+      // `--sidebar-width` the route sets.
+      className="p-2.5 pr-1.5"
+      {...props}
+    >
+      {/* Desktop shares the page's ground; mobile sheets paint the same wash. */}
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 flex-col pt-1.5 pr-2 pb-1 pl-1.5",
+          isMobile && "bg-(image:--portal-ground)",
+        )}
+      >
+        {sections}
+      </div>
     </Sidebar>
   );
 }

@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
+import { PanelSkeleton } from "~/components/feedback/PageSkeleton";
 import {
   Sheet,
   SheetContent,
   SheetClose,
-  SheetHeader,
   SheetTitle,
   SheetDescription,
 } from "~/components/ui/sheet";
 import { Button } from "~/components/ui/button";
-import { Separator } from "~/components/ui/separator";
 import {
   Collapsible,
   CollapsibleContent,
@@ -27,16 +26,15 @@ import {
   Clock,
   CircleDollarSign,
   Layers,
-  CheckCircle2,
   AlertTriangle,
-  ArrowRight,
   FileText,
   ChevronDown,
-  Send,
+  ChevronUp,
 } from "lucide-react";
 import {
   cleanStepText,
   formatFee,
+  formatServiceCode,
   parseRequirementName,
 } from "~/features/services/service-utils";
 import {
@@ -50,6 +48,17 @@ interface ServiceDetailSheetProps {
   onOpenChange: (open: boolean) => void;
   onEdit?: (service: ServiceDossier) => void;
   editLabel?: string;
+  /**
+   * Steps through the list the sheet was opened from, so an admin can review
+   * services one after another without closing and reopening it. A missing
+   * handler disables that button (first or last item).
+   */
+  navigation?: {
+    position: number;
+    total: number;
+    onPrevious?: () => void;
+    onNext?: () => void;
+  };
 }
 
 export function ServiceDetailSheet({
@@ -58,6 +67,7 @@ export function ServiceDetailSheet({
   onOpenChange,
   onEdit,
   editLabel = "Edit Service",
+  navigation,
 }: ServiceDetailSheetProps) {
   const [requirements, setRequirements] = useState<ServiceRequirement[]>([]);
   const [loading, setLoading] = useState(false);
@@ -87,8 +97,11 @@ export function ServiceDetailSheet({
             }),
         );
         setRequirements(data);
-      } catch (err: any) {
-        setError(err.message || "Failed to load requirements.");
+      } catch (err) {
+        setError(
+          (err instanceof Error && err.message) ||
+            "Failed to load requirements.",
+        );
       } finally {
         setLoading(false);
       }
@@ -113,10 +126,42 @@ export function ServiceDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-md w-full h-full flex flex-col p-0 border-l border-border bg-white shadow-2xl overflow-hidden">
+      <SheetContent className="sm:max-w-md w-full h-full flex flex-col p-0 border-l border-border bg-card shadow-2xl overflow-hidden">
         {/* Header Section - clean and neutral */}
         <div className="relative p-6 bg-card border-b border-border">
           <div className="space-y-2 pr-8">
+            {navigation && (
+              <div className="flex items-center gap-1.5 pb-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  onClick={navigation.onPrevious}
+                  disabled={!navigation.onPrevious}
+                  aria-label="Previous service"
+                  title="Previous service"
+                >
+                  <ChevronUp aria-hidden="true" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  onClick={navigation.onNext}
+                  disabled={!navigation.onNext}
+                  aria-label="Next service"
+                  title="Next service"
+                >
+                  <ChevronDown aria-hidden="true" />
+                </Button>
+                <span
+                  className="ml-1 text-xs tabular-nums text-muted-foreground"
+                  aria-live="polite"
+                >
+                  {navigation.position} of {navigation.total}
+                </span>
+              </div>
+            )}
             {service.variant_count <= 1 && (
               <div className="flex flex-wrap items-center gap-2">
                 <ClassificationBadge classification={service.classification} />
@@ -126,7 +171,7 @@ export function ServiceDetailSheet({
               {service.name}
             </SheetTitle>
             <p className="text-xs text-muted-foreground">
-              Service Code: {service.service_code}
+              Service Code: {formatServiceCode(service.service_code)}
             </p>
             <SheetDescription className="text-muted-foreground text-xs">
               Review the requirement checklist and registry details before
@@ -164,8 +209,10 @@ export function ServiceDetailSheet({
             <div className="grid grid-cols-1 gap-2 text-xs">
               <div className="flex justify-between py-1 border-b border-dashed border-border">
                 <span className="text-muted-foreground">Bundled under:</span>
-                <span className="font-medium text-foreground uppercase">
-                  {service.display_group || "None (Standalone)"}
+                <span className="font-medium text-foreground">
+                  {service.display_group
+                    ? formatServiceCode(service.display_group)
+                    : "None (Standalone)"}
                 </span>
               </div>
               <div className="flex justify-between py-1 border-b border-dashed border-border">
@@ -178,8 +225,10 @@ export function ServiceDetailSheet({
                 <span className="text-muted-foreground">
                   Checklist shared with:
                 </span>
-                <span className="font-mono text-foreground font-medium uppercase">
-                  {service.requirement_group || service.service_code}
+                <span className="font-medium text-foreground">
+                  {formatServiceCode(
+                    service.requirement_group || service.service_code,
+                  )}
                 </span>
               </div>
             </div>
@@ -198,8 +247,8 @@ export function ServiceDetailSheet({
                     key={variant.service_code}
                     className="flex items-center justify-between gap-2 py-2 first:pt-0 last:pb-0"
                   >
-                    <span className="font-mono text-xs font-medium text-foreground">
-                      {variant.service_code}
+                    <span className="text-xs font-medium text-foreground">
+                      {formatServiceCode(variant.service_code)}
                     </span>
                     <span className="text-xs font-semibold text-foreground">
                       {formatFee(variant.fee)}
@@ -219,7 +268,6 @@ export function ServiceDetailSheet({
             >
               <CollapsibleTrigger className="flex items-center justify-between w-full cursor-pointer group/trigger select-none">
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
                   How It Works
                 </h3>
                 <ChevronDown
@@ -260,18 +308,11 @@ export function ServiceDetailSheet({
             </h4>
 
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-8 space-y-2">
-                <div
-                  className="h-6 w-6 animate-spin rounded-full border-2 border-t-transparent"
-                  style={{
-                    borderColor: "var(--primary)",
-                    borderTopColor: "transparent",
-                  }}
-                />
-                <span className="text-xs text-muted-foreground">
-                  Loading requirements...
-                </span>
-              </div>
+              <PanelSkeleton
+                label="Loading requirements"
+                rows={3}
+                className="py-4"
+              />
             ) : error ? (
               <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-lg">
                 {error}

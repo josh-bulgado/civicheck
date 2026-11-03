@@ -1,56 +1,89 @@
-import { Controller, useFieldArray, useFormContext } from "react-hook-form";
-import { AlertTriangle, ClipboardCheck, Plus, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useFieldArray, useFormContext } from "react-hook-form";
+import {
+  AlertTriangle,
+  ClipboardCheck,
+  GitBranch,
+  Lock,
+  Plus,
+  Search,
+  Unlock,
+} from "lucide-react";
+import { toast } from "sonner";
 import { Alert, AlertDescription } from "~/components/ui/alert";
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { Checkbox } from "~/components/ui/checkbox";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
 import {
   Empty,
   EmptyDescription,
   EmptyHeader,
   EmptyTitle,
 } from "~/components/ui/empty";
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-  FieldLegend,
-  FieldSet,
-} from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
-import { Spinner } from "~/components/ui/spinner";
-import {
-  ConditionRuleBuilder,
-  type ConditionSource,
-} from "~/features/forms/components/ConditionRuleBuilder";
+import { PanelSkeleton } from "~/components/feedback/PageSkeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { type ConditionSource } from "~/features/forms/components/ConditionRuleBuilder";
 import type { FormTemplateDefinition } from "~/features/forms/form-template.types";
 import type { Service } from "../../services.types";
+import {
+  defaultRequirementTab,
+  filterRequirements,
+  type RequirementTab,
+} from "../requirement-chips";
+import {
+  classifyRequirementScope,
+  variantScopeCondition,
+  type RequirementScopeKind,
+} from "../requirement-scope";
 import {
   EMPTY_REQUIREMENT,
   type ServiceFormValues,
 } from "../service-form.config";
+import { RequirementSheet } from "./RequirementSheet";
+import { RequirementsTable, type RequirementEntry } from "./RequirementsTable";
 
 interface RequirementsSectionProps {
   isLoading: boolean;
   sharedWith: Service[];
   formDefinition: FormTemplateDefinition;
+  currentServiceCode: string | null;
+  variantCodes: string[];
+  embedded?: boolean;
 }
+
+const TAB_LABELS: Record<RequirementTab, string> = {
+  all: "All",
+  variant: "This variant",
+  conditional: "Conditional",
+  inherited: "Shared",
+  other: "Other",
+};
+
+const TAB_ORDER: RequirementTab[] = [
+  "all",
+  "variant",
+  "conditional",
+  "inherited",
+  "other",
+];
+
+const NO_ROUTING_HINT =
+  "Connect this checklist to a shared application form with routing to limit a requirement to one variant.";
 
 export function RequirementsSection({
   isLoading,
   sharedWith,
   formDefinition,
+  currentServiceCode,
+  variantCodes,
+  embedded = false,
 }: RequirementsSectionProps) {
   const form = useFormContext<ServiceFormValues>();
   const requirementFields = useFieldArray({
@@ -62,344 +95,381 @@ export function RequirementsSection({
     .watch("party_roles")
     .map((entry) => entry.value.trim())
     .filter(Boolean);
-  const conditionSources: ConditionSource[] = [
-    ...(formDefinition.caseSelector?.questions ?? []).map((question) => ({
-      key: question.key,
-      label: question.label,
-      options: question.options,
-    })),
-    ...(formDefinition.derivedAnswers ?? []).map((derived) => ({
-      key: derived.key,
-      label: derived.label,
-      options: derived.bands.map((band) => ({
-        value: band.value,
-        label: band.label,
+
+  const [query, setQuery] = useState("");
+  const [inheritedUnlocked, setInheritedUnlocked] = useState(false);
+  // null until the user picks a tab; the default is latched on first data.
+  const [tab, setTab] = useState<RequirementTab | null>(null);
+  // The row whose Configure sheet is open. The index stays set while the sheet
+  // animates closed; `sheetOpen` is what actually shows it.
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  // A row added in this session that has not been confirmed with Done yet.
+  const [newIndex, setNewIndex] = useState<number | null>(null);
+  // What to refocus when the sheet closes. Base UI only returns focus to what
+  // was focused when the sheet mounted, which is wrong for menu-originated
+  // opens and for Safari (it does not focus a button on click).
+  const openerRef = useRef<HTMLElement | null>(null);
+  const addButtonRef = useRef<HTMLButtonElement>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
+
+  const conditionSources: ConditionSource[] = useMemo(
+    () => [
+      ...(formDefinition.caseSelector?.questions ?? []).map((question) => ({
+        key: question.key,
+        label: question.label,
+        options: question.options,
       })),
-    })),
-    ...formDefinition.sections.flatMap((section) =>
-      section.fields.flatMap((field) =>
-        field.type === "select"
-          ? [{ key: field.key, label: field.label, options: field.options }]
-          : [],
+      ...(formDefinition.derivedAnswers ?? []).map((derived) => ({
+        key: derived.key,
+        label: derived.label,
+        options: derived.bands.map((band) => ({
+          value: band.value,
+          label: band.label,
+        })),
+      })),
+      ...formDefinition.sections.flatMap((section) =>
+        section.fields.flatMap((field) =>
+          field.type === "select"
+            ? [{ key: field.key, label: field.label, options: field.options }]
+            : [],
+        ),
       ),
-    ),
-  ];
+    ],
+    [formDefinition],
+  );
+
+  const entries: RequirementEntry[] = useMemo(
+    () =>
+      requirementValues.map((value, index) => ({
+        id: requirementFields.fields[index]?.id ?? `requirement-${index}`,
+        index,
+        value,
+        scope: classifyRequirementScope(value, {
+          variantCodes,
+          currentCode: currentServiceCode,
+          caseSelector: formDefinition.caseSelector,
+          sources: conditionSources,
+        }),
+      })),
+    [
+      requirementValues,
+      requirementFields.fields,
+      variantCodes,
+      currentServiceCode,
+      formDefinition.caseSelector,
+      conditionSources,
+    ],
+  );
+
+  const counts = useMemo(() => {
+    const next: Record<RequirementScopeKind, number> = {
+      variant: 0,
+      conditional: 0,
+      inherited: 0,
+      other: 0,
+    };
+    for (const entry of entries) next[entry.scope.kind] += 1;
+    return next;
+  }, [entries]);
+
+  // Latch the default tab once the checklist AND the form definition (which
+  // supplies the routing that classifies rows) have loaded, so a later edit
+  // that changes the counts never moves the tab out from under the user.
+  // Loading starting again (another service, a reload) clears the latch so
+  // the default is chosen afresh from the new data.
+  useEffect(() => {
+    if (isLoading) {
+      setTab(null);
+      return;
+    }
+    if (tab === null && entries.length > 0) {
+      setTab(defaultRequirementTab(counts));
+    }
+  }, [tab, isLoading, entries.length, counts]);
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const selectedTab = tab ?? defaultRequirementTab(counts);
+  // "This variant" and "Other" only exist as tabs while they have rows.
+  const resolvedTab: RequirementTab =
+    (selectedTab === "other" || selectedTab === "variant") &&
+    counts[selectedTab] === 0
+      ? "all"
+      : selectedTab;
+  // A search spans every group, so the strip shows All while one is active.
+  const activeTab: RequirementTab = normalizedQuery ? "all" : resolvedTab;
+
+  const filterable = useMemo(
+    () =>
+      entries.map((entry) => ({
+        ...entry,
+        scopeKind: entry.scope.kind,
+        searchText: [
+          entry.value.requirement_name,
+          entry.value.where_to_secure,
+          entry.scope.conditionSummary,
+          entry.scope.label,
+        ]
+          .filter(Boolean)
+          .join(" "),
+      })),
+    [entries],
+  );
+  const visibleEntries = useMemo(
+    () => filterRequirements(filterable, resolvedTab, query),
+    [filterable, resolvedTab, query],
+  );
+
+  const isShared = sharedWith.length > 0;
+  const canOverride = Boolean(formDefinition.caseSelector);
+  const variantCount = counts.variant;
+  const inheritedCount = counts.inherited;
+  const visibleTabs = TAB_ORDER.filter(
+    (candidate) =>
+      !(candidate === "other" || candidate === "variant") ||
+      counts[candidate] > 0,
+  );
+  const hasLockableRows =
+    isShared &&
+    visibleEntries.some(
+      (entry) =>
+        entry.scope.kind === "inherited" || entry.scope.kind === "other",
+    );
+
+  function groupLocked(kind: RequirementScopeKind) {
+    if (!isShared) return false;
+    if (!(kind === "inherited" || kind === "other")) return false;
+    return !inheritedUnlocked;
+  }
+
+  function tabCount(candidate: RequirementTab) {
+    return candidate === "all" ? entries.length : counts[candidate];
+  }
+
+  function openRequirement(index: number, opener: HTMLElement | null = null) {
+    openerRef.current = opener;
+    setOpenIndex(index);
+    setSheetOpen(true);
+  }
+
+  // Wait a frame so this runs after the close has been committed; the library
+  // then sees focus already outside the sheet and leaves it alone. Prefers the
+  // opener, then the row's own button (a kept new row has no opener), then the
+  // Add button, so focus never falls back to <body>.
+  function returnFocus(opener: HTMLElement | null, index: number | null) {
+    requestAnimationFrame(() => {
+      const rowButton =
+        index === null
+          ? null
+          : tableRef.current?.querySelector<HTMLElement>(
+              `[data-requirement-opener="${index}"]`,
+            );
+      const target =
+        (opener?.isConnected ? opener : null) ??
+        rowButton ??
+        addButtonRef.current;
+      target?.focus({ preventScroll: true });
+    });
+  }
+
+  function handleSheetOpenChange(open: boolean) {
+    setSheetOpen(open);
+    if (open) return;
+    const opener = openerRef.current;
+    openerRef.current = null;
+    setNewIndex(null);
+    returnFocus(opener, openIndex);
+  }
+
+  function discardNewRequirement() {
+    const index = openIndex;
+    openerRef.current = null;
+    setSheetOpen(false);
+    setOpenIndex(null);
+    setNewIndex(null);
+    if (index !== null) requirementFields.remove(index);
+    // The row is gone, so the Add button is the right place to land.
+    returnFocus(null, null);
+  }
+
+  function addBlank() {
+    const nextIndex = requirementFields.fields.length;
+    requirementFields.append({ ...EMPTY_REQUIREMENT });
+    // An unscoped requirement is Shared, so show and unlock that tab —
+    // otherwise the new row appears to vanish into a locked list.
+    setQuery("");
+    setTab("inherited");
+    setInheritedUnlocked(true);
+    setNewIndex(nextIndex);
+    openRequirement(nextIndex);
+  }
+
+  function addVariantSpecific() {
+    const nextIndex = requirementFields.fields.length;
+    requirementFields.append({
+      ...EMPTY_REQUIREMENT,
+      applies_when: variantScopeCondition(
+        currentServiceCode,
+        formDefinition.caseSelector,
+      ),
+    });
+    setQuery("");
+    setTab("variant");
+    setNewIndex(nextIndex);
+    openRequirement(nextIndex);
+  }
+
+  function removeRequirement(index: number) {
+    const removed = form.getValues("requirements")[index];
+    if (!removed) return;
+    requirementFields.remove(index);
+    toast(
+      `Removed “${removed.requirement_name?.trim() || "Untitled requirement"}”`,
+      {
+        action: {
+          label: "Undo",
+          onClick: () => {
+            const count = form.getValues("requirements").length;
+            requirementFields.insert(Math.min(index, count), removed);
+          },
+        },
+      },
+    );
+  }
+
+  function overrideRequirement(index: number) {
+    const source = requirementValues[index];
+    if (!source) return;
+    const condition = variantScopeCondition(
+      currentServiceCode,
+      formDefinition.caseSelector,
+    );
+    const nextIndex = requirementFields.fields.length;
+    requirementFields.insert(nextIndex, {
+      ...source,
+      // The override is a new checklist row; the shared one keeps its id.
+      requirement_id: undefined,
+      applies_when: condition,
+    });
+    setQuery("");
+    setTab("variant");
+    setNewIndex(nextIndex);
+    openRequirement(nextIndex);
+  }
 
   return (
-    <Card id="requirements" className="scroll-mt-6">
-      <CardHeader className="border-b">
-        <div className="flex items-start gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
-            <ClipboardCheck aria-hidden="true" className="size-4" />
+    <Card
+      id={embedded ? undefined : "requirements"}
+      variant={embedded ? "embedded" : "default"}
+      className={embedded ? "overflow-visible" : "scroll-mt-6 overflow-visible"}
+    >
+      {!embedded ? (
+        <CardHeader className="border-b">
+          <div className="flex items-start gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+              <ClipboardCheck aria-hidden="true" className="size-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <CardTitle>
+                <h2>Requirements</h2>
+              </CardTitle>
+              {entries.length > 0 ? (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <Badge variant="neutral">{entries.length} total</Badge>
+                  <Badge variant="default">{variantCount} this variant</Badge>
+                  <Badge variant="outline">{inheritedCount} shared</Badge>
+                </div>
+              ) : null}
+            </div>
           </div>
-          <div className="min-w-0">
-            <CardTitle>
-              <h2>Requirements</h2>
-            </CardTitle>
-            <CardDescription>
-              What applicants must bring, where to secure it, and when each
-              item applies.
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+        </CardHeader>
+      ) : null}
+      <CardContent className="flex flex-col gap-4 pt-4">
         {sharedWith.length > 0 ? (
           <Alert variant="warning">
             <AlertTriangle aria-hidden="true" />
-            <AlertDescription className="flex flex-col gap-1">
-              <p className="font-semibold">
-                This checklist is shared by {sharedWith.length + 1} services.
-              </p>
-              <p>
-                Saving changes it for all of them:{" "}
-                {sharedWith.map((entry) => entry.name).join(", ")}. Use the case
-                tag on a row to limit it to one variant, or give this service
-                its own requirement group below.
-              </p>
+            <AlertDescription>
+              This checklist is shared by {sharedWith.length + 1} services.
+              Inherited requirements are locked to prevent group-wide edits —
+              use <span className="font-medium">Override for this variant</span>{" "}
+              to change one without touching the others.
             </AlertDescription>
           </Alert>
         ) : null}
 
         {isLoading ? (
-          <div
-            className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 py-6 text-xs text-muted-foreground"
-            role="status"
-            aria-live="polite"
-          >
-            <Spinner className="size-4" />
-            Loading checklist&hellip;
-          </div>
+          <PanelSkeleton label="Loading checklist" rows={3} className="py-4" />
         ) : (
           <>
-            {requirementFields.fields.map((requirementField, index) => {
-              const requiresUpload =
-                requirementValues[index]?.requires_upload ?? true;
-              const uploadScope =
-                requirementValues[index]?.upload_scope ?? "request";
-
-              return (
-              <FieldGroup
-                key={requirementField.id}
-                className="gap-3 rounded-lg border border-border bg-surface-subtle p-3"
-              >
-                <div className="flex items-start gap-2">
-                  <Controller
-                    control={form.control}
-                    name={`requirements.${index}.requirement_name`}
-                    render={({ field, fieldState }) => (
-                      <Field
-                        data-invalid={fieldState.invalid}
-                        className="flex-1"
-                      >
-                        <FieldLabel htmlFor={`requirement-name-${index}`}>
-                          Requirement {index + 1}
-                        </FieldLabel>
-                        <Input
-                          {...field}
-                          id={`requirement-name-${index}`}
-                          placeholder="Valid ID, 1 photocopy with signature…"
-                          autoComplete="off"
-                          aria-invalid={fieldState.invalid}
-                        />
-                        {fieldState.invalid ? (
-                          <FieldError errors={[fieldState.error]} />
-                        ) : null}
-                      </Field>
-                    )}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="mt-6 shrink-0 text-muted-foreground hover:text-destructive"
-                    onClick={() => requirementFields.remove(index)}
-                    aria-label={`Remove requirement ${index + 1}`}
-                  >
-                    <Trash2 aria-hidden="true" />
-                  </Button>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Controller
-                    control={form.control}
-                    name={`requirements.${index}.where_to_secure`}
-                    render={({ field }) => (
-                      <Field>
-                        <FieldLabel htmlFor={`requirement-source-${index}`}>
-                          Where to Secure
-                        </FieldLabel>
-                        <Input
-                          {...field}
-                          id={`requirement-source-${index}`}
-                          placeholder="Government / private sector…"
-                          autoComplete="off"
-                        />
-                      </Field>
-                    )}
-                  />
-
-                  <Controller
-                    control={form.control}
-                    name={`requirements.${index}.is_mandatory`}
-                    render={({ field }) => (
-                      <FieldSet>
-                        <FieldLegend variant="label" className="mb-0">
-                          Applies To
-                        </FieldLegend>
-                        <RadioGroup
-                          name={field.name}
-                          value={field.value ? "required" : "conditional"}
-                          onValueChange={(value) =>
-                            field.onChange(value === "required")
-                          }
-                          className="mt-3 grid-cols-2 gap-2"
-                        >
-                          <FieldLabel
-                            htmlFor={`requirement-required-${index}`}
-                          >
-                            <Field
-                              orientation="horizontal"
-                              className="h-9 py-0!"
-                            >
-                              <RadioGroupItem
-                                value="required"
-                                id={`requirement-required-${index}`}
-                              />
-                              Required
-                            </Field>
-                          </FieldLabel>
-                          <FieldLabel
-                            htmlFor={`requirement-conditional-${index}`}
-                          >
-                            <Field
-                              orientation="horizontal"
-                              className="h-9 py-0!"
-                            >
-                              <RadioGroupItem
-                                value="conditional"
-                                id={`requirement-conditional-${index}`}
-                              />
-                              If applicable
-                            </Field>
-                          </FieldLabel>
-                        </RadioGroup>
-                      </FieldSet>
-                    )}
-                  />
-                </div>
-
-                <div className="grid gap-3 rounded-md border border-border bg-background p-3 sm:grid-cols-2">
-                  <Controller
-                    control={form.control}
-                    name={`requirements.${index}.requires_upload`}
-                    render={({ field }) => (
-                      <Field>
-                        <FieldLabel
-                          htmlFor={`requirement-upload-${index}`}
-                          className="cursor-pointer"
-                        >
-                          <Field orientation="horizontal" className="gap-3">
-                            <Checkbox
-                              id={`requirement-upload-${index}`}
-                              name={field.name}
-                              checked={field.value}
-                              onCheckedChange={(checked) =>
-                                field.onChange(checked === true)
-                              }
-                            />
-                            Applicant must upload a file
-                          </Field>
-                        </FieldLabel>
-                        <FieldDescription>
-                          Turn this off for an in-person action or reminder.
-                        </FieldDescription>
-                      </Field>
-                    )}
-                  />
-
-                  {requiresUpload ? (
-                    <Controller
-                      control={form.control}
-                      name={`requirements.${index}.upload_scope`}
-                      render={({ field }) => (
-                        <Field>
-                          <FieldLabel htmlFor={`requirement-upload-scope-${index}`}>
-                            File needed from
-                          </FieldLabel>
-                          <Select
-                            name={field.name}
-                            value={field.value}
-                            onValueChange={field.onChange}
-                          >
-                            <SelectTrigger
-                              id={`requirement-upload-scope-${index}`}
-                              className="w-full"
-                            >
-                              <SelectValue>
-                                {(value) =>
-                                  value === "each_subject"
-                                    ? "Every person"
-                                    : value === "specific_subject"
-                                      ? "One specific person"
-                                      : "Once per request"
-                                }
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectGroup>
-                                <SelectItem value="request">
-                                  Once per request
-                                </SelectItem>
-                                <SelectItem value="each_subject">
-                                  Every person
-                                </SelectItem>
-                                <SelectItem value="specific_subject">
-                                  One specific person
-                                </SelectItem>
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
-                          <FieldDescription>
-                            For example, CENOMAR can require one file from every
-                            applicant.
-                          </FieldDescription>
-                        </Field>
-                      )}
-                    />
-                  ) : null}
-
-                  {requiresUpload && uploadScope === "specific_subject" ? (
-                    <Controller
-                      control={form.control}
-                      name={`requirements.${index}.subject_role`}
-                      render={({ field, fieldState }) => (
-                        <Field
-                          className="sm:col-start-2"
-                          data-invalid={fieldState.invalid}
-                        >
-                          <FieldLabel htmlFor={`requirement-subject-role-${index}`}>
-                            Person
-                          </FieldLabel>
-                          <Select
-                            name={field.name}
-                            value={field.value || null}
-                            onValueChange={field.onChange}
-                          >
-                            <SelectTrigger
-                              id={`requirement-subject-role-${index}`}
-                              className="w-full"
-                              aria-invalid={fieldState.invalid}
-                            >
-                              <SelectValue placeholder="Select a role…" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectGroup>
-                                {partyRoles.map((role) => (
-                                  <SelectItem key={role} value={role}>
-                                    {role}
-                                  </SelectItem>
-                                ))}
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
-                          {fieldState.invalid ? (
-                            <FieldError errors={[fieldState.error]} />
-                          ) : null}
-                        </Field>
-                      )}
-                    />
-                  ) : null}
-                </div>
-
-                <Controller
-                  control={form.control}
-                  name={`requirements.${index}.applies_when`}
-                  render={({ field }) => (
-                    <Field>
-                      <FieldLabel>When does this requirement apply?</FieldLabel>
-                      <ConditionRuleBuilder
-                        idPrefix={`requirement-${index}-condition`}
-                        rule={field.value}
-                        sources={conditionSources}
-                        emptyLabel="Applies to every applicant for the selected service."
-                        onChange={field.onChange}
-                      />
-                      {form.getValues(`requirements.${index}.case_tag`) &&
-                      !field.value ? (
-                        <FieldDescription>
-                          This row still has a legacy case tag. Add a condition
-                          to replace its hardcoded behavior.
-                        </FieldDescription>
-                      ) : null}
-                    </Field>
-                  )}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative sm:max-w-sm sm:flex-1">
+                <Search
+                  aria-hidden="true"
+                  className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
                 />
-              </FieldGroup>
-              );
-            })}
+                <Input
+                  type="search"
+                  name="requirements_search"
+                  autoComplete="off"
+                  fieldSize="lg"
+                  shape="pill"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search requirements…"
+                  aria-label="Search requirements"
+                  className="bg-background data-[field-size=lg]:pl-10"
+                />
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  nativeButton
+                  render={
+                    <Button
+                      ref={addButtonRef}
+                      type="button"
+                      variant="raised"
+                      size="lg"
+                    />
+                  }
+                >
+                  <Plus aria-hidden="true" data-icon="inline-start" />
+                  Add
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  variant="roomy"
+                  className="min-w-64"
+                >
+                  <DropdownMenuItem onClick={addBlank}>
+                    <Plus
+                      aria-hidden="true"
+                      className="text-muted-foreground"
+                    />
+                    Add Requirement
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={!canOverride}
+                    className="items-start py-2"
+                    onClick={addVariantSpecific}
+                  >
+                    <GitBranch
+                      aria-hidden="true"
+                      className="mt-0.5 text-muted-foreground"
+                    />
+                    <span className="flex flex-col gap-0.5">
+                      Add Variant-Specific
+                      {canOverride ? null : (
+                        <span className="max-w-60 text-xs whitespace-normal text-muted-foreground">
+                          {NO_ROUTING_HINT}
+                        </span>
+                      )}
+                    </span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
-            {requirementFields.fields.length === 0 ? (
+            {entries.length === 0 ? (
               <Empty className="border border-border px-4 py-8">
                 <EmptyHeader>
                   <EmptyTitle className="text-sm">
@@ -410,20 +480,118 @@ export function RequirementsSection({
                   </EmptyDescription>
                 </EmptyHeader>
               </Empty>
-            ) : null}
+            ) : (
+              <Tabs
+                value={activeTab}
+                onValueChange={(next) => {
+                  // Picking a group is an explicit choice, so it ends a search.
+                  setQuery("");
+                  setTab(next as RequirementTab);
+                }}
+                className="gap-3"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                  <div className="max-w-full overflow-x-auto">
+                    <TabsList
+                      variant="segmented"
+                      aria-label="Requirement groups"
+                    >
+                      {visibleTabs.map((candidate) => (
+                        <TabsTrigger
+                          key={candidate}
+                          value={candidate}
+                          className="gap-2 px-3.5"
+                        >
+                          {TAB_LABELS[candidate]}
+                          <span className="font-mono text-xs text-muted-foreground tabular-nums">
+                            {tabCount(candidate)}
+                          </span>
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  </div>
+                  {hasLockableRows ? (
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      {inheritedUnlocked ? null : (
+                        <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Lock aria-hidden="true" className="size-3.5" />
+                          Locked to protect every variant. Unlock, or override a
+                          row for this variant only.
+                        </p>
+                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          setInheritedUnlocked((current) => !current)
+                        }
+                      >
+                        {inheritedUnlocked ? (
+                          <>
+                            <Lock aria-hidden="true" data-icon="inline-start" />
+                            Lock
+                          </>
+                        ) : (
+                          <>
+                            <Unlock
+                              aria-hidden="true"
+                              data-icon="inline-start"
+                            />
+                            Unlock to Edit
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
 
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => requirementFields.append({ ...EMPTY_REQUIREMENT })}
-            >
-              <Plus aria-hidden="true" data-icon="inline-start" />
-              Add Requirement
-            </Button>
+                <TabsContent value={activeTab} className="flex flex-col gap-3">
+                  {activeTab === "other" ? (
+                    <p className="text-xs text-muted-foreground">
+                      Scoped by a condition that excludes this variant. Edit it
+                      from the variant it applies to.
+                    </p>
+                  ) : null}
+                  {visibleEntries.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+                      {normalizedQuery
+                        ? `No requirements match “${query}”.`
+                        : "No requirements in this group yet."}
+                    </div>
+                  ) : (
+                    <RequirementsTable
+                      ref={tableRef}
+                      entries={visibleEntries}
+                      locked={groupLocked}
+                      onOpen={openRequirement}
+                      onOverride={canOverride ? overrideRequirement : undefined}
+                      onRemove={removeRequirement}
+                      conditionSources={conditionSources}
+                    />
+                  )}
+                </TabsContent>
+              </Tabs>
+            )}
+
+            {normalizedQuery ? (
+              <p className="text-xs text-muted-foreground">
+                Showing {visibleEntries.length} of {entries.length}{" "}
+                requirements.
+              </p>
+            ) : null}
           </>
         )}
       </CardContent>
+      <RequirementSheet
+        index={openIndex}
+        open={sheetOpen}
+        onOpenChange={handleSheetOpenChange}
+        isNew={sheetOpen && openIndex !== null && openIndex === newIndex}
+        onDiscardNew={discardNewRequirement}
+        conditionSources={conditionSources}
+        partyRoles={partyRoles}
+      />
     </Card>
   );
 }

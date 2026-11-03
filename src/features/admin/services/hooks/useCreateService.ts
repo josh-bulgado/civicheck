@@ -9,7 +9,7 @@ export function useCreateService() {
 
   return useMutation({
     fn: createService,
-    onSuccess: async (ctx) => {
+    onSuccess: async () => {
       toast.success("Service created successfully.");
       // Service definitions and checklists are cached client-side; drop the
       // cached copies so every reader sees this edit right away.

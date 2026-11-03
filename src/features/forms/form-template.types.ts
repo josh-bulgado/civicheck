@@ -10,9 +10,19 @@ export const formFieldTypeSchema = z.enum([
   "person_group",
 ]);
 
+/** Applicant-facing message that can hold the case step until it is resolved. */
+export const answerNoticeSchema = z.object({
+  variant: z.enum(["default", "warning", "destructive", "success"]),
+  title: z.string().min(1).max(160),
+  description: z.string().min(1).max(500),
+  blocksProgress: z.boolean().default(false),
+});
+
 export const formOptionSchema = z.object({
   value: z.string().min(1).max(120),
   label: z.string().min(1).max(160),
+  /** Shown while this option is selected; may block continuing. */
+  notice: answerNoticeSchema.optional(),
 });
 
 export const formConditionSchema = z.object({
@@ -60,14 +70,7 @@ export const ageBandSchema = z.object({
   label: z.string().min(1).max(160),
   minAge: z.number().int().min(0).max(150),
   maxAge: z.number().int().min(0).max(150).optional(),
-  notice: z
-    .object({
-      variant: z.enum(["default", "warning", "destructive", "success"]),
-      title: z.string().min(1).max(160),
-      description: z.string().min(1).max(500),
-      blocksProgress: z.boolean().default(false),
-    })
-    .optional(),
+  notice: answerNoticeSchema.optional(),
 });
 
 /**
@@ -88,6 +91,62 @@ export const derivedAnswerSchema = z.object({
   bands: z.array(ageBandSchema).min(1).max(20),
 });
 
+export const eventTimingBehaviorSchema = z.enum([
+  "block",
+  "warn_allow",
+  "redirect_confirm",
+  "auto_route",
+]);
+
+export const eventTimingMismatchSchema = z.enum([
+  "outside_window",
+  "inside_window",
+]);
+
+/**
+ * A declarative on-time window for a registry event. The evaluator is generic
+ * application code; the trigger field, window length, routing target, and the
+ * applicant-facing copy are versioned database data. Any service — grouped or
+ * standalone — can therefore declare its own window without a code change.
+ *
+ * On-time is `event_date + windowDays`, inclusive, measured in whole days so
+ * there is no month-length or leap-year ambiguity.
+ */
+export const eventTimingRuleSchema = z.object({
+  /** Key of the date field in this template that starts the clock. */
+  triggerField: z.string().min(1).max(64),
+  windowDays: z.number().int().min(0).max(3660),
+  /**
+   * The window can depend on another answer (a marriage with a license is
+   * on-time for 15 days, one without for 30). `windowDays` is the fallback
+   * until that question is answered or when the answer has no entry.
+   */
+  windowDaysByAnswer: z
+    .object({
+      field: z.string().min(1).max(64),
+      values: z.record(
+        z.string().min(1).max(120),
+        z.number().int().min(0).max(3660),
+      ),
+    })
+    .optional(),
+  /**
+   * Which side of the window means the applicant is on the wrong service.
+   * An on-time service routes when `outside_window`; its delayed counterpart
+   * routes when `inside_window`.
+   */
+  mismatch: eventTimingMismatchSchema.default("outside_window"),
+  /** Group key (`birth_delayed`) or service code (`DEATH_DELAYED`). */
+  targetServiceCode: z.string().min(1).max(80),
+  behavior: eventTimingBehaviorSchema.default("redirect_confirm"),
+  /** Defer the check until the supporting document is uploaded (later step). */
+  requireDocumentFirst: z.boolean().default(false),
+  timezone: z.string().min(1).max(64).default("Asia/Manila"),
+  title: z.string().min(1).max(160),
+  description: z.string().min(1).max(500),
+  ctaLabel: z.string().min(1).max(80).default("Switch registration track"),
+});
+
 export const formFieldDefinitionSchema = z.object({
   key: z
     .string()
@@ -95,20 +154,129 @@ export const formFieldDefinitionSchema = z.object({
     .max(64)
     .regex(/^[a-z][a-z0-9_]*$/, "Use lowercase letters, numbers, and underscores"),
   type: formFieldTypeSchema,
+  // Choose which Philippine location list to show in this field.
+  philippineAddressLevel: z.enum(["province", "city", "barangay"]).optional(),
+  countrySelect: z.boolean().optional(),
   label: z.string().min(1).max(160),
   required: z.boolean().default(false),
   placeholder: z.string().max(240).optional(),
   helpText: z.string().max(500).optional(),
   options: z.array(formOptionSchema).max(100).optional(),
   dateDirection: z.enum(["past", "future", "any"]).optional(),
+  allowEstimate: z.boolean().optional(),
   visibleWhen: formConditionSchema.optional(),
+  /**
+   * In a single-column step, keep this field beside its neighbours instead of on
+   * its own row. Consecutive inline fields share a row (up to three), which is
+   * how a first/middle/last name sits on one line.
+   */
+  inline: z.boolean().optional(),
+  /**
+   * On a text field, adds an "I don't have one" checkbox under the input (for
+   * example "I don't have a middle name"). Ticking it clears and disables the
+   * input; it is a display aid only and nothing extra is saved.
+   */
+  noneLabel: z.string().min(1).max(120).optional(),
+  /**
+   * On a `person_group` field, star the middle name: it must be filled in, or
+   * the "I don't have a middle name" box ticked. Enforced in the wizard.
+   */
+  requireMiddleName: z.boolean().optional(),
+  /**
+   * On a `person_group` field with one person, a heading above the name boxes
+   * that depends on an earlier answer, e.g. "Full name of the deceased" when the
+   * record type is death. `labels` maps an answer value to the heading.
+   */
+  labelByAnswer: z
+    .object({
+      field: z.string().min(1).max(64),
+      labels: z.record(z.string().min(1).max(120), z.string().min(1).max(160)),
+    })
+    .optional(),
+  /**
+   * Set when the field was copied in from a shared field block. The published
+   * definition always carries the full field, so the applicant wizard never
+   * resolves blocks; the marker only tells the admin editor which fields to
+   * update when the block changes.
+   */
+  blockKey: z
+    .string()
+    .min(1)
+    .max(64)
+    .regex(/^[a-z][a-z0-9_]*$/, "Use lowercase letters, numbers, and underscores")
+    .optional(),
 });
+
+/**
+ * An admin-maintained group of questions shared by several form templates.
+ * Block fields are plain field definitions without the `blockKey` marker —
+ * the marker is added when the block is copied into a template.
+ */
+export const formFieldBlockFieldSchema = formFieldDefinitionSchema.omit({
+  blockKey: true,
+});
+
+export const formFieldBlockSchema = z
+  .object({
+    blockKey: z
+      .string()
+      .min(1)
+      .max(64)
+      .regex(/^[a-z][a-z0-9_]*$/, "Use lowercase letters, numbers, and underscores"),
+    name: z.string().trim().min(1).max(160),
+    description: z.string().trim().max(500).optional(),
+    step: formStepSchema,
+    fields: z.array(formFieldBlockFieldSchema).min(1).max(20),
+  })
+  .superRefine((block, context) => {
+    const keys = new Set<string>();
+    for (const [index, field] of block.fields.entries()) {
+      if (keys.has(field.key)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Field key "${field.key}" is used more than once`,
+          path: ["fields", index, "key"],
+        });
+      }
+      keys.add(field.key);
+
+      if (field.type === "person_group") {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "A shared block cannot contain the person name group",
+          path: ["fields", index, "type"],
+        });
+      }
+      if (field.type === "select" && !field.options?.length) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Select field "${field.label}" needs at least one option`,
+          path: ["fields", index, "options"],
+        });
+      }
+    }
+    for (const [index, field] of block.fields.entries()) {
+      if (field.visibleWhen && !keys.has(field.visibleWhen.field)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Visibility condition for "${field.label}" must reference a field in this block`,
+          path: ["fields", index, "visibleWhen"],
+        });
+      }
+    }
+  });
 
 export const formSectionDefinitionSchema = z.object({
   key: z.string().min(1).max(64),
   step: formStepSchema,
   title: z.string().min(1).max(160),
   description: z.string().max(500).optional(),
+  /**
+   * Show this section's fields one per row (fields marked `inline` still share a
+   * row) and, when it is not the first section of its step, set it apart with a
+   * rule and extra room.
+   */
+  singleColumn: z.boolean().optional(),
   fields: z.array(formFieldDefinitionSchema).max(100),
 });
 
@@ -117,6 +285,7 @@ export const formTemplateDefinitionSchema = z
     schemaVersion: z.literal(1),
     caseSelector: caseSelectorDefinitionSchema.optional(),
     derivedAnswers: z.array(derivedAnswerSchema).max(20).optional(),
+    eventTiming: eventTimingRuleSchema.optional(),
     sections: z.array(formSectionDefinitionSchema).min(1).max(10),
   })
   .superRefine((definition, context) => {
@@ -170,6 +339,20 @@ export const formTemplateDefinitionSchema = z
     const allFields = definition.sections.flatMap((section) => section.fields);
     const derivedKeys = new Set<string>();
     const derivedOptions = new Map<string, z.infer<typeof formOptionSchema>[]>();
+
+    if (definition.eventTiming) {
+      const trigger = allFields.find(
+        (field) => field.key === definition.eventTiming!.triggerField,
+      );
+      if (trigger?.type !== "date") {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Registration window needs a valid date field as its trigger`,
+          path: ["eventTiming", "triggerField"],
+        });
+      }
+    }
+
     for (const [derivedIndex, derived] of (definition.derivedAnswers ?? []).entries()) {
       if (keys.has(derived.key) || derivedKeys.has(derived.key)) {
         context.addIssue({
@@ -234,9 +417,26 @@ export const formTemplateDefinitionSchema = z
         derived.bands.map((band) => ({ value: band.value, label: band.label })),
       );
     }
+    // A case field may also be shown by a case-selector answer. The selector
+    // sits on the case step, so such a condition is only valid there. A field
+    // key always wins over a question key of the same name.
+    const caseQuestionsByKey = new Map(
+      (definition.caseSelector?.questions ?? [])
+        .filter((question) => !keys.has(question.key))
+        .map((question) => [question.key, question] as const),
+    );
+    for (const key of caseQuestionsByKey.keys()) stepsByKey.set(key, "case");
+
     for (const section of definition.sections) {
       for (const field of section.fields) {
-        if (field.visibleWhen && !keys.has(field.visibleWhen.field)) {
+        const caseQuestion = field.visibleWhen
+          ? caseQuestionsByKey.get(field.visibleWhen.field)
+          : undefined;
+        if (
+          field.visibleWhen &&
+          !keys.has(field.visibleWhen.field) &&
+          !caseQuestion
+        ) {
           context.addIssue({
             code: z.ZodIssueCode.custom,
             message: `Visibility condition for "${field.label}" references a missing field`,
@@ -244,11 +444,29 @@ export const formTemplateDefinitionSchema = z
           });
         } else if (
           field.visibleWhen &&
-          stepsByKey.get(field.visibleWhen.field) !== section.step
+          stepsByKey.get(field.visibleWhen.field) !== section.step &&
+          // The details step comes after the case step, so it may depend on an
+          // answer already given there (e.g. the record type).
+          !(
+            section.step === "details" &&
+            stepsByKey.get(field.visibleWhen.field) === "case"
+          )
         ) {
           context.addIssue({
             code: z.ZodIssueCode.custom,
-            message: `Visibility condition for "${field.label}" must reference a field on the same step`,
+            message: `Visibility condition for "${field.label}" must reference a field on the same step or an earlier one`,
+            path: ["sections"],
+          });
+        } else if (
+          field.visibleWhen &&
+          caseQuestion &&
+          !caseQuestion.options.some(
+            (option) => option.value === field.visibleWhen?.value,
+          )
+        ) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Visibility condition for "${field.label}" uses an invalid answer value`,
             path: ["sections"],
           });
         } else if (field.visibleWhen) {
@@ -355,8 +573,14 @@ export type CaseSelectorQuestion = z.infer<typeof caseSelectorQuestionSchema>;
 export type CaseSelectorOutcome = z.infer<typeof caseSelectorOutcomeSchema>;
 export type CaseSelectorDefinition = z.infer<typeof caseSelectorDefinitionSchema>;
 export type AgeBand = z.infer<typeof ageBandSchema>;
+export type AnswerNotice = z.infer<typeof answerNoticeSchema>;
 export type DerivedAnswer = z.infer<typeof derivedAnswerSchema>;
+export type EventTimingBehavior = z.infer<typeof eventTimingBehaviorSchema>;
+export type EventTimingMismatch = z.infer<typeof eventTimingMismatchSchema>;
+export type EventTimingRule = z.infer<typeof eventTimingRuleSchema>;
 export type FormFieldDefinition = z.infer<typeof formFieldDefinitionSchema>;
+export type FormFieldBlockField = z.infer<typeof formFieldBlockFieldSchema>;
+export type FormFieldBlock = z.infer<typeof formFieldBlockSchema>;
 export type FormSectionDefinition = z.infer<typeof formSectionDefinitionSchema>;
 export type FormTemplateDefinition = z.infer<typeof formTemplateDefinitionSchema>;
 

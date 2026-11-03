@@ -3,6 +3,22 @@
 // online wizard and the staff walk-in dialog so both intake paths write the
 // same `form_data` shape.
 
+// The draft stores "no suffix" as an empty string, but Base UI reads an empty
+// value as "nothing selected" and renders no label for it, so the option needs
+// a real value that is mapped back to "" on the way in and out.
+export const NO_SUFFIX = "none";
+
+// Generational suffixes as they appear on PSA civil registry records.
+export const SUFFIXES = [
+  { value: NO_SUFFIX, label: "None" },
+  { value: "Jr.", label: "Jr." },
+  { value: "Sr.", label: "Sr." },
+  { value: "II", label: "II" },
+  { value: "III", label: "III" },
+  { value: "IV", label: "IV" },
+  { value: "V", label: "V" },
+];
+
 export interface SubjectFields {
   role: string;
   firstName: string;
@@ -10,6 +26,11 @@ export interface SubjectFields {
   lastName: string;
   suffix: string;
   sex: string;
+  /**
+   * The applicant said this person has no middle name, as opposed to not having
+   * filled it in yet. Only the applicant wizard sets it; `middleName` is "" either way.
+   */
+  noMiddleName?: boolean;
 }
 
 const IMPLIED_SEX: Record<string, "male" | "female"> = {
@@ -48,7 +69,19 @@ export function reconcileSubjects(
   current: SubjectFields[],
   roles: string[],
 ): SubjectFields[] {
-  return roles.map((role, i) => ({ ...(current[i] ?? emptySubject(role)), role }));
+  return roles.map((role, i) => {
+    const subject = current[i];
+    return {
+      ...emptySubject(role),
+      ...subject,
+      role,
+      // React Hook Form unregisters inputs that are intentionally hidden for
+      // sex-specific roles. Restore their canonical values before the draft
+      // reaches the server-function validator.
+      suffix: impliedSex(role) === "female" ? "" : (subject?.suffix ?? ""),
+      sex: impliedSex(role) ?? subject?.sex ?? "",
+    };
+  });
 }
 
 export function subjectFullName(subject: SubjectFields | undefined): string {
@@ -71,6 +104,35 @@ export function subjectFullName(subject: SubjectFields | undefined): string {
  * there's more than one subject, so a single-subject service's `form_data`
  * stays byte-for-byte identical to before this feature existed.
  */
+/**
+ * Reads back the people `flattenSubjects` wrote into `form_data`. A lone
+ * subject's role is not stored, so it comes from `roles` (the service's party
+ * roles) by position, the way the wizard assigned it.
+ */
+export function subjectsFromFormData(
+  formData: Record<string, unknown>,
+  roles: string[],
+): SubjectFields[] {
+  const text = (key: string) => {
+    const value = formData[key];
+    return typeof value === "string" ? value : "";
+  };
+  const subjects: SubjectFields[] = [];
+  for (let index = 0; ; index++) {
+    const prefix = index === 0 ? "subject" : `party${index + 1}`;
+    if (!(`${prefix}_first_name` in formData) && !(`${prefix}_last_name` in formData)) break;
+    subjects.push({
+      role: text(`${prefix}_role`) || roles[index] || "Subject",
+      firstName: text(`${prefix}_first_name`),
+      middleName: text(`${prefix}_middle_name`),
+      lastName: text(`${prefix}_last_name`),
+      suffix: text(`${prefix}_suffix`),
+      sex: text(`${prefix}_sex`),
+    });
+  }
+  return subjects;
+}
+
 export function flattenSubjects(subjects: SubjectFields[]): Record<string, string> {
   const out: Record<string, string> = {};
   const multi = subjects.length > 1;

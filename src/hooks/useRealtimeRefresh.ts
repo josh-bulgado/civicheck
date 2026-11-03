@@ -1,9 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
-import type { RealtimeChannel } from "@supabase/supabase-js";
+import type {
+  RealtimeChannel,
+  RealtimePostgresChangesPayload,
+} from "@supabase/supabase-js";
 import { getSupabaseBrowserClient } from "~/utils/supabase-browser";
 
 export type RealtimeStatus = "connecting" | "live" | "offline";
+
+/** One row change, as the channel delivered it. */
+export interface RealtimeRowEvent {
+  table: string;
+  eventType: "INSERT" | "UPDATE" | "DELETE";
+  /** The row as it now stands. Empty for a delete. */
+  row: Record<string, unknown>;
+}
 
 /** Collapses a burst of row changes into one refetch. */
 const REFRESH_DEBOUNCE_MS = 250;
@@ -36,10 +47,27 @@ export function useRealtimeRefresh({
   tables,
   schema = "public",
   enabled = true,
+  onChange,
+  onRefresh,
+  onRow,
 }: {
   tables: string[];
   schema?: string;
   enabled?: boolean;
+  /**
+   * Runs for each realtime row change, ahead of the debounced refetch, so a
+   * client-side cache can mark itself stale. Not called by the focus/visibility
+   * fallback — a cache has its own expiry for that.
+   */
+  onChange?: () => void;
+  /** Replace route-loader invalidation with a debounced, local cache refresh. */
+  onRefresh?: () => void;
+  /**
+   * Same moment as `onChange`, but with the row itself, for a caller that needs
+   * to know *what* changed (a pop-up for a new notification) rather than only
+   * that something did.
+   */
+  onRow?: (event: RealtimeRowEvent) => void;
 }): RealtimeStatus {
   const router = useRouter();
   const [status, setStatus] = useState<RealtimeStatus>(
@@ -48,6 +76,12 @@ export function useRealtimeRefresh({
   // Keeps the effect from re-subscribing every time the router object changes.
   const routerRef = useRef(router);
   routerRef.current = router;
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  const onRefreshRef = useRef(onRefresh);
+  onRefreshRef.current = onRefresh;
+  const onRowRef = useRef(onRow);
+  onRowRef.current = onRow;
   // Arrays are a fresh reference each render, so the effect keys off the names.
   const tableKey = tables.join(",");
 
@@ -59,18 +93,39 @@ export function useRealtimeRefresh({
 
     let cancelled = false;
     let channel: RealtimeChannel | undefined;
-    let client: Awaited<ReturnType<typeof getSupabaseBrowserClient>> | undefined;
+    let client:
+      Awaited<ReturnType<typeof getSupabaseBrowserClient>> | undefined;
     let debounce: ReturnType<typeof setTimeout> | undefined;
     let lastRefreshAt = 0;
 
     const refreshNow = () => {
+      if (cancelled) return;
+      // Invalidating during a route change restarts its loaders. Let the
+      // destination commit first, then apply any queued background changes.
+      if (routerRef.current.state.isLoading || routerRef.current.state.status === "pending") {
+        scheduleRefresh();
+        return;
+      }
       lastRefreshAt = Date.now();
-      void routerRef.current.invalidate();
+      if (onRefreshRef.current) onRefreshRef.current();
+      else void routerRef.current.invalidate();
     };
 
     const scheduleRefresh = () => {
       if (debounce) clearTimeout(debounce);
       debounce = setTimeout(refreshNow, REFRESH_DEBOUNCE_MS);
+    };
+
+    const handleChange = (
+      payload: RealtimePostgresChangesPayload<Record<string, unknown>>,
+    ) => {
+      onChangeRef.current?.();
+      onRowRef.current?.({
+        table: payload.table,
+        eventType: payload.eventType,
+        row: payload.new,
+      });
+      scheduleRefresh();
     };
 
     // Belt and braces. A backgrounded tab gets its timers throttled, which can
@@ -103,7 +158,7 @@ export function useRealtimeRefresh({
         pending = pending.on(
           "postgres_changes",
           { event: "*", schema, table },
-          scheduleRefresh,
+          handleChange,
         );
       }
 

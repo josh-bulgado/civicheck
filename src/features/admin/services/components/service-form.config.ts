@@ -1,19 +1,26 @@
 import z from "zod";
 import { parseRequirementName } from "~/features/services/service-utils";
 import {
+  feeComponentsIssue,
+  parseFeeComponents,
+  type FeeComponent,
+} from "~/features/services/fee-components";
+import {
   conditionRuleSchema,
   type FormTemplateDefinition,
 } from "~/features/forms/form-template.types";
 import { buildLegacyFormDefinition } from "~/features/forms/form-template.utils";
 import type {
-  EventDateDirection,
   Service,
   ServiceClassification,
   ServiceRequirement,
 } from "../services.types";
 
 const requirementSchema = z.object({
-  requirement_name: z.string().trim().min(1, "Requirement is required"),
+  // Id of the saved checklist row, so an edit updates that row instead of
+  // replacing it. Absent on a row added in the editor.
+  requirement_id: z.string().optional(),
+  requirement_name: z.string().trim().min(1, "Enter a requirement title"),
   where_to_secure: z.string().optional(),
   is_mandatory: z.boolean(),
   case_tag: z.string().optional(),
@@ -23,47 +30,104 @@ const requirementSchema = z.object({
   subject_role: z.string().optional(),
 });
 
+// Amounts stay strings for the same reason as `fee` below.
+const feeComponentFormSchema = z.object({
+  label: z.string().trim().min(1, "Describe this charge"),
+  amount: z
+    .string()
+    .trim()
+    .min(1, "Enter an amount")
+    .refine(
+      (value) => !Number.isNaN(Number(value)) && Number(value) >= 0,
+      "Enter a valid amount (0 or more)",
+    ),
+  included: z.boolean(),
+  // "" is flat. Only an "also payable" row can carry a unit or a note.
+  unit: z.enum(["", "page", "copy", "document"]),
+  note: z.string().max(120, "Keep it to 120 characters or fewer"),
+});
+
+/**
+ * Form rows -> the saved shape. Blank or unreadable amounts count as 0. A unit
+ * or note is kept only on an "also payable" row and only when filled in.
+ */
+export function toFeeComponentPayload(
+  rows: ServiceFormValues["fee_components"],
+): FeeComponent[] {
+  return rows.map((row) => {
+    const component: FeeComponent = {
+      label: row.label.trim(),
+      amount: Number(row.amount) || 0,
+      included: row.included,
+    };
+    if (!row.included) {
+      if (row.unit) component.unit = row.unit;
+      const note = row.note.trim();
+      if (note) component.note = note;
+    }
+    return component;
+  });
+}
+
 // `fee` stays a string so the resolver's input and output types match the text
 // input; it is converted once, at submit.
 export function buildServiceFormSchema(takenCodes: Set<string>) {
-  return z.object({
-    service_code: z
-      .string()
-      .trim()
-      .min(1, "Service code is required")
-      .regex(
-        /^[A-Z0-9_-]+$/,
-        "Use uppercase letters, numbers, underscores, and hyphens only",
-      )
-      .refine(
-        (code) => !takenCodes.has(code),
-        "A service with this code already exists",
-      ),
-    name: z.string().trim().min(1, "Service name is required"),
-    classification: z.enum(["simple", "complex", "highly_technical"]),
-    fee: z
-      .string()
-      .trim()
-      .min(1, "Fee is required — enter 0 for a free service")
-      .refine(
-        (value) => !Number.isNaN(Number(value)) && Number(value) >= 0,
-        "Enter a valid amount (0 or more)",
-      ),
-    processing_time: z.string().trim().min(1, "Processing time is required"),
-    department_id: z.string().optional(),
-    steps: z.array(z.object({ value: z.string() })),
-    party_roles: z.array(z.object({ value: z.string() })),
-    requirements: z.array(requirementSchema),
-    event_date_label: z.string().optional(),
-    event_place_label: z.string().optional(),
-    event_date_direction: z.enum(["past", "future", "any"]),
-    reference_number_label: z.string().optional(),
-    asks_purpose: z.boolean(),
-    asks_birth_details: z.boolean(),
-    display_group: z.string().optional(),
-    display_name: z.string().optional(),
-    requirement_group: z.string().optional(),
-  });
+  return z
+    .object({
+      service_code: z
+        .string()
+        .trim()
+        .min(1, "Enter a service code")
+        .regex(
+          /^[A-Z0-9_-]+$/,
+          "Use uppercase letters, numbers, underscores, and hyphens only",
+        )
+        .refine(
+          (code) => !takenCodes.has(code),
+          "This code is already in use. Choose a different one.",
+        ),
+      name: z.string().trim().min(1, "Enter a service name"),
+      classification: z.enum(["simple", "complex", "highly_technical"]),
+      fee: z
+        .string()
+        .trim()
+        .min(1, "Enter a fee, or 0 for a free service")
+        .refine(
+          (value) => !Number.isNaN(Number(value)) && Number(value) >= 0,
+          "Enter a valid amount (0 or more)",
+        ),
+      processing_time: z.string().trim().min(1, "Enter a processing time"),
+      department_id: z.string().optional(),
+      steps: z.array(z.object({ value: z.string() })),
+      party_roles: z.array(z.object({ value: z.string() })),
+      requirements: z.array(requirementSchema),
+      event_date_label: z.string().optional(),
+      event_place_label: z.string().optional(),
+      event_date_direction: z.enum(["past", "future", "any"]),
+      reference_number_label: z.string().optional(),
+      asks_purpose: z.boolean(),
+      asks_birth_details: z.boolean(),
+      allows_messages: z.boolean(),
+      fee_per_copy: z.boolean(),
+      display_group: z.string().optional(),
+      display_name: z.string().optional(),
+      short_name: z.string().max(40, "Keep it to 40 characters or fewer").optional(),
+      requirement_group: z.string().optional(),
+      fee_components: z.array(feeComponentFormSchema),
+    })
+    .superRefine((values, context) => {
+      const issue = feeComponentsIssue(
+        toFeeComponentPayload(values.fee_components),
+        Number(values.fee) || 0,
+      );
+      if (issue) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: issue,
+          path: ["fee_components"],
+        });
+      }
+    });
 }
 
 export type ServiceFormValues = z.infer<
@@ -96,24 +160,6 @@ export const STEP_PLACEHOLDERS = [
 export function defaultPartyRoles() {
   return [{ value: "Subject" }];
 }
-
-export const DATE_DIRECTIONS: {
-  value: EventDateDirection;
-  label: string;
-}[] = [
-  { value: "past", label: "Past dates only" },
-  { value: "future", label: "Future dates only" },
-  { value: "any", label: "Any date" },
-];
-
-export const SERVICE_EDITOR_SECTIONS = [
-  { id: "registry-details", label: "Registry Details" },
-  { id: "citizen-journey", label: "Citizen Journey" },
-  { id: "case-questions", label: "Case Questions" },
-  { id: "application-form", label: "Application Form" },
-  { id: "requirements", label: "Requirements" },
-  { id: "relationships", label: "Relationships" },
-] as const;
 
 export const EMPTY_REQUIREMENT = {
   requirement_name: "",
@@ -153,9 +199,13 @@ export function emptyServiceFormDefaults(): ServiceFormValues {
     reference_number_label: "",
     asks_purpose: true,
     asks_birth_details: false,
+    allows_messages: false,
+    fee_per_copy: false,
     display_group: "",
     display_name: "",
+    short_name: "",
     requirement_group: "",
+    fee_components: [],
   };
 }
 
@@ -178,9 +228,21 @@ export function serviceFormDefaults(service: Service): ServiceFormValues {
     reference_number_label: service.reference_number_label ?? "",
     asks_purpose: service.asks_purpose,
     asks_birth_details: service.asks_birth_details,
+    allows_messages: service.allows_messages ?? false,
+    fee_per_copy: service.fee_per_copy ?? false,
     display_group: service.display_group ?? "",
     display_name: service.display_name ?? "",
+    short_name: service.short_name ?? "",
     requirement_group: service.requirement_group ?? "",
+    fee_components: parseFeeComponents(service.fee_components).map(
+      (component) => ({
+        label: component.label,
+        amount: String(component.amount),
+        included: component.included,
+        unit: component.unit ?? "",
+        note: component.note ?? "",
+      }),
+    ),
   };
 }
 
@@ -191,6 +253,7 @@ export function toServiceFormRequirement(requirement: ServiceRequirement) {
   const hasOwnColumn = Boolean(requirement.where_to_secure);
 
   return {
+    requirement_id: requirement.id as string | undefined,
     requirement_name: hasOwnColumn ? requirement.requirement_name : primary,
     where_to_secure: requirement.where_to_secure ?? secondary ?? "",
     is_mandatory: requirement.is_mandatory,

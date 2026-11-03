@@ -1,4 +1,6 @@
 "use client";
+import { QuietAnchor } from "~/components/quiet-link";
+
 
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -10,9 +12,9 @@ import {
 } from "~/components/ui/input-group";
 import { Label } from "~/components/ui/label";
 import { Separator } from "~/components/ui/separator";
-import { ArrowRight, Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { JSX, SVGProps, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 
 const GoogleIcon = (
   props: JSX.IntrinsicAttributes & SVGProps<SVGSVGElement>,
@@ -93,9 +95,9 @@ export default function Login07() {
             <div>
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <a href="#" className="text-sm text-primary hover:underline">
+                <QuietAnchor href="#" className="text-sm text-primary hover:underline">
                   Forgot Password?
-                </a>
+                </QuietAnchor>
               </div>
               <InputGroup className="mt-2.5">
                 <InputGroupInput
@@ -133,14 +135,13 @@ export default function Login07() {
 
           <Button className="w-full">
             Sign in
-            <ArrowRight data-icon="inline-end" />
           </Button>
 
           <div className="text-center text-sm">
             No account?{" "}
-            <a href="#" className="text-primary font-medium hover:underline">
+            <QuietAnchor href="#" className="text-primary font-medium hover:underline">
               Create an account
-            </a>
+            </QuietAnchor>
           </div>
         </div>
       </div>

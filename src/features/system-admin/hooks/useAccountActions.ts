@@ -1,9 +1,11 @@
-import { useCallback, useState } from "react";
-import { useRouter } from "@tanstack/react-router";
-import { toast } from "sonner";
+import { useCallback } from "react";
+import { useActionRunner } from "~/hooks/useActionRunner";
 import {
   reactivateAccount,
   replaceCcroAdmin,
+  resendAccountVerification,
+  revokeAccountSessions,
+  sendAccountPasswordReset,
   suspendAccount,
   updateAccountDetails,
 } from "../system-admin.functions";
@@ -20,39 +22,16 @@ export type AccountPendingAction =
   | { type: "suspend"; accountId: string }
   | { type: "reactivate"; accountId: string }
   | { type: "edit-details"; accountId: string }
+  | { type: "password-reset"; accountId: string }
+  | { type: "revoke-sessions"; accountId: string }
+  | { type: "resend-verification"; accountId: string }
   | { type: "replace-admin" }
   | null;
 
-export function useAccountActions() {
-  const router = useRouter();
-  const [pendingAction, setPendingAction] =
-    useState<AccountPendingAction>(null);
-
-  const run = useCallback(
-    async (
-      action: () => Promise<unknown>,
-      pending: Exclude<AccountPendingAction, null>,
-      successMessage: string,
-    ) => {
-      setPendingAction(pending);
-      try {
-        await action();
-        toast.success(successMessage);
-        await router.invalidate();
-        return true;
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "The action could not be completed.",
-        );
-        return false;
-      } finally {
-        setPendingAction(null);
-      }
-    },
-    [router],
-  );
+export function useAccountActions(onRefresh?: () => void) {
+  const { pending: pendingAction, run } = useActionRunner<
+    Exclude<AccountPendingAction, null>
+  >("The action could not be completed.", onRefresh);
 
   const suspend = useCallback(
     (accountId: string, reason: string) =>
@@ -84,8 +63,43 @@ export function useAccountActions() {
     [run],
   );
 
+  const sendPasswordReset = useCallback(
+    (accountId: string) =>
+      run(
+        () => sendAccountPasswordReset({ data: { targetId: accountId } }),
+        { type: "password-reset", accountId },
+        "Password reset link sent.",
+      ),
+    [run],
+  );
+
+  const revokeSessions = useCallback(
+    (accountId: string) =>
+      run(
+        () => revokeAccountSessions({ data: { targetId: accountId } }),
+        { type: "revoke-sessions", accountId },
+        "Signed out of all sessions.",
+      ),
+    [run],
+  );
+
+  const resendVerification = useCallback(
+    (accountId: string, email: string) =>
+      run(
+        () =>
+          resendAccountVerification({ data: { targetId: accountId, email } }),
+        { type: "resend-verification", accountId },
+        "Verification email sent.",
+      ),
+    [run],
+  );
+
   const replaceAdministrator = useCallback(
-    ({ candidateId, outgoingRole, outgoingDepartmentId }: ReplaceAdministratorInput) =>
+    ({
+      candidateId,
+      outgoingRole,
+      outgoingDepartmentId,
+    }: ReplaceAdministratorInput) =>
       run(
         () =>
           replaceCcroAdmin({
@@ -104,6 +118,9 @@ export function useAccountActions() {
     suspend,
     reactivate,
     updateDetails,
+    sendPasswordReset,
+    revokeSessions,
+    resendVerification,
     replaceAdministrator,
   };
 }

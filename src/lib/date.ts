@@ -36,6 +36,45 @@ export function fromDateKey(key: string | null | undefined): Date | null {
   return date;
 }
 
+// The CCRO is a single office, so a moment is shown on its Philippine calendar
+// day whichever machine renders it.
+export const OFFICE_TIME_ZONE = "Asia/Manila";
+const shortDateFormat = new Intl.DateTimeFormat("en-US", {
+  timeZone: OFFICE_TIME_ZONE,
+  month: "short",
+  day: "numeric",
+});
+const shortDateYearFormat = new Intl.DateTimeFormat("en-US", {
+  timeZone: OFFICE_TIME_ZONE,
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+const yearFormat = new Intl.DateTimeFormat("en-US", {
+  timeZone: OFFICE_TIME_ZONE,
+  year: "numeric",
+});
+
+const timeFormat = new Intl.DateTimeFormat("en-US", {
+  timeZone: OFFICE_TIME_ZONE,
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+/** "11:09 AM" for a timestamp, on the office's clock. "" if unparsable. */
+export function formatOfficeTime(iso: string): string {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? "" : timeFormat.format(date);
+}
+
+/** "Aug 15" for a timestamp, with the year once it isn't this one. "" if unparsable. */
+export function formatShortDate(iso: string, now: Date = new Date()): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const sameYear = yearFormat.format(date) === yearFormat.format(now);
+  return (sameYear ? shortDateFormat : shortDateYearFormat).format(date);
+}
+
 /** "August 16, 2026" — the format used on screen for a chosen date. */
 export function formatDateKey(key: string | null | undefined): string {
   const date = fromDateKey(key);

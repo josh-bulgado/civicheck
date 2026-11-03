@@ -1,11 +1,16 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
+import { QuietLink as Link } from "~/components/quiet-link";
 import { AlertCircleIcon, Lock, Mail } from "lucide-react";
-import { JSX, SVGProps, useState } from "react";
+import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import z from "zod";
-import { Field, FieldError, FieldLabel } from "~/components/ui/field";
-import { staggerStyle } from "~/components/motion/stagger";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from "~/components/ui/field";
 import {
   InputGroup,
   InputGroupAddon,
@@ -13,17 +18,32 @@ import {
 } from "~/components/ui/input-group";
 import { Input } from "~/components/ui/input";
 import { Checkbox } from "~/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { NO_SUFFIX, SUFFIXES } from "~/lib/subject-fields";
+import { LegalDialogLink } from "~/features/legal/components/LegalDialogLink";
+import {
+  checkMiddleNameAnswer,
+  PASSWORD_HINT,
+  signupFieldsSchema,
+} from "../auth.schema";
 import { useSignUp } from "../hooks/useSignUp";
-import { useVerifySignupOtp } from "../hooks/useVerifySignupOtp";
 import { useOAuthLogin } from "../hooks/useOAuthLogin";
+import {
+  setPendingVerification,
+  type PendingSignup,
+} from "../pending-verification";
 import { Spinner } from "~/components/ui/spinner";
 import { Button } from "~/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { AuthProgressPanel } from "./AuthSidePanel";
 import {
-  authButtonClass,
-  authFilledFieldClass,
-  authFilledGroupClass,
   authLabelClass,
   authLinkClass,
   AuthFormDivider,
@@ -31,61 +51,32 @@ import {
   AuthFormHeading,
   AuthSplitLayout,
 } from "./AuthSplitLayout";
+import { RequiredMark } from "~/components/ui/required-mark";
+import { GoogleIcon } from "./GoogleIcon";
 import { PasswordToggle } from "./PasswordToggle";
-import { VerifyEmailNotice } from "./VerifyEmailNotice";
 
-const formSchema = z
-  .object({
-    firstName: z.string().min(1, "First name is required"),
-    lastName: z.string().min(1, "Last name is required"),
-    middleName: z.string(),
-    noMiddleName: z.boolean(),
-    email: z.string().email("Please enter a valid email address"),
-    password: z
-      .string()
-      .min(8, "Password must be at least 8 characters")
-      .regex(/\d/, "Password must include at least one number"),
+// The field rules live in auth.schema.ts so the server enforces exactly what
+// this form shows; only the consent checkbox belongs to the form alone.
+const formSchema = signupFieldsSchema
+  .extend({
     agreeToTerms: z.boolean().refine((value) => value === true, {
       message: "You must agree to continue",
     }),
   })
-  // Civil registry records carry the middle name, so a blank one has to be a
-  // declaration rather than an omission — otherwise the office cannot tell a
-  // resident who has none from one who skipped the field.
-  .refine((data) => data.noMiddleName || data.middleName.trim().length > 0, {
-    message: 'Enter your middle name, or tick "I have no middle name"',
-    path: ["middleName"],
-  });
+  .superRefine(checkMiddleNameAnswer);
 
 type FormValues = z.infer<typeof formSchema>;
 
-const GoogleIcon = (
-  props: JSX.IntrinsicAttributes & SVGProps<SVGSVGElement>,
-) => (
-  <svg fill="currentColor" viewBox="0 0 24 24" {...props}>
-    <path d="M3.06364 7.50914C4.70909 4.24092 8.09084 2 12 2C14.6954 2 16.959 2.99095 18.6909 4.60455L15.8227 7.47274C14.7864 6.48185 13.4681 5.97727 12 5.97727C9.39542 5.97727 7.19084 7.73637 6.40455 10.1C6.2045 10.7 6.09086 11.3409 6.09086 12C6.09086 12.6591 6.2045 13.3 6.40455 13.9C7.19084 16.2636 9.39542 18.0227 12 18.0227C13.3454 18.0227 14.4909 17.6682 15.3864 17.0682C16.4454 16.3591 17.15 15.3 17.3818 14.05H12V10.1818H21.4181C21.5364 10.8363 21.6 11.5182 21.6 12.2273C21.6 15.2727 20.5091 17.8363 18.6181 19.5773C16.9636 21.1046 14.7 22 12 22C8.09084 22 4.70909 19.7591 3.06364 16.4909C2.38638 15.1409 2 13.6136 2 12C2 10.3864 2.38638 8.85911 3.06364 7.50914Z" />
-  </svg>
-);
-
-type PendingSignup = {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  middleName: string;
-};
+/** Empty fields should not leave blank validation rows in the form. */
+function SignupFieldError({ error }: { error?: { message?: string } }) {
+  return <FieldError errors={[error]} className="text-[13px] leading-5" />;
+}
 
 const RegisterForm = () => {
+  const navigate = useNavigate();
   const signupMutation = useSignUp();
-  const verifyOtpMutation = useVerifySignupOtp();
   const oauthLoginMutation = useOAuthLogin();
   const [showPassword, setShowPassword] = useState(false);
-  // Kept in memory (never persisted) so the resend action can re-run the same
-  // signup call — that is what mints a fresh code once the previous one has
-  // been sent.
-  const [pendingSignup, setPendingSignup] = useState<PendingSignup | null>(
-    null,
-  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -94,14 +85,21 @@ const RegisterForm = () => {
       firstName: "",
       lastName: "",
       middleName: "",
-      noMiddleName: false,
+      hasNoMiddleName: false,
+      suffix: "",
       email: "",
       password: "",
       agreeToTerms: false,
     },
   });
 
-  const noMiddleName = form.watch("noMiddleName");
+  // Sign up stays disabled until every rule in the schema passes, including the
+  // terms checkbox. This reads the schema against the live values rather than
+  // `formState.isValid`: with `mode: "onBlur"` that flag only refreshes on
+  // blur, so ticking a checkbox would leave the button stale until focus moved
+  // away.
+  const isComplete = formSchema.safeParse(form.watch()).success;
+  const hasNoMiddleName = form.watch("hasNoMiddleName");
 
   async function onSubmit(data: FormValues) {
     const signup: PendingSignup = {
@@ -109,48 +107,34 @@ const RegisterForm = () => {
       password: data.password,
       firstName: data.firstName,
       lastName: data.lastName,
-      middleName: data.noMiddleName ? "" : data.middleName.trim(),
+      middleName: data.hasNoMiddleName ? "" : data.middleName.trim(),
+      hasNoMiddleName: data.hasNoMiddleName,
+      suffix: data.suffix.trim(),
     };
     const result = await signupMutation.mutate({ data: signup });
 
     if (result && !result.error) {
-      setPendingSignup(signup);
-      form.reset();
+      // The code-entry step is its own page; this form goes with the navigation,
+      // so there is nothing to reset here.
+      setPendingVerification({
+        email: signup.email,
+        password: signup.password,
+        signup,
+      });
+      await navigate({ to: "/verify-email" });
     }
   }
 
-  const otpError = verifyOtpMutation.data?.error
-    ? verifyOtpMutation.data.message
-    : verifyOtpMutation.status === "error"
-      ? "We could not reach the account service. Please try again in a moment."
-      : null;
-
   return (
-    <AuthSplitLayout panel={<AuthProgressPanel />} className="max-w-85">
-      <VerifyEmailNotice
-        open={pendingSignup !== null}
-        email={pendingSignup?.email ?? ""}
-        isVerifying={verifyOtpMutation.status === "pending"}
-        isResending={signupMutation.status === "pending"}
-        errorMessage={otpError}
-        onVerify={(token) => {
-          if (!pendingSignup) return;
-          verifyOtpMutation.mutate({
-            data: { email: pendingSignup.email, token },
-          });
-        }}
-        onResend={() => {
-          if (!pendingSignup) return;
-          signupMutation.mutate({ data: pendingSignup });
-        }}
-        onUseDifferentEmail={() => setPendingSignup(null)}
-      />
-
-      <div className="flex flex-col gap-6.5">
+    <AuthSplitLayout
+      panel={<AuthProgressPanel />}
+      className="max-w-85 animate-none justify-start py-6"
+    >
+      <div className="flex flex-col gap-5">
         <AuthFormHeading title="Create an account" />
 
         {signupMutation.data?.error && (
-          <Alert variant="destructive" className="civic-enter-sm">
+          <Alert variant="destructive">
             <AlertCircleIcon />
             <AlertTitle>Account not created</AlertTitle>
             <AlertDescription>{signupMutation.data.message}</AlertDescription>
@@ -159,35 +143,33 @@ const RegisterForm = () => {
 
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className="civic-stagger flex flex-col gap-3.5"
+          className="flex flex-col gap-3.5"
         >
-          <div style={staggerStyle(0)} className="flex gap-2.5">
-            <Controller
-              control={form.control}
-              name="firstName"
-              render={({ field, fieldState }) => (
-                <Field
-                  data-invalid={fieldState.invalid}
-                  className="min-w-0 flex-1 gap-1.5"
-                >
-                  <FieldLabel htmlFor="firstName" className={authLabelClass}>
-                    First name
-                  </FieldLabel>
-                  <Input
-                    {...field}
-                    id="firstName"
-                    className={authFilledFieldClass}
-                    placeholder="Juan"
-                    aria-invalid={fieldState.invalid}
-                    autoComplete="given-name"
-                  />
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
-                  )}
-                </Field>
-              )}
-            />
+          <Controller
+            control={form.control}
+            name="firstName"
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid} className="gap-1.5">
+                <FieldLabel htmlFor="firstName" className={authLabelClass}>
+                  First Name
+                  <RequiredMark />
+                </FieldLabel>
+                <Input
+                  {...field}
+                  id="firstName"
+                  placeholder="Juan"
+                  aria-invalid={fieldState.invalid}
+                  autoComplete="given-name"
+                  fieldSize="touch"
+                  shape="pill"
+                />
+                <SignupFieldError error={fieldState.error} />
+              </Field>
+            )}
+          />
 
+          {/* Suffix modifies the surname, so it shares a row with it. */}
+          <div className="flex items-start gap-2.5">
             <Controller
               control={form.control}
               name="lastName"
@@ -197,89 +179,120 @@ const RegisterForm = () => {
                   className="min-w-0 flex-1 gap-1.5"
                 >
                   <FieldLabel htmlFor="lastName" className={authLabelClass}>
-                    Last name
+                    Last Name <RequiredMark />
                   </FieldLabel>
                   <Input
                     {...field}
                     id="lastName"
-                    className={authFilledFieldClass}
                     placeholder="Dela Cruz"
                     aria-invalid={fieldState.invalid}
                     autoComplete="family-name"
+                    fieldSize="touch"
+                    shape="pill"
                   />
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
-                  )}
+                  <SignupFieldError error={fieldState.error} />
+                </Field>
+              )}
+            />
+
+            <Controller
+              control={form.control}
+              name="suffix"
+              render={({ field }) => (
+                <Field className="w-24 shrink-0 gap-1.5">
+                  <FieldLabel htmlFor="suffix" className={authLabelClass}>
+                    Suffix
+                  </FieldLabel>
+                  <Select
+                    items={SUFFIXES}
+                    value={field.value || NO_SUFFIX}
+                    onValueChange={(value) =>
+                      field.onChange(value === NO_SUFFIX ? "" : value)
+                    }
+                  >
+                    <SelectTrigger id="suffix" size="touch" shape="pill">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {SUFFIXES.map((suffix) => (
+                          <SelectItem key={suffix.value} value={suffix.value}>
+                            {suffix.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
                 </Field>
               )}
             />
           </div>
 
-          <div style={staggerStyle(1)} className="flex flex-col gap-2">
+          {/* A blank middle name is only accepted with the checkbox ticked, so
+              the database can tell "has none" from "left empty". */}
+          <Field
+            data-invalid={!!form.formState.errors.middleName}
+            className="gap-1.5"
+          >
             <Controller
               control={form.control}
               name="middleName"
               render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid} className="gap-1.5">
+                <>
                   <FieldLabel htmlFor="middleName" className={authLabelClass}>
-                    Middle name
+                    Middle Name
+                    {!hasNoMiddleName && <RequiredMark />}
                   </FieldLabel>
                   <Input
                     {...field}
                     id="middleName"
-                    className={authFilledFieldClass}
-                    placeholder={noMiddleName ? "Not applicable" : "Santos"}
-                    disabled={noMiddleName}
+                    placeholder="Santos"
+                    disabled={hasNoMiddleName}
                     aria-invalid={fieldState.invalid}
                     autoComplete="additional-name"
+                    fieldSize="touch"
+                    shape="pill"
                   />
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
-                  )}
-                </Field>
+                  <SignupFieldError error={fieldState.error} />
+                </>
               )}
             />
-
             <Controller
               control={form.control}
-              name="noMiddleName"
+              name="hasNoMiddleName"
               render={({ field }) => (
-                <Field orientation="horizontal" className="w-fit">
+                <Field orientation="horizontal" className="pt-0.5">
                   <Checkbox
-                    id="noMiddleName"
+                    id="hasNoMiddleName"
                     checked={field.value === true}
                     onCheckedChange={(checked) => {
-                      const declared = checked === true;
-                      field.onChange(declared);
-                      if (declared) {
-                        // Anything already typed would be submitted behind a
-                        // disabled field the applicant can no longer see.
+                      field.onChange(checked === true);
+                      if (checked === true) {
                         form.setValue("middleName", "");
-                        form.clearErrors("middleName");
                       }
+                      void form.trigger("middleName");
                     }}
                   />
-                  <FieldLabel htmlFor="noMiddleName">
-                    I have no middle name
+                  <FieldLabel
+                    htmlFor="hasNoMiddleName"
+                    className="text-[13px] leading-snug text-body"
+                  >
+                    I don&apos;t have a middle name
                   </FieldLabel>
                 </Field>
               )}
             />
-          </div>
+          </Field>
 
           <Controller
             control={form.control}
             name="email"
             render={({ field, fieldState }) => (
-              <Field
-                data-invalid={fieldState.invalid}
-                style={staggerStyle(2)}
-                className="gap-1.5"
-              >
+              <Field data-invalid={fieldState.invalid} className="gap-1.5">
                 <FieldLabel htmlFor="email" className={authLabelClass}>
-                  Email
+                  Email <RequiredMark />
                 </FieldLabel>
-                <InputGroup className={`${authFilledGroupClass} px-0`}>
+                <InputGroup fieldSize="touch" shape="pill">
                   <InputGroupAddon>
                     <Mail size={16} aria-hidden="true" />
                   </InputGroupAddon>
@@ -292,9 +305,7 @@ const RegisterForm = () => {
                     autoComplete="email"
                   />
                 </InputGroup>
-                {fieldState.invalid && (
-                  <FieldError errors={[fieldState.error]} />
-                )}
+                <SignupFieldError error={fieldState.error} />
               </Field>
             )}
           />
@@ -303,15 +314,11 @@ const RegisterForm = () => {
             control={form.control}
             name="password"
             render={({ field, fieldState }) => (
-              <Field
-                data-invalid={fieldState.invalid}
-                style={staggerStyle(3)}
-                className="gap-1.5"
-              >
+              <Field data-invalid={fieldState.invalid} className="gap-1.5">
                 <FieldLabel htmlFor="password" className={authLabelClass}>
-                  Password
+                  Password <RequiredMark />
                 </FieldLabel>
-                <InputGroup className={`${authFilledGroupClass} px-0`}>
+                <InputGroup fieldSize="touch" shape="pill">
                   <InputGroupAddon>
                     <Lock size={16} aria-hidden="true" />
                   </InputGroupAddon>
@@ -319,8 +326,9 @@ const RegisterForm = () => {
                     {...field}
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="8+ characters, one number"
+                    placeholder="Create a password"
                     aria-invalid={fieldState.invalid}
+                    aria-describedby="password-help"
                     autoComplete="new-password"
                   />
                   <PasswordToggle
@@ -328,9 +336,18 @@ const RegisterForm = () => {
                     onToggle={() => setShowPassword(!showPassword)}
                   />
                 </InputGroup>
-                {fieldState.invalid && (
-                  <FieldError errors={[fieldState.error]} />
-                )}
+                <div id="password-help">
+                  {fieldState.invalid ? (
+                    <FieldError
+                      errors={[fieldState.error]}
+                      className="text-[13px] leading-5"
+                    />
+                  ) : (
+                    <FieldDescription className="text-[13px] leading-5">
+                      {PASSWORD_HINT}
+                    </FieldDescription>
+                  )}
+                </div>
               </Field>
             )}
           />
@@ -341,7 +358,6 @@ const RegisterForm = () => {
             render={({ field, fieldState }) => (
               <Field
                 data-invalid={fieldState.invalid}
-                style={staggerStyle(4)}
                 className="gap-1.5 pt-1 pb-1.5"
               >
                 <Field orientation="horizontal">
@@ -358,28 +374,30 @@ const RegisterForm = () => {
                     className="text-[13px] leading-snug text-body"
                   >
                     I agree to the{" "}
-                    <Link to="/" className={authLinkClass}>
+                    <LegalDialogLink document="terms" className={authLinkClass}>
                       Terms of Use
-                    </Link>{" "}
+                    </LegalDialogLink>{" "}
                     and{" "}
-                    <Link to="/" className={authLinkClass}>
+                    <LegalDialogLink
+                      document="privacy"
+                      className={authLinkClass}
+                    >
                       Privacy Notice
-                    </Link>
+                    </LegalDialogLink>
                     .
                   </FieldLabel>
                 </Field>
-                {fieldState.invalid && (
-                  <FieldError errors={[fieldState.error]} />
-                )}
+                <SignupFieldError error={fieldState.error} />
               </Field>
             )}
           />
 
-          <div style={staggerStyle(5)} className="flex flex-col gap-3.5">
+          <div className="flex flex-col gap-3.5">
             <Button
               type="submit"
-              className={authButtonClass}
-              disabled={signupMutation.status === "pending"}
+              size="touch"
+              shape="pill"
+              disabled={signupMutation.status === "pending" || !isComplete}
             >
               {signupMutation.status === "pending" ? (
                 <>
@@ -395,12 +413,22 @@ const RegisterForm = () => {
 
             <Button
               variant="outline"
-              className={`${authButtonClass} justify-center gap-2.5 text-sm font-medium`}
+              size="touch"
+              shape="pill"
               onClick={() => oauthLoginMutation.mutate({ provider: "google" })}
-              disabled={oauthLoginMutation.status === "pending"}
+              disabled={oauthLoginMutation.redirecting}
             >
-              <GoogleIcon className="size-4.5" />
-              Sign up with Google
+              {oauthLoginMutation.redirecting ? (
+                <>
+                  <Spinner />
+                  Redirecting to Google…
+                </>
+              ) : (
+                <>
+                  <GoogleIcon className="size-4.5" />
+                  Sign up with Google
+                </>
+              )}
             </Button>
           </div>
         </form>

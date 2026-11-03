@@ -1,6 +1,80 @@
-import { CheckIcon } from "lucide-react";
-import { enterDelay, staggerStyle } from "~/components/motion/stagger";
-import { cn } from "~/lib/utils";
+import { LazyMotion, MotionConfig, m } from "framer-motion";
+import type { ReactNode } from "react";
+
+const loadMotionFeatures = () => import("framer-motion").then((mod) => mod.domAnimation);
+
+// Same curves as `--ease-civic` / `--ease-civic-emphasized` in app.css.
+const easeCivic = [0.22, 0.61, 0.36, 1] as const;
+const easeEmphasized = [0.16, 1, 0.3, 1] as const;
+
+/**
+ * Motion for the decorative panels. The animation features load as a separate
+ * chunk so the auth routes are not paying for them up front, and
+ * `reducedMotion="user"` drops every transform for anyone who has asked their
+ * OS for less movement. Stroke drawing and the focus ring are not transforms,
+ * so app.css switches those off under the same media query.
+ */
+function PanelMotion({ children }: { children: ReactNode }) {
+  return (
+    <MotionConfig reducedMotion="user">
+      <LazyMotion features={loadMotionFeatures}>{children}</LazyMotion>
+    </MotionConfig>
+  );
+}
+
+/**
+ * One of the two back sheets spreading out of a flat pile into its tilt.
+ *
+ * The resting tilt and offset live in app.css as the `rotate` and `translate`
+ * properties. Framer writes `transform`, which stacks on top of those, so the
+ * start pose here is the inverse of the resting one and the animation settles
+ * to zero. Offsets are percentages of the sheet, converted from the `cqw`
+ * values in the stylesheet, and rotated by the sheet's own tilt because CSS
+ * applies `translate` and `rotate` before `transform`.
+ */
+function FanSheet({
+  layer,
+  from,
+  opacity,
+  delay,
+}: {
+  layer: 1 | 2;
+  from: { rotate: number; x: string; y: string };
+  opacity: number;
+  delay: number;
+}) {
+  return (
+    <m.div
+      className="docket-sheet"
+      data-layer={layer}
+      initial={{ opacity: 0, ...from }}
+      animate={{ opacity, rotate: 0, x: 0, y: 0 }}
+      transition={{
+        type: "spring",
+        stiffness: 260,
+        damping: 20,
+        delay,
+        opacity: { duration: 0.2, delay },
+      }}
+    />
+  );
+}
+
+/** The top sheet (or badge) rising onto the stack after the back sheets. */
+const land = {
+  initial: { opacity: 0, y: 16, scale: 0.96 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  transition: { duration: 0.52, delay: 0.22, ease: easeEmphasized },
+} as const;
+
+/** The caption rising in underneath once everything above it has settled. */
+function captionIn(delay: number) {
+  return {
+    initial: { opacity: 0, y: 8 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.28, delay, ease: easeCivic },
+  } as const;
+}
 
 /** The four points of the workflow an applicant actually watches for. */
 const trackedSteps = [
@@ -10,170 +84,215 @@ const trackedSteps = [
   { label: "Claimed", note: null, state: "pending" },
 ] as const;
 
-/** Squares scattered into a panel corner, at the edge of legibility. */
-function CornerSquares({
-  className,
-  size,
-  opacities,
-}: {
-  className: string;
-  size: string;
-  opacities: readonly number[];
-}) {
+/** When each beat of the tracker plays, in seconds after mount. */
+const stampTiming = {
+  firstCheck: 0.36,
+  checkGap: 0.28,
+  ring: 1.0,
+  pill: 1.12,
+  stamp: 1.34,
+  caption: 1.5,
+} as const;
+
+/**
+ * Panel for the screens a resident reaches once they already have an account.
+ * A fanned stack of request sheets, the top one stamped and marked ready for
+ * release, hints at what is waiting on the other side without a feature list.
+ * The back sheets spread out of a flat pile first, then the top sheet lands.
+ *
+ * The sheets are decorative, so they stay out of the accessibility tree.
+ * Placeholder only: the stamp is text, because no MOA authorizes use of the
+ * real CCRO seal artwork yet. Swap it for the emblem once that is in hand.
+ */
+export function AuthDocketPanel() {
   return (
-    <div
-      className={cn("absolute grid grid-cols-3", className)}
-      aria-hidden="true"
-    >
-      {opacities.map((opacity, index) => (
-        <span
-          key={index}
-          className={cn("rounded-[5px] bg-white", size)}
-          style={{ opacity }}
-        />
-      ))}
-    </div>
+    <PanelMotion>
+      <aside className="docket-panel">
+        <div className="docket-stage" aria-hidden="true">
+          <div className="docket-group">
+            <FanSheet layer={1} from={{ rotate: 9, x: "5.2%", y: "-4.6%" }} opacity={0.55} delay={0} />
+            <FanSheet layer={2} from={{ rotate: 4, x: "1.6%", y: "-1.7%" }} opacity={0.8} delay={0.09} />
+            <m.div className="docket-sheet" data-layer="3" {...land}>
+              <div className="docket-stamp">CCRO</div>
+              <div className="docket-skel w-[82%]" />
+              <div className="docket-skel w-[64%]" />
+              <div className="docket-skel w-[74%]" />
+              <div className="docket-pill">Ready for release</div>
+            </m.div>
+          </div>
+        </div>
+
+        <m.div className="docket-caption" {...captionIn(0.94)}>
+          <strong>Every request, filed to released.</strong>
+          City Civil Registrar Office, Legazpi
+        </m.div>
+      </aside>
+    </PanelMotion>
   );
 }
 
 /**
- * Panel for the create-account screen. Two mocked-up fragments of the request
- * tracker sit above the pitch, because the promise being made — file once, then
- * watch it move — is easier to show than to describe.
+ * Panel for the create-account screen. The same stack of sheets, with the
+ * request tracker on the top one: the promise being made, file once and then
+ * watch it move, is easier to show than to describe.
+ *
+ * The tracker acts that out once on arrival. The check marks draw in order, the
+ * current step pulses, and the CCRO stamp presses onto the sheet. It runs about
+ * two seconds and never gates the form, which is usable from the first frame.
  *
  * The whole composition is decorative: it carries no live data, so it stays out
  * of the accessibility tree and the copy underneath does the talking.
  */
 export function AuthProgressPanel() {
   return (
-    <aside className="civic-auth-panel relative flex h-full flex-col justify-center gap-9 overflow-hidden px-10">
-      <CornerSquares
-        className="top-11 right-8 gap-3.5 opacity-50"
-        size="size-8.5"
-        opacities={[0.06, 0.11, 0.05, 0.09, 0.04, 0.12]}
-      />
-      <CornerSquares
-        className="bottom-8 left-9 gap-4 opacity-45"
-        size="size-7.5"
-        opacities={[0.05, 0.1, 0.04, 0.09, 0.05, 0.03]}
-      />
-
-      <div className="relative mx-auto h-75 w-full max-w-112" aria-hidden="true">
-        <div
-          className="civic-enter-scale absolute top-0 left-0 flex w-79 flex-col gap-3.5 rounded-xl bg-white px-4.5 pt-4 pb-3.5 shadow-[0_18px_40px_-16px_rgba(3,20,42,0.55)]"
-          style={enterDelay(140)}
-        >
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm font-semibold text-foreground">
-              Request status
-            </span>
-            <span className="rounded-[5px] bg-success-soft px-1.75 py-0.5 text-[11px] font-semibold text-success">
-              On track
-            </span>
-          </div>
-
-          <div className="civic-stagger flex flex-col gap-2.75">
-            {trackedSteps.map((step, index) => (
-              <div
-                key={step.label}
-                style={staggerStyle(index, 340)}
-                className={cn(
-                  "flex items-center gap-2.5 text-[12.5px]",
-                  step.state === "current"
-                    ? "font-semibold text-primary"
-                    : step.state === "done"
-                      ? "text-body"
-                      : "text-disabled",
-                )}
-              >
-                {step.state === "done" ? (
-                  <span className="grid size-4 shrink-0 place-items-center rounded-full bg-primary text-white">
-                    <CheckIcon className="size-2.5" strokeWidth={3} />
-                  </span>
-                ) : (
-                  <span
-                    className={cn(
-                      "size-4 shrink-0 rounded-full border-2",
-                      step.state === "current"
-                        ? "border-primary"
-                        : "border-border-light",
-                    )}
-                  />
-                )}
-                {step.label}
-                {step.note ? (
-                  <span className="ml-auto font-normal text-muted-foreground">
-                    {step.note}
-                  </span>
-                ) : null}
+    <PanelMotion>
+      <aside className="docket-panel" data-variant="tracker">
+        <div className="docket-stage" aria-hidden="true">
+          <div className="docket-group">
+            <div className="docket-sheet" data-layer="1" />
+            <div className="docket-sheet" data-layer="2" />
+            <m.div
+              className="docket-sheet"
+              data-layer="3"
+              initial={{ opacity: 0, scale: 0.97, y: 0 }}
+              animate={{ opacity: 1, scale: 1, y: [0, 2, 0] }}
+              transition={{
+                opacity: { duration: 0.26, ease: easeEmphasized },
+                scale: { duration: 0.26, ease: easeEmphasized },
+                // A small thud as the stamp lands.
+                y: { delay: stampTiming.stamp, duration: 0.2, times: [0, 0.45, 1] },
+              }}
+            >
+              <div className="docket-track-head">
+                Request status
+                <m.span
+                  className="docket-pill"
+                  initial={{ opacity: 0, scale: 0.85 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ type: "spring", stiffness: 380, damping: 16, delay: stampTiming.pill }}
+                >
+                  On track
+                </m.span>
               </div>
-            ))}
+
+              {trackedSteps.map((step, index) => (
+                <div key={step.label} className="docket-step" data-state={step.state}>
+                  {step.state === "done" ? (
+                    <m.span
+                      className="docket-dot"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: [0.8, 1.15, 1] }}
+                      transition={{
+                        duration: 0.24,
+                        delay: stampTiming.firstCheck + index * stampTiming.checkGap,
+                      }}
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="size-[calc(3.4cqw*var(--docket-scale))]"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={3}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <m.path
+                          className="docket-check"
+                          d="M4 12l5 5L20 6"
+                          initial={{ pathLength: 0 }}
+                          animate={{ pathLength: 1 }}
+                          transition={{
+                            duration: 0.26,
+                            ease: easeEmphasized,
+                            delay: stampTiming.firstCheck + 0.04 + index * stampTiming.checkGap,
+                          }}
+                        />
+                      </svg>
+                    </m.span>
+                  ) : (
+                    <span className="docket-dot">
+                      {step.state === "current" ? (
+                        <m.span
+                          className="docket-ring"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: [0.6, 0], scale: [1, 2.2] }}
+                          transition={{ duration: 0.7, ease: "easeOut", delay: stampTiming.ring }}
+                        />
+                      ) : null}
+                    </span>
+                  )}
+                  {step.label}
+                  {step.note ? <small>{step.note}</small> : <small />}
+                </div>
+              ))}
+
+              <m.div
+                className="docket-foot"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.24, delay: stampTiming.pill }}
+              >
+                3 of 4 steps done
+              </m.div>
+
+              <m.div
+                className="docket-track-stamp"
+                initial={{ opacity: 0, scale: 1.9, rotate: -6 }}
+                animate={{ opacity: 0.88, scale: 1, rotate: 0 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 420,
+                  damping: 18,
+                  delay: stampTiming.stamp,
+                  opacity: { duration: 0.12, delay: stampTiming.stamp },
+                }}
+              >
+                CCRO
+              </m.div>
+            </m.div>
           </div>
         </div>
 
-        <div
-          className="civic-enter-scale absolute right-0 bottom-0 flex w-44 flex-col items-center gap-3 rounded-xl bg-white p-4.5 shadow-[0_20px_44px_-14px_rgba(3,20,42,0.6)]"
-          style={enterDelay(300)}
-        >
-          <div
-            className="grid size-26 place-items-center rounded-full"
-            style={{
-              background:
-                "conic-gradient(var(--primary) 0turn 0.75turn, var(--border-light) 0.75turn 1turn)",
-            }}
-          >
-            <div className="flex size-17 flex-col items-center justify-center rounded-full bg-white">
-              <span className="text-[10.5px] text-muted-foreground">
-                Complete
-              </span>
-              <span className="text-[19px] font-bold text-foreground tabular-nums">
-                75%
-              </span>
-            </div>
-          </div>
-          <span className="text-center text-xs text-muted-2">
-            3 of 4 steps done
-          </span>
-        </div>
-      </div>
-
-      <div
-        className="civic-enter-sm flex flex-col items-center gap-2.5 text-center"
-        style={enterDelay(420)}
-      >
-        <h2 className="text-xl font-bold tracking-[-0.01em] text-white">
-          One account, every CCRO request
-        </h2>
-        <p className="max-w-[36ch] text-[13.5px] leading-relaxed text-pretty text-white/75">
+        <m.div className="docket-caption" {...captionIn(stampTiming.caption)}>
+          <h2>One account, every CCRO request.</h2>
           File online, follow each step, and visit once to pay and claim.
-        </p>
-      </div>
-    </aside>
+        </m.div>
+      </aside>
+    </PanelMotion>
   );
 }
 
 /**
- * Panel for the screens a resident reaches once they already have an account.
- * Nothing to sell here, so it carries a placeholder mark on a tinted field and
- * leaves the form to hold attention.
+ * Panel for the staff invitation page: a staff ID card on the same stack of
+ * sheets, marked "Access pending" until the password is set. The card carries
+ * no name, so it fits every invitation without personal data.
  *
- * Placeholder only: no MOA authorizes use of the real CCRO seal artwork yet.
- * Swap the badge below for the actual emblem once that's in hand.
+ * Decorative, so it stays out of the accessibility tree. Placeholder only: the
+ * mark is text until the real CCRO seal is cleared for use.
  */
-export function AuthEmblemPanel() {
+export function AuthBadgePanel() {
   return (
-    <aside className="flex h-full items-center justify-center bg-auth-panel-tint px-11">
-      <div className="civic-enter-scale flex flex-col items-center gap-7">
-        <div
-          aria-hidden="true"
-          className="flex size-40 items-center justify-center rounded-full border border-primary/20 bg-white text-sm font-extrabold tracking-tight text-primary xl:size-44"
-        >
-          CCRO
+    <PanelMotion>
+      <aside className="docket-panel" data-variant="badge">
+        <div className="docket-stage" aria-hidden="true">
+          <div className="docket-group">
+            <FanSheet layer={1} from={{ rotate: 9, x: "6.1%", y: "-3.8%" }} opacity={0.55} delay={0} />
+            <FanSheet layer={2} from={{ rotate: 4, x: "1.9%", y: "-1.4%" }} opacity={0.8} delay={0.09} />
+            <m.div className="docket-badge" {...land}>
+              <div className="docket-slot" />
+              <div className="docket-avatar">CCRO</div>
+              <div className="docket-skel w-[62%]" />
+              <div className="docket-skel w-[42%]" />
+              <div className="docket-pill docket-pill--pending">Access pending</div>
+            </m.div>
+          </div>
         </div>
-        <p className="text-center text-[13px] font-medium text-primary-hover">
-          City Civil Registrar Office · City Government of Legazpi
-        </p>
-      </div>
-    </aside>
+
+        <m.div className="docket-caption" {...captionIn(0.94)}>
+          <h2>Welcome to the CCRO team.</h2>
+          Your access starts when you finish setup.
+        </m.div>
+      </aside>
+    </PanelMotion>
   );
 }

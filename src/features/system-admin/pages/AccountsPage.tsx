@@ -1,37 +1,27 @@
-import { UsersRound } from "lucide-react";
-import { AccountsCategoryNav } from "../components/AccountsCategoryNav";
+import { useState } from "react";
+import { UserRoundPlus } from "lucide-react";
+import { QuietLink as Link } from "~/components/quiet-link";
+import { Button } from "~/components/ui/button";
 import { AccountsDataTable } from "../components/AccountsDataTable";
-import { SystemAdminPageHeader } from "../components/SystemAdminPageHeader";
+import {
+  accountCategories,
+  accountCategoryLabels,
+} from "../system-admin.constants";
 import type {
   AccountCategory,
+  AccountFilters,
   AccountSummary,
   AdminCandidate,
   SystemAdminDepartment,
 } from "../system-admin.types";
+import "../center-tables.css";
+import "../accounts-center.css";
 
-const pageContent = {
-  personnel: {
-    eyebrow: "CCRO directory",
-    title: "CCRO personnel accounts",
-    description:
-      "Review personnel access, suspend or reactivate accounts, and manage the CCRO Administrator assignment.",
-  },
-  citizens: {
-    eyebrow: "Citizen directory",
-    title: "Citizen accounts",
-    description:
-      "Review citizen access and suspend or reactivate accounts without opening submissions or documents.",
-  },
-  "platform-admins": {
-    eyebrow: "Protected directory",
-    title: "Platform administrators",
-    description:
-      "Review protected System Administrator accounts. Their access cannot be modified from this directory.",
-  },
-} satisfies Record<
-  AccountCategory,
-  { eyebrow: string; title: string; description: string }
->;
+const descriptions = {
+  personnel: "CCRO personnel",
+  citizens: "Citizens",
+  "platform-admins": "Platform administrators",
+} satisfies Record<AccountCategory, string>;
 
 export function AccountsPage({
   accounts,
@@ -39,58 +29,88 @@ export function AccountsPage({
   departments,
   hasActiveAdmin,
   category,
+  filters,
   page,
   pageSize,
   total,
   hasNextPage,
+  isLoading = false,
+  error = null,
+  onRefresh,
 }: {
   accounts: AccountSummary[];
   adminCandidates: AdminCandidate[];
   departments: SystemAdminDepartment[];
   hasActiveAdmin: boolean;
   category: AccountCategory;
+  filters: AccountFilters;
   page: number;
   pageSize: number;
   total: number;
   hasNextPage: boolean;
+  isLoading?: boolean;
+  error?: string | null;
+  onRefresh?: () => void;
 }) {
-  const content = pageContent[category];
+  const [replacementOpen, setReplacementOpen] = useState(false);
 
   return (
-    <div className="dashboard-page">
-      <SystemAdminPageHeader
-        icon={UsersRound}
-        title="Account oversight"
-        description="Manage platform access and administrator assignments without opening citizen submissions or documents."
+    <div className="dashboard-page accounts-center-page">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-1.5">
+          <h1 className="text-3xl font-extrabold tracking-[-0.03em] sm:text-4xl">
+            Accounts Center
+          </h1>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {descriptions[category]}
+          </p>
+        </div>
+        {category === "personnel" ? (
+          <Button
+            size="lg"
+            shape="pill"
+            className="gap-2 px-4"
+            onClick={() => setReplacementOpen(true)}
+            disabled={isLoading || !!error}
+          >
+            <UserRoundPlus aria-hidden="true" />
+            {hasActiveAdmin
+              ? "Replace CCRO Administrator"
+              : "Appoint CCRO Administrator"}
+          </Button>
+        ) : null}
+      </header>
+      <nav className="accounts-categories" aria-label="Account group">
+        {accountCategories.map((value) => (
+          <Link
+            key={value}
+            to="/system-admin/accounts"
+            search={{ category: value, page: 1 }}
+            resetScroll={false}
+            aria-current={category === value ? "page" : undefined}
+          >
+            {accountCategoryLabels[value]}
+          </Link>
+        ))}
+      </nav>
+      <AccountsDataTable
+        key={category}
+        data={accounts}
+        adminCandidates={adminCandidates}
+        departments={departments}
+        hasActiveAdmin={hasActiveAdmin}
+        category={category}
+        filters={filters}
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        hasNextPage={hasNextPage}
+        replacementOpen={replacementOpen}
+        onReplacementOpenChange={setReplacementOpen}
+        isLoading={isLoading}
+        error={error}
+        onRefresh={onRefresh}
       />
-      <AccountsCategoryNav activeCategory={category} />
-      <section className="dashboard-panel overflow-hidden">
-        <div className="border-b border-border px-5 py-5 sm:px-6">
-          <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
-            {content.eyebrow}
-          </p>
-          <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground">
-            {content.title}
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {content.description}
-          </p>
-        </div>
-        <div className="p-5 sm:p-6">
-          <AccountsDataTable
-            key={category}
-            data={accounts}
-            adminCandidates={adminCandidates}
-            departments={departments}
-            hasActiveAdmin={hasActiveAdmin}
-            category={category}
-            page={page}
-            pageSize={pageSize}
-            total={total}
-            hasNextPage={hasNextPage}
-          />
-        </div>
-      </section>
     </div>
   );
 }

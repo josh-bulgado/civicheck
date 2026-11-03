@@ -32,6 +32,8 @@ yarn-error.log*
 /blob-report/
 /playwright/.cache/
 .playwright-mcp/
+# Generated screenshots, previews, and verification output
+/artifacts/
 coverage/
 *.lcov
 
@@ -52,6 +54,8 @@ skills-lock.json
 .claude/
 .opencode/
 opencode.json
+.codex/
+.agents/
 
 
 # AI assistant local state/config (not shared project config)

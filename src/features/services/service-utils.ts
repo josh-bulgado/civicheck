@@ -2,7 +2,10 @@ import type {
   ConditionRule,
   TemplateAnswers,
 } from "~/features/forms/form-template.types";
-import { conditionRuleMatches } from "~/features/forms/form-template.utils";
+import {
+  conditionMatches,
+  conditionRuleMatches,
+} from "~/features/forms/form-template.utils";
 
 // ─── Service-layer utilities ──────────────────────────────────────────────
 // Shared by ServiceHero, ServiceDetailSheet, ServiceCard, the apply wizard's
@@ -69,6 +72,21 @@ export function splitCaseLabel(name: string): {
   return { caseLabel: match[1].trim(), name: match[2].trim() };
 }
 
+/**
+ * Order a checklist the way applicants read it: mandatory documents first, then
+ * the order the admin arranged them in. Rows from before `sort_order` existed
+ * tie on it, and the stable sort leaves those in the order they arrived.
+ */
+export function sortChecklist<
+  T extends { is_mandatory: boolean; sort_order?: number | null },
+>(requirements: T[]): T[] {
+  return [...requirements].sort(
+    (a, b) =>
+      Number(b.is_mandatory) - Number(a.is_mandatory) ||
+      (a.sort_order ?? 0) - (b.sort_order ?? 0),
+  );
+}
+
 // ─── Editorial caveat patterns ───────────────────────────────────────────────
 // These phrases indicate internal notes that leaked into user-facing step copy.
 // The regex matches parenthesized text containing any of these phrases.
@@ -125,6 +143,71 @@ export function formatFee(
   })}`;
 }
 
+/** `formatFee` with the peso sign on an actual amount: "₱1,100.00", "Free", "Varies". */
+export function formatPesoFee(
+  fee: number | string | null,
+  displayGroup?: string | null,
+): string {
+  const label = formatFee(fee, displayGroup);
+  return /^\d/.test(label) ? `₱${label}` : label;
+}
+
+// Registry acronyms that must stay upper-case when a code is humanized.
+const CODE_ACRONYMS = new Set([
+  "CTC",
+  "PSA",
+  "CCRO",
+  "BRAP",
+  "CCE",
+  "CFN",
+  "RA",
+  "DCOLB",
+  "OTCOLB",
+]);
+
+/**
+ * Turn a registry identifier into applicant-facing text:
+ *   "MARRIAGE_LICENSE" -> "Marriage License"
+ *   "birth_delayed"    -> "Birth Delayed"
+ *   "RA9048-CCE"       -> "RA9048 CCE"
+ * Words containing digits and known acronyms stay upper-case. Admin screens
+ * keep showing the raw code, since staff need the exact identifier there.
+ */
+export function formatServiceCode(code: string): string {
+  return code
+    .split(/[_\-\s]+/)
+    .filter(Boolean)
+    .map((word) => {
+      const upper = word.toUpperCase();
+      if (CODE_ACRONYMS.has(upper) || /\d/.test(word)) return upper;
+      return upper.charAt(0) + upper.slice(1).toLowerCase();
+    })
+    .join(" ");
+}
+
+/** Most copies one request may ask for. Mirrors the `requests.copies` check constraint. */
+export const MAX_COPIES = 10;
+
+/** Coerces any input to a whole number of copies within 1..MAX_COPIES. */
+export function clampCopies(value: unknown): number {
+  const n = Math.trunc(Number(value));
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return Math.min(n, MAX_COPIES);
+}
+
+/**
+ * Fee due for a request. Per-copy services (certified true copies) scale with
+ * the quantity; every other service charges its flat fee once.
+ */
+export function totalFee(
+  fee: number | string | null,
+  copies: number,
+  feePerCopy: boolean | undefined,
+): number {
+  const unit = Number(fee) || 0;
+  return feePerCopy ? unit * clampCopies(copies) : unit;
+}
+
 // ─── Browse Services card helpers ────────────────────────────────────────────
 // `processing_time` and `steps_description` are free-text charter language, not
 // structured fields, so the signals below (visit count, fully-online, category)
@@ -177,6 +260,31 @@ export function summarizeWait(processingTime: string): string {
   return processingTime.split(";")[0].split("(")[0].trim();
 }
 
+/**
+ * `summarizeWait` as the applicant portal words it: always in working days.
+ *   "... after a 10-day posting period" -> "After 10 working days"
+ *   "3 days" / "3 working days"          -> "Within 3 working days"
+ *   "Same day", "3 hours", "2 weeks"      -> unchanged
+ * `summarizeWait` itself stays as it was for staff.
+ */
+export function portalWait(processingTime: string): string {
+  const hasWaitWindow = /posting|publication/i.test(processingTime);
+  const days = (text: string) =>
+    text.match(/(\d+)[\s-]*(?:calendar[\s-]*|working[\s-]*|business[\s-]*)?days?\b/i);
+
+  if (hasWaitWindow) {
+    const window = days(processingTime);
+    if (window) return `After ${window[1]} working days`;
+    return summarizeWait(processingTime);
+  }
+
+  const lead = processingTime.split(";")[0].split("(")[0].trim();
+  if (/^same[\s-]*day$/i.test(lead)) return "Same day";
+  const within = days(lead);
+  if (within) return `Within ${within[1]} working days`;
+  return lead;
+}
+
 export type ServiceCategory =
   | "birth"
   | "marriage"
@@ -224,6 +332,17 @@ export interface RequirementCaseTag {
   applies_when?: ConditionRule | null;
 }
 
+/** What a requirement's `case_tag` means, in the words a checklist shows beside it. */
+export const CASE_TAG_LABELS: Record<string, string> = {
+  marital_only: "Marital child only",
+  non_marital_only: "Non-marital child only",
+  brap_only: "Barangay-assisted (BRAP) only",
+  foreigner_only: "Foreign parent only",
+  parental_consent_required: "Ages 18–20",
+  parental_advice_required: "Ages 21–24",
+  foreign_national_spouse: "Foreign-national applicant",
+};
+
 /**
  * Whether a requirement applies to the currently selected service code, based
  * on its case_tag. Requirements with no case_tag always apply.
@@ -260,17 +379,30 @@ export function isRequirementApplicable(
   answers: TemplateAnswers | Record<string, string>,
 ): boolean {
   if (requirement.applies_when) {
-    const hasEveryAnswer = requirement.applies_when.conditions.every(
-      (condition) => {
-        const value = answers[condition.field];
-        return typeof value === "string" && value.length > 0;
-      },
+    const { match, conditions } = requirement.applies_when;
+    const isAnswered = (field: string) => {
+      const value = answers[field];
+      return typeof value === "string" && value.length > 0;
+    };
+    const hasEveryAnswer = conditions.every((condition) =>
+      isAnswered(condition.field),
     );
-    if (
-      requirement.applies_when.match === "any" &&
-      conditionRuleMatches(requirement.applies_when, answers)
-    ) {
+    if (match === "any" && conditionRuleMatches(requirement.applies_when, answers)) {
       return true;
+    }
+    // An `all` rule that an answered condition already fails can never match,
+    // whatever the unanswered ones turn out to be. This must come before the
+    // conservative fallback below: a condition's question can be absent
+    // because it is hidden (the answer was pruned) rather than because it is
+    // unanswered, and its absence must not make the document required.
+    if (
+      match === "all" &&
+      conditions.some(
+        (condition) =>
+          isAnswered(condition.field) && !conditionMatches(condition, answers),
+      )
+    ) {
+      return false;
     }
     // Older published form versions do not contain the newly-configured
     // source fields. Fall back conservatively so a caller cannot bypass a

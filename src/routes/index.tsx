@@ -1,3 +1,4 @@
+import { LandingPageSkeleton } from "~/features/landing/components/LandingPageSkeleton";
 import { createFileRoute } from "@tanstack/react-router";
 import SiteHeader from "~/features/landing/components/SiteHeader";
 
@@ -7,6 +8,7 @@ import LandingPage from "~/features/landing/LandingPage";
 export const Route = createFileRoute("/")({
   loader: () => getFeaturedChecklists(),
   staleTime: 5 * 60_000,
+  pendingComponent: LandingPageSkeleton,
   component: Home,
 });
 

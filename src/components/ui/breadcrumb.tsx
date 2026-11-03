@@ -1,4 +1,5 @@
 import * as React from "react"
+import { QuietAnchor } from "~/components/quiet-link"
 import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
 
@@ -52,7 +53,7 @@ function BreadcrumbLink({
       },
       props
     ),
-    render,
+    render: render ?? <QuietAnchor />,
     state: {
       slot: "breadcrumb-link",
     },

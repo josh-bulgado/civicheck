@@ -1,6 +1,6 @@
 import { createMiddleware } from "@tanstack/react-start";
 import { getSupabaseServerClient } from "~/utils/supabase";
-import { getVerifiedSessionUser } from "~/server/auth";
+import { getVerifiedSessionUser, isSessionRevoked } from "~/server/auth";
 import { hasPermission } from "~/lib/permissions";
 import type { AccountStatus, Permission, Role } from "~/lib/permissions";
 
@@ -20,9 +20,13 @@ export const rbacMiddleware = createMiddleware({ type: "function" }).server(
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, access_status")
+      .select("role, access_status, sessions_revoked_at")
       .eq("id", user.id)
       .single();
+
+    if (isSessionRevoked(user, profile?.sessions_revoked_at)) {
+      throw new Error("Unauthorized: session was signed out");
+    }
 
     const status = (profile?.access_status ?? "active") as AccountStatus;
     if (status !== "active") {

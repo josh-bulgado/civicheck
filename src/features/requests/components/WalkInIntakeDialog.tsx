@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -21,7 +22,9 @@ import {
 } from "~/components/ui/select";
 import { encodeWalkInFn } from "~/features/requests/walk-in-intake.mutations";
 import type { EncodableService } from "~/features/requests/walk-in-intake.queries";
+import { CopiesStepper } from "~/features/services/components/CopiesStepper";
 import { ServiceRequirementsDialog } from "~/features/services/components/ServiceRequirementsDialog";
+import { digitsOnly } from "~/lib/phone";
 import {
   emptySubject,
   reconcileSubjects,
@@ -34,32 +37,44 @@ interface WalkInIntakeDialogProps {
   onChanged: () => void;
 }
 
-export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogProps) {
+export function WalkInIntakeDialog({
+  services,
+  onChanged,
+}: WalkInIntakeDialogProps) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [requirementsOpen, setRequirementsOpen] = useState(false);
   const [serviceCode, setServiceCode] = useState("");
-  const [subjects, setSubjects] = useState<SubjectFields[]>([emptySubject("Subject")]);
+  const [subjects, setSubjects] = useState<SubjectFields[]>([
+    emptySubject("Subject"),
+  ]);
   const [purpose, setPurpose] = useState("");
   const [contactNumber, setContactNumber] = useState("");
+  const [copies, setCopies] = useState(1);
   const [encodedRequest, setEncodedRequest] = useState<{
     trackingNumber: string;
   } | null>(null);
 
-  const selectedService = services.find((service) => service.serviceCode === serviceCode);
+  const selectedService = services.find(
+    (service) => service.serviceCode === serviceCode,
+  );
 
   // Most services ask about one person; Marriage License asks about two.
   // Resize the subject list to match whenever the selected service changes.
   useEffect(() => {
     const roles = selectedService?.partyRoles ?? ["Subject"];
-    setSubjects((prev) => (subjectsMatchRoles(prev, roles) ? prev : reconcileSubjects(prev, roles)));
+    setSubjects((prev) =>
+      subjectsMatchRoles(prev, roles) ? prev : reconcileSubjects(prev, roles),
+    );
   }, [selectedService]);
 
   const showRoleLabels = subjects.length > 1;
 
   function updateSubject(index: number, patch: Partial<SubjectFields>) {
     setSubjects((prev) =>
-      prev.map((subject, i) => (i === index ? { ...subject, ...patch } : subject)),
+      prev.map((subject, i) =>
+        i === index ? { ...subject, ...patch } : subject,
+      ),
     );
   }
 
@@ -68,6 +83,7 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
     setSubjects([emptySubject("Subject")]);
     setPurpose("");
     setContactNumber("");
+    setCopies(1);
     setEncodedRequest(null);
     setRequirementsOpen(false);
   }
@@ -82,11 +98,14 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
           subjects,
           purpose,
           contactNumber,
+          copies: selectedService?.feePerCopy ? copies : undefined,
         },
       });
 
       if (result.error) {
-        toast.error("Could not encode this walk-in", { description: result.message });
+        toast.error("Could not encode this walk-in", {
+          description: result.message,
+        });
         return;
       }
 
@@ -102,8 +121,15 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
 
   return (
     <>
-      <Button type="button" onClick={() => setOpen(true)} disabled={services.length === 0}>
-        Encode walk-in
+      <Button
+        type="button"
+        shape="pill"
+        size="lg"
+        onClick={() => setOpen(true)}
+        disabled={services.length === 0}
+      >
+        <Plus aria-hidden="true" data-icon="inline-start" />
+        Encode Walk-in
       </Button>
 
       <Dialog
@@ -125,17 +151,30 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
             <form onSubmit={handleSubmit}>
               <FieldGroup>
                 <Field>
-                  <FieldLabel htmlFor="walkin-service">Service requested</FieldLabel>
+                  <FieldLabel htmlFor="walkin-service">
+                    Service requested
+                  </FieldLabel>
                   <div className="flex gap-2">
-                    <Select value={serviceCode} onValueChange={(value) => setServiceCode(value ?? "")}>
-                      <SelectTrigger id="walkin-service" className="flex-1">
+                    <Select
+                      value={serviceCode}
+                      onValueChange={(value) => setServiceCode(value ?? "")}
+                    >
+                      <SelectTrigger
+                        id="walkin-service"
+                        className="flex-1"
+                        shape="split"
+                      >
                         <SelectValue placeholder="Select a department service" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
                           {services.map((service) => (
-                            <SelectItem key={service.serviceCode} value={service.serviceCode}>
+                            <SelectItem
+                              key={service.serviceCode}
+                              value={service.serviceCode}
+                            >
                               {service.name} — ₱{service.fee.toFixed(2)}
+                              {service.feePerCopy ? " per copy" : ""}
                             </SelectItem>
                           ))}
                         </SelectGroup>
@@ -144,6 +183,7 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
                     <Button
                       type="button"
                       variant="outline"
+                      shape="soft"
                       disabled={!selectedService}
                       onClick={() => setRequirementsOpen(true)}
                     >
@@ -151,6 +191,14 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
                     </Button>
                   </div>
                 </Field>
+
+                {selectedService?.feePerCopy ? (
+                  <CopiesStepper
+                    value={copies}
+                    onChange={setCopies}
+                    unitFee={selectedService.fee}
+                  />
+                ) : null}
 
                 {subjects.map((subject, index) => (
                   <div key={index} className="space-y-3">
@@ -161,23 +209,31 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
                     )}
                     <div className="grid gap-4 sm:grid-cols-2">
                       <Field>
-                        <FieldLabel htmlFor={`walkin-first-${index}`}>First name</FieldLabel>
+                        <FieldLabel htmlFor={`walkin-first-${index}`}>
+                          First name
+                        </FieldLabel>
                         <Input
                           id={`walkin-first-${index}`}
                           value={subject.firstName}
                           onChange={(event) =>
-                            updateSubject(index, { firstName: event.target.value })
+                            updateSubject(index, {
+                              firstName: event.target.value,
+                            })
                           }
                           required
                         />
                       </Field>
                       <Field>
-                        <FieldLabel htmlFor={`walkin-last-${index}`}>Last name</FieldLabel>
+                        <FieldLabel htmlFor={`walkin-last-${index}`}>
+                          Last name
+                        </FieldLabel>
                         <Input
                           id={`walkin-last-${index}`}
                           value={subject.lastName}
                           onChange={(event) =>
-                            updateSubject(index, { lastName: event.target.value })
+                            updateSubject(index, {
+                              lastName: event.target.value,
+                            })
                           }
                           required
                         />
@@ -188,15 +244,23 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field>
-                    <FieldLabel htmlFor="walkin-contact">Contact number (optional)</FieldLabel>
+                    <FieldLabel htmlFor="walkin-contact">
+                      Contact number (optional)
+                    </FieldLabel>
                     <Input
                       id="walkin-contact"
+                      type="tel"
+                      inputMode="numeric"
                       value={contactNumber}
-                      onChange={(event) => setContactNumber(event.target.value)}
+                      onChange={(event) =>
+                        setContactNumber(digitsOnly(event.target.value))
+                      }
                     />
                   </Field>
                   <Field>
-                    <FieldLabel htmlFor="walkin-purpose">Purpose (optional)</FieldLabel>
+                    <FieldLabel htmlFor="walkin-purpose">
+                      Purpose (optional)
+                    </FieldLabel>
                     <Input
                       id="walkin-purpose"
                       value={purpose}
@@ -206,7 +270,11 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
                 </div>
 
                 <div className="flex justify-end gap-3">
-                  <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setOpen(false)}
+                  >
                     Cancel
                   </Button>
                   <Button
@@ -214,7 +282,9 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
                     disabled={
                       submitting ||
                       !serviceCode ||
-                      subjects.some((s) => !s.firstName.trim() || !s.lastName.trim())
+                      subjects.some(
+                        (s) => !s.firstName.trim() || !s.lastName.trim(),
+                      )
                     }
                   >
                     {submitting ? "Encoding..." : "Encode request"}
@@ -225,9 +295,12 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
           ) : (
             <div className="flex flex-col gap-5">
               <Alert>
-                <AlertTitle>Request {encodedRequest.trackingNumber} is ready</AlertTitle>
+                <AlertTitle>
+                  Request {encodedRequest.trackingNumber} is ready
+                </AlertTitle>
                 <AlertDescription>
-                  The request has been submitted and is ready for staff to process.
+                  The request has been submitted and is ready for staff to
+                  process.
                 </AlertDescription>
               </Alert>
               <div className="flex justify-end">
@@ -247,7 +320,9 @@ export function WalkInIntakeDialog({ services, onChanged }: WalkInIntakeDialogPr
 
       {selectedService && (
         <ServiceRequirementsDialog
-          serviceCode={selectedService.displayGroup ?? selectedService.serviceCode}
+          serviceCode={
+            selectedService.displayGroup ?? selectedService.serviceCode
+          }
           title={selectedService.name}
           fee={selectedService.fee}
           displayGroup={selectedService.displayGroup}

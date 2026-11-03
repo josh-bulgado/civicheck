@@ -34,11 +34,15 @@ export function isInStage(status: string, stage: WorkflowStage) {
 /** Department filter value meaning "services with no department assigned". */
 export const UNASSIGNED_DEPARTMENT_FILTER = "unassigned";
 
+export type PaymentFilter = "unpaid" | "verified";
+
 export interface RequestQueueFilters {
   stage?: WorkflowStage;
   status?: RequestStatus;
-  payment?: "unpaid";
+  payment?: PaymentFilter;
   department?: string;
+  /** Only requests waiting on staff: the "Needs you" toggle. */
+  needs?: true;
 }
 
 /** Every filter cleared — navigate with this to reset the docket. */
@@ -47,7 +51,32 @@ export const EMPTY_FILTERS: RequestQueueFilters = {
   status: undefined,
   payment: undefined,
   department: undefined,
+  needs: undefined,
 };
+
+/**
+ * The filters after `patch`, kept consistent with each other. A status belongs
+ * to one stage, so choosing a status drops the stage, and choosing a stage
+ * drops a status that lives in another one. Without this the two could be set
+ * to a pair that matches nothing.
+ */
+export function applyFilterChange(
+  current: RequestQueueFilters,
+  patch: Partial<RequestQueueFilters>,
+): RequestQueueFilters {
+  const next = { ...current, ...patch };
+  if (patch.status) {
+    next.stage = undefined;
+  } else if (
+    "stage" in patch &&
+    next.stage &&
+    next.status &&
+    STAGE_OF[next.status] !== next.stage
+  ) {
+    next.status = undefined;
+  }
+  return next;
+}
 
 export function parseWorkflowStage(value: unknown): WorkflowStage | undefined {
   switch (value) {
@@ -65,8 +94,12 @@ export function parseRequestStatus(value: unknown): RequestStatus | undefined {
   return typeof value === "string" && isRequestStatus(value) ? value : undefined;
 }
 
-export function parsePaymentFilter(value: unknown): "unpaid" | undefined {
-  return value === "unpaid" ? value : undefined;
+export function parsePaymentFilter(value: unknown): PaymentFilter | undefined {
+  return value === "unpaid" || value === "verified" ? value : undefined;
+}
+
+export function parseNeedsFilter(value: unknown): true | undefined {
+  return value === true || value === "true" ? true : undefined;
 }
 
 export function parseDepartmentFilter(value: unknown): string | undefined {

@@ -1,4 +1,4 @@
-import { type Table } from "@tanstack/react-table";
+import { type RowData } from "@tanstack/react-table";
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,24 +13,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import type { AppTable } from "~/lib/table";
 
-interface DataTablePaginationProps<TData> {
-  table: Table<TData>;
+interface DataTablePaginationProps<TData extends RowData> {
+  table: AppTable<TData>;
   pageSizeOptions?: number[];
   // server-side overrides — provide these for server-side pagination
   pageCount?: number;
+  /** Rows across every page. Without it, server-side mode can only say "N+". */
+  total?: number;
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (size: number) => void;
 }
 
-export function DataTablePagination<TData>({
+export function DataTablePagination<TData extends RowData>({
   table,
   pageSizeOptions = [10, 20, 50],
   pageCount: serverPageCount,
+  total,
   onPageChange,
   onPageSizeChange,
 }: DataTablePaginationProps<TData>) {
-  const { pageIndex, pageSize } = table.getState().pagination;
+  const { pageIndex, pageSize } = table.state.pagination;
 
   // server-side mode uses the provided pageCount, client-side uses table's
   const pageCount = serverPageCount ?? table.getPageCount();
@@ -45,7 +49,7 @@ export function DataTablePagination<TData>({
   const lastRow = isServerSide
     ? pageIndex * pageSize + totalRows
     : Math.min((pageIndex + 1) * pageSize, totalRows);
-  const totalLabel = isServerSide ? `${lastRow}+` : `${totalRows}`;
+  const totalLabel = String(isServerSide ? (total ?? `${lastRow}+`) : totalRows);
 
   const goToPage = (page: number) => {
     if (isServerSide) {
@@ -65,11 +69,11 @@ export function DataTablePagination<TData>({
   };
 
   return (
-    <div className="flex items-center justify-between px-2">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-2">
       <div className="flex-1 text-sm text-muted-foreground">
         Showing {firstRow}–{lastRow} of {totalLabel} row(s).
       </div>
-      <div className="flex items-center space-x-6 lg:space-x-8">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 lg:gap-x-8">
         <div className="flex items-center space-x-2">
           <p className="text-sm font-medium">Rows per page</p>
           <Select

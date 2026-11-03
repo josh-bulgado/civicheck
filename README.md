@@ -73,7 +73,11 @@ QR-verification only — the CCRO cashier handles the actual transaction.
    | `SUPABASE_PUBLISHABLE_KEY` | Supabase publishable (anon) key |
    | `SUPABASE_SECRET_KEY` | Supabase service-role/secret key |
    | `RESEND_API_KEY` | API key for transactional email notifications |
+   | `RESEND_FROM_EMAIL` | Optional sender, e.g. `CiviCheck <accounts@your-verified-domain.example>`; defaults to the existing CiviCheck sender |
+   | `RESEND_REPLY_TO` | Optional monitored mailbox for replies; omit until that mailbox exists |
    | `APP_URL` | Base URL of the app (used in emails, redirects, etc.) |
+
+   For Gmail bounces, see [email delivery investigation and recovery](docs/email-deliverability.md).
 
 3. Apply database migrations to your Supabase project (see `supabase/migrations`):
 
@@ -86,6 +90,20 @@ QR-verification only — the CCRO cashier handles the actual transaction.
    ```bash
    pnpm dev
    ```
+
+### Google sign-in on localhost
+
+In Supabase **Authentication → URL Configuration → Redirect URLs**, add
+`http://localhost:3000/auth/callback` alongside your production callback URL.
+If you use a different port or `127.0.0.1`, add that exact callback URL too.
+Keep **Site URL** set to your production URL.
+
+During `pnpm dev`, redirects and auth cookie settings use the current loopback
+origin, even if `APP_URL` contains the production URL. Production builds continue
+to use `APP_URL` (or the Vercel URL environment variables). Supabase must allow
+the local callback URL; otherwise it can redirect back to the production site,
+where the localhost PKCE cookie is unavailable. After changing the configuration,
+start a fresh sign-in from localhost instead of reusing an old callback link.
 
 ### Other scripts
 

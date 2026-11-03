@@ -1,8 +1,9 @@
 import { useRouter } from "@tanstack/react-router";
 
 import { useMutation } from "~/hooks/useMutation";
+import { hintCurrentUser } from "../current-user";
 import { loginWithEmailFn } from "../auth.mutations";
-import { clearCurrentUser } from "../current-user";
+import { startFreshSession } from "../start-fresh-session";
 import { toast } from "sonner";
 
 export function useLogin(redirectTo?: string) {
@@ -12,7 +13,11 @@ export function useLogin(redirectTo?: string) {
     fn: loginWithEmailFn,
     onSuccess: async (ctx) => {
       if (!ctx.data?.error) {
-        clearCurrentUser();
+        startFreshSession(router);
+        // After the reset above, which forgets it.
+        if (ctx.data?.role) {
+          hintCurrentUser({ id: ctx.data.userId, role: ctx.data.role });
+        }
         await router.invalidate();
         await router.navigate({ to: redirectTo || "/dashboard" });
         return;
@@ -24,9 +29,7 @@ export function useLogin(redirectTo?: string) {
         return;
       }
 
-      toast.error("Unable to sign in", {
-        description: "Invalid email or password.",
-      });
+      toast.error("Wrong Email and Password");
     },
   });
 }
