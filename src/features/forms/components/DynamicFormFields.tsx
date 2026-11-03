@@ -372,6 +372,11 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                   locationKey += ":" + values.requester_city;
                 }
 
+                const placeholder =
+                  /place.*\b(birth|born)\b/i.test(definitionField.label)
+                    ? "e.g., Hospital/clinic or house no., street, barangay, city/municipality, province."
+                    : definitionField.placeholder;
+
                 const selectedNotice =
                   definitionField.type === "select"
                     ? definitionField.options?.find(
@@ -498,7 +503,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         id={`dynamic-${definitionField.key}`}
                         rows={3}
                         maxLength={2_000}
-                        placeholder={definitionField.placeholder}
+                        placeholder={placeholder}
                         aria-invalid={fieldState.invalid}
                         className={WIZARD_TEXTAREA_CLASS}
                       />
@@ -591,7 +596,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                           type="tel"
                           inputMode="numeric"
                           autoComplete="tel-national"
-                          placeholder={definitionField.placeholder}
+                          placeholder={placeholder}
                           maxLength={10}
                           aria-invalid={fieldState.invalid}
                         />
@@ -600,7 +605,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                       <TextWithNoneOption
                         field={field}
                         id={`dynamic-${definitionField.key}`}
-                        placeholder={definitionField.placeholder}
+                        placeholder={placeholder}
                         invalid={fieldState.invalid}
                         noneLabel={definitionField.noneLabel}
                       />
@@ -609,7 +614,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         {...field}
                         id={`dynamic-${definitionField.key}`}
                         autoComplete="off"
-                        placeholder={definitionField.placeholder}
+                        placeholder={placeholder}
                         maxLength={240}
                         aria-invalid={fieldState.invalid}
                         className={WIZARD_CONTROL_CLASS}
