@@ -128,7 +128,11 @@ function DashboardLayout() {
       // Both shells are a ground, a sidebar on it and one floating panel. The
       // service editor is full screen, so it keeps the plain page.
       className={
-        isCitizen ? "citizen-portal" : isServiceEditor ? undefined : "workspace-frame"
+        isCitizen
+          ? "citizen-portal max-w-full overflow-x-clip"
+          : isServiceEditor
+            ? undefined
+            : "workspace-frame"
       }
       style={isServiceEditor ? undefined : WORKSPACE_SIDEBAR_STYLE}
     >

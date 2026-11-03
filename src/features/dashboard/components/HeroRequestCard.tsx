@@ -60,7 +60,7 @@ export function HeroRequestCard({ request, compact = false }: HeroRequestCardPro
       // does not stretch to the bottom of the screen: that left the content
       // floating in empty blue.
       className={cn(
-        "portal-banner flex flex-col rounded-[28px] p-5.5 md:rounded-hero md:px-12",
+        "portal-banner flex min-w-0 w-full max-w-full flex-col rounded-[28px] p-5.5 md:rounded-hero md:px-12",
         compact
           ? "md:py-[clamp(1.5rem,3.4vh,2.5rem)]"
           : "md:py-[clamp(1.75rem,4vh,3rem)]",

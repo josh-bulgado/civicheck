@@ -56,7 +56,10 @@ const CitizenDashboard = ({
   }, [userId, shape]);
 
   return (
-    <div className="portal-page flex-1 gap-4.5 md:gap-5" aria-busy={!ready}>
+    <div
+      className="portal-page min-w-0 max-w-full flex-1 gap-4.5 md:gap-5"
+      aria-busy={!ready}
+    >
       <div className="flex items-center justify-between gap-4 md:gap-6">
         <h1 className="portal-title min-w-0 max-md:truncate">
           Welcome back
@@ -77,7 +80,7 @@ const CitizenDashboard = ({
           className="[--skeleton-delay:150ms]"
         />
       ) : (
-        <div className="civic-content-in flex flex-1 flex-col gap-4.5 md:gap-5">
+        <div className="civic-content-in flex min-w-0 max-w-full flex-1 flex-col gap-4.5 md:gap-5">
           {!hasRequests ? (
             <>
               <ContinueApplicationCard application={application} />
@@ -120,7 +123,7 @@ function OtherRequests({
   seeAll: boolean;
 }) {
   return (
-    <section aria-labelledby="other-requests-heading">
+    <section className="min-w-0 max-w-full" aria-labelledby="other-requests-heading">
       <div className="mb-2 flex items-center justify-between gap-4">
         <h2
           id="other-requests-heading"
@@ -130,7 +133,7 @@ function OtherRequests({
         </h2>
         {seeAll && <SeeAllRequestsLink />}
       </div>
-      <ul className="civic-stagger grid gap-3 md:grid-cols-2 md:gap-4">
+      <ul className="civic-stagger grid min-w-0 max-w-full gap-3 md:grid-cols-2 md:gap-4">
         {requests.map((request) => {
           const service =
             request.services_registry?.display_name ||
@@ -138,11 +141,11 @@ function OtherRequests({
             request.request_type;
 
           return (
-            <li key={request.id}>
+            <li key={request.id} className="min-w-0">
               <QuietLink
                 to="/my-requests/$requestId"
                 params={{ requestId: request.id }}
-                className="civic-press flex items-center gap-4 rounded-4xl bg-card px-5 py-3.5 shadow-portal-card hover:bg-primary-tint md:gap-4 md:px-6 md:py-3"
+                className="civic-press flex min-w-0 max-w-full items-center gap-4 rounded-4xl bg-card px-5 py-3.5 shadow-portal-card hover:bg-primary-tint md:gap-4 md:px-6 md:py-3"
               >
                 <span className="min-w-0 flex-1 truncate text-[17px] leading-[normal] font-semibold text-foreground md:text-[18px]">
                   {service}

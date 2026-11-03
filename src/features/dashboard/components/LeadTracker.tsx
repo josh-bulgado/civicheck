@@ -36,7 +36,10 @@ export function LeadTracker({
   const { done: doneThrough, here: hereStage } = trackerProgress(status);
 
   return (
-    <ol className={cn("flex", className)} aria-label="Request progress">
+    <ol
+      className={cn("flex min-w-0 w-full max-w-full overflow-hidden", className)}
+      aria-label="Request progress"
+    >
       {STAGES.map((stage) => {
         const done = stage <= doneThrough;
         const here = stage === hereStage;

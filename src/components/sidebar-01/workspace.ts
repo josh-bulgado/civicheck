@@ -19,11 +19,11 @@ export const WORKSPACE_SIDEBAR_STYLE = {
 // panel: the page sits on the ground with 20px at the sides, and 130px below it
 // for the bottom bar.
 export const CITIZEN_INSET_CLASS =
-  "min-w-0 bg-transparent p-0 md:p-2.5 md:pl-0";
+  "min-w-0 max-w-full overflow-x-clip bg-transparent p-0 md:p-2.5 md:pl-0";
 export const CITIZEN_PANEL_CLASS =
-  "flex w-full flex-1 flex-col gap-4.5 px-5 pt-4 pb-32.5 md:gap-7 md:rounded-panel md:bg-portal-panel md:px-11 md:pt-7 md:pb-9 md:shadow-portal-panel short:md:gap-5 short:md:pt-5 short:md:pb-6";
+  "flex min-w-0 w-full max-w-full flex-1 flex-col gap-4.5 px-5 pt-4 pb-32.5 md:gap-7 md:rounded-panel md:bg-portal-panel md:px-11 md:pt-7 md:pb-9 md:shadow-portal-panel short:md:gap-5 short:md:pt-5 short:md:pb-6";
 export const CITIZEN_MAIN_CLASS =
-  "civic-workspace flex flex-1 flex-col text-foreground";
+  "civic-workspace flex min-w-0 max-w-full flex-1 flex-col text-foreground";
 
 export type WorkspaceDetails = {
   label: string;

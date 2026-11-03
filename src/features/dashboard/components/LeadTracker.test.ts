@@ -9,6 +9,12 @@ const render = (status: string) =>
 const count = (html: string, needle: string) => html.split(needle).length - 1;
 
 describe("LeadTracker", () => {
+  it("stays inside the lead card on narrow screens", () => {
+    const html = render("processing");
+
+    expect(html).toContain("min-w-0 w-full max-w-full overflow-hidden");
+  });
+
   it("draws all four stages finished, and none under way, once a request is released", () => {
     const html = render("released");
 
