@@ -169,6 +169,11 @@ export const otpVerificationSchema = z.object({
   token: z.string().trim().min(OTP_MIN).max(OTP_MAX),
 });
 
+export const recoveryVerificationSchema = z.object({
+  email: emailSchema,
+  token: z.string().trim().regex(/^\d{8}$/, "Enter the eight-digit reset code"),
+});
+
 export const emailOnlySchema = z.object({ email: emailSchema });
 
 export const newPasswordInputSchema = z.object({ password: strongPasswordSchema });

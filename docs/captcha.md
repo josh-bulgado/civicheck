@@ -55,13 +55,22 @@ its response body, to **four seconds**. Google enforces single use and a
 4. Apply `supabase/migrations/20261104151609_harden_login_and_recovery.sql` to
    every database used by these deployments **before deploying the app**. It
    extends the existing `rate_limit_hits` table and adds service-role-only RPCs.
-   Login fails closed if the migration or shared database is unavailable.
+   Also apply `supabase/migrations/20261104162416_harden_recovery_codes.sql`.
+   It adds the private hashed-code/reset-grant store and atomic recovery limits.
+   Signup's tables and code lifetime are unchanged. Both migrations must exist
+   in Production and in every Preview database before deploying this version.
+   Login and recovery fail closed if their migration or shared database is unavailable.
+   Recovery codes issued before this deployment must be requested again; new
+   code verification does not accept the old one-hour Supabase recovery codes.
 5. **Redeploy Production and Preview** after changing environment variables;
    changing dashboard values does not update an existing deployment.
 6. Smoke-test a real invisible challenge, an expired/replayed token, a failed
    password retry, recovery and resend, and Google sign-in on the deployed host.
    Real keys, Google client ID configuration and email delivery require this
    deployed check; local tests mock external services.
+7. Sign out and back in after deploying so existing browser cookies are
+   replaced with the new HttpOnly policy. New sign-ins and server refreshes
+   enforce the hardened flags automatically.
 
 ## Shared limits and timing
 
@@ -77,8 +86,8 @@ release their own IP reservation. Abandoned reservations expire after 60 seconds
 | Account + client IP | Existing five failures per 15-minute window/cooldown |
 | Client IP across accounts | 20 failed logins per 15 minutes |
 | Account across IPs | 30 failures per rolling hour triggers one owner notification per hour and a 500 ms delay on later attempts; it never hard-locks the account |
-| Reset email | Existing three sends per email per 15 minutes and ten sends per IP per hour |
-| Recovery code guesses | Existing five per email and 30 per IP per 15 minutes; database failures reject verification |
+| Reset email | Three requests per email per hour, a 60-second resend cooldown, and ten per IP per hour; admitted requests count identically for existing/missing accounts |
+| Recovery code guesses | Five wrong guesses per code, then invalidate it; 30 verification calls per IP per 15 minutes; storage failures reject verification |
 
 Every password attempt requires a freshly verified CAPTCHA. Failures from other
 IPs never consume the owner's account/IP allowance. A successful login is not
@@ -95,16 +104,57 @@ project's existing Supabase bcrypt credentials; imported alternate hash
 algorithms or mixed work factors need a matching timing strategy before use.
 The app does not claim constant wall-clock response times across network calls.
 
-Recovery account lookup, code generation and email delivery run under
-`waitUntil()` from `@vercel/functions`. Existing and missing addresses receive
-the same immediate response and code-entry UI; suppressed per-email sends use
-that response too. Security notifications use the same lifecycle helper and a
+Recovery codes use Node's cryptographically secure `randomInt()` to produce
+**eight digits**. Only a keyed HMAC of each code is stored in the private
+`password_recovery_challenges` table. Codes expire after **ten minutes**. A new
+admitted request replaces the previous code and any prior reset authorization.
+The server compares fixed-length digests with `timingSafeEqual()`, then commits
+the outcome through an atomic SQL RPC. Five wrong guesses erase the code hash;
+concurrent requests cannot exceed that limit or consume a correct code twice.
+Attempts left are not exposed. The verification step has no CAPTCHA.
+
+A correct code creates a **ten-minute, single-use HttpOnly reset authorization**,
+not a general login session. It is consumed atomically before the password
+update through Supabase Admin. A failed password update requires a fresh code.
+After the password changes, the existing `revoke_user_sessions()` RPC deletes
+all refresh sessions and advances the profile revocation marker, so the app
+rejects already-issued tokens. Current browser credentials are cleared and a
+"Your CiviCheck password was changed" email is scheduled. Supabase access JWTs
+remain cryptographically valid until expiry at direct provider APIs; the app's
+existing revocation check is what rejects them immediately on app requests.
+
+Account lookup and email delivery run under `waitUntil()` from
+`@vercel/functions`. Existing and missing addresses receive exactly
+**"If that email exists, we sent a reset code"** and the same code-entry UI;
+throttled sends use that confirmation too. The response includes a resend
+countdown (at least 60 seconds; longer when the hourly limit is reached). Security notifications use the same lifecycle helper and a
 trusted confirmed email read from Auth. Background failures log a generic
 message. Local non-Vercel execution awaits background work so it cannot become
 an orphaned promise. No local memory stores counters, lockouts or reset codes.
 Nitro's shared Vercel function has `maxDuration: 60`; Google, database/Auth and
 email HTTP requests have bounded timeouts. `waitUntil` is bounded background
 work, not a durable retry queue.
+
+
+## Session cookies and browser services
+
+Auth and persistence cookies are **HttpOnly**, **SameSite=Lax**, and **Secure**
+in production/on Vercel (and on local HTTPS). The existing "Keep me signed in" choice only changes cookie
+lifetime. Plain HTTP loopback development does not require Secure cookies.
+PKCE verifier cookies are also HttpOnly; the server performs the code exchange.
+
+Realtime and direct avatar uploads no longer read or write browser auth cookies.
+The browser Supabase client uses its `accessToken` callback to call a server
+function which validates the active, non-revoked session and returns only an
+access token with `Cache-Control: private, no-store`. Refresh tokens remain in
+HttpOnly cookies and are refreshed on the server. The callback is also used by
+Realtime for token renewal. This keeps existing Realtime/Storage behavior with
+the stronger cookie settings; no new dependency is required.
+
+The existing CSP already permits Google's documented recaptcha script, frame,
+and connection origins. Badge hiding is scoped to `.grecaptcha-badge` and does
+not hide or restyle Google's challenge iframe. Google owns the popup styling
+and high stacking order; the app does not cover it with a loading overlay.
 
 ## Google OAuth trust boundary
 
@@ -159,6 +209,55 @@ Run `pnpm test`, `pnpm build`, and
 use isolated Chrome, mocked Google/server responses and test credentials; they
 do not create accounts or send mail. Database tests execute the actual migration
 and RPCs in embedded Postgres. No hosted migration is applied by these tests.
+
+
+## Deployment acceptance checklist
+
+Use a test account and your own inbox for actions that send emails. The automated
+suite mocks Google/Auth/email and executes the recovery SQL in embedded Postgres.
+Items involving a real Google challenge, email delivery, external IPs, hosted
+cookie headers, and Vercel scaling still require a deployed smoke test.
+
+- [ ] **a. Missing login token:** replay a password-login request without
+  `g-recaptcha-response`; it is rejected before password authentication.
+- [ ] **b. Generic credentials:** with fresh CAPTCHA tokens, submit a wrong
+  password and a nonexistent email; both show `Invalid email or password`.
+- [ ] **c. Account + IP lockout:** fail five times for one account from one IP;
+  the fifth response starts the 15-minute cooldown (remaining time is shown).
+  Correct credentials from a different IP still succeed.
+- [ ] **d. Missing reset token:** remove the token from Send reset code; reject
+  before lookup, counter reservation or email delivery.
+- [ ] **e. Enumeration:** request once for a real and a nonexistent address;
+  both show `If that email exists, we sent a reset code` and code entry.
+- [ ] **f. Five wrong codes:** submit five wrong eight-digit codes. The fifth
+  says `This code is no longer valid. Request a new one.` The correct old code
+  now fails too. A correct fifth submission after four wrong ones may succeed.
+- [ ] **g. Inbox spam:** resend before 60 seconds and exceed three requests for
+  an email in an hour (also try simultaneous requests). No extra email/code is
+  generated. Confirm ten sends per IP per hour and that a resend invalidates
+  the older code. Codes expire after ten minutes and are single-use.
+- [ ] **h. Google:** Continue with Google on login still works without CAPTCHA
+  or a form email. Signup keeps its checkbox and existing OTP behavior.
+- [ ] **i. Real client IP:** on Vercel, inspect `getClientIp()` with a temporary,
+  protected diagnostic or a debugger and compare it to your public IP. Existing
+  audit displays are intentionally masked. Confirm `VERCEL=1`, inspect the
+  platform's `x-real-ip`, test IPv6 /64 grouping and ensure any upstream proxy
+  is explicitly authenticated before trusting its header. Remove diagnostics
+  afterward; do not expose a public raw-IP endpoint.
+- [ ] **j. Shared counters:** repeat failed requests across reloads, function
+  instances and deployments using the same database; lockouts do not reset.
+  Verify unavailable Google/database services fail closed.
+- [ ] **k. UI/accessibility:** desktop/mobile, light/dark: check notice contrast,
+  linked policies, inline announced errors, fixed button widths, disabled
+  loading state and Enter-key submission through CAPTCHA. Trigger Google's
+  real image challenge and confirm it stays above the page and can be used on
+  mobile. Resend code shows a disabled 60-second countdown. Code verification
+  must not execute CAPTCHA.
+- [ ] **Session completion:** reset a test account while it is signed in on two
+  browsers. Both old sessions lose app access, the password-changed email
+  arrives, and the reset authorization cannot be replayed. Check Set-Cookie
+  headers for HttpOnly, Secure and SameSite=Lax with Keep me signed in both on
+  and off. Check Realtime updates and avatar uploads after access-token refresh.
 
 References:
 - [Google Invisible v2](https://developers.google.com/recaptcha/docs/invisible)

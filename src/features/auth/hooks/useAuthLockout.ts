@@ -28,7 +28,7 @@ export function useAuthLockout(initialDeadline?: number) {
     isLocked: secondsRemaining > 0,
     hasExpired: deadline !== null && secondsRemaining === 0,
     message: secondsRemaining > 0
-      ? `Too many attempts. Try again in ${Math.floor(secondsRemaining / 60)}:${String(secondsRemaining % 60).padStart(2, "0")}.`
+      ? `Too many attempts. Please try again in ${Math.floor(secondsRemaining / 60)}:${String(secondsRemaining % 60).padStart(2, "0")}.`
       : null,
   };
 }

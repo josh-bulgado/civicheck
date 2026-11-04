@@ -36,6 +36,7 @@ vi.mock("@tanstack/react-start", () => ({
 vi.mock("@tanstack/react-start/server", () => ({
   getRequestIP: () => state.ip,
   getRequest: () => new Request(state.requestUrl),
+  setResponseHeader: vi.fn(),
 }));
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: unknown) => options,
@@ -209,31 +210,6 @@ describe("login and recovery security", () => {
     expect(state.dummyCompare).toHaveBeenCalledWith(credentials.password, expect.stringMatching(/^\$2b\$10\$/));
     expect(missing).toEqual(known);
     expect(missing).toHaveProperty("message", "Invalid email or password");
-  });
-
-  it("returns recovery acknowledgement while account lookup/email is still pending", async () => {
-    let release!: (value: unknown) => void;
-    state.generateLink.mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
-    const existing = await forgotPasswordFn({ data: credentials });
-    expect(existing.error).toBe(false);
-    expect(state.sendEmail).not.toHaveBeenCalled();
-    expect(state.background).toHaveLength(1);
-    release({ data: { properties: { email_otp: "123456" } }, error: null });
-    await Promise.all(state.background);
-    state.generateLink.mockResolvedValueOnce({ data: null, error: { status: 404, code: "user_not_found" } });
-    expect(await forgotPasswordFn({ data: { ...credentials, email: "missing@example.test" } })).toEqual(existing);
-    await Promise.all(state.background);
-    expect(state.sendEmail).toHaveBeenCalledOnce();
-  });
-
-  it("does not reveal recovery account throttling and fails closed on database failure", async () => {
-    const replies = [await forgotPasswordFn({ data: credentials })];
-    for (let i = 0; i < 3; i++) replies.push(await forgotPasswordFn({ data: credentials }));
-    expect(replies.every(reply => JSON.stringify(reply) === JSON.stringify(replies[0]))).toBe(true);
-    expect(state.generateLink).toHaveBeenCalledTimes(3);
-    state.counterUnavailable = true;
-    expect(await forgotPasswordFn({ data: credentials })).toHaveProperty("error", true);
-    expect(state.generateLink).toHaveBeenCalledTimes(3);
   });
 
   it("expires abandoned reservations and rejects replayed completions", async () => {

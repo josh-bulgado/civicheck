@@ -1,11 +1,12 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { deleteCookie, getCookie, getRequest, setCookie } from "@tanstack/react-start/server";
 import { getAppUrl } from "~/utils/app-url";
-import { getSupabaseAdminClient } from "~/utils/supabase";
+import { getSupabaseAdminClient, secureCookiesEnabled } from "~/utils/supabase";
 import { bucketKey, getClientIp } from "~/server/rate-limit";
 import {
   captchaFailure, CAPTCHA_CONFIG_MESSAGE, CAPTCHA_TOKEN_MAX_LENGTH,
   CAPTCHA_RETRY_MESSAGE, CAPTCHA_UNAVAILABLE_MESSAGE,
+  INVISIBLE_CAPTCHA_FAILURE_MESSAGE,
 } from "./captcha";
 
 const TEST_SITE_KEY = "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI";
@@ -122,7 +123,10 @@ export function getInvisibleCaptchaPublicConfig() {
 }
 
 export async function verifyInvisibleCaptcha(token: string | undefined) {
-  try { return await verifyCaptcha(token, getInvisibleSettings()); }
+  try {
+    const result = await verifyCaptcha(token, getInvisibleSettings());
+    return result.error ? { ...result, message: INVISIBLE_CAPTCHA_FAILURE_MESSAGE } : result;
+  }
   catch { return captchaFailure(CAPTCHA_CONFIG_MESSAGE); }
 }
 
@@ -137,7 +141,7 @@ export function issueOAuthCaptchaProof(intent: "login" | "signup" = "signup") {
   const payload = Buffer.from(JSON.stringify({ id: randomUUID(), intent, expires: Date.now() + PROOF_SECONDS * 1000 })).toString("base64url");
   setCookie(OAUTH_PROOF_COOKIE, `${payload}.${signProof(payload)}`, {
     path: "/", httpOnly: true, sameSite: "lax",
-    secure: new URL(getAppUrl()).protocol === "https:", maxAge: PROOF_SECONDS,
+    secure: secureCookiesEnabled(), maxAge: PROOF_SECONDS,
   });
 }
 

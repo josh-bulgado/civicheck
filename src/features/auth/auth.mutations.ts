@@ -1,8 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
+import { setResponseHeader } from "@tanstack/react-start/server";
 import type { User } from "@supabase/supabase-js";
 import {
   clearSessionScope,
   commitSupabaseCookies,
+  clearSupabaseAuthCookies,
   getSupabaseServerClient,
   getSupabaseAdminClient,
   getSupabaseStatelessClient,
@@ -11,11 +13,9 @@ import {
 import { getAppUrl } from "~/utils/app-url";
 import { sendEmail } from "~/utils/resend";
 import {
-  renderOtpEmail,
   renderVerificationEmail,
   renderVerificationEmailText,
 } from "~/utils/email-template";
-import { requireActiveSession } from "~/server/auth";
 import { findAuthUserByEmail } from "~/server/auth-users";
 import {
   allowAttempt,
@@ -25,7 +25,6 @@ import {
 } from "~/server/rate-limit";
 import {
   recordAuthenticationSecurityEvent,
-  recordSessionForCurrentUser,
   recordSessionStarted,
 } from "~/features/system-admin/security-center.server";
 import type { Role } from "~/lib/permissions";
@@ -36,14 +35,16 @@ import {
   newPasswordInputSchema,
   oauthProviderSchema,
   otpVerificationSchema,
+  recoveryVerificationSchema,
   signupInputSchema,
 } from "./auth.schema";
 import { describeWeakPassword } from "./password-error";
 import { getSignupErrorField } from "./signup-error";
 import { authAttemptFailure, checkAuthLockout, clearAuthAttempts, reserveAuthAttempt, finishAuthAttempt } from "~/server/auth-attempts";
-import { INVALID_CREDENTIALS, compareDummyPassword, getLoginAccountInfo, runAuthBackground, sendLoginSecurityNotification } from "~/server/auth-security";
+import { INVALID_CREDENTIALS, compareDummyPassword, getLoginAccountInfo, runAuthBackground, sendLoginSecurityNotification, sendPasswordChangedNotification } from "~/server/auth-security";
 import { issueOAuthCaptchaProof, verifyCaptcha, verifyInvisibleCaptcha } from "./captcha.server";
-import { bucketKey } from "~/server/rate-limit";
+import { consumePasswordResetGrant, deliverRecoveryCode, reserveRecoverySend, verifyRecoveryCode } from "./recovery.server";
+import { RECOVERY_CONFIRMATION, RECOVERY_INVALID_CODE, RECOVERY_UNAVAILABLE } from "./recovery";
 import {
   clearIssuedOtps,
   describeRejectedOtp,
@@ -177,6 +178,7 @@ export const loginWithEmailFn = createServerFn({ method: "POST" })
     if (captcha.error) return captcha;
     const attempt = await reserveAuthAttempt("sign-in", data.email);
     if (!attempt.allowed) {
+      if (attempt.lockedUntil) setResponseHeader("Retry-After", String(Math.max(1, Math.ceil((attempt.lockedUntil - Date.now()) / 1000))));
       return authAttemptFailure(attempt, attempt.message ?? TOO_MANY_ATTEMPTS);
     }
 
@@ -213,6 +215,7 @@ export const loginWithEmailFn = createServerFn({ method: "POST" })
         if (/email not confirmed/i.test(error.message ?? "")) {
           return { error: true, message: "Email not confirmed" };
         }
+        if (completed.lockedUntil) setResponseHeader("Retry-After", String(Math.max(1, Math.ceil((completed.lockedUntil - Date.now()) / 1000))));
         return authAttemptFailure(completed, INVALID_CREDENTIALS);
       }
 
@@ -559,124 +562,53 @@ export const verifySignupOtpFn = createServerFn({ method: "POST" })
 export const resetPasswordFn = createServerFn({ method: "POST" })
   .validator(newPasswordInputSchema)
   .handler(async ({ data }) => {
-    const { supabase } = await requireActiveSession();
-    const { error } = await supabase.auth.updateUser({
-      password: data.password,
-    });
-
-    if (error) {
-      // Supabase rejects reusing the current password with this code.
-      if (error.code === "same_password") {
-        return {
-          error: true,
-          message:
-            "Your new password must be different from your current password.",
-        };
+    try {
+      const userId = await consumePasswordResetGrant();
+      if (!userId) return { error: true, message: RECOVERY_INVALID_CODE };
+      const admin = getSupabaseAdminClient({ requestTimeoutMs: 8000 });
+      const { data: changed, error } = await admin.auth.admin.updateUserById(userId, { password: data.password });
+      if (error || !changed.user) {
+        return { error: true, message: `${describeWeakPassword(error ?? {}) ?? "Password reset could not be completed."} Request a new reset code before trying again.` };
       }
-
-      const isJsonEmpty = error.message === "{}" || !error.message;
-      const cleanMessage =
-        describeWeakPassword(error) ??
-        (isJsonEmpty
-          ? "An unexpected password reset server error occurred."
-          : error.message);
-      return {
-        error: true,
-        message: cleanMessage,
-      };
+      // This existing RPC revokes refresh sessions AND sets the profile marker
+      // which makes the app reject already-issued access tokens immediately.
+      const { error: revokeError } = await admin.rpc("revoke_user_sessions", { target_user_id: userId });
+      clearSupabaseAuthCookies();
+      if (changed.user.email) await runAuthBackground(sendPasswordChangedNotification(changed.user.email));
+      if (revokeError) {
+        return { error: true, message: "Your password was changed, but we couldn't finish signing out other sessions. Please contact support." };
+      }
+      return { error: false, message: "Password updated successfully." };
+    } catch {
+      return { error: true, message: RECOVERY_UNAVAILABLE };
     }
-
-    return {
-      error: false,
-      message: "Password updated successfully.",
-    };
   });
-
-/** Account lookup, code generation and delivery all happen after the response. */
-async function deliverRecoveryCode(email: string) {
-  const admin = getSupabaseAdminClient({ requestTimeoutMs: 8000 });
-  const { data, error } = await admin.auth.admin.generateLink({ type: "recovery", email });
-  if (error?.status === 404 || error?.code === "user_not_found") return;
-  if (error || !data?.properties?.email_otp) throw new Error("Recovery generation failed");
-  const otp = data.properties.email_otp;
-  await sendEmail({
-    to: email,
-    subject: "Reset your CiviCheck password",
-    html: renderOtpEmail({
-      preheader: "Use this code to reset your CiviCheck password.",
-      heading: "Reset your password",
-      paragraphs: ["We received a request to reset the password for your CiviCheck account. Enter the code below to continue."],
-      code: otp,
-      noteLines: ["This code expires in 1 hour and can only be used once."],
-      footerNote: "If you did not request a password reset, you can safely ignore this email. Your password stays the same.",
-    }),
-  });
-  await recordIssuedOtp(email, "recovery", otp);
-}
 
 export const forgotPasswordFn = createServerFn({ method: "POST" })
   .validator(forgotPasswordInputSchema)
   .handler(async ({ data }) => {
     const captcha = await verifyInvisibleCaptcha(data["g-recaptcha-response"]);
     if (captcha.error) return captcha;
-    // Fail closed. Check IP first so rotating emails cannot create unbounded
-    // account buckets. Suppressed account sends return the same public result.
     try {
-      const admin = getSupabaseAdminClient({ requestTimeoutMs: 5000 });
-      const ipLimit = await admin.rpc("consume_rate_limit", {
-        p_bucket: bucketKey("otp-send:ip", getClientIp() ?? "unknown"),
-        p_limit: RATE_LIMITS.otpSendPerIp.limit,
-        p_window_seconds: RATE_LIMITS.otpSendPerIp.windowSeconds,
-      });
-      if (ipLimit.error || typeof ipLimit.data !== "boolean") throw new Error("Limiter unavailable");
-      if (!ipLimit.data) return { error: true, message: TOO_MANY_ATTEMPTS };
-      const emailLimit = await admin.rpc("consume_rate_limit", {
-        p_bucket: bucketKey("otp-send:email", data.email),
-        p_limit: RATE_LIMITS.otpSendPerEmail.limit,
-        p_window_seconds: RATE_LIMITS.otpSendPerEmail.windowSeconds,
-      });
-      if (emailLimit.error || typeof emailLimit.data !== "boolean") throw new Error("Limiter unavailable");
-      if (emailLimit.data) await runAuthBackground(deliverRecoveryCode(data.email));
-      return { error: false, message: "If an account exists for this email, a reset code will arrive shortly." };
+      // No lookup or email occurs before CAPTCHA and the atomic send allowance.
+      const reservation = await reserveRecoverySend(data.email);
+      if (reservation.allowed) await runAuthBackground(deliverRecoveryCode(data.email, reservation));
+      else setResponseHeader("Retry-After", String(reservation.retryAfterSeconds));
+      return { error: false, message: RECOVERY_CONFIRMATION,
+        retryAfterSeconds: reservation.retryAfterSeconds };
     } catch {
-      return { error: true, message: "Password reset is temporarily unavailable. Please try again shortly." };
+      return { error: true, message: RECOVERY_UNAVAILABLE };
     }
   });
 
 export const verifyRecoveryOtpFn = createServerFn({ method: "POST" })
-  .validator(otpVerificationSchema)
+  .validator(recoveryVerificationSchema)
   .handler(async ({ data }) => {
-    if (!(await allowCodeCheck("recovery", data.email))) {
+    // No CAPTCHA here. The per-IP gate bounds cross-account guesses; the
+    // challenge RPC enforces five wrong guesses for this particular code.
+    if (!(await allowAttempt("recovery-verify:ip", getClientIp(), RATE_LIMITS.otpVerifyPerIp, true))) {
       return { error: true, message: TOO_MANY_ATTEMPTS };
     }
-
-    const supabase = getSupabaseServerClient();
-    const { error } = await supabase.auth.verifyOtp({
-      email: data.email,
-      token: data.token,
-      type: "recovery",
-    });
-
-    if (error) {
-      if (isRejectedOtpError(error)) {
-        return {
-          error: true,
-          message: await describeRejectedOtp(data.email, "recovery", data.token),
-        };
-      }
-
-      const isJsonEmpty = error.message === "{}" || !error.message;
-      const cleanMessage = isJsonEmpty
-        ? "An unexpected verification error occurred."
-        : error.message;
-      return {
-        error: true,
-        message: cleanMessage,
-      };
-    }
-
-    await clearIssuedOtps(data.email, "recovery");
-    // A verified recovery code opens a session without a password check.
-    await recordSessionForCurrentUser(supabase, "password reset");
-    return { error: false };
+    try { return await verifyRecoveryCode(data.email, data.token); }
+    catch { return { error: true, message: RECOVERY_UNAVAILABLE }; }
   });

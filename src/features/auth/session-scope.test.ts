@@ -48,6 +48,10 @@ describe("persistent sessions (Keep me signed in ticked)", () => {
 });
 
 describe("either way", () => {
+  it.each([true, false])("keeps HttpOnly, Secure and SameSite even when persistence is %s", sessionOnly => {
+    expect(applyCookiePolicy({ httpOnly: false, secure: false, sameSite: "none", maxAge: SUPABASE_DEFAULT_MAX_AGE },
+      { sessionOnly, secure: true })).toMatchObject({ httpOnly: true, secure: true, sameSite: "lax" });
+  });
   it("lets a removal expire", () => {
     for (const sessionOnly of [true, false]) {
       const options = applyCookiePolicy(

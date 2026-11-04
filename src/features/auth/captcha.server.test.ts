@@ -15,7 +15,7 @@ vi.mock("@tanstack/react-start/server", () => ({
   setCookie: (name: string, value: string, options: CookieOptions) => state.cookies.set(name, { value, options }),
   deleteCookie: (name: string) => state.cookies.delete(name),
 }));
-vi.mock("~/utils/supabase", () => ({ getSupabaseAdminClient: () => ({ rpc: state.rpc }) }));
+vi.mock("~/utils/supabase", () => ({ getSupabaseAdminClient: () => ({ rpc: state.rpc }), secureCookiesEnabled: () => true }));
 import { consumeOAuthCaptchaProof, getCaptchaPublicConfig, issueOAuthCaptchaProof, verifyCaptcha } from "./captcha.server";
 import { CAPTCHA_TOKEN_MAX_LENGTH, CAPTCHA_UNAVAILABLE_MESSAGE } from "./captcha";
 

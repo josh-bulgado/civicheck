@@ -20,6 +20,7 @@ declare global {
 
 async function mockServices(page: Page, configured = true) {
   const requests: { name: string; body: string }[] = [];
+  let wrongCodes = 0;
   await page.route("https://www.google.com/recaptcha/api.js**", route => route.fulfill({
     contentType: "application/javascript",
     body: `window.__captcha = { executeCount: 0, resetCount: 0 };
@@ -50,7 +51,13 @@ async function mockServices(page: Page, configured = true) {
       result = { error: true, message: "Invalid email or password", attemptsRemaining: 4 };
     } else if (name.startsWith("forgotPasswordFn")) {
       requests.push({ name: "recovery", body: route.request().postData() ?? "" });
-      result = { error: false, message: "If an account exists, a reset code will arrive shortly." };
+      wrongCodes = 0;
+      result = { error: false, message: "If that email exists, we sent a reset code", retryAfterSeconds: 60 };
+    } else if (name.startsWith("verifyRecoveryOtpFn")) {
+      requests.push({ name: "code-check", body: route.request().postData() ?? "" });
+      wrongCodes++;
+      result = { error: true, codeInvalid: wrongCodes >= 5,
+        message: wrongCodes >= 5 ? "This code is no longer valid. Request a new one." : "That code isn't right. Check the email and try again." };
     } else if (name.startsWith("loginWithOAuthFn")) {
       requests.push({ name: "google", body: route.request().postData() ?? "" });
       result = { error: true, message: "Google test handoff" };
@@ -161,11 +168,13 @@ test("recovery and resend each require a fresh callback token", async ({ page })
   expect(requests).toHaveLength(0);
   await completeCaptcha(page, "recovery-first-token");
   await expect(page.getByText("Check your email", { exact: true })).toBeVisible();
-  await expect(page.getByText("If an account exists for", { exact: false })).toBeVisible();
+  await expect(page.getByRole("paragraph").filter({ hasText: "If that email exists, we sent a reset code" })).toBeVisible();
   expect(requests[0].body).toContain("recovery-first-token");
   // Advance only the resend cooldown; never contact Google or the mail API.
-  for (let second = 0; second < 31; second++) await page.clock.runFor(1000);
-  const resend = page.getByRole("button", { name: "Resend", exact: true });
+  for (let second = 0; second < 59; second++) await page.clock.runFor(1000);
+  await expect(page.getByRole("button", { name: /Resend code in/ })).toBeDisabled();
+  for (let second = 0; second < 2; second++) await page.clock.runFor(1000);
+  const resend = page.getByRole("button", { name: "Resend code", exact: true });
   await expect(resend).toBeEnabled();
   await resend.click();
   expect(requests).toHaveLength(1);
@@ -174,4 +183,55 @@ test("recovery and resend each require a fresh callback token", async ({ page })
   expect(requests[1].body).toContain("recovery-resend-token");
   expect(requests[1].body).not.toContain("recovery-first-token");
   await expect(page.getByText("Check your email", { exact: true })).toBeVisible();
+});
+
+test("wrong reset codes invalidate the code after five guesses without executing CAPTCHA", async ({ page }) => {
+  const requests = await mockServices(page);
+  await page.goto("/forgot-password");
+  await expect(page.getByRole("button", { name: "Send reset code" })).toBeEnabled();
+  await page.getByLabel("Email address", { exact: true }).fill("person@example.test");
+  await page.getByLabel("Email address", { exact: true }).press("Enter");
+  await expect.poll(() => page.evaluate(() => window.__captcha!.executeCount)).toBe(1);
+  await completeCaptcha(page, "reset-request-token");
+  await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
+  const code = page.getByLabel("Verification code", { exact: true });
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    await code.fill("12345678");
+    await page.getByRole("button", { name: "Verify code", exact: true }).click();
+    await expect.poll(() => requests.filter(request => request.name === "code-check").length).toBe(attempt);
+    await expect(page.getByText(attempt === 5 ? "This code is no longer valid. Request a new one." : "That code isn't right. Check the email and try again.", { exact: true }).last()).toBeVisible();
+  }
+  await expect(code).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Verify code", exact: true })).toBeDisabled();
+  expect(await page.evaluate(() => window.__captcha!.executeCount)).toBe(1);
+});
+
+test("Enter, CAPTCHA failure and loading states work on mobile in both themes", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockServices(page);
+  for (const route of ["/login", "/forgot-password"]) {
+    await page.goto(route);
+    const label = route === "/login" ? "Sign in" : "Send reset code";
+    const button = page.getByRole("button", { name: label, exact: true });
+    await expect(button).toBeEnabled();
+    await page.getByLabel("Email address", { exact: true }).fill("person@example.test");
+    if (route === "/login") await page.getByLabel("Password", { exact: true }).fill("WrongPassword1!");
+    const before = (await button.boundingBox())!.width;
+    await page.getByLabel(route === "/login" ? "Password" : "Email address", { exact: true }).press("Enter");
+    const loading = page.locator('button[type="submit"]').first();
+    await expect(loading).toBeDisabled();
+    await expect(loading).toContainText(route === "/login" ? "Signing in" : "Sending");
+    expect((await loading.boundingBox())!.width).toBe(before);
+    await page.evaluate(() => window.__captcha!.fail());
+    await expect(page.getByRole("alert").filter({ hasText: "We couldn't verify you're human. Please try again." })).toBeVisible();
+    await expect(button).toBeEnabled();
+    expect(await page.evaluate(() => window.__captcha!.resetCount)).toBeGreaterThan(0);
+    for (const dark of [false, true]) {
+      await page.evaluate(value => document.documentElement.classList.toggle("dark", value), dark);
+      const notice = page.locator(".recaptcha-notice");
+      await expect(notice).toBeVisible();
+      await expect(notice).toHaveCSS("color", dark ? "rgb(168, 181, 199)" : "rgb(100, 116, 139)");
+      await page.screenshot({ path: `artifacts/${route.slice(1)}-mobile-${dark ? "dark" : "light"}.png`, fullPage: true });
+    }
+  }
 });

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CAPTCHA_LOAD_MESSAGE, CAPTCHA_RETRY_MESSAGE } from "../captcha";
+import { CAPTCHA_LOAD_MESSAGE, INVISIBLE_CAPTCHA_FAILURE_MESSAGE } from "../captcha";
 import { getInvisibleCaptchaConfigFn } from "../captcha.functions";
 import { loadRecaptcha, type RecaptchaApi } from "../components/Captcha";
 
@@ -50,15 +50,15 @@ export function useInvisibleCaptcha() {
           callback: token => {
             const request = pending.current;
             if (!active || !request || request.submitting) return;
-            if (!token) { fail(CAPTCHA_RETRY_MESSAGE); return; }
+            if (!token) { fail(INVISIBLE_CAPTCHA_FAILURE_MESSAGE); return; }
             request.submitting = true;
             clearTimeout(request.timer);
             void request.submit(token).catch(() => {
               if (active) setError("The request failed. Please try again.");
             }).finally(() => { if (active) finish(); });
           },
-          "expired-callback": () => fail(CAPTCHA_RETRY_MESSAGE),
-          "error-callback": () => fail(CAPTCHA_LOAD_MESSAGE),
+          "expired-callback": () => fail(INVISIBLE_CAPTCHA_FAILURE_MESSAGE),
+          "error-callback": () => fail(INVISIBLE_CAPTCHA_FAILURE_MESSAGE),
         });
         widget.current = { api, id };
         setReady(true);
@@ -82,7 +82,7 @@ export function useInvisibleCaptcha() {
     setBusy(true);
     return new Promise(resolve => {
       pending.current = { submit, resolve, submitting: false, timer: setTimeout(() => {
-        setError(CAPTCHA_RETRY_MESSAGE);
+        setError(INVISIBLE_CAPTCHA_FAILURE_MESSAGE);
         finish();
       }, 120000) };
       try { current.api.execute(current.id); }

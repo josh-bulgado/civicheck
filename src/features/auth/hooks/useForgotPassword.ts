@@ -1,6 +1,7 @@
 import { useMutation } from "~/hooks/useMutation"; // Your custom wrapper
 import { forgotPasswordFn } from "../auth.mutations";
 import { toast } from "sonner";
+import { RECOVERY_CONFIRMATION } from "../recovery";
 
 export function useForgotPassword() {
   return useMutation({
@@ -10,7 +11,7 @@ export function useForgotPassword() {
         toast.error("Error", { description: ctx.data.message });
         return;
       }
-      toast.success("If an account exists, a reset code will arrive shortly.");
+      toast.success(RECOVERY_CONFIRMATION);
     },
   });
 }

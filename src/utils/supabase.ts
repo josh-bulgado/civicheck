@@ -19,8 +19,8 @@ import {
 import { getAppUrl } from "./app-url";
 
 /** Auth cookies are only ever sent over HTTPS when the app is served on it. */
-function secureCookiesEnabled() {
-  return getAppUrl().startsWith("https://");
+export function secureCookiesEnabled() {
+  return process.env.NODE_ENV === "production" || process.env.VERCEL === "1" || getAppUrl().startsWith("https://");
 }
 
 /**
@@ -42,6 +42,15 @@ export function setSessionScope(sessionOnly: boolean) {
 /** Forgets the choice once the session it applied to is gone. */
 export function clearSessionScope() {
   deleteCookie(SESSION_SCOPE_COOKIE, { path: "/" });
+}
+
+/** Remove only this project's browser credentials after a completed reset. */
+export function clearSupabaseAuthCookies() {
+  const prefix = `sb-${new URL(process.env.SUPABASE_URL!).hostname.split(".")[0]}-auth-token`;
+  for (const name of Object.keys(getCookies())) {
+    if (name === prefix || name.startsWith(`${prefix}.`)) deleteCookie(name, { path: "/" });
+  }
+  clearSessionScope();
 }
 
 // The scope each server client writes cookies with. It lives beside the client
@@ -106,6 +115,7 @@ export async function limitSessionToBrowser(
 
   setCookie(SESSION_SCOPE_COOKIE, proof, {
     path: "/",
+    httpOnly: true,
     sameSite: "lax",
     secure: secureCookiesEnabled(),
   });

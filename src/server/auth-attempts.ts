@@ -13,6 +13,7 @@ type AuthAttempt = {
 };
 
 const LOCKED_MESSAGE = "Too many attempts. Please wait 15 minutes before trying again.";
+const LOGIN_LOCKED_MESSAGE = "Too many attempts. Please try again in 15 minutes.";
 const UNAVAILABLE_MESSAGE = "We couldn't check your attempts. Please try again shortly.";
 
 /** Read the deadline from the shared counter, never from a browser's count. */
@@ -68,7 +69,7 @@ export async function reserveAuthAttempt(action: AuthAction, email: string): Pro
       });
       if (error || !data || typeof data.allowed !== "boolean" ||
         (data.allowed && typeof data.attemptId !== "string")) throw new Error("Reservation unavailable");
-      return { ...data, message: data.allowed ? undefined : LOCKED_MESSAGE };
+      return { ...data, message: data.allowed ? undefined : LOGIN_LOCKED_MESSAGE };
     } catch {
       return { allowed: false, attemptsRemaining: 0, message: UNAVAILABLE_MESSAGE };
     }
@@ -114,6 +115,7 @@ export async function finishAuthAttempt(attempt: AuthAttempt, success: boolean) 
   if (error || !data || typeof data.attemptsRemaining !== "number") throw new Error("Completion unavailable");
   return { ...attempt, attemptsRemaining: data.attemptsRemaining as number,
     lockedUntil: typeof data.lockedUntil === "number" ? data.lockedUntil : undefined,
+    message: typeof data.lockedUntil === "number" ? LOGIN_LOCKED_MESSAGE : undefined,
     notify: data.notify === true };
 }
 
@@ -121,7 +123,7 @@ export async function finishAuthAttempt(attempt: AuthAttempt, success: boolean) 
 export function authAttemptFailure(attempt: AuthAttempt, message: string) {
   return {
     error: true as const,
-    message: attempt.lockedUntil ? LOCKED_MESSAGE : message,
+    message: attempt.lockedUntil ? attempt.message ?? LOCKED_MESSAGE : message,
     attemptsRemaining: attempt.attemptsRemaining,
     lockedUntil: attempt.lockedUntil,
     captchaRequired: attempt.captchaRequired,

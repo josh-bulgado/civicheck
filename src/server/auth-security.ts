@@ -42,3 +42,11 @@ export async function sendLoginSecurityNotification(email: string) {
     html: "<p>We noticed repeated unsuccessful attempts to sign in to your CiviCheck account.</p><p>Your account has not been locked. If this was not you, consider changing your password using the CiviCheck website.</p><p>Never share your password or verification codes.</p>",
   });
 }
+
+export async function sendPasswordChangedNotification(email: string) {
+  await sendEmail({
+    to: email, subject: "Your CiviCheck password was changed",
+    text: "Your CiviCheck password was changed. If you did not make this change, reset your password immediately using the CiviCheck website and contact support. Never share your password or verification codes.",
+    html: "<p>Your CiviCheck password was changed.</p><p>If you did not make this change, reset your password immediately using the CiviCheck website and contact support. Never share your password or verification codes.</p>",
+  });
+}

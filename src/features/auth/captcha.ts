@@ -1,5 +1,6 @@
 // Bound untrusted input without truncating the longer tokens reCAPTCHA can issue.
 export const CAPTCHA_TOKEN_MAX_LENGTH = 8192;
+export const INVISIBLE_CAPTCHA_FAILURE_MESSAGE = "We couldn't verify you're human. Please try again.";
 
 export const CAPTCHA_REQUIRED_MESSAGE = "Please complete the security verification to continue.";
 export const CAPTCHA_RETRY_MESSAGE = "Verification expired or failed. Please verify again.";

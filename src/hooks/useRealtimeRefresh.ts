@@ -146,11 +146,10 @@ export function useRealtimeRefresh({
       client = await getSupabaseBrowserClient();
       if (cancelled) return;
 
-      // Realtime authorises the socket with the access token, not the cookie.
-      // Setting it before subscribing avoids racing the client's own restore.
-      const { data } = await client.auth.getSession();
+      // The SDK's accessToken callback obtains a verified token from the
+      // server; browser JavaScript never reads the HttpOnly session cookies.
+      await client.realtime.setAuth();
       if (cancelled) return;
-      if (data.session) client.realtime.setAuth(data.session.access_token);
 
       channelSequence += 1;
       let pending = client.channel(`civicheck-${schema}-${channelSequence}`);
