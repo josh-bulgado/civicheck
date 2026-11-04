@@ -1,12 +1,7 @@
 import * as React from "react";
 import { Camera, Trash2, Upload } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
+import { Button } from "~/components/ui/button";
 import { Spinner } from "~/components/ui/spinner";
 import { AVATAR_ACCEPT } from "~/lib/avatar-image";
 import {
@@ -14,23 +9,32 @@ import {
   getInitials,
   type AccountProfile,
 } from "../account.types";
-import { useAvatar } from "../hooks/useAvatar";
 
 // A 32px badge with a hit area stretched to 44px, the touch minimum.
 const badgeClassName =
   "civic-press absolute right-[-4px] bottom-[-4px] flex size-8 items-center justify-center rounded-full border border-(--settings-line) bg-card text-primary shadow-[0_2px_6px_rgba(15,27,45,0.16)] outline-none after:absolute after:-inset-1.5 after:content-[''] focus-visible:ring-4 focus-visible:ring-primary/20 disabled:opacity-60";
 
 /**
- * The photo at the top of the Profile tab. The camera badge on the avatar adds
- * a photo, or opens a menu to change or remove the one that is there. Unlike
- * the fields below it, a change is saved the moment it is made, so it has no
- * part in Save and Cancel.
+ * The photo at the top of the Profile tab, with visible controls to change or
+ * remove the current preview. The profile form owns the pending change and
+ * saves it with Save changes.
  */
-export function SettingsAvatar({ account }: { account: AccountProfile }) {
-  const { pending, upload, remove } = useAvatar(account.id);
+export function SettingsAvatar({
+  account,
+  avatarUrl,
+  pending,
+  onSelect,
+  onRemove,
+}: {
+  account: AccountProfile;
+  avatarUrl: string | null;
+  pending: boolean;
+  onSelect: (file: File) => void;
+  onRemove: () => void;
+}) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const name = getDisplayName(account);
-  const hasPhoto = Boolean(account.avatarUrl);
+  const hasPhoto = Boolean(avatarUrl);
 
   const choosePhoto = () => inputRef.current?.click();
 
@@ -38,7 +42,7 @@ export function SettingsAvatar({ account }: { account: AccountProfile }) {
     const file = event.target.files?.[0];
     // Cleared so choosing the same file again still fires a change.
     event.target.value = "";
-    if (file) void upload(file);
+    if (file) onSelect(file);
   }
 
   const cameraIcon = <Camera className="size-4" aria-hidden="true" />;
@@ -47,8 +51,8 @@ export function SettingsAvatar({ account }: { account: AccountProfile }) {
     <div className="flex items-center gap-4 pt-3">
       <div className="relative size-18 shrink-0">
         <Avatar className="size-18">
-          {account.avatarUrl ? (
-            <AvatarImage src={account.avatarUrl} alt={`${name}'s photo`} />
+          {avatarUrl ? (
+            <AvatarImage src={avatarUrl} alt={`${name}'s photo`} />
           ) : null}
           <AvatarFallback className="bg-primary-soft text-2xl font-bold text-primary">
             {getInitials(name)}
@@ -65,50 +69,15 @@ export function SettingsAvatar({ account }: { account: AccountProfile }) {
           </span>
         ) : null}
 
-        {hasPhoto ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              nativeButton
-              disabled={pending}
-              aria-label="Change profile photo"
-              className={badgeClassName}
-            >
-              {cameraIcon}
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              side="bottom"
-              align="start"
-              sideOffset={8}
-              className="w-52 rounded-[16px] bg-card p-1.5 shadow-portal-menu ring-0"
-            >
-              <DropdownMenuItem
-                onClick={choosePhoto}
-                className="h-11 gap-2.5 rounded-[12px] px-3 text-sm font-medium focus:bg-portal-panel"
-              >
-                <Upload className="size-4.5" aria-hidden="true" />
-                Upload new photo
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => void remove()}
-                className="h-11 gap-2.5 rounded-[12px] px-3 text-sm font-medium"
-              >
-                <Trash2 className="size-4.5" aria-hidden="true" />
-                Remove photo
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <button
-            type="button"
-            disabled={pending}
-            onClick={choosePhoto}
-            aria-label="Add profile photo"
-            className={badgeClassName}
-          >
-            {cameraIcon}
-          </button>
-        )}
+        <button
+          type="button"
+          disabled={pending}
+          onClick={choosePhoto}
+          aria-label={hasPhoto ? "Change profile photo" : "Add profile photo"}
+          className={badgeClassName}
+        >
+          {cameraIcon}
+        </button>
       </div>
 
       {/* The sidebar already names the person from `md`, so there the text
@@ -126,6 +95,35 @@ export function SettingsAvatar({ account }: { account: AccountProfile }) {
         <p className="hidden text-[13px] leading-[18px] text-body-2 md:block">
           JPG, PNG or WebP. It is cropped to a square.
         </p>
+        <p className="text-[13px] leading-[18px] text-body-2">
+          Click Save changes to apply your photo.
+        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="touch"
+            disabled={pending}
+            onClick={choosePhoto}
+            className="border-(--settings-line) bg-card text-sm shadow-none"
+          >
+            <Upload className="size-4" aria-hidden="true" />
+            {hasPhoto ? "Change photo" : "Upload photo"}
+          </Button>
+          {hasPhoto ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="touch"
+              disabled={pending}
+              onClick={onRemove}
+              className="text-sm text-destructive hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 className="size-4" aria-hidden="true" />
+              Remove photo
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       <input

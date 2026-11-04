@@ -64,6 +64,7 @@ function Photo({ src }: { src: string }) {
     <img
       src={src}
       alt=""
+      draggable={false}
       decoding="async"
       onError={() => {
         missingPhotos.add(src);

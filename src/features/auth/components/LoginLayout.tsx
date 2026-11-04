@@ -20,6 +20,7 @@ export function LoginLayout({ children }: { children: ReactNode }) {
               width={660}
               height={495}
               alt=""
+              draggable={false}
               decoding="async"
             />
           </div>

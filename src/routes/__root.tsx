@@ -200,6 +200,20 @@ function RootComponent() {
   );
 }
 
+function preventUnintendedDrag(event: React.DragEvent<HTMLBodyElement>) {
+  const target = event.target;
+  if (
+    target instanceof Element &&
+    (target.closest('input, textarea, [draggable="true"]') ||
+      (target instanceof HTMLElement && target.isContentEditable))
+  ) {
+    return;
+  }
+
+  // Covers images, avatars and links, including content rendered in portals.
+  event.preventDefault();
+}
+
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     // The `dark` class on <html> is owned by ThemeScope below, for every page.
@@ -207,7 +221,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body suppressHydrationWarning>
+      <body suppressHydrationWarning onDragStart={preventUnintendedDrag}>
         <ThemeScope />
         <TooltipProvider>{children}</TooltipProvider>
         <OfflineBanner />

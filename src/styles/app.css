@@ -45,6 +45,40 @@
   body {
     @apply bg-background text-foreground;
     min-width: 320px;
+    cursor: default;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Keep text selection available where users enter or edit a value. */
+  input,
+  textarea,
+  [contenteditable=""],
+  [contenteditable="true"],
+  [contenteditable="plaintext-only"] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  textarea,
+  [contenteditable=""],
+  [contenteditable="true"],
+  [contenteditable="plaintext-only"] {
+    cursor: text;
+  }
+
+  /* Images and links are clicked, unless dragging is explicitly enabled. */
+  img:not([draggable="true"]),
+  a[href]:not([draggable="true"]) {
+    -webkit-user-drag: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Decorative images let pointer input pass through to the actual controls. */
+  img[alt=""],
+  img[aria-hidden="true"] {
+    pointer-events: none;
   }
 
   button:not(:disabled),
@@ -1080,6 +1114,8 @@
     inset: 0 0 20cqw 0;
     display: grid;
     place-items: center;
+    pointer-events: none;
+    user-select: none;
   }
 
   .docket-group {
