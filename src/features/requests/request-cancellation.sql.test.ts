@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { canCancelCtcBirthRequest } from "./request-cancellation";
+import { canCancelCtcRequest } from "./request-cancellation";
 import { nextStatuses, TERMINAL_STATUSES } from "./request-workflow";
 import { isClosedRequestStatus } from "./document-review";
 import { requestTurn } from "./requests-table.utils";
@@ -40,6 +40,8 @@ beforeAll(async () => {
     create trigger attachment_guard before update on requirements_attachments for each row execute function guard_attachment_review_fields();
   `);
   await db.exec(read("20261104115804_ctc_birth_request_cancellation.sql"));
+  const extension = read("20261104145753_shared_upload_history_and_ctc_cancellation.sql");
+  await db.exec(extension.slice(extension.indexOf("-- Extend the existing cancellation guard")));
 }, 30000);
 afterAll(() => db.close());
 beforeEach(async () => {
@@ -49,7 +51,7 @@ beforeEach(async () => {
     set role service_role;`);
 });
 
-describe("CTC birth cancellation", () => {
+describe("CTC cancellation", () => {
   it("keeps the request, tracking number and uploads, and records who cancelled it", async () => {
     expect((await cancel()).rows[0].cancelled).toBe(true);
     expect((await db.query("select status, tracking_number from requests")).rows[0]).toEqual({ status: "cancelled", tracking_number: "OLD-TRACKING" });
@@ -66,9 +68,22 @@ describe("CTC birth cancellation", () => {
     await db.query("update requests set status=$1", [status]);
     expect((await cancel()).rows[0].cancelled).toBe(false);
   });
-  it.each([['CTC-LOCAL', 'marriage'], ['CTC-ABROAD', 'death'], ['EMAIL_INQUIRY', 'birth']])("refuses %s %s requests", async (service, record) => {
+  it.each([['CTC-LOCAL', 'other'], ['CTC-ABROAD', ''], ['EMAIL_INQUIRY', 'birth']])("refuses %s %s requests", async (service, record) => {
     await db.query("update requests set request_type=$1, form_data=jsonb_build_object('record_type', $2::text)", [service, record]);
     expect((await cancel()).rows[0].cancelled).toBe(false);
+  });
+  it.each(["CTC-LOCAL", "CTC-ABROAD", "CTC_ISSUANCE"])("allows birth, marriage and death cancellation for %s", async (service) => {
+    for (const record of ["birth", "marriage", "death"]) {
+      await db.exec("reset role; alter table requests disable trigger workflow;");
+      await db.query("update requests set status='submitted', request_type=$1, form_data=jsonb_build_object('record_type', $2::text)", [service, record]);
+      await db.exec("alter table requests enable trigger workflow; set role service_role;");
+      expect(canCancelCtcRequest("submitted", service, { record_type: record })).toBe(true);
+      expect((await cancel()).rows[0].cancelled).toBe(true);
+    }
+  });
+  it("blocks direct cancellation of unsupported record types", async () => {
+    await db.exec("update requests set form_data='{}'");
+    await expect(db.exec("update requests set status='cancelled'")).rejects.toThrow("Only a submitted CTC");
   });
   it("saves cancellation and history together", async () => {
     await db.exec("reset role; alter table application_logs add constraint reject_log check (action_status <> 'cancelled'); set role service_role;");
@@ -90,7 +105,7 @@ describe("CTC birth cancellation", () => {
     expect(TERMINAL_STATUSES).toContain("cancelled");
     expect(isClosedRequestStatus("cancelled")).toBe(true);
     expect(requestTurn({ status: "cancelled", paymentStatus: "unpaid" })).toBe("none");
-    expect(canCancelCtcBirthRequest("submitted", "CTC-LOCAL", { record_type: "birth" })).toBe(true);
-    expect(canCancelCtcBirthRequest("under_validation", "CTC-LOCAL", { record_type: "birth" })).toBe(false);
+    expect(canCancelCtcRequest("submitted", "CTC-LOCAL", { record_type: "birth" })).toBe(true);
+    expect(canCancelCtcRequest("under_validation", "CTC-LOCAL", { record_type: "birth" })).toBe(false);
   });
 });
