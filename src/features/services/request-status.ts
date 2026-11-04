@@ -63,7 +63,7 @@ const APPLICANT_NOTES: Record<string, string> = {
   incomplete:
     "Some requirements are missing or need correction. Please check the details and submit what's needed.",
   rejected: "Your request could not be accepted.",
-  processing: "Your requirements are complete. Staff are preparing your record.",
+  processing: "Bring your original documents and hard copies of your requirements to CCRO for final validation.",
   ready_for_release: "Your document is ready. Pay at the CCRO cashier and claim it.",
   released: "Payment verified and your document has been released.",
   // Retired stage — only old audit-log entries still carry it.

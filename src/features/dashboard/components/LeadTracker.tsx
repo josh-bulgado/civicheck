@@ -45,13 +45,11 @@ export function LeadTracker({
         const here = stage === hereStage;
 
         return (
-          // The first three share the width and the last is only as wide as its
-          // own text, so Release ends at the right edge with the lines between
-          // the stages as long as they can be.
+          // Keep each caption and tag inside its stage column.
           <li
             key={stage}
             aria-current={here ? "step" : undefined}
-            className={cn("min-w-0", stage < 4 ? "flex-1 pr-2 md:pr-3" : "shrink-0")}
+            className="min-w-0 flex-1 pr-2 md:pr-3"
           >
             <div className="flex items-center">
               <span
@@ -100,16 +98,12 @@ export function LeadTracker({
               </span>
             </p>
             {captions[stage] || (here && tag) ? (
-              // Release is only as wide as its label, so the lines before it
-              // stay as long as they can. Its caption and tag are wider than
-              // that, so they hang off the label's right edge in a box that
-              // takes no width, and the caption wraps at a fixed width.
-              <div className={cn("hidden md:block", stage === 4 && "w-0")}>
+              <div className="hidden min-w-0 md:block">
                 {captions[stage] ? (
                   <p
                     className={cn(
                       "mt-0.5 leading-[normal] text-muted-foreground md:text-[clamp(0.875rem,2vh,1.1875rem)]",
-                      stage === 4 && "w-max max-w-[16rem]",
+                      "break-words",
                     )}
                   >
                     {captions[stage]}
@@ -118,7 +112,7 @@ export function LeadTracker({
                 {here && tag ? (
                   <span
                     className={cn(
-                      "inline-flex items-center rounded-full font-semibold whitespace-nowrap md:mt-[clamp(0.375rem,1vh,0.625rem)] md:h-[clamp(1.5rem,3.2vh,2rem)] md:px-[clamp(0.75rem,1.6vh,1rem)] md:text-[clamp(0.75rem,1.6vh,0.9375rem)]",
+                      "inline-flex max-w-full items-center rounded-full py-1 font-semibold whitespace-normal break-words md:mt-[clamp(0.375rem,1vh,0.625rem)] md:min-h-[clamp(1.5rem,3.2vh,2rem)] md:px-[clamp(0.75rem,1.6vh,1rem)] md:text-[clamp(0.75rem,1.6vh,0.9375rem)]",
                       tag.tone === "action"
                         ? "bg-portal-danger-soft text-destructive"
                         : "bg-card/75 text-primary-hover",

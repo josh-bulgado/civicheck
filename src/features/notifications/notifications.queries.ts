@@ -50,6 +50,7 @@ export interface NotificationRow {
    * request by tracking number.
    */
   serviceName: string | null;
+  serviceCode?: string | null;
   target: NotificationTarget;
 }
 
@@ -127,6 +128,7 @@ function toApplicantRow(row: ApplicantFeedRow): NotificationRow {
     archivedAt: row.archived_at,
     subject: row.subject,
     body: toFeedBody(row.body),
+    serviceCode: request?.request_type ?? null,
     status: row.status,
     isRead: row.is_read,
     sentAt: row.sent_at,

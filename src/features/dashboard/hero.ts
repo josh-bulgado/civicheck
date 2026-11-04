@@ -293,23 +293,23 @@ function owesPayment(request: CitizenDashboardRequest): boolean {
   return Number(request.fees_due ?? 0) > 0 && request.payment_status !== "verified";
 }
 
-// Release repeats the physical check: documents are screened online, but the
-// originals still go across the counter. Money is mentioned only when a fee is
-// owed, so the applicant knows to bring it; a free or already paid request says
-// nothing about payment.
+// Originals are checked during Processing; release covers payment and collection.
 function trackerNote(request: CitizenDashboardRequest): string | null {
+  if (request.status === "ready_for_release" && request.request_type === "EMAIL_INQUIRY") {
+    return "Read CCRO's reply in the messages";
+  }
   if (request.status === "incomplete") return "One more document needed";
   if (request.status === "ready_for_release") {
     return owesPayment(request)
-      ? `Bring your original documents and ${formatPesoFee(request.fees_due)} to pay at the CCRO counter`
-      : "Bring your original documents to the CCRO counter";
+      ? `Bring ${formatPesoFee(request.fees_due)} to pay at the CCRO cashier to claim your document`
+      : "Claim your document at the CCRO cashier";
   }
   return getLogNote(request.status, null, "applicant", Number(request.fees_due ?? 0));
 }
 
 function trackerTag(request: CitizenDashboardRequest): TrackerDetails["tag"] {
   if (request.status === "incomplete") return { label: "Action needed", tone: "action" };
-  if (request.status === "ready_for_release" && owesPayment(request)) {
+  if (request.status === "ready_for_release" && request.request_type !== "EMAIL_INQUIRY" && owesPayment(request)) {
     return { label: "Pay at cashier", tone: "info" };
   }
   return null;

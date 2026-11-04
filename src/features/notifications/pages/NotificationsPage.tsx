@@ -69,7 +69,7 @@ interface NotificationsPageProps {
 
 /**
  * One notification: the service it is about, what happened, and when. Unread
- * ones also carry their one line of detail. The whole row opens the request;
+ * and read ones both carry their instructions. The whole row opens the request;
  * archiving lives in a menu that takes the place of the time on hover, and
  * sits beside it where there is no hover.
  */
@@ -82,7 +82,7 @@ function PortalNotificationRow({
   const [menuOpen, setMenuOpen] = useState(false);
   const { icon: TypeIcon, unreadClass } = TYPE_STYLE[notification.type] ?? TYPE_STYLE.status_change;
   const unread = !notification.isRead;
-  const detail = unread ? feedDetail(notification) : null;
+  const detail = feedDetail(notification);
 
   return (
     <div
