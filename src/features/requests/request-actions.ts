@@ -225,7 +225,7 @@ export function describeRequestProgress(input: RequestActionInput): string {
         : "Waiting for the applicant to upload what was missing.";
     case "processing":
       return needsMarriagePosting(input.serviceCode)
-        ? marriagePostingMessage(input.postingStartDate, input.today)
+        ? marriagePostingMessage(input.postingStartDate, input.today, input.serviceCode)
         : "Prepare the record, then mark it ready for release.";
     case "ready_for_release":
       if (!isPaymentSettled(input.paymentStatus)) {

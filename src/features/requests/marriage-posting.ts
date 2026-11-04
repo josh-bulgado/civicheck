@@ -1,7 +1,7 @@
 import { diffInDays, formatDateKey, fromDateKey, OFFICE_TIME_ZONE } from "~/lib/date";
 
 export function needsMarriagePosting(serviceCode?: string | null) {
-  return serviceCode?.toUpperCase() === "MARRIAGE_DELAYED";
+  return ["MARRIAGE_DELAYED", "DEATH_DELAYED", "MARRIAGE_LICENSE"].includes(serviceCode?.toUpperCase() ?? "");
 }
 
 export function postingToday(now = new Date()) {
@@ -26,11 +26,13 @@ export function marriagePostingBlockedReason(start?: string | null, today = post
   return undefined;
 }
 
-export function marriagePostingMessage(start?: string | null, today = postingToday()) {
+export function marriagePostingMessage(start?: string | null, today = postingToday(), serviceCode?: string | null) {
   const end = marriagePostingEnd(start);
   if (!end) return "Waiting for staff to record the actual notice-posting date.";
   const remaining = Math.max(0, diffInDays(today, end));
   return remaining > 0
     ? `${remaining} calendar ${remaining === 1 ? "day" : "days"} remaining in the posting period.`
-    : "Posting period complete. Staff must finish registration and signing before release.";
+    : serviceCode?.toUpperCase() === "MARRIAGE_LICENSE"
+      ? "Posting period complete. Staff must confirm all marriage-license requirements before issuance."
+      : "Posting period complete. Staff must finish registration and signing before release.";
 }
