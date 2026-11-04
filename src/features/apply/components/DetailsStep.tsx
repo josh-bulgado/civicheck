@@ -367,7 +367,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   const useSpouseLabels =
     selectedService.service_code === "MARRIAGE_ONTIME" ||
     selectedService.service_code === "MARRIAGE_DELAYED";
-  const requireMiddleName = personGroupField?.requireMiddleName === true;
+  const requireMiddleName = true;
   const roles = selectedService?.party_roles?.length
     ? selectedService.party_roles
     : ["Subject"];
