@@ -91,6 +91,8 @@ function DocumentName({ document }: { document: NonNullable<HistoryEvent["docume
 function sentence(event: HistoryEvent): ReactNode {
   const actor = <Actor name={event.actor} strong={event.important} />;
 
+  if (event.status === "posting_updated") return <>{actor} updated the notice-posting date</>;
+
   if (event.kind === "status") {
     const status = getStatusDetails(event.status);
     return (

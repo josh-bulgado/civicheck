@@ -78,6 +78,52 @@ describe("CTC Local address migration", () => {
     expect(versions.rows[0].definition).toEqual(original);
   });
 
+  it("reuses local fields for email inquiry without requiring an origin answer", async () => {
+    const emailMigration = readFileSync(new URL("../../supabase/migrations/20261104000915_email_inquiry_local_address.sql", import.meta.url), "utf8");
+    const emailOriginal = {
+      schemaVersion: 1,
+      sections: [{ key: "requester", step: "details", title: "Requester", fields: [
+        { key: "subjects", type: "person_group", label: "Owner", required: false },
+        { key: "requester_first_name", type: "text", label: "First name", required: true },
+        { key: "requester_address", type: "text", label: "Address", required: true },
+      ] }],
+    };
+    await db.exec(`
+      create table service_form_templates (service_code text, template_id uuid);
+      insert into form_templates (template_key) values ('email_inquiry');
+      insert into service_form_templates select 'EMAIL_INQUIRY', id from form_templates where template_key = 'email_inquiry';
+    `);
+    await db.query(`insert into form_template_versions(template_id, version, definition)
+      select id, 1, $1::jsonb from form_templates where template_key = 'email_inquiry'`, [JSON.stringify(emailOriginal)]);
+    await db.exec(`update form_templates t set active_version_id = v.id
+      from form_template_versions v where v.template_id = t.id and t.template_key = 'email_inquiry'`);
+    const ctcBefore = await db.query("select active_version_id from form_templates where template_key = 'ctc_issuance'");
+    await db.exec(emailMigration);
+    const result = await db.query<{ definition: unknown }>(`select v.definition from form_templates t
+      join form_template_versions v on v.id = t.active_version_id where t.template_key = 'email_inquiry'`);
+    const email = formTemplateDefinitionSchema.parse(result.rows[0].definition);
+    expect(email.sections[0].fields.map((field) => field.key)).toEqual([
+      "subjects", "requester_first_name", "requester_province", "requester_city", "requester_barangay", "requester_street",
+    ]);
+    const answers = { subjects: [], requester_first_name: "Juan", requester_province: "Albay",
+      requester_city: "City of Legazpi", requester_barangay: "Rawis" };
+    expect(validateTemplateAnswers(email, answers)).toEqual({ success: true });
+    for (const key of ["requester_province", "requester_city", "requester_barangay"]) {
+      expect(validateTemplateAnswers(email, { ...answers, [key]: "" }).success).toBe(false);
+    }
+    expect(validateTemplateAnswers(email, { ...answers, requester_city: "City of Manila" }).success).toBe(false);
+    const cleaned = canonicalizeTemplateAnswers(email, { ...answers, requester_address: "Old address" });
+    expect(cleaned).not.toHaveProperty("requester_address");
+    expect(formatRequesterAddress(cleaned)).toBe("Rawis, Legazpi City, Albay");
+    await db.exec(emailMigration);
+    const versions = await db.query<{ definition: unknown }>(`select v.definition from form_template_versions v
+      join form_templates t on t.id = v.template_id where t.template_key = 'email_inquiry' order by v.version`);
+    expect(versions.rows).toHaveLength(2);
+    expect(versions.rows[0].definition).toEqual(emailOriginal);
+    expect(await db.query("select active_version_id from form_templates where template_key = 'ctc_issuance'"))
+      .toEqual(ctcBefore);
+  });
+
   it("upgrades Abroad, preserves Local, and prunes the other branch's address", async () => {
     const abroadMigration = readFileSync(new URL("../../supabase/migrations/20261101002733_ctc_abroad_structured_address.sql", import.meta.url), "utf8");
     const isolated = new PGlite();

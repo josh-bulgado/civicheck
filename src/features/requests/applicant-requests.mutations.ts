@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { attachmentVersionSchema, parsePreviousUploads } from "./previous-uploads";
 import { isClosedRequestStatus } from "~/features/requests/document-review";
 import { loadAddableUploads } from "~/features/requests/missing-uploads.server";
 import { requirementUploadKey } from "~/features/services/requirement-upload.utils";
@@ -12,13 +13,13 @@ const uuidSchema = z.string().uuid();
 
 /** Signed file URL for an applicant viewing their own uploaded document. */
 export const getMyAttachmentSignedUrlFn = createServerFn({ method: "GET" })
-  .validator((d: { attachmentId: string }) => d)
+  .validator(attachmentVersionSchema)
   .handler(async ({ data }) => {
     const { supabase, user } = await requireActiveSession("requests:view_own");
 
     const { data: attachment, error: fetchError } = await supabase
       .from("requirements_attachments")
-      .select("id, file_url, requests!inner(applicant_id)")
+      .select("id, file_url, previous_uploads, requests!inner(applicant_id)")
       .eq("id", data.attachmentId)
       .eq("requests.applicant_id", user.id)
       .maybeSingle();
@@ -27,9 +28,14 @@ export const getMyAttachmentSignedUrlFn = createServerFn({ method: "GET" })
       return { error: true, message: "That document no longer exists." };
     }
 
+    const fileUrl = data.previousIndex === undefined
+      ? attachment.file_url
+      : parsePreviousUploads(attachment.previous_uploads)[data.previousIndex]?.fileUrl;
+    if (!fileUrl) return { error: true, message: "That version no longer exists." };
+
     const { data: signed, error: signError } = await supabase.storage
       .from("request-documents")
-      .createSignedUrl(attachment.file_url, 300);
+      .createSignedUrl(fileUrl, 300);
 
     if (signError || !signed) {
       return { error: true, message: "Could not generate a link for this file." };
@@ -105,7 +111,8 @@ export const resubmitOwnAttachmentFn = createServerFn({ method: "POST" })
       })
       .eq("id", attachment.id)
       .eq("verification_status", "rejected")
-      .select("id");
+      .eq("file_url", attachment.file_url)
+      .select("id, previous_uploads");
     if (updateError || !updated?.length) {
       await admin.storage.from("request-documents").remove([path]);
       return {
@@ -114,8 +121,11 @@ export const resubmitOwnAttachmentFn = createServerFn({ method: "POST" })
       };
     }
 
+    // Death requests retain rejected files in the history saved by the trigger.
+    const retained = parsePreviousUploads(updated[0].previous_uploads)
+      .some((version) => version.fileUrl === attachment.file_url);
     // The service role can delete any file, so only ever the applicant's own.
-    if (attachment.file_url !== path && attachment.file_url.startsWith(`${user.id}/`)) {
+    if (!retained && attachment.file_url !== path && attachment.file_url.startsWith(`${user.id}/`)) {
       const { error: oldFileError } = await admin.storage
         .from("request-documents")
         .remove([attachment.file_url]);

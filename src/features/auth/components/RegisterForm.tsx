@@ -1,8 +1,8 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "@tanstack/react-router";
 import { QuietLink as Link } from "~/components/quiet-link";
-import { AlertCircleIcon, Lock, Mail } from "lucide-react";
-import { useState } from "react";
+import { AlertCircleIcon, ArrowLeft } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import z from "zod";
 import {
@@ -10,12 +10,10 @@ import {
   FieldDescription,
   FieldError,
   FieldLabel,
+  FieldLegend,
+  FieldSet,
 } from "~/components/ui/field";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "~/components/ui/input-group";
+import { InputGroup, InputGroupInput } from "~/components/ui/input-group";
 import { Input } from "~/components/ui/input";
 import { Checkbox } from "~/components/ui/checkbox";
 import {
@@ -30,11 +28,14 @@ import { NO_SUFFIX, SUFFIXES } from "~/lib/subject-fields";
 import { LegalDialogLink } from "~/features/legal/components/LegalDialogLink";
 import {
   checkMiddleNameAnswer,
-  PASSWORD_HINT,
+  PASSWORD_MIN,
   signupFieldsSchema,
 } from "../auth.schema";
 import { useSignUp } from "../hooks/useSignUp";
 import { useOAuthLogin } from "../hooks/useOAuthLogin";
+import { useAuthLockout } from "../hooks/useAuthLockout";
+import { useCaptcha } from "../hooks/useCaptcha";
+import { Captcha } from "./Captcha";
 import {
   setPendingVerification,
   type PendingSignup,
@@ -42,18 +43,17 @@ import {
 import { Spinner } from "~/components/ui/spinner";
 import { Button } from "~/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { AuthProgressPanel } from "./AuthSidePanel";
 import {
-  authLabelClass,
   authLinkClass,
   AuthFormDivider,
   AuthFormFooter,
-  AuthFormHeading,
-  AuthSplitLayout,
 } from "./AuthSplitLayout";
-import { RequiredMark } from "~/components/ui/required-mark";
+import { CiviCheckIdentity } from "~/components/brand/civic-identity";
+import { ThemeSwitch } from "~/components/theme-switch";
 import { GoogleIcon } from "./GoogleIcon";
 import { PasswordToggle } from "./PasswordToggle";
+import type { SignupErrorField } from "../signup-error";
+import "../register.css";
 
 // The field rules live in auth.schema.ts so the server enforces exactly what
 // this form shows; only the consent checkbox belongs to the form alone.
@@ -67,20 +67,47 @@ const formSchema = signupFieldsSchema
 
 type FormValues = z.infer<typeof formSchema>;
 
-/** Empty fields should not leave blank validation rows in the form. */
-function SignupFieldError({ error }: { error?: { message?: string } }) {
-  return <FieldError errors={[error]} className="text-[13px] leading-5" />;
+/** Skipped fields use the outline; their explanation stays available to readers. */
+function SignupFieldError({
+  error,
+  empty = false,
+  id,
+}: {
+  error?: { message?: string };
+  empty?: boolean;
+  id?: string;
+}) {
+  return (
+    <FieldError
+      id={id}
+      errors={[error]}
+      className={empty ? "sr-only" : "text-[13px] leading-5"}
+    />
+  );
 }
 
 const RegisterForm = () => {
   const navigate = useNavigate();
   const signupMutation = useSignUp();
   const oauthLoginMutation = useOAuthLogin();
+  const lockout = useAuthLockout();
+  const captcha = useCaptcha(true);
   const [showPassword, setShowPassword] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"email" | "google" | null>(
+    null,
+  );
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const requestInFlight = useRef(false);
+  const errorRef = useRef<HTMLDivElement>(null);
+  const serverErrorField = useRef<SignupErrorField | null>(null);
+  const isBusy = pendingAction !== null;
+  const expiredLockoutError = lockout.hasExpired &&
+    [signupMutation.data, oauthLoginMutation.data].some(result => result &&
+      "lockedUntil" in result && result.lockedUntil && submissionError === result.message);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    mode: "onBlur",
+    mode: "onTouched",
     defaultValues: {
       firstName: "",
       lastName: "",
@@ -93,15 +120,41 @@ const RegisterForm = () => {
     },
   });
 
-  // Sign up stays disabled until every rule in the schema passes, including the
-  // terms checkbox. This reads the schema against the live values rather than
-  // `formState.isValid`: with `mode: "onBlur"` that flag only refreshes on
-  // blur, so ticking a checkbox would leave the button stale until focus moved
-  // away.
-  const isComplete = formSchema.safeParse(form.watch()).success;
+  const hasInlineSubmissionError =
+    [form.formState.errors.email, form.formState.errors.password].some(
+      error => error?.type === "server" && error.message === submissionError,
+    );
+  const visibleSubmissionError = lockout.message ??
+    (expiredLockoutError || hasInlineSubmissionError ? null : submissionError);
+
   const hasNoMiddleName = form.watch("hasNoMiddleName");
+  const isPasswordValid =
+    signupFieldsSchema.shape.password.safeParse(form.watch("password"))
+      .success && form.formState.errors.password?.type !== "server";
+
+  useEffect(() => {
+    if (!submissionError) return;
+    if (serverErrorField.current) {
+      form.setFocus(serverErrorField.current);
+    } else {
+      errorRef.current?.focus();
+    }
+  }, [submissionError, form]);
+
+  function clearSubmissionError(field?: SignupErrorField) {
+    if (field && serverErrorField.current !== field) return;
+    if (serverErrorField.current) form.clearErrors(serverErrorField.current);
+    serverErrorField.current = null;
+    setSubmissionError(null);
+  }
 
   async function onSubmit(data: FormValues) {
+    if (requestInFlight.current || lockout.isLocked) return;
+    if (!captcha.token) { captcha.requireVerification(); return; }
+    requestInFlight.current = true;
+    setPendingAction("email");
+    clearSubmissionError();
+
     const signup: PendingSignup = {
       email: data.email,
       password: data.password,
@@ -111,9 +164,23 @@ const RegisterForm = () => {
       hasNoMiddleName: data.hasNoMiddleName,
       suffix: data.suffix.trim(),
     };
-    const result = await signupMutation.mutate({ data: signup });
+    try {
+      const result = await signupMutation.mutate({ data: { ...signup, captchaToken: captcha.token } });
+      lockout.recordResult(result);
+      captcha.recordResult(result);
+      if (!result || result.error) {
+        if (result && "captchaError" in result && result.captchaError) return;
+        const message =
+          result?.message ||
+          "We couldn't create your account. Check your connection and try again.";
+        if (result && "field" in result && result.field) {
+          serverErrorField.current = result.field;
+          form.setError(result.field, { type: "server", message });
+        }
+        setSubmissionError(message);
+        return;
+      }
 
-    if (result && !result.error) {
       // The code-entry step is its own page; this form goes with the navigation,
       // so there is nothing to reset here.
       setPendingVerification({
@@ -122,284 +189,443 @@ const RegisterForm = () => {
         signup,
       });
       await navigate({ to: "/verify-email" });
+    } catch {
+      setSubmissionError("We couldn't complete signup. Please try again.");
+    } finally {
+      requestInFlight.current = false;
+      setPendingAction(null);
+    }
+  }
+
+  async function onGoogleSignup() {
+    if (requestInFlight.current || lockout.isLocked) return;
+    if (!captcha.token) { captcha.requireVerification(); return; }
+    requestInFlight.current = true;
+    clearSubmissionError();
+    let redirecting = false;
+
+    try {
+      if (!(await form.trigger("agreeToTerms", { shouldFocus: true }))) return;
+      setPendingAction("google");
+      const email = form.getValues("email");
+      const result = await oauthLoginMutation.mutate({
+        provider: "google",
+        email: z.string().email().safeParse(email).success ? email : undefined,
+        captchaToken: captcha.token,
+      });
+      lockout.recordResult(result);
+      captcha.recordResult(result);
+      if (!result || result.error || !result.url) {
+        if (result?.captchaError) return;
+        setSubmissionError(
+          result?.message ||
+            "We couldn't connect to Google. Check your connection and try again.",
+        );
+        return;
+      }
+      redirecting = true;
+    } finally {
+      // Keep both actions locked while the browser leaves for Google.
+      if (!redirecting) {
+        requestInFlight.current = false;
+        setPendingAction(null);
+      }
     }
   }
 
   return (
-    <AuthSplitLayout
-      panel={<AuthProgressPanel />}
-      className="max-w-85 animate-none justify-start py-6"
-    >
-      <div className="flex flex-col gap-5">
-        <AuthFormHeading title="Create an account" />
-
-        {signupMutation.data?.error && (
-          <Alert variant="destructive">
-            <AlertCircleIcon />
-            <AlertTitle>Account not created</AlertTitle>
-            <AlertDescription>{signupMutation.data.message}</AlertDescription>
-          </Alert>
-        )}
+    <div className="auth-scope register-page">
+      <main className="register-container">
+        <header className="register-header">
+          <div className="register-navigation">
+            <Link
+              to="/login"
+              aria-label="Back to sign in"
+              className="register-back"
+            >
+              <ArrowLeft aria-hidden="true" className="size-5" />
+            </Link>
+            <ThemeSwitch />
+          </div>
+          <Link to="/" aria-label="CiviCheck home" className="register-home">
+            <CiviCheckIdentity compact />
+          </Link>
+          <h1 className="register-title">Create your account</h1>
+        </header>
 
         <form
+          noValidate
+          aria-busy={isBusy}
           onSubmit={form.handleSubmit(onSubmit)}
-          className="flex flex-col gap-3.5"
+          className="register-form"
         >
-          <Controller
-            control={form.control}
-            name="firstName"
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                <FieldLabel htmlFor="firstName" className={authLabelClass}>
-                  First Name
-                  <RequiredMark />
-                </FieldLabel>
-                <Input
-                  {...field}
-                  id="firstName"
-                  placeholder="Juan"
-                  aria-invalid={fieldState.invalid}
-                  autoComplete="given-name"
-                  fieldSize="touch"
-                  shape="pill"
+          {visibleSubmissionError && (
+            <Alert ref={errorRef} tabIndex={-1} variant="destructive">
+              <AlertCircleIcon />
+              <AlertTitle>Unable to sign up</AlertTitle>
+              <AlertDescription>{visibleSubmissionError}</AlertDescription>
+            </Alert>
+          )}
+
+          <FieldSet disabled={isBusy} className="register-fields">
+            <FieldSet className="gap-3">
+              <FieldLegend className="register-label mb-0">Name</FieldLegend>
+              <div className="register-name-row">
+                <Controller
+                  control={form.control}
+                  name="firstName"
+                  render={({ field, fieldState }) => (
+                    <Field
+                      data-invalid={fieldState.invalid}
+                      className="gap-1.5"
+                    >
+                      <FieldLabel htmlFor="firstName" className="sr-only">
+                        First name
+                      </FieldLabel>
+                      <Input
+                        {...field}
+                        id="firstName"
+                        placeholder="First name"
+                        aria-invalid={fieldState.invalid}
+                        aria-describedby={
+                          fieldState.invalid ? "firstName-error" : undefined
+                        }
+                        autoComplete="given-name"
+                        fieldSize="touch"
+                        shape="soft"
+                        className="register-input"
+                        aria-required="true"
+                      />
+                      <SignupFieldError
+                        id="firstName-error"
+                        error={fieldState.error}
+                        empty={!field.value.trim()}
+                      />
+                    </Field>
+                  )}
                 />
-                <SignupFieldError error={fieldState.error} />
-              </Field>
-            )}
-          />
 
-          {/* Suffix modifies the surname, so it shares a row with it. */}
-          <div className="flex items-start gap-2.5">
-            <Controller
-              control={form.control}
-              name="lastName"
-              render={({ field, fieldState }) => (
-                <Field
-                  data-invalid={fieldState.invalid}
-                  className="min-w-0 flex-1 gap-1.5"
-                >
-                  <FieldLabel htmlFor="lastName" className={authLabelClass}>
-                    Last Name <RequiredMark />
-                  </FieldLabel>
-                  <Input
-                    {...field}
-                    id="lastName"
-                    placeholder="Dela Cruz"
-                    aria-invalid={fieldState.invalid}
-                    autoComplete="family-name"
-                    fieldSize="touch"
-                    shape="pill"
-                  />
-                  <SignupFieldError error={fieldState.error} />
-                </Field>
-              )}
-            />
+                <Controller
+                  control={form.control}
+                  name="lastName"
+                  render={({ field, fieldState }) => (
+                    <Field
+                      data-invalid={fieldState.invalid}
+                      className="min-w-0 flex-1 gap-1.5"
+                    >
+                      <FieldLabel htmlFor="lastName" className="sr-only">
+                        Last name
+                      </FieldLabel>
+                      <Input
+                        {...field}
+                        id="lastName"
+                        placeholder="Last name"
+                        aria-invalid={fieldState.invalid}
+                        aria-describedby={
+                          fieldState.invalid ? "lastName-error" : undefined
+                        }
+                        autoComplete="family-name"
+                        fieldSize="touch"
+                        shape="soft"
+                        className="register-input"
+                        aria-required="true"
+                      />
+                      <SignupFieldError
+                        id="lastName-error"
+                        error={fieldState.error}
+                        empty={!field.value.trim()}
+                      />
+                    </Field>
+                  )}
+                />
+              </div>
 
-            <Controller
-              control={form.control}
-              name="suffix"
-              render={({ field }) => (
-                <Field className="w-24 shrink-0 gap-1.5">
-                  <FieldLabel htmlFor="suffix" className={authLabelClass}>
-                    Suffix
-                  </FieldLabel>
-                  <Select
-                    items={SUFFIXES}
-                    value={field.value || NO_SUFFIX}
-                    onValueChange={(value) =>
-                      field.onChange(value === NO_SUFFIX ? "" : value)
-                    }
-                  >
-                    <SelectTrigger id="suffix" size="touch" shape="pill">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {SUFFIXES.map((suffix) => (
-                          <SelectItem key={suffix.value} value={suffix.value}>
-                            {suffix.label}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </Field>
-              )}
-            />
-          </div>
-
-          {/* A blank middle name is only accepted with the checkbox ticked, so
+              {/* A blank middle name is only accepted with the checkbox ticked, so
               the database can tell "has none" from "left empty". */}
-          <Field
-            data-invalid={!!form.formState.errors.middleName}
-            className="gap-1.5"
-          >
+              <div className="register-middle-row">
+                <Field
+                  data-invalid={!!form.formState.errors.middleName}
+                  className="gap-1.5"
+                >
+                  <Controller
+                    control={form.control}
+                    name="middleName"
+                    render={({ field, fieldState }) => (
+                      <>
+                        <FieldLabel htmlFor="middleName" className="sr-only">
+                          Middle name
+                        </FieldLabel>
+                        <Input
+                          {...field}
+                          id="middleName"
+                          placeholder="Middle name"
+                          disabled={hasNoMiddleName}
+                          aria-invalid={fieldState.invalid}
+                          aria-describedby={
+                            fieldState.invalid ? "middleName-error" : undefined
+                          }
+                          autoComplete="additional-name"
+                          fieldSize="touch"
+                          shape="soft"
+                          className="register-input"
+                          aria-required={!hasNoMiddleName}
+                        />
+                        <SignupFieldError
+                          id="middleName-error"
+                          error={fieldState.error}
+                          empty={!field.value.trim()}
+                        />
+                      </>
+                    )}
+                  />
+                  <Controller
+                    control={form.control}
+                    name="hasNoMiddleName"
+                    render={({ field }) => (
+                      <Field
+                        orientation="horizontal"
+                        className="register-checkbox-row"
+                      >
+                        <Checkbox
+                          id="hasNoMiddleName"
+                          disabled={isBusy}
+                          ref={field.ref}
+                          onBlur={field.onBlur}
+                          checked={field.value === true}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked === true);
+                            if (checked === true) {
+                              form.setValue("middleName", "");
+                            }
+                            void form.trigger("middleName");
+                          }}
+                        />
+                        <FieldLabel
+                          htmlFor="hasNoMiddleName"
+                          className="register-checkbox-label"
+                        >
+                          No middle name
+                        </FieldLabel>
+                      </Field>
+                    )}
+                  />
+                </Field>
+
+                <Controller
+                  control={form.control}
+                  name="suffix"
+                  render={({ field }) => (
+                    <Field className="gap-1.5">
+                      <FieldLabel htmlFor="suffix" className="sr-only">
+                        Suffix
+                      </FieldLabel>
+                      <Select
+                        disabled={isBusy}
+                        items={SUFFIXES}
+                        value={field.value || NO_SUFFIX}
+                        onValueChange={(value) =>
+                          field.onChange(value === NO_SUFFIX ? "" : value)
+                        }
+                      >
+                        <SelectTrigger
+                          id="suffix"
+                          ref={field.ref}
+                          onBlur={field.onBlur}
+                          size="touch"
+                          shape="soft"
+                          className="register-input"
+                        >
+                          <span className="register-suffix-value">
+                            <span
+                              className="register-suffix-caption"
+                              aria-hidden="true"
+                            >
+                              Suffix
+                            </span>
+                            <SelectValue />
+                          </span>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            {SUFFIXES.map((suffix) => (
+                              <SelectItem
+                                key={suffix.value}
+                                value={suffix.value}
+                              >
+                                {suffix.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  )}
+                />
+              </div>
+            </FieldSet>
+
             <Controller
               control={form.control}
-              name="middleName"
+              name="email"
               render={({ field, fieldState }) => (
-                <>
-                  <FieldLabel htmlFor="middleName" className={authLabelClass}>
-                    Middle Name
-                    {!hasNoMiddleName && <RequiredMark />}
+                <Field data-invalid={fieldState.invalid} className="gap-1.5">
+                  <FieldLabel htmlFor="email" className="register-label">
+                    Email
                   </FieldLabel>
                   <Input
-                    {...field}
-                    id="middleName"
-                    placeholder="Santos"
-                    disabled={hasNoMiddleName}
-                    aria-invalid={fieldState.invalid}
-                    autoComplete="additional-name"
-                    fieldSize="touch"
-                    shape="pill"
-                  />
-                  <SignupFieldError error={fieldState.error} />
-                </>
-              )}
-            />
-            <Controller
-              control={form.control}
-              name="hasNoMiddleName"
-              render={({ field }) => (
-                <Field orientation="horizontal" className="pt-0.5">
-                  <Checkbox
-                    id="hasNoMiddleName"
-                    checked={field.value === true}
-                    onCheckedChange={(checked) => {
-                      field.onChange(checked === true);
-                      if (checked === true) {
-                        form.setValue("middleName", "");
-                      }
-                      void form.trigger("middleName");
-                    }}
-                  />
-                  <FieldLabel
-                    htmlFor="hasNoMiddleName"
-                    className="text-[13px] leading-snug text-body"
-                  >
-                    I don&apos;t have a middle name
-                  </FieldLabel>
-                </Field>
-              )}
-            />
-          </Field>
-
-          <Controller
-            control={form.control}
-            name="email"
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                <FieldLabel htmlFor="email" className={authLabelClass}>
-                  Email <RequiredMark />
-                </FieldLabel>
-                <InputGroup fieldSize="touch" shape="pill">
-                  <InputGroupAddon>
-                    <Mail size={16} aria-hidden="true" />
-                  </InputGroupAddon>
-                  <InputGroupInput
                     {...field}
                     id="email"
+                    onChange={(event) => {
+                      field.onChange(event);
+                      clearSubmissionError("email");
+                    }}
                     type="email"
                     placeholder="Enter your email"
                     aria-invalid={fieldState.invalid}
-                    autoComplete="email"
-                  />
-                </InputGroup>
-                <SignupFieldError error={fieldState.error} />
-              </Field>
-            )}
-          />
-
-          <Controller
-            control={form.control}
-            name="password"
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                <FieldLabel htmlFor="password" className={authLabelClass}>
-                  Password <RequiredMark />
-                </FieldLabel>
-                <InputGroup fieldSize="touch" shape="pill">
-                  <InputGroupAddon>
-                    <Lock size={16} aria-hidden="true" />
-                  </InputGroupAddon>
-                  <InputGroupInput
-                    {...field}
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Create a password"
-                    aria-invalid={fieldState.invalid}
-                    aria-describedby="password-help"
-                    autoComplete="new-password"
-                  />
-                  <PasswordToggle
-                    shown={showPassword}
-                    onToggle={() => setShowPassword(!showPassword)}
-                  />
-                </InputGroup>
-                <div id="password-help">
-                  {fieldState.invalid ? (
-                    <FieldError
-                      errors={[fieldState.error]}
-                      className="text-[13px] leading-5"
-                    />
-                  ) : (
-                    <FieldDescription className="text-[13px] leading-5">
-                      {PASSWORD_HINT}
-                    </FieldDescription>
-                  )}
-                </div>
-              </Field>
-            )}
-          />
-
-          <Controller
-            control={form.control}
-            name="agreeToTerms"
-            render={({ field, fieldState }) => (
-              <Field
-                data-invalid={fieldState.invalid}
-                className="gap-1.5 pt-1 pb-1.5"
-              >
-                <Field orientation="horizontal">
-                  <Checkbox
-                    id="agreeToTerms"
-                    checked={field.value === true}
-                    onCheckedChange={(checked) =>
-                      field.onChange(checked === true)
+                    aria-describedby={
+                      fieldState.invalid ? "email-error" : undefined
                     }
-                    aria-invalid={fieldState.invalid}
+                    autoComplete="email"
+                    fieldSize="touch"
+                    shape="soft"
+                    className="register-input"
+                    aria-required="true"
                   />
-                  <FieldLabel
-                    htmlFor="agreeToTerms"
-                    className="text-[13px] leading-snug text-body"
-                  >
-                    I agree to the{" "}
-                    <LegalDialogLink document="terms" className={authLinkClass}>
-                      Terms of Use
-                    </LegalDialogLink>{" "}
-                    and{" "}
-                    <LegalDialogLink
-                      document="privacy"
-                      className={authLinkClass}
-                    >
-                      Privacy Notice
-                    </LegalDialogLink>
-                    .
-                  </FieldLabel>
+                  <SignupFieldError
+                    id="email-error"
+                    error={fieldState.error}
+                    empty={!field.value.trim()}
+                  />
                 </Field>
-                <SignupFieldError error={fieldState.error} />
-              </Field>
-            )}
-          />
+              )}
+            />
+
+            <Controller
+              control={form.control}
+              name="password"
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid} className="gap-1.5">
+                  <FieldLabel htmlFor="password" className="register-label">
+                    Password
+                  </FieldLabel>
+                  <InputGroup
+                    fieldSize="touch"
+                    shape="soft"
+                    className="register-input"
+                  >
+                    <InputGroupInput
+                      {...field}
+                      id="password"
+                      onChange={(event) => {
+                        field.onChange(event);
+                        clearSubmissionError("password");
+                      }}
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Create a password"
+                      aria-invalid={fieldState.invalid}
+                      aria-describedby={
+                        isPasswordValid ? undefined : "password-help"
+                      }
+                      autoComplete="new-password"
+                      aria-required="true"
+                    />
+                    <PasswordToggle
+                      shown={showPassword}
+                      onToggle={() => setShowPassword(!showPassword)}
+                    />
+                  </InputGroup>
+                  <div
+                    id="password-help"
+                    className="register-password-help"
+                    aria-hidden={isPasswordValid || undefined}
+                  >
+                    {!isPasswordValid && fieldState.invalid && (
+                      <SignupFieldError
+                        error={fieldState.error}
+                        empty={!field.value.trim()}
+                      />
+                    )}
+                    <FieldDescription
+                      className="register-password-hint text-[13px] leading-5"
+                      data-hidden={
+                        isPasswordValid ||
+                        (fieldState.invalid && !!field.value.trim())
+                      }
+                    >
+                      {PASSWORD_MIN}+ characters with uppercase, lowercase, a
+                      number and a symbol.
+                    </FieldDescription>
+                  </div>
+                </Field>
+              )}
+            />
+
+            <Controller
+              control={form.control}
+              name="agreeToTerms"
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid} className="gap-1.5">
+                  <Field
+                    orientation="horizontal"
+                    className="register-checkbox-row"
+                  >
+                    <Checkbox
+                      id="agreeToTerms"
+                      disabled={isBusy}
+                      ref={field.ref}
+                      onBlur={field.onBlur}
+                      checked={field.value === true}
+                      onCheckedChange={(checked) =>
+                        form.setValue("agreeToTerms", checked === true, {
+                          shouldValidate: true,
+                          shouldTouch: true,
+                        })
+                      }
+                      aria-invalid={fieldState.invalid}
+                      aria-describedby={
+                        fieldState.invalid ? "consent-error" : undefined
+                      }
+                    />
+                    <FieldLabel
+                      htmlFor="agreeToTerms"
+                      className="register-checkbox-label register-consent"
+                    >
+                      I agree to the{" "}
+                      <LegalDialogLink
+                        document="terms"
+                        className={authLinkClass}
+                      >
+                        Terms of Use
+                      </LegalDialogLink>{" "}
+                      and{" "}
+                      <LegalDialogLink
+                        document="privacy"
+                        className={authLinkClass}
+                      >
+                        Privacy Notice
+                      </LegalDialogLink>
+                      .
+                    </FieldLabel>
+                  </Field>
+                  <SignupFieldError
+                    id="consent-error"
+                    error={fieldState.error}
+                  />
+                </Field>
+              )}
+            />
+          </FieldSet>
 
           <div className="flex flex-col gap-3.5">
+            {!lockout.isLocked && <Captcha onToken={captcha.onToken} error={captcha.error} resetKey={captcha.resetKey} />}
             <Button
               type="submit"
               size="touch"
               shape="pill"
-              disabled={signupMutation.status === "pending" || !isComplete}
+              className="register-action"
+              disabled={isBusy || lockout.isLocked || !captcha.token}
             >
-              {signupMutation.status === "pending" ? (
+              {pendingAction === "email" ? (
                 <>
                   <Spinner />
                   Creating account
@@ -412,13 +638,15 @@ const RegisterForm = () => {
             <AuthFormDivider />
 
             <Button
+              type="button"
               variant="outline"
               size="touch"
               shape="pill"
-              onClick={() => oauthLoginMutation.mutate({ provider: "google" })}
-              disabled={oauthLoginMutation.redirecting}
+              className="register-action register-google"
+              onClick={onGoogleSignup}
+              disabled={isBusy || lockout.isLocked || !captcha.token}
             >
-              {oauthLoginMutation.redirecting ? (
+              {pendingAction === "google" ? (
                 <>
                   <Spinner />
                   Redirecting to Google…
@@ -439,8 +667,8 @@ const RegisterForm = () => {
             Sign in
           </Link>
         </AuthFormFooter>
-      </div>
-    </AuthSplitLayout>
+      </main>
+    </div>
   );
 };
 

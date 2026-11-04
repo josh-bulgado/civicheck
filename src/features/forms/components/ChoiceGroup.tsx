@@ -58,7 +58,7 @@ export function planChoiceLayout(
   const isChoice = (field: (typeof fields)[number] | undefined) =>
     field?.type === "select" && isChoiceGroup(field.options);
   const isPairable = (field: (typeof fields)[number] | undefined) =>
-    isChoice(field) && !choiceGroupIsWide(field?.options ?? []);
+    isChoice(field) && field?.key !== "out_of_town" && !choiceGroupIsWide(field?.options ?? []);
 
   for (let index = 0; index < fields.length; index += 1) {
     const field = fields[index];

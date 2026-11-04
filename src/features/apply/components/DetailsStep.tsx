@@ -1,4 +1,5 @@
 import { formatFieldLabel } from "~/features/forms/field-label";
+import { validatePersonName } from "~/lib/person-name";
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { useNavigate, useRouteContext } from "@tanstack/react-router";
 import {
@@ -138,11 +139,11 @@ function MiddleNameField({
         rules={{
           // Read the box from the form values, not from this render: ticking it
           // re-runs this check, and it must see the box as ticked.
-          validate: (value, formValues) =>
-            !required ||
-            formValues.subjects?.[index]?.noMiddleName === true ||
-            (value ?? "").trim() !== "" ||
-            "Middle name is required",
+          validate: (value, formValues) => {
+            if (formValues.subjects?.[index]?.noMiddleName === true) return true;
+            if (required && !(value ?? "").trim()) return "Middle name is required";
+            return validatePersonName(value ?? "");
+          },
         }}
         render={({ field, fieldState }) => (
           <>
@@ -220,7 +221,7 @@ function SubjectFieldGrid({
       <Controller
         control={control}
         name={`subjects.${index}.firstName`}
-        rules={{ required: "First name is required" }}
+        rules={{ required: "First name is required", validate: validatePersonName }}
         render={({ field, fieldState }) => (
           <Field data-invalid={fieldState.invalid}>
             <FieldLabel htmlFor={`subject-${index}-firstName`} className={WIZARD_LABEL_CLASS}>First Name <RequiredMark /></FieldLabel>
@@ -246,7 +247,7 @@ function SubjectFieldGrid({
       <Controller
         control={control}
         name={`subjects.${index}.lastName`}
-        rules={{ required: "Last name is required" }}
+        rules={{ required: "Last name is required", validate: validatePersonName }}
         render={({ field, fieldState }) => (
           <Field data-invalid={fieldState.invalid}>
             <FieldLabel htmlFor={`subject-${index}-lastName`} className={WIZARD_LABEL_CLASS}>Last Name <RequiredMark /></FieldLabel>
@@ -363,7 +364,10 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   const hasPersonGroup = Boolean(personGroupField);
   const recordType = draft.caseSelectorAnswers.record_type ?? draft.answers.record_type;
   const isMarriageRecord = recordType === "marriage";
-  const requireMiddleName = personGroupField?.requireMiddleName === true;
+  const useSpouseLabels =
+    selectedService.service_code === "MARRIAGE_ONTIME" ||
+    selectedService.service_code === "MARRIAGE_DELAYED";
+  const requireMiddleName = true;
   const roles = selectedService?.party_roles?.length
     ? selectedService.party_roles
     : ["Subject"];
@@ -584,8 +588,22 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       // Each party is its own headed section, stacked, so its name parts
       // can run across the card instead of sharing narrow columns.
       <div className="flex flex-col gap-7.5">
-        {subjectFields.fields.map((subjectField, index) => (
-          <PartySection key={subjectField.id} role={subjectField.role}>
+        {subjectFields.fields
+          .map((subjectField, index) => ({ subjectField, index }))
+          .sort((a, b) =>
+            useSpouseLabels
+              ? Number(b.subjectField.role === "Groom") - Number(a.subjectField.role === "Groom")
+              : a.index - b.index,
+          )
+          .map(({ subjectField, index }) => (
+          <PartySection
+            key={subjectField.id}
+            role={
+              useSpouseLabels
+                ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[subjectField.role] ?? subjectField.role)
+                : subjectField.role
+            }
+          >
             <SubjectFieldGrid
               control={form.control}
               setValue={form.setValue}

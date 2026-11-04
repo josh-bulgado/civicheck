@@ -1,4 +1,6 @@
+import { validateEventPlace } from "../event-place";
 import { formatFieldLabel } from "~/features/forms/field-label";
+import { isNameField, validatePersonName } from "~/lib/person-name";
 import type { ReactNode } from "react";
 import { addressDescendants } from "~/lib/requester-address";
 import { AddressLocationField } from "./AddressLocationField";
@@ -339,6 +341,9 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                   : false,
                 validate: (value) => {
                   if (!value) return true;
+                  const placeValidation = validateEventPlace(definitionField, value);
+                  if (placeValidation !== true) return placeValidation;
+                  if (isNameField(definitionField)) return validatePersonName(value);
                   if (
                     definitionField.type === "date" &&
                     definitionField.allowEstimate &&
@@ -371,6 +376,11 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                 if (addressLevel === "barangay") {
                   locationKey += ":" + values.requester_city;
                 }
+
+                const placeholder =
+                  /place.*\b(birth|born)\b/i.test(definitionField.label)
+                    ? "e.g., Hospital/clinic or house no., street, barangay, city/municipality, province."
+                    : definitionField.placeholder;
 
                 const selectedNotice =
                   definitionField.type === "select"
@@ -498,7 +508,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         id={`dynamic-${definitionField.key}`}
                         rows={3}
                         maxLength={2_000}
-                        placeholder={definitionField.placeholder}
+                        placeholder={placeholder}
                         aria-invalid={fieldState.invalid}
                         className={WIZARD_TEXTAREA_CLASS}
                       />
@@ -591,7 +601,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                           type="tel"
                           inputMode="numeric"
                           autoComplete="tel-national"
-                          placeholder={definitionField.placeholder}
+                          placeholder={placeholder}
                           maxLength={10}
                           aria-invalid={fieldState.invalid}
                         />
@@ -600,7 +610,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                       <TextWithNoneOption
                         field={field}
                         id={`dynamic-${definitionField.key}`}
-                        placeholder={definitionField.placeholder}
+                        placeholder={placeholder}
                         invalid={fieldState.invalid}
                         noneLabel={definitionField.noneLabel}
                       />
@@ -609,7 +619,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         {...field}
                         id={`dynamic-${definitionField.key}`}
                         autoComplete="off"
-                        placeholder={definitionField.placeholder}
+                        placeholder={placeholder}
                         maxLength={240}
                         aria-invalid={fieldState.invalid}
                         className={WIZARD_CONTROL_CLASS}

@@ -1,4 +1,6 @@
 import { useRef, useState } from "react";
+import { PreviousUploads } from "./PreviousUploads";
+import type { PreviousUpload } from "../previous-uploads";
 import { toast } from "sonner";
 import { Upload } from "lucide-react";
 import { Button } from "~/components/ui/button";
@@ -41,6 +43,7 @@ type AttachmentDoc = {
   subjectRole: string | null;
   verificationStatus: string;
   rejectionReason: string | null;
+  previousUploads?: PreviousUpload[];
 };
 
 /**
@@ -322,6 +325,7 @@ function AttachmentRow({
         </>
       )}
 
+      <PreviousUploads attachmentId={doc.id} uploads={doc.previousUploads ?? []} applicant />
       <AttachmentViewerDialog
         url={viewerUrl}
         subjectRole={doc.subjectRole}

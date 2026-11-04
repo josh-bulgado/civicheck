@@ -5,7 +5,9 @@ import {
   recordSessionForCurrentUser,
   type SessionMethod,
 } from "~/features/system-admin/security-center.server";
-import { getSupabaseServerClient } from "~/utils/supabase";
+import { commitSupabaseCookies, getSupabaseServerClient } from "~/utils/supabase";
+import { authAttemptFailure, checkAuthLockout } from "~/server/auth-attempts";
+import { consumeOAuthCaptchaProof } from "~/features/auth/captcha.server";
 
 const OTP_TYPES = ["invite", "signup", "recovery", "email", "email_change"] as const;
 
@@ -29,14 +31,19 @@ function parseOtpType(value: string | null) {
   return OTP_TYPES.find((type) => type === value);
 }
 
-const handleCallback = createServerFn({ method: "GET" }).handler(async () => {
+export const handleCallback = createServerFn({ method: "GET" }).handler(async () => {
   const request = getRequest();
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const tokenHash = url.searchParams.get("token_hash");
   const otpType = parseOtpType(url.searchParams.get("type"));
   const next = url.searchParams.get("next");
-  const supabase = getSupabaseServerClient();
+  const isOAuth = !!code && !(tokenHash && otpType);
+  if (isOAuth && !(await consumeOAuthCaptchaProof())) {
+    return { error: true, message: "Your security verification expired. Please sign in again." };
+  }
+  // Hold newly issued cookies until the provider-verified account is allowed.
+  const supabase = getSupabaseServerClient({ deferCookies: isOAuth });
   let method: SessionMethod = "email link";
 
   if (tokenHash && otpType) {
@@ -56,7 +63,7 @@ const handleCallback = createServerFn({ method: "GET" }).handler(async () => {
     }
     method = SESSION_METHODS[otpType];
   } else if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
       console.error("Auth code exchange error:", error);
       return {
@@ -67,6 +74,22 @@ const handleCallback = createServerFn({ method: "GET" }).handler(async () => {
             : "The authentication session could not be created.",
       };
     }
+    const verifiedEmail = data.user?.email;
+    const lockout = verifiedEmail ? await checkAuthLockout(verifiedEmail) : null;
+    if (!lockout?.allowed) {
+      // Revoke only this new session. No session cookies have been sent, even
+      // if revocation fails; the callback never records or opens app access.
+      try {
+        const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
+        if (signOutError) console.error("Could not revoke blocked OAuth session:", signOutError.message);
+      } catch (signOutError) {
+        console.error("Could not revoke blocked OAuth session:", signOutError);
+      }
+      return lockout
+        ? authAttemptFailure(lockout, lockout.message!)
+        : { error: true, message: "We couldn't verify your sign-in email. Please try again." };
+    }
+    commitSupabaseCookies(supabase);
   } else {
     return {
       error: true,
@@ -78,7 +101,7 @@ const handleCallback = createServerFn({ method: "GET" }).handler(async () => {
   // invitations, reset and verification links, and OAuth.
   await recordSessionForCurrentUser(
     supabase,
-    code && !tokenHash ? "social sign-in" : method,
+    isOAuth ? "social sign-in" : method,
   );
 
   return {
@@ -99,6 +122,7 @@ export const Route = createFileRoute("/auth/callback")({
         to: "/login",
         search: {
           error: res.message,
+          lockedUntil: "lockedUntil" in res ? res.lockedUntil : undefined,
         },
       });
     }

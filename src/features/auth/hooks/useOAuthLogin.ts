@@ -1,26 +1,21 @@
 import { useEffect } from "react";
-import { toast } from "sonner";
 import { useMutation } from "~/hooks/useMutation";
 import { loginWithOAuthFn } from "../auth.mutations";
 
 type OAuthProvider = "google" | "apple";
 
 /** What `loginWithOAuthFn` hands back: an error to show, or the URL to leave for. */
-type OAuthResult = { error?: boolean; message?: string; url?: string | null };
+type OAuthResult = { error?: boolean; message?: string; url?: string | null; lockedUntil?: number; captchaRequired?: boolean; captchaError?: boolean };
 
 export function useOAuthLogin() {
   const mutation = useMutation<
-    { provider: OAuthProvider; keepSignedIn?: boolean },
+    { provider: OAuthProvider; keepSignedIn?: boolean; email?: string; captchaToken?: string },
     OAuthResult
   >({
-    fn: async ({ provider, keepSignedIn }) =>
-      loginWithOAuthFn({ data: { provider, keepSignedIn } }),
+    fn: async ({ provider, keepSignedIn, email, captchaToken }) =>
+      loginWithOAuthFn({ data: { provider, keepSignedIn, email, captchaToken } }),
     onSuccess: async (ctx) => {
       if (ctx.data?.error) {
-        toast.error("Unable to sign in", {
-          description: ctx.data.message || "OAuth sign in failed.",
-        });
-
         return;
       }
 

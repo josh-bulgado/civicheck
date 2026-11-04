@@ -48,6 +48,12 @@ export function clearSessionScope() {
 // rather than in a closure so it can be tightened mid-request, once a profile
 // shows the session belongs to an internal role.
 const clientScopes = new WeakMap<object, { sessionOnly: boolean }>();
+const pendingCookieCommits = new WeakMap<object, () => void>();
+
+/** Publish an OAuth session only after its verified account passes the cooldown. */
+export function commitSupabaseCookies(client: SupabaseClient) {
+  pendingCookieCommits.get(client)?.();
+}
 
 /**
  * Holds an internal role's session to the browser's lifetime, whatever was
@@ -110,8 +116,9 @@ export async function limitSessionToBrowser(
  * @param options.sessionOnly Overrides the stored choice. Needed at sign-in,
  *   where the cookies are written in the same request that carries the choice,
  *   before the marker cookie could have been read back.
+ * @param options.deferCookies Holds writes until commitSupabaseCookies is called.
  */
-export function getSupabaseServerClient(options?: { sessionOnly?: boolean }) {
+export function getSupabaseServerClient(options?: { sessionOnly?: boolean; deferCookies?: boolean }) {
   const scope = {
     // Fails closed: only an explicit persistent marker lengthens the session.
     sessionOnly:
@@ -119,6 +126,8 @@ export function getSupabaseServerClient(options?: { sessionOnly?: boolean }) {
       !isPersistentScope(getCookie(SESSION_SCOPE_COOKIE)),
   };
   const secure = secureCookiesEnabled();
+  let deferCookies = options?.deferCookies === true;
+  const pendingWrites: Array<() => void> = [];
 
   const client = createServerClient(
     process.env.SUPABASE_URL!,
@@ -132,42 +141,51 @@ export function getSupabaseServerClient(options?: { sessionOnly?: boolean }) {
           }));
         },
         setAll(cookies, headers) {
-          cookies.forEach(({ name, value, options }) => {
-            setCookie(
-              name,
-              value,
-              applyCookiePolicy(options, {
-                sessionOnly: scope.sessionOnly,
-                secure,
-              }),
-            );
-          });
-          // The marker has to outlive the cookies it governs, so it is renewed
-          // alongside them. Left to lapse it would quietly turn a persistent
-          // session browser-only on the next refresh.
-          if (
-            !scope.sessionOnly &&
-            cookies.some(({ options }) => !isRemoval(options))
-          ) {
-            setCookie(
-              SESSION_SCOPE_COOKIE,
-              PERSISTENT_SESSION_VALUE,
-              persistentMarkerOptions(secure),
-            );
-          }
-          const cacheControl = headers["Cache-Control"];
-          const expires = headers.Expires;
-          const pragma = headers.Pragma;
+          const writeCookies = () => {
+            cookies.forEach(({ name, value, options }) => {
+              setCookie(
+                name,
+                value,
+                applyCookiePolicy(options, {
+                  sessionOnly: scope.sessionOnly,
+                  secure,
+                }),
+              );
+            });
+            // Renew the persistence marker alongside the cookies it governs.
+            if (
+              !scope.sessionOnly &&
+              cookies.some(({ options }) => !isRemoval(options))
+            ) {
+              setCookie(
+                SESSION_SCOPE_COOKIE,
+                PERSISTENT_SESSION_VALUE,
+                persistentMarkerOptions(secure),
+              );
+            }
+            const cacheControl = headers["Cache-Control"];
+            const expires = headers.Expires;
+            const pragma = headers.Pragma;
 
-          if (cacheControl) setResponseHeader("Cache-Control", cacheControl);
-          if (expires) setResponseHeader("Expires", expires);
-          if (pragma) setResponseHeader("Pragma", pragma);
+            if (cacheControl) setResponseHeader("Cache-Control", cacheControl);
+            if (expires) setResponseHeader("Expires", expires);
+            if (pragma) setResponseHeader("Pragma", pragma);
+          };
+          if (deferCookies) pendingWrites.push(writeCookies);
+          else writeCookies();
         },
       },
     },
   );
 
   clientScopes.set(client, scope);
+  if (deferCookies) {
+    pendingCookieCommits.set(client, () => {
+      deferCookies = false;
+      pendingCookieCommits.delete(client);
+      pendingWrites.splice(0).forEach(write => write());
+    });
+  }
   return client;
 }
 

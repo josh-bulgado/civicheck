@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { MarriagePostingPanel } from "../components/MarriagePostingPanel";
+import { usePostingToday } from "../hooks/usePostingToday";
+import { needsMarriagePosting } from "../marriage-posting";
 import { useHotkeys, type HotkeyChord } from "@tanstack/react-hotkeys";
 import { toast } from "sonner";
 import { MessageSquare } from "lucide-react";
@@ -81,6 +84,7 @@ export default function RequestDetailPage({
   const hotkeyLabel = useHotkeyLabel();
 
   const canProcess = can("requests:process");
+  const today = usePostingToday(needsMarriagePosting(request.serviceCode) && request.status === "processing");
   const canReverse = can("requests:reverse_verification");
   const hasChat = request.allowsMessages && !request.isWalkIn;
   // Accept/reject confirmation is rolling out service by service — on-time
@@ -138,6 +142,8 @@ export default function RequestDetailPage({
       : doc;
   });
   const planInput = {
+    postingStartDate: request.postingStartDate,
+    today,
     serviceCode: request.serviceCode,
     status: request.status,
     paymentStatus: request.paymentStatus,
@@ -256,6 +262,15 @@ export default function RequestDetailPage({
             <RequestActionBar plan={plan} busy={busy} onAction={handleAction} />
           </div>
         }
+      />
+
+      <MarriagePostingPanel
+        key={`${request.id}-${request.postingStartDate}`}
+        serviceCode={request.serviceCode} status={request.status}
+        postingStartDate={request.postingStartDate} postingEndDate={request.postingEndDate}
+        editor={canProcess ? {
+          requestId: request.id, updatedAt: request.updatedAt, createdAt: request.createdAt, onSaved: onUpdated,
+        } : undefined}
       />
 
       <Tabs value={tab} onValueChange={(value) => onTabChange(value as RequestDetailTab)} className="gap-4">

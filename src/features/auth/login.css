@@ -20,6 +20,7 @@
   inset: 0;
   background: url("/login/login-background.webp") center / cover no-repeat;
   opacity: var(--login-background-opacity);
+  pointer-events: none;
   content: "";
 }
 
@@ -97,7 +98,7 @@
 .login-page .login-google:not(:disabled):hover { border-color: var(--login-blue); background: var(--primary-soft); }
 .login-page .login-google-icon { width: 32px; height: 32px; }
 .login-footer { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 9px; margin-top: 28px; color: var(--login-muted); font-size: 20px; line-height: 1.5; }
-.login-artwork { position: relative; top: -64px; min-width: 0; }
+.login-artwork { position: relative; top: -64px; min-width: 0; pointer-events: none; user-select: none; }
 .login-artwork > img { display: block; width: calc(100% + 20px); max-width: 660px; height: auto; }
 
 .dark .login-page {

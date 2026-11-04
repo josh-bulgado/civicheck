@@ -37,7 +37,7 @@ export const getEncodableServicesFn = createServerFn({ method: "GET" }).handler(
 
     return (data ?? []).map((service) => ({
       serviceCode: service.service_code,
-      name: service.display_name || service.name,
+      name: service.name,
       fee: Number(service.fee ?? 0),
       feePerCopy: service.fee_per_copy === true,
       displayGroup: service.display_group,

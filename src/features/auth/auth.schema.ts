@@ -129,7 +129,9 @@ export function checkMiddleNameAnswer(
   }
 }
 
-export const signupInputSchema = signupFieldsSchema.superRefine(
+const captchaTokenSchema = z.string().max(2048).optional();
+
+export const signupInputSchema = signupFieldsSchema.extend({ captchaToken: captchaTokenSchema }).superRefine(
   checkMiddleNameAnswer,
 );
 
@@ -144,11 +146,14 @@ const keepSignedInSchema = z.boolean().optional();
 
 export const loginInputSchema = credentialsSchema.extend({
   keepSignedIn: keepSignedInSchema,
+  captchaToken: captchaTokenSchema,
 });
 
 export const oauthProviderSchema = z.object({
   provider: z.enum(["google", "apple"]),
   keepSignedIn: keepSignedInSchema,
+  email: emailSchema.optional(),
+  captchaToken: captchaTokenSchema,
 });
 
 export const otpVerificationSchema = z.object({

@@ -1,5 +1,8 @@
+import { ChevronLeft } from "lucide-react";
 import { QuietLink } from "~/components/quiet-link";
+import { buttonVariants } from "~/components/ui/button";
 import { StatusPill } from "~/features/requests/components/StatusPill";
+import { cn } from "~/lib/utils";
 
 /**
  * The top of an applicant's request page: the way back, then what it is for
@@ -22,9 +25,14 @@ export function MyRequestHeader({
     <header>
       <QuietLink
         to="/my-requests"
-        className="civic-press inline-flex h-11 items-center gap-2 rounded-full border border-border bg-card px-5 text-base font-semibold text-foreground shadow-portal-pill transition-colors duration-150 hover:bg-primary-tint hover:text-primary-hover"
+        aria-label="Back to my requests"
+        className={cn(
+          buttonVariants({ size: "sm", shape: "pill" }),
+          "w-fit gap-1 pl-2 pr-3 text-[13px] font-medium hover:bg-primary-fill-hover",
+        )}
       >
-        Back to my requests
+        <ChevronLeft aria-hidden="true" className="size-4" />
+        Back
       </QuietLink>
       <div className="mt-4 flex items-start justify-between gap-4 md:gap-6">
         {/* `min-w-0` lets a long service name wrap here instead of pushing the

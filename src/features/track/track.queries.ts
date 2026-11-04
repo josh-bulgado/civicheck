@@ -31,7 +31,7 @@ async function verifyTrackingAccess(trackingNumberRaw: string, lastNameRaw: stri
   const { data: request, error } = await supabase
     .from("requests")
     .select(
-      "id, applicant_id, tracking_number, request_type, status, payment_status, created_at, fees_due, form_data, services_registry(name)",
+      "id, applicant_id, tracking_number, request_type, status, payment_status, created_at, fees_due, form_data, posting_start_date, posting_end_date, services_registry(name)",
     )
     .eq("tracking_number", trackingNumber)
     .maybeSingle();
@@ -77,6 +77,9 @@ export const trackRequestFn = createServerFn({ method: "POST" })
       error: false,
       request: {
         trackingNumber: request.tracking_number,
+        serviceCode: request.request_type as string,
+        postingStartDate: request.posting_start_date as string | null,
+        postingEndDate: request.posting_end_date as string | null,
         serviceName: serviceName || request.request_type,
         status: request.status,
         paymentStatus: request.payment_status,

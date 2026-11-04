@@ -235,12 +235,9 @@ export function VerificationFormPdf({ data, qrDataUrl, generatedAt }: Verificati
   } : answers, recordType);
   if (isEmailInquiry) {
     owner.showsLateRegistration = true;
-    owner.rows = owner.rows.filter((row) => ![
-      "Maiden Name of Mother", "Name of Father",
-    ].includes(row.label));
     const sex = text(answers, "subject_sex");
     if (recordType !== "marriage" && (sex === "male" || sex === "female")) {
-      owner.rows.push({ label: "Sex", value: sex === "male" ? "Male" : "Female" });
+      owner.rows.splice(1, 0, { label: "Sex", value: sex === "male" ? "Male" : "Female" });
     }
   }
 
@@ -315,11 +312,6 @@ export function VerificationFormPdf({ data, qrDataUrl, generatedAt }: Verificati
             <Field label="Relationship to the Owner" value={relationship} />
             <Field label="Address" value={formatRequesterAddress(answers)} />
             {!isEmailInquiry ? <Field label="Purpose" value={text(answers, "purpose_of_request") === "Other" ? text(answers, "purpose_of_request_other") : text(answers, "purpose_of_request")} /> : null}
-          </View>
-          <View style={styles.right}>
-            <Text style={[styles.sectionHeading, { opacity: 0 }]}>.</Text>
-            <View style={{ height: 14 + 9 }} />
-            <View style={{ height: 14 + 9 }} />
             <Field label="Contact No." value={contact ? `+63 ${contact}` : ""} />
             <Field label="Date" value={todayFormatter.format(generatedAt)} />
           </View>
@@ -328,9 +320,9 @@ export function VerificationFormPdf({ data, qrDataUrl, generatedAt }: Verificati
         {isEmailInquiry ? (
           <View>
             <Text style={styles.sectionHeading}>Inquiry details:</Text>
-            <Field label="Registry number" value={text(answers, "reference_number")} />
-            <Field label="What to verify" value={text(answers, "what_to_verify")} />
-            <Field label="Additional notes" value={text(answers, "additional_notes")} />
+            <Field label="Registry Number (if known)" value={text(answers, "reference_number")} />
+            <Field label="Details to Verify / Nature of Inquiry" value={text(answers, "what_to_verify")} />
+            <Field label="Additional Information (if any)" value={text(answers, "additional_notes")} />
           </View>
         ) : null}
 

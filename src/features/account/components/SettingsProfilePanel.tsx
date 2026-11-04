@@ -20,6 +20,7 @@ import { formatLocalMobile, mobileDigits } from "~/lib/phone";
 import { NO_SUFFIX, SUFFIXES } from "~/lib/subject-fields";
 import { cn } from "~/lib/utils";
 import type { AccountProfile } from "../account.types";
+import { useAvatar } from "../hooks/useAvatar";
 import { useUpdateProfile } from "../hooks/useUpdateProfile";
 import {
   SETTINGS_CONTROL_CLASS,
@@ -68,6 +69,7 @@ export function SettingsProfilePanel({
   onDirtyChange: (dirty: boolean) => void;
 }) {
   const updateMutation = useUpdateProfile();
+  const avatar = useAvatar(account.id, account.avatarUrl);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -84,25 +86,52 @@ export function SettingsProfilePanel({
     },
   });
 
-  const isDirty = form.formState.isDirty;
+  const isDirty = form.formState.isDirty || avatar.isDirty;
+  const pending =
+    form.formState.isSubmitting ||
+    updateMutation.status === "pending" ||
+    avatar.pending;
   React.useEffect(() => {
     onDirtyChange(isDirty);
   }, [isDirty, onDirtyChange]);
 
   const hasNoMiddleName = form.watch("hasNoMiddleName");
 
-  async function onSubmit(data: FormValues) {
-    const result = await updateMutation.mutate({ data });
-    if (result && !result.error) onClose();
+  async function onSubmit(data?: FormValues) {
+    if (data) {
+      const result = await updateMutation.mutate({ data });
+      if (!result || result.error) return;
+      // If the photo fails afterwards, retry only the remaining photo change.
+      form.reset(data);
+    }
+    if (await avatar.save()) onClose();
+  }
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (pending || !isDirty) return;
+
+    // Photo-only changes do not need to revalidate unchanged personal details.
+    if (form.formState.isDirty) {
+      void form.handleSubmit(onSubmit)(event);
+    } else {
+      void onSubmit();
+    }
   }
 
   return (
     <form
-      onSubmit={form.handleSubmit(onSubmit)}
+      onSubmit={handleSubmit}
       className="flex min-h-0 flex-1 flex-col"
     >
       <SettingsPanelBody>
-        <SettingsAvatar account={account} />
+        <SettingsAvatar
+          account={account}
+          avatarUrl={avatar.avatarUrl}
+          pending={pending}
+          onSelect={avatar.select}
+          onRemove={avatar.remove}
+        />
 
         <div className="grid gap-x-4 gap-y-5 pt-5 pb-3 md:grid-cols-2">
           <SettingsRow
@@ -314,8 +343,8 @@ export function SettingsProfilePanel({
 
       <SettingsFormFooter
         onCancel={onClose}
-        canSave={form.formState.isDirty}
-        pending={updateMutation.status === "pending"}
+        canSave={isDirty}
+        pending={pending}
       />
     </form>
   );

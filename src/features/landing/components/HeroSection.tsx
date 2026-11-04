@@ -137,7 +137,7 @@ function ChecklistCard({ checklists }: { checklists: FeaturedChecklist[] }) {
 
 const HeroSection = ({ checklists }: { checklists: FeaturedChecklist[] }) => (
   <section className="landing-hero" aria-labelledby="landing-title">
-    <img className="landing-hero-background" src={landingAssets.background} alt="" aria-hidden="true" />
+    <img className="landing-hero-background" src={landingAssets.background} alt="" aria-hidden="true" draggable={false} />
     <div className="landing-hero-content">
       <div className="landing-hero-copy">
         <h1 id="landing-title">
@@ -154,8 +154,8 @@ const HeroSection = ({ checklists }: { checklists: FeaturedChecklist[] }) => (
         </div>
       </div>
       <div className="landing-hero-preview">
-        <img className="landing-certificate-art" src={landingAssets.certificate} alt="" aria-hidden="true" />
-        <img className="landing-id-art" src={landingAssets.id} alt="" aria-hidden="true" />
+        <img className="landing-certificate-art" src={landingAssets.certificate} alt="" aria-hidden="true" draggable={false} />
+        <img className="landing-id-art" src={landingAssets.id} alt="" aria-hidden="true" draggable={false} />
         <ChecklistCard checklists={checklists} />
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { parsePreviousUploads } from "./previous-uploads";
 import { requireActiveSession } from "~/server/auth";
 import { one } from "~/lib/embed";
 import {
@@ -74,7 +75,7 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
       .from("requests")
       .select(
         `id, tracking_number, request_type, status, payment_status,
-         fees_due, copies, form_data, created_at, updated_at,
+         fees_due, copies, form_data, created_at, updated_at, posting_start_date, posting_end_date,
          services_registry(name, display_name, processing_time, departments(name),
            event_date_label, event_place_label, reference_number_label, allows_messages),
          form_template_versions(definition)`,
@@ -99,7 +100,7 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
     const [attachments, logs] = await Promise.all([
       supabase
         .from("requirements_attachments")
-        .select("id, requirement_id, requirement_name, subject_role, verification_status, rejection_reason, uploaded_at")
+        .select("id, requirement_id, requirement_name, subject_role, verification_status, rejection_reason, uploaded_at, previous_uploads")
         .eq("request_id", data.requestId)
         .order("uploaded_at", { ascending: true }),
       supabase
@@ -135,6 +136,8 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
       id: row.id,
       trackingNumber: row.tracking_number,
       serviceCode: row.request_type as string | null,
+      postingStartDate: row.posting_start_date as string | null,
+      postingEndDate: row.posting_end_date as string | null,
       status: row.status,
       paymentStatus: row.payment_status,
       feesDue: Number(row.fees_due ?? 0),
@@ -157,6 +160,7 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
         subjectRole: a.subject_role,
         verificationStatus: a.verification_status,
         rejectionReason: a.rejection_reason,
+        previousUploads: parsePreviousUploads(a.previous_uploads),
       })),
       addableUploads,
       logs: (logs.data ?? []).map((l) => ({

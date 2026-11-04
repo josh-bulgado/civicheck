@@ -266,27 +266,45 @@ export const removeMyAvatarFn = createServerFn({ method: "POST" }).handler(
   async () => {
     const { supabase, user } = await requireActiveSession();
 
-    const { data: current } = await supabase
+    const { data: current, error: lookupError } = await supabase
       .from("profiles")
       .select("avatar_path")
       .eq("id", user.id)
       .single();
+    if (lookupError || !current) {
+      return {
+        error: true,
+        message: "Unable to load your profile photo. Please try again.",
+      };
+    }
     const previous = current?.avatar_path as string | null | undefined;
     if (!previous) return { error: false, message: "Profile photo removed." };
+
+    // Delete the object before dropping its reference. If Storage fails, keep
+    // the path so Save changes can retry instead of leaving an orphaned file.
+    const { error: deleteError } = await supabase.storage
+      .from(AVATAR_BUCKET)
+      .remove([previous]);
+    if (deleteError) {
+      return {
+        error: true,
+        message: "Your photo could not be permanently deleted. Please try again.",
+      };
+    }
+    forgetAvatarUrl(previous);
 
     const { error } = await supabase
       .from("profiles")
       .update({ avatar_path: null, updated_at: new Date().toISOString() })
-      .eq("id", user.id);
+      .eq("id", user.id)
+      // A different photo saved in another tab must not be unlinked here.
+      .eq("avatar_path", previous);
     if (error) {
       return {
         error: true,
         message: "An unexpected error occurred while removing your photo.",
       };
     }
-
-    await supabase.storage.from(AVATAR_BUCKET).remove([previous]);
-    forgetAvatarUrl(previous);
 
     return { error: false, message: "Profile photo removed." };
   },

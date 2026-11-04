@@ -1,4 +1,6 @@
+import { validateEventPlace } from "./event-place";
 import { ageInYears, diffInDays, fromDateKey, toDateKey } from "~/lib/date";
+import { INVALID_PERSON_NAME, isNameField, validatePersonName } from "~/lib/person-name";
 import { flattenSubjects, type SubjectFields } from "~/lib/subject-fields";
 import { addressAreas, addressCities } from "~/lib/requester-address";
 import { countryOptions } from "~/lib/countries";
@@ -398,6 +400,8 @@ export function evaluateTemplateEventTiming(
 ): { rule: EventTimingRule; evaluation: EventTimingEvaluation } | null {
   const rule = definition.eventTiming;
   if (!rule) return null;
+  if (rule.appliesWhen && !conditionMatches(rule.appliesWhen, answers)) return null;
+  if (rule.windowDaysByAnswer && !answerString(answers, rule.windowDaysByAnswer.field)) return null;
   return {
     rule,
     evaluation: evaluateEventTiming(
@@ -756,6 +760,11 @@ export function validateTemplateAnswers(
           return { success: false, message: `${field.label} is required.` };
         }
         for (const subject of subjects) {
+          if ([subject.firstName, subject.middleName, subject.lastName].some(
+            (part) => validatePersonName(part ?? "") !== true,
+          )) {
+            return { success: false, message: INVALID_PERSON_NAME };
+          }
           if (!subject.firstName?.trim() || !subject.lastName?.trim()) {
             return {
               success: false,
@@ -787,6 +796,13 @@ export function validateTemplateAnswers(
         return { success: false, message: `${field.label} is required.` };
       }
       if (!value) continue;
+      const placeValidation = validateEventPlace(field, value);
+      if (placeValidation !== true) {
+        return { success: false, message: placeValidation };
+      }
+      if (isNameField(field) && validatePersonName(value) !== true) {
+        return { success: false, message: `${field.label}: ${INVALID_PERSON_NAME}` };
+      }
 
       if (field.countrySelect && !countryOptions.some((country) => country.name === value)) {
         return { success: false, message: "Select a valid country." };

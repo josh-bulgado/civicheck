@@ -612,6 +612,10 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
     const isOnTimeColb =
       ["BIRTH_ONTIME", "OTCOLB-MARITAL", "OTCOLB-NONMARITAL"].includes(selectedService.service_code) &&
       /certificate of live birth/i.test(req.requirement_name);
+    const needsFourPhysicalCopies =
+      isOnTimeColb ||
+      (/certificate/i.test(req.requirement_name) &&
+        /\b(?:4\)?|four)\s+(?:original\s+)?copies\b/i.test(req.requirement_name));
     const primary = isOnTimeColb
       ? "Certificate of Live Birth (COLB)"
       : parseRequirementName(req.requirement_name).primary;
@@ -723,7 +727,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
               >
                 {isDropTarget
                   ? "Drop to add to this document."
-                  : isOnTimeColb
+                  : needsFourPhysicalCopies
                     ? "Required · upload one copy (all pages). Bring 4 physical copies to CCRO."
                   : pageCount > 0
                     ? "Keep photos in reading order. A multi-page PDF can stay as one file."

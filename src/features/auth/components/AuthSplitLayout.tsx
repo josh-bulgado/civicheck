@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ChevronLeft } from "lucide-react";
 import { QuietLink as Link } from "~/components/quiet-link";
 import { CiviCheckIdentity } from "~/components/brand/civic-identity";
 import { enterDelay } from "~/components/motion/stagger";
@@ -103,10 +104,11 @@ export function AuthBackLink({
     <Link
       to={to}
       className={cn(
-        buttonVariants({ variant: "ghost", size: "sm" }),
-        "group w-fit rounded-full border-border-light bg-card px-3.5 text-[13px] font-semibold text-foreground hover:bg-surface-subtle",
+        buttonVariants({ size: "sm", shape: "pill" }),
+        "w-fit gap-1 pl-2 pr-3 text-[13px] font-medium hover:bg-primary-fill-hover",
       )}
     >
+      <ChevronLeft aria-hidden="true" className="size-4" />
       {children}
     </Link>
   );

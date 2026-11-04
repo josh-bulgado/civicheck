@@ -1,5 +1,43 @@
 # Gmail delivery investigation and recovery
 
+## November 4: new domain verified and Gmail test accepted
+
+The user registered `civicheck.xyz` and added the Resend DNS records in Porkbun.
+Read-only checks confirmed the public records and Resend's domain verification:
+
+- Domain ID: `bce2dc3c-d14b-4e88-a8c3-793e3c0d2c2a`; region: `ap-northeast-1`.
+- Domain, DKIM and both sending CNAME records are verified; sending is enabled.
+- DKIM TXT host: `resend._domainkey.civicheck.xyz`.
+- Sending CNAMEs: `rsend.civicheck.xyz` points to
+  `rsend-apne1.forge.rmta.net`; `send.civicheck.xyz` points to
+  `send.forge.rmta.net`. The first CNAME host is **`rsend`**, not `resend`.
+- DMARC at `_dmarc.civicheck.xyz`: `v=DMARC1; p=none;`.
+- Open and click tracking are disabled; receiving is disabled.
+
+The user supplied a Gmail inbox they control for one delivery test. At
+16:09:45 Singapore time, the existing `sendEmail` utility and OTP renderer sent
+one explicitly nonfunctional test from `CiviCheck <noreply@civicheck.xyz>`.
+Resend email ID: `01a1a59b-d556-7c1e-b26c-43da8c961740`; final event:
+**`delivered`**. No account or authentication tokens were created or changed.
+The ignored receipt is
+`artifacts/gmail-xyz-delivery-test-2026-11-04.json`.
+
+Gmail accepted this test; Inbox versus Spam placement has not been confirmed.
+This does not establish the cause of the old domain's failures or verify the
+deployed application's signup and recovery flows.
+
+Local `.env` now sets
+`RESEND_FROM_EMAIL="CiviCheck <noreply@civicheck.xyz>"`. Restart the local app
+to load it. The code's fallback sender remains the old domain. Production has
+not been changed: the Vercel CLI has no authenticated credentials and no
+connected browser session is available. In the intended CiviCheck Vercel
+project, set `RESEND_FROM_EMAIL` to `CiviCheck <noreply@civicheck.xyz>` for the
+required environments and redeploy the current deployment. Then verify an
+actual signup/recovery flow with the inbox owner. Review the health-probe's
+sender secrets separately as described in the recovery steps below.
+
+## November 3: previous domain investigation
+
 Checked against the live Resend API and public DNS on November 3, 2026.
 The initial investigation was read-only. An authorized support submission and
 single Gmail delivery test followed; their results are recorded below. No DNS
@@ -26,9 +64,10 @@ account. Gmail rejected it with the same `550 5.7.1` unsolicited-mail diagnostic
 this time from `23.251.234.61`, a fourth observed sending IP. The message was not
 retried. Final events were retrieved at 11:38:25 Singapore time.
 
-Gmail delivery remains blocked. The next external step is Resend's investigation;
-an actual verification/recovery flow still needs a successful retest after
-remediation. Full receipts are stored locally under ignored `artifacts/` files.
+At that point, Gmail delivery remained blocked on the old domain. Resend's
+investigation was the next external step. An actual verification/recovery flow
+still needs a successful retest after migration. Full receipts are stored
+locally under ignored `artifacts/` files.
 
 ## Confirmed evidence
 

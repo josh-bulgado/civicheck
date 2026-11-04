@@ -1,0 +1,644 @@
+{
+  "definition": {
+    "sections": [
+      {
+        "key": "case",
+        "step": "case",
+        "title": "Case details",
+        "fields": [
+          {
+            "key": "event_date",
+            "type": "date",
+            "label": "Date of birth",
+            "helpText": "We calculate the correct 0-79 or 80+ registration track from this date.",
+            "required": true,
+            "dateDirection": "past"
+          },
+          {
+            "key": "event_place",
+            "type": "text",
+            "label": "Place of birth",
+            "required": true,
+            "placeholder": "e.g. Legazpi City, Albay"
+          },
+          {
+            "key": "place_type",
+            "type": "select",
+            "label": "Where did the birth take place?",
+            "options": [
+              {
+                "label": "Hospital / Clinic",
+                "value": "hospital"
+              },
+              {
+                "label": "Home",
+                "value": "home"
+              },
+              {
+                "label": "Other",
+                "value": "other"
+              }
+            ],
+            "blockKey": "birth_details",
+            "required": false
+          },
+          {
+            "key": "informant_relationship",
+            "type": "select",
+            "label": "Informant's relationship to the child",
+            "options": [
+              {
+                "label": "Mother",
+                "value": "mother"
+              },
+              {
+                "label": "Father",
+                "value": "father"
+              },
+              {
+                "label": "Grandparent",
+                "value": "grandparent"
+              },
+              {
+                "label": "Guardian",
+                "value": "guardian"
+              },
+              {
+                "label": "Physician / Midwife",
+                "value": "physician_midwife"
+              },
+              {
+                "label": "Other",
+                "value": "other"
+              }
+            ],
+            "blockKey": "birth_details",
+            "required": false
+          },
+          {
+            "key": "informant_name",
+            "type": "text",
+            "label": "Informant's name",
+            "blockKey": "birth_details",
+            "required": false,
+            "placeholder": "Full name of the person reporting the birth"
+          },
+          {
+            "key": "has_foreign_parent",
+            "type": "select",
+            "label": "Is either parent a foreign national?",
+            "options": [
+              {
+                "label": "Yes",
+                "value": "yes"
+              },
+              {
+                "label": "No",
+                "value": "no"
+              }
+            ],
+            "required": true
+          },
+          {
+            "key": "out_of_town",
+            "type": "select",
+            "label": "Was the person born outside Legazpi City?",
+            "options": [
+              {
+                "label": "Yes — out-of-town registration",
+                "value": "yes"
+              },
+              {
+                "label": "No — born in Legazpi City",
+                "value": "no"
+              }
+            ],
+            "helpText": "Choose whether the person was born in Legazpi City or another city/municipality.",
+            "required": true
+          },
+          {
+            "key": "additional_identity",
+            "type": "select",
+            "label": "Is additional proof of identity applicable to your BRAP application?",
+            "options": [
+              {
+                "label": "Yes",
+                "value": "yes"
+              },
+              {
+                "label": "No",
+                "value": "no"
+              }
+            ],
+            "helpText": "Select Yes if additional identity proof is available or requested by CCRO.",
+            "required": true,
+            "visibleWhen": {
+              "field": "program",
+              "value": "brap",
+              "operator": "equals"
+            }
+          }
+        ]
+      },
+      {
+        "key": "details",
+        "step": "details",
+        "title": "Your details",
+        "fields": [
+          {
+            "key": "subjects",
+            "type": "person_group",
+            "label": "Person named on the record",
+            "required": true
+          },
+          {
+            "key": "contact_number",
+            "type": "phone",
+            "label": "Contact number",
+            "blockKey": "contact_number",
+            "required": false,
+            "placeholder": "9171234567"
+          }
+        ]
+      }
+    ],
+    "eventTiming": {
+      "title": "This date is within the last 30 days",
+      "behavior": "redirect_confirm",
+      "ctaLabel": "Switch to On-Time Registration",
+      "mismatch": "inside_window",
+      "timezone": "Asia/Manila",
+      "windowDays": 30,
+      "description": "Use the registration track that matches the birth date.",
+      "triggerField": "event_date",
+      "targetServiceCode": "birth_ontime",
+      "requireDocumentFirst": false
+    },
+    "caseSelector": {
+      "title": "Find the right delayed-registration service",
+      "outcomes": [
+        {
+          "when": {
+            "match": "all",
+            "conditions": [
+              {
+                "field": "age",
+                "value": "0-79",
+                "operator": "equals"
+              },
+              {
+                "field": "program",
+                "value": "brap",
+                "operator": "equals"
+              }
+            ]
+          },
+          "serviceCode": "DCOLB-0079-BRAP"
+        },
+        {
+          "when": {
+            "match": "all",
+            "conditions": [
+              {
+                "field": "age",
+                "value": "0-79",
+                "operator": "equals"
+              },
+              {
+                "field": "program",
+                "value": "normal",
+                "operator": "equals"
+              },
+              {
+                "field": "marital",
+                "value": "marital",
+                "operator": "equals"
+              }
+            ]
+          },
+          "serviceCode": "DCOLB-0079-NORMAL-MARITAL"
+        },
+        {
+          "when": {
+            "match": "all",
+            "conditions": [
+              {
+                "field": "age",
+                "value": "0-79",
+                "operator": "equals"
+              },
+              {
+                "field": "program",
+                "value": "normal",
+                "operator": "equals"
+              },
+              {
+                "field": "marital",
+                "value": "non-marital",
+                "operator": "equals"
+              }
+            ]
+          },
+          "serviceCode": "DCOLB-0079-NORMAL-NONMARITAL"
+        },
+        {
+          "when": {
+            "match": "all",
+            "conditions": [
+              {
+                "field": "age",
+                "value": "80+",
+                "operator": "equals"
+              },
+              {
+                "field": "program",
+                "value": "brap",
+                "operator": "equals"
+              }
+            ]
+          },
+          "serviceCode": "DCOLB-80UP-BRAP"
+        },
+        {
+          "when": {
+            "match": "all",
+            "conditions": [
+              {
+                "field": "age",
+                "value": "80+",
+                "operator": "equals"
+              },
+              {
+                "field": "program",
+                "value": "normal",
+                "operator": "equals"
+              },
+              {
+                "field": "marital",
+                "value": "marital",
+                "operator": "equals"
+              }
+            ]
+          },
+          "serviceCode": "DCOLB-80UP-NORMAL-MARITAL"
+        },
+        {
+          "when": {
+            "match": "all",
+            "conditions": [
+              {
+                "field": "age",
+                "value": "80+",
+                "operator": "equals"
+              },
+              {
+                "field": "program",
+                "value": "normal",
+                "operator": "equals"
+              },
+              {
+                "field": "marital",
+                "value": "non-marital",
+                "operator": "equals"
+              }
+            ]
+          },
+          "serviceCode": "DCOLB-80UP-NORMAL-NONMARITAL"
+        }
+      ],
+      "questions": [
+        {
+          "key": "program",
+          "label": "Registration program",
+          "options": [
+            {
+              "label": "BRAP-assisted registration",
+              "value": "brap"
+            },
+            {
+              "label": "Standard registration",
+              "value": "normal"
+            }
+          ]
+        },
+        {
+          "key": "marital",
+          "label": "Are the child’s parents legally married?",
+          "options": [
+            {
+              "label": "Yes",
+              "value": "marital"
+            },
+            {
+              "label": "No",
+              "value": "non-marital"
+            }
+          ]
+        }
+      ],
+      "description": "Answer these questions so we can apply the correct fee, parties, process, and requirements."
+    },
+    "schemaVersion": 1,
+    "derivedAnswers": [
+      {
+        "key": "age",
+        "kind": "age_band",
+        "bands": [
+          {
+            "label": "0–79 years old",
+            "value": "0-79",
+            "maxAge": 79,
+            "minAge": 0
+          },
+          {
+            "label": "80 years old and above",
+            "value": "80+",
+            "minAge": 80
+          }
+        ],
+        "label": "Age at registration",
+        "required": true,
+        "dateField": "event_date"
+      }
+    ]
+  },
+  "requirements": [
+    {
+      "id": "fefb7d11-e17d-41b2-ab68-09a5a41dfe75",
+      "case_tag": null,
+      "sort_order": 1,
+      "applies_when": null,
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": "Hospital / Lying-ins / Birthing Homes / Clinics / Local Civil Registrar",
+      "requirement_name": "Four (4) copies of duly accomplished Certificate of Live Birth",
+      "requirement_group": "birth_delayed"
+    },
+    {
+      "id": "89541c12-d14e-4c02-9d43-2d236e6af9a9",
+      "case_tag": null,
+      "sort_order": 2,
+      "applies_when": null,
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": "Philippine Statistics Authority",
+      "requirement_name": "PSA Negative Certification — 1 original copy and 1 photocopy",
+      "requirement_group": "birth_delayed"
+    },
+    {
+      "id": "7c940ecb-1ceb-4719-9605-651d9d70e5dd",
+      "case_tag": null,
+      "sort_order": 3,
+      "applies_when": null,
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": "Government / Private Sector",
+      "requirement_name": "Two (2) documentary evidences, 1 certified photocopy each (e.g. Baptismal Certificate, School Records, Voter's Registration, Medical Records, Pag-ibig Nomination Form, PhilHealth MDR, SSS Membership, COLB of children, NBI/Police clearance)",
+      "requirement_group": "birth_delayed"
+    },
+    {
+      "id": "655a66b8-bb0f-4c07-b46d-7e48fe42deed",
+      "case_tag": null,
+      "sort_order": 4,
+      "applies_when": null,
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": "Local Civil Registrar",
+      "requirement_name": "Affidavit of 2 Disinterested Persons / Joint Affidavit — with 1 photocopy of IDs of affiant, with signature",
+      "requirement_group": "birth_delayed"
+    },
+    {
+      "id": "9853c70c-8778-484d-8124-32d5fcd45726",
+      "case_tag": null,
+      "sort_order": 5,
+      "applies_when": null,
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": "Philippine Statistics Authority",
+      "requirement_name": "National ID / PhilSys Transaction Slip — 1 photocopy",
+      "requirement_group": "birth_delayed"
+    },
+    {
+      "id": "66479e5e-c68d-4586-9db8-7f7b4dcec7db",
+      "case_tag": null,
+      "sort_order": 6,
+      "applies_when": null,
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": "Office of the Punong Barangay",
+      "requirement_name": "Barangay Residency Certificate — 1 original or certified photocopy",
+      "requirement_group": "birth_delayed"
+    },
+    {
+      "id": "3aab4690-3e46-4567-ab5f-2fd301dd57df",
+      "case_tag": null,
+      "sort_order": 7,
+      "applies_when": null,
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": "Photo Studio / Applicant",
+      "requirement_name": "2x2 picture with white background",
+      "requirement_group": "birth_delayed"
+    },
+    {
+      "id": "48ef5509-fe73-492e-85cb-8a9108c94b26",
+      "case_tag": null,
+      "sort_order": 8,
+      "applies_when": null,
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": "Government / Private Sector",
+      "requirement_name": "Valid ID of the registrant / informant — with personal appearance",
+      "requirement_group": "birth_delayed"
+    },
+    {
+      "id": "286fd932-1c2f-4b64-b0f9-95bef0f9755c",
+      "case_tag": null,
+      "sort_order": 9,
+      "applies_when": null,
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": "Local Civil Registrar / PSA",
+      "requirement_name": "Parent's valid ID / Birth Certificate / Death Certificate if deceased — 1 original to be presented and 1 certified photocopy",
+      "requirement_group": "birth_delayed"
+    },
+    {
+      "id": "4d6c4bab-1fe6-4410-9eac-4bc0885a400c",
+      "case_tag": "marital_only",
+      "sort_order": 10,
+      "applies_when": {
+        "match": "all",
+        "conditions": [
+          {
+            "field": "marital",
+            "value": "marital",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": "Local Civil Registrar / Philippine Statistics Authority",
+      "requirement_name": "Marriage Certificate of Parents — 1 photocopy (for Marital Child)",
+      "requirement_group": "birth_delayed"
+    },
+    {
+      "id": "8680d2ca-22c5-4087-b109-ef6feae24797",
+      "case_tag": "non_marital_only",
+      "sort_order": 11,
+      "applies_when": {
+        "match": "all",
+        "conditions": [
+          {
+            "field": "marital",
+            "value": "non-marital",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": "Local Civil Registrar",
+      "requirement_name": "Acknowledgement / Admission of Paternity + Affidavit to Use Surname of Father + Sworn Attestation of mother/guardian for ages 7-17 - with IDs of parents and child (for Non-Marital Child)",
+      "requirement_group": "birth_delayed"
+    },
+    {
+      "id": "a41dc0b9-ce5c-45d9-afe8-c37fff83b787",
+      "case_tag": "foreigner_only",
+      "sort_order": 12,
+      "applies_when": {
+        "match": "all",
+        "conditions": [
+          {
+            "field": "has_foreign_parent",
+            "value": "yes",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": "Philippine Embassy / Department of Foreign Affairs",
+      "requirement_name": "Valid passport / BI Clearance / ACR-ICR Card of foreign parent — 1 original to be presented and 1 certified photocopy (if parent is a foreigner)",
+      "requirement_group": "birth_delayed"
+    },
+    {
+      "id": "8474c9f6-6ccb-42df-ac73-d4fcb0e789a0",
+      "case_tag": "brap_only",
+      "sort_order": 13,
+      "applies_when": {
+        "match": "all",
+        "conditions": [
+          {
+            "field": "program",
+            "value": "brap",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": "Philippine Statistics Authority",
+      "requirement_name": "Negative Omnibus Certification — 1 original and 1 photocopy (if under BRAP)",
+      "requirement_group": "birth_delayed"
+    },
+    {
+      "id": "eb39cb61-735b-4238-a74f-0f269a142bce",
+      "case_tag": "brap_only",
+      "sort_order": 14,
+      "applies_when": {
+        "match": "all",
+        "conditions": [
+          {
+            "field": "program",
+            "value": "brap",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": "Punong Barangay",
+      "requirement_name": "Certificate of Indigency — 1 original (if under BRAP)",
+      "requirement_group": "birth_delayed"
+    },
+    {
+      "id": "9534b7fa-f585-4f67-b3d8-aa6d5638ed41",
+      "case_tag": "brap_only",
+      "sort_order": 15,
+      "applies_when": {
+        "match": "all",
+        "conditions": [
+          {
+            "field": "program",
+            "value": "brap",
+            "operator": "equals"
+          },
+          {
+            "field": "additional_identity",
+            "value": "yes",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": "Government / Private Sector",
+      "requirement_name": "Any additional proof of identity, such as Barangay certification or Driver's License — 1 photocopy (BRAP, if applicable)",
+      "requirement_group": "birth_delayed"
+    }
+  ],
+  "fees": {
+    "DCOLB-0079-NORMAL-MARITAL": 500,
+    "DCOLB-80UP-NORMAL-MARITAL": 500,
+    "DCOLB-0079-BRAP": 0,
+    "DCOLB-80UP-NORMAL-NONMARITAL": 500,
+    "DCOLB-0079-NORMAL-NONMARITAL": 800,
+    "DCOLB-80UP-BRAP": 0
+  }
+}
