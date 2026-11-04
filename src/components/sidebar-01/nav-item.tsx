@@ -54,7 +54,7 @@ export function SidebarNavItem({ item, index = 0 }: { item: NavItem; index?: num
             <>
               <span
                 key={item.badge}
-                className="civic-enter-scale flex h-6 min-w-6 items-center justify-center rounded-full bg-brand-gold px-1.75 text-[13px] font-bold text-foreground transition-opacity duration-150 group-data-[collapsible=icon]:opacity-0"
+                className="civic-enter-scale flex h-6 min-w-6 items-center justify-center rounded-full bg-brand-gold px-1.75 text-[13px] font-bold text-panel-dark transition-opacity duration-150 group-data-[collapsible=icon]:opacity-0"
               >
                 {item.badge > 99 ? "99+" : item.badge}
               </span>
