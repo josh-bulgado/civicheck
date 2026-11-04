@@ -1,0 +1,227 @@
+.register-page {
+  min-height: 100dvh;
+  background: var(--auth-bg);
+  color: var(--foreground);
+}
+
+.register-container {
+  width: calc(100% - 40px);
+  max-width: 576px;
+  margin-inline: auto;
+  padding-block: 32px 40px;
+}
+
+.register-header {
+  margin-bottom: 24px;
+}
+
+.register-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.register-back {
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  margin-left: -12px;
+  border-radius: 50%;
+  color: var(--body);
+}
+
+.register-back:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.register-back:focus-visible,
+.register-home:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 4px;
+}
+
+.register-home {
+  display: inline-flex;
+  border-radius: 8px;
+}
+
+.register-title {
+  margin-top: 16px;
+  font-size: 28px;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.035em;
+}
+
+.register-form,
+.register-page .register-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.register-fields {
+  min-width: 0;
+}
+
+.register-name-row,
+.register-middle-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+
+.register-middle-row {
+  grid-template-columns: minmax(0, 1fr) 132px;
+}
+
+.register-suffix-value {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  text-align: left;
+  line-height: 20px;
+}
+
+.register-suffix-caption {
+  color: var(--muted-foreground);
+  font-size: 11px;
+  line-height: 14px;
+}
+
+.register-page .register-label {
+  color: var(--foreground);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.register-page .register-input {
+  width: 100%;
+  height: 56px;
+  border-color: var(--input);
+  background: transparent;
+  box-shadow: none;
+  font-size: 16px;
+}
+
+.register-page input.register-input,
+.register-page .register-input > input {
+  padding-inline: 16px;
+  font-size: 16px;
+}
+
+.register-page .register-input:focus-visible,
+.register-page .register-input:has(input:focus-visible) {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 20%, transparent);
+}
+
+.register-page .register-input[aria-invalid="true"],
+.register-page .register-input:has([aria-invalid="true"]) {
+  border-color: var(--destructive);
+}
+
+.register-page input[aria-invalid="true"]::placeholder {
+  color: var(--destructive);
+  opacity: 1;
+}
+
+.register-page .register-input[aria-invalid="true"]:focus-visible,
+.register-page .register-input:has(input[aria-invalid="true"]:focus-visible) {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--destructive) 20%, transparent);
+}
+
+.register-page .register-checkbox-row {
+  min-height: 44px;
+  align-items: center;
+  gap: 10px;
+  padding-block: 0;
+}
+
+.register-checkbox-row [data-slot="checkbox"] {
+  margin-top: 0;
+}
+
+.register-checkbox-row [data-slot="checkbox"]::after {
+  inset: -14px;
+}
+
+.register-page .register-checkbox-label {
+  color: var(--body);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
+  padding-block: 12px;
+}
+
+.register-password-help {
+  display: grid;
+}
+
+.register-password-help > * {
+  grid-area: 1 / 1;
+}
+
+.register-password-hint[data-hidden="true"] {
+  visibility: hidden;
+}
+
+.register-page .register-input [data-slot="button"] {
+  min-width: 44px;
+  height: 44px;
+}
+
+.register-page .register-consent {
+  display: block;
+}
+
+.register-page .register-action {
+  width: 100%;
+  height: 48px;
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.register-page .register-google {
+  background: transparent;
+}
+
+.register-page .register-google:hover {
+  background: var(--muted);
+}
+
+.register-form + div {
+  margin-top: 24px;
+}
+
+@media (max-width: 479px) {
+  .register-container {
+    padding-top: 16px;
+  }
+
+  .register-navigation {
+    margin-bottom: 12px;
+  }
+
+  .register-title {
+    font-size: 26px;
+  }
+
+  .register-middle-row {
+    grid-template-columns: minmax(0, 1fr) 108px;
+  }
+}
+
+@media (max-width: 359px) {
+  .register-name-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -38,6 +38,8 @@ import {
   signupInputSchema,
 } from "./auth.schema";
 import { describeWeakPassword } from "./password-error";
+import { getSignupErrorField } from "./signup-error";
+import { authAttemptFailure, checkAuthLockout, clearAuthAttempts, reserveAuthAttempt } from "~/server/auth-attempts";
 import {
   clearIssuedOtps,
   describeRejectedOtp,
@@ -71,10 +73,7 @@ async function allowCodeCheck(purpose: OtpPurpose, email: string) {
 
 /** Bounds password guesses, per account and per visitor. */
 async function allowPasswordCheck(email: string) {
-  return (
-    (await allowAttempt("sign-in:email", email, RATE_LIMITS.signInPerEmail)) &&
-    (await allowAttempt("sign-in:ip", getClientIp(), RATE_LIMITS.signInPerIp))
-  );
+  return (await reserveAuthAttempt("sign-in", email)).allowed;
 }
 
 /** Matches the code lifetime promised in the verification email. */
@@ -175,8 +174,9 @@ async function sendSignupOtpEmail(
 export const loginWithEmailFn = createServerFn({ method: "POST" })
   .validator(loginInputSchema)
   .handler(async ({ data }) => {
-    if (!(await allowPasswordCheck(data.email))) {
-      return { error: true, message: TOO_MANY_ATTEMPTS };
+    const attempt = await reserveAuthAttempt("sign-in", data.email);
+    if (!attempt.allowed) {
+      return authAttemptFailure(attempt, attempt.message ?? TOO_MANY_ATTEMPTS);
     }
 
     const sessionOnly = data.keepSignedIn !== true;
@@ -190,6 +190,7 @@ export const loginWithEmailFn = createServerFn({ method: "POST" })
     // and that verification opens the session — so it needs the choice too.
     if (!error || /email not confirmed/i.test(error.message ?? "")) {
       setSessionScope(sessionOnly);
+      await clearAuthAttempts("sign-in", data.email);
     }
 
     if (error) {
@@ -201,10 +202,11 @@ export const loginWithEmailFn = createServerFn({ method: "POST" })
       const cleanMessage = isJsonEmpty
         ? "An unexpected login server error occurred. Please check your Supabase connection."
         : error.message;
-      return {
-        error: true,
-        message: cleanMessage,
-      };
+      // Correct credentials for an unconfirmed account continue to verification.
+      if (/email not confirmed/i.test(error.message ?? "")) {
+        return { error: true, message: cleanMessage };
+      }
+      return authAttemptFailure(attempt, cleanMessage);
     }
 
     const { data: profile } = await supabase
@@ -236,6 +238,12 @@ export const loginWithEmailFn = createServerFn({ method: "POST" })
 export const loginWithOAuthFn = createServerFn({ method: "POST" })
   .validator(oauthProviderSchema)
   .handler(async ({ data }) => {
+    // Optional form email provides early feedback. The callback always checks
+    // the provider-verified email too, so omitting/changing this cannot bypass it.
+    if (data.email) {
+      const lockout = await checkAuthLockout(data.email);
+      if (!lockout.allowed) return authAttemptFailure(lockout, lockout.message!);
+    }
     // The session is opened later, by /auth/callback, so the choice rides
     // along as the marker cookie that request will read.
     const sessionOnly = data.keepSignedIn !== true;
@@ -265,8 +273,9 @@ export const loginWithOAuthFn = createServerFn({ method: "POST" })
 export const signupFn = createServerFn({ method: "POST" })
   .validator(signupInputSchema)
   .handler(async ({ data }) => {
-    if (!(await allowCodeEmail(data.email))) {
-      return { error: true, message: TOO_MANY_ATTEMPTS };
+    const attempt = await reserveAuthAttempt("sign-up", data.email);
+    if (!attempt.allowed) {
+      return authAttemptFailure(attempt, attempt.message ?? TOO_MANY_ATTEMPTS);
     }
 
     const adminSupabase = getSupabaseAdminClient();
@@ -290,20 +299,32 @@ export const signupFn = createServerFn({ method: "POST" })
 
     if (signUpResult.error) {
       const isAlreadyRegistered =
+        signUpResult.error.code === "email_exists" ||
+        signUpResult.error.code === "user_already_exists" ||
         signUpResult.error.message.includes("already been registered") ||
         signUpResult.error.message.includes("already exists");
 
       if (isAlreadyRegistered) {
         // If the lookup fails there is no user to find, and the "already
         // registered" error below is the right answer anyway.
-        const existingUser = await findAuthUserByEmail(adminSupabase, data.email);
+        const existingUser = await findAuthUserByEmail(
+          adminSupabase,
+          data.email,
+        );
 
         if (
           existingUser &&
           !existingUser.email_confirmed_at &&
-          !(await canRestartPendingSignup(adminSupabase, existingUser, data.password))
+          !(await canRestartPendingSignup(
+            adminSupabase,
+            existingUser,
+            data.password,
+          ))
         ) {
-          return { error: true, message: PENDING_SIGNUP_MESSAGE };
+          return {
+            ...authAttemptFailure(attempt, PENDING_SIGNUP_MESSAGE),
+            field: attempt.lockedUntil ? undefined : "email" as const,
+          };
         }
 
         // A stalled sign-up of this applicant's own: start it over.
@@ -335,8 +356,8 @@ export const signupFn = createServerFn({ method: "POST" })
           ? "An unexpected registration error occurred. Please check your SMTP configuration in the Supabase Dashboard."
           : signUpResult.error.message);
       return {
-        error: true,
-        message: cleanMessage,
+        ...authAttemptFailure(attempt, cleanMessage),
+        field: attempt.lockedUntil ? undefined : getSignupErrorField(signUpResult.error),
       };
     }
 
@@ -355,6 +376,10 @@ export const signupFn = createServerFn({ method: "POST" })
         .eq("id", newProfileId);
     }
 
+    // Failed account creation must not spend the separate email-send allowance.
+    if (!(await allowCodeEmail(data.email))) {
+      return authAttemptFailure(attempt, TOO_MANY_ATTEMPTS);
+    }
     const otpResult = await sendSignupOtpEmail(adminSupabase, {
       email: data.email,
       password: data.password,
@@ -369,9 +394,10 @@ export const signupFn = createServerFn({ method: "POST" })
     });
 
     if (otpResult.error) {
-      return otpResult;
+      return authAttemptFailure(attempt, otpResult.message ?? "Could not send your verification code.");
     }
 
+    await clearAuthAttempts("sign-up", data.email);
     return {
       error: false,
       message: "Please check your email for your verification code.",

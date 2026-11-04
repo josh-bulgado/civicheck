@@ -19,15 +19,17 @@ export const RATE_LIMITS = {
   /** Each send emails a stranger's inbox and replaces their current code. */
   otpSendPerEmail: { limit: 3, windowSeconds: 15 * 60 },
   otpSendPerIp: { limit: 10, windowSeconds: 60 * 60 },
-  signInPerEmail: { limit: 10, windowSeconds: 15 * 60 },
+  signInPerEmail: { limit: 5, windowSeconds: 15 * 60 },
+  signUpPerEmail: { limit: 5, windowSeconds: 15 * 60 },
   // An office or school shares one address, so this stays generous.
   signInPerIp: { limit: 60, windowSeconds: 15 * 60 },
+  signUpPerIp: { limit: 60, windowSeconds: 15 * 60 },
   /** Tracking numbers are 6 digits; a surname is the only other factor. */
   trackingPerIp: { limit: 30, windowSeconds: 15 * 60 },
 } satisfies Record<string, RateLimitRule>;
 
 /** Identifiers are stored as keyed hashes, never as readable emails or addresses. */
-function bucketKey(scope: string, identifier: string) {
+export function bucketKey(scope: string, identifier: string) {
   const digest = createHmac("sha256", process.env.SUPABASE_SECRET_KEY ?? "")
     .update(identifier.trim().toLowerCase())
     .digest("hex");

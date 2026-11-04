@@ -149,6 +149,7 @@ export const loginInputSchema = credentialsSchema.extend({
 export const oauthProviderSchema = z.object({
   provider: z.enum(["google", "apple"]),
   keepSignedIn: keepSignedInSchema,
+  email: emailSchema.optional(),
 });
 
 export const otpVerificationSchema = z.object({

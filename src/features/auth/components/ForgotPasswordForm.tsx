@@ -77,7 +77,7 @@ const ForgotPasswordForm = () => {
   return (
     <AuthCenteredLayout>
       <div className="flex flex-col gap-6">
-        <AuthBackLink to="/login">Back to sign in</AuthBackLink>
+        <AuthBackLink to="/login">Back</AuthBackLink>
 
         {codeSent ? (
           <>

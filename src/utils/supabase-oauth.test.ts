@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { CookieOptions } from "@supabase/ssr";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getAppUrl } from "./app-url";
-import { getSupabaseServerClient, setSessionScope } from "./supabase";
+import { commitSupabaseCookies, getSupabaseServerClient, setSessionScope } from "./supabase";
 
 const requestState = vi.hoisted(() => ({
   url: "http://localhost:3000/login",
@@ -38,9 +38,11 @@ afterEach(() => {
 
 describe("Supabase OAuth cookies and callback", () => {
   it.each([
-    { mode: "development", origin: "http://localhost:3000", secure: false },
-    { mode: "production", origin: "https://civicheck.vercel.app", secure: true },
-  ])("exchanges the same PKCE verifier on $origin", async ({ mode, origin, secure }) => {
+    { mode: "development", origin: "http://localhost:3000", secure: false, deferCookies: false },
+    { mode: "production", origin: "https://civicheck.vercel.app", secure: true, deferCookies: false },
+    { mode: "development", origin: "http://localhost:3000", secure: false, deferCookies: true },
+    { mode: "production", origin: "https://civicheck.vercel.app", secure: true, deferCookies: true },
+  ])("exchanges the same PKCE verifier on $origin (deferred cookies: $deferCookies)", async ({ mode, origin, secure, deferCookies }) => {
     vi.stubEnv("NODE_ENV", mode);
     requestState.url = `${origin}/login`;
     setSessionScope(false);
@@ -78,11 +80,20 @@ describe("Supabase OAuth cookies and callback", () => {
     );
     vi.stubGlobal("fetch", tokenEndpoint);
 
-    const callbackClient = getSupabaseServerClient();
+    const callbackClient = getSupabaseServerClient({ deferCookies });
     const result = await callbackClient.auth.exchangeCodeForSession("test-auth-code");
     expect(result.error).toBeNull();
     expect(result.data.session?.access_token).toBe("test-access-token");
     expect(tokenEndpoint).toHaveBeenCalledOnce();
+    const hasSessionCookies = () => [...requestState.cookies.keys()]
+      .some(name => name.includes("-auth-token") && !name.endsWith("-code-verifier"));
+    expect(hasSessionCookies()).toBe(!deferCookies);
+    if (deferCookies) {
+      // Token exchange alone must not authenticate the browser. Only a callback
+      // that passes the account cooldown is allowed to publish the new cookies.
+      commitSupabaseCookies(callbackClient);
+      expect(hasSessionCookies()).toBe(true);
+    }
 
     const [endpoint, init] = vi.mocked(fetch).mock.calls[0];
     expect(String(endpoint)).toContain("/auth/v1/token?grant_type=pkce");
