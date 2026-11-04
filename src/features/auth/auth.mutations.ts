@@ -40,6 +40,7 @@ import {
 import { describeWeakPassword } from "./password-error";
 import { getSignupErrorField } from "./signup-error";
 import { authAttemptFailure, checkAuthLockout, clearAuthAttempts, reserveAuthAttempt } from "~/server/auth-attempts";
+import { issueOAuthCaptchaProof, verifyCaptcha } from "./captcha.server";
 import {
   clearIssuedOtps,
   describeRejectedOtp,
@@ -174,7 +175,11 @@ async function sendSignupOtpEmail(
 export const loginWithEmailFn = createServerFn({ method: "POST" })
   .validator(loginInputSchema)
   .handler(async ({ data }) => {
-    const attempt = await reserveAuthAttempt("sign-in", data.email);
+    if (data.captchaToken) {
+      const captcha = await verifyCaptcha(data.captchaToken);
+      if (captcha.error) return captcha;
+    }
+    const attempt = await reserveAuthAttempt("sign-in", data.email, !!data.captchaToken);
     if (!attempt.allowed) {
       return authAttemptFailure(attempt, attempt.message ?? TOO_MANY_ATTEMPTS);
     }
@@ -244,6 +249,8 @@ export const loginWithOAuthFn = createServerFn({ method: "POST" })
       const lockout = await checkAuthLockout(data.email);
       if (!lockout.allowed) return authAttemptFailure(lockout, lockout.message!);
     }
+    const captcha = await verifyCaptcha(data.captchaToken);
+    if (captcha.error) return captcha;
     // The session is opened later, by /auth/callback, so the choice rides
     // along as the marker cookie that request will read.
     const sessionOnly = data.keepSignedIn !== true;
@@ -267,12 +274,15 @@ export const loginWithOAuthFn = createServerFn({ method: "POST" })
       return { error: true, message: cleanMessage };
     }
 
+    issueOAuthCaptchaProof();
     return { url: authData.url };
   });
 
 export const signupFn = createServerFn({ method: "POST" })
   .validator(signupInputSchema)
   .handler(async ({ data }) => {
+    const captcha = await verifyCaptcha(data.captchaToken);
+    if (captcha.error) return captcha;
     const attempt = await reserveAuthAttempt("sign-up", data.email);
     if (!attempt.allowed) {
       return authAttemptFailure(attempt, attempt.message ?? TOO_MANY_ATTEMPTS);
@@ -434,6 +444,8 @@ export const resendSignupOtpFn = createServerFn({ method: "POST" })
     ) {
       return { error: true, message: INVALID_CREDENTIALS };
     }
+
+    await clearAuthAttempts("sign-in", data.email);
 
     const adminSupabase = getSupabaseAdminClient();
     const existingUser = await findAuthUserByEmail(adminSupabase, data.email);

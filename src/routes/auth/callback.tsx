@@ -7,6 +7,7 @@ import {
 } from "~/features/system-admin/security-center.server";
 import { commitSupabaseCookies, getSupabaseServerClient } from "~/utils/supabase";
 import { authAttemptFailure, checkAuthLockout } from "~/server/auth-attempts";
+import { consumeOAuthCaptchaProof } from "~/features/auth/captcha.server";
 
 const OTP_TYPES = ["invite", "signup", "recovery", "email", "email_change"] as const;
 
@@ -38,6 +39,9 @@ export const handleCallback = createServerFn({ method: "GET" }).handler(async ()
   const otpType = parseOtpType(url.searchParams.get("type"));
   const next = url.searchParams.get("next");
   const isOAuth = !!code && !(tokenHash && otpType);
+  if (isOAuth && !(await consumeOAuthCaptchaProof())) {
+    return { error: true, message: "Your security verification expired. Please sign in again." };
+  }
   // Hold newly issued cookies until the provider-verified account is allowed.
   const supabase = getSupabaseServerClient({ deferCookies: isOAuth });
   let method: SessionMethod = "email link";

@@ -5,15 +5,15 @@ import { loginWithOAuthFn } from "../auth.mutations";
 type OAuthProvider = "google" | "apple";
 
 /** What `loginWithOAuthFn` hands back: an error to show, or the URL to leave for. */
-type OAuthResult = { error?: boolean; message?: string; url?: string | null; lockedUntil?: number };
+type OAuthResult = { error?: boolean; message?: string; url?: string | null; lockedUntil?: number; captchaRequired?: boolean; captchaError?: boolean };
 
 export function useOAuthLogin() {
   const mutation = useMutation<
-    { provider: OAuthProvider; keepSignedIn?: boolean; email?: string },
+    { provider: OAuthProvider; keepSignedIn?: boolean; email?: string; captchaToken?: string },
     OAuthResult
   >({
-    fn: async ({ provider, keepSignedIn, email }) =>
-      loginWithOAuthFn({ data: { provider, keepSignedIn, email } }),
+    fn: async ({ provider, keepSignedIn, email, captchaToken }) =>
+      loginWithOAuthFn({ data: { provider, keepSignedIn, email, captchaToken } }),
     onSuccess: async (ctx) => {
       if (ctx.data?.error) {
         return;

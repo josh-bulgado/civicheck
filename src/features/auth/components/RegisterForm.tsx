@@ -34,6 +34,8 @@ import {
 import { useSignUp } from "../hooks/useSignUp";
 import { useOAuthLogin } from "../hooks/useOAuthLogin";
 import { useAuthLockout } from "../hooks/useAuthLockout";
+import { useCaptcha } from "../hooks/useCaptcha";
+import { Captcha } from "./Captcha";
 import {
   setPendingVerification,
   type PendingSignup,
@@ -89,6 +91,7 @@ const RegisterForm = () => {
   const signupMutation = useSignUp();
   const oauthLoginMutation = useOAuthLogin();
   const lockout = useAuthLockout();
+  const captcha = useCaptcha(true);
   const [showPassword, setShowPassword] = useState(false);
   const [pendingAction, setPendingAction] = useState<"email" | "google" | null>(
     null,
@@ -147,6 +150,7 @@ const RegisterForm = () => {
 
   async function onSubmit(data: FormValues) {
     if (requestInFlight.current || lockout.isLocked) return;
+    if (!captcha.token) { captcha.requireVerification(); return; }
     requestInFlight.current = true;
     setPendingAction("email");
     clearSubmissionError();
@@ -161,9 +165,11 @@ const RegisterForm = () => {
       suffix: data.suffix.trim(),
     };
     try {
-      const result = await signupMutation.mutate({ data: signup });
+      const result = await signupMutation.mutate({ data: { ...signup, captchaToken: captcha.token } });
       lockout.recordResult(result);
+      captcha.recordResult(result);
       if (!result || result.error) {
+        if (result && "captchaError" in result && result.captchaError) return;
         const message =
           result?.message ||
           "We couldn't create your account. Check your connection and try again.";
@@ -193,6 +199,7 @@ const RegisterForm = () => {
 
   async function onGoogleSignup() {
     if (requestInFlight.current || lockout.isLocked) return;
+    if (!captcha.token) { captcha.requireVerification(); return; }
     requestInFlight.current = true;
     clearSubmissionError();
     let redirecting = false;
@@ -204,9 +211,12 @@ const RegisterForm = () => {
       const result = await oauthLoginMutation.mutate({
         provider: "google",
         email: z.string().email().safeParse(email).success ? email : undefined,
+        captchaToken: captcha.token,
       });
       lockout.recordResult(result);
+      captcha.recordResult(result);
       if (!result || result.error || !result.url) {
+        if (result?.captchaError) return;
         setSubmissionError(
           result?.message ||
             "We couldn't connect to Google. Check your connection and try again.",
@@ -607,12 +617,13 @@ const RegisterForm = () => {
           </FieldSet>
 
           <div className="flex flex-col gap-3.5">
+            {!lockout.isLocked && <Captcha onToken={captcha.onToken} error={captcha.error} resetKey={captcha.resetKey} />}
             <Button
               type="submit"
               size="touch"
               shape="pill"
               className="register-action"
-              disabled={isBusy || lockout.isLocked}
+              disabled={isBusy || lockout.isLocked || !captcha.token}
             >
               {pendingAction === "email" ? (
                 <>
@@ -633,7 +644,7 @@ const RegisterForm = () => {
               shape="pill"
               className="register-action register-google"
               onClick={onGoogleSignup}
-              disabled={isBusy || lockout.isLocked}
+              disabled={isBusy || lockout.isLocked || !captcha.token}
             >
               {pendingAction === "google" ? (
                 <>

@@ -57,14 +57,14 @@ function contentSecurityPolicy(nonce: string) {
 
   return [
     "default-src 'self'",
-    `script-src ${sources("'self'", `'nonce-${nonce}'`, "'wasm-unsafe-eval'", vercelPreview && "https://vercel.live")}`,
+    `script-src ${sources("'self'", `'nonce-${nonce}'`, "'wasm-unsafe-eval'", "https://challenges.cloudflare.com", vercelPreview && "https://vercel.live")}`,
     `style-src ${sources("'self'", "'unsafe-inline'", vercelPreview && "https://vercel.live")}`,
     `img-src ${sources("'self'", "data:", "blob:", supabase?.https, vercelPreview && "https://vercel.live https://vercel.com")}`,
     `font-src ${sources("'self'", "data:", vercelPreview && "https://vercel.live https://assets.vercel.com")}`,
     `connect-src ${sources("'self'", supabase?.https, supabase?.wss, vercelPreview && "https://vercel.live wss://ws-us3.pusher.com")}`,
     "media-src 'self' blob:",
     "worker-src 'self' blob:",
-    `frame-src ${sources("'self'", "blob:", vercelPreview && "https://vercel.live")}`,
+    `frame-src ${sources("'self'", "blob:", "https://challenges.cloudflare.com", vercelPreview && "https://vercel.live")}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

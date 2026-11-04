@@ -15,6 +15,7 @@ const state = vi.hoisted(() => ({
   signOut: vi.fn(),
   commitCookies: vi.fn(),
   recordSession: vi.fn(),
+  captchaProofAllowed: true,
   requestUrl: "https://civicheck.test/auth/callback?code=test-code",
 }));
 
@@ -67,13 +68,20 @@ vi.mock("~/features/system-admin/security-center.server", () => ({
 vi.mock("./otp-codes.server", () => ({
   clearIssuedOtps: vi.fn(), describeRejectedOtp: vi.fn(), recordIssuedOtp: vi.fn(),
 }));
+vi.mock("./captcha.server", () => ({
+  verifyCaptcha: async (token: string | undefined) => token === "valid-captcha"
+    ? { error: false }
+    : { error: true, captchaError: true, captchaRequired: true, message: "Please complete the security verification to continue." },
+  issueOAuthCaptchaProof: vi.fn(),
+  consumeOAuthCaptchaProof: async () => state.captchaProofAllowed,
+}));
 
 import { loginWithEmailFn, loginWithOAuthFn, resendSignupOtpFn, signupFn } from "./auth.mutations";
 import { bucketKey } from "~/server/rate-limit";
 import { handleCallback } from "~/routes/auth/callback";
 
 const db = new PGlite();
-const credentials = { email: "lockout@example.test", password: "WrongPassword1!" };
+const credentials = { email: "lockout@example.test", password: "WrongPassword1!", captchaToken: "valid-captcha" };
 const signup = {
   ...credentials, firstName: "Test", lastName: "Applicant",
   middleName: "", hasNoMiddleName: true, suffix: "",
@@ -126,6 +134,7 @@ beforeEach(async () => {
   vi.clearAllMocks();
   state.ip = "192.0.2.10";
   state.counterUnavailable = false;
+  state.captchaProofAllowed = true;
   state.requestUrl = "https://civicheck.test/auth/callback?code=test-code";
   state.signIn.mockResolvedValue({ error: { message: "Invalid login credentials" } });
   state.createUser.mockResolvedValue({ error: { code: "email_exists", message: "Email already registered" } });
@@ -140,7 +149,7 @@ describe("OAuth respects the account cooldown", () => {
       if (action === "sign-in") await loginWithEmailFn({ data: credentials });
       else await signupFn({ data: signup });
     }
-    const result = await loginWithOAuthFn({ data: { provider: "google", email: credentials.email } });
+    const result = await loginWithOAuthFn({ data: { provider: "google", email: credentials.email, captchaToken: "valid-captcha" } });
     expect(result).toMatchObject({ error: true, lockedUntil: expect.any(Number) });
     expect(state.oauth).not.toHaveBeenCalled();
   });
@@ -151,7 +160,7 @@ describe("OAuth respects the account cooldown", () => {
       else await signupFn({ data: signup });
     }
     state.ip = "192.0.2.30";
-    await loginWithOAuthFn({ data: { provider: "google" } });
+    await loginWithOAuthFn({ data: { provider: "google", captchaToken: "valid-captcha" } });
     const result = await handleCallback();
     expect(result).toMatchObject({ error: true, lockedUntil: expect.any(Number) });
     expect(state.signOut).toHaveBeenCalledWith({ scope: "local" });
@@ -161,7 +170,7 @@ describe("OAuth respects the account cooldown", () => {
 
   it("checks Google's verified email when the form supplies a different unlocked email", async () => {
     for (let attempt = 0; attempt < 5; attempt++) await loginWithEmailFn({ data: credentials });
-    await loginWithOAuthFn({ data: { provider: "google", email: "unlocked@example.test" } });
+    await loginWithOAuthFn({ data: { provider: "google", email: "unlocked@example.test", captchaToken: "valid-captcha" } });
     const result = await handleCallback();
     expect(result.error).toBe(true);
     expect(state.commitCookies).not.toHaveBeenCalled();
@@ -180,7 +189,7 @@ describe("OAuth respects the account cooldown", () => {
     for (let attempt = 0; attempt < 5; attempt++) await loginWithEmailFn({ data: credentials });
     await db.exec("update public.rate_limit_hits set hit_at = now() - interval '16 minutes'");
     const rpcCalls = state.rpc.mock.calls.length;
-    const start = await loginWithOAuthFn({ data: { provider: "google", email: credentials.email } });
+    const start = await loginWithOAuthFn({ data: { provider: "google", email: credentials.email, captchaToken: "valid-captcha" } });
     expect(start).toHaveProperty("url");
     expect(await handleCallback()).toMatchObject({ error: false });
     expect(state.commitCookies).toHaveBeenCalledOnce();
@@ -212,6 +221,45 @@ describe("OAuth respects the account cooldown", () => {
 afterAll(async () => { await db.close(); });
 
 describe("five-attempt authentication lockout", () => {
+  it("requires CAPTCHA after two password attempts without spending attempts on missing CAPTCHA", async () => {
+    const data = { ...credentials, captchaToken: undefined };
+    expect(await loginWithEmailFn({ data })).toMatchObject({ attemptsRemaining: 4, captchaRequired: false });
+    expect(await loginWithEmailFn({ data })).toMatchObject({ attemptsRemaining: 3, captchaRequired: true });
+    for (let retry = 0; retry < 6; retry++) {
+      expect(await loginWithEmailFn({ data })).toMatchObject({ error: true, captchaRequired: true, attemptsRemaining: 3 });
+    }
+    expect(state.signIn).toHaveBeenCalledTimes(2);
+    expect(await loginWithEmailFn({ data: credentials })).toMatchObject({ error: true, attemptsRemaining: 2 });
+    expect(state.signIn).toHaveBeenCalledTimes(3);
+  });
+
+  it("lets at most two simultaneous unverified password checks through", async () => {
+    await Promise.all(Array.from({ length: 12 }, () => loginWithEmailFn({ data: { ...credentials, captchaToken: undefined } })));
+    expect(state.signIn).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not spend password attempts on an invalid CAPTCHA", async () => {
+    expect(await loginWithEmailFn({ data: { ...credentials, captchaToken: "invalid" } })).toMatchObject({ error: true, captchaError: true });
+    expect(state.signIn).not.toHaveBeenCalled();
+    expect(state.rpc).not.toHaveBeenCalled();
+  });
+
+  it("requires CAPTCHA before signup and before Google redirect", async () => {
+    expect(await signupFn({ data: { ...signup, captchaToken: undefined } })).toMatchObject({ error: true, captchaError: true });
+    expect(await loginWithOAuthFn({ data: { provider: "google" } })).toMatchObject({ error: true, captchaError: true });
+    expect(state.createUser).not.toHaveBeenCalled();
+    expect(state.sendEmail).not.toHaveBeenCalled();
+    expect(state.oauth).not.toHaveBeenCalled();
+    expect(state.rpc).not.toHaveBeenCalled();
+  });
+
+  it("rejects a direct Google callback without the one-use CAPTCHA proof", async () => {
+    state.captchaProofAllowed = false;
+    expect(await handleCallback()).toMatchObject({ error: true, message: expect.stringContaining("verification expired") });
+    expect(state.exchangeCode).not.toHaveBeenCalled();
+    expect(state.commitCookies).not.toHaveBeenCalled();
+  });
+
   it("allows five login checks, reports the lockout on the fifth failure, then rejects direct calls", async () => {
     for (let attempt = 1; attempt <= 5; attempt++) {
       const result = await loginWithEmailFn({ data: credentials });

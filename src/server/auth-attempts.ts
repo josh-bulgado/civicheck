@@ -1,5 +1,6 @@
 import { getSupabaseAdminClient } from "~/utils/supabase";
 import { bucketKey, getClientIp, RATE_LIMITS, type RateLimitRule } from "./rate-limit";
+import { CAPTCHA_REQUIRED_MESSAGE } from "~/features/auth/captcha";
 
 type AuthAction = "sign-in" | "sign-up";
 type AuthAttempt = {
@@ -7,6 +8,7 @@ type AuthAttempt = {
   attemptsRemaining: number;
   lockedUntil?: number;
   message?: string;
+  captchaRequired?: boolean;
 };
 
 const LOCKED_MESSAGE = "Too many attempts. Please wait 15 minutes before trying again.";
@@ -55,29 +57,38 @@ export async function checkAuthLockout(email: string): Promise<AuthAttempt> {
  * submissions, persists across reloads/servers, and lets exactly five through.
  * Auth attempts fail closed when the counter is unavailable.
  */
-export async function reserveAuthAttempt(action: AuthAction, email: string): Promise<AuthAttempt> {
+export async function reserveAuthAttempt(action: AuthAction, email: string, captchaVerified = false): Promise<AuthAttempt> {
   const emailRule = action === "sign-in" ? RATE_LIMITS.signInPerEmail : RATE_LIMITS.signUpPerEmail;
   const ipRule = action === "sign-in" ? RATE_LIMITS.signInPerIp : RATE_LIMITS.signUpPerIp;
   const ip = getClientIp();
+  const emailBucket = bucketKey(`${action}:email`, email);
   const buckets = [
     ...(ip ? [{ bucket: bucketKey(`${action}:ip`, ip), rule: ipRule }] : []),
-    { bucket: bucketKey(`${action}:email`, email), rule: emailRule },
+    { bucket: emailBucket, rule: emailRule },
   ];
   try {
     for (const { bucket, rule } of buckets) {
+      // The same advisory-locked RPC uses a limit of two for unverified
+      // password submissions. Rejected CAPTCHA requests never add an email hit.
+      const captchaGate = action === "sign-in" && bucket === emailBucket && !captchaVerified;
       const { data, error } = await getSupabaseAdminClient().rpc("consume_rate_limit", {
         p_bucket: bucket,
-        p_limit: rule.limit,
+        p_limit: captchaGate ? 2 : rule.limit,
         p_window_seconds: rule.windowSeconds,
       });
       if (error || typeof data !== "boolean") throw new Error("Could not reserve authentication attempt");
       if (!data) {
-        return { allowed: false, ...await readAttemptState(bucket, rule), message: LOCKED_MESSAGE };
+        const state = await readAttemptState(bucket, rule);
+        const captchaRequired = captchaGate && !state.lockedUntil;
+        return { allowed: false, ...state, captchaRequired,
+          message: captchaRequired ? CAPTCHA_REQUIRED_MESSAGE : LOCKED_MESSAGE };
       }
     }
+    const state = await readAttemptState(emailBucket, emailRule);
     return {
       allowed: true,
-      ...await readAttemptState(bucketKey(`${action}:email`, email), emailRule),
+      ...state,
+      captchaRequired: action === "sign-in" && state.attemptsRemaining <= emailRule.limit - 2,
     };
   } catch (error) {
     console.error("Authentication attempt check failed:", error);
@@ -92,6 +103,7 @@ export function authAttemptFailure(attempt: AuthAttempt, message: string) {
     message: attempt.lockedUntil ? LOCKED_MESSAGE : message,
     attemptsRemaining: attempt.attemptsRemaining,
     lockedUntil: attempt.lockedUntil,
+    captchaRequired: attempt.captchaRequired,
   };
 }
 

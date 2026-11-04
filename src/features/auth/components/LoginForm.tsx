@@ -12,6 +12,8 @@ import { staggerStyle } from "~/components/motion/stagger";
 import { useLogin } from "~/features/auth/hooks/useLogin";
 import { useOAuthLogin } from "~/features/auth/hooks/useOAuthLogin";
 import { useAuthLockout } from "~/features/auth/hooks/useAuthLockout";
+import { useCaptcha } from "~/features/auth/hooks/useCaptcha";
+import { Captcha } from "./Captcha";
 import { setPendingVerification } from "~/features/auth/pending-verification";
 import { PERSISTENT_SESSION_MAX_AGE_SECONDS } from "~/features/auth/session-scope";
 import {
@@ -86,6 +88,7 @@ export function LoginForm({
   const loginMutation = useLogin(redirectTo);
   const oauthLoginMutation = useOAuthLogin();
   const lockout = useAuthLockout(lockedUntil);
+  const captcha = useCaptcha();
   const requestInFlight = useRef(false);
   const [activeMethod, setActiveMethod] = useState<"email" | "google">("email");
 
@@ -100,13 +103,18 @@ export function LoginForm({
 
   async function onSubmit(data: FormValues) {
     if (requestInFlight.current || lockout.isLocked) return;
+    if (captcha.required && !captcha.token) {
+      captcha.requireVerification();
+      return;
+    }
     requestInFlight.current = true;
     setActiveMethod("email");
     try {
       const result = await loginMutation.mutate({
-        data: { ...data, keepSignedIn },
+        data: { ...data, keepSignedIn, captchaToken: captcha.token ?? undefined },
       });
       lockout.recordResult(result);
+      captcha.recordResult(result);
       // Open code entry as soon as the credentials identify an unconfirmed
       // account. The verification page sends the code without delaying navigation.
       if (result?.error && /email not confirmed/i.test(result.message ?? "")) {
@@ -124,6 +132,10 @@ export function LoginForm({
 
   async function onGoogleSignin() {
     if (requestInFlight.current || lockout.isLocked) return;
+    if (!captcha.token) {
+      captcha.requireVerification();
+      return;
+    }
     requestInFlight.current = true;
     setActiveMethod("google");
     try {
@@ -131,8 +143,10 @@ export function LoginForm({
       const result = await oauthLoginMutation.mutate({
         provider: "google", keepSignedIn,
         email: z.string().email().safeParse(email).success ? email : undefined,
+        captchaToken: captcha.token,
       });
       lockout.recordResult(result);
+      captcha.recordResult(result);
     } finally {
       requestInFlight.current = false;
     }
@@ -140,13 +154,14 @@ export function LoginForm({
 
   const isSigningIn = form.formState.isSubmitting;
 
-  const emailError = describeSignInError(
+  const emailError = loginMutation.status !== "error" && loginMutation.data &&
+    "captchaError" in loginMutation.data && loginMutation.data.captchaError ? null : describeSignInError(
     loginMutation.data,
     loginMutation.status === "error",
   );
   const oauthError = oauthLoginMutation.status === "error"
     ? "We couldn't connect to Google. Check your connection and try again."
-    : oauthLoginMutation.data?.error ? oauthLoginMutation.data.message : null;
+    : oauthLoginMutation.data?.error && !oauthLoginMutation.data.captchaError ? oauthLoginMutation.data.message : null;
   const signInError = lockout.message ?? (activeMethod === "google"
     ? oauthError
     : lockout.hasExpired ? null : emailError);
@@ -312,12 +327,15 @@ export function LoginForm({
             </div>
 
             <div style={staggerStyle(3)} className="login-actions">
+              {captcha.required && !lockout.isLocked && (
+                <Captcha onToken={captcha.onToken} error={captcha.error} resetKey={captcha.resetKey} />
+              )}
               <Button
                 type="submit"
                 shape="pill"
                 size="touch"
                 className="login-submit"
-                disabled={isSigningIn || oauthLoginMutation.redirecting || lockout.isLocked}
+                disabled={isSigningIn || oauthLoginMutation.redirecting || lockout.isLocked || (captcha.required && !captcha.token)}
               >
                 {isSigningIn ? (
                   <>
@@ -342,7 +360,7 @@ export function LoginForm({
                 size="touch"
                 className="login-google"
                 onClick={onGoogleSignin}
-                disabled={isSigningIn || oauthLoginMutation.redirecting || lockout.isLocked}
+                disabled={isSigningIn || oauthLoginMutation.redirecting || lockout.isLocked || (captcha.required && !captcha.token)}
               >
                 {oauthLoginMutation.redirecting ? (
                   <>
