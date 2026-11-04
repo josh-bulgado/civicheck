@@ -311,21 +311,10 @@ export function VerificationFormPdf({ data, qrDataUrl, generatedAt }: Verificati
             <Field label="Full Name" value={requesterName} />
             <Field label="Relationship to the Owner" value={relationship} />
             <Field label="Address" value={formatRequesterAddress(answers)} />
-            {isEmailInquiry ? (
-              <>
-                <Field label="Contact No." value={contact ? `+63 ${contact}` : ""} />
-                <Field label="Date" value={todayFormatter.format(generatedAt)} />
-              </>
-            ) : null}
             {!isEmailInquiry ? <Field label="Purpose" value={text(answers, "purpose_of_request") === "Other" ? text(answers, "purpose_of_request_other") : text(answers, "purpose_of_request")} /> : null}
-          </View>
-          {!isEmailInquiry ? <View style={styles.right}>
-            <Text style={[styles.sectionHeading, { opacity: 0 }]}>.</Text>
-            <View style={{ height: 14 + 9 }} />
-            <View style={{ height: 14 + 9 }} />
             <Field label="Contact No." value={contact ? `+63 ${contact}` : ""} />
             <Field label="Date" value={todayFormatter.format(generatedAt)} />
-          </View> : null}
+          </View>
         </View>
 
         {isEmailInquiry ? (
