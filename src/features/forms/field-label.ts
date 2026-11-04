@@ -1,4 +1,8 @@
 export function formatFieldLabel(label: string): string {
+  label = label.replace(/^requester['’]s (first|middle|last) name$/i, "$1 Name");
+
+  if (label.trim() === "Registered late?") return "Registered Late?";
+
   if (label.trimEnd().endsWith("?")) return label;
 
   return label.replace(/[A-Za-z]+(?:['?][A-Za-z]+)*/g, (word) => {
