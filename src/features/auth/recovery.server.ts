@@ -55,6 +55,7 @@ export async function deliverRecoveryCode(email: string, reservation: Awaited<Re
   if (error) throw new Error("Recovery challenge unavailable");
   if (!data) return;
   await sendEmail({
+    category: "auth",
     to: user.email, subject: "Reset your CiviCheck password",
     html: renderOtpEmail({
       preheader: "Use this code to reset your CiviCheck password.", heading: "Reset your password",

@@ -152,6 +152,7 @@ async function sendSignupOtpEmail(
 
   try {
     await sendEmail({
+      category: "auth",
       to: params.email,
       subject: "Your CiviCheck email verification code",
       html: renderVerificationEmail(otp),

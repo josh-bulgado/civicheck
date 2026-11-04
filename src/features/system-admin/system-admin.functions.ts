@@ -512,6 +512,7 @@ export const sendAccountPasswordReset = createServerFn({ method: "POST" })
     }
 
     await sendEmail({
+      category: "auth",
       to: user.email,
       subject: "Reset your CiviCheck password",
       html: renderLinkEmail({
@@ -597,6 +598,7 @@ export const resendAccountVerification = createServerFn({ method: "POST" })
     }
 
     await sendEmail({
+      category: "auth",
       to: data.email,
       subject: "Verify your CiviCheck email address",
       html: renderLinkEmail({

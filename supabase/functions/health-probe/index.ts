@@ -100,8 +100,9 @@ async function sendAlert(admin: ReturnType<typeof createClient>, outcome: RunOut
     (appUrl ? `<p><a href="${escapeHtml(appUrl)}/system-admin/health">Open System Health</a></p>` : "");
   const from =
     Deno.env.get("HEALTH_ALERT_FROM")?.trim() ||
-    Deno.env.get("RESEND_FROM_EMAIL")?.trim() ||
-    "CiviCheck <noreply@civicheck.abrdns.com>";
+    Deno.env.get("RESEND_FROM_ALERTS")?.trim() ||
+    Deno.env.get("RESEND_FROM_EMAIL")?.trim();
+  if (!from) return;
   const replyTo = Deno.env.get("RESEND_REPLY_TO")?.trim() || undefined;
 
   // One message per person, so nobody sees the other addresses.

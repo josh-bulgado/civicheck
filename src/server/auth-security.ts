@@ -36,6 +36,7 @@ export async function runAuthBackground(work: Promise<unknown>) {
 
 export async function sendLoginSecurityNotification(email: string) {
   await sendEmail({
+    category: "auth",
     to: email,
     subject: "Unusual sign-in activity on your CiviCheck account",
     text: "We noticed repeated unsuccessful attempts to sign in to your CiviCheck account. Your account has not been locked. If this was not you, consider changing your password using the CiviCheck website. Never share your password or verification codes.",
@@ -45,6 +46,7 @@ export async function sendLoginSecurityNotification(email: string) {
 
 export async function sendPasswordChangedNotification(email: string) {
   await sendEmail({
+    category: "auth",
     to: email, subject: "Your CiviCheck password was changed",
     text: "Your CiviCheck password was changed. If you did not make this change, reset your password immediately using the CiviCheck website and contact support. Never share your password or verification codes.",
     html: "<p>Your CiviCheck password was changed.</p><p>If you did not make this change, reset your password immediately using the CiviCheck website and contact support. Never share your password or verification codes.</p>",

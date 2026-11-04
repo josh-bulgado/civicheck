@@ -172,7 +172,7 @@ export async function dispatchApplicantNotification(
   }
 
   try {
-    await sendEmail({ to: email, subject, html });
+    await sendEmail({ category: "updates", to: email, subject, html });
     await supabase.from("notifications").update({ status: "sent" }).eq("id", notification.id);
   } catch (err) {
     console.error("Failed to send notification email", err);

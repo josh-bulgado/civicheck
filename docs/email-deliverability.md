@@ -26,13 +26,12 @@ Gmail accepted this test; Inbox versus Spam placement has not been confirmed.
 This does not establish the cause of the old domain's failures or verify the
 deployed application's signup and recovery flows.
 
-Local `.env` now sets
-`RESEND_FROM_EMAIL="CiviCheck <noreply@civicheck.xyz>"`. Restart the local app
-to load it. The code's fallback sender remains the old domain. Production has
-not been changed: the Vercel CLI has no authenticated credentials and no
-connected browser session is available. In the intended CiviCheck Vercel
-project, set `RESEND_FROM_EMAIL` to `CiviCheck <noreply@civicheck.xyz>` for the
-required environments and redeploy the current deployment. Then verify an
+The delivery test used
+`RESEND_FROM_EMAIL="CiviCheck <noreply@civicheck.xyz>"`. The application now
+supports separate `RESEND_FROM_AUTH`, `RESEND_FROM_UPDATES` and
+`RESEND_FROM_ALERTS` senders, with `RESEND_FROM_EMAIL` retained only as a
+migration fallback. Production has not been changed: configure the category
+senders in the intended CiviCheck Vercel project and redeploy. Then verify an
 actual signup/recovery flow with the inbox owner. Review the health-probe's
 sender secrets separately as described in the recovery steps below.
 
@@ -118,12 +117,12 @@ cause. Do not describe the incident as fixed until Gmail accepts a fresh message
    records in ClouDNS. Publish DMARC for that sender and keep tracking disabled.
    A replacement domain still needs legitimate sending history; changing a
    domain does not guarantee Gmail acceptance.
-5. Set `RESEND_FROM_EMAIL` in the app's deployment environment to an address on
-   the verified domain, then redeploy. All app emails use this shared sender,
-   including signup, password reset, staff invitations and request updates.
+5. Set `RESEND_FROM_AUTH` and `RESEND_FROM_UPDATES` in the app's deployment
+   environment to addresses on the verified domain, then redeploy. Auth covers
+   signup, password reset and staff invitations. Updates covers request events.
    Set `RESEND_REPLY_TO` only to a mailbox that exists and is monitored.
-6. Apply the same variables to the Supabase `health-probe` function secrets and
-   redeploy that function if health alerts should use the new sender.
+6. Set `RESEND_FROM_ALERTS` and `RESEND_REPLY_TO` in the Supabase `health-probe`
+   function secrets and redeploy that function if health alerts should send.
    `HEALTH_ALERT_FROM`, when set, takes precedence for health alerts and must
    also be reviewed during migration.
 7. With authorization and a recipient address supplied by the inbox owner, send
@@ -133,9 +132,9 @@ cause. Do not describe the incident as fixed until Gmail accepts a fresh message
    reset and request notifications with authorized recipients after delivery
    recovers. Do not repeatedly resend the same blocked message.
 
-The existing sender remains the default when `RESEND_FROM_EMAIL` is unset. This
-configuration change is preparation for a verified replacement, not evidence
-that the current Gmail block has been lifted. Local code changes require deployment.
+`RESEND_FROM_EMAIL` remains a migration fallback. A missing category sender and
+missing fallback now stops the send before contacting Resend. Configuration is
+not evidence that the current Gmail block has been lifted. Code changes require deployment.
 
 ## Submitted support request
 

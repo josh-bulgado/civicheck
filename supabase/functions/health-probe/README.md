@@ -33,9 +33,10 @@ Resend only when these Edge Function secrets exist; without them it skips the em
 | Secret | Purpose |
 | --- | --- |
 | `RESEND_API_KEY` | The same key the app uses |
-| `RESEND_FROM_EMAIL` | Optional sender on a Resend-verified domain; use the same value as the app |
+| `RESEND_FROM_ALERTS` | Sender on a Resend-verified domain for system-health alerts |
+| `RESEND_FROM_EMAIL` | Optional legacy fallback while `RESEND_FROM_ALERTS` is being deployed |
 | `RESEND_REPLY_TO` | Optional monitored reply mailbox; use the same value as the app |
-| `HEALTH_ALERT_FROM` | Optional override. Otherwise uses `RESEND_FROM_EMAIL`, then `CiviCheck <noreply@civicheck.abrdns.com>` |
+| `HEALTH_ALERT_FROM` | Optional health-probe-specific override; takes precedence over `RESEND_FROM_ALERTS` |
 | `APP_URL` | Optional. Adds an "Open System Health" link |
 
 ## Privacy

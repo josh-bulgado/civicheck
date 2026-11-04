@@ -20,6 +20,7 @@ node_modules/
 # Environment
 .env
 .env.*
+# Commit the blank environment template, never local values.
 !.env.example
 
 # Logs

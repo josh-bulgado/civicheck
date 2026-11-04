@@ -73,7 +73,10 @@ QR-verification only — the CCRO cashier handles the actual transaction.
    | `SUPABASE_PUBLISHABLE_KEY` | Supabase publishable (anon) key |
    | `SUPABASE_SECRET_KEY` | Supabase service-role/secret key |
    | `RESEND_API_KEY` | API key for transactional email notifications |
-   | `RESEND_FROM_EMAIL` | Optional sender, e.g. `CiviCheck <accounts@your-verified-domain.example>`; defaults to the existing CiviCheck sender |
+   | `RESEND_FROM_AUTH` | Sender for verification, recovery and staff invitations, e.g. `CiviCheck Accounts <auth@civicheck.xyz>` |
+   | `RESEND_FROM_UPDATES` | Sender for request status notifications, e.g. `CiviCheck Updates <updates@civicheck.xyz>` |
+   | `RESEND_FROM_ALERTS` | Sender for system-health alerts, e.g. `CiviCheck Alerts <alerts@civicheck.xyz>` |
+   | `RESEND_FROM_EMAIL` | Optional legacy fallback while category senders are being deployed |
    | `RESEND_REPLY_TO` | Optional monitored mailbox for replies; omit until that mailbox exists |
    | `APP_URL` | Base URL of the app (used in emails, redirects, etc.) |
 
