@@ -238,6 +238,8 @@ export function describeRequestProgress(input: RequestActionInput): string {
       return "Released. Nothing left to do.";
     case "rejected":
       return "Rejected. Nothing left to do.";
+    case "cancelled":
+      return "Cancelled by the applicant. Nothing left to do.";
     default:
       return "";
   }

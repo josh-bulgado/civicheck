@@ -22,6 +22,8 @@ export function NextStepsCard({
   /** Null once the request has ended: there is no next to show. */
   next: NextStepsView | null;
 }) {
+  if (status === "cancelled") return null;
+
   return (
     <section
       aria-label="Progress"

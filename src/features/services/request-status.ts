@@ -171,6 +171,8 @@ interface PaymentDetails {
 // full 5-tone palette down a list of log entries reads as noise, not signal.
 export function getStatusDetails(status: string | null): StatusDetails {
   switch (status) {
+    case "cancelled":
+      return { label: "Cancelled", styles: TONE_STYLES.neutral, dot: "bg-health-neutral-dot", variant: "neutral" };
     case "submitted":
       return { label: "Submitted", styles: TONE_STYLES.info, dot: "bg-health-neutral-dot", variant: "info" };
     case "under_validation":

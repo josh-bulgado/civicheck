@@ -145,6 +145,7 @@ export function dashboardPlan(
 // Finishes "Your … is ___". Phrased as a state of the document, so the tracker
 // under it can carry the detail.
 const HEADLINE_WORD: Record<RequestStatus, string> = {
+  cancelled: "cancelled",
   submitted: "received",
   under_validation: "under review",
   incomplete: "incomplete",

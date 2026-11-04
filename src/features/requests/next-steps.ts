@@ -36,7 +36,7 @@ const ORIGINALS = "Bring your original documents";
 export function nextSteps(input: NextStepsInput): NextStepsView | null {
   const { status } = input;
 
-  if (status === "released" || status === "rejected") return null;
+  if (status === "released" || status === "rejected" || status === "cancelled") return null;
 
   if (status === "processing" && needsMarriagePosting(input.serviceCode) && input.postingStartDate) {
     return { kind: "line", text: `${marriagePostingMessage(input.postingStartDate)} We'll notify you when the certificate is ready for collection.` };

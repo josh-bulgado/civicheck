@@ -28,6 +28,7 @@ export function requestTurn({ status, paymentStatus }: TurnFields): RequestTurn 
     // until the applicant pays at the cashier.
     case "ready_for_release":
       return isPaymentSettled(paymentStatus) ? "staff" : "payment";
+    case "cancelled":
     case "released":
     case "rejected":
       return "none";
@@ -187,6 +188,6 @@ export function paymentDisplay({
   paymentStatus,
 }: TurnFields): PaymentDisplay {
   if (isPaymentSettled(paymentStatus)) return "verified";
-  if (status === "rejected") return "none";
+  if (status === "rejected" || status === "cancelled") return "none";
   return PAYMENT_DUE_STATUSES.includes(status) ? "unpaid" : "not_due";
 }

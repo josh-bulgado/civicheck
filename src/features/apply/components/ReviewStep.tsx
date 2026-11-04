@@ -1,6 +1,7 @@
 import { RegistrationNoticeText } from "~/features/requests/components/RegistrationNoticeText";
 import { onTimeRegistrationNotice } from "~/features/requests/on-time-registration";
 import { SignaturePad } from "./SignaturePad";
+import { VerificationFormPreview } from "./VerificationFormPreview";
 import { requiresVerificationSignature } from "../verification-signature";
 import { formatFieldLabel } from "~/features/forms/field-label";
 import { useNavigate } from "@tanstack/react-router";
@@ -410,6 +411,23 @@ export function ReviewStep({
         </ReviewBlock>
 
         {needsSignature && <SignaturePad onChange={setSignature} disabled={submitting} />}
+
+        {needsSignature && answerBag.record_type === "birth" && (
+          <VerificationFormPreview
+            data={{
+              trackingNumber: "PREVIEW",
+              copies,
+              formData: {
+                ...Object.fromEntries(
+                  Object.entries(answerBag).filter(([, value]) => typeof value === "string"),
+                ) as Record<string, string>,
+                ...flattenSubjects(subjects),
+                requester_signature: signature,
+              },
+            }}
+            disabled={submitting}
+          />
+        )}
 
         <div className="flex items-start gap-3">
           <Checkbox

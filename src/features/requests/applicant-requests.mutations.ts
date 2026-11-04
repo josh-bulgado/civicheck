@@ -261,3 +261,22 @@ export const addMissingAttachmentFn = createServerFn({ method: "POST" })
 
     return { error: false };
   });
+
+/** Cancellation and its audit entry are saved in one database transaction. */
+export const cancelOwnCtcBirthRequestFn = createServerFn({ method: "POST" })
+  .validator(z.object({ requestId: uuidSchema }))
+  .handler(async ({ data }) => {
+    const { user } = await requireActiveSession("requests:view_own");
+    const { data: cancelled, error } = await getSupabaseAdminClient().rpc(
+      "cancel_own_ctc_birth_request",
+      { p_request_id: data.requestId, p_applicant_id: user.id },
+    );
+    if (error) {
+      console.error("Could not cancel request", error);
+      return { error: true, message: "The request could not be cancelled. Try again." };
+    }
+    if (!cancelled) {
+      return { error: true, message: "This request cannot be cancelled. Only your submitted CTC birth request can be cancelled before staff starts checking." };
+    }
+    return { error: false };
+  });
