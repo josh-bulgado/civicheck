@@ -1,3 +1,4 @@
+import { validateEventPlace } from "./event-place";
 import { ageInYears, diffInDays, fromDateKey, toDateKey } from "~/lib/date";
 import { flattenSubjects, type SubjectFields } from "~/lib/subject-fields";
 import { addressAreas, addressCities } from "~/lib/requester-address";
@@ -789,6 +790,10 @@ export function validateTemplateAnswers(
         return { success: false, message: `${field.label} is required.` };
       }
       if (!value) continue;
+      const placeValidation = validateEventPlace(field, value);
+      if (placeValidation !== true) {
+        return { success: false, message: placeValidation };
+      }
 
       if (field.countrySelect && !countryOptions.some((country) => country.name === value)) {
         return { success: false, message: "Select a valid country." };
