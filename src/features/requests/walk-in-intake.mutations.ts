@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { INVALID_PERSON_NAME, validatePersonName } from "~/lib/person-name";
 import { isDepartmentScopedRole } from "~/lib/permissions";
 import { insertRequestWithTrackingNumber } from "~/features/requests/tracking-number";
 import { flattenSubjects, type SubjectFields } from "~/lib/subject-fields";
@@ -28,6 +29,13 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
     }));
     if (subjects.length === 0 || subjects.some((s) => !s.firstName || !s.lastName)) {
       return { error: true, message: "Enter each person's first and last name." };
+    }
+    if (subjects.some((subject) =>
+      [subject.firstName, subject.middleName, subject.lastName].some(
+        (part) => validatePersonName(part ?? "") !== true,
+      ),
+    )) {
+      return { error: true, message: INVALID_PERSON_NAME };
     }
 
     const { data: service, error: serviceError } = await supabase

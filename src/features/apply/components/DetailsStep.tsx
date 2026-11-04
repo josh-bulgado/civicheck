@@ -1,4 +1,5 @@
 import { formatFieldLabel } from "~/features/forms/field-label";
+import { validatePersonName } from "~/lib/person-name";
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { useNavigate, useRouteContext } from "@tanstack/react-router";
 import {
@@ -138,11 +139,11 @@ function MiddleNameField({
         rules={{
           // Read the box from the form values, not from this render: ticking it
           // re-runs this check, and it must see the box as ticked.
-          validate: (value, formValues) =>
-            !required ||
-            formValues.subjects?.[index]?.noMiddleName === true ||
-            (value ?? "").trim() !== "" ||
-            "Middle name is required",
+          validate: (value, formValues) => {
+            if (formValues.subjects?.[index]?.noMiddleName === true) return true;
+            if (required && !(value ?? "").trim()) return "Middle name is required";
+            return validatePersonName(value ?? "");
+          },
         }}
         render={({ field, fieldState }) => (
           <>
@@ -220,7 +221,7 @@ function SubjectFieldGrid({
       <Controller
         control={control}
         name={`subjects.${index}.firstName`}
-        rules={{ required: "First name is required" }}
+        rules={{ required: "First name is required", validate: validatePersonName }}
         render={({ field, fieldState }) => (
           <Field data-invalid={fieldState.invalid}>
             <FieldLabel htmlFor={`subject-${index}-firstName`} className={WIZARD_LABEL_CLASS}>First Name <RequiredMark /></FieldLabel>
@@ -246,7 +247,7 @@ function SubjectFieldGrid({
       <Controller
         control={control}
         name={`subjects.${index}.lastName`}
-        rules={{ required: "Last name is required" }}
+        rules={{ required: "Last name is required", validate: validatePersonName }}
         render={({ field, fieldState }) => (
           <Field data-invalid={fieldState.invalid}>
             <FieldLabel htmlFor={`subject-${index}-lastName`} className={WIZARD_LABEL_CLASS}>Last Name <RequiredMark /></FieldLabel>

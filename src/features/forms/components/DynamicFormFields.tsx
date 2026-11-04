@@ -1,5 +1,6 @@
 import { validateEventPlace } from "../event-place";
 import { formatFieldLabel } from "~/features/forms/field-label";
+import { isNameField, validatePersonName } from "~/lib/person-name";
 import type { ReactNode } from "react";
 import { addressDescendants } from "~/lib/requester-address";
 import { AddressLocationField } from "./AddressLocationField";
@@ -342,6 +343,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                   if (!value) return true;
                   const placeValidation = validateEventPlace(definitionField, value);
                   if (placeValidation !== true) return placeValidation;
+                  if (isNameField(definitionField)) return validatePersonName(value);
                   if (
                     definitionField.type === "date" &&
                     definitionField.allowEstimate &&
