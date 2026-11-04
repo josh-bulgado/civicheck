@@ -12,8 +12,8 @@ import { staggerStyle } from "~/components/motion/stagger";
 import { useLogin } from "~/features/auth/hooks/useLogin";
 import { useOAuthLogin } from "~/features/auth/hooks/useOAuthLogin";
 import { useAuthLockout } from "~/features/auth/hooks/useAuthLockout";
-import { useCaptcha } from "~/features/auth/hooks/useCaptcha";
-import { Captcha } from "./Captcha";
+import { useInvisibleCaptcha } from "~/features/auth/hooks/useInvisibleCaptcha";
+import { InvisibleCaptcha, RecaptchaNotice } from "./InvisibleCaptcha";
 import { setPendingVerification } from "~/features/auth/pending-verification";
 import { PERSISTENT_SESSION_MAX_AGE_SECONDS } from "~/features/auth/session-scope";
 import {
@@ -41,7 +41,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-const INVALID_CREDENTIALS = "Wrong Email and Password";
+const INVALID_CREDENTIALS = "Invalid email or password";
 
 // Read from the cookie policy, so the sentence under the checkbox cannot drift
 // from what the cookies actually do.
@@ -88,7 +88,7 @@ export function LoginForm({
   const loginMutation = useLogin(redirectTo);
   const oauthLoginMutation = useOAuthLogin();
   const lockout = useAuthLockout(lockedUntil);
-  const captcha = useCaptcha();
+  const captcha = useInvisibleCaptcha();
   const requestInFlight = useRef(false);
   const [activeMethod, setActiveMethod] = useState<"email" | "google">("email");
 
@@ -103,59 +103,46 @@ export function LoginForm({
 
   async function onSubmit(data: FormValues) {
     if (requestInFlight.current || lockout.isLocked) return;
-    if (captcha.required && !captcha.token) {
-      captcha.requireVerification();
-      return;
-    }
     requestInFlight.current = true;
     setActiveMethod("email");
     try {
-      const result = await loginMutation.mutate({
-        data: { ...data, keepSignedIn, captchaToken: captcha.token ?? undefined },
-      });
-      lockout.recordResult(result);
-      captcha.recordResult(result);
-      // Open code entry as soon as the credentials identify an unconfirmed
-      // account. The verification page sends the code without delaying navigation.
-      if (result?.error && /email not confirmed/i.test(result.message ?? "")) {
-        setPendingVerification({
-          email: data.email,
-          password: data.password,
-          sendCodeOnArrival: true,
+      await captcha.execute(async token => {
+        const result = await loginMutation.mutate({
+          data: { ...data, keepSignedIn, "g-recaptcha-response": token },
         });
-        await navigate({ to: "/verify-email" });
-      }
+        lockout.recordResult(result);
+        // Open code entry as soon as the credentials identify an unconfirmed
+        // account. The verification page sends the code without delaying navigation.
+        if (result?.error && /email not confirmed/i.test(result.message ?? "")) {
+          setPendingVerification({
+            email: data.email,
+            password: data.password,
+            sendCodeOnArrival: true,
+          });
+          await navigate({ to: "/verify-email" });
+        }
+      });
     } finally {
       requestInFlight.current = false;
     }
   }
 
   async function onGoogleSignin() {
-    if (requestInFlight.current || lockout.isLocked) return;
-    if (!captcha.token) {
-      captcha.requireVerification();
-      return;
-    }
+    if (requestInFlight.current) return;
     requestInFlight.current = true;
     setActiveMethod("google");
     try {
-      const email = form.getValues("email");
-      const result = await oauthLoginMutation.mutate({
-        provider: "google", keepSignedIn,
-        email: z.string().email().safeParse(email).success ? email : undefined,
-        captchaToken: captcha.token,
+      await oauthLoginMutation.mutate({
+        provider: "google", intent: "login", keepSignedIn,
       });
-      lockout.recordResult(result);
-      captcha.recordResult(result);
     } finally {
       requestInFlight.current = false;
     }
   }
 
-  const isSigningIn = form.formState.isSubmitting;
+  const isSigningIn = form.formState.isSubmitting || captcha.busy;
 
-  const emailError = loginMutation.status !== "error" && loginMutation.data &&
-    "captchaError" in loginMutation.data && loginMutation.data.captchaError ? null : describeSignInError(
+  const emailError = describeSignInError(
     loginMutation.data,
     loginMutation.status === "error",
   );
@@ -327,15 +314,13 @@ export function LoginForm({
             </div>
 
             <div style={staggerStyle(3)} className="login-actions">
-              {captcha.required && !lockout.isLocked && (
-                <Captcha onToken={captcha.onToken} error={captcha.error} resetKey={captcha.resetKey} />
-              )}
               <Button
                 type="submit"
+                data-size="invisible"
                 shape="pill"
                 size="touch"
                 className="login-submit"
-                disabled={isSigningIn || oauthLoginMutation.redirecting || lockout.isLocked || (captcha.required && !captcha.token)}
+                disabled={isSigningIn || oauthLoginMutation.redirecting || lockout.isLocked || !captcha.ready}
               >
                 {isSigningIn ? (
                   <>
@@ -346,6 +331,8 @@ export function LoginForm({
                   "Sign in"
                 )}
               </Button>
+              <RecaptchaNotice />
+              <InvisibleCaptcha captcha={captcha} />
 
               <div className="login-divider" aria-hidden="true">
                 <span />
@@ -360,7 +347,7 @@ export function LoginForm({
                 size="touch"
                 className="login-google"
                 onClick={onGoogleSignin}
-                disabled={isSigningIn || oauthLoginMutation.redirecting || lockout.isLocked || (captcha.required && !captcha.token)}
+                disabled={isSigningIn || oauthLoginMutation.redirecting}
               >
                 {oauthLoginMutation.redirecting ? (
                   <>

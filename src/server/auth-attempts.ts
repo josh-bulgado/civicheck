@@ -1,6 +1,5 @@
 import { getSupabaseAdminClient } from "~/utils/supabase";
 import { bucketKey, getClientIp, RATE_LIMITS, type RateLimitRule } from "./rate-limit";
-import { CAPTCHA_REQUIRED_MESSAGE } from "~/features/auth/captcha";
 
 type AuthAction = "sign-in" | "sign-up";
 type AuthAttempt = {
@@ -9,6 +8,8 @@ type AuthAttempt = {
   lockedUntil?: number;
   message?: string;
   captchaRequired?: boolean;
+  attemptId?: string;
+  elevated?: boolean;
 };
 
 const LOCKED_MESSAGE = "Too many attempts. Please wait 15 minutes before trying again.";
@@ -32,11 +33,10 @@ async function readAttemptState(bucket: string, rule: RateLimitRule) {
   };
 }
 
-/** Check both account cooldowns without spending another attempt or extending it. */
+/** Signup's existing OAuth cooldown, independent of password login failures. */
 export async function checkAuthLockout(email: string): Promise<AuthAttempt> {
   try {
     const states = await Promise.all([
-      readAttemptState(bucketKey("sign-in:email", email), RATE_LIMITS.signInPerEmail),
       readAttemptState(bucketKey("sign-up:email", email), RATE_LIMITS.signUpPerEmail),
     ]);
     const lockedUntil = Math.max(...states.map(state => state.lockedUntil ?? 0));
@@ -57,9 +57,24 @@ export async function checkAuthLockout(email: string): Promise<AuthAttempt> {
  * submissions, persists across reloads/servers, and lets exactly five through.
  * Auth attempts fail closed when the counter is unavailable.
  */
-export async function reserveAuthAttempt(action: AuthAction, email: string, captchaVerified = false): Promise<AuthAttempt> {
-  const emailRule = action === "sign-in" ? RATE_LIMITS.signInPerEmail : RATE_LIMITS.signUpPerEmail;
-  const ipRule = action === "sign-in" ? RATE_LIMITS.signInPerIp : RATE_LIMITS.signUpPerIp;
+export async function reserveAuthAttempt(action: AuthAction, email: string): Promise<AuthAttempt> {
+  if (action === "sign-in") {
+    try {
+      const ip = getClientIp() ?? "unknown";
+      const { data, error } = await getSupabaseAdminClient({ requestTimeoutMs: 5000 }).rpc("reserve_login_attempt", {
+        p_pair: bucketKey("sign-in:pair", `${email.trim().toLowerCase()}|${ip}`),
+        p_ip: bucketKey("sign-in:ip", ip),
+        p_account: bucketKey("sign-in:account", email),
+      });
+      if (error || !data || typeof data.allowed !== "boolean" ||
+        (data.allowed && typeof data.attemptId !== "string")) throw new Error("Reservation unavailable");
+      return { ...data, message: data.allowed ? undefined : LOCKED_MESSAGE };
+    } catch {
+      return { allowed: false, attemptsRemaining: 0, message: UNAVAILABLE_MESSAGE };
+    }
+  }
+  const emailRule = RATE_LIMITS.signUpPerEmail;
+  const ipRule = RATE_LIMITS.signUpPerIp;
   const ip = getClientIp();
   const emailBucket = bucketKey(`${action}:email`, email);
   const buckets = [
@@ -68,32 +83,38 @@ export async function reserveAuthAttempt(action: AuthAction, email: string, capt
   ];
   try {
     for (const { bucket, rule } of buckets) {
-      // The same advisory-locked RPC uses a limit of two for unverified
-      // password submissions. Rejected CAPTCHA requests never add an email hit.
-      const captchaGate = action === "sign-in" && bucket === emailBucket && !captchaVerified;
       const { data, error } = await getSupabaseAdminClient().rpc("consume_rate_limit", {
         p_bucket: bucket,
-        p_limit: captchaGate ? 2 : rule.limit,
+        p_limit: rule.limit,
         p_window_seconds: rule.windowSeconds,
       });
       if (error || typeof data !== "boolean") throw new Error("Could not reserve authentication attempt");
       if (!data) {
         const state = await readAttemptState(bucket, rule);
-        const captchaRequired = captchaGate && !state.lockedUntil;
-        return { allowed: false, ...state, captchaRequired,
-          message: captchaRequired ? CAPTCHA_REQUIRED_MESSAGE : LOCKED_MESSAGE };
+        return { allowed: false, ...state, message: LOCKED_MESSAGE };
       }
     }
     const state = await readAttemptState(emailBucket, emailRule);
     return {
       allowed: true,
       ...state,
-      captchaRequired: action === "sign-in" && state.attemptsRemaining <= emailRule.limit - 2,
     };
   } catch (error) {
     console.error("Authentication attempt check failed:", error);
     return { allowed: false, attemptsRemaining: 0, message: UNAVAILABLE_MESSAGE };
   }
+}
+
+/** Complete exactly the reserved attempt. Successful logins don't spend IP failures. */
+export async function finishAuthAttempt(attempt: AuthAttempt, success: boolean) {
+  if (!attempt.attemptId) throw new Error("Missing login reservation");
+  const { data, error } = await getSupabaseAdminClient({ requestTimeoutMs: 5000 }).rpc("finish_login_attempt", {
+    p_attempt: attempt.attemptId, p_success: success,
+  });
+  if (error || !data || typeof data.attemptsRemaining !== "number") throw new Error("Completion unavailable");
+  return { ...attempt, attemptsRemaining: data.attemptsRemaining as number,
+    lockedUntil: typeof data.lockedUntil === "number" ? data.lockedUntil : undefined,
+    notify: data.notify === true };
 }
 
 /** The fifth unsuccessful submission immediately locks the form. */

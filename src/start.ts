@@ -40,8 +40,8 @@ function supabaseSources() {
 /**
  * The page may run only its own scripts and those carrying this response's
  * nonce (the router stamps it on the hydration and theme scripts), so injected
- * markup can't execute, and may talk only to itself and Supabase, so a script
- * that does run can't send a session anywhere else.
+ * markup can't execute. Connections are limited to this app, Supabase, and
+ * the Google reCAPTCHA endpoint needed by the checkbox widget.
  *
  * `wasm-unsafe-eval` lets pdf.js and the PDF layout engine compile their
  * WebAssembly; it does not allow eval of JavaScript. Styles stay inline-capable
@@ -57,14 +57,14 @@ function contentSecurityPolicy(nonce: string) {
 
   return [
     "default-src 'self'",
-    `script-src ${sources("'self'", `'nonce-${nonce}'`, "'wasm-unsafe-eval'", "https://challenges.cloudflare.com", vercelPreview && "https://vercel.live")}`,
+    `script-src ${sources("'self'", `'nonce-${nonce}'`, "'wasm-unsafe-eval'", "https://www.google.com/recaptcha/", "https://www.gstatic.com/recaptcha/", vercelPreview && "https://vercel.live")}`,
     `style-src ${sources("'self'", "'unsafe-inline'", vercelPreview && "https://vercel.live")}`,
     `img-src ${sources("'self'", "data:", "blob:", supabase?.https, vercelPreview && "https://vercel.live https://vercel.com")}`,
     `font-src ${sources("'self'", "data:", vercelPreview && "https://vercel.live https://assets.vercel.com")}`,
-    `connect-src ${sources("'self'", supabase?.https, supabase?.wss, vercelPreview && "https://vercel.live wss://ws-us3.pusher.com")}`,
+    `connect-src ${sources("'self'", supabase?.https, supabase?.wss, "https://www.google.com/recaptcha/", vercelPreview && "https://vercel.live wss://ws-us3.pusher.com")}`,
     "media-src 'self' blob:",
     "worker-src 'self' blob:",
-    `frame-src ${sources("'self'", "blob:", "https://challenges.cloudflare.com", vercelPreview && "https://vercel.live")}`,
+    `frame-src ${sources("'self'", "blob:", "https://www.google.com/recaptcha/", "https://recaptcha.google.com/recaptcha/", vercelPreview && "https://vercel.live")}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

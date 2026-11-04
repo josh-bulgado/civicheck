@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import type { User } from "@supabase/supabase-js";
 import {
   clearSessionScope,
+  commitSupabaseCookies,
   getSupabaseServerClient,
   getSupabaseAdminClient,
   getSupabaseStatelessClient,
@@ -30,7 +31,7 @@ import {
 import type { Role } from "~/lib/permissions";
 import {
   credentialsSchema,
-  emailOnlySchema,
+  forgotPasswordInputSchema,
   loginInputSchema,
   newPasswordInputSchema,
   oauthProviderSchema,
@@ -39,8 +40,10 @@ import {
 } from "./auth.schema";
 import { describeWeakPassword } from "./password-error";
 import { getSignupErrorField } from "./signup-error";
-import { authAttemptFailure, checkAuthLockout, clearAuthAttempts, reserveAuthAttempt } from "~/server/auth-attempts";
-import { issueOAuthCaptchaProof, verifyCaptcha } from "./captcha.server";
+import { authAttemptFailure, checkAuthLockout, clearAuthAttempts, reserveAuthAttempt, finishAuthAttempt } from "~/server/auth-attempts";
+import { INVALID_CREDENTIALS, compareDummyPassword, getLoginAccountInfo, runAuthBackground, sendLoginSecurityNotification } from "~/server/auth-security";
+import { issueOAuthCaptchaProof, verifyCaptcha, verifyInvisibleCaptcha } from "./captcha.server";
+import { bucketKey } from "~/server/rate-limit";
 import {
   clearIssuedOtps,
   describeRejectedOtp,
@@ -67,14 +70,9 @@ async function allowCodeEmail(email: string) {
 /** Bounds guesses at a 6-digit code, per inbox and per visitor. */
 async function allowCodeCheck(purpose: OtpPurpose, email: string) {
   return (
-    (await allowAttempt(`otp-verify:${purpose}`, email, RATE_LIMITS.otpVerifyPerEmail)) &&
-    (await allowAttempt("otp-verify:ip", getClientIp(), RATE_LIMITS.otpVerifyPerIp))
+    (await allowAttempt(`otp-verify:${purpose}`, email, RATE_LIMITS.otpVerifyPerEmail, purpose === "recovery")) &&
+    (await allowAttempt("otp-verify:ip", getClientIp(), RATE_LIMITS.otpVerifyPerIp, purpose === "recovery"))
   );
-}
-
-/** Bounds password guesses, per account and per visitor. */
-async function allowPasswordCheck(email: string) {
-  return (await reserveAuthAttempt("sign-in", email)).allowed;
 }
 
 /** Matches the code lifetime promised in the verification email. */
@@ -175,69 +173,79 @@ async function sendSignupOtpEmail(
 export const loginWithEmailFn = createServerFn({ method: "POST" })
   .validator(loginInputSchema)
   .handler(async ({ data }) => {
-    if (data.captchaToken) {
-      const captcha = await verifyCaptcha(data.captchaToken);
-      if (captcha.error) return captcha;
-    }
-    const attempt = await reserveAuthAttempt("sign-in", data.email, !!data.captchaToken);
+    const captcha = await verifyInvisibleCaptcha(data["g-recaptcha-response"]);
+    if (captcha.error) return captcha;
+    const attempt = await reserveAuthAttempt("sign-in", data.email);
     if (!attempt.allowed) {
       return authAttemptFailure(attempt, attempt.message ?? TOO_MANY_ATTEMPTS);
     }
 
     const sessionOnly = data.keepSignedIn !== true;
-    const supabase = getSupabaseServerClient({ sessionOnly });
-    const { data: loginData, error } = await supabase.auth.signInWithPassword({
-      email: data.email,
-      password: data.password,
-    });
-
-    // An unconfirmed account goes on to verify its email from the login form,
-    // and that verification opens the session — so it needs the choice too.
-    if (!error || /email not confirmed/i.test(error.message ?? "")) {
-      setSessionScope(sessionOnly);
-      await clearAuthAttempts("sign-in", data.email);
-    }
-
-    if (error) {
-      await recordAuthenticationSecurityEvent({
-        type: "sign_in_failed",
+    const supabase = getSupabaseServerClient({ sessionOnly, deferCookies: true, requestTimeoutMs: 8000 });
+    try {
+      const account = await getLoginAccountInfo(data.email);
+      if (attempt.elevated) await new Promise(resolve => setTimeout(resolve, 500));
+      // Supabase owns real hashes. Missing/passwordless accounts get equivalent
+      // bcrypt work here, then still take the same Auth request path.
+      if (account.needsDummyPassword) await compareDummyPassword(data.password, account.bcryptCost);
+      const { data: loginData, error } = await supabase.auth.signInWithPassword({
         email: data.email,
+        password: data.password,
       });
-      const isJsonEmpty = error.message === "{}" || !error.message;
-      const cleanMessage = isJsonEmpty
-        ? "An unexpected login server error occurred. Please check your Supabase connection."
-        : error.message;
-      // Correct credentials for an unconfirmed account continue to verification.
-      if (/email not confirmed/i.test(error.message ?? "")) {
-        return { error: true, message: cleanMessage };
-      }
-      return authAttemptFailure(attempt, cleanMessage);
-    }
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role, access_status")
-      .eq("id", loginData.user.id)
-      .single();
-    if ((profile?.access_status ?? "active") !== "active") {
-      await supabase.auth.signOut();
-      clearSessionScope();
-      return { error: true, message: "This account is not active." };
+      // An unconfirmed account goes on to verify its email from the login form,
+      // and that verification opens the session — so it needs the choice too.
+      const passwordAccepted = !error || error.code === "email_not_confirmed" || /email not confirmed/i.test(error.message ?? "");
+      const completed = await finishAuthAttempt(attempt, passwordAccepted);
+      if (passwordAccepted) {
+        setSessionScope(sessionOnly);
+      }
+
+      if (error) {
+        await runAuthBackground(recordAuthenticationSecurityEvent({
+          type: "sign_in_failed",
+          email: data.email,
+        }));
+        if (completed.notify && account.email) {
+          await runAuthBackground(sendLoginSecurityNotification(account.email));
+        }
+        // Correct credentials for an unconfirmed account continue to verification.
+        if (/email not confirmed/i.test(error.message ?? "")) {
+          return { error: true, message: "Email not confirmed" };
+        }
+        return authAttemptFailure(completed, INVALID_CREDENTIALS);
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, access_status")
+        .eq("id", loginData.user.id)
+        .single();
+      if ((profile?.access_status ?? "active") !== "active") {
+        await supabase.auth.signOut();
+        clearSessionScope();
+        return { error: true, message: "This account is not active." };
+      }
+      if (profile?.role) {
+        await recordSessionStarted({
+          actorProfileId: loginData.user.id,
+          role: profile.role as Role,
+          method: "password",
+        });
+      }
+      commitSupabaseCookies(supabase);
+      // Who just signed in, so the first screen can be drawn for them while their
+      // account details are still loading. See `hintCurrentUser`.
+      return {
+        error: false,
+        userId: loginData.user.id,
+        role: (profile?.role as Role | undefined) ?? null,
+      };
+    } catch {
+      // No session cookies have been committed. The short database lease
+      // bounds abandoned attempts if Auth or its completion becomes unavailable.
+      return { error: true, message: "Sign-in is temporarily unavailable. Please try again shortly." };
     }
-    if (profile?.role) {
-      await recordSessionStarted({
-        actorProfileId: loginData.user.id,
-        role: profile.role as Role,
-        method: "password",
-      });
-    }
-    // Who just signed in, so the first screen can be drawn for them while their
-    // account details are still loading. See `hintCurrentUser`.
-    return {
-      error: false,
-      userId: loginData.user.id,
-      role: (profile?.role as Role | undefined) ?? null,
-    };
   });
 
 export const loginWithOAuthFn = createServerFn({ method: "POST" })
@@ -245,12 +253,14 @@ export const loginWithOAuthFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     // Optional form email provides early feedback. The callback always checks
     // the provider-verified email too, so omitting/changing this cannot bypass it.
-    if (data.email) {
+    if (data.intent !== "login" && data.email) {
       const lockout = await checkAuthLockout(data.email);
       if (!lockout.allowed) return authAttemptFailure(lockout, lockout.message!);
     }
-    const captcha = await verifyCaptcha(data.captchaToken);
-    if (captcha.error) return captcha;
+    if (data.intent !== "login") {
+      const captcha = await verifyCaptcha(data.captchaToken);
+      if (captcha.error) return captcha;
+    }
     // The session is opened later, by /auth/callback, so the choice rides
     // along as the marker cookie that request will read.
     const sessionOnly = data.keepSignedIn !== true;
@@ -263,6 +273,7 @@ export const loginWithOAuthFn = createServerFn({ method: "POST" })
       provider: data.provider,
       options: {
         redirectTo,
+        ...(data.provider === "google" ? { scopes: "openid email profile" } : {}),
       },
     });
 
@@ -274,7 +285,7 @@ export const loginWithOAuthFn = createServerFn({ method: "POST" })
       return { error: true, message: cleanMessage };
     }
 
-    issueOAuthCaptchaProof();
+    issueOAuthCaptchaProof(data.intent);
     return { url: authData.url };
   });
 
@@ -428,9 +439,13 @@ export const resendSignupOtpFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const INVALID_CREDENTIALS = "Invalid email or password.";
     // This checks a password and then sends a code, so it is held to both limits.
-    if (!(await allowPasswordCheck(data.email)) || !(await allowCodeEmail(data.email))) {
+    const attempt = await reserveAuthAttempt("sign-in", data.email);
+    if (!attempt.allowed) {
       return { error: true, message: TOO_MANY_ATTEMPTS };
     }
+    const account = await getLoginAccountInfo(data.email);
+    if (account.needsDummyPassword) await compareDummyPassword(data.password, account.bcryptCost);
+    if (attempt.elevated) await new Promise(resolve => setTimeout(resolve, 500));
     const statelessSupabase = getSupabaseStatelessClient();
     const { error: signInError } =
       await statelessSupabase.auth.signInWithPassword({
@@ -438,6 +453,9 @@ export const resendSignupOtpFn = createServerFn({ method: "POST" })
         password: data.password,
       });
 
+    const passwordAccepted = !signInError || /email not confirmed/i.test(signInError.message ?? "");
+    const completed = await finishAuthAttempt(attempt, passwordAccepted);
+    if (completed.notify && account.email) await runAuthBackground(sendLoginSecurityNotification(account.email));
     if (
       !signInError ||
       !/email not confirmed/i.test(signInError.message ?? "")
@@ -445,7 +463,7 @@ export const resendSignupOtpFn = createServerFn({ method: "POST" })
       return { error: true, message: INVALID_CREDENTIALS };
     }
 
-    await clearAuthAttempts("sign-in", data.email);
+    if (!(await allowCodeEmail(data.email))) return { error: true, message: TOO_MANY_ATTEMPTS };
 
     const adminSupabase = getSupabaseAdminClient();
     const existingUser = await findAuthUserByEmail(adminSupabase, data.email);
@@ -574,83 +592,55 @@ export const resetPasswordFn = createServerFn({ method: "POST" })
     };
   });
 
+/** Account lookup, code generation and delivery all happen after the response. */
+async function deliverRecoveryCode(email: string) {
+  const admin = getSupabaseAdminClient({ requestTimeoutMs: 8000 });
+  const { data, error } = await admin.auth.admin.generateLink({ type: "recovery", email });
+  if (error?.status === 404 || error?.code === "user_not_found") return;
+  if (error || !data?.properties?.email_otp) throw new Error("Recovery generation failed");
+  const otp = data.properties.email_otp;
+  await sendEmail({
+    to: email,
+    subject: "Reset your CiviCheck password",
+    html: renderOtpEmail({
+      preheader: "Use this code to reset your CiviCheck password.",
+      heading: "Reset your password",
+      paragraphs: ["We received a request to reset the password for your CiviCheck account. Enter the code below to continue."],
+      code: otp,
+      noteLines: ["This code expires in 1 hour and can only be used once."],
+      footerNote: "If you did not request a password reset, you can safely ignore this email. Your password stays the same.",
+    }),
+  });
+  await recordIssuedOtp(email, "recovery", otp);
+}
+
 export const forgotPasswordFn = createServerFn({ method: "POST" })
-  .validator(emailOnlySchema)
+  .validator(forgotPasswordInputSchema)
   .handler(async ({ data }) => {
-    if (!(await allowCodeEmail(data.email))) {
-      return { error: true, message: TOO_MANY_ATTEMPTS };
-    }
-
-    const adminSupabase = getSupabaseAdminClient();
-
-    // Generate a recovery OTP code
-    const { data: linkData, error } =
-      await adminSupabase.auth.admin.generateLink({
-        type: "recovery",
-        email: data.email,
-      });
-
-    if (error) {
-      // Unregistered address: answer exactly as we do for a real one so this
-      // form can't be used to discover which emails have accounts.
-      if (error.status === 404 || error.code === "user_not_found") {
-        return {
-          error: false,
-          message: "Password reset code sent.",
-        };
-      }
-
-      const isJsonEmpty = error.message === "{}" || !error.message;
-      const cleanMessage = isJsonEmpty
-        ? "An unexpected forgot password request server error occurred."
-        : error.message;
-      return {
-        error: true,
-        message: cleanMessage,
-      };
-    }
-
-    const otp = linkData?.properties?.email_otp;
-
-    if (!otp) {
-      return {
-        error: true,
-        message: "Failed to generate the password reset code.",
-      };
-    }
-
+    const captcha = await verifyInvisibleCaptcha(data["g-recaptcha-response"]);
+    if (captcha.error) return captcha;
+    // Fail closed. Check IP first so rotating emails cannot create unbounded
+    // account buckets. Suppressed account sends return the same public result.
     try {
-      await sendEmail({
-        to: data.email,
-        subject: "Reset your CiviCheck password",
-        html: renderOtpEmail({
-          preheader: "Use this code to reset your CiviCheck password.",
-          heading: "Reset your password",
-          paragraphs: [
-            "We received a request to reset the password for your CiviCheck account. Enter the code below to continue.",
-          ],
-          code: otp,
-          noteLines: ["This code expires in 1 hour and can only be used once."],
-          footerNote:
-            "If you did not request a password reset, you can safely ignore this email — your password stays the same.",
-        }),
+      const admin = getSupabaseAdminClient({ requestTimeoutMs: 5000 });
+      const ipLimit = await admin.rpc("consume_rate_limit", {
+        p_bucket: bucketKey("otp-send:ip", getClientIp() ?? "unknown"),
+        p_limit: RATE_LIMITS.otpSendPerIp.limit,
+        p_window_seconds: RATE_LIMITS.otpSendPerIp.windowSeconds,
       });
-    } catch (sendError) {
-      console.error("Resend sending error:", sendError);
-      return {
-        error: true,
-        message: `Failed to send the password reset code: ${
-          sendError instanceof Error ? sendError.message : String(sendError)
-        }`,
-      };
+      if (ipLimit.error || typeof ipLimit.data !== "boolean") throw new Error("Limiter unavailable");
+      if (!ipLimit.data) return { error: true, message: TOO_MANY_ATTEMPTS };
+      const emailLimit = await admin.rpc("consume_rate_limit", {
+        p_bucket: bucketKey("otp-send:email", data.email),
+        p_limit: RATE_LIMITS.otpSendPerEmail.limit,
+        p_window_seconds: RATE_LIMITS.otpSendPerEmail.windowSeconds,
+      });
+      if (emailLimit.error || typeof emailLimit.data !== "boolean") throw new Error("Limiter unavailable");
+      if (emailLimit.data) await runAuthBackground(deliverRecoveryCode(data.email));
+      return { error: false, message: "If an account exists for this email, a reset code will arrive shortly." };
+    } catch {
+      return { error: true, message: "Password reset is temporarily unavailable. Please try again shortly." };
     }
-
-    await recordIssuedOtp(data.email, "recovery", otp);
-
-    return {
-      error: false,
-      message: "Password reset code sent.",
-    };
   });
 
 export const verifyRecoveryOtpFn = createServerFn({ method: "POST" })

@@ -11,7 +11,9 @@ export function useCaptcha(alwaysRequired = false) {
 
   const onToken = useCallback((value: string | null) => {
     setToken(value);
-    setError(value ? null : CAPTCHA_RETRY_MESSAGE);
+    // Widget lifecycle errors are shown by Captcha; starting a fresh attempt
+    // also clears any previous server error while keeping the token empty.
+    setError(null);
   }, []);
 
   function requireVerification() {

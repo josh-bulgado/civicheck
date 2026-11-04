@@ -13,12 +13,14 @@ node_modules/
 /public/build
 /dist/
 .output
+.vercel/
+/supabase/.temp/
 .cache
 
 # Environment
 .env
 .env.*
-!.env.example  # Good practice: commit a template, ignore the real values
+!.env.example
 
 # Logs
 *.log

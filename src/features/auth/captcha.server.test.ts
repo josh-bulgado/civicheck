@@ -17,6 +17,7 @@ vi.mock("@tanstack/react-start/server", () => ({
 }));
 vi.mock("~/utils/supabase", () => ({ getSupabaseAdminClient: () => ({ rpc: state.rpc }) }));
 import { consumeOAuthCaptchaProof, getCaptchaPublicConfig, issueOAuthCaptchaProof, verifyCaptcha } from "./captcha.server";
+import { CAPTCHA_TOKEN_MAX_LENGTH, CAPTCHA_UNAVAILABLE_MESSAGE } from "./captcha";
 
 beforeEach(() => {
   state.url = "https://civicheck.test/signup";
@@ -24,13 +25,14 @@ beforeEach(() => {
   state.consumed.clear();
   state.rpcUnavailable = false;
   vi.stubEnv("NODE_ENV", "production");
+  vi.stubEnv("VERCEL", "");
   vi.stubEnv("APP_URL", "https://civicheck.test");
   vi.stubEnv("SUPABASE_SECRET_KEY", "test-only-signing-key");
-  vi.stubEnv("TURNSTILE_SITE_KEY", "production-site-key");
-  vi.stubEnv("TURNSTILE_SECRET_KEY", "production-secret-key");
-  vi.stubEnv("TURNSTILE_ALLOWED_HOSTNAMES", "");
+  vi.stubEnv("RECAPTCHA_SITE_KEY", "production-site-key");
+  vi.stubEnv("RECAPTCHA_SECRET_KEY", "production-secret-key");
+  vi.stubEnv("RECAPTCHA_ALLOWED_HOSTNAMES", "");
   vi.stubGlobal("fetch", vi.fn(async () => Response.json({
-    success: true, hostname: "civicheck.test", action: "authentication",
+    success: true, hostname: "civicheck.test",
   })));
   state.rpc.mockImplementation(async (_name, args) => {
     if (state.rpcUnavailable) return { data: null, error: { message: "Unavailable" } };
@@ -41,37 +43,46 @@ beforeEach(() => {
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
-describe("Turnstile server validation", () => {
+describe("reCAPTCHA v2 server validation", () => {
   it("returns only the site key to the browser", () => {
     expect(getCaptchaPublicConfig()).toEqual({ siteKey: "production-site-key", error: null });
     expect(JSON.stringify(getCaptchaPublicConfig())).not.toContain("production-secret-key");
   });
-  it("verifies against Cloudflare with the server secret and expected metadata", async () => {
+  it("verifies a v2 response without v3 action metadata using Google's server endpoint", async () => {
     expect(await verifyCaptcha("valid-token")).toEqual({ error: false });
     const [url, init] = vi.mocked(fetch).mock.calls[0];
-    expect(url).toBe("https://challenges.cloudflare.com/turnstile/v0/siteverify");
+    expect(url).toBe("https://www.google.com/recaptcha/api/siteverify");
     const body = init!.body as URLSearchParams;
     expect(body.get("secret")).toBe("production-secret-key");
     expect(body.get("response")).toBe("valid-token");
+    expect(body.get("remoteip")).toBe("192.0.2.10");
   });
-  it.each([undefined, "", " ", "x".repeat(2049)])("rejects a missing or malformed token without contacting Cloudflare", async token => {
+  it("accepts bounded long reCAPTCHA tokens without truncation", async () => {
+    const token = "x".repeat(CAPTCHA_TOKEN_MAX_LENGTH);
+    expect(await verifyCaptcha(token)).toEqual({ error: false });
+    expect((vi.mocked(fetch).mock.calls[0][1]!.body as URLSearchParams).get("response")).toBe(token);
+  });
+  it.each([undefined, "", " ", "x".repeat(CAPTCHA_TOKEN_MAX_LENGTH + 1)])("rejects a missing or malformed token without contacting Google", async token => {
     expect(await verifyCaptcha(token)).toMatchObject({ error: true, captchaError: true });
     expect(fetch).not.toHaveBeenCalled();
   });
   it.each([
     { success: false, "error-codes": ["timeout-or-duplicate"] },
     { success: false, "error-codes": ["invalid-input-response"] },
-    { success: true, hostname: "other.test", action: "authentication" },
-    { success: true, hostname: "civicheck.test", action: "wrong-action" },
+    { success: true, hostname: "other.test" },
+    { success: true, hostname: "civicheck.test", score: 0.9 },
+    { success: true, hostname: 123 },
+    { success: true, hostname: "civicheck.test", "error-codes": ["Over free quota."] },
+    { success: true, hostname: "civicheck.test", "error-codes": "malformed" },
     { success: true },
-    { success: "true", hostname: "civicheck.test", action: "authentication" },
+    { success: "true", hostname: "civicheck.test" },
   ])("rejects expired, replayed or mismatched validation: %j", async response => {
     vi.mocked(fetch).mockResolvedValueOnce(Response.json(response));
     expect(await verifyCaptcha("bad-token")).toMatchObject({ error: true, captchaError: true });
   });
   it("supports explicit preview hostnames without trusting a request's Host header", async () => {
-    vi.stubEnv("TURNSTILE_ALLOWED_HOSTNAMES", "civicheck.test, civicheck-preview.test");
-    vi.mocked(fetch).mockResolvedValueOnce(Response.json({ success: true, hostname: "civicheck-preview.test", action: "authentication" }));
+    vi.stubEnv("RECAPTCHA_ALLOWED_HOSTNAMES", "civicheck.test, civicheck-preview.test");
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json({ success: true, hostname: "civicheck-preview.test", "error-codes": [] }));
     expect(await verifyCaptcha("valid-preview")).toEqual({ error: false });
   });
   it.each(["timeout", "http", "json"])("fails closed on a validation service failure (%s)", async failure => {
@@ -80,9 +91,8 @@ describe("Turnstile server validation", () => {
     else vi.mocked(fetch).mockResolvedValueOnce(new Response("invalid json"));
     expect(await verifyCaptcha("some-token")).toMatchObject({ error: true, captchaError: true });
   });
-  it("fails closed in production without keys", async () => {
-    vi.stubEnv("TURNSTILE_SITE_KEY", "");
-    vi.stubEnv("TURNSTILE_SECRET_KEY", "");
+  it.each(["RECAPTCHA_SITE_KEY", "RECAPTCHA_SECRET_KEY"])("fails closed in production without %s", async key => {
+    vi.stubEnv(key, "");
     expect(getCaptchaPublicConfig().siteKey).toBeNull();
     expect(await verifyCaptcha("some-token")).toMatchObject({ error: true });
     expect(fetch).not.toHaveBeenCalled();
@@ -90,20 +100,36 @@ describe("Turnstile server validation", () => {
   it("uses official dummy keys only for local development", async () => {
     vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("VERCEL", "");
-    vi.stubEnv("TURNSTILE_SITE_KEY", "");
-    vi.stubEnv("TURNSTILE_SECRET_KEY", "");
+    vi.stubEnv("RECAPTCHA_SITE_KEY", "");
+    vi.stubEnv("RECAPTCHA_SECRET_KEY", "");
     state.url = "http://localhost:3000/signup";
-    expect(getCaptchaPublicConfig().siteKey).toBe("1x00000000000000000000AA");
-    vi.mocked(fetch).mockResolvedValueOnce(Response.json({ success: true, hostname: "example.com", action: "test" }));
+    expect(getCaptchaPublicConfig().siteKey).toBe("6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI");
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json({ success: true, hostname: "testkey.google.com" }));
     expect(await verifyCaptcha("test-token")).toEqual({ error: false });
     state.url = "https://public-preview.test/signup";
     expect(getCaptchaPublicConfig().siteKey).toBeNull();
   });
   it("rejects explicitly configured dummy keys in production", async () => {
-    vi.stubEnv("TURNSTILE_SITE_KEY", "1x00000000000000000000AA");
-    vi.stubEnv("TURNSTILE_SECRET_KEY", "1x0000000000000000000000000000000AA");
+    vi.stubEnv("RECAPTCHA_SITE_KEY", "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI");
+    vi.stubEnv("RECAPTCHA_SECRET_KEY", "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe");
     expect(await verifyCaptcha("test-token")).toMatchObject({ error: true });
     expect(fetch).not.toHaveBeenCalled();
+  });
+  it.each(["RECAPTCHA_SITE_KEY", "RECAPTCHA_SECRET_KEY"])("rejects a test/production key mix (%s), even on localhost", async key => {
+    vi.stubEnv("NODE_ENV", "development");
+    state.url = "http://localhost:3000/signup";
+    vi.stubEnv(key, key === "RECAPTCHA_SITE_KEY"
+      ? "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
+      : "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe");
+    expect(getCaptchaPublicConfig().siteKey).toBeNull();
+    expect(await verifyCaptcha("test-token")).toMatchObject({ error: true });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+  it("reports unavailable when Google returns success alongside a quota error", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json({
+      success: true, hostname: "civicheck.test", "error-codes": ["Over free quota."],
+    }));
+    expect(await verifyCaptcha("token")).toMatchObject({ error: true, message: CAPTCHA_UNAVAILABLE_MESSAGE });
   });
 });
 

@@ -1,0 +1,12 @@
+.invisible-recaptcha { height: 0; }
+.invisible-recaptcha .grecaptcha-badge { visibility: hidden; }
+.recaptcha-notice {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  text-align: center;
+}
+.login-actions > .recaptcha-notice { margin-top: 8px; }
+.dark .recaptcha-notice { color: #a8b5c7; }
+.recaptcha-notice a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }

@@ -9,11 +9,13 @@ type OAuthResult = { error?: boolean; message?: string; url?: string | null; loc
 
 export function useOAuthLogin() {
   const mutation = useMutation<
-    { provider: OAuthProvider; keepSignedIn?: boolean; email?: string; captchaToken?: string },
+    { provider: OAuthProvider; intent?: "login" | "signup"; keepSignedIn?: boolean; email?: string; captchaToken?: string },
     OAuthResult
   >({
-    fn: async ({ provider, keepSignedIn, email, captchaToken }) =>
-      loginWithOAuthFn({ data: { provider, keepSignedIn, email, captchaToken } }),
+    fn: async ({ provider, intent = "signup", keepSignedIn, email, captchaToken }) =>
+      loginWithOAuthFn({ data: { provider, intent, keepSignedIn,
+        ...(intent === "signup" ? { email, captchaToken } : {}),
+      } }),
     onSuccess: async (ctx) => {
       if (ctx.data?.error) {
         return;

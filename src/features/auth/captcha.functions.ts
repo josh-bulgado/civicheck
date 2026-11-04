@@ -1,5 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getCaptchaPublicConfig } from "./captcha.server";
+import { getCaptchaPublicConfig, getInvisibleCaptchaPublicConfig } from "./captcha.server";
 
 export const getCaptchaConfigFn = createServerFn({ method: "GET" })
   .handler(async () => getCaptchaPublicConfig());
+
+export const getInvisibleCaptchaConfigFn = createServerFn({ method: "GET" })
+  .handler(async () => getInvisibleCaptchaPublicConfig());

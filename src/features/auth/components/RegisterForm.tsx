@@ -534,28 +534,22 @@ const RegisterForm = () => {
                       onToggle={() => setShowPassword(!showPassword)}
                     />
                   </InputGroup>
-                  <div
-                    id="password-help"
-                    className="register-password-help"
-                    aria-hidden={isPasswordValid || undefined}
-                  >
-                    {!isPasswordValid && fieldState.invalid && (
-                      <SignupFieldError
-                        error={fieldState.error}
-                        empty={!field.value.trim()}
-                      />
-                    )}
-                    <FieldDescription
-                      className="register-password-hint text-[13px] leading-5"
-                      data-hidden={
-                        isPasswordValid ||
-                        (fieldState.invalid && !!field.value.trim())
-                      }
-                    >
-                      {PASSWORD_MIN}+ characters with uppercase, lowercase, a
-                      number and a symbol.
-                    </FieldDescription>
-                  </div>
+                  {!isPasswordValid && (
+                    <div id="password-help">
+                      {fieldState.invalid && (
+                        <SignupFieldError
+                          error={fieldState.error}
+                          empty={!field.value.trim()}
+                        />
+                      )}
+                      {(!fieldState.invalid || !field.value.trim()) && (
+                        <FieldDescription className="text-[13px] leading-5">
+                          {PASSWORD_MIN}+ characters with uppercase, lowercase, a
+                          number and a symbol.
+                        </FieldDescription>
+                      )}
+                    </div>
+                  )}
                 </Field>
               )}
             />
@@ -610,6 +604,7 @@ const RegisterForm = () => {
                   <SignupFieldError
                     id="consent-error"
                     error={fieldState.error}
+                    empty
                   />
                 </Field>
               )}

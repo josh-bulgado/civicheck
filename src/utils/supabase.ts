@@ -118,7 +118,7 @@ export async function limitSessionToBrowser(
  *   before the marker cookie could have been read back.
  * @param options.deferCookies Holds writes until commitSupabaseCookies is called.
  */
-export function getSupabaseServerClient(options?: { sessionOnly?: boolean; deferCookies?: boolean }) {
+export function getSupabaseServerClient(options?: { sessionOnly?: boolean; deferCookies?: boolean; requestTimeoutMs?: number }) {
   const scope = {
     // Fails closed: only an explicit persistent marker lengthens the session.
     sessionOnly:
@@ -133,6 +133,9 @@ export function getSupabaseServerClient(options?: { sessionOnly?: boolean; defer
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_PUBLISHABLE_KEY!,
     {
+      global: options?.requestTimeoutMs ? {
+        fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(options.requestTimeoutMs!) }),
+      } : undefined,
       cookies: {
         getAll() {
           return Object.entries(getCookies()).map(([name, value]) => ({

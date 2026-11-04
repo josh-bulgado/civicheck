@@ -19,6 +19,7 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
   const replyTo = process.env.RESEND_REPLY_TO?.trim() || undefined;
 
   const response = await fetch("https://api.resend.com/emails", {
+    signal: AbortSignal.timeout(8000),
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -36,7 +37,7 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
-    console.error("Resend API Error:", errorBody);
+    console.error("Resend API request failed:", response.status);
     throw new Error(
       errorBody.message || `Failed to send email via Resend: ${response.statusText}`
     );

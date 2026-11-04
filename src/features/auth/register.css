@@ -57,10 +57,13 @@
   letter-spacing: -0.035em;
 }
 
-.register-form,
-.register-page .register-fields {
+.register-form {
   display: flex;
   flex-direction: column;
+  gap: 20px;
+}
+
+.register-page .register-fields {
   gap: 20px;
 }
 
@@ -139,7 +142,7 @@
 }
 
 .register-page .register-checkbox-row {
-  min-height: 44px;
+  min-height: 28px;
   align-items: center;
   gap: 10px;
   padding-block: 0;
@@ -158,19 +161,7 @@
   font-size: 13px;
   font-weight: 400;
   line-height: 20px;
-  padding-block: 12px;
-}
-
-.register-password-help {
-  display: grid;
-}
-
-.register-password-help > * {
-  grid-area: 1 / 1;
-}
-
-.register-password-hint[data-hidden="true"] {
-  visibility: hidden;
+  padding-block: 4px;
 }
 
 .register-page .register-input [data-slot="button"] {
