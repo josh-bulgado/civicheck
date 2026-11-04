@@ -121,7 +121,7 @@ export const resubmitOwnAttachmentFn = createServerFn({ method: "POST" })
       };
     }
 
-    // Death requests retain rejected files in the history saved by the trigger.
+    // Requests retain rejected files in the history saved by the trigger.
     const retained = parsePreviousUploads(updated[0].previous_uploads)
       .some((version) => version.fileUrl === attachment.file_url);
     // The service role can delete any file, so only ever the applicant's own.
@@ -276,7 +276,7 @@ export const cancelOwnCtcBirthRequestFn = createServerFn({ method: "POST" })
       return { error: true, message: "The request could not be cancelled. Try again." };
     }
     if (!cancelled) {
-      return { error: true, message: "This request cannot be cancelled. Only your submitted CTC birth request can be cancelled before staff starts checking." };
+      return { error: true, message: "This request cannot be cancelled. Only your submitted CTC birth, marriage or death request can be cancelled before staff starts checking." };
     }
     return { error: false };
   });

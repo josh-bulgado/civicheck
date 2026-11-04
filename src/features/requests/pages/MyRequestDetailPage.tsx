@@ -1,5 +1,5 @@
 import { CancelRequestCard } from "../components/CancelRequestCard";
-import { canCancelCtcBirthRequest } from "../request-cancellation";
+import { canCancelCtcRequest } from "../request-cancellation";
 import { Download } from "lucide-react";
 import { MarriagePostingPanel } from "../components/MarriagePostingPanel";
 import { Button } from "~/components/ui/button";
@@ -70,7 +70,7 @@ export default function MyRequestDetailPage({
           <NextStepsCard status={request.status} next={next} />
           <MarriagePostingPanel serviceCode={request.serviceCode} status={request.status}
             postingStartDate={request.postingStartDate} postingEndDate={request.postingEndDate} />
-          {canCancelCtcBirthRequest(request.status, request.serviceCode, request.formData) && (
+          {canCancelCtcRequest(request.status, request.serviceCode, request.formData) && (
             <CancelRequestCard requestId={request.id} onCancelled={onUpdated} />
           )}
           <RequestStatusHistory logs={request.logs} />
