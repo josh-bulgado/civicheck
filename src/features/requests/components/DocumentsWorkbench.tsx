@@ -1,4 +1,5 @@
 import { documentReviewBlockedReason } from "../document-review";
+import { PreviousUploads } from "./PreviousUploads";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys, type HotkeyChord } from "@tanstack/react-hotkeys";
 import { CheckCircle2, Circle, FileText, XCircle } from "lucide-react";
@@ -125,6 +126,7 @@ export function DocumentsWorkbench({
       fileUrl: "",
       verificationStatus: "generated",
       rejectionReason: null,
+      previousUploads: [],
     } satisfies Attachment,
     label: "Verification Form",
   }] : [], [hasVerificationForm]);
@@ -199,6 +201,7 @@ export function DocumentsWorkbench({
     null,
   );
   const selectedDocId = selected?.doc.id;
+  const selectedFileUrl = selected?.doc.fileUrl;
   useEffect(() => {
     if (!active || !selectedDocId) return;
     if (selectedDocId === GENERATED_FORM_ID) {
@@ -221,7 +224,8 @@ export function DocumentsWorkbench({
         if (objectUrl) URL.revokeObjectURL(objectUrl);
       };
     }
-    const cached = links.current.get(selectedDocId);
+    const cacheKey = `${selectedDocId}:${selectedFileUrl}`;
+    const cached = links.current.get(cacheKey);
     if (cached && Date.now() - cached.at < LINK_REUSE_MS) {
       setLink({ id: selectedDocId, url: cached.url });
       return;
@@ -235,7 +239,7 @@ export function DocumentsWorkbench({
           setLink({ id: selectedDocId, error: res.message });
           return;
         }
-        links.current.set(selectedDocId, { url: res.url, at: Date.now() });
+        links.current.set(cacheKey, { url: res.url, at: Date.now() });
         setLink({ id: selectedDocId, url: res.url });
       })
       .catch(() => {
@@ -246,7 +250,7 @@ export function DocumentsWorkbench({
     return () => {
       cancelled = true;
     };
-  }, [active, selectedDocId, request.trackingNumber, request.copies, request.formData]);
+  }, [active, selectedDocId, selectedFileUrl, request.trackingNumber, request.copies, request.formData]);
 
   function decide(doc: Attachment, status: Decision, reason?: string) {
     if (!canProcess || blockedReason || verdictOf(doc).status !== "pending") return;
@@ -523,6 +527,11 @@ export function DocumentsWorkbench({
               )}
             </div>
           </div>
+          <PreviousUploads
+            key={selected.doc.id}
+            attachmentId={selected.doc.id}
+            uploads={selected.doc.previousUploads}
+          />
           {!expanded && controls && (
             <DocumentDecisionBar
               controls={controls}

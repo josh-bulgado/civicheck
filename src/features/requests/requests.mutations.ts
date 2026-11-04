@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { attachmentVersionSchema, parsePreviousUploads } from "./previous-uploads";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { documentReviewBlockedReason } from "./document-review";
@@ -43,7 +44,6 @@ const revertAttachmentVerificationSchema = z.object({
   attachmentId: z.string().uuid(),
   reason: z.string(),
 });
-const attachmentIdSchema = z.object({ attachmentId: z.string().uuid() });
 
 /**
  * Processing and release both mean every uploaded requirement is accepted
@@ -575,13 +575,13 @@ export const revertAttachmentVerificationFn = createServerFn({ method: "POST" })
   });
 
 export const getAttachmentSignedUrlFn = createServerFn({ method: "GET" })
-  .validator(attachmentIdSchema)
+  .validator(attachmentVersionSchema)
   .handler(async ({ data }) => {
     const { supabase, role, departmentId } = await requireActiveSession("requests:process");
 
     const { data: attachment, error: fetchError } = await supabase
       .from("requirements_attachments")
-      .select("id, file_url, requests(services_registry(department_id))")
+      .select("id, file_url, previous_uploads, requests(services_registry(department_id))")
       .eq("id", data.attachmentId)
       .single();
 
@@ -601,9 +601,14 @@ export const getAttachmentSignedUrlFn = createServerFn({ method: "GET" })
       }
     }
 
+    const fileUrl = data.previousIndex === undefined
+      ? attachment.file_url
+      : parsePreviousUploads(attachment.previous_uploads)[data.previousIndex]?.fileUrl;
+    if (!fileUrl) return { error: true, message: "That version no longer exists." };
+
     const { data: signed, error: signError } = await supabase.storage
       .from("request-documents")
-      .createSignedUrl(attachment.file_url, 300);
+      .createSignedUrl(fileUrl, 300);
 
     if (signError || !signed) {
       return { error: true, message: "Could not generate a link for this file." };

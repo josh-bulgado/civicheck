@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { parsePreviousUploads } from "./previous-uploads";
 import { z } from "zod";
 import { requireActiveSession } from "~/server/auth";
 import { one } from "~/lib/embed";
@@ -418,7 +419,7 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
     const [attachments, logs] = await Promise.all([
       supabase
         .from("requirements_attachments")
-        .select("id, requirement_name, subject_role, file_url, verification_status, rejection_reason, uploaded_at")
+        .select("id, requirement_name, subject_role, file_url, verification_status, rejection_reason, uploaded_at, previous_uploads")
         .eq("request_id", data.requestId)
         .order("uploaded_at", { ascending: true }),
       supabase
@@ -472,6 +473,7 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
         fileUrl: a.file_url,
         verificationStatus: a.verification_status,
         rejectionReason: a.rejection_reason,
+        previousUploads: parsePreviousUploads(a.previous_uploads),
       })),
       logs: ((logs.data ?? []) as ActionLogRow[]).map((l) => {
         const actor = one<PersonName>(l.profiles);
