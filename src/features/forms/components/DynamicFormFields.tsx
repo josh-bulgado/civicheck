@@ -63,6 +63,7 @@ import type {
   FormStep,
   FormTemplateDefinition,
 } from "../form-template.types";
+import { applicantCopy } from "../applicant-copy";
 
 export type DynamicFieldValues = Record<string, string>;
 
@@ -310,11 +311,11 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                   : "text-sm font-semibold text-foreground"
               }
             >
-              {section.title}
+              {applicantCopy(section.title)}
             </h2>
             {section.description ? (
               <p className="text-xs text-muted-foreground">
-                {section.description}
+                {applicantCopy(section.description)}
               </p>
             ) : null}
           </div>
@@ -337,7 +338,9 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
               name={definitionField.key as Path<TFieldValues>}
               rules={{
                 required: definitionField.required
-                  ? `${formatFieldLabel(definitionField.label)} is required`
+                  ? definitionField.type === "select"
+                    ? "Select an option."
+                    : "Enter a value."
                   : false,
                 validate: (value) => {
                   if (!value) return true;
@@ -365,7 +368,10 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                 },
                 maxLength: {
                   value: definitionField.type === "textarea" ? 2_000 : 240,
-                  message: `${formatFieldLabel(definitionField.label)} is too long`,
+                  message:
+                    definitionField.type === "textarea"
+                      ? "Use 2,000 characters or fewer."
+                      : "Use 240 characters or fewer.",
                 },
               }}
               render={({ field, fieldState }) => {
@@ -396,7 +402,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                   <>
                     {definitionField.helpText ? (
                       <FieldDescription>
-                        {definitionField.helpText}
+                        {applicantCopy(definitionField.helpText)}
                       </FieldDescription>
                     ) : null}
                     {selectedNotice ? (
@@ -415,10 +421,13 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                   </>
                 );
 
-                const options = definitionField.options ?? [];
+                const options = (definitionField.options ?? []).map((option) => ({
+                  ...option,
+                  label: applicantCopy(option.label),
+                }));
                 const legendLabel = (
                   <>
-                    {formatFieldLabel(definitionField.label)}
+                    {formatFieldLabel(applicantCopy(definitionField.label))}
                     {!definitionField.required ? " (optional)" : ""}
                     {showRequiredMarks && definitionField.required ? (
                       <>

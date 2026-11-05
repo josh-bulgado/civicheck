@@ -3,7 +3,7 @@ import { Check } from "lucide-react";
 import { cn } from "~/lib/utils";
 
 const STEPS = [
-  { step: 1, label: "About your case" },
+  { step: 1, label: "Request details" },
   { step: 2, label: "Your details" },
   { step: 3, label: "Upload documents" },
   { step: 4, label: "Review and submit" },

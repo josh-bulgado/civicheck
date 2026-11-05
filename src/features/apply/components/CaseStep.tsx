@@ -36,6 +36,7 @@ import {
   CaseSelector,
   inferMaritalStatus,
 } from "~/features/services/components/CaseSelector";
+import { applicantCopy } from "~/features/forms/applicant-copy";
 
 const MARRIAGE_LICENSE_CODE = "MARRIAGE_LICENSE";
 const MARRIAGE_NOTICE_DAYS = 10;
@@ -47,6 +48,18 @@ function formatLeadTime(days: number) {
   return `${days} days away`;
 }
 
+function caseAnswersFrom(values: DynamicFieldValues) {
+  return {
+    purpose: values.purpose ?? "",
+    otherPurpose: values.purpose_other ?? "",
+    additionalNotes: values.additional_notes ?? "",
+    referenceNumber: values.reference_number ?? "",
+    placeType: values.place_type ?? "",
+    informantName: values.informant_name ?? "",
+    informantRelationship: values.informant_relationship ?? "",
+  };
+}
+
 function getMarriageTimingNotice(serviceCode: string | undefined, intendedDate: string) {
   if (serviceCode !== MARRIAGE_LICENSE_CODE || !intendedDate) return null;
   const daysUntilMarriage = diffInDays(toDateKey(), intendedDate);
@@ -54,14 +67,14 @@ function getMarriageTimingNotice(serviceCode: string | undefined, intendedDate: 
 
   if (daysUntilMarriage <= MARRIAGE_NOTICE_DAYS) {
     return {
-      title: "Your intended marriage date is too soon",
-      description: `This date is ${formatLeadTime(daysUntilMarriage)}. A marriage license is issued only after the required 10-day public-notice period, and you must first attend the scheduled family-planning and pre-marriage counseling session. Choose a later date; planning at least 3 weeks ahead is safer.`,
+      title: "Choose a later marriage date",
+      description: `This date is ${formatLeadTime(daysUntilMarriage)}. Allow at least 3 weeks for counseling, document processing, and the required 10-day public-notice period. Choose a later date.`,
     };
   }
   if (daysUntilMarriage < RECOMMENDED_MARRIAGE_LEAD_DAYS) {
     return {
-      title: "Allow more time before the wedding",
-      description: `This date is ${formatLeadTime(daysUntilMarriage)}. The schedule may be tight after the family-planning and pre-marriage counseling session, document processing, and the required 10-day public-notice period. Planning at least 3 weeks ahead is safer.`,
+      title: "Your marriage date may be too soon",
+      description: `This date is ${formatLeadTime(daysUntilMarriage)}. Allow at least 3 weeks for counseling, document processing, and the required 10-day public-notice period.`,
     };
   }
   return null;
@@ -80,10 +93,13 @@ function trackRedirectCopy(rule: EventTimingRule) {
   ) {
     return {
       title: `This birth date is over ${rule.windowDays} days ago`,
-      description: `Births registered after ${rule.windowDays} days use the Delayed Registration track.`,
+      description: `Births registered more than ${rule.windowDays} days after birth require Delayed Registration.`,
     };
   }
-  return { title: rule.title, description: rule.description };
+  return {
+    title: applicantCopy(rule.title),
+    description: applicantCopy(rule.description),
+  };
 }
 
 interface CaseStepProps {
@@ -230,15 +246,7 @@ export function CaseStep({
       answers: { ...draft.answers, ...values },
       eventDate: values.event_date ?? "",
       eventPlace: values.event_place ?? "",
-      caseAnswers: {
-        purpose: values.purpose ?? "",
-        otherPurpose: values.purpose_other ?? "",
-        additionalNotes: values.additional_notes ?? "",
-        referenceNumber: values.reference_number ?? "",
-        placeType: values.place_type ?? "",
-        informantName: values.informant_name ?? "",
-        informantRelationship: values.informant_relationship ?? "",
-      },
+      caseAnswers: caseAnswersFrom(values),
       presetMarital: draft.selectedServiceCode
         ? inferMaritalStatus(selectedService.name)
         : null,
@@ -278,15 +286,7 @@ export function CaseStep({
         answers,
         eventDate: values.event_date ?? "",
         eventPlace: values.event_place ?? "",
-        caseAnswers: {
-          purpose: values.purpose ?? "",
-          otherPurpose: values.purpose_other ?? "",
-          additionalNotes: values.additional_notes ?? "",
-          referenceNumber: values.reference_number ?? "",
-          placeType: values.place_type ?? "",
-          informantName: values.informant_name ?? "",
-          informantRelationship: values.informant_relationship ?? "",
-        },
+        caseAnswers: caseAnswersFrom(values),
         documents: previous.documents.filter((document) =>
           visibleRequirementIds.has(document.requirementId),
         ),
@@ -327,7 +327,7 @@ export function CaseStep({
   }
 
   return (
-    <WizardShell step={1} title="Tell us about your case">
+    <WizardShell step={1} title="Tell us about your request">
       <div className="flex flex-col gap-6">
         {isGroup ? (
           <CaseSelector
@@ -361,8 +361,8 @@ export function CaseStep({
             ["DEATH_ONTIME", "DEATH_DELAYED"].includes(selectedService.service_code) &&
             section.fields.some((field) => field.key === "event_date") ? (
               <p className="text-sm text-muted-foreground">
-                Enter the date and place of death exactly as written on the duly
-                accomplished Certificate of Death.
+                Enter the date and place of death exactly as shown on the
+                completed Certificate of Death.
               </p>
             ) : null
           }
@@ -398,8 +398,8 @@ export function CaseStep({
         {timingMismatch && timingRule ? (
           <EventTimingNotice
             behavior={timingRule.behavior}
-            title={timingRule.title}
-            description={timingRule.description}
+            title={applicantCopy(timingRule.title)}
+            description={applicantCopy(timingRule.description)}
             ctaLabel={timingRule.ctaLabel}
             onCta={() => setRedirectOpen(true)}
           />
@@ -410,10 +410,10 @@ export function CaseStep({
             variant="default"
             role="status"
             icon={CalendarClock}
-            title={timingDeferredNotice.rule.title}
+            title={applicantCopy(timingDeferredNotice.rule.title)}
           >
-            {timingDeferredNotice.rule.description} We&rsquo;ll confirm this
-            against your supporting document before processing.
+            {applicantCopy(timingDeferredNotice.rule.description)} We&rsquo;ll check the date
+            against your supporting document before processing your request.
           </NoticeAlert>
         ) : null}
 
@@ -433,7 +433,7 @@ export function CaseStep({
               : blockingOptionNotice
                 ? blockingOptionNotice.description
                 : timingBlocks
-                ? "Resolve the date above before continuing."
+                ? "Update the date or switch services before continuing."
                 : undefined
           }
         />
@@ -444,6 +444,7 @@ export function CaseStep({
         onOpenChange={setRedirectOpen}
         title={timingRule ? trackRedirectCopy(timingRule).title : ""}
         description={timingRule ? trackRedirectCopy(timingRule).description : ""}
+        switchLabel={timingRule?.ctaLabel || "Switch service"}
         onKeepEditing={() => setRedirectOpen(false)}
         onSwitch={handleSwitchTrack}
         // Closing, by any route, puts the cursor back on the date.

@@ -96,7 +96,7 @@ type BlockDialog =
 const PREFIX_CELL = "self-stretch border-r bg-muted/60 px-3.5 py-0";
 
 const STEP_LABELS: Record<FormStep, string> = {
-  case: "Case details",
+  case: "Request details",
   details: "Personal details",
 };
 

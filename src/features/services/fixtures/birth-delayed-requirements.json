@@ -4,7 +4,7 @@
       {
         "key": "case",
         "step": "case",
-        "title": "Case details",
+        "title": "Request details",
         "fields": [
           {
             "key": "event_date",
@@ -169,13 +169,13 @@
       "mismatch": "inside_window",
       "timezone": "Asia/Manila",
       "windowDays": 30,
-      "description": "Use the registration track that matches the birth date.",
+      "description": "Use the registration type that matches the birth date.",
       "triggerField": "event_date",
       "targetServiceCode": "birth_ontime",
       "requireDocumentFirst": false
     },
     "caseSelector": {
-      "title": "Find the right delayed-registration service",
+      "title": "Answer a few questions about delayed registration",
       "outcomes": [
         {
           "when": {
@@ -309,10 +309,10 @@
       "questions": [
         {
           "key": "program",
-          "label": "Registration program",
+          "label": "How will the birth be registered?",
           "options": [
             {
-              "label": "BRAP-assisted registration",
+              "label": "With BRAP assistance",
               "value": "brap"
             },
             {
@@ -336,7 +336,7 @@
           ]
         }
       ],
-      "description": "Answer these questions so we can apply the correct fee, parties, process, and requirements."
+      "description": "Your answers help us select the correct service, fee, process, and requirements."
     },
     "schemaVersion": 1,
     "derivedAnswers": [

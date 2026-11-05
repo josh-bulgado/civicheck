@@ -80,7 +80,7 @@ import {
 import { PublishedFormPreviewSheet } from "./PublishedFormPreviewSheet";
 
 const STEPS: Array<{ value: FormStep; label: string }> = [
-  { value: "case", label: "Case details" },
+  { value: "case", label: "Request details" },
   { value: "details", label: "Personal details" },
 ];
 
@@ -105,7 +105,7 @@ function withStepFields(
         {
           key: step,
           step,
-          title: step === "case" ? "Case details" : "Your details",
+          title: step === "case" ? "Request details" : "Your details",
           fields,
         },
       ],

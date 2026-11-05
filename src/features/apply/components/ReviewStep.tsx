@@ -350,7 +350,7 @@ export function ReviewStep({
       <div className="flex flex-col gap-5">
         {caseRows.length > 0 ? (
           <ReviewBlock
-            title="About your case"
+            title="Request details"
             onEdit={() =>
               navigate({ to: "/apply/$serviceCode/case", params: { serviceCode } })
             }

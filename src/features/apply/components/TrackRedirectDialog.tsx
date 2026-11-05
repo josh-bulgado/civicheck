@@ -13,6 +13,7 @@ interface TrackRedirectDialogProps {
   /** Applicant-facing copy, authored per service in the admin editor. */
   title: string;
   description: string;
+  switchLabel: string;
   onKeepEditing: () => void;
   onSwitch: () => void;
   /**
@@ -30,7 +31,7 @@ interface TrackRedirectDialogProps {
  *
  * It is guidance, not an error, so it is calm: a plain white panel, a blue
  * glyph, two equal buttons and no X (the buttons, Escape and a click outside
- * are the ways out). Focus starts on "Switch track", so Enter answers yes only
+ * are the ways out). Focus starts on the switch action, so Enter answers yes only
  * when that is where the person already is.
  */
 export function TrackRedirectDialog({
@@ -38,6 +39,7 @@ export function TrackRedirectDialog({
   onOpenChange,
   title,
   description,
+  switchLabel,
   onKeepEditing,
   onSwitch,
   returnFocusTo,
@@ -74,7 +76,7 @@ export function TrackRedirectDialog({
             onClick={onKeepEditing}
             className="civic-press h-13 min-w-0 flex-1 rounded-full border border-border bg-card px-4 text-base font-semibold whitespace-nowrap text-foreground transition-colors hover:border-primary focus-visible:ring-4 focus-visible:ring-primary/20"
           >
-            Fix the date
+            Edit date
           </button>
           <button
             ref={switchButton}
@@ -82,7 +84,7 @@ export function TrackRedirectDialog({
             onClick={onSwitch}
             className="civic-press h-13 min-w-0 flex-1 rounded-full border border-primary-fill bg-primary-fill px-4 text-base font-semibold whitespace-nowrap text-white transition-colors hover:bg-primary-fill-hover focus:ring-4 focus:ring-primary/20 focus:outline-none"
           >
-            Switch track
+            {switchLabel}
           </button>
         </div>
       </DialogContent>
