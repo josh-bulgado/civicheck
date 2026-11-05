@@ -6,11 +6,13 @@ Online on-time birth and death registrations use 30 days from the event date. Ma
 
 Each request gets one in-app notification and email with 3 days remaining and another with 1 day remaining. Online submission does not reset the deadline. **Mark ready for release** confirms that staff checked the hard copies at the office and stops reminders. Requests that have reached that stage, requests that end, and walk-ins are skipped. No separate hard-copy action is required.
 
+After the last on-time day, unfinished online registrations automatically switch to the corresponding delayed service. Standard birth registration keeps the marital/non-marital case and age band; BRAP enrollment is not assumed. The delayed service's published form, checklist, fee, and posting rules apply. The tracking number and files are kept, accepted files return to review, and the request becomes Incomplete for the extra documents. The applicant receives a notification and email. Requests already finally validated, previously Ready for Release, or ended are not converted. Conversion runs every 15 minutes and also before reminder delivery.
+
 The unique request/deadline/reminder-day key prevents duplicate notifications. Email batches contain at most 10 messages; a 15-minute lease prevents overlapping sends. Failed email delivery is retried up to five times on the matching reminder day. Resend idempotency keys prevent duplicate email after a delivery-status write fails.
 
 ## Deployment
 
-1. Apply the registration reminder migrations in chronological order, including `limit_registration_reminder_batches`, `stop_office_reminders_at_ready_for_release`, and `immediate_registration_reminders`.
+1. Apply the registration reminder migrations in chronological order, including `limit_registration_reminder_batches`, `stop_office_reminders_at_ready_for_release`, `immediate_registration_reminders`, and `automatically_convert_expired_registrations`.
 2. Deploy `index.ts` as `registration-reminders` with JWT verification disabled. It authenticates the cron's Vault-generated `x-reminder-secret` through a service-only RPC.
 3. From a trusted service-role client, call `configure_registration_reminder_email` with `p_api_key`, `p_from`, and optional `p_reply_to`. Use the same Resend update sender as the application. Credentials stay in Vault; applicants and staff cannot read them.
 4. Call `install_registration_reminder_schedule` with `p_function_url` set to `https://<project-ref>.supabase.co/functions/v1/registration-reminders`.

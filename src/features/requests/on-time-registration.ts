@@ -49,7 +49,7 @@ export function onTimeRegistrationNotice(
   }
   const rule = `${event[0].toUpperCase()}${event.slice(1)} registration is due within ${period}. Late submission requires delayed registration.`;
   const lines = [heading, "Bring your hard copies for final validation.", rule];
-  if (heading.includes("deadline has passed")) lines.push("Contact CCRO to confirm whether delayed registration is required.");
+  if (heading.includes("deadline has passed")) lines.push("Your request will automatically switch to delayed registration. Check My Requests for the updated requirements.");
   if (event === "death") lines.push("Report the death to the Local Health Officer within 48 hours.");
   const notice = lines.join("\n");
   return notice;

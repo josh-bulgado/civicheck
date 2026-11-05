@@ -93,7 +93,7 @@ describe("on-time registration deadline", () => {
     ["MARRIAGE_ONTIME", "with_license", "2026-11-19", "2026-11-20", "2026-11-21"],
     ["MARRIAGE_ONTIME", "article_34", "2026-12-04", "2026-12-05", "2026-12-06"],
     ["MARRIAGE_ONTIME", "pd_1083", "2026-12-04", "2026-12-05", "2026-12-06"],
-  ])("keeps the correct deadline at processing and release for %s (%s)",
+  ])("shows the deadline during processing and stops at readiness for %s (%s)",
     (serviceCode, basis, dayBefore, deadline, dayAfter) => {
       vi.useFakeTimers();
       try {
@@ -112,7 +112,8 @@ describe("on-time registration deadline", () => {
             });
             expect(result?.kind).toBe("steps");
             if (result?.kind !== "steps") throw new Error("Expected office instructions");
-            expect(result.registrationNotice).toContain(expected);
+            if (status === "processing") expect(result.registrationNotice).toContain(expected);
+            else expect(result.registrationNotice).toBeUndefined();
           }
         }
       } finally {
@@ -122,7 +123,7 @@ describe("on-time registration deadline", () => {
   );
 
   it.each(["BIRTH_ONTIME", "OTCOLB-MARITAL", "OTCOLB-NONMARITAL", "MARRIAGE_ONTIME", "DEATH_ONTIME"])(
-    "keeps the countdown alongside processing and release instructions for %s",
+    "keeps the processing countdown and removes it at readiness for %s",
     (serviceCode) => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2026-11-11T12:00:00+08:00"));
@@ -144,9 +145,13 @@ describe("on-time registration deadline", () => {
             });
             expect(result?.kind).toBe("steps");
             if (result?.kind !== "steps") throw new Error("Expected office instructions");
-            expect(result.registrationNotice).toContain(
-              serviceCode === "MARRIAGE_ONTIME" ? "9 days left" : "24 days left",
-            );
+            if (status === "processing") {
+              expect(result.registrationNotice).toContain(
+                serviceCode === "MARRIAGE_ONTIME" ? "9 days left" : "24 days left",
+              );
+            } else {
+              expect(result.registrationNotice).toBeUndefined();
+            }
             expect(result.steps).toContain(status === "processing"
               ? "Go to the CCRO office for final validation"
               : readyForReleaseInstruction(payment.paymentStatus, payment.feesDue));

@@ -75,13 +75,13 @@ export function nextSteps(input: NextStepsInput): NextStepsView | null {
   }
 
   if (status === "ready_for_release") {
+    // Staff have completed the office check, so the countdown stops here.
     // An inquiry is answered in the thread: no visit, so no originals.
     if (input.allowsMessages) {
       return { kind: "steps", steps: ["Read CCRO's reply in the messages"] };
     }
     return {
       kind: "steps",
-      ...notice,
       steps: [readyForReleaseInstruction(input.paymentStatus, input.feesDue)],
     };
   }

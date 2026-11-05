@@ -12,15 +12,19 @@ Deno.serve(async (request) => {
   });
   const { data: authorized, error: authError } = await supabase.rpc("authorize_registration_reminder_worker", { p_secret: secret });
   if (authError || !authorized) return json({ error: "Unauthorized" }, 401);
-  const { data: config, error: configError } = await supabase.rpc("registration_reminder_email_config");
-  const apiKey = config?.key;
-  const from = config?.from;
-  if (configError || !apiKey || !from) return json({ error: "Reminder email delivery is not configured" }, 503);
   const input = await request.json().catch(() => ({}));
   const requestId = input?.request_id;
   if (requestId !== undefined && (typeof requestId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestId))) {
     return json({ error: "Invalid request ID" }, 400);
   }
+  const { data: converted, error: conversionError } = await supabase.rpc("convert_expired_registrations", { p_request_id: requestId ?? null });
+  if (conversionError) return json({ error: "Could not check expired registrations" }, 500);
+  const { data: config, error: configError } = await supabase.rpc("registration_reminder_email_config");
+  const apiKey = config?.key;
+  const from = config?.from;
+  if (configError || !apiKey || !from) return json({ error: "Reminder email delivery is not configured" }, 503);
+  const { data: delayEmails, error: delayError } = await supabase.rpc("claim_registration_delay_emails", { p_request_id: requestId ?? null });
+  if (delayError) return json({ error: "Could not prepare delayed registration emails" }, 500);
   const { data: reminders, error } = await supabase.rpc("claim_registration_reminders", {
     p_request_id: requestId ?? null,
   });
@@ -30,7 +34,7 @@ Deno.serve(async (request) => {
   }
   let sent = 0;
   let failed = 0;
-  for (const reminder of reminders ?? []) {
+  for (const reminder of [...(delayEmails ?? []), ...(reminders ?? [])]) {
     // Recheck after claiming: staff may have completed the check in the meantime.
     const { data: eligible, error: checkError } = await supabase.rpc("registration_reminder_deliverable", {
       p_notification_id: reminder.notification_id,
@@ -59,5 +63,5 @@ Deno.serve(async (request) => {
     // Resend's default limit is two requests per second.
     await new Promise((resolve) => setTimeout(resolve, 600));
   }
-  return json({ sent, failed });
+  return json({ sent, failed, converted });
 });

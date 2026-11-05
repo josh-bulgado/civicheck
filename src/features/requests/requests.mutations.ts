@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { loadAddableUploads } from "./missing-uploads.server";
 import { attachmentVersionSchema } from "./previous-uploads";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
@@ -284,7 +285,7 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
     const { data: request, error: fetchError } = await supabase
       .from("requests")
       .select(
-        "id, status, payment_status, fees_due, tracking_number, request_type, posting_start_date, claimed_by, claimed_stage, claim_expires_at, services_registry(department_id)",
+        "id, status, payment_status, fees_due, tracking_number, request_type, form_data, registration_conversion, posting_start_date, claimed_by, claimed_stage, claim_expires_at, services_registry(department_id)",
       )
       .eq("id", data.requestId)
       .single();
@@ -322,7 +323,7 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
     if (RETURNABLE_TO_VALIDATION.includes(toStatus) || toStatus === "released") {
       const { data: attachments } = await supabase
         .from("requirements_attachments")
-        .select("verification_status")
+        .select("verification_status, requirement_id, requirement_name, subject_role")
         .eq("request_id", data.requestId);
       const hasUnresolved = (attachments ?? []).some(
         (a) => a.verification_status !== "approved",
@@ -333,6 +334,16 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
           message:
             "Every uploaded requirement needs to be accepted first — some are still pending or rejected.",
         };
+      }
+      if (request.registration_conversion) {
+        const missing = await loadAddableUploads(request, (attachments ?? []).map((doc) => ({
+          requirementId: doc.requirement_id,
+          requirementName: doc.requirement_name,
+          subjectRole: doc.subject_role,
+        })));
+        if (missing.some((doc) => doc.isMandatory)) {
+          return { error: true, message: "The additional required documents for delayed registration must be uploaded before continuing." };
+        }
       }
     }
 
