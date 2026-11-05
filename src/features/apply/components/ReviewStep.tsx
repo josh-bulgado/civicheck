@@ -487,7 +487,7 @@ export function ReviewStep({
   );
 }
 
-/** One of the review's three blocks: its name, an Edit link, and the answers in two columns. */
+/** A review block with stacked mobile answers and two columns on larger screens. */
 function ReviewBlock({
   title,
   onEdit,
@@ -509,7 +509,7 @@ function ReviewBlock({
           Edit
         </button>
       </div>
-      <div className="grid grid-cols-1 gap-x-10 gap-y-3 px-5.5 py-4.5 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-x-10 gap-y-5 px-5.5 py-4.5 sm:grid-cols-2 sm:gap-y-3">
         {children}
       </div>
     </section>
@@ -518,9 +518,9 @@ function ReviewBlock({
 
 function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex min-w-0 justify-between gap-4 text-base">
-      <span className="shrink-0 text-muted-foreground">{formatFieldLabel(label)}</span>
-      <span className="min-w-0 text-right font-bold wrap-break-word text-foreground">
+    <div className="grid min-w-0 grid-cols-1 items-start gap-1.5 text-base sm:grid-cols-2 sm:gap-4">
+      <span className="min-w-0 wrap-anywhere text-muted-foreground">{formatFieldLabel(label)}</span>
+      <span className="min-w-0 font-bold wrap-anywhere text-foreground sm:text-right">
         {value}
       </span>
     </div>

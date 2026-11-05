@@ -1,0 +1,170 @@
+# Civicheck UI guide
+
+Use this guide when creating or changing Civicheck screens. It describes the
+existing application, with source files to read before implementing a pattern.
+An explicit design request can change these conventions; ordinary feature work
+should extend the nearest existing screen. When source code changes, update the
+affected guidance rather than treating this snapshot as a second implementation.
+
+## Project foundation
+
+- React and TypeScript with TanStack Start/Router. Routes live in `src/routes`;
+  feature pages and their components live in `src/features`.
+- [components.json](../components.json) configures shadcn `base-vega`, Base UI,
+  `rsc: false`, Lucide icons, and `~/` import aliases.
+- Shared controls are local source in `src/components/ui`. Read their actual
+  exports and props before using an upstream example: these controls have been
+  customized for Civicheck.
+- Tailwind v4 tokens and shared classes live in
+  [app.css](../src/styles/app.css). Use `cn` from `~/lib/utils` for conditional
+  classes and the project's pnpm package manager for commands.
+- TanStack Table is **v9**. Read [table.ts](../src/lib/table.ts) and the installed
+  Intent skills when changing tables. Existing tables use `useTable` and
+  `appTableFeatures`; v8 `useReactTable` examples need adaptation.
+
+## Choose the right surface
+
+| Surface | Existing reference | Starting pattern |
+| --- | --- | --- |
+| Citizen home | [CitizenDashboard](../src/features/dashboard/pages/CitizenDashboard.tsx) | `portal-page`, `portal-title`, one current request and its next useful action, then attention items and secondary requests. |
+| Citizen request list | [MyRequestsPage](../src/features/requests/pages/MyRequestsPage.tsx) | Readable request rows, status pills, transaction references, and an actionable first-use empty state. |
+| Citizen request detail | [MyRequestDetailPage](../src/features/requests/pages/MyRequestDetailPage.tsx) | Reuse the feature's detail sections and status vocabulary. |
+| Staff queue | [RequestsPage](../src/features/requests/pages/RequestsPage.tsx) | `dashboard-page`, page header, filters, table, and pagination; preserve the route-owned filters and department scope. |
+| Admin list | [ServicesPage](../src/features/admin/services/pages/ServicesPage.tsx) | `PageHeaderCard` plus a feature table built on `DataTableCard`. |
+| Staff home | [StaffDashboard](../src/features/dashboard/StaffDashboard.tsx) | Operational priorities and available actions appropriate to the role. |
+| Application steps | [WizardShell](../src/features/apply/components/WizardShell.tsx) | Existing step shell, title, form, optional guidance sidebar, and `WizardFooterActions`. |
+| Service editor | [ServiceFormPage](../src/features/admin/services/components/ServiceFormPage.tsx) | Full-height workspace, persistent header/actions, section tabs, scrollable body, and unsaved-change handling. |
+
+The dashboard shell and citizen navigation are already composed in
+[the dashboard layout route](../src/routes/_authed/_dashboard/route.tsx) and
+`src/components/sidebar-01`. Extend those instead of introducing a second shell
+inside a feature page. Keep routes responsible for their existing loaders,
+permission checks, search parameters, and pending components.
+
+## Visual language
+
+**Type.** Keep Geist as the application font and Geist Mono for transaction
+references and other code-like identifiers. Citizen titles use `portal-title`
+(28px on small screens, 38px from `md`); section headings use `portal-heading`.
+Admin list titles use the compact 18px heading in `PageHeaderCard`. Match the
+surface rather than applying one title size everywhere.
+
+**Color.** Use semantic utilities such as `bg-card`, `text-foreground`,
+`text-muted-foreground`, `text-body-2`, `bg-primary-soft`, and `border-border`.
+The light theme's brand blue is `#0b4da2`, with red and gold accent tokens; use
+the token names in components so their dark equivalents continue to work.
+
+| Intended role | Token or existing utility |
+| --- | --- |
+| Blue text, borders, focus accents | `primary` / `primary-hover` |
+| Solid blue action with a light label | `primary-fill` / `primary-fill-hover` with `primary-foreground` |
+| Blue hero/header background | `hero-fill` and the existing hero composition |
+| Low-emphasis surface | `muted`, `surface-subtle`, or the appropriate portal token |
+| Request/payment/visit state | Existing badge variants and `tone-*` pairs |
+| Health/status callout | Matching `health-*-bg`, `health-*-border`, and `health-*-fg` |
+
+The distinction between `primary` ink and `primary-fill` backgrounds matters in
+dark mode: white labels cannot simply be placed on the lighter blue ink token.
+Themes are managed by [ThemeScope](../src/components/theme-scope.tsx) and
+[theme.ts](../src/lib/theme.ts), with the `dark` class on `html` and
+`civicheck-theme` storage. Reuse that mechanism for both themes.
+
+**Shape and spacing.** `dashboard-page` provides a centered 1440px maximum width
+and 24px vertical spacing. Admin headers and table cards use `rounded-xl`,
+`border-border-strong`, and compact padding. Citizen request cards commonly use
+`rounded-4xl` (24px) or 28px corners and `shadow-portal-card`; use the nearest
+reference page. The utility named `portal-card` is a separate, quieter 16px
+borderless/shadowless treatment. Do not assume these treatments are identical.
+Use existing responsive padding and `gap-*` for new layouts.
+
+**Identity.** Reuse [CiviCheckIdentity and CityGovernmentIdentity](../src/components/brand/civic-identity.tsx).
+They currently render text initials for the office/city marks. Preserve that
+representation when extending the UI; replacing brand artwork is a separate
+design change.
+
+## Component recipes
+
+| Need | Reuse and local details |
+| --- | --- |
+| Page header/actions | [PageHeaderCard](../src/components/ui/page-header-card.tsx): `title`, `description`, and action children which wrap on narrow screens. |
+| Buttons | [Button](../src/components/ui/button.tsx): defaults are `variant="default"`, `size="lg"`, `shape="pill"`. Local variants include `raised`, `tonal`, `field`, and `lifted`; choose by purpose. `touch` and `icon-touch` give 44px controls. |
+| Navigation action | [QuietLink / QuietAnchor](../src/components/quiet-link.tsx), with `buttonVariants` when appropriate. Base UI composition uses `render`, not Radix `asChild`. |
+| Citizen buttons/tables | [portal/styles.ts](../src/components/portal/styles.ts): reuse `pillButton` and `portalTable` where that visual treatment applies. |
+| Data table | [DataTableCard](../src/components/ui/data-table-card.tsx), toolbar, pagination, and column-header helpers. Supply the table's accessible `label` and an `emptyLabel`; use `onClearFilters` for filtered results. |
+| Form controls | [Field](../src/components/ui/field.tsx), `FieldGroup`, `FieldLabel`, `FieldDescription`, `FieldError`, and existing input/select wrappers. Keep labels associated with controls; use `data-invalid` on the field and `aria-invalid` on its input. |
+| Settings sections | [SettingGroup](../src/components/ui/setting-group.tsx) for its labeled section header and padded/divided content. |
+| Request status | [StatusPill](../src/features/requests/components/StatusPill.tsx) and [request-status.ts](../src/features/services/request-status.ts). Reuse `getStatusDetails`, audience-specific notes, and timeline helpers instead of inventing labels or colors. |
+| Other status badges | [Badge](../src/components/ui/badge.tsx): `info`, `progress`, `success`, `warning`, `neutral`, `destructive`; service classifications have their own variants. |
+| Notifications | Existing [Sonner wrapper](../src/components/ui/sonner.tsx) and `toast` from `sonner`. The root already mounts the toaster. Generic Base UI examples recommending a different toast system do not describe this project. |
+| Empty/error states | [Empty](../src/components/ui/empty.tsx), [Alert](../src/components/ui/alert.tsx), and the feature's existing error handling. Distinguish no records yet from no filter matches. |
+| Loading | [PageSkeleton / TablePageSkeleton](../src/components/feedback/PageSkeleton.tsx), feature skeletons, [Skeleton](../src/components/ui/skeleton.tsx), and [Spinner](../src/components/ui/spinner.tsx). Match the loaded layout and preserve the router's pending timing. |
+| Unsaved changes | [DiscardChangesDialog](../src/components/feedback/DiscardChangesDialog.tsx) and the feature's existing navigation guard. |
+| Charts | [chart.tsx](../src/components/ui/chart.tsx) with the project's Recharts setup; follow the nearby feature for specialist charts. |
+
+Keep icon-only controls named with an accessible label. Decorative Lucide icons
+use `aria-hidden="true"`; button icons use `data-icon="inline-start"` or
+`inline-end` so the wrapper controls sizing and spacing. Dialogs and sheets need
+their title components, including when the title is visually hidden.
+
+## Interaction and responsive behavior
+
+- Make the current stage and next useful action clear to a citizen. Keep staff
+  screens efficient for scanning and repeated work. Preserve existing role-aware
+  actions and terminology when changing presentation.
+- Keep long names, reference numbers, and translated/expanded copy from forcing
+  page overflow. Use `min-w-0`, wrapping, and the existing mobile layouts.
+  Tables may scroll horizontally inside their card; the entire page should not.
+- The wizard keeps a consistent main-card width when adding a sidebar, stacks
+  the sidebar below on smaller screens, and offsets it below the sticky service
+  band. Preserve that behavior and the `.apply-wizard` scroll-padding rules.
+- Service-editor typography is intentionally scoped by `data-service-editor` in
+  `app.css`. Preserve the scope, `min-h-0` scroll layout, and safe-area padding
+  instead of changing shared controls to achieve an editor-only adjustment.
+- Reuse `civic-enter`, `civic-content-in`, `civic-stagger`, `civic-press`, and
+  [stagger helpers](../src/components/motion/stagger.ts) for appropriate motion.
+  [Reveal](../src/components/motion/reveal.tsx) is for below-fold sections on long
+  pages. Keep reduced-motion behavior and immediately visible loading layouts.
+- For mutations, expose a pending state and prevent duplicate submission; retain
+  entered values on failure and show an actionable error. Reuse the current
+  feature's mutation flow and success feedback.
+
+## Working with skills and registries
+
+Start with the repository's Intent skill check from `AGENTS.md`. Use the local
+`civicheck-ui` skill to apply this guide, the installed `shadcn` skill for component
+APIs and registry operations, `frontend-design` when developing a visual
+direction, and `web-design-guidelines` for a relevant accessibility/UX review.
+Keep visual exploration within the requested screen and Civicheck's established
+identity unless the user requests a broader redesign.
+
+The shadcn MCP server can browse the registries in `components.json`:
+`@blocks-so`, `@blockus`, `@flx`, and `@reui`, plus built-in `@shadcn`.
+Discover a suitable component only after checking local wrappers. Before adopting
+a registry item, inspect its files, dependencies, Base UI compatibility, `~/`
+imports, and styling. Existing controls are customized; preview an upstream
+update with `--dry-run` / `--diff` and preserve local behavior.
+
+If MCP is unavailable in a session, use the CLI from the workspace root:
+
+```powershell
+pnpm.cmd dlx shadcn@latest info --json
+pnpm.cmd dlx shadcn@latest docs button dialog select
+```
+
+Fetch the documentation URLs returned by `docs` when their API details are needed.
+Use `pnpm` instead of `pnpm.cmd` on non-Windows shells.
+
+## Verify a UI change
+
+For a visible change, inspect the affected screen in a browser at a narrow mobile
+width and a desktop width, in light and dark themes. Check the relevant loading,
+empty, error, validation, disabled, and success states. Exercise the changed
+interaction with keyboard and pointer, verify focus and overlay behavior, and
+inspect screenshots for clipping, overflow, contrast, and layout shifts. Check
+reduced motion when motion changes. If authentication or data prevents checking
+a state, report exactly what remains unverified.
+
+Run checks appropriate to the change: `pnpm.cmd build` includes TypeScript,
+`pnpm.cmd lint` checks source, and focused tests cover changed behavior. Keep
+documentation-only work to link/content validation. Update this guide when a
+deliberate shared UI convention changes.
