@@ -31,22 +31,16 @@ import {
   useSeedDraftForGroup,
 } from "~/features/apply/hooks/useApplyDraft";
 import { discardRequestUploadDraftFn } from "~/features/apply/apply.mutations";
-import { ageInYears, diffInDays, toDateKey } from "~/lib/date";
+import { ageInYears } from "~/lib/date";
 import {
   CaseSelector,
   inferMaritalStatus,
 } from "~/features/services/components/CaseSelector";
 import { applicantCopy } from "~/features/forms/applicant-copy";
-
-const MARRIAGE_LICENSE_CODE = "MARRIAGE_LICENSE";
-const MARRIAGE_NOTICE_DAYS = 10;
-const RECOMMENDED_MARRIAGE_LEAD_DAYS = 21;
-
-function formatLeadTime(days: number) {
-  if (days === 0) return "today";
-  if (days === 1) return "1 day away";
-  return `${days} days away`;
-}
+import {
+  getMarriageLicenseTiming,
+  MARRIAGE_MINIMUM_LEAD_DAYS,
+} from "~/features/apply/marriage-license-timing";
 
 function caseAnswersFrom(values: DynamicFieldValues) {
   return {
@@ -58,26 +52,6 @@ function caseAnswersFrom(values: DynamicFieldValues) {
     informantName: values.informant_name ?? "",
     informantRelationship: values.informant_relationship ?? "",
   };
-}
-
-function getMarriageTimingNotice(serviceCode: string | undefined, intendedDate: string) {
-  if (serviceCode !== MARRIAGE_LICENSE_CODE || !intendedDate) return null;
-  const daysUntilMarriage = diffInDays(toDateKey(), intendedDate);
-  if (daysUntilMarriage < 0) return null;
-
-  if (daysUntilMarriage <= MARRIAGE_NOTICE_DAYS) {
-    return {
-      title: "Choose a later marriage date",
-      description: `This date is ${formatLeadTime(daysUntilMarriage)}. Allow at least 3 weeks for counseling, document processing, and the required 10-day public-notice period. Choose a later date.`,
-    };
-  }
-  if (daysUntilMarriage < RECOMMENDED_MARRIAGE_LEAD_DAYS) {
-    return {
-      title: "Your marriage date may be too soon",
-      description: `This date is ${formatLeadTime(daysUntilMarriage)}. Allow at least 3 weeks for counseling, document processing, and the required 10-day public-notice period.`,
-    };
-  }
-  return null;
 }
 
 // The seeded wording of the birth on-time rule. It states a problem, so the
@@ -191,10 +165,11 @@ export function CaseStep({
       return !field.required || (typeof value === "string" && value.trim() !== "");
     });
   const watchedEventDate = watchedValues.event_date ?? "";
-  const marriageTimingNotice = getMarriageTimingNotice(
+  const marriageTimingNotice = getMarriageLicenseTiming(
     selectedService.service_code,
     watchedEventDate,
   );
+  const marriageTimingBlocks = marriageTimingNotice?.blocksProgress === true;
 
   // Data-driven on-time window. The rule and its routing target live in the
   // published form template, so any current or future service can declare one.
@@ -423,6 +398,7 @@ export function CaseStep({
           continueReady={hasRequiredAnswers}
           continueDisabled={
             (isGroup && !draft.selectedServiceCode) ||
+            marriageTimingBlocks ||
             timingBlocks ||
             Boolean(blockingAgeFeedback) ||
             Boolean(blockingOptionNotice)
@@ -432,9 +408,11 @@ export function CaseStep({
               ? blockingAgeFeedback.notice.description
               : blockingOptionNotice
                 ? blockingOptionNotice.description
-                : timingBlocks
-                ? "Update the date or switch services before continuing."
-                : undefined
+                : marriageTimingBlocks
+                  ? `Choose a marriage date at least ${MARRIAGE_MINIMUM_LEAD_DAYS} days from today.`
+                  : timingBlocks
+                    ? "Update the date or switch services before continuing."
+                    : undefined
           }
         />
       </div>
