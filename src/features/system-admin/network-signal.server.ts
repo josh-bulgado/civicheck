@@ -1,4 +1,5 @@
-import { getRequestHeader, getRequestIP } from "@tanstack/react-start/server";
+import { getRequestHeader } from "@tanstack/react-start/server";
+import { getClientIp } from "~/server/client-ip";
 
 const MAX_USER_AGENT_LENGTH = 300;
 
@@ -57,7 +58,7 @@ export function getRequestNetworkSignal(): {
   deviceLabel: string | null;
 } {
   try {
-    const rawIp = getRequestIP({ xForwardedFor: true });
+    const rawIp = getClientIp();
     const userAgent = getRequestHeader("user-agent") ?? null;
     return {
       maskedIpAddress: rawIp ? maskIpAddress(rawIp) : null,

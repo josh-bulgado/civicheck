@@ -16,6 +16,22 @@ const definition = formTemplateDefinitionSchema.parse({
 });
 
 describe("late registration dates", () => {
+  it.each(["2022-10-20", "Estimated: 2022", "Estimated: 2022-2026"])("rejects registration before birth: %s", (value) => {
+    const withBirthDate = structuredClone(definition);
+    withBirthDate.sections[0].fields.unshift({ key: "event_date", type: "date", label: "Date of Birth", required: true });
+    expect(validateTemplateAnswers(withBirthDate, {
+      event_date: "2026-11-04", registered_late: "yes", registered_late_when: value,
+    }, "2026-11-04").success).toBe(false);
+  });
+
+  it.each(["2026-11-04", "Estimated: 2026"])("accepts registration on or after the event: %s", (value) => {
+    const withBirthDate = structuredClone(definition);
+    withBirthDate.sections[0].fields.unshift({ key: "event_date", type: "date", label: "Date of Birth", required: true });
+    expect(validateTemplateAnswers(withBirthDate, {
+      event_date: "2026-11-04", registered_late: "yes", registered_late_when: value,
+    }, "2026-11-04")).toEqual({ success: true });
+  });
+
   it.each(["2018-01-02", "Estimated: 2018", "Estimated: 2015–2020", "Estimated: 2015-2020"])("accepts %s", (value) => {
     expect(validateTemplateAnswers(definition, { registered_late: "yes", registered_late_when: value }, "2026-11-01")).toEqual({ success: true });
   });

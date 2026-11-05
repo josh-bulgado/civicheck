@@ -53,6 +53,10 @@ export function OtpCodeForm({
   onVerify,
   onResend,
   submitLabel = "Verify code",
+  resendCooldownSeconds = RESEND_COOLDOWN_SECONDS,
+  resendLabel = "Resend",
+  minCodeLength = MIN_CODE_LENGTH,
+  codeInvalid = false,
 }: {
   isVerifying: boolean;
   isResending: boolean;
@@ -62,12 +66,18 @@ export function OtpCodeForm({
   onVerify: (code: string) => void;
   onResend: () => void;
   submitLabel?: string;
+  resendCooldownSeconds?: number;
+  resendLabel?: string;
+  minCodeLength?: number;
+  codeInvalid?: boolean;
 }) {
   const [code, setCode] = useState("");
   // The code the last attempt was made with: a rejection belongs to that code,
   // so it stops showing the moment the applicant edits it.
   const [submittedCode, setSubmittedCode] = useState<string | null>(null);
-  const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_SECONDS);
+  const [cooldown, setCooldown] = useState(resendCooldownSeconds);
+
+  useEffect(() => { setCooldown(resendCooldownSeconds); }, [resendCooldownSeconds]);
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -78,13 +88,13 @@ export function OtpCodeForm({
   }, [cooldown]);
 
   const shownError =
-    errorMessage && !isVerifying && submittedCode === code
+    errorMessage && !isVerifying && (codeInvalid || submittedCode === code)
       ? errorMessage
       : null;
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (isVerifying || isResending || code.length < MIN_CODE_LENGTH) return;
+    if (isVerifying || isResending || codeInvalid || code.length < minCodeLength) return;
     setSubmittedCode(code);
     onVerify(code);
   }
@@ -92,7 +102,7 @@ export function OtpCodeForm({
   function handleResend() {
     setCode("");
     setSubmittedCode(null);
-    setCooldown(RESEND_COOLDOWN_SECONDS);
+    setCooldown(resendCooldownSeconds);
     onResend();
   }
 
@@ -113,6 +123,7 @@ export function OtpCodeForm({
           aria-invalid={shownError !== null}
           aria-describedby={shownError ? "otp-error" : undefined}
           autoFocus
+          disabled={codeInvalid}
         >
           {cellGroups.map((cells, group) => (
             <InputOTPGroup key={group}>
@@ -148,7 +159,7 @@ export function OtpCodeForm({
           !isVerifying &&
             "disabled:bg-border-light disabled:text-disabled disabled:opacity-100",
         )}
-        disabled={isVerifying || isResending || code.length < MIN_CODE_LENGTH}
+        disabled={isVerifying || isResending || codeInvalid || code.length < minCodeLength}
       >
         {isVerifying ? (
           <>
@@ -172,8 +183,8 @@ export function OtpCodeForm({
           {isResending
             ? "Resending…"
             : cooldown > 0
-              ? `Resend in ${formatCountdown(cooldown)}`
-              : "Resend"}
+              ? `${resendLabel} in ${formatCountdown(cooldown)}`
+              : resendLabel}
         </Button>
       </div>
     </form>

@@ -14,7 +14,7 @@ import { Checkbox } from "~/components/ui/checkbox";
 import { Phone } from "lucide-react";
 import { DatePicker } from "~/components/ui/date-picker";
 import { EstimatedDateField } from "./EstimatedDateField";
-import { isEstimatedDate, validateEstimatedDate } from "../estimated-date";
+import { isEstimatedDate, validateEstimatedDate, validateRegistrationDate } from "../estimated-date";
 import { todayKeyInTimeZone } from "../form-template.utils";
 import {
   Field,
@@ -341,6 +341,10 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                   : false,
                 validate: (value) => {
                   if (!value) return true;
+                  if (definitionField.key === "registered_late_when") {
+                    const result = validateRegistrationDate(value, String(values.event_date ?? ""));
+                    if (result !== true) return result;
+                  }
                   const placeValidation = validateEventPlace(definitionField, value);
                   if (placeValidation !== true) return placeValidation;
                   if (isNameField(definitionField)) return validatePersonName(value);
@@ -515,6 +519,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                     ) : definitionField.type === "date" ? (
                       definitionField.allowEstimate ? (
                         <EstimatedDateField
+                          min={definitionField.key === "registered_late_when" ? String(values.event_date || "") : undefined}
                           id={`dynamic-${definitionField.key}`}
                           value={field.value ?? ""}
                           onChange={(value) => {
@@ -540,7 +545,9 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                               : undefined
                           }
                           min={
-                            definitionField.dateDirection === "future"
+                            definitionField.key === "registered_late_when"
+                              ? String(values.event_date || "")
+                              : definitionField.dateDirection === "future"
                               ? toDateKey()
                               : undefined
                           }

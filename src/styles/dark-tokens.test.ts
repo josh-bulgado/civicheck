@@ -172,6 +172,7 @@ describe("dark tokens: contrast", () => {
     ["--primary-foreground", "--primary-fill"],
     ["--primary-foreground", "--primary-fill-hover"],
     ["--sidebar-primary-foreground", "--sidebar-primary"],
+    ["--panel-dark", "--brand-gold"],
     ["--destructive", "--card"],
     ["--destructive", "--portal-danger-soft"],
     ["--success", "--card"],

@@ -18,6 +18,7 @@ beforeAll(async () => {
     grant all on public.requests to authenticated;
   `);
   await db.exec(migration);
+  await db.exec(readFileSync(new URL("../../../supabase/migrations/20261104151348_extend_posting_to_death_and_license.sql", import.meta.url), "utf8"));
 }, 30_000);
 afterAll(() => db.close());
 
@@ -31,11 +32,11 @@ async function attempt(sql: string, role = "staff") {
   }
 }
 
-describe("database marriage posting guard", () => {
+describe.each(["MARRIAGE_DELAYED", "DEATH_DELAYED", "MARRIAGE_LICENSE"])("database posting guard for %s", (serviceCode) => {
   beforeAll(async () => {
-    await db.exec(`insert into requests(id,request_type,status) values
-      (1,'MARRIAGE_DELAYED','processing'), (2,'MARRIAGE_ONTIME','processing'),
-      (3,'MARRIAGE_DELAYED','under_validation');`);
+    await db.exec(`delete from requests; insert into requests(id,request_type,status) values
+      (1,'${serviceCode}','processing'), (2,'MARRIAGE_ONTIME','processing'),
+      (3,'${serviceCode}','under_validation');`);
   });
   it("blocks direct readiness and release without posting", async () => {
     for (const status of ["ready_for_release", "released"]) {
@@ -65,7 +66,7 @@ describe("database marriage posting guard", () => {
     await expect(attempt("update requests set posting_start_date=current_date+2 where id=1")).rejects.toThrow(/future/);
     await expect(attempt("update requests set posting_start_date=current_date-100 where id=1")).rejects.toThrow(/precede/);
     await expect(attempt("update requests set posting_start_date=current_date where id=3")).rejects.toThrow(/during Processing/);
-    await expect(attempt("insert into requests(id,request_type,status,posting_start_date) values (4,'MARRIAGE_DELAYED','submitted',current_date)")).rejects.toThrow(/during Processing/);
+    await expect(attempt(`insert into requests(id,request_type,status,posting_start_date) values (4,'${serviceCode}','submitted',current_date)`)).rejects.toThrow(/during Processing/);
   });
   it.each(["applicant", "cashier", "system_admin", ""])("denies date writes by %s", async (role) => {
     await expect(attempt("update requests set posting_start_date=current_date where id=1", role)).rejects.toThrow(/Only CCRO staff/);

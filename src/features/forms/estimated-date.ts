@@ -5,6 +5,19 @@ export function isEstimatedDate(value: string) {
   return value === UNKNOWN_DATE || value.startsWith(ESTIMATE_PREFIX);
 }
 
+export function validateRegistrationDate(value: string, eventDate: string): true | string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(eventDate)) return true;
+  if (isEstimatedDate(value)) {
+    const year = /^(\d{4})/.exec(value.slice(ESTIMATE_PREFIX.length).trim());
+    if (year && Number(year[1]) < Number(eventDate.slice(0, 4))) {
+      return "The estimated registration year cannot be before the event year.";
+    }
+  } else if (value && value < eventDate) {
+    return "The registration date cannot be before the event date.";
+  }
+  return true;
+}
+
 export function validateEstimatedDate(value: string, today: string): true | string {
   if (value === UNKNOWN_DATE || value === ESTIMATE_PREFIX || !value.trim()) {
     return "Enter an estimated registration year or year range.";

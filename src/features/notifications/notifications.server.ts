@@ -3,7 +3,6 @@ import { sendEmail } from "~/utils/resend";
 import { getStatusDetails } from "~/features/services/request-status";
 import type { NotificationType } from "~/features/notifications/notifications.queries";
 import {
-  needsOfficeFinalValidation,
   type RequestStatus,
 } from "~/features/requests/request-workflow";
 
@@ -52,21 +51,49 @@ export function buildStatusChangeEmail(
   remarks?: string | null,
   serviceCode?: string | null,
 ): NotificationContent {
-  if (status === "processing" && needsOfficeFinalValidation(serviceCode)) {
+  if (status === "processing") {
     return composeContent(
       "status_change",
       `Request ${trackingNumber}: go to the CCRO for final validation`,
       [
         `The documents you uploaded for request ${trackingNumber} have been accepted.`,
-        `You can now go to the CCRO office for final validation. Please bring the hard copies of your requirements so staff can check them.`,
+        `You can now go to the CCRO office for final validation. Please bring your original documents and hard copies of your requirements so staff can check them.`,
         `Also bring your tracking number (${trackingNumber}): a printout of your acknowledgment from "My Requests", or write it down.`,
       ],
       `open "My Requests" for the full details.`,
     );
   }
+  if (status === "ready_for_release") {
+    return composeContent(
+      "status_change",
+      `Request ${trackingNumber}: now Ready for Release`,
+      [
+        `Your CiviCheck request ${trackingNumber} is now "Ready for Release".`,
+        serviceCode === "EMAIL_INQUIRY"
+          ? "Read CCRO's reply in the messages."
+          : "Pay any outstanding fee at the cashier to claim your document. Open your request for the exact amount.",
+        remarks || "",
+      ].filter(Boolean),
+      `open "My Requests" for the full details.`,
+    );
+  }
+  if (status === "released") {
+    return composeContent(
+      "status_change",
+      `Request ${trackingNumber}: now Released`,
+      [
+        `Your CiviCheck request ${trackingNumber} is now "Released".`,
+        serviceCode === "EMAIL_INQUIRY"
+          ? "Keep CCRO's reply for your records."
+          : "Please claim your requested document from the CCRO staff.",
+        remarks || "",
+      ].filter(Boolean),
+      `open "My Requests" for the full details.`,
+    );
+  }
   const label = getStatusDetails(status).label;
   const subject = `Request ${trackingNumber}: now ${label}`;
-  const lines = [`Your CiviCheck request ${trackingNumber} is now "${label}".`, remarks || ""].filter(
+  const lines = [`Your CiviCheck request ${trackingNumber} is now "${label}".`, status === "under_validation" ? "CCRO is currently reviewing your uploaded documents. We’ll notify you of updates or needed corrections." : "", remarks || ""].filter(
     Boolean,
   );
   return composeContent("status_change", subject, lines, `open "My Requests" for the full details.`);
@@ -88,11 +115,9 @@ export function buildNewMessageEmail(trackingNumber: string): NotificationConten
 
 export function buildPreValidationCompleteEmail(trackingNumber: string): NotificationContent {
   const subject = `Request ${trackingNumber}: pre-validation complete`;
-  // One visit, at release: accepted uploads mean there is nothing to bring in
-  // yet, and the cashier can't take payment before Ready for Release anyway.
   const lines = [
     `All the documents you uploaded for request ${trackingNumber} have been checked and accepted.`,
-    `You don't need to visit the CCRO yet. We'll notify you when your document is ready for release. Then visit once: bring the original copies of the documents you uploaded so staff can match them, pay any fee at the counter, and claim your document.`,
+    `Once your request is in Processing, go to the CCRO office and bring your original documents and submit hard copies of your requirements for final validation. Bring your tracking number or a printout of your acknowledgment.`,
   ];
   return composeContent(
     "pre_validation_complete",
@@ -147,7 +172,7 @@ export async function dispatchApplicantNotification(
   }
 
   try {
-    await sendEmail({ to: email, subject, html });
+    await sendEmail({ category: "updates", to: email, subject, html });
     await supabase.from("notifications").update({ status: "sent" }).eq("id", notification.id);
   } catch (err) {
     console.error("Failed to send notification email", err);

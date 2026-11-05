@@ -225,7 +225,7 @@ export function describeRequestProgress(input: RequestActionInput): string {
         : "Waiting for the applicant to upload what was missing.";
     case "processing":
       return needsMarriagePosting(input.serviceCode)
-        ? marriagePostingMessage(input.postingStartDate, input.today)
+        ? marriagePostingMessage(input.postingStartDate, input.today, input.serviceCode)
         : "Prepare the record, then mark it ready for release.";
     case "ready_for_release":
       if (!isPaymentSettled(input.paymentStatus)) {
@@ -238,6 +238,8 @@ export function describeRequestProgress(input: RequestActionInput): string {
       return "Released. Nothing left to do.";
     case "rejected":
       return "Rejected. Nothing left to do.";
+    case "cancelled":
+      return "Cancelled by the applicant. Nothing left to do.";
     default:
       return "";
   }

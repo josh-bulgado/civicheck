@@ -16,8 +16,7 @@ describe("what to do next once a request is ready for release", () => {
     expect(ready({ feesDue: 150, paymentStatus: "unpaid" })).toEqual({
       kind: "steps",
       steps: [
-        "Bring your original documents",
-        "Bring ₱150.00 to pay at the counter",
+        "Bring ₱150.00 to pay at the CCRO cashier",
         "Claim your document",
       ],
     });
@@ -26,19 +25,19 @@ describe("what to do next once a request is ready for release", () => {
   it("does not mention payment for a free request", () => {
     expect(ready({ feesDue: 0, paymentStatus: "unpaid" })).toEqual({
       kind: "steps",
-      steps: ["Bring your original documents", "Claim your document at the CCRO"],
+      steps: ["Claim your document at the CCRO"],
     });
   });
 
   it("does not mention payment once the cashier has verified it", () => {
     expect(ready({ feesDue: 150, paymentStatus: "verified" })).toEqual({
       kind: "steps",
-      steps: ["Bring your original documents", "Claim your document"],
+      steps: ["Claim your document"],
     });
   });
 
   it("tells the applicant not to visit while staff are still working", () => {
-    for (const status of ["submitted", "under_validation", "processing"]) {
+    for (const status of ["submitted"]) {
       expect(
         nextSteps({
           status,
@@ -55,14 +54,15 @@ describe("what to do next once a request is ready for release", () => {
     }
   });
 
-  it("sends a delayed marriage applicant to the office with hard copies once requirements are accepted", () => {
+  it.each(["MARRIAGE_DELAYED", "MARRIAGE_ONTIME", "BIRTH_ONTIME", "OTCOLB-MARITAL", "OTCOLB-NONMARITAL", "DEATH_ONTIME", "EMAIL_INQUIRY", "CTC", undefined])("sends a processing applicant to the office with hard copies for %s", (serviceCode) => {
     expect(
       nextSteps({
         status: "processing",
-        serviceCode: "MARRIAGE_DELAYED",
+        serviceCode,
+        postingStartDate: "2026-11-01",
         paymentStatus: "unpaid",
         feesDue: 0,
-        allowsMessages: false,
+        allowsMessages: serviceCode === "EMAIL_INQUIRY",
         attachments: [],
         logs: [],
       }),
@@ -70,7 +70,7 @@ describe("what to do next once a request is ready for release", () => {
       kind: "steps",
       steps: [
         "Go to the CCRO office for final validation",
-        "Bring the hard copies of your requirements",
+        "Bring your original documents and hard copies of your requirements",
         "Bring your tracking number (a printout of your acknowledgment, or write it down)",
       ],
     });
@@ -88,7 +88,7 @@ describe("on-time registration deadline", () => {
   it.each(["BIRTH_ONTIME", "OTCOLB-MARITAL", "OTCOLB-NONMARITAL", "MARRIAGE_ONTIME", "DEATH_ONTIME"])(
     "keeps the CCRO deadline visible for %s after submission",
     (serviceCode) => {
-      for (const status of ["submitted", "under_validation", "processing"]) {
+      for (const status of ["submitted"]) {
         expect(nextSteps({
           status,
           serviceCode,
@@ -101,4 +101,29 @@ describe("on-time registration deadline", () => {
       }
     },
   );
+});
+
+describe("under validation instructions", () => {
+  it.each([
+    ["CTC", false, "your uploaded documents"],
+    ["MARRIAGE_DELAYED", false, "your uploaded documents"],
+    ["BIRTH_ONTIME", false, "your uploaded documents"],
+    ["EMAIL_INQUIRY", true, "your inquiry"],
+  ] as const)("uses suitable wording for %s", (serviceCode, allowsMessages, subject) => {
+    const result = nextSteps({
+      status: "under_validation",
+      serviceCode,
+      allowsMessages,
+      paymentStatus: "unpaid",
+      feesDue: 0,
+      attachments: [],
+      logs: [],
+    });
+    expect(result?.kind).toBe("line");
+    if (result?.kind !== "line") return;
+    expect(result.text).toContain(`CCRO is currently reviewing ${subject}.`);
+    expect(result.text).toContain("notify you of updates or needed corrections.");
+    const notice = onTimeRegistrationNotice(serviceCode);
+    if (notice) expect(result.text).toContain(notice);
+  });
 });

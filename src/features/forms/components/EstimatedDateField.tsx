@@ -5,12 +5,13 @@ import { todayKeyInTimeZone } from "../form-template.utils";
 import { ESTIMATE_PREFIX, UNKNOWN_DATE, isEstimatedDate } from "../estimated-date";
 import { WIZARD_CONTROL_CLASS } from "./wizard-field";
 
-export function EstimatedDateField({ id, value, onChange, onBlur, invalid }: {
+export function EstimatedDateField({ id, value, onChange, onBlur, invalid, min }: {
   id: string;
   value: string;
   onChange: (value: string) => void;
   onBlur: () => void;
   invalid: boolean;
+  min?: string;
 }) {
   const estimated = isEstimatedDate(value);
   return (
@@ -36,7 +37,7 @@ export function EstimatedDateField({ id, value, onChange, onBlur, invalid }: {
         </div>
       ) : (
         <DatePicker id={id} value={value} onValueChange={onChange} onBlur={onBlur}
-          max={todayKeyInTimeZone()} invalid={invalid} icon="calendar"
+          min={min} max={todayKeyInTimeZone()} invalid={invalid} icon="calendar"
           className={`${WIZARD_CONTROL_CLASS} h-10 px-3`} />
       )}
       <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm">

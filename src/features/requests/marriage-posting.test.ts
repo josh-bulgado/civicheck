@@ -8,6 +8,9 @@ describe("delayed marriage and reconstruction posting", () => {
     expect(marriagePostingEnd("2028-02-20")).toBe("2028-03-01");
     expect(marriagePostingEnd("2026-11-03")).toBe("2026-11-13");
   });
+  it("uses license-specific completion instructions", () => {
+    expect(marriagePostingMessage("2026-11-03", "2026-11-13", "MARRIAGE_LICENSE")).toContain("marriage-license requirements");
+  });
   it("uses the Philippine date even when UTC is still the previous day", () => {
     expect(postingToday(new Date("2026-11-12T16:00:00Z"))).toBe("2026-11-13");
   });
@@ -20,8 +23,8 @@ describe("delayed marriage and reconstruction posting", () => {
     expect(marriagePostingMessage("2026-11-03", "2026-11-12")).toContain("1 calendar day remaining");
     expect(marriagePostingMessage("2026-11-03", "2026-11-13")).toContain("Staff must finish");
   });
-  it("keeps processing available, gates readiness and release, and preserves payment checks", () => {
-    const input = { serviceCode: "MARRIAGE_DELAYED", status: "processing", paymentStatus: "unpaid",
+  it.each(["MARRIAGE_DELAYED", "DEATH_DELAYED", "MARRIAGE_LICENSE"])("gates readiness and release while preserving payment checks for %s", (serviceCode) => {
+    const input = { serviceCode, status: "processing", paymentStatus: "unpaid",
       feesDue: 500, canProcess: true, attachments: [], today: "2026-11-13" };
     expect(planRequestActions(input).primary?.blocked).toBeTruthy();
     expect(planRequestActions({ ...input, status: "under_validation" }).primary?.blocked).toBeUndefined();
@@ -29,6 +32,6 @@ describe("delayed marriage and reconstruction posting", () => {
     expect(planRequestActions({ ...input, status: "ready_for_release", paymentStatus: "verified" }).primary?.blocked).toBeTruthy();
     expect(planRequestActions({ ...input, status: "ready_for_release", postingStartDate: "2026-11-03" }).primary?.blocked).toContain("cashier");
     expect(planRequestActions({ ...input, serviceCode: "MARRIAGE_ONTIME" }).primary?.blocked).toBeUndefined();
-    expect(planRequestActions({ ...input, serviceCode: "MARRIAGE_LICENSE" }).primary?.blocked).toBeUndefined();
+
   });
 });

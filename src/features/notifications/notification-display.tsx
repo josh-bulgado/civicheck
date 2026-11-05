@@ -108,12 +108,18 @@ export function feedTitle(subject: string): string {
 }
 
 /**
- * The one line of detail an unread row carries. Bodies are written as the
+ * Instructions shown below the notification title. Bodies are written as the
  * restatement of the subject, any remarks or reason, then a generic "open My
  * Requests" action — and the first and last of those add nothing the row
  * doesn't already say. What's left, if anything, is what the applicant needs.
  */
 export function feedDetail(notification: NotificationRow): string | null {
+  if (notification.type === "pre_validation_complete") {
+    return "Once your request is in Processing, go to the CCRO office and bring your original documents and submit hard copies of your requirements for final validation. Bring your tracking number or a printout of your acknowledgment.";
+  }
+  if (notification.type === "status_change" && /^processing$/i.test(feedTitle(notification.subject))) {
+    return "Go to the CCRO office and bring your original documents and submit hard copies of your requirements for final validation. Bring your tracking number or a printout of your acknowledgment.";
+  }
   const paragraphs = notification.body
     .split(/\n{2,}/)
     .map((paragraph) => paragraph.trim())
@@ -125,6 +131,22 @@ export function feedDetail(notification: NotificationRow): string | null {
     paragraphs[0].includes(notification.trackingNumber)
   ) {
     paragraphs.shift();
+  }
+  if (notification.type === "status_change" && /^under validation$/i.test(feedTitle(notification.subject))) {
+    const instruction = "CCRO is currently reviewing your uploaded documents. We’ll notify you of updates or needed corrections.";
+    if (!paragraphs.includes(instruction)) paragraphs.unshift(instruction);
+  }
+  if (notification.type === "status_change" && /^ready for release$/i.test(feedTitle(notification.subject))) {
+    const instruction = notification.serviceCode === "EMAIL_INQUIRY"
+      ? "Read CCRO's reply in the messages."
+      : "Pay any outstanding fee at the cashier to claim your document. Open your request for the exact amount.";
+    if (!paragraphs.includes(instruction)) paragraphs.unshift(instruction);
+  }
+  if (notification.type === "status_change" && /^released$/i.test(feedTitle(notification.subject))) {
+    const instruction = notification.serviceCode === "EMAIL_INQUIRY"
+      ? "Keep CCRO's reply for your records."
+      : "Please claim your requested document from the CCRO staff.";
+    if (!paragraphs.includes(instruction)) paragraphs.unshift(instruction);
   }
   return paragraphs.length > 0 ? paragraphs.join(" ") : null;
 }

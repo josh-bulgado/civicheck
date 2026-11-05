@@ -49,7 +49,7 @@ export function MarriagePostingPanel(props: MarriagePostingPanelProps) {
     <section className="rounded-xl border border-border bg-card p-5 text-sm">
       <h2 className="text-lg font-semibold">10-day notice of posting</h2>
       <p className="mt-2 text-muted-foreground" aria-live="polite">
-        {marriagePostingMessage(props.postingStartDate, today)}
+        {marriagePostingMessage(props.postingStartDate, today, props.serviceCode)}
       </p>
       {props.postingStartDate && end && (
         <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-2">
@@ -57,7 +57,7 @@ export function MarriagePostingPanel(props: MarriagePostingPanelProps) {
           <div><dt className="text-muted-foreground">Posting completion date</dt><dd className="font-medium">{formatDateKey(end)}</dd></div>
         </dl>
       )}
-      <p className="mt-3 text-muted-foreground">The period includes weekends and holidays. Completion does not automatically make the certificate ready for collection.</p>
+      <p className="mt-3 text-muted-foreground">The period includes weekends and holidays. Completion does not automatically make the document ready for collection.</p>
       {editor && (
         <form className="mt-4 flex flex-wrap items-end gap-3" onSubmit={(event) => { event.preventDefault(); void save(); }}>
           <div className="flex flex-col gap-2">
@@ -69,7 +69,9 @@ export function MarriagePostingPanel(props: MarriagePostingPanelProps) {
           <Button type="submit" disabled={saving || !date || date > today || date === props.postingStartDate}>
             {saving ? "Saving..." : "Save posting date"}
           </Button>
-          <p className="w-full text-muted-foreground">Record when the office actually posted the notice. Once posting is complete, confirm registration and signing before marking ready for release.</p>
+          <p className="w-full text-muted-foreground">{props.serviceCode?.toUpperCase() === "MARRIAGE_LICENSE"
+            ? "Record when the office actually posted the notice. Once posting is complete, confirm all applicable requirements, including counseling, before marking the license ready for release."
+            : "Record when the office actually posted the notice. Once posting is complete, confirm registration and signing before marking ready for release."}</p>
         </form>
       )}
     </section>

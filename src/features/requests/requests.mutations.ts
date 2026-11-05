@@ -264,7 +264,7 @@ export const saveMarriagePostingFn = createServerFn({ method: "POST" })
       return { error: true, message: "That request no longer exists." };
     }
     if (!needsMarriagePosting(request.request_type) || request.status !== "processing") {
-      return { error: true, message: "Record the posting date during Processing for delayed marriage or reconstruction." };
+      return { error: true, message: "Record the posting date during Processing for delayed marriage, delayed death or a marriage license." };
     }
     if (data.postingStartDate > postingToday()) {
       return { error: true, message: "The posting date cannot be in the future." };

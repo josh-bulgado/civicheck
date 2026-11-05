@@ -21,6 +21,7 @@ type StepState = "done" | "current" | "problem" | "todo";
 function stepState(stage: WorkflowStage, status: string | null): StepState {
   if (!isRequestStatus(status)) return "todo";
   const current = STAGE_OF[status];
+  if (status === "cancelled") return "todo";
   if (status === "released") return "done";
   if (status === "rejected" && stage === current) return "problem";
   if (stage < current) return "done";

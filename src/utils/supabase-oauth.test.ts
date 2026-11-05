@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { CookieOptions } from "@supabase/ssr";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getAppUrl } from "./app-url";
-import { commitSupabaseCookies, getSupabaseServerClient, setSessionScope } from "./supabase";
+import { commitSupabaseCookies, getSupabaseServerClient, setSessionScope, secureCookiesEnabled } from "./supabase";
 
 const requestState = vi.hoisted(() => ({
   url: "http://localhost:3000/login",
@@ -37,6 +37,11 @@ afterEach(() => {
 });
 
 describe("Supabase OAuth cookies and callback", () => {
+  it("requires Secure in production even if APP_URL is accidentally HTTP", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("APP_URL", "http://example.test");
+    expect(secureCookiesEnabled()).toBe(true);
+  });
   it.each([
     { mode: "development", origin: "http://localhost:3000", secure: false, deferCookies: false },
     { mode: "production", origin: "https://civicheck.vercel.app", secure: true, deferCookies: false },
@@ -64,6 +69,7 @@ describe("Supabase OAuth cookies and callback", () => {
     expect(verifierCookie?.value).toBeTruthy();
     expect(Boolean(verifierCookie?.options.secure)).toBe(secure);
     expect(verifierCookie?.options.sameSite).toBe("lax");
+    expect(verifierCookie?.options.httpOnly).toBe(true);
     expect(verifierCookie?.options.path).toBe("/");
 
     // A separate callback request/client must read the verifier cookie written
@@ -93,6 +99,9 @@ describe("Supabase OAuth cookies and callback", () => {
       // that passes the account cooldown is allowed to publish the new cookies.
       commitSupabaseCookies(callbackClient);
       expect(hasSessionCookies()).toBe(true);
+    }
+    for (const [name, cookie] of requestState.cookies) {
+      if (name.includes("-auth-token")) expect(cookie.options).toMatchObject({ httpOnly: true, sameSite: "lax" });
     }
 
     const [endpoint, init] = vi.mocked(fetch).mock.calls[0];

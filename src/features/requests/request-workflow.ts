@@ -14,6 +14,7 @@ export const REQUEST_STATUSES = [
   "processing",
   "ready_for_release",
   "released",
+  "cancelled",
 ] as const;
 
 export type RequestStatus = (typeof REQUEST_STATUSES)[number];
@@ -28,6 +29,7 @@ export const STAGE_LABELS: Record<WorkflowStage, string> = {
 };
 
 export const STAGE_OF: Record<RequestStatus, WorkflowStage> = {
+  cancelled: 1,
   submitted: 1,
   under_validation: 2,
   incomplete: 2,
@@ -61,6 +63,7 @@ export const ALLOWED_TRANSITIONS: Record<RequestStatus, RequestStatus[]> = {
   // the released hop is guarded on payment_status in advanceRequestStatusFn.
   // A payment already verified stays verified if the request is sent back.
   ready_for_release: ["released", "under_validation"],
+  cancelled: [],
   rejected: [],
   released: [],
 };
@@ -104,7 +107,7 @@ export function needsOfficeFinalValidation(serviceCode: string | null | undefine
 }
 
 /** Statuses that end the request's life — nothing transitions out of these. */
-export const TERMINAL_STATUSES: RequestStatus[] = ["rejected", "released"];
+export const TERMINAL_STATUSES: RequestStatus[] = ["rejected", "released", "cancelled"];
 
 export function isRequestStatus(value: string | null): value is RequestStatus {
   return !!value && (REQUEST_STATUSES as readonly string[]).includes(value);
@@ -128,6 +131,7 @@ export function stageOf(status: string | null): WorkflowStage | null {
  * the action reads the same regardless of where it was triggered from.
  */
 export const TRANSITION_LABELS: Record<RequestStatus, string> = {
+  cancelled: "Cancel request",
   submitted: "Return to submitted",
   under_validation: "Start validation",
   incomplete: "Mark incomplete",

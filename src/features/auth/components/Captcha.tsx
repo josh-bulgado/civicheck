@@ -1,38 +1,52 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { CAPTCHA_ACTION, CAPTCHA_UNAVAILABLE_MESSAGE } from "../captcha";
+import {
+  CAPTCHA_LOAD_MESSAGE, CAPTCHA_RETRY_MESSAGE, CAPTCHA_UNAVAILABLE_MESSAGE,
+} from "../captcha";
 import { getCaptchaConfigFn } from "../captcha.functions";
 
-type TurnstileApi = {
+export type RecaptchaApi = {
   render: (container: HTMLElement, options: {
-    sitekey: string; action: string; theme: "auto"; size: "compact" | "flexible";
-    "response-field": boolean; callback: (token: string) => void;
+    sitekey: string; theme: "light"; size: "compact" | "normal" | "invisible";
+    callback: (token: string) => void;
     "expired-callback": () => void; "error-callback": () => void;
-    "timeout-callback": () => void;
-  }) => string;
-  remove: (id: string) => void;
+  }) => number;
+  reset: (id: number) => void;
+  execute: (id: number) => void;
 };
-type TurnstileWindow = Window & { turnstile?: TurnstileApi };
-let scriptPromise: Promise<TurnstileApi> | null = null;
+type RecaptchaWindow = Window & {
+  grecaptcha?: RecaptchaApi;
+  civicheckRecaptchaLoaded?: () => void;
+};
+let scriptPromise: Promise<RecaptchaApi> | null = null;
 
-function loadTurnstile(): Promise<TurnstileApi> {
-  const browser = window as TurnstileWindow;
-  if (browser.turnstile) return Promise.resolve(browser.turnstile);
-  scriptPromise ??= new Promise<TurnstileApi>((resolve, reject) => {
+export function loadRecaptcha(): Promise<RecaptchaApi> {
+  const browser = window as RecaptchaWindow;
+  if (browser.grecaptcha?.render) return Promise.resolve(browser.grecaptcha);
+  scriptPromise ??= new Promise<RecaptchaApi>((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    script.src = "https://www.google.com/recaptcha/api.js?onload=civicheckRecaptchaLoaded&render=explicit";
     script.async = true;
-    const timer = window.setTimeout(() => fail(), 15000);
+    script.defer = true;
+    let settled = false;
+    const timer = window.setTimeout(fail, 15000);
     function fail() {
+      if (settled) return;
+      settled = true;
       window.clearTimeout(timer);
+      delete browser.civicheckRecaptchaLoaded;
       script.remove();
       reject(new Error("Security verification could not load"));
     }
-    script.addEventListener("error", fail, { once: true });
-    script.addEventListener("load", () => {
+    // Google's onload callback fires after its dependencies are ready to render.
+    browser.civicheckRecaptchaLoaded = () => {
+      if (settled) return;
+      if (!browser.grecaptcha?.render) { fail(); return; }
+      settled = true;
       window.clearTimeout(timer);
-      if (browser.turnstile) resolve(browser.turnstile);
-      else fail();
-    }, { once: true });
+      delete browser.civicheckRecaptchaLoaded;
+      resolve(browser.grecaptcha);
+    };
+    script.addEventListener("error", fail, { once: true });
     document.head.append(script);
   }).catch(error => {
     scriptPromise = null;
@@ -54,34 +68,60 @@ export function Captcha({ onToken, error, resetKey }: {
 
   useEffect(() => {
     let active = true;
-    let widget: { api: TurnstileApi; id: string } | undefined;
+    let widget: { api: RecaptchaApi; id: number; host: HTMLDivElement } | undefined;
     setLoadError(null);
     setRendered(false);
     async function render() {
       try {
         const config = await getCaptchaConfigFn();
-        if (!config.siteKey) throw new Error(config.error ?? CAPTCHA_UNAVAILABLE_MESSAGE);
-        const api = await loadTurnstile();
+        if (!active) return;
+        if (!config.siteKey) {
+          onToken(null);
+          setLoadError(config.error ?? CAPTCHA_UNAVAILABLE_MESSAGE);
+          return;
+        }
+        const api = await loadRecaptcha();
         if (!active || !container.current) return;
-        const invalidate = () => { if (active) onToken(null); };
-        const id = api.render(container.current, {
-          sitekey: config.siteKey, action: CAPTCHA_ACTION, theme: "auto",
-          size: container.current.clientWidth < 300 ? "compact" : "flexible",
-          "response-field": false,
-          callback: token => { if (active) onToken(token); },
-          "expired-callback": invalidate, "error-callback": invalidate,
-          "timeout-callback": invalidate,
-        });
-        widget = { api, id };
-        setRendered(true);
+        const host = document.createElement("div");
+        container.current.append(host);
+        const fail = (message: string) => {
+          if (!active) return;
+          onToken(null);
+          setLoadError(message);
+        };
+        try {
+          const id = api.render(host, {
+            sitekey: config.siteKey, theme: "light",
+            size: container.current.clientWidth < 304 ? "compact" : "normal",
+            callback: token => {
+              if (!active) return;
+              setLoadError(null);
+              onToken(token);
+            },
+            "expired-callback": () => fail(CAPTCHA_RETRY_MESSAGE),
+            "error-callback": () => fail(CAPTCHA_LOAD_MESSAGE),
+          });
+          widget = { api, id, host };
+          setRendered(true);
+        } catch (error) {
+          host.remove();
+          throw error;
+        }
       } catch {
-        if (active) setLoadError(CAPTCHA_UNAVAILABLE_MESSAGE);
+        if (active) {
+          onToken(null);
+          setLoadError(CAPTCHA_LOAD_MESSAGE);
+        }
       }
     }
     void render();
     return () => {
       active = false;
-      if (widget) widget.api.remove(widget.id);
+      if (widget) {
+        // Reset before removing Google's iframe to close any open challenge.
+        try { widget.api.reset(widget.id); }
+        finally { widget.host.remove(); }
+      }
     };
   }, [onToken, resetKey, retry]);
 
@@ -89,11 +129,14 @@ export function Captcha({ onToken, error, resetKey }: {
   return (
     <div role="group" aria-label="Security verification" aria-describedby={message ? errorId : undefined}
       className="grid w-full min-w-0 justify-items-center gap-2 py-1">
-      <div ref={container} className="w-full min-w-0" />
+      <div ref={container} className="flex w-full min-w-0 justify-center" />
       {!rendered && !loadError && <p role="status" className="text-sm text-muted-foreground">Loading security verification…</p>}
       {message && <p id={errorId} role="alert" className="text-center text-sm text-destructive">{message}</p>}
-      {loadError && <button type="button" className="text-sm underline underline-offset-4"
-        onClick={() => setRetry(value => value + 1)}>Retry verification</button>}
+      {message && <button type="button" className="text-sm underline underline-offset-4"
+        onClick={() => {
+          onToken(null);
+          setRetry(value => value + 1);
+        }}>Retry verification</button>}
     </div>
   );
 }

@@ -121,7 +121,7 @@ export const resubmitOwnAttachmentFn = createServerFn({ method: "POST" })
       };
     }
 
-    // Death requests retain rejected files in the history saved by the trigger.
+    // Requests retain rejected files in the history saved by the trigger.
     const retained = parsePreviousUploads(updated[0].previous_uploads)
       .some((version) => version.fileUrl === attachment.file_url);
     // The service role can delete any file, so only ever the applicant's own.
@@ -259,5 +259,24 @@ export const addMissingAttachmentFn = createServerFn({ method: "POST" })
       console.error("Failed to write added-document audit log", logError);
     }
 
+    return { error: false };
+  });
+
+/** Cancellation and its audit entry are saved in one database transaction. */
+export const cancelOwnCtcBirthRequestFn = createServerFn({ method: "POST" })
+  .validator(z.object({ requestId: uuidSchema }))
+  .handler(async ({ data }) => {
+    const { user } = await requireActiveSession("requests:view_own");
+    const { data: cancelled, error } = await getSupabaseAdminClient().rpc(
+      "cancel_own_ctc_birth_request",
+      { p_request_id: data.requestId, p_applicant_id: user.id },
+    );
+    if (error) {
+      console.error("Could not cancel request", error);
+      return { error: true, message: "The request could not be cancelled. Try again." };
+    }
+    if (!cancelled) {
+      return { error: true, message: "This request cannot be cancelled. Only your submitted CTC birth, marriage or death request can be cancelled before staff starts checking." };
+    }
     return { error: false };
   });

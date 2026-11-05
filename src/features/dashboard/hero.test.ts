@@ -72,7 +72,7 @@ describe("leadCaptions", () => {
 
     expect(captions[1]).toBeTruthy();
     expect(captions[2]).toBeTruthy();
-    expect(captions[3]).toMatch(/preparing your record/i);
+    expect(captions[3]).toMatch(/original documents.*final validation/i);
     expect(captions[4]).toBeUndefined();
   });
 });
@@ -397,7 +397,7 @@ describe("the Release caption and payment", () => {
 
   it("tells the applicant to bring the fee when one is owed", () => {
     expect(release({ fees_due: 150, payment_status: "unpaid" })).toBe(
-      "Bring your original documents and ₱150.00 to pay at the CCRO counter",
+      "Bring ₱150.00 to pay at the CCRO cashier to claim your document",
     );
     // Fees are stored as numeric text by the database.
     expect(release({ fees_due: "1100", payment_status: null })).toContain("₱1,100.00");
@@ -405,14 +405,24 @@ describe("the Release caption and payment", () => {
 
   it("says nothing about payment for a free request", () => {
     expect(release({ fees_due: 0, payment_status: "unpaid" })).toBe(
-      "Bring your original documents to the CCRO counter",
+      "Claim your document at the CCRO cashier",
     );
     expect(release({ fees_due: null, payment_status: "unpaid" })).not.toMatch(/pay|₱/i);
   });
 
   it("says nothing about payment once the cashier has verified it", () => {
     expect(release({ fees_due: 150, payment_status: "verified" })).toBe(
-      "Bring your original documents to the CCRO counter",
+      "Claim your document at the CCRO cashier",
     );
   });
+});
+
+it("keeps inquiry release instructions in messages even if a fee is recorded", () => {
+  const request = made("inquiry", "ready_for_release", 5, {
+    request_type: "EMAIL_INQUIRY",
+    fees_due: 150,
+    payment_status: "unpaid",
+  });
+  expect(leadCaptions(request)[4]).toBe("Read CCRO's reply in the messages");
+  expect(trackerDetails(request).tag).toBeNull();
 });

@@ -2,17 +2,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { sendEmail } from "./resend";
 
 const fetchMock = vi.fn<typeof fetch>();
-const email = {
+const message = {
   to: "recipient@example.com",
   subject: "Your CiviCheck email verification code",
   html: "<p>Your code is 123456.</p>",
   text: "Your code is 123456.",
 };
+const authEmail = { category: "auth" as const, ...message };
 
 beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
   vi.stubEnv("RESEND_API_KEY", "test-api-key");
   vi.stubEnv("RESEND_FROM_EMAIL", undefined);
+  vi.stubEnv("RESEND_FROM_AUTH", undefined);
+  vi.stubEnv("RESEND_FROM_UPDATES", undefined);
+  vi.stubEnv("RESEND_FROM_ALERTS", undefined);
   vi.stubEnv("RESEND_REPLY_TO", undefined);
   fetchMock.mockResolvedValue(Response.json({ id: "test-message-id" }));
 });
@@ -29,8 +33,16 @@ function sentPayload() {
 }
 
 describe("transactional email sender", () => {
-  it("retains the current sender when no replacement is configured", async () => {
-    await expect(sendEmail(email)).resolves.toEqual({ id: "test-message-id" });
+  it.each([
+    ["auth", "RESEND_FROM_AUTH"],
+    ["updates", "RESEND_FROM_UPDATES"],
+    ["alerts", "RESEND_FROM_ALERTS"],
+  ] as const)("uses the %s category sender", async (category, environmentVariable) => {
+    vi.stubEnv(environmentVariable, ` CiviCheck ${category} <${category}@civicheck.xyz> `);
+
+    await expect(sendEmail({ category, ...message })).resolves.toEqual({
+      id: "test-message-id",
+    });
 
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.resend.com/emails",
@@ -40,48 +52,58 @@ describe("transactional email sender", () => {
       }),
     );
     expect(sentPayload()).toEqual({
-      from: "CiviCheck <noreply@civicheck.abrdns.com>",
-      ...email,
+      from: `CiviCheck ${category} <${category}@civicheck.xyz>`,
+      ...message,
     });
   });
 
-  it("uses the configured sender and reply mailbox without changing the message", async () => {
+  it("uses the shared sender as a migration fallback", async () => {
     vi.stubEnv("RESEND_FROM_EMAIL", " CiviCheck <accounts@mail.example.com> ");
-    vi.stubEnv("RESEND_REPLY_TO", " support@example.com ");
 
-    await sendEmail(email);
+    await sendEmail(authEmail);
 
     expect(sentPayload()).toEqual({
       from: "CiviCheck <accounts@mail.example.com>",
-      ...email,
+      ...message,
+    });
+  });
+
+  it("adds the monitored reply mailbox without changing the message", async () => {
+    vi.stubEnv("RESEND_FROM_AUTH", "CiviCheck Accounts <auth@civicheck.xyz>");
+    vi.stubEnv("RESEND_REPLY_TO", " support@example.com ");
+
+    await sendEmail(authEmail);
+
+    expect(sentPayload()).toEqual({
+      from: "CiviCheck Accounts <auth@civicheck.xyz>",
+      ...message,
       reply_to: "support@example.com",
     });
   });
 
-  it("ignores empty optional sender configuration", async () => {
-    vi.stubEnv("RESEND_FROM_EMAIL", "  ");
-    vi.stubEnv("RESEND_REPLY_TO", "  ");
+  it("does not contact Resend without a configured category or fallback sender", async () => {
+    await expect(sendEmail(authEmail)).rejects.toThrow(
+      "RESEND_FROM_AUTH or RESEND_FROM_EMAIL must be defined",
+    );
 
-    await sendEmail(email);
-
-    expect(sentPayload().from).toBe("CiviCheck <noreply@civicheck.abrdns.com>");
-    expect(sentPayload()).not.toHaveProperty("reply_to");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("does not contact Resend without an API key", async () => {
     vi.stubEnv("RESEND_API_KEY", undefined);
 
-    await expect(sendEmail(email)).rejects.toThrow("RESEND_API_KEY is not defined");
+    await expect(sendEmail(authEmail)).rejects.toThrow("RESEND_API_KEY is not defined");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("reports immediate provider rejection without retrying the message", async () => {
+    vi.stubEnv("RESEND_FROM_AUTH", "CiviCheck Accounts <auth@civicheck.xyz>");
     vi.spyOn(console, "error").mockImplementation(() => {});
     fetchMock.mockResolvedValue(
       Response.json({ message: "The sender domain is not verified." }, { status: 403 }),
     );
 
-    await expect(sendEmail(email)).rejects.toThrow("The sender domain is not verified.");
+    await expect(sendEmail(authEmail)).rejects.toThrow("The sender domain is not verified.");
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

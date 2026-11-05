@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
-import { getRequestIP } from "@tanstack/react-start/server";
 import { getSupabaseAdminClient } from "~/utils/supabase";
+export { getClientIp } from "./client-ip";
 
 export type RateLimitRule = { limit: number; windowSeconds: number };
 
@@ -22,7 +22,7 @@ export const RATE_LIMITS = {
   signInPerEmail: { limit: 5, windowSeconds: 15 * 60 },
   signUpPerEmail: { limit: 5, windowSeconds: 15 * 60 },
   // An office or school shares one address, so this stays generous.
-  signInPerIp: { limit: 60, windowSeconds: 15 * 60 },
+  signInPerIp: { limit: 20, windowSeconds: 15 * 60 },
   signUpPerIp: { limit: 60, windowSeconds: 15 * 60 },
   /** Tracking numbers are 6 digits; a surname is the only other factor. */
   trackingPerIp: { limit: 30, windowSeconds: 15 * 60 },
@@ -36,15 +36,6 @@ export function bucketKey(scope: string, identifier: string) {
   return `${scope}:${digest}`;
 }
 
-/** The visitor's address as the hosting proxy reports it, or null when unknown. */
-export function getClientIp(): string | null {
-  try {
-    return getRequestIP({ xForwardedFor: true }) ?? null;
-  } catch {
-    return null;
-  }
-}
-
 /**
  * Records one attempt for `identifier` under `scope` and says whether it is
  * still within `rule`. A missing identifier (no client address) is not limited.
@@ -55,16 +46,21 @@ export async function allowAttempt(
   scope: string,
   identifier: string | null | undefined,
   rule: RateLimitRule,
+  failClosed = false,
 ): Promise<boolean> {
-  if (!identifier) return true;
-  const { data, error } = await getSupabaseAdminClient().rpc("consume_rate_limit", {
-    p_bucket: bucketKey(scope, identifier),
-    p_limit: rule.limit,
-    p_window_seconds: rule.windowSeconds,
-  });
-  if (error) {
-    console.error("Rate limit check failed:", error.message);
-    return true;
+  if (!identifier && !failClosed) return true;
+  try {
+    const { data, error } = await getSupabaseAdminClient({ requestTimeoutMs: 5000 }).rpc("consume_rate_limit", {
+      p_bucket: bucketKey(scope, identifier ?? "unknown"),
+      p_limit: rule.limit,
+      p_window_seconds: rule.windowSeconds,
+    });
+    if (error || typeof data !== "boolean") {
+      console.error("Rate limit check failed:", error?.message);
+      return !failClosed;
+    }
+    return data;
+  } catch {
+    return !failClosed;
   }
-  return data !== false;
 }

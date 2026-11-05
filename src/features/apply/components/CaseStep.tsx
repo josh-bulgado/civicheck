@@ -357,8 +357,18 @@ export function CaseStep({
           // visibility alongside the form's own values.
           values={{ ...draft.caseSelectorAnswers, ...watchedValues }}
           onDateChange={handleEventDateChange}
+          renderSectionLead={(section) =>
+            ["DEATH_ONTIME", "DEATH_DELAYED"].includes(selectedService.service_code) &&
+            section.fields.some((field) => field.key === "event_date") ? (
+              <p className="text-sm text-muted-foreground">
+                Enter the date and place of death exactly as written on the duly
+                accomplished Certificate of Death.
+              </p>
+            ) : null
+          }
           // With the service questions above, head the fields as their own block.
-          showSectionTitles={isGroup}        />
+          showSectionTitles={isGroup}
+        />
 
         {draft.selectedServiceCode && selectedService.fee_per_copy ? (
           <CopiesStepper

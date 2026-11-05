@@ -1,9 +1,14 @@
 import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
   rpc: vi.fn(),
+  dummyCompare: vi.fn(),
+  needsDummy: false,
+  background: [] as Promise<unknown>[],
+  generateLink: vi.fn(),
+  oauthIntent: "login" as "login" | "signup",
   from: vi.fn(),
   signIn: vi.fn(),
   createUser: vi.fn(),
@@ -19,6 +24,9 @@ const state = vi.hoisted(() => ({
   requestUrl: "https://civicheck.test/auth/callback?code=test-code",
 }));
 
+vi.mock("bcryptjs", () => ({ compare: state.dummyCompare }));
+vi.mock("@vercel/functions", () => ({ waitUntil: (work: Promise<unknown>) => state.background.push(work) }));
+vi.mock("~/server/client-ip", () => ({ getClientIp: () => state.ip }));
 vi.mock("@tanstack/react-start", () => ({
   createServerFn: () => ({
     validator: () => ({ handler: (handler: unknown) => handler }),
@@ -28,6 +36,7 @@ vi.mock("@tanstack/react-start", () => ({
 vi.mock("@tanstack/react-start/server", () => ({
   getRequestIP: () => state.ip,
   getRequest: () => new Request(state.requestUrl),
+  setResponseHeader: vi.fn(),
 }));
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: unknown) => options,
@@ -39,7 +48,7 @@ vi.mock("~/utils/supabase", () => ({
     from: state.from,
     auth: { admin: {
       createUser: state.createUser,
-      generateLink: async () => ({ data: { properties: { email_otp: "123456" } }, error: null }),
+      generateLink: state.generateLink,
     } },
   }),
   getSupabaseServerClient: () => ({
@@ -63,7 +72,7 @@ vi.mock("~/utils/email-template", () => ({
 vi.mock("~/server/auth", () => ({ requireActiveSession: vi.fn() }));
 vi.mock("~/server/auth-users", () => ({ findAuthUserByEmail: async () => null }));
 vi.mock("~/features/system-admin/security-center.server", () => ({
-  recordAuthenticationSecurityEvent: vi.fn(), recordSessionForCurrentUser: state.recordSession, recordSessionStarted: vi.fn(),
+  recordAuthenticationSecurityEvent: async () => {}, recordSessionForCurrentUser: state.recordSession, recordSessionStarted: vi.fn(),
 }));
 vi.mock("./otp-codes.server", () => ({
   clearIssuedOtps: vi.fn(), describeRejectedOtp: vi.fn(), recordIssuedOtp: vi.fn(),
@@ -72,28 +81,43 @@ vi.mock("./captcha.server", () => ({
   verifyCaptcha: async (token: string | undefined) => token === "valid-captcha"
     ? { error: false }
     : { error: true, captchaError: true, captchaRequired: true, message: "Please complete the security verification to continue." },
+  verifyInvisibleCaptcha: async (token: string | undefined) => token === "valid-captcha"
+    ? { error: false }
+    : { error: true, captchaError: true, message: "Verification required" },
   issueOAuthCaptchaProof: vi.fn(),
+  consumeOAuthFlowProof: async () => state.captchaProofAllowed && state.oauthIntent,
   consumeOAuthCaptchaProof: async () => state.captchaProofAllowed,
 }));
 
-import { loginWithEmailFn, loginWithOAuthFn, resendSignupOtpFn, signupFn } from "./auth.mutations";
+import { loginWithEmailFn, loginWithOAuthFn, resendSignupOtpFn, signupFn, forgotPasswordFn } from "./auth.mutations";
 import { bucketKey } from "~/server/rate-limit";
 import { handleCallback } from "~/routes/auth/callback";
 
 const db = new PGlite();
-const credentials = { email: "lockout@example.test", password: "WrongPassword1!", captchaToken: "valid-captcha" };
+const credentials = { email: "lockout@example.test", password: "WrongPassword1!", "g-recaptcha-response": "valid-captcha" };
 const signup = {
-  ...credentials, firstName: "Test", lastName: "Applicant",
+  ...credentials, captchaToken: "valid-captcha", firstName: "Test", lastName: "Applicant",
   middleName: "", hasNoMiddleName: true, suffix: "",
 };
 
 beforeAll(async () => {
   await db.exec("create role anon; create role authenticated; create role service_role;");
   await db.exec(readFileSync(new URL("../../../supabase/migrations/20261027121000_add_rate_limits.sql", import.meta.url), "utf8"));
+  await db.exec("create schema auth; create table auth.users(id uuid, email text, encrypted_password text, email_confirmed_at timestamptz, created_at timestamptz);");
+  await db.exec(readFileSync(new URL("../../../supabase/migrations/20261104151609_harden_login_and_recovery.sql", import.meta.url), "utf8"));
   // Exercise the real atomic counter through the same RPC/query shapes used by
   // the handlers; Auth/email are mocked so no real accounts or mail are created.
   state.rpc.mockImplementation(async (_name, args) => {
     if (state.counterUnavailable) return { data: null, error: { message: "Unavailable" } };
+    if (_name === "login_account_security_info") return { data: { email: credentials.email, needsDummyPassword: state.needsDummy, bcryptCost: 10 }, error: null };
+    if (_name === "reserve_login_attempt") {
+      const result = await db.query<{ value: unknown }>("select public.reserve_login_attempt($1, $2, $3) as value", [args.p_pair, args.p_ip, args.p_account]);
+      return { data: result.rows[0].value, error: null };
+    }
+    if (_name === "finish_login_attempt") {
+      const result = await db.query<{ value: unknown }>("select public.finish_login_attempt($1, $2) as value", [args.p_attempt, args.p_success]);
+      return { data: result.rows[0].value, error: null };
+    }
     const result = await db.query<{ allowed: boolean }>(
       "select public.consume_rate_limit($1, $2, $3) as allowed",
       [args.p_bucket, args.p_limit, args.p_window_seconds],
@@ -129,9 +153,17 @@ beforeAll(async () => {
   });
 });
 
+afterEach(async () => { await Promise.all(state.background); vi.unstubAllEnvs(); });
+afterAll(() => db.close());
+
 beforeEach(async () => {
   await db.exec("truncate public.rate_limit_hits");
   vi.clearAllMocks();
+  vi.stubEnv("VERCEL", "1");
+  state.needsDummy = false;
+  state.background = [];
+  state.oauthIntent = "login";
+  state.generateLink.mockResolvedValue({ data: { properties: { email_otp: "123456" } }, error: null });
   state.ip = "192.0.2.10";
   state.counterUnavailable = false;
   state.captchaProofAllowed = true;
@@ -139,124 +171,95 @@ beforeEach(async () => {
   state.signIn.mockResolvedValue({ error: { message: "Invalid login credentials" } });
   state.createUser.mockResolvedValue({ error: { code: "email_exists", message: "Email already registered" } });
   state.oauth.mockResolvedValue({ data: { url: "https://accounts.google.com/test" }, error: null });
-  state.exchangeCode.mockResolvedValue({ data: { user: { id: "applicant", email: credentials.email } }, error: null });
+  state.exchangeCode.mockResolvedValue({ data: { user: { id: "applicant", email: credentials.email, email_confirmed_at: "2026-01-01", app_metadata: { provider: "google" }, identities: [{ provider: "google", identity_data: { email_verified: true } }] } }, error: null });
   state.signOut.mockResolvedValue({ error: null });
 });
 
-describe("OAuth respects the account cooldown", () => {
-  it.each(["sign-in", "sign-up"])("rejects Google before redirect when the email has a %s cooldown", async action => {
-    for (let attempt = 0; attempt < 5; attempt++) {
-      if (action === "sign-in") await loginWithEmailFn({ data: credentials });
-      else await signupFn({ data: signup });
+describe("login and recovery security", () => {
+  it("limits one IP to 20 failures across accounts, without penalizing successful logins", async () => {
+    for (let i = 0; i < 21; i++) {
+      await loginWithEmailFn({ data: { ...credentials, email: `person${i}@example.test` } });
     }
-    const result = await loginWithOAuthFn({ data: { provider: "google", email: credentials.email, captchaToken: "valid-captcha" } });
-    expect(result).toMatchObject({ error: true, lockedUntil: expect.any(Number) });
-    expect(state.oauth).not.toHaveBeenCalled();
+    expect(state.signIn).toHaveBeenCalledTimes(20);
+    state.ip = "192.0.2.90";
+    state.signIn.mockResolvedValue({ data: { user: { id: "owner" } }, error: null });
+    for (let i = 0; i < 25; i++) expect(await loginWithEmailFn({ data: credentials })).toMatchObject({ error: false });
   });
 
-  it.each(["sign-in", "sign-up"])("rejects the verified Google email after a %s cooldown even if the form email is omitted", async action => {
-    for (let attempt = 0; attempt < 5; attempt++) {
-      if (action === "sign-in") await loginWithEmailFn({ data: credentials });
-      else await signupFn({ data: signup });
+  it("notifies once at 30 account failures and never hard-locks another IP", async () => {
+    for (let i = 0; i < 30; i++) {
+      state.ip = `192.0.2.${i + 1}`;
+      await loginWithEmailFn({ data: credentials });
     }
-    state.ip = "192.0.2.30";
-    await loginWithOAuthFn({ data: { provider: "google", captchaToken: "valid-captcha" } });
-    const result = await handleCallback();
-    expect(result).toMatchObject({ error: true, lockedUntil: expect.any(Number) });
-    expect(state.signOut).toHaveBeenCalledWith({ scope: "local" });
-    expect(state.commitCookies).not.toHaveBeenCalled();
-    expect(state.recordSession).not.toHaveBeenCalled();
+    await Promise.all(state.background);
+    expect(state.sendEmail).toHaveBeenCalledOnce();
+    state.ip = "192.0.2.100";
+    const started = Date.now();
+    state.signIn.mockResolvedValueOnce({ data: { user: { id: "owner" } }, error: null });
+    expect(await loginWithEmailFn({ data: credentials })).toMatchObject({ error: false });
+    expect(Date.now() - started).toBeGreaterThanOrEqual(450);
+    await loginWithEmailFn({ data: credentials });
+    expect(state.sendEmail).toHaveBeenCalledOnce();
   });
 
-  it("checks Google's verified email when the form supplies a different unlocked email", async () => {
-    for (let attempt = 0; attempt < 5; attempt++) await loginWithEmailFn({ data: credentials });
-    await loginWithOAuthFn({ data: { provider: "google", email: "unlocked@example.test", captchaToken: "valid-captcha" } });
-    const result = await handleCallback();
-    expect(result.error).toBe(true);
-    expect(state.commitCookies).not.toHaveBeenCalled();
+  it("performs a matching-cost dummy comparison for unknown emails with the same public error", async () => {
+    const known = await loginWithEmailFn({ data: credentials });
+    expect(state.dummyCompare).not.toHaveBeenCalled();
+    state.needsDummy = true;
+    const missing = await loginWithEmailFn({ data: { ...credentials, email: "missing@example.test" } });
+    expect(state.dummyCompare).toHaveBeenCalledWith(credentials.password, expect.stringMatching(/^\$2b\$10\$/));
+    expect(missing).toEqual(known);
+    expect(missing).toHaveProperty("message", "Invalid email or password");
   });
 
-  it.each(["error", "throw"])("never publishes cookies when revoking the blocked session fails (%s)", async failure => {
-    for (let attempt = 0; attempt < 5; attempt++) await loginWithEmailFn({ data: credentials });
-    if (failure === "error") state.signOut.mockResolvedValueOnce({ error: { message: "Unavailable" } });
-    else state.signOut.mockRejectedValueOnce(new Error("Unavailable"));
-    expect(await handleCallback()).toMatchObject({ error: true, lockedUntil: expect.any(Number) });
-    expect(state.commitCookies).not.toHaveBeenCalled();
-    expect(state.recordSession).not.toHaveBeenCalled();
+  it("expires abandoned reservations and rejects replayed completions", async () => {
+    const args = [bucketKey("sign-in:pair", "pair"), bucketKey("sign-in:ip", "ip"), bucketKey("sign-in:account", "account")];
+    const reserve = () => db.query<{ value: { allowed: boolean; attemptId: string } }>("select public.reserve_login_attempt($1,$2,$3) as value", args);
+    const first = (await reserve()).rows[0].value;
+    await db.query("select public.finish_login_attempt($1, false)", [first.attemptId]);
+    await expect(db.query("select public.finish_login_attempt($1, false)", [first.attemptId])).rejects.toThrow();
+    for (let i = 0; i < 4; i++) await reserve();
+    expect((await reserve()).rows[0].value.allowed).toBe(false);
+    await db.exec("update public.rate_limit_hits set lease_until = now() - interval '1 second' where lease_until is not null");
+    expect((await reserve()).rows[0].value.allowed).toBe(true);
   });
 
-  it("allows Google after cooldown expiry without spending another password attempt", async () => {
-    for (let attempt = 0; attempt < 5; attempt++) await loginWithEmailFn({ data: credentials });
-    await db.exec("update public.rate_limit_hits set hit_at = now() - interval '16 minutes'");
-    const rpcCalls = state.rpc.mock.calls.length;
-    const start = await loginWithOAuthFn({ data: { provider: "google", email: credentials.email, captchaToken: "valid-captcha" } });
-    expect(start).toHaveProperty("url");
-    expect(await handleCallback()).toMatchObject({ error: false });
-    expect(state.commitCookies).toHaveBeenCalledOnce();
-    expect(state.recordSession).toHaveBeenCalledOnce();
-    expect(state.rpc).toHaveBeenCalledTimes(rpcCalls);
+  it("keeps security RPCs private and never returns hashes in account metadata", async () => {
+    const grants = await db.query<{ permitted: boolean }>("select has_function_privilege('anon', 'public.login_account_security_info(text)', 'execute') or has_function_privilege('authenticated', 'public.reserve_login_attempt(text,text,text)', 'execute') as permitted");
+    expect(grants.rows[0].permitted).toBe(false);
+    await expect(db.query("select public.login_account_security_info('missing@example.test')")).rejects.toThrow();
+    await db.exec(`select set_config('request.jwt.claims', '{"role":"service_role"}', false)`);
+    const info = await db.query<{ value: unknown }>("select public.login_account_security_info('missing@example.test') as value");
+    expect(info.rows[0].value).toEqual({ email: null, needsDummyPassword: true, bcryptCost: 10 });
+    await db.exec("select set_config('request.jwt.claims', '{}', false)");
   });
-
-  it("allows Google for an account below five attempts", async () => {
-    for (let attempt = 0; attempt < 4; attempt++) await loginWithEmailFn({ data: credentials });
-    expect(await handleCallback()).toMatchObject({ error: false });
-    expect(state.commitCookies).toHaveBeenCalledOnce();
-    expect(state.signOut).not.toHaveBeenCalled();
-  });
-
-  it("fails closed if the callback cannot read the lockout counter", async () => {
-    state.counterUnavailable = true;
-    expect(await handleCallback()).toMatchObject({ error: true, message: expect.stringContaining("try again shortly") });
-    expect(state.commitCookies).not.toHaveBeenCalled();
-    expect(state.recordSession).not.toHaveBeenCalled();
-  });
-
-  it("rejects a Google response without a verified email", async () => {
-    state.exchangeCode.mockResolvedValueOnce({ data: { user: { id: "applicant" } }, error: null });
-    expect(await handleCallback()).toMatchObject({ error: true });
-    expect(state.commitCookies).not.toHaveBeenCalled();
-    expect(state.recordSession).not.toHaveBeenCalled();
-  });
-});
-afterAll(async () => { await db.close(); });
-
-describe("five-attempt authentication lockout", () => {
-  it("requires CAPTCHA after two password attempts without spending attempts on missing CAPTCHA", async () => {
-    const data = { ...credentials, captchaToken: undefined };
-    expect(await loginWithEmailFn({ data })).toMatchObject({ attemptsRemaining: 4, captchaRequired: false });
-    expect(await loginWithEmailFn({ data })).toMatchObject({ attemptsRemaining: 3, captchaRequired: true });
-    for (let retry = 0; retry < 6; retry++) {
-      expect(await loginWithEmailFn({ data })).toMatchObject({ error: true, captchaRequired: true, attemptsRemaining: 3 });
+  it("requires invisible CAPTCHA on every password and recovery request before counters or Auth", async () => {
+    for (const token of [undefined, "invalid"]) {
+      expect(await loginWithEmailFn({ data: { ...credentials, "g-recaptcha-response": token } })).toMatchObject({ error: true, captchaError: true });
+      expect(await forgotPasswordFn({ data: { email: credentials.email, "g-recaptcha-response": token } })).toMatchObject({ error: true, captchaError: true });
     }
-    expect(state.signIn).toHaveBeenCalledTimes(2);
-    expect(await loginWithEmailFn({ data: credentials })).toMatchObject({ error: true, attemptsRemaining: 2 });
-    expect(state.signIn).toHaveBeenCalledTimes(3);
-  });
-
-  it("lets at most two simultaneous unverified password checks through", async () => {
-    await Promise.all(Array.from({ length: 12 }, () => loginWithEmailFn({ data: { ...credentials, captchaToken: undefined } })));
-    expect(state.signIn).toHaveBeenCalledTimes(2);
-  });
-
-  it("does not spend password attempts on an invalid CAPTCHA", async () => {
-    expect(await loginWithEmailFn({ data: { ...credentials, captchaToken: "invalid" } })).toMatchObject({ error: true, captchaError: true });
     expect(state.signIn).not.toHaveBeenCalled();
     expect(state.rpc).not.toHaveBeenCalled();
   });
 
-  it("requires CAPTCHA before signup and before Google redirect", async () => {
-    expect(await signupFn({ data: { ...signup, captchaToken: undefined } })).toMatchObject({ error: true, captchaError: true });
-    expect(await loginWithOAuthFn({ data: { provider: "google" } })).toMatchObject({ error: true, captchaError: true });
-    expect(state.createUser).not.toHaveBeenCalled();
-    expect(state.sendEmail).not.toHaveBeenCalled();
-    expect(state.oauth).not.toHaveBeenCalled();
-    expect(state.rpc).not.toHaveBeenCalled();
+  it("keeps login Google CAPTCHA-free and independent of password lockout", async () => {
+    for (let i = 0; i < 5; i++) await loginWithEmailFn({ data: credentials });
+    expect(await loginWithOAuthFn({ data: { provider: "google", intent: "login", email: credentials.email } })).toHaveProperty("url");
+    expect(await handleCallback()).toMatchObject({ error: false });
+    expect(state.commitCookies).toHaveBeenCalledOnce();
   });
 
-  it("rejects a direct Google callback without the one-use CAPTCHA proof", async () => {
+  it("retains signup CAPTCHA and rejects callbacks without their initiation proof", async () => {
+    expect(await signupFn({ data: { ...signup, captchaToken: undefined } })).toMatchObject({ error: true, captchaError: true });
+    expect(await loginWithOAuthFn({ data: { provider: "google", intent: "signup" } })).toMatchObject({ error: true, captchaError: true });
     state.captchaProofAllowed = false;
-    expect(await handleCallback()).toMatchObject({ error: true, message: expect.stringContaining("verification expired") });
+    expect(await handleCallback()).toMatchObject({ error: true });
     expect(state.exchangeCode).not.toHaveBeenCalled();
+  });
+
+  it("rejects a Google identity with an unverified provider email", async () => {
+    state.exchangeCode.mockResolvedValueOnce({ data: { user: { email: credentials.email, email_confirmed_at: "2026-01-01", app_metadata: { provider: "google" }, identities: [{ provider: "google", identity_data: { email_verified: false } }] } }, error: null });
+    expect(await handleCallback()).toMatchObject({ error: true });
     expect(state.commitCookies).not.toHaveBeenCalled();
   });
 
@@ -272,12 +275,12 @@ describe("five-attempt authentication lockout", () => {
     expect(state.signIn).toHaveBeenCalledTimes(5);
   });
 
-  it("shares the account counter across casing, IP changes, and new requests", async () => {
+  it("shares casing within one IP but allows the owner from a different IP", async () => {
     for (let attempt = 0; attempt < 5; attempt++) await loginWithEmailFn({ data: credentials });
+    expect(await loginWithEmailFn({ data: { ...credentials, email: credentials.email.toUpperCase() } })).toHaveProperty("lockedUntil");
     state.ip = "192.0.2.20";
-    const result = await loginWithEmailFn({ data: { ...credentials, email: credentials.email.toUpperCase() } });
-    expect(result).toMatchObject({ error: true, lockedUntil: expect.any(Number) });
-    expect(state.signIn).toHaveBeenCalledTimes(5);
+    state.signIn.mockResolvedValueOnce({ data: { user: { id: "owner" } }, error: null });
+    expect(await loginWithEmailFn({ data: credentials })).toMatchObject({ error: false });
   });
 
   it("does not let simultaneous requests exceed five password checks", async () => {
@@ -314,7 +317,7 @@ describe("five-attempt authentication lockout", () => {
     await signupFn({ data: signup });
     expect(state.createUser).toHaveBeenCalledTimes(5);
     expect(state.sendEmail).not.toHaveBeenCalled();
-    expect(state.rpc.mock.calls.some(([, args]) => args.p_bucket.startsWith("otp-send:"))).toBe(false);
+    expect(state.rpc.mock.calls.some(([, args]) => args.p_bucket?.startsWith("otp-send:"))).toBe(false);
   });
 
   it("clears the signup counter after an account and verification email are created", async () => {

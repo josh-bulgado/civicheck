@@ -7,7 +7,7 @@ import {
 } from "~/features/system-admin/security-center.server";
 import { commitSupabaseCookies, getSupabaseServerClient } from "~/utils/supabase";
 import { authAttemptFailure, checkAuthLockout } from "~/server/auth-attempts";
-import { consumeOAuthCaptchaProof } from "~/features/auth/captcha.server";
+import { consumeOAuthFlowProof } from "~/features/auth/captcha.server";
 
 const OTP_TYPES = ["invite", "signup", "recovery", "email", "email_change"] as const;
 
@@ -39,7 +39,8 @@ export const handleCallback = createServerFn({ method: "GET" }).handler(async ()
   const otpType = parseOtpType(url.searchParams.get("type"));
   const next = url.searchParams.get("next");
   const isOAuth = !!code && !(tokenHash && otpType);
-  if (isOAuth && !(await consumeOAuthCaptchaProof())) {
+  const oauthIntent = isOAuth ? await consumeOAuthFlowProof() : false;
+  if (isOAuth && !oauthIntent) {
     return { error: true, message: "Your security verification expired. Please sign in again." };
   }
   // Hold newly issued cookies until the provider-verified account is allowed.
@@ -75,7 +76,16 @@ export const handleCallback = createServerFn({ method: "GET" }).handler(async ()
       };
     }
     const verifiedEmail = data.user?.email;
-    const lockout = verifiedEmail ? await checkAuthLockout(verifiedEmail) : null;
+    // Identity data comes from Auth's provider exchange, not editable user
+    // metadata or the form email. Supabase validates Google signatures/aud/exp
+    // and OAuth state; the SDK exchanges the app code with its PKCE verifier.
+    const googleIdentity = data.user?.identities?.find(identity => identity.provider === "google");
+    const emailVerified = !!verifiedEmail && !!data.user?.email_confirmed_at &&
+      (data.user?.app_metadata?.provider !== "google" ||
+        googleIdentity?.identity_data?.email_verified === true);
+    const lockout = emailVerified ? oauthIntent === "login"
+      ? { allowed: true, attemptsRemaining: 5 }
+      : await checkAuthLockout(verifiedEmail!) : null;
     if (!lockout?.allowed) {
       // Revoke only this new session. No session cookies have been sent, even
       // if revocation fails; the callback never records or opens app access.

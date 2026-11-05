@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { NO_SUFFIX, SUFFIXES } from "~/lib/subject-fields";
+import { CAPTCHA_TOKEN_MAX_LENGTH } from "./captcha";
 
 // Rules shared by the auth forms and the server functions behind them. The
 // forms use them for instant feedback; the server functions use them because a
@@ -129,7 +130,7 @@ export function checkMiddleNameAnswer(
   }
 }
 
-const captchaTokenSchema = z.string().max(2048).optional();
+const captchaTokenSchema = z.string().max(CAPTCHA_TOKEN_MAX_LENGTH).optional();
 
 export const signupInputSchema = signupFieldsSchema.extend({ captchaToken: captchaTokenSchema }).superRefine(
   checkMiddleNameAnswer,
@@ -146,10 +147,16 @@ const keepSignedInSchema = z.boolean().optional();
 
 export const loginInputSchema = credentialsSchema.extend({
   keepSignedIn: keepSignedInSchema,
-  captchaToken: captchaTokenSchema,
+  "g-recaptcha-response": captchaTokenSchema,
+});
+
+export const forgotPasswordInputSchema = z.object({
+  email: emailSchema,
+  "g-recaptcha-response": captchaTokenSchema,
 });
 
 export const oauthProviderSchema = z.object({
+  intent: z.enum(["login", "signup"]).default("signup"),
   provider: z.enum(["google", "apple"]),
   keepSignedIn: keepSignedInSchema,
   email: emailSchema.optional(),
@@ -160,6 +167,11 @@ export const otpVerificationSchema = z.object({
   email: emailSchema,
   // Length is a project-level Supabase setting, so only bound it.
   token: z.string().trim().min(OTP_MIN).max(OTP_MAX),
+});
+
+export const recoveryVerificationSchema = z.object({
+  email: emailSchema,
+  token: z.string().trim().regex(/^\d{8}$/, "Enter the eight-digit reset code"),
 });
 
 export const emailOnlySchema = z.object({ email: emailSchema });

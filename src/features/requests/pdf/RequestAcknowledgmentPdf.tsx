@@ -36,6 +36,11 @@ function formatDate(value: Date) {
 
 function nextAction(status: string) {
   switch (status) {
+    case "cancelled":
+      return {
+        title: "This request was cancelled",
+        detail: "To continue, submit a new request. It will have a new tracking number.",
+      };
     case "submitted":
       return {
         title: "Your request is awaiting review",
@@ -269,7 +274,7 @@ export function RequestAcknowledgmentPdf({ data, qrDataUrl, generatedAt }: Reque
   const status = getStatusDetails(data.status);
   const action = nextAction(data.status);
   const hasFee = data.feesDue > 0;
-  const isClosed = data.status === "released" || data.status === "rejected";
+  const isClosed = data.status === "released" || data.status === "rejected" || data.status === "cancelled";
 
   return (
     <Document title={`CiviCheck Acknowledgment ${data.trackingNumber}`} author="CiviCheck | City Civil Registrar Office, Legazpi" language="en-PH">

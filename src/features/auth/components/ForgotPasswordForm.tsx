@@ -1,4 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRef, useState } from "react";
 import { AlertCircleIcon, Mail } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import z from "zod";
@@ -6,6 +7,9 @@ import { Button } from "~/components/ui/button";
 import { staggerStyle } from "~/components/motion/stagger";
 import { useForgotPassword } from "../hooks/useForgotPassword";
 import { useVerifyRecoveryOtp } from "../hooks/useVerifyRecoveryOtp";
+import { useInvisibleCaptcha } from "../hooks/useInvisibleCaptcha";
+import { InvisibleCaptcha, RecaptchaNotice } from "./InvisibleCaptcha";
+import { RECOVERY_CONFIRMATION, RECOVERY_RESEND_SECONDS } from "../recovery";
 import {
   Field,
   FieldError,
@@ -19,15 +23,11 @@ import {
 } from "~/components/ui/input-group";
 import { Spinner } from "~/components/ui/spinner";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { cn } from "~/lib/utils";
 import { OtpCodeForm } from "./OtpCodeForm";
 import {
-  authButtonClass,
-  authFieldClass,
   authStepLabelClass,
   AuthBackLink,
   AuthCenteredLayout,
-  AuthEmphasis,
   AuthStepHeading,
 } from "./AuthSplitLayout";
 
@@ -41,10 +41,13 @@ const ForgotPasswordForm = () => {
   const forgotPasswordMutation = useForgotPassword();
   const verifyOtpMutation = useVerifyRecoveryOtp();
   const result = forgotPasswordMutation.data;
+  const captcha = useInvisibleCaptcha();
+  const inFlight = useRef(false);
   // A server-reported failure still resolves the mutation, so "success" alone
   // would show the code-entry step for a request that never sent anything.
-  const codeSent =
-    forgotPasswordMutation.status === "success" && !result?.error;
+  const [codeSent, setCodeSent] = useState(false);
+  const [codeInvalid, setCodeInvalid] = useState(false);
+  const [resendSeconds, setResendSeconds] = useState(RECOVERY_RESEND_SECONDS);
   const requestError = result?.error
     ? result.message
     : forgotPasswordMutation.status === "error"
@@ -66,12 +69,21 @@ const ForgotPasswordForm = () => {
 
   const email = form.watch("email");
 
-  function onSubmit(data: FormValues) {
-    forgotPasswordMutation.mutate({
-      data: {
-        email: data.email,
-      },
-    });
+  async function onSubmit(data: FormValues) {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    try {
+      await captcha.execute(async token => {
+        const response = await forgotPasswordMutation.mutate({
+          data: { email: data.email, "g-recaptcha-response": token },
+        });
+        if (response && !response.error) {
+          setCodeSent(true);
+          setCodeInvalid(false);
+          setResendSeconds(response.retryAfterSeconds ?? RECOVERY_RESEND_SECONDS);
+        }
+      });
+    } finally { inFlight.current = false; }
   }
 
   return (
@@ -82,22 +94,26 @@ const ForgotPasswordForm = () => {
         {codeSent ? (
           <>
             <AuthStepHeading title="Check your email">
-              We&apos;ve sent a verification code to{" "}
-              <AuthEmphasis>{email}</AuthEmphasis>. Enter it below to continue.
+              {RECOVERY_CONFIRMATION}
             </AuthStepHeading>
 
             <div className="civic-enter-scale">
+              {requestError && <Alert variant="destructive"><AlertDescription>{requestError}</AlertDescription></Alert>}
               <OtpCodeForm
                 isVerifying={verifyOtpMutation.status === "pending"}
-                isResending={forgotPasswordMutation.status === "pending"}
+                isResending={captcha.busy || !captcha.ready || forgotPasswordMutation.status === "pending"}
                 errorMessage={otpError}
-                onVerify={(token) =>
-                  verifyOtpMutation.mutate({ data: { email, token } })
-                }
-                onResend={() =>
-                  forgotPasswordMutation.mutate({ data: { email } })
-                }
+                codeInvalid={codeInvalid}
+                minCodeLength={8}
+                resendCooldownSeconds={resendSeconds}
+                resendLabel="Resend code"
+                onVerify={async (token) => {
+                  const response = await verifyOtpMutation.mutate({ data: { email, token } });
+                  setCodeInvalid(!!(response && "codeInvalid" in response && response.codeInvalid));
+                }}
+                onResend={() => { void onSubmit({ email }); }}
               />
+              <RecaptchaNotice />
             </div>
           </>
         ) : (
@@ -157,12 +173,13 @@ const ForgotPasswordForm = () => {
 
                 <Button
                   type="submit"
+                  data-size="invisible"
                   size="touch"
                   shape="split"
                   style={staggerStyle(1)}
-                  disabled={forgotPasswordMutation.status === "pending"}
+                  disabled={!captcha.ready || captcha.busy || forgotPasswordMutation.status === "pending"}
                 >
-                  {forgotPasswordMutation.status === "pending" ? (
+                  {captcha.busy || forgotPasswordMutation.status === "pending" ? (
                     <>
                       <Spinner />
                       Sending
@@ -171,10 +188,12 @@ const ForgotPasswordForm = () => {
                     "Send reset code"
                   )}
                 </Button>
+                <RecaptchaNotice />
               </FieldGroup>
             </form>
           </>
         )}
+        <InvisibleCaptcha captcha={captcha} />
       </div>
     </AuthCenteredLayout>
   );

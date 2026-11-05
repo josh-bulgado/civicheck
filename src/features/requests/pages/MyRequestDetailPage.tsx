@@ -1,3 +1,5 @@
+import { CancelRequestCard } from "../components/CancelRequestCard";
+import { canCancelCtcRequest } from "../request-cancellation";
 import { Download } from "lucide-react";
 import { MarriagePostingPanel } from "../components/MarriagePostingPanel";
 import { Button } from "~/components/ui/button";
@@ -60,7 +62,7 @@ export default function MyRequestDetailPage({
         serviceName={request.serviceName}
         trackingNumber={request.trackingNumber}
         status={request.status}
-        note={request.status === "rejected" ? getRejectionNotice(request.logs) : null}
+        note={request.status === "cancelled" ? "You cancelled this request. To continue, submit a new request. It will have a new tracking number." : request.status === "rejected" ? getRejectionNotice(request.logs) : null}
       />
 
       <div className="civic-stagger grid grid-cols-1 items-start gap-6 md:gap-7 lg:grid-cols-[minmax(0,1fr)_30rem]">
@@ -68,6 +70,9 @@ export default function MyRequestDetailPage({
           <NextStepsCard status={request.status} next={next} />
           <MarriagePostingPanel serviceCode={request.serviceCode} status={request.status}
             postingStartDate={request.postingStartDate} postingEndDate={request.postingEndDate} />
+          {canCancelCtcRequest(request.status, request.serviceCode, request.formData) && (
+            <CancelRequestCard requestId={request.id} onCancelled={onUpdated} />
+          )}
           <RequestStatusHistory logs={request.logs} />
         </div>
 

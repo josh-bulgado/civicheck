@@ -4,7 +4,7 @@ import { INVALID_PERSON_NAME, isNameField, validatePersonName } from "~/lib/pers
 import { flattenSubjects, type SubjectFields } from "~/lib/subject-fields";
 import { addressAreas, addressCities } from "~/lib/requester-address";
 import { countryOptions } from "~/lib/countries";
-import { isEstimatedDate, validateEstimatedDate } from "./estimated-date";
+import { isEstimatedDate, validateEstimatedDate, validateRegistrationDate } from "./estimated-date";
 import {
   conditionRuleSchema,
   formTemplateDefinitionSchema,
@@ -848,6 +848,10 @@ export function validateTemplateAnswers(
         return { success: false, message: blockingNotice.description };
       }
       if (field.type === "date") {
+        if (field.key === "registered_late_when") {
+          const result = validateRegistrationDate(value, answerString(effectiveAnswers, "event_date"));
+          if (result !== true) return { success: false, message: result };
+        }
         if (field.allowEstimate && isEstimatedDate(value)) {
           const result = validateEstimatedDate(value, todayKey);
           if (result !== true) return { success: false, message: result };

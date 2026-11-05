@@ -14,5 +14,5 @@ export function documentReviewBlockedReason(status: string | null | undefined): 
 
 /** Released and rejected end a request's life (TERMINAL_STATUSES). */
 export function isClosedRequestStatus(status: string | null | undefined): boolean {
-  return status === "released" || status === "rejected";
+  return status === "released" || status === "rejected" || status === "cancelled";
 }

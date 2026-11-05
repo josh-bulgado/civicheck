@@ -32,10 +32,12 @@ beforeAll(async () => {
              (3,3,'birth.pdf','rejected','Blurry');
   `);
   await db.exec(migration);
+  const extension = readFileSync(new URL("../../../supabase/migrations/20261104145753_shared_upload_history_and_ctc_cancellation.sql", import.meta.url), "utf8");
+  await db.exec(extension.slice(0, extension.indexOf("-- Extend the existing cancellation guard")));
 }, 30_000);
 afterAll(() => db.close());
 
-describe("death upload history", () => {
+describe("shared upload history", () => {
   it("archives the rejected file and reason atomically while keeping one pending attachment", async () => {
     await db.exec("update requirements_attachments set file_url='new.pdf', verification_status='pending', rejection_reason=null where id=1");
     const { rows } = await db.query<{ verification_status: string; rejection_reason: null; previous_uploads: unknown[] }>(
@@ -59,12 +61,21 @@ describe("death upload history", () => {
     ]);
   });
 
-  it("supports delayed death and leaves other services unchanged", async () => {
+  it("supports delayed death and other services", async () => {
     await db.exec("update requirements_attachments set file_url='delayed-new.pdf', verification_status='pending', rejection_reason=null where id=2");
     await db.exec("update requirements_attachments set file_url='birth-new.pdf', verification_status='pending', rejection_reason=null where id=3");
     const { rows } = await db.query<{ previous_uploads: unknown[] }>("select previous_uploads from requirements_attachments where id in (2,3) order by id");
     expect(rows[0].previous_uploads).toHaveLength(1);
-    expect(rows[1].previous_uploads).toEqual([]);
+    expect(rows[1].previous_uploads).toHaveLength(1);
+  });
+
+  it.each(["OTCOLB-MARITAL", "MARRIAGE_ONTIME", "MARRIAGE_DELAYED", "CTC-LOCAL", "CTC-ABROAD", "EMAIL_INQUIRY", "LEGITIMATION", "RA9048-CCE", "RA9255_SURNAME", "COURT_DECREE", "SUPPLEMENTAL_REPORT", "ELEC_ENDORSEMENT", "OTHER_CERT"])("retains rejected uploads for %s", async (service) => {
+    await db.query("insert into requests values (4, $1)", [service]);
+    await db.exec("insert into requirements_attachments(id, request_id, file_url, verification_status, rejection_reason) values (4,4,'original.pdf','rejected','Unreadable')");
+    await db.exec("update requirements_attachments set file_url='replacement.pdf', verification_status='pending', rejection_reason=null where id=4");
+    const { rows } = await db.query<{ previous_uploads: unknown[] }>("select previous_uploads from requirements_attachments where id=4");
+    expect(rows[0].previous_uploads).toEqual([expect.objectContaining({ fileUrl: "original.pdf", rejectionReason: "Unreadable" })]);
+    await db.exec("delete from requirements_attachments where id=4; delete from requests where id=4");
   });
 
   it("ignores attempts to erase history", async () => {

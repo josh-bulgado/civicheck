@@ -43,6 +43,7 @@ export function enforcedScopeValue(sessionKey: string) {
 export function persistentMarkerOptions(secure: boolean): CookieOptions {
   return {
     path: "/",
+    httpOnly: true,
     sameSite: "lax",
     maxAge: PERSISTENT_SESSION_MAX_AGE_SECONDS,
     secure,
@@ -65,6 +66,8 @@ export function applyCookiePolicy(
   policy: { sessionOnly: boolean; secure: boolean },
 ): CookieOptions {
   const next: CookieOptions = { ...options };
+  next.httpOnly = true;
+  next.sameSite = "lax";
   if (policy.secure) next.secure = true;
 
   if (isRemoval(next)) return next;
