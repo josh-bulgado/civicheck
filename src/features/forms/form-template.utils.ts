@@ -698,6 +698,14 @@ export function canonicalizeTemplateAnswers(
   );
 }
 
+export function selectableFieldOptions(field: FormFieldDefinition, answers: Record<string, unknown>) {
+  const options = field.options ?? [];
+  if (field.key === "requester_relationship" && answers.record_type === "death") {
+    return options.filter((option) => option.value !== "owner");
+  }
+  return options;
+}
+
 export function validateTemplateAnswers(
   definition: FormTemplateDefinition,
   answers: TemplateAnswers,
@@ -837,7 +845,7 @@ export function validateTemplateAnswers(
       if (
         field.type === "select" &&
         field.options?.length &&
-        !field.options.some((option) => option.value === value)
+        !selectableFieldOptions(field, effectiveAnswers).some((option) => option.value === value)
       ) {
         return { success: false, message: `${field.label} has an invalid selection.` };
       }

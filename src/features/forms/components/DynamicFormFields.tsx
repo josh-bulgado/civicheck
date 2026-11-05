@@ -1,7 +1,7 @@
 import { validateEventPlace } from "../event-place";
 import { formatFieldLabel } from "~/features/forms/field-label";
 import { isNameField, validatePersonName } from "~/lib/person-name";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { addressDescendants } from "~/lib/requester-address";
 import { AddressLocationField } from "./AddressLocationField";
 import {
@@ -15,7 +15,7 @@ import { Phone } from "lucide-react";
 import { DatePicker } from "~/components/ui/date-picker";
 import { EstimatedDateField } from "./EstimatedDateField";
 import { isEstimatedDate, validateEstimatedDate, validateRegistrationDate } from "../estimated-date";
-import { todayKeyInTimeZone } from "../form-template.utils";
+import { selectableFieldOptions, todayKeyInTimeZone } from "../form-template.utils";
 import {
   Field,
   FieldDescription,
@@ -272,7 +272,9 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
   );
 
   return sections.map((section, sectionIndex) => {
-    const fields = conditionMatches(section, values).filter(
+    const fields = conditionMatches(section, values).map((field) => (
+      field.type === "select" ? { ...field, options: selectableFieldOptions(field, values) } : field
+    )).filter(
       (field) => field.type !== "person_group",
     );
     const lead = renderSectionLead?.(section) ?? null;
@@ -332,6 +334,10 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
           )}
         >
           {fields.map((definitionField) => (
+            <Fragment key={definitionField.key}>
+              {section.key === "details_requester" && definitionField.key === "requester_province" ? (
+                <h3 className={cn("col-span-full -mb-3", WIZARD_LABEL_CLASS)}>Address</h3>
+              ) : null}
             <Controller
               key={definitionField.key}
               control={control}
@@ -344,6 +350,10 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                   : false,
                 validate: (value) => {
                   if (!value) return true;
+                  if (definitionField.type === "select" && definitionField.options?.length &&
+                    !definitionField.options.some((option) => option.value === value)) {
+                    return "Select a valid option";
+                  }
                   if (definitionField.key === "registered_late_when") {
                     const result = validateRegistrationDate(value, String(values.event_date ?? ""));
                     if (result !== true) return result;
@@ -647,6 +657,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                 );
               }}
             />
+            </Fragment>
           ))}
         </FieldGroup>
       </section>

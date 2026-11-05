@@ -1,0 +1,32 @@
+-- Add a specific example for the CTC place of death.
+do $$
+declare
+  target record;
+  next_definition jsonb;
+  next_version integer;
+  published_id uuid;
+begin
+  select t.id, v.definition into target
+  from public.form_templates t
+  join public.form_template_versions v on v.id = t.active_version_id
+  where t.template_key = 'ctc_issuance'
+  for update of t;
+  if not found then raise exception 'CTC template not found'; end if;
+
+  select jsonb_set(target.definition, '{sections}', jsonb_agg(
+    jsonb_set(s, '{fields}', (
+      select jsonb_agg(case when f->>'key' = 'death_place' then
+        jsonb_set(f, '{placeholder}', to_jsonb('e.g. Hospital name or house/street, barangay, city/municipality, province'::text)) else f end order by fi)
+      from jsonb_array_elements(s->'fields') with ordinality as fields(f, fi)
+    )) order by si
+  )) into next_definition
+  from jsonb_array_elements(target.definition->'sections') with ordinality as sections(s, si);
+  if next_definition = target.definition then return; end if;
+
+  select coalesce(max(version), 0) + 1 into next_version
+  from public.form_template_versions where template_id = target.id;
+  insert into public.form_template_versions(template_id, version, status, definition, published_at)
+  values(target.id, next_version, 'published', next_definition, now()) returning id into published_id;
+  update public.form_templates set active_version_id = published_id, updated_at = now() where id = target.id;
+end
+$$;

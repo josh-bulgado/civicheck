@@ -165,6 +165,27 @@ describe("CTC Local address migration", () => {
       const versions = await isolated.query<{ definition: unknown }>("select definition from form_template_versions order by version");
       expect(versions.rows).toHaveLength(2);
       expect(versions.rows[0].definition).toEqual(definition);
+      const localRequesterMigration = readFileSync(new URL("../../supabase/migrations/20261105085857_ctc_abroad_local_requester_address.sql", import.meta.url), "utf8");
+      await isolated.exec(localRequesterMigration);
+      const current = await isolated.query<{ definition: unknown }>("select v.definition from form_templates t join form_template_versions v on v.id=t.active_version_id");
+      const localRequester = formTemplateDefinitionSchema.parse(current.rows[0].definition);
+      for (const origin of ["local", "abroad"]) {
+        const answers = canonicalizeTemplateAnswers(localRequester, {
+          ...overseas, origin, requester_province: "Albay",
+          requester_city: "City of Legazpi", requester_barangay: "Rawis",
+        });
+        expect(validateTemplateAnswers(localRequester, answers)).toEqual({ success: true });
+        expect(answers).not.toHaveProperty("requester_country");
+        expect(answers).not.toHaveProperty("requester_address_line1");
+        expect(formatRequesterAddress(answers)).toBe("Rawis, Legazpi City, Albay");
+        for (const key of ["requester_province", "requester_city", "requester_barangay"]) {
+          expect(validateTemplateAnswers(localRequester, { ...answers, [key]: "" }).success).toBe(false);
+        }
+      }
+      await isolated.exec(localRequesterMigration);
+      const finalVersions = await isolated.query<{ definition: unknown }>("select definition from form_template_versions order by version");
+      expect(finalVersions.rows).toHaveLength(3);
+      expect(finalVersions.rows[1].definition).toEqual(upgraded);
     } finally {
       await isolated.close();
     }
