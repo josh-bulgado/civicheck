@@ -1,14 +1,19 @@
-import { Button } from "~/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "~/components/ui/dialog";
-import { Spinner } from "~/components/ui/spinner";
 import type { StaffMember } from "../staff.types";
+import {
+  StaffActionDialog,
+  type StaffActionDialogCopy,
+} from "./StaffActionDialog";
+
+const deactivateStaffCopy: StaffActionDialogCopy = {
+  title: "Deactivate this staff member?",
+  description: (staffMember) =>
+    staffMember
+      ? `${staffMember.email} will lose access, but their profile and history will be preserved and can be reactivated.`
+      : "This staff account will be deactivated and preserved.",
+  cancelLabel: "Keep staff member",
+  confirmLabel: "Deactivate staff member",
+  pendingLabel: "Deactivating",
+};
 
 export function RemoveStaffMemberDialog({
   staffMember,
@@ -22,47 +27,12 @@ export function RemoveStaffMemberDialog({
   onConfirm: () => void;
 }) {
   return (
-    <Dialog
-      open={staffMember !== null}
-      onOpenChange={(open) => onOpenChange(open)}
-    >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Deactivate this staff member?</DialogTitle>
-          <DialogDescription>
-            {staffMember
-              ? `${staffMember.email} will lose access, but their profile and history will be preserved and can be reactivated.`
-              : "This staff account will be deactivated and preserved."}
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            disabled={isPending}
-            onClick={() => onOpenChange(false)}
-          >
-            Keep staff member
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            size="lg"
-            disabled={isPending}
-            onClick={onConfirm}
-          >
-            {isPending ? (
-              <>
-                <Spinner />
-                Deactivating
-              </>
-            ) : (
-              "Deactivate staff member"
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <StaffActionDialog
+      staffMember={staffMember}
+      copy={deactivateStaffCopy}
+      isPending={isPending}
+      onOpenChange={onOpenChange}
+      onConfirm={onConfirm}
+    />
   );
 }

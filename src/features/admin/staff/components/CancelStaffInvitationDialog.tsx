@@ -1,14 +1,19 @@
-import { Button } from "~/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "~/components/ui/dialog";
-import { Spinner } from "~/components/ui/spinner";
 import type { StaffMember } from "../staff.types";
+import {
+  StaffActionDialog,
+  type StaffActionDialogCopy,
+} from "./StaffActionDialog";
+
+const cancelInvitationCopy: StaffActionDialogCopy = {
+  title: "Cancel this invitation?",
+  description: (staffMember) =>
+    staffMember
+      ? `The pending account for ${staffMember.email} will be removed and its current invitation link will stop working.`
+      : "The pending account will be removed.",
+  cancelLabel: "Keep invitation",
+  confirmLabel: "Cancel invitation",
+  pendingLabel: "Cancelling",
+};
 
 export function CancelStaffInvitationDialog({
   staffMember,
@@ -22,47 +27,12 @@ export function CancelStaffInvitationDialog({
   onConfirm: () => void;
 }) {
   return (
-    <Dialog
-      open={staffMember !== null}
-      onOpenChange={(open) => onOpenChange(open)}
-    >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Cancel this invitation?</DialogTitle>
-          <DialogDescription>
-            {staffMember
-              ? `The pending account for ${staffMember.email} will be removed and its current invitation link will stop working.`
-              : "The pending account will be removed."}
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            disabled={isPending}
-            onClick={() => onOpenChange(false)}
-          >
-            Keep invitation
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            size="lg"
-            disabled={isPending}
-            onClick={onConfirm}
-          >
-            {isPending ? (
-              <>
-                <Spinner />
-                Cancelling
-              </>
-            ) : (
-              "Cancel invitation"
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <StaffActionDialog
+      staffMember={staffMember}
+      copy={cancelInvitationCopy}
+      isPending={isPending}
+      onOpenChange={onOpenChange}
+      onConfirm={onConfirm}
+    />
   );
 }
