@@ -1,19 +1,22 @@
-import {
-  MoreHorizontal,
-  RotateCcw,
-  ShieldCheck,
-  Trash2,
-  UserMinus,
-} from "lucide-react";
+import { ChevronDown, Trash2, UserMinus } from "lucide-react";
 import { Button } from "~/components/ui/button";
+import { ButtonGroup } from "~/components/ui/button-group";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import type { StaffMember } from "../staff.types";
+
+export interface StaffRowActionHandlers {
+  onManage: (staffMember: StaffMember) => void;
+  onResend: (staffMember: StaffMember) => void;
+  onCancel: (staffMember: StaffMember) => void;
+  onRemove: (staffMember: StaffMember) => void;
+  onReactivate: (staffMember: StaffMember) => void;
+}
 
 export function StaffRowActions({
   staffMember,
@@ -26,73 +29,73 @@ export function StaffRowActions({
 }: {
   staffMember: StaffMember;
   isResending: boolean;
-  onManage: (staffMember: StaffMember) => void;
-  onResend: (staffMember: StaffMember) => void;
-  onCancel: (staffMember: StaffMember) => void;
-  onRemove: (staffMember: StaffMember) => void;
-  onReactivate: (staffMember: StaffMember) => void;
-}) {
+} & StaffRowActionHandlers) {
   if (staffMember.role === "admin") return null;
 
-  return (
-    <div className="flex items-center justify-end gap-2">
+  const isActive = staffMember.status === "active";
+  const isInvited = isActive && !staffMember.emailConfirmed;
+  const staffName = `${staffMember.firstName} ${staffMember.lastName}`.trim();
+
+  if (!isActive) {
+    return (
       <Button
         variant="outline"
-        size="lg"
-        shape="pill"
-        onClick={() => onManage(staffMember)}
-        disabled={staffMember.status !== "active"}
-        className="whitespace-nowrap"
+        size="sm"
+        shape="default"
+        onClick={() => onReactivate(staffMember)}
+        className="w-40"
       >
-        <ShieldCheck aria-hidden="true" data-icon="inline-start" />
-        Manage Access
+        Reactivate
       </Button>
-      <DropdownMenu>
+    );
+  }
+
+  return (
+    <DropdownMenu>
+      <ButtonGroup
+        aria-label={`Actions for ${staffName}`}
+        variant="outline"
+        size="sm"
+        shape="default"
+        className="w-40"
+      >
+        <Button
+          onClick={() =>
+            isInvited ? onResend(staffMember) : onManage(staffMember)
+          }
+          disabled={isInvited && isResending}
+          className="min-w-0 flex-1"
+        >
+          {isInvited
+            ? isResending
+              ? "Resending..."
+              : "Resend invitation"
+            : "Manage access"}
+        </Button>
         <DropdownMenuTrigger
           nativeButton
           render={
-            <Button
-              variant="ghost"
-              size="icon-lg"
-              className="text-muted-foreground data-open:bg-muted"
-            />
+            <Button size="icon-sm" className="text-muted-foreground" />
           }
         >
-          <MoreHorizontal aria-hidden="true" />
-          <span className="sr-only">
-            Actions for {staffMember.firstName} {staffMember.lastName}
-          </span>
+          <ChevronDown aria-hidden="true" />
+          <span className="sr-only">More actions for {staffName}</span>
         </DropdownMenuTrigger>
-        {/* The menu defaults to the trigger's width, which is the icon button
-            here, so it sizes to its longest item instead. */}
-        <DropdownMenuContent
-          align="end"
-          variant="roomy"
-          className="w-max whitespace-nowrap"
-        >
-          {staffMember.status !== "active" ? (
-            <DropdownMenuItem onClick={() => onReactivate(staffMember)}>
-              <RotateCcw />
-              Reactivate staff member
+      </ButtonGroup>
+      <DropdownMenuContent
+        align="end"
+        variant="roomy"
+        className="w-max whitespace-nowrap"
+      >
+        <DropdownMenuGroup>
+          {isInvited ? (
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => onCancel(staffMember)}
+            >
+              <Trash2 />
+              Cancel invitation
             </DropdownMenuItem>
-          ) : !staffMember.emailConfirmed ? (
-            <>
-              <DropdownMenuItem
-                disabled={isResending}
-                onClick={() => onResend(staffMember)}
-              >
-                <RotateCcw />
-                {isResending ? "Resending invitation..." : "Resend invitation"}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => onCancel(staffMember)}
-              >
-                <Trash2 />
-                Cancel invitation
-              </DropdownMenuItem>
-            </>
           ) : (
             <DropdownMenuItem
               variant="destructive"
@@ -102,8 +105,8 @@ export function StaffRowActions({
               Deactivate staff member
             </DropdownMenuItem>
           )}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
