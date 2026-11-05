@@ -48,8 +48,8 @@ describe("StaffRowActions", () => {
     expect(html).toContain("Actions for Civic Staff");
     expect(html).toContain("More actions for Civic Staff");
     expect(html).toContain('data-slot="button-group"');
-    expect(html).toContain('data-size="sm"');
-    expect(html).toContain('data-shape="default"');
+    expect(html).toContain('data-size="lg"');
+    expect(html).toContain('data-shape="pill"');
   });
 
   it("shows invitation actions for invited staff", () => {
