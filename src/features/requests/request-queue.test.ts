@@ -7,7 +7,12 @@ import {
   parseMineFilter,
   parseNeedsFilter,
   parsePaymentFilter,
+  parseRequestPage,
+  parseRequestPageSize,
+  parseRequestSearch,
+  parseRequestSort,
   parseRequestStatus,
+  parseSortDirection,
   parseWorkflowStage,
 } from "./request-queue";
 
@@ -40,6 +45,18 @@ describe("search param parsers", () => {
     expect(parseWorkflowStage(7)).toBeUndefined();
     expect(parseRequestStatus("incomplete")).toBe("incomplete");
     expect(parseRequestStatus("approved")).toBeUndefined();
+  });
+
+  it("keeps queue paging and sorting inputs bounded", () => {
+    expect(parseRequestPage(2)).toBe(2);
+    expect(parseRequestPage(0)).toBeUndefined();
+    expect(parseRequestPage(100_001)).toBeUndefined();
+    expect(parseRequestPageSize("50")).toBe(50);
+    expect(parseRequestPageSize(500)).toBeUndefined();
+    expect(parseRequestSort("createdAt")).toBe("createdAt");
+    expect(parseRequestSort("drop table")).toBeUndefined();
+    expect(parseSortDirection("false")).toBe(false);
+    expect(parseRequestSearch("x".repeat(120))).toHaveLength(100);
   });
 });
 

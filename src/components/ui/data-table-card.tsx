@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
+import { Skeleton } from "~/components/ui/skeleton";
 import { cn } from "~/lib/utils";
 import type { AppRow, AppTable } from "~/lib/table";
 
@@ -51,6 +52,33 @@ interface DataTableCardProps<TData extends RowData> {
   className?: string;
   /** Visual treatment shared by the table header and rows. */
   variant?: ComponentProps<typeof Table>["variant"];
+  /** Replaces only the rows while fresh table data is loading. */
+  loading?: boolean;
+}
+
+export function DataTableLoadingRows({
+  columns,
+  rows = 6,
+  cellClassName,
+}: {
+  columns: number;
+  rows?: number;
+  cellClassName?: string;
+}) {
+  return Array.from({ length: rows }, (_, row) => (
+    <TableRow key={row} aria-hidden="true" className="hover:bg-transparent">
+      {Array.from({ length: columns }, (_, column) => (
+        <TableCell key={column} className={cellClassName}>
+          <Skeleton
+            className={cn(
+              "h-4 max-w-full",
+              column === 0 ? "w-32" : column === columns - 1 ? "w-16" : "w-24",
+            )}
+          />
+        </TableCell>
+      ))}
+    </TableRow>
+  ));
 }
 
 interface ColumnVisibilityMenuProps<TData extends RowData> {
@@ -110,6 +138,7 @@ export function DataTableCard<TData extends RowData>({
   cellClassName,
   className,
   variant = "entity",
+  loading = false,
 }: DataTableCardProps<TData>) {
   const rows = table.getRowModel().rows;
   const columnMenu = columnLabels ? (
@@ -133,7 +162,13 @@ export function DataTableCard<TData extends RowData>({
         "overflow-hidden rounded-xl border border-border-strong bg-card",
         className,
       )}
+      aria-busy={loading || undefined}
     >
+      {loading ? (
+        <span className="sr-only" role="status">
+          Loading {label.toLowerCase()}
+        </span>
+      ) : null}
       <div className="border-b border-border px-5 py-4">{toolbarContent}</div>
 
       <div className="overflow-x-auto">
@@ -161,7 +196,12 @@ export function DataTableCard<TData extends RowData>({
             ))}
           </TableHeader>
           <TableBody className="civic-stagger-auto ">
-            {rows.length > 0 ? (
+            {loading ? (
+              <DataTableLoadingRows
+                columns={table.getVisibleLeafColumns().length}
+                cellClassName={cellClassName}
+              />
+            ) : rows.length > 0 ? (
               rows.map((row) => {
                 const { className: rowClassName, ...rowProps } =
                   getRowProps?.(row) ?? {};

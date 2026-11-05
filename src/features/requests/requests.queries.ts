@@ -8,6 +8,9 @@ import { normalizePaymentRange, paymentRangeBounds } from "~/features/requests/p
 import { requestFieldLabelsOf } from "~/features/requests/request-field-labels";
 import { readRequestMessages } from "~/features/requests/request-messages.server";
 import type { RequestClaim } from "~/features/requests/request-claims";
+import { REQUEST_QUEUE_SORTS } from "~/features/requests/request-queue";
+import { REQUEST_STATUSES } from "~/features/requests/request-workflow";
+import type { StageCounts } from "~/features/requests/requests-table.utils";
 
 // A counter lookup sends the numbers a bare 6-digit entry could mean: one per
 // year it might have been filed in (see cashier/tracking-input.ts).
@@ -18,6 +21,22 @@ const requestIdSchema = z.object({ requestId: z.string().uuid() });
 const paymentHistorySchema = z.object({
   from: z.string().optional(),
   to: z.string().optional(),
+});
+const requestQueuePageSchema = z.object({
+  page: z.number().int().min(0).max(100_000),
+  pageSize: z.union([z.literal(10), z.literal(20), z.literal(50)]),
+  search: z.string().trim().max(100).optional(),
+  stage: z
+    .union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)])
+    .optional(),
+  status: z.enum(REQUEST_STATUSES).optional(),
+  payment: z.enum(["unpaid", "verified"]).optional(),
+  department: z.string().max(100).optional(),
+  needs: z.literal(true).optional(),
+  mine: z.literal(true).optional(),
+  attention: z.literal(true).optional(),
+  sort: z.enum(REQUEST_QUEUE_SORTS),
+  desc: z.boolean(),
 });
 
 export interface StaffRequestRow {
@@ -70,8 +89,7 @@ type Embed<T> = T | T[] | null | undefined;
 // from the schema, so these are the one place a row's shape is stated; a to-one
 // embed may arrive as an object or a one-item list, hence `Embed`.
 
-/** A `requests` row as `getAllRequestsFn` selects it. */
-interface RequestListRow {
+interface RequestReadRow {
   id: string;
   tracking_number: string;
   request_type: string | null;
@@ -88,6 +106,52 @@ interface RequestListRow {
   claim_expires_at: string | null;
   services_registry: Embed<ServiceEmbed>;
   profiles: Embed<PersonName>;
+}
+
+/** A `requests` row as `getAllRequestsFn` selects it. */
+type RequestListRow = RequestReadRow;
+
+interface RequestQueueRpcRow {
+  id: string;
+  tracking_number: string;
+  status: string;
+  payment_status: string;
+  fees_due: number | string | null;
+  applicant_id: string | null;
+  created_at: string;
+  updated_at: string;
+  claimed_by: string | null;
+  claimed_stage: string | null;
+  claimed_at: string | null;
+  claim_expires_at: string | null;
+  claim_staff_name: string;
+  department_id: string | null;
+  department_name: string;
+  service_name: string;
+  applicant_name: string;
+}
+
+interface RequestQueueRpcResult {
+  rows: RequestQueueRpcRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  requestCount: number;
+  waitingCount: number;
+  attentionCount: number;
+  stageCounts: StageCounts;
+}
+
+export interface RequestQueuePage {
+  rows: StaffRequestRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  requestCount: number;
+  waitingCount: number;
+  attentionCount: number;
+  stageCounts: StageCounts;
+  now: number;
 }
 
 /** A `requests` row as `lookupRequestsByTrackingFn` selects it. */
@@ -130,27 +194,11 @@ interface PaymentLogRow {
 }
 
 /** A `requests` row as `getRequestDetailFn` selects it. */
-interface RequestDetailRow {
+interface RequestDetailRow extends RequestReadRow {
   posting_start_date: string | null;
   posting_end_date: string | null;
-  id: string;
-  tracking_number: string;
-  request_type: string | null;
-  status: string;
-  payment_status: string;
   or_number: string | null;
-  fees_due: number | string | null;
   copies: number | null;
-  form_data: Record<string, unknown> | null;
-  applicant_id: string | null;
-  created_at: string;
-  updated_at: string;
-  claimed_by: string | null;
-  claimed_stage: string | null;
-  claimed_at: string | null;
-  claim_expires_at: string | null;
-  services_registry: Embed<ServiceEmbed>;
-  profiles: Embed<PersonName>;
   form_template_versions: Embed<{ definition?: unknown }>;
 }
 
@@ -196,6 +244,65 @@ function applicantNameOf(row: {
   const fromForm = `${form.subject_first_name ?? ""} ${form.subject_last_name ?? ""}`.trim();
   return fromForm || "—";
 }
+
+/** One filtered, sorted request page plus the queue counts used around it. */
+export const getRequestQueuePageFn = createServerFn({ method: "GET" })
+  .validator(requestQueuePageSchema)
+  .handler(async ({ data }): Promise<RequestQueuePage> => {
+    const { supabase, user } = await requireActiveSession("requests:view_all");
+    const now = Date.now();
+    const { data: result, error } = await supabase.rpc("get_request_queue_page", {
+      p_page: data.page,
+      p_page_size: data.pageSize,
+      p_search: data.search ?? null,
+      p_stage: data.stage ?? null,
+      p_status: data.status ?? null,
+      p_payment: data.payment ?? null,
+      p_department: data.department ?? null,
+      p_needs: data.needs ?? false,
+      p_mine: data.mine ?? false,
+      p_attention: data.attention ?? false,
+      p_sort: data.sort,
+      p_desc: data.desc,
+      p_now: new Date(now).toISOString(),
+    });
+
+    if (error) throw new Error(error.message);
+    const page = result as RequestQueueRpcResult;
+
+    return {
+      ...page,
+      rows: page.rows.map((row) => ({
+        id: row.id,
+        trackingNumber: row.tracking_number,
+        status: row.status,
+        paymentStatus: row.payment_status,
+        serviceName: row.service_name,
+        departmentId: row.department_id,
+        departmentName: row.department_name,
+        applicantName: row.applicant_name,
+        feesDue: Number(row.fees_due ?? 0),
+        isWalkIn: row.applicant_id == null,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        claim:
+          row.claimed_by &&
+          row.claimed_stage &&
+          row.claimed_at &&
+          row.claim_expires_at
+            ? {
+                staffId: row.claimed_by,
+                staffName: row.claim_staff_name,
+                stage: row.claimed_stage,
+                claimedAt: row.claimed_at,
+                expiresAt: row.claim_expires_at,
+                isMine: row.claimed_by === user.id,
+              }
+            : null,
+      })),
+      now,
+    };
+  });
 
 /**
  * Every request in the office pipeline — or, for a department-scoped role

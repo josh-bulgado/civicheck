@@ -1,5 +1,5 @@
-import { useDeferredValue, useMemo, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useHotkeys, type HotkeyChord } from "@tanstack/react-hotkeys";
 import {
   useTable,
@@ -7,19 +7,15 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { DataTableCard } from "~/components/ui/data-table-card";
+import { DataTablePagination } from "~/components/ui/data-table-pagination";
 import type { Department } from "~/features/admin/departments.queries";
 import {
   EMPTY_FILTERS,
   applyFilterChange,
   type RequestQueueFilters,
 } from "../request-queue";
-import {
-  countByStage,
-  countNeedingAttention,
-  filterRequests,
-  showsPaymentColumn,
-} from "../requests-table.utils";
-import type { StaffRequestRow } from "../requests.queries";
+import { showsPaymentColumn } from "../requests-table.utils";
+import type { RequestQueuePage } from "../requests.queries";
 import {
   IN_STAGE_COLUMN,
   REQUEST_COLUMN_LABELS,
@@ -57,7 +53,7 @@ function focusRequestLink(step: 1 | -1) {
 }
 
 interface RequestsDataTableProps {
-  requests: StaffRequestRow[];
+  queue: RequestQueuePage;
   departments: Department[];
   filters: RequestQueueFilters;
   onFiltersChange: (filters: RequestQueueFilters) => void;
@@ -65,70 +61,55 @@ interface RequestsDataTableProps {
   onSearchChange: (value: string) => void;
   /** Staff/supervisor only ever see one department. */
   scopedDepartmentName?: string | null;
-  /** The loader's clock. See `createRequestColumns`. */
-  now: number;
 }
 
 export function RequestsDataTable({
-  requests,
+  queue,
   departments,
   filters,
   onFiltersChange,
   search,
   onSearchChange,
   scopedDepartmentName,
-  now,
 }: RequestsDataTableProps) {
   const navigate = useNavigate();
-  const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
+  const isQueueLoading = useRouterState({
+    select: (state) =>
+      state.isLoading &&
+      (state.location.pathname === "/requests" ||
+        state.location.pathname === "/requests/"),
+  });
+  const [showLoadingRows, setShowLoadingRows] = useState(false);
   const [columnVisibility, setColumnVisibility] =
     useState<ColumnVisibilityState>({});
-  // Typing stays responsive while a long queue re-filters behind it.
-  const deferredSearch = useDeferredValue(search);
 
-  const rows = useMemo(
+  useEffect(() => {
+    if (!isQueueLoading) {
+      setShowLoadingRows(false);
+      return;
+    }
+    const timeout = window.setTimeout(() => setShowLoadingRows(true), 250);
+    return () => window.clearTimeout(timeout);
+  }, [isQueueLoading]);
+  const sorting = useMemo<SortingState>(
     () =>
-      filterRequests(requests, {
-        ...filters,
-        search: deferredSearch,
-        now,
-      }),
-    [requests, filters, deferredSearch, now],
+      filters.sort
+        ? [{ id: filters.sort, desc: filters.desc ?? false }]
+        : DEFAULT_SORTING,
+    [filters.desc, filters.sort],
   );
-
-  // Each count shows the rows every other filter leaves, so a chip never
-  // promises more than the table will show.
-  const stageCounts = useMemo(
-    () =>
-      countByStage(
-        filterRequests(requests, {
-          ...filters,
-          stage: undefined,
-          search: deferredSearch,
-          now,
-        }),
-      ),
-    [requests, filters, deferredSearch, now],
-  );
-  const attentionCount = useMemo(
-    () =>
-      countNeedingAttention(
-        filterRequests(requests, {
-          ...filters,
-          attention: undefined,
-          needs: undefined,
-          mine: undefined,
-          search: deferredSearch,
-          now,
-        }),
-        now,
-      ),
-    [requests, filters, deferredSearch, now],
+  const pagination = useMemo(
+    () => ({ pageIndex: queue.page, pageSize: queue.pageSize }),
+    [queue.page, queue.pageSize],
   );
 
   const columns = useMemo(
-    () => createRequestColumns({ now, showDepartment: !scopedDepartmentName }),
-    [now, scopedDepartmentName],
+    () =>
+      createRequestColumns({
+        now: queue.now,
+        showDepartment: !scopedDepartmentName,
+      }),
+    [queue.now, scopedDepartmentName],
   );
   const paymentColumnIsAvailable = showsPaymentColumn(filters);
   const resolvedColumnVisibility = useMemo(
@@ -141,17 +122,50 @@ export function RequestsDataTable({
 
   const table = useTable({
     features: appTableFeatures,
-    data: rows,
+    data: queue.rows,
     columns,
-    state: { sorting, columnVisibility: resolvedColumnVisibility },
-    onSortingChange: setSorting,
+    state: {
+      sorting,
+      pagination,
+      columnVisibility: resolvedColumnVisibility,
+    },
+    onSortingChange: (updater) => {
+      const next = typeof updater === "function" ? updater(sorting) : updater;
+      const sort = next[0] ?? DEFAULT_SORTING[0];
+      onFiltersChange({
+        ...filters,
+        sort: sort.id as RequestQueueFilters["sort"],
+        desc: sort.desc,
+        page: undefined,
+      });
+    },
+    onPaginationChange: (updater) => {
+      const next =
+        typeof updater === "function" ? updater(pagination) : updater;
+      onFiltersChange({
+        ...filters,
+        page: next.pageIndex || undefined,
+        pageSize: next.pageSize as RequestQueueFilters["pageSize"],
+      });
+    },
     onColumnVisibilityChange: setColumnVisibility,
-    initialState: { pagination: { pageIndex: 0, pageSize: 20 } },
+    manualPagination: true,
+    manualSorting: true,
+    rowCount: queue.total,
+    autoResetPageIndex: false,
   });
 
   const hasActiveFilters =
     search !== "" ||
-    Object.values(filters).some((value) => value !== undefined);
+    [
+      filters.stage,
+      filters.status,
+      filters.payment,
+      filters.department,
+      filters.needs,
+      filters.mine,
+      filters.attention,
+    ].some((value) => value !== undefined);
 
   const clearFilters = () => {
     onSearchChange("");
@@ -179,10 +193,13 @@ export function RequestsDataTable({
           onSearchChange={onSearchChange}
           filters={filters}
           onFilterChange={(patch) =>
-            onFiltersChange(applyFilterChange(filters, patch))
+            onFiltersChange({
+              ...applyFilterChange(filters, patch),
+              page: undefined,
+            })
           }
-          stageCounts={stageCounts}
-          attentionCount={attentionCount}
+          stageCounts={queue.stageCounts}
+          attentionCount={queue.attentionCount}
           departments={departments}
           scopedDepartmentName={scopedDepartmentName}
           hasActiveFilters={hasActiveFilters}
@@ -192,8 +209,30 @@ export function RequestsDataTable({
       )}
       cellClassName="py-3"
       label="Requests"
+      loading={isQueueLoading && showLoadingRows}
       emptyLabel="No requests found matching your filters."
       onClearFilters={clearFilters}
+      footer={
+        <DataTablePagination
+          table={table}
+          pageCount={Math.ceil(queue.total / queue.pageSize)}
+          total={queue.total}
+          disabled={isQueueLoading}
+          onPageChange={(page) =>
+            onFiltersChange({
+              ...filters,
+              page: page || undefined,
+            })
+          }
+          onPageSizeChange={(pageSize) =>
+            onFiltersChange({
+              ...filters,
+              page: undefined,
+              pageSize: pageSize as RequestQueueFilters["pageSize"],
+            })
+          }
+        />
+      }
       getRowProps={(row) => ({
         // The tracking number is the keyboard-reachable control; this lets a
         // mouse click anywhere on the row open the request too.

@@ -24,6 +24,7 @@ interface DataTablePaginationProps<TData extends RowData> {
   total?: number;
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (size: number) => void;
+  disabled?: boolean;
 }
 
 export function DataTablePagination<TData extends RowData>({
@@ -33,6 +34,7 @@ export function DataTablePagination<TData extends RowData>({
   total,
   onPageChange,
   onPageSizeChange,
+  disabled = false,
 }: DataTablePaginationProps<TData>) {
   const { pageIndex, pageSize } = table.state.pagination;
 
@@ -79,6 +81,7 @@ export function DataTablePagination<TData extends RowData>({
           <Select
             value={`${pageSize}`}
             onValueChange={(value) => changePageSize(Number(value))}
+            disabled={disabled}
           >
             <SelectTrigger className="h-8 w-[70px]">
               <SelectValue placeholder={pageSize} />
@@ -101,7 +104,7 @@ export function DataTablePagination<TData extends RowData>({
             size="icon"
             className="hidden size-8 lg:flex"
             onClick={() => goToPage(0)}
-            disabled={!canPreviousPage}
+            disabled={disabled || !canPreviousPage}
             aria-label="Go to first page"
           >
             <span className="sr-only">Go to first page</span>
@@ -112,7 +115,7 @@ export function DataTablePagination<TData extends RowData>({
             size="icon"
             className="size-8"
             onClick={() => goToPage(pageIndex - 1)}
-            disabled={!canPreviousPage}
+            disabled={disabled || !canPreviousPage}
             aria-label="Go to previous page"
           >
             <span className="sr-only">Go to previous page</span>
@@ -123,7 +126,7 @@ export function DataTablePagination<TData extends RowData>({
             size="icon"
             className="size-8"
             onClick={() => goToPage(pageIndex + 1)}
-            disabled={!canNextPage}
+            disabled={disabled || !canNextPage}
             aria-label="Go to next page"
           >
             <span className="sr-only">Go to next page</span>
@@ -134,7 +137,7 @@ export function DataTablePagination<TData extends RowData>({
             size="icon"
             className="hidden size-8 lg:flex"
             onClick={() => goToPage(pageCount - 1)}
-            disabled={!canNextPage}
+            disabled={disabled || !canNextPage}
             aria-label="Go to last page"
           >
             <span className="sr-only">Go to last page</span>
