@@ -56,7 +56,6 @@ import { requestClaimBlockedReason } from "~/features/requests/request-claims";
 // On-time birth registration is split by parents' marital status. Rejections
 // still ask for confirmation; accepting always uses the reversible undo flow.
 const CONFIRM_REJECTION_SERVICE_CODES = ["OTCOLB-MARITAL", "OTCOLB-NONMARITAL"];
-
 const CHAT_HOTKEY: HotkeyChord = "C";
 
 const DIALOG_TARGET: Record<TransitionDialog, RequestStatus> = {

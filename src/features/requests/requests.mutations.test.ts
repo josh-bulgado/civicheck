@@ -42,7 +42,7 @@ vi.mock("~/server/auth", () => ({
 }));
 vi.mock("~/features/notifications/notifications.server", () => ({
   buildDocumentRejectedEmail: vi.fn(), buildPreValidationCompleteEmail: vi.fn(),
-  buildStatusChangeEmail: vi.fn(), dispatchApplicantNotification: state.notify,
+  buildStatusChangeEmail: vi.fn(), buildCashierClearedEmail: vi.fn(), dispatchApplicantNotification: state.notify,
 }));
 
 import { setAttachmentVerificationFn } from "./requests.mutations";

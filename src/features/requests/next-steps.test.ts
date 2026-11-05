@@ -1,5 +1,6 @@
 import { onTimeRegistrationNotice } from "./on-time-registration";
-import { describe, expect, it } from "vitest";
+import { readyForReleaseInstruction } from "~/features/services/release-instructions";
+import { describe, expect, it, vi } from "vitest";
 import { nextSteps } from "./next-steps";
 
 const ready = (over: { feesDue: number; paymentStatus: string | null; allowsMessages?: boolean }) =>
@@ -16,23 +17,22 @@ describe("what to do next once a request is ready for release", () => {
     expect(ready({ feesDue: 150, paymentStatus: "unpaid" })).toEqual({
       kind: "steps",
       steps: [
-        "Bring ₱150.00 to pay at the CCRO cashier",
-        "Claim your document",
+        "Please pay ₱150.00 at the CCRO cashier.",
       ],
     });
   });
 
-  it("does not mention payment for a free request", () => {
+  it("waits for the cashier to confirm a free request", () => {
     expect(ready({ feesDue: 0, paymentStatus: "unpaid" })).toEqual({
       kind: "steps",
-      steps: ["Claim your document at the CCRO"],
+      steps: ["Please wait for the cashier to confirm that no payment is required."],
     });
   });
 
   it("does not mention payment once the cashier has verified it", () => {
     expect(ready({ feesDue: 150, paymentStatus: "verified" })).toEqual({
       kind: "steps",
-      steps: ["Claim your document"],
+      steps: ["Your document is ready to be claimed from the CCRO staff."],
     });
   });
 
@@ -68,6 +68,9 @@ describe("what to do next once a request is ready for release", () => {
       }),
     ).toEqual({
       kind: "steps",
+      ...(onTimeRegistrationNotice(serviceCode)
+        ? { registrationNotice: onTimeRegistrationNotice(serviceCode) }
+        : {}),
       steps: [
         "Go to the CCRO office for final validation",
         "Bring your original documents and hard copies of your requirements",
@@ -85,6 +88,76 @@ describe("what to do next once a request is ready for release", () => {
 });
 
 describe("on-time registration deadline", () => {
+  it.each([
+    ["DEATH_ONTIME", undefined, "2026-12-04", "2026-12-05", "2026-12-06"],
+    ["MARRIAGE_ONTIME", "with_license", "2026-11-19", "2026-11-20", "2026-11-21"],
+    ["MARRIAGE_ONTIME", "article_34", "2026-12-04", "2026-12-05", "2026-12-06"],
+    ["MARRIAGE_ONTIME", "pd_1083", "2026-12-04", "2026-12-05", "2026-12-06"],
+  ])("keeps the correct deadline at processing and release for %s (%s)",
+    (serviceCode, basis, dayBefore, deadline, dayAfter) => {
+      vi.useFakeTimers();
+      try {
+        for (const status of ["processing", "ready_for_release"]) {
+          for (const [today, expected] of [
+            [dayBefore, "1 day left"],
+            [deadline, "due today"],
+            [dayAfter, "deadline has passed"],
+          ]) {
+            vi.setSystemTime(new Date(`${today}T12:00:00+08:00`));
+            const result = nextSteps({
+              status, serviceCode,
+              formData: { event_date: "2026-11-05", marriage_license_basis: basis },
+              feesDue: 0, paymentStatus: "unpaid", allowsMessages: false,
+              attachments: [], logs: [],
+            });
+            expect(result?.kind).toBe("steps");
+            if (result?.kind !== "steps") throw new Error("Expected office instructions");
+            expect(result.registrationNotice).toContain(expected);
+          }
+        }
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it.each(["BIRTH_ONTIME", "OTCOLB-MARITAL", "OTCOLB-NONMARITAL", "MARRIAGE_ONTIME", "DEATH_ONTIME"])(
+    "keeps the countdown alongside processing and release instructions for %s",
+    (serviceCode) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-11-11T12:00:00+08:00"));
+      try {
+        for (const status of ["processing", "ready_for_release"]) {
+          for (const payment of [
+            { feesDue: 0, paymentStatus: "unpaid" },
+            { feesDue: 150, paymentStatus: "unpaid" },
+            { feesDue: 150, paymentStatus: "verified" },
+          ]) {
+            const result = nextSteps({
+              status,
+              serviceCode,
+              formData: { event_date: "2026-11-05", marriage_license_basis: "with_license" },
+              ...payment,
+              allowsMessages: false,
+              attachments: [],
+              logs: [],
+            });
+            expect(result?.kind).toBe("steps");
+            if (result?.kind !== "steps") throw new Error("Expected office instructions");
+            expect(result.registrationNotice).toContain(
+              serviceCode === "MARRIAGE_ONTIME" ? "9 days left" : "24 days left",
+            );
+            expect(result.steps).toContain(status === "processing"
+              ? "Go to the CCRO office for final validation"
+              : readyForReleaseInstruction(payment.paymentStatus, payment.feesDue));
+          }
+        }
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
   it.each(["BIRTH_ONTIME", "OTCOLB-MARITAL", "OTCOLB-NONMARITAL", "MARRIAGE_ONTIME", "DEATH_ONTIME"])(
     "keeps the CCRO deadline visible for %s after submission",
     (serviceCode) => {

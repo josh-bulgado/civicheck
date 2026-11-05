@@ -21,6 +21,7 @@ import {
   buildDocumentRejectedEmail,
   buildPreValidationCompleteEmail,
   buildStatusChangeEmail,
+  buildCashierClearedEmail,
   dispatchApplicantNotification,
 } from "~/features/notifications/notifications.server";
 import { REQUEST_CLAIM_LEASE_MS } from "~/features/requests/request-claims";
@@ -283,7 +284,7 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
     const { data: request, error: fetchError } = await supabase
       .from("requests")
       .select(
-        "id, status, payment_status, tracking_number, request_type, posting_start_date, claimed_by, claimed_stage, claim_expires_at, services_registry(department_id)",
+        "id, status, payment_status, fees_due, tracking_number, request_type, posting_start_date, claimed_by, claimed_stage, claim_expires_at, services_registry(department_id)",
       )
       .eq("id", data.requestId)
       .single();
@@ -397,6 +398,7 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
       request.tracking_number,
       remarks,
       request.request_type,
+      { paymentStatus: request.payment_status, feesDue: Number(request.fees_due ?? 0) },
     );
     await dispatchApplicantNotification(supabase, data.requestId, notificationContent);
 
@@ -452,7 +454,7 @@ export const verifyPaymentFn = createServerFn({ method: "POST" })
 
     const { data: request, error: fetchError } = await supabase
       .from("requests")
-      .select("id, status, fees_due")
+      .select("id, status, fees_due, tracking_number, request_type")
       .eq("id", data.requestId)
       .single();
 
@@ -522,6 +524,9 @@ export const verifyPaymentFn = createServerFn({ method: "POST" })
         : `Payment verified against OR ${orNumber}.`,
     });
 
+    if (request.request_type !== "EMAIL_INQUIRY" && request.tracking_number) {
+      await dispatchApplicantNotification(supabase, data.requestId, buildCashierClearedEmail(request.tracking_number));
+    }
     return { error: false };
   });
 

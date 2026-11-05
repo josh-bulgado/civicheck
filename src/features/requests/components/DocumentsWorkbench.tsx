@@ -88,7 +88,7 @@ interface DocumentsWorkbenchProps {
   /** The open document, kept by the page so the overview can open one here. */
   selectedId: string | null;
   onSelectedIdChange: (id: string | null) => void;
-  /** Saves a decision at once, for services that ask for a confirm instead. */
+  /** Saves a confirmed rejection at once. */
   onDecide: (
     attachmentId: string,
     status: Decision,
@@ -172,7 +172,6 @@ export function DocumentsWorkbench({
     status: Decision;
     reason?: string;
   } | null>(null);
-  const confirmButton = useRef<HTMLButtonElement | null>(null);
 
   function select(id: string) {
     setSelectedId(id);
@@ -584,33 +583,23 @@ export function DocumentsWorkbench({
         open={confirming != null}
         onOpenChange={(open) => !open && !busy && setConfirming(null)}
       >
-        {/* Accepting is routine and reversible, so "Yes" takes focus and Enter
-            confirms. Rejecting keeps the default (Cancel) so a stray Enter
-            cannot fire it. */}
-        <AlertDialogContent
-          initialFocus={confirming?.status === "approved" ? confirmButton : true}
-        >
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {confirming?.status === "approved"
-                ? "Accept this document?"
-                : "Reject this document?"}
+              Reject this document?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {confirming?.status === "approved"
-                ? `"${confirming.doc.requirementName}" will be marked as accepted.`
-                : `"${confirming?.doc.requirementName}" will be marked as rejected and the applicant will see your reason.`}
+              {`"${confirming?.doc.requirementName}" will be marked as rejected and the applicant will see your reason.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              ref={confirmButton}
-              variant={confirming?.status === "approved" ? "success" : "destructive"}
+              variant="destructive"
               disabled={busy}
               onClick={confirmDecision}
             >
-              {confirming?.status === "approved" ? "Yes, accept" : "Yes, reject"}
+              Yes, reject
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,6 +1,6 @@
 import { formatFieldLabel } from "~/features/forms/field-label";
 import { validatePersonName } from "~/lib/person-name";
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useRouteContext } from "@tanstack/react-router";
 import {
   Controller,
@@ -24,7 +24,10 @@ import {
 } from "~/components/ui/select";
 import { WizardShell } from "~/features/apply/components/WizardShell";
 import { WizardFooterActions } from "~/features/apply/components/WizardFooterActions";
-import { useApplyDraft } from "~/features/apply/hooks/useApplyDraft";
+import { useApplyDraft, useSeedDraftForGroup } from "~/features/apply/hooks/useApplyDraft";
+import { discardRequestUploadDraftFn } from "~/features/apply/apply.mutations";
+import { EventTimingNotice } from "~/features/forms/components/EventTimingNotice";
+import { TrackRedirectDialog } from "./TrackRedirectDialog";
 import {
   DynamicFormFields,
   NONE_ANSWER,
@@ -38,6 +41,7 @@ import {
 } from "~/features/forms/components/wizard-field";
 import {
   canonicalizeTemplateAnswers,
+  evaluateTemplateEventTiming,
   fieldsForStep,
 } from "~/features/forms/form-template.utils";
 import { isRequirementApplicable } from "~/features/services/service-utils";
@@ -355,7 +359,9 @@ interface DetailsStepProps {
 export function DetailsStep({ serviceCode, requirements, services }: DetailsStepProps) {
   const navigate = useNavigate();
   const { user } = useRouteContext({ from: "/_authed" });
-  const { draft, update, hydrated } = useApplyDraft(serviceCode);
+  const { draft, update, hydrated, clear } = useApplyDraft(serviceCode);
+  const seedDraftForGroup = useSeedDraftForGroup();
+  const [redirectOpen, setRedirectOpen] = useState(false);
   const selectedService =
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
   const definition = selectedService.form_template!.definition;
@@ -456,6 +462,30 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     ...watchedValues,
   } as unknown as DynamicFieldValues;
 
+  const detailsTiming = definition.eventTiming && detailsFields.some((field) => field.key === definition.eventTiming?.triggerField)
+    ? evaluateTemplateEventTiming(definition, visibilityValues)
+    : null;
+  const timingMismatch = detailsTiming?.evaluation.mismatched ? detailsTiming : null;
+  const timingBlocks = timingMismatch && ["block", "redirect_confirm"].includes(timingMismatch.rule.behavior);
+
+  function switchRegistrationTrack() {
+    if (!detailsTiming) return;
+    const values = form.getValues();
+    seedDraftForGroup(detailsTiming.rule.targetServiceCode, {
+      ...draft,
+      selectedServiceCode: null,
+      answers: { ...draft.answers, ...values },
+      subjects: reconcileSubjects(values.subjects, roles),
+      eventDate: typeof values.event_date === "string" ? values.event_date : "",
+      eventPlace: typeof values.event_place === "string" ? values.event_place : "",
+      documents: [],
+      uploadDraftId: null,
+    });
+    clear();
+    if (draft.uploadDraftId) void discardRequestUploadDraftFn({ data: { uploadDraftId: draft.uploadDraftId } }).catch(() => {});
+    navigate({ to: "/apply/$serviceCode/case", params: { serviceCode: detailsTiming.rule.targetServiceCode } });
+  }
+
   // When the requester says they are the document owner, the owner's name boxes
   // follow the requester's name as it is typed. They stay editable (a married
   // woman uses her maiden name on the form): once the owner's boxes differ from
@@ -535,6 +565,10 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     });
 
   function onSubmit(values: DetailsValues) {
+    if (timingBlocks) {
+      setRedirectOpen(true);
+      return;
+    }
     // Hidden suffix/sex controls are unregistered by React Hook Form. Convert
     // the submitted rows back to complete SubjectFields objects before saving
     // them in either `subjects` location in the draft.
@@ -575,6 +609,8 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
             ? values.contact_number
             : "",
         answers,
+        ...(detailsFields.some((field) => field.key === "event_date") ? { eventDate: typeof values.event_date === "string" ? values.event_date : "" } : {}),
+        ...(detailsFields.some((field) => field.key === "event_place") ? { eventPlace: typeof values.event_place === "string" ? values.event_place : "" } : {}),
         documents: previous.documents.filter((document) =>
           visibleRequirementIds.has(document.requirementId),
         ),
@@ -668,6 +704,11 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
         <DynamicFormFields
           definition={definition}
           step="details"
+          onDateChange={(key, value) => {
+            if (key !== definition.eventTiming?.triggerField) return;
+            const timing = evaluateTemplateEventTiming(definition, { ...visibilityValues, [key]: value });
+            if (timing?.evaluation.mismatched && timing.rule.behavior === "redirect_confirm") setRedirectOpen(true);
+          }}
           showRequiredMarks
           showSectionTitles={detailSections.length > 1}
           control={form.control}
@@ -680,15 +721,25 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
           }
         />
 
+        {timingMismatch ? (
+          <EventTimingNotice behavior={timingMismatch.rule.behavior} title={timingMismatch.rule.title}
+            description={timingMismatch.rule.description} ctaLabel={timingMismatch.rule.ctaLabel}
+            onCta={() => setRedirectOpen(true)} />
+        ) : null}
         <WizardFooterActions
           onBack={() =>
             navigate({ to: "/apply/$serviceCode/case", params: { serviceCode } })
           }
           onContinue={form.handleSubmit(onSubmit)}
           continueLabel="Next"
-          continueReady={hasRequiredAnswers}
+          continueReady={hasRequiredAnswers && !timingBlocks}
         />
       </div>
+      <TrackRedirectDialog open={redirectOpen} onOpenChange={setRedirectOpen}
+        title={detailsTiming?.rule.title ?? ""} description={detailsTiming?.rule.description ?? ""}
+        switchLabel={detailsTiming?.rule.ctaLabel ?? "Switch service"}
+        onKeepEditing={() => setRedirectOpen(false)} onSwitch={switchRegistrationTrack}
+        returnFocusTo={() => detailsTiming ? document.getElementById(`dynamic-${detailsTiming.rule.triggerField}`) : null} />
     </WizardShell>
   );
 }

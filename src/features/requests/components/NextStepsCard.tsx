@@ -53,6 +53,11 @@ export function NextStepsCard({
               <RegistrationNoticeText text={next.text} />
             </p>
           )}
+          {next.kind === "steps" && next.registrationNotice ? (
+            <p className="mt-4 rounded-[20px] bg-card/78 px-5 py-4 text-[19px] leading-snug font-semibold text-foreground">
+              <RegistrationNoticeText text={next.registrationNotice} />
+            </p>
+          ) : null}
         </div>
       ) : null}
     </section>

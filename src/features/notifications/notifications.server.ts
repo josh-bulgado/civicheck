@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { DOCUMENT_RELEASED, READY_TO_CLAIM, readyForReleaseInstruction } from "~/features/services/release-instructions";
 import { sendEmail } from "~/utils/resend";
 import { getStatusDetails } from "~/features/services/request-status";
 import type { NotificationType } from "~/features/notifications/notifications.queries";
@@ -50,6 +51,7 @@ export function buildStatusChangeEmail(
   trackingNumber: string,
   remarks?: string | null,
   serviceCode?: string | null,
+  payment?: { paymentStatus: string | null; feesDue: number },
 ): NotificationContent {
   if (status === "processing") {
     return composeContent(
@@ -71,7 +73,7 @@ export function buildStatusChangeEmail(
         `Your CiviCheck request ${trackingNumber} is now "Ready for Release".`,
         serviceCode === "EMAIL_INQUIRY"
           ? "Read CCRO's reply in the messages."
-          : "Pay any outstanding fee at the cashier to claim your document. Open your request for the exact amount.",
+          : readyForReleaseInstruction(payment?.paymentStatus, payment?.feesDue),
         remarks || "",
       ].filter(Boolean),
       `open "My Requests" for the full details.`,
@@ -85,7 +87,7 @@ export function buildStatusChangeEmail(
         `Your CiviCheck request ${trackingNumber} is now "Released".`,
         serviceCode === "EMAIL_INQUIRY"
           ? "Keep CCRO's reply for your records."
-          : "Please claim your requested document from the CCRO staff.",
+          : DOCUMENT_RELEASED,
         remarks || "",
       ].filter(Boolean),
       `open "My Requests" for the full details.`,
@@ -99,11 +101,13 @@ export function buildStatusChangeEmail(
   return composeContent("status_change", subject, lines, `open "My Requests" for the full details.`);
 }
 
-/**
- * The applicant is told a message exists, never what it says: replies cannot
- * be sent by email, so they have to sign in anyway, and this keeps personal
- * details out of inboxes.
- */
+export function buildCashierClearedEmail(trackingNumber: string): NotificationContent {
+  return composeContent("status_change", `Request ${trackingNumber}: Ready for Release`,
+    [`Your CiviCheck request ${trackingNumber} is "Ready for Release".`, READY_TO_CLAIM],
+    'open "My Requests" for the full details.');
+}
+
+/** Tell the applicant a message exists without putting its contents in email. */
 export function buildNewMessageEmail(trackingNumber: string): NotificationContent {
   return composeContent(
     "message",

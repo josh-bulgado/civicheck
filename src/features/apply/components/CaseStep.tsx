@@ -173,7 +173,9 @@ export function CaseStep({
 
   // Data-driven on-time window. The rule and its routing target live in the
   // published form template, so any current or future service can declare one.
-  const timing = evaluateTemplateEventTiming(definition, derivedCaseAnswers);
+  const timing = caseFields.some((field) => field.key === definition.eventTiming?.triggerField)
+    ? evaluateTemplateEventTiming(definition, derivedCaseAnswers)
+    : null;
   const timingRule = timing?.rule ?? null;
   const timingDeferred = timingRule?.requireDocumentFirst === true;
   const timingMismatch =

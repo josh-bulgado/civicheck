@@ -112,6 +112,7 @@ export function useQueuedDecisions(
       held.current.set(id, item);
       newest.current = id;
       item.toastId = toast(`${status === "approved" ? "Accepted" : "Rejected"}: ${label}`, {
+        position: "bottom-right",
         duration: UNDO_MS,
         toasterId: DOCUMENT_DECISION_TOASTER_ID,
         style: {
