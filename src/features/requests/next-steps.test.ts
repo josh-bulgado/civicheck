@@ -49,7 +49,7 @@ describe("what to do next once a request is ready for release", () => {
         }),
       ).toEqual({
         kind: "line",
-        text: "No need to visit yet. We'll notify you when it's ready for release.",
+        text: "No need to visit yet. Your uploaded requirements are awaiting staff review.",
       });
     }
   });

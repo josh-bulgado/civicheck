@@ -62,6 +62,15 @@ export function nextSteps(input: NextStepsInput): NextStepsView | null {
     return { kind: "line", text: registrationNotice };
   }
 
+  if (status === "submitted") {
+    return {
+      kind: "line",
+      text: input.allowsMessages
+        ? "No need to visit yet. Your inquiry is awaiting staff review."
+        : "No need to visit yet. Your uploaded requirements are awaiting staff review.",
+    };
+  }
+
   if (status === "ready_for_release") {
     // An inquiry is answered in the thread: no visit, so no originals.
     if (input.allowsMessages) {
