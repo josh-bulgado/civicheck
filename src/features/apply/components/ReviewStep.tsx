@@ -7,7 +7,7 @@ import { formatFieldLabel } from "~/features/forms/field-label";
 import { useNavigate } from "@tanstack/react-router";
 import { SubmittedRequestRedirect } from "./SubmittedRequestRedirect";
 import { QuietLink } from "~/components/quiet-link";
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { Check, CheckCircle2, Download } from "lucide-react";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Button, buttonVariants } from "~/components/ui/button";
@@ -60,7 +60,9 @@ export function ReviewStep({
   requirements,
 }: ReviewStepProps) {
   const navigate = useNavigate();
-  const { draft, complete } = useApplyDraft(serviceCode);
+  const { draft, complete, getSubmissionId } = useApplyDraft(serviceCode);
+  const submitLock = useRef(false);
+  const [duplicateRequest, setDuplicateRequest] = useState<{ id: string; trackingNumber: string; identical: boolean } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
@@ -158,13 +160,16 @@ export function ReviewStep({
     };
   });
 
-  async function handleSubmit() {
-    if (!selectedService || !confirmed || (needsSignature && !signature) || submitting) return;
+  async function handleSubmit(acknowledgedDuplicateId?: string) {
+    if (!selectedService || !confirmed || (needsSignature && !signature) || submitLock.current) return;
+    submitLock.current = true;
     setSubmitting(true);
     setSubmitError(null);
     try {
       const res = await submitRequestFn({
         data: {
+          submissionId: getSubmissionId(),
+          acknowledgedDuplicateId,
           serviceCode: selectedService.service_code,
           templateVersionId: selectedService.form_template?.versionId ?? null,
           uploadDraftId: draft.uploadDraftId,
@@ -181,10 +186,19 @@ export function ReviewStep({
       });
 
       if (res.error) {
+        if (res.duplicateRequest) {
+          setDuplicateRequest(res.duplicateRequest);
+          return;
+        }
         setSubmitError(
           res.message ||
             "The request could not be submitted. Review the details and try again.",
         );
+        return;
+      }
+
+      if (res.existingRequestId) {
+        complete(res.existingRequestId);
         return;
       }
 
@@ -217,6 +231,7 @@ export function ReviewStep({
           : "The request could not reach the CCRO service. Check your connection and try again.",
       );
     } finally {
+      submitLock.current = false;
       setSubmitting(false);
     }
   }
@@ -444,6 +459,25 @@ export function ReviewStep({
           </label>
         </div>
 
+        {duplicateRequest && (
+          <div role="alert" className="flex flex-col gap-3 rounded-[18px] border border-border-light px-5 py-4">
+            <p>
+              {duplicateRequest.identical
+                ? "An application with the same service, subjects, and details is already ongoing. Open the existing request to follow its progress:"
+                : "You have an ongoing request for this service and the same person or parties, but some application details differ. Review it before submitting a separate request:"}
+              {" "}{duplicateRequest.trackingNumber}
+            </p>
+            <QuietLink to="/my-requests/$requestId" params={{ requestId: duplicateRequest.id }}>
+              View existing request
+            </QuietLink>
+            {!duplicateRequest.identical && (
+              <Button type="button" disabled={submitting} onClick={() => handleSubmit(duplicateRequest.id)}>
+                Submit a separate request
+              </Button>
+            )}
+          </div>
+        )}
+
         {submitError && (
           <div
             role="alert"
@@ -455,7 +489,7 @@ export function ReviewStep({
             <div className="flex items-center gap-4">
               <button
                 type="button"
-                onClick={handleSubmit}
+                onClick={() => handleSubmit()}
                 disabled={submitting}
                 className="civic-press h-12 rounded-full bg-primary-fill px-6 text-base font-semibold text-white hover:bg-primary-fill-hover disabled:opacity-60"
               >
@@ -477,10 +511,10 @@ export function ReviewStep({
         onBack={() =>
           navigate({ to: "/apply/$serviceCode/documents", params: { serviceCode } })
         }
-        onContinue={handleSubmit}
+        onContinue={() => handleSubmit()}
         continueLabel="Submit request"
         pendingLabel="Submitting…"
-        continueDisabled={!confirmed || (needsSignature && !signature)}
+        continueDisabled={!confirmed || (needsSignature && !signature) || !!duplicateRequest}
         continuePending={submitting}
       />
     </WizardShell>

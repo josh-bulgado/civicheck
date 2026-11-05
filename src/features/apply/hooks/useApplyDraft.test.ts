@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_APPLY_DRAFT,
+  applyRecordTypeChange,
   completeDraftAt,
   discardDraftAt,
   draftHasProgress,
@@ -149,5 +150,69 @@ describe("discarding an application", () => {
     reopenDraftAt(KEY);
     expect(updateDraftAt(KEY, { selectedServiceCode: "BIRTH_ONTIME" })).toBe(true);
     expect(store.has(KEY)).toBe(true);
+  });
+});
+
+
+describe("switching civil record types", () => {
+  const birth = (): ApplyDraft => draft({
+    caseSelectorAnswers: { record_type: "birth" },
+    answers: {
+      record_type: "birth", event_date: "2000-01-01", event_place: "Legazpi",
+      mother_name: "Maria", requester_first_name: "Ana", requester_last_name: "Reyes",
+      requester_province: "Albay", contact_number: "09123456789",
+      requester_relationship: "Self", requester_signature: "signature",
+    },
+    subjects: [{ ...person, firstName: "Juan", lastName: "Reyes" }],
+    documents: [{
+      requirementId: "shared-id", requirementName: "Supporting document", subjectRole: null,
+      storagePath: "birth.pdf", fileName: "birth.pdf", fileSize: 10, uploadedAt: "today",
+    }],
+    copies: 3, eventDate: "2000-01-01", eventPlace: "Legazpi",
+  });
+  it.each(["death", "marriage"])("clears birth record data when choosing %s", (record_type) => {
+    const previous = birth();
+    const next = { ...previous, ...applyRecordTypeChange(previous, {
+      caseSelectorAnswers: { record_type },
+      answers: { ...previous.answers, event_place: "stale form value" },
+    }) };
+    expect(next.subjects).toEqual([]);
+    expect(next.documents).toEqual([]);
+    expect(next.eventDate).toBe("");
+    expect(next.eventPlace).toBe("");
+    expect(next.copies).toBe(1);
+    expect(next.answers).toMatchObject({
+      record_type, requester_first_name: "Ana", requester_last_name: "Reyes",
+      requester_province: "Albay", contact_number: "09123456789",
+    });
+    for (const key of ["mother_name", "event_date", "event_place", "requester_relationship", "requester_signature"]) {
+      expect(next.answers[key]).toBeUndefined();
+    }
+  });
+  it("remembers the old type when the service directory resets selector choices", () => {
+    const previous = { ...birth(), caseSelectorAnswers: {} };
+    const next = applyRecordTypeChange(previous, { caseSelectorAnswers: { record_type: "death" } });
+    expect(next.documents).toEqual([]);
+    expect(next.subjects).toEqual([]);
+    expect(next.answers?.record_type).toBe("death");
+  });
+  it("keeps record data when choosing the same record type", () => {
+    const previous = birth();
+    const next = { ...previous, ...applyRecordTypeChange(previous, {
+      caseSelectorAnswers: { record_type: "birth", destination: "local" },
+    }) };
+    expect(next.documents).toEqual(previous.documents);
+    expect(next.subjects).toEqual(previous.subjects);
+    expect(next.answers.event_date).toBe("2000-01-01");
+  });
+  it("saves the first record choice without clearing an unfinished application", () => {
+    const previous = { ...birth(), caseSelectorAnswers: {}, answers: { requester_first_name: "Ana" } };
+    const next = applyRecordTypeChange(previous, { caseSelectorAnswers: { record_type: "birth" } });
+    expect(next.answers?.record_type).toBe("birth");
+    expect(next.documents).toBeUndefined();
+  });
+  it("leaves other service choices alone", () => {
+    expect(applyRecordTypeChange(birth(), { caseSelectorAnswers: { age: "80+" } }))
+      .toEqual({ caseSelectorAnswers: { age: "80+" } });
   });
 });

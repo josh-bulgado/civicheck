@@ -24,6 +24,7 @@ export interface ApplyDraftDocument {
 
 export interface ApplyDraft {
   submittedRequestId?: string | null;
+  submissionId?: string;
   /**
    * What to call this application on the dashboard ("Marriage License"). Written
    * by the wizard once the draft has anything in it; null until then.
@@ -255,12 +256,44 @@ export type DraftPatch =
  */
 const discardedKeys = new Set<string>();
 
+/** A different civil record needs fresh subjects, answers, and upload selections. */
+export function applyRecordTypeChange(previous: ApplyDraft, patch: Partial<ApplyDraft>): Partial<ApplyDraft> {
+  const nextType = patch.caseSelectorAnswers?.record_type;
+  if (!nextType) return patch;
+  const oldType = previous.caseSelectorAnswers.record_type ?? previous.answers.record_type;
+  if (!oldType || oldType === nextType) {
+    return { ...patch, answers: { ...previous.answers, ...patch.answers, record_type: nextType } };
+  }
+  const contactKeys = new Set([
+    "contact_number", "requester_first_name", "requester_middle_name", "requester_last_name",
+    "requester_suffix", "requester_address", "requester_province", "requester_city",
+    "requester_municipality", "requester_barangay", "requester_street", "requester_house_number",
+    "requester_address_line", "requester_country", "requester_overseas_city", "requester_overseas_region",
+    "requester_postal_code", "requester_zip_code", "requester_contact_number", "requester_email",
+  ]);
+  const contactAnswers = Object.fromEntries(
+    Object.entries({ ...previous.answers, ...patch.answers }).filter(([key]) => contactKeys.has(key)),
+  );
+  return {
+    ...patch,
+    answers: { ...DEFAULT_APPLY_DRAFT.answers, ...contactAnswers, record_type: nextType },
+    subjects: [],
+    documents: [],
+    eventDate: "",
+    eventPlace: "",
+    caseAnswers: { ...DEFAULT_APPLY_DRAFT.caseAnswers },
+    copies: 1,
+    presetAge: null,
+    presetMarital: null,
+  };
+}
+
 /** Applies a patch. False when the application was discarded, so nothing was written. */
 export function updateDraftAt(key: string, patch: DraftPatch): boolean {
   if (discardedKeys.has(key)) return false;
   const prev = readDraft(key);
   if (prev.submittedRequestId) return false;
-  const resolved = typeof patch === "function" ? patch(prev) : patch;
+  const resolved = applyRecordTypeChange(prev, typeof patch === "function" ? patch(prev) : patch);
   writeDraft(key, {
     ...prev,
     ...resolved,
@@ -361,6 +394,13 @@ function resetApplyChoices(owner: string | null, groupOrCode: string) {
   if (!hasChoices) return;
   writeDraft(key, {
     ...previous,
+    // Keep the last record type so the next choice can detect a switch.
+    answers: {
+      ...previous.answers,
+      ...(previous.caseSelectorAnswers.record_type
+        ? { record_type: previous.caseSelectorAnswers.record_type }
+        : {}),
+    },
     selectedServiceCode: null,
     caseSelectorAnswers: {},
     presetAge: null,
@@ -530,7 +570,22 @@ export function useApplyDraft(groupOrCode: string) {
   /** The applicant threw the application away: it stays gone until the wizard reopens. */
   const discard = useCallback(() => discardDraftAt(key), [key]);
 
-  return { draft, update, clear, complete, discard, hydrated };
+  // Read storage again so another tab uses the same application ID.
+  const getSubmissionId = useCallback(() => {
+    try {
+      const saved = window.localStorage.getItem(key);
+      if (saved) draftCache.set(key, withMigratedAnswers(JSON.parse(saved)));
+    } catch {
+      // Keep the in-memory draft when storage is unavailable.
+    }
+    const current = readDraft(key);
+    if (current.submittedRequestId) throw new Error("This application was already submitted. Open My Requests.");
+    const id = current.submissionId ?? current.uploadDraftId ?? crypto.randomUUID();
+    updateDraftAt(key, { submissionId: id });
+    return id;
+  }, [key]);
+
+  return { draft, update, clear, complete, discard, hydrated, getSubmissionId };
 }
 
 /**

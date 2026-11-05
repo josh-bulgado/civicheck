@@ -9,6 +9,7 @@ export type NewRequestValues = {
   form_data: unknown;
   fees_due: number;
   copies?: number;
+  submission_key?: string;
   form_template_version_id?: string | null;
   status?: string;
 };
@@ -46,7 +47,7 @@ export async function insertRequestWithTrackingNumber(
     }
     if (error) {
       lastErrorMsg = error.message;
-      if (error.code === "23505") continue;
+      if (error.code === "23505" && !error.message.includes("requests_applicant_submission_key")) continue;
       return { error: true, message: error.message };
     }
   }

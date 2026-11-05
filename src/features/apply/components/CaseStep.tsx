@@ -275,10 +275,16 @@ export function CaseStep({
   function handleServiceSelect(code: string) {
     const currentValues = form.getValues();
     update((previous) => {
+      // CaseSelector publishes the new record type before resolving its service.
+      // Do not restore the old form values after that change cleared the draft.
+      const recordTypeChanged = previous.caseSelectorAnswers.record_type !== draft.caseSelectorAnswers.record_type;
+      const answers = recordTypeChanged
+        ? previous.answers
+        : { ...previous.answers, ...currentValues };
       if (!code) {
         return {
           selectedServiceCode: null,
-          answers: { ...previous.answers, ...currentValues },
+          answers,
         };
       }
       const answerBag = canonicalizeTemplateAnswers(definition, {
@@ -295,7 +301,7 @@ export function CaseStep({
       );
       return {
         selectedServiceCode: code,
-        answers: { ...previous.answers, ...currentValues },
+        answers,
         documents: previous.documents.filter((document) =>
           visibleRequirementIds.has(document.requirementId),
         ),

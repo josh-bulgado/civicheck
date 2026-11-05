@@ -503,12 +503,16 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     form.setValue("requester_relationship", "");
     update((previous) => ({ answers: { ...previous.answers, requester_relationship: "" } }));
   }, [recordType, relationship, form, update]);
+  const emailRecordOwner =
+    selectedService.service_code === "EMAIL_INQUIRY" &&
+    (draft.caseSelectorAnswers.is_record_owner ?? draft.answers.is_record_owner) === "yes";
   const requesterFirst = textOf(watchedValues.requester_first_name);
   const requesterMiddle = textOf(watchedValues.requester_middle_name);
   const requesterLast = textOf(watchedValues.requester_last_name);
   useEffect(() => {
     if (!hasPersonGroup || roles.length !== 1) return;
-    if (isMarriageRecord || recordType === "death" || relationship !== "owner") {
+    if ((isMarriageRecord && !emailRecordOwner) || recordType === "death" ||
+        (relationship !== "owner" && !emailRecordOwner)) {
       mirroredOwner.current = null;
       return;
     }
@@ -542,7 +546,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     mirroredOwner.current = next;
     // `form`, `roles` and `hasPersonGroup` are stable for a given service.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMarriageRecord, recordType, relationship, requesterFirst, requesterMiddle, requesterLast]);
+  }, [isMarriageRecord, recordType, relationship, emailRecordOwner, requesterFirst, requesterMiddle, requesterLast]);
 
   // The role comes from the field array, not the watched values: `role` has no
   // input of its own, so `shouldUnregister` drops it from the watched rows.
