@@ -12,6 +12,8 @@ import {
 import { getEncodableServicesFn } from "~/features/requests/walk-in-intake.queries";
 import {
   parseDepartmentFilter,
+  parseAttentionFilter,
+  parseMineFilter,
   parseNeedsFilter,
   parsePaymentFilter,
   parseRequestStatus,
@@ -30,6 +32,8 @@ export const Route = createFileRoute("/_authed/_dashboard/requests/")({
     payment: parsePaymentFilter(search.payment),
     department: parseDepartmentFilter(search.department),
     needs: parseNeedsFilter(search.needs),
+    mine: parseMineFilter(search.mine),
+    attention: parseAttentionFilter(search.attention),
   }),
   beforeLoad: ({ context, location }) => {
     if (

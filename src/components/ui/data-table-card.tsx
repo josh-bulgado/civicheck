@@ -1,8 +1,16 @@
 import type { ComponentProps, ReactNode } from "react";
 import { flexRender, type RowData } from "@tanstack/react-table";
-import { SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { Columns3, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { DataTablePagination } from "~/components/ui/data-table-pagination";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -26,7 +34,9 @@ type RowProps = ComponentProps<"tr"> & {
 interface DataTableCardProps<TData extends RowData> {
   table: AppTable<TData>;
   /** Search, chips and selects. Sits above the table behind a hairline. */
-  toolbar: ReactNode;
+  toolbar: ReactNode | ((columnMenu: ReactNode) => ReactNode);
+  /** Labels columns that users may show or hide. Omit to hide the chooser. */
+  columnLabels?: Readonly<Record<string, string>>;
   /** Names the table for screen readers, e.g. "Requests". */
   label: string;
   /** Shown, with a Clear Filters button, when no row survives the filters. */
@@ -43,6 +53,45 @@ interface DataTableCardProps<TData extends RowData> {
   variant?: ComponentProps<typeof Table>["variant"];
 }
 
+interface ColumnVisibilityMenuProps<TData extends RowData> {
+  table: AppTable<TData>;
+  labels: Readonly<Record<string, string>>;
+}
+
+function ColumnVisibilityMenu<TData extends RowData>({
+  table,
+  labels,
+}: ColumnVisibilityMenuProps<TData>) {
+  const columns = table
+    .getAllLeafColumns()
+    .filter((column) => column.getCanHide() && labels[column.id]);
+
+  if (columns.length === 0) return null;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={<Button variant="outline" size="lg" />}>
+        <Columns3 aria-hidden="true" data-icon="inline-start" />
+        Columns
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Show columns</DropdownMenuLabel>
+          {columns.map((column) => (
+            <DropdownMenuCheckboxItem
+              key={column.id}
+              checked={column.getIsVisible()}
+              onCheckedChange={(checked) => column.toggleVisibility(checked)}
+            >
+              {labels[column.id]}
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 /**
  * One card holding the filters, the table and the pagination footer: the
  * shape of the Services, Staff and Request Queue pages. The page owns the
@@ -51,6 +100,7 @@ interface DataTableCardProps<TData extends RowData> {
 export function DataTableCard<TData extends RowData>({
   table,
   toolbar,
+  columnLabels,
   label,
   emptyLabel,
   onClearFilters,
@@ -62,6 +112,20 @@ export function DataTableCard<TData extends RowData>({
   variant = "entity",
 }: DataTableCardProps<TData>) {
   const rows = table.getRowModel().rows;
+  const columnMenu = columnLabels ? (
+    <ColumnVisibilityMenu table={table} labels={columnLabels} />
+  ) : null;
+  const toolbarContent =
+    typeof toolbar === "function" ? (
+      toolbar(columnMenu)
+    ) : columnMenu ? (
+      <div className="flex flex-wrap items-start gap-3">
+        <div className="min-w-0 flex-1">{toolbar}</div>
+        {columnMenu}
+      </div>
+    ) : (
+      toolbar
+    );
 
   return (
     <div
@@ -70,7 +134,7 @@ export function DataTableCard<TData extends RowData>({
         className,
       )}
     >
-      <div className="border-b border-border px-5 py-4">{toolbar}</div>
+      <div className="border-b border-border px-5 py-4">{toolbarContent}</div>
 
       <div className="overflow-x-auto">
         <Table variant={variant} aria-label={label}>
@@ -96,7 +160,7 @@ export function DataTableCard<TData extends RowData>({
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody className="civic-stagger-auto">
+          <TableBody className="civic-stagger-auto ">
             {rows.length > 0 ? (
               rows.map((row) => {
                 const { className: rowClassName, ...rowProps } =

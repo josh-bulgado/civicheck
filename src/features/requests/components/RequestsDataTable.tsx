@@ -15,19 +15,24 @@ import {
 } from "../request-queue";
 import {
   countByStage,
-  countNeedingStaff,
+  countNeedingAttention,
   filterRequests,
   showsPaymentColumn,
 } from "../requests-table.utils";
 import type { StaffRequestRow } from "../requests.queries";
-import { IN_STAGE_COLUMN, createRequestColumns } from "./RequestsColumn";
+import {
+  IN_STAGE_COLUMN,
+  REQUEST_COLUMN_LABELS,
+  createRequestColumns,
+} from "./RequestsColumn";
 import { RequestsTableToolbar } from "./RequestsTableToolbar";
 import { appTableFeatures } from "~/lib/table";
 
 /** Longest wait first: the oldest thing someone is waiting on is row one. */
 const DEFAULT_SORTING: SortingState = [{ id: IN_STAGE_COLUMN, desc: true }];
-const ALL_COLUMNS: ColumnVisibilityState = {};
-const WITHOUT_PAYMENT: ColumnVisibilityState = { payment: false };
+const COLUMN_LABELS_WITHOUT_PAYMENT = Object.fromEntries(
+  Object.entries(REQUEST_COLUMN_LABELS).filter(([id]) => id !== "payment"),
+);
 
 const NEXT_REQUEST_HOTKEY: HotkeyChord = "J";
 const PREVIOUS_REQUEST_HOTKEY: HotkeyChord = "K";
@@ -76,12 +81,19 @@ export function RequestsDataTable({
 }: RequestsDataTableProps) {
   const navigate = useNavigate();
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
+  const [columnVisibility, setColumnVisibility] =
+    useState<ColumnVisibilityState>({});
   // Typing stays responsive while a long queue re-filters behind it.
   const deferredSearch = useDeferredValue(search);
 
   const rows = useMemo(
-    () => filterRequests(requests, { ...filters, search: deferredSearch }),
-    [requests, filters, deferredSearch],
+    () =>
+      filterRequests(requests, {
+        ...filters,
+        search: deferredSearch,
+        now,
+      }),
+    [requests, filters, deferredSearch, now],
   );
 
   // Each count shows the rows every other filter leaves, so a chip never
@@ -93,41 +105,53 @@ export function RequestsDataTable({
           ...filters,
           stage: undefined,
           search: deferredSearch,
+          now,
         }),
       ),
-    [requests, filters, deferredSearch],
+    [requests, filters, deferredSearch, now],
   );
-  const needsCount = useMemo(
+  const attentionCount = useMemo(
     () =>
-      countNeedingStaff(
+      countNeedingAttention(
         filterRequests(requests, {
           ...filters,
+          attention: undefined,
           needs: undefined,
+          mine: undefined,
           search: deferredSearch,
+          now,
         }),
+        now,
       ),
-    [requests, filters, deferredSearch],
+    [requests, filters, deferredSearch, now],
   );
 
   const columns = useMemo(
     () => createRequestColumns({ now, showDepartment: !scopedDepartmentName }),
     [now, scopedDepartmentName],
   );
-  const columnVisibility = showsPaymentColumn(filters)
-    ? ALL_COLUMNS
-    : WITHOUT_PAYMENT;
+  const paymentColumnIsAvailable = showsPaymentColumn(filters);
+  const resolvedColumnVisibility = useMemo(
+    () =>
+      paymentColumnIsAvailable
+        ? columnVisibility
+        : { ...columnVisibility, payment: false },
+    [columnVisibility, paymentColumnIsAvailable],
+  );
 
   const table = useTable({
     features: appTableFeatures,
     data: rows,
     columns,
-    state: { sorting, columnVisibility },
+    state: { sorting, columnVisibility: resolvedColumnVisibility },
     onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
     initialState: { pagination: { pageIndex: 0, pageSize: 20 } },
   });
 
   const hasActiveFilters =
-    search !== "" || Object.values(filters).some((value) => value !== undefined);
+    search !== "" ||
+    Object.values(filters).some((value) => value !== undefined);
 
   const clearFilters = () => {
     onSearchChange("");
@@ -144,7 +168,12 @@ export function RequestsDataTable({
   return (
     <DataTableCard
       table={table}
-      toolbar={
+      columnLabels={
+        paymentColumnIsAvailable
+          ? REQUEST_COLUMN_LABELS
+          : COLUMN_LABELS_WITHOUT_PAYMENT
+      }
+      toolbar={(columnMenu) => (
         <RequestsTableToolbar
           search={search}
           onSearchChange={onSearchChange}
@@ -153,13 +182,15 @@ export function RequestsDataTable({
             onFiltersChange(applyFilterChange(filters, patch))
           }
           stageCounts={stageCounts}
-          needsCount={needsCount}
+          attentionCount={attentionCount}
           departments={departments}
           scopedDepartmentName={scopedDepartmentName}
           hasActiveFilters={hasActiveFilters}
           onClear={clearFilters}
+          actions={columnMenu}
         />
-      }
+      )}
+      cellClassName="py-3"
       label="Requests"
       emptyLabel="No requests found matching your filters."
       onClearFilters={clearFilters}

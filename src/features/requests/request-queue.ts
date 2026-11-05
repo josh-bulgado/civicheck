@@ -41,8 +41,12 @@ export interface RequestQueueFilters {
   status?: RequestStatus;
   payment?: PaymentFilter;
   department?: string;
-  /** Only requests waiting on staff: the "Needs you" toggle. */
+  /** Any request whose next workflow move belongs to staff. */
   needs?: true;
+  /** Requests actively claimed by the signed-in staff member. */
+  mine?: true;
+  /** Requests whose staff-owned wait has crossed the attention threshold. */
+  attention?: true;
 }
 
 /** Every filter cleared — navigate with this to reset the docket. */
@@ -52,6 +56,8 @@ export const EMPTY_FILTERS: RequestQueueFilters = {
   payment: undefined,
   department: undefined,
   needs: undefined,
+  mine: undefined,
+  attention: undefined,
 };
 
 /**
@@ -67,6 +73,15 @@ export function applyFilterChange(
   const next = { ...current, ...patch };
   if (patch.status) {
     next.stage = undefined;
+  } else if (patch.attention) {
+    next.needs = undefined;
+    next.mine = undefined;
+  } else if (patch.needs) {
+    next.attention = undefined;
+    next.mine = undefined;
+  } else if (patch.mine) {
+    next.attention = undefined;
+    next.needs = undefined;
   } else if (
     "stage" in patch &&
     next.stage &&
@@ -98,9 +113,14 @@ export function parsePaymentFilter(value: unknown): PaymentFilter | undefined {
   return value === "unpaid" || value === "verified" ? value : undefined;
 }
 
-export function parseNeedsFilter(value: unknown): true | undefined {
+export function parseAttentionFilter(value: unknown): true | undefined {
   return value === true || value === "true" ? true : undefined;
 }
+
+/** Backward-compatible parser for dashboard links to all staff-owned work. */
+export const parseNeedsFilter = parseAttentionFilter;
+
+export const parseMineFilter = parseAttentionFilter;
 
 export function parseDepartmentFilter(value: unknown): string | undefined {
   return typeof value === "string" && value.length > 0 ? value : undefined;
