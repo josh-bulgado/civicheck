@@ -40,8 +40,6 @@ export function StaffRowActions({
     return (
       <Button
         variant="outline"
-        size="sm"
-        shape="default"
         onClick={() => onReactivate(staffMember)}
         className="w-40"
       >
@@ -55,8 +53,6 @@ export function StaffRowActions({
       <ButtonGroup
         aria-label={`Actions for ${staffName}`}
         variant="outline"
-        size="sm"
-        shape="default"
         className="w-40"
       >
         <Button
@@ -74,9 +70,7 @@ export function StaffRowActions({
         </Button>
         <DropdownMenuTrigger
           nativeButton
-          render={
-            <Button size="icon-sm" className="text-muted-foreground" />
-          }
+          render={<Button className="text-muted-foreground" />}
         >
           <ChevronDown aria-hidden="true" />
           <span className="sr-only">More actions for {staffName}</span>
