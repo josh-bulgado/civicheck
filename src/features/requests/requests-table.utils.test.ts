@@ -36,6 +36,7 @@ function request(overrides: Partial<StaffRequestRow> = {}): StaffRequestRow {
     isWalkIn: false,
     createdAt: "2026-10-20T00:00:00Z",
     updatedAt: new Date(NOW - 5 * HOUR).toISOString(),
+    claim: null,
     ...overrides,
   };
 }

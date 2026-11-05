@@ -13,6 +13,7 @@ import {
   isRequestStatus,
 } from "../request-workflow";
 import type { StaffRequestRow } from "../requests.queries";
+import { isRequestClaimActive } from "../request-claims";
 import {
   formatTimeInStage,
   paymentDisplay,
@@ -202,6 +203,27 @@ export function createRequestColumns({
           {getStatusDetails(row.original.status).label}
         </Badge>
       ),
+    },
+    {
+      id: "handler",
+      accessorFn: ({ claim, status }) =>
+        isRequestClaimActive(claim, status, now)
+          ? claim.isMine
+            ? "You"
+            : claim.staffName
+          : "Available",
+      header: ({ column }) => <SortHeader column={column}>Handler</SortHeader>,
+      cell: ({ row }) => {
+        const claim = row.original.claim;
+        if (!isRequestClaimActive(claim, row.original.status, now)) {
+          return <span className="text-sm text-muted-foreground">Available</span>;
+        }
+        return (
+          <Badge variant={claim.isMine ? "success" : "warning"}>
+            {claim.isMine ? "You" : claim.staffName}
+          </Badge>
+        );
+      },
     },
     {
       id: "payment",

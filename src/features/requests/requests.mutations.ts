@@ -1,12 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
-import { attachmentVersionSchema, parsePreviousUploads } from "./previous-uploads";
+import { attachmentVersionSchema } from "./previous-uploads";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { documentReviewBlockedReason } from "./document-review";
 import { marriagePostingBlockedReason, needsMarriagePosting, postingToday } from "./marriage-posting";
 import { fromDateKey } from "~/lib/date";
 import { requireActiveSession } from "~/server/auth";
-import { isDepartmentScopedRole } from "~/lib/permissions";
+import { isDepartmentScopedRole, type Role } from "~/lib/permissions";
 import {
   ALLOWED_TRANSITIONS,
   REASON_REQUIRED,
@@ -23,6 +23,8 @@ import {
   buildStatusChangeEmail,
   dispatchApplicantNotification,
 } from "~/features/notifications/notifications.server";
+import { REQUEST_CLAIM_LEASE_MS } from "~/features/requests/request-claims";
+import { signAttachmentVersion } from "~/features/requests/attachment-signing.server";
 
 const advanceRequestStatusSchema = z.object({
   requestId: z.string().uuid(),
@@ -44,6 +46,161 @@ const revertAttachmentVerificationSchema = z.object({
   attachmentId: z.string().uuid(),
   reason: z.string(),
 });
+const requestClaimSchema = z.object({
+  requestId: z.string().uuid(),
+});
+
+interface ClaimedRequestRow {
+  id?: string;
+  status: string | null;
+  claimed_by: string | null;
+  claimed_stage: string | null;
+  claim_expires_at: string | null;
+}
+
+function requestClaimError(
+  request: ClaimedRequestRow,
+  userId: string,
+  now = Date.now(),
+): string | null {
+  if (
+    request.claimed_by === userId &&
+    request.claimed_stage === request.status &&
+    Date.parse(request.claim_expires_at ?? "") > now
+  ) {
+    return null;
+  }
+  if (
+    request.claimed_by &&
+    request.claimed_stage === request.status &&
+    Date.parse(request.claim_expires_at ?? "") > now
+  ) {
+    return "Another staff member is handling this stage.";
+  }
+  return "Start handling this stage before making changes.";
+}
+
+type AttachmentRequestInfo = ClaimedRequestRow & {
+  services_registry:
+    | { department_id?: string | null }
+    | { department_id?: string | null }[]
+    | null;
+};
+
+type DepartmentRequest = {
+  services_registry:
+    | { department_id?: string | null }
+    | { department_id?: string | null }[]
+    | null;
+};
+
+function requestIsOutsideDepartment(
+  request: DepartmentRequest,
+  role: Role,
+  departmentId: string | null,
+) {
+  const service = Array.isArray(request.services_registry)
+    ? request.services_registry[0]
+    : request.services_registry;
+  return isDepartmentScopedRole(role) && service?.department_id !== departmentId;
+}
+
+/** Applies the shared department, lease, and workflow guards for document edits. */
+function attachmentReviewAccessError(
+  request: AttachmentRequestInfo | null | undefined,
+  role: Role,
+  departmentId: string | null,
+  userId: string,
+): string | null {
+  if (isDepartmentScopedRole(role)) {
+    const service = Array.isArray(request?.services_registry)
+      ? request.services_registry[0]
+      : request?.services_registry;
+    if (service?.department_id !== departmentId) {
+      return "That document no longer exists.";
+    }
+  }
+  if (!request) return "That request no longer exists.";
+
+  const claimError = requestClaimError(request, userId);
+  if (claimError) return claimError;
+  return documentReviewBlockedReason(request.status);
+}
+
+/** Claim or renew the request's current stage. Expired claims are available. */
+export const claimRequestStageFn = createServerFn({ method: "POST" })
+  .validator(requestClaimSchema)
+  .handler(async ({ data }) => {
+    const { supabase, user, role, departmentId } = await requireActiveSession("requests:process");
+    const { data: request, error: fetchError } = await supabase
+      .from("requests")
+      .select(
+        "id, status, claimed_by, claimed_stage, claim_expires_at, services_registry(department_id)",
+      )
+      .eq("id", data.requestId)
+      .single();
+
+    if (
+      fetchError ||
+      !request ||
+      requestIsOutsideDepartment(request, role, departmentId)
+    ) {
+      return { error: true, message: "That request no longer exists." };
+    }
+    if (!isRequestStatus(request.status) || ALLOWED_TRANSITIONS[request.status].length === 0) {
+      return { error: true, message: "This request has no stage left to handle." };
+    }
+
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + REQUEST_CLAIM_LEASE_MS);
+    const { data: claimed, error } = await supabase
+      .from("requests")
+      .update({
+        claimed_by: user.id,
+        claimed_stage: request.status,
+        claimed_at: now.toISOString(),
+        claim_expires_at: expiresAt.toISOString(),
+      })
+      .eq("id", data.requestId)
+      .eq("status", request.status)
+      .or(
+        `claimed_by.is.null,claimed_by.eq.${user.id},claim_expires_at.lt.${now.toISOString()}`,
+      )
+      .select("id");
+
+    if (error) return { error: true, message: error.message };
+    if (!claimed || claimed.length === 0) {
+      return {
+        error: true,
+        message: "Another staff member claimed this stage first. Refresh and choose another request.",
+      };
+    }
+    return { error: false, expiresAt: expiresAt.toISOString() };
+  });
+
+/** Release only the caller's lease; another staff member's claim is untouched. */
+export const releaseRequestStageFn = createServerFn({ method: "POST" })
+  .validator(requestClaimSchema)
+  .handler(async ({ data }) => {
+    const { supabase, user } = await requireActiveSession("requests:process");
+    const { data: released, error } = await supabase
+      .from("requests")
+      .update({
+        claimed_by: null,
+        claimed_stage: null,
+        claimed_at: null,
+        claim_expires_at: null,
+      })
+      .eq("id", data.requestId)
+      .eq("claimed_by", user.id)
+      .select("id");
+
+    if (error) return { error: true, message: error.message };
+    if (!released || released.length === 0) {
+      return { error: true, message: "This stage is no longer claimed by you." };
+    }
+    return { error: false };
+  });
 
 /**
  * Processing and release both mean every uploaded requirement is accepted
@@ -126,23 +283,23 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
     const { data: request, error: fetchError } = await supabase
       .from("requests")
       .select(
-        "id, status, payment_status, tracking_number, request_type, posting_start_date, services_registry(department_id)",
+        "id, status, payment_status, tracking_number, request_type, posting_start_date, claimed_by, claimed_stage, claim_expires_at, services_registry(department_id)",
       )
       .eq("id", data.requestId)
       .single();
 
-    if (fetchError || !request) {
-      return { error: true, message: "That request no longer exists." };
-    }
-
-    const service = Array.isArray(request.services_registry)
-      ? request.services_registry[0]
-      : request.services_registry;
-    if (isDepartmentScopedRole(role) && service?.department_id !== departmentId) {
+    if (
+      fetchError ||
+      !request ||
+      requestIsOutsideDepartment(request, role, departmentId)
+    ) {
       // Same phrasing as a missing row — don't reveal a wrong-department
       // request exists.
       return { error: true, message: "That request no longer exists." };
     }
+
+    const claimError = requestClaimError(request, user.id);
+    if (claimError) return { error: true, message: claimError };
 
     const from = request.status;
     if (!isRequestStatus(from)) {
@@ -255,14 +412,14 @@ export const saveMarriagePostingFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabase, user, role, departmentId } = await requireActiveSession("requests:process");
     const { data: request, error } = await supabase.from("requests")
-      .select("id, request_type, status, created_at, updated_at, services_registry(department_id)")
+      .select("id, request_type, status, created_at, updated_at, claimed_by, claimed_stage, claim_expires_at, services_registry(department_id)")
       .eq("id", data.requestId).single();
-    const service = Array.isArray(request?.services_registry)
-      ? request.services_registry[0] : request?.services_registry;
     if (error || !request ||
-      (isDepartmentScopedRole(role) && service?.department_id !== departmentId)) {
+      requestIsOutsideDepartment(request, role, departmentId)) {
       return { error: true, message: "That request no longer exists." };
     }
+    const claimError = requestClaimError(request, user.id);
+    if (claimError) return { error: true, message: claimError };
     if (!needsMarriagePosting(request.request_type) || request.status !== "processing") {
       return { error: true, message: "Record the posting date during Processing for delayed marriage, delayed death or a marriage license." };
     }
@@ -382,7 +539,7 @@ export const setAttachmentVerificationFn = createServerFn({ method: "POST" })
     const { data: attachment, error: fetchError } = await supabase
       .from("requirements_attachments")
       .select(
-        "id, request_id, requirement_name, requests(status, tracking_number, request_type, services_registry(department_id))",
+        "id, request_id, requirement_name, verification_status, requests(status, tracking_number, request_type, claimed_by, claimed_stage, claim_expires_at, services_registry(department_id))",
       )
       .eq("id", data.attachmentId)
       .single();
@@ -395,31 +552,33 @@ export const setAttachmentVerificationFn = createServerFn({ method: "POST" })
       ? attachment.requests[0]
       : attachment.requests;
 
-    if (isDepartmentScopedRole(role)) {
-      const service = Array.isArray(requestInfo?.services_registry)
-        ? requestInfo.services_registry[0]
-        : requestInfo?.services_registry;
-      if (service?.department_id !== departmentId) {
-        return { error: true, message: "That document no longer exists." };
-      }
-    }
-
-    const blockedReason = documentReviewBlockedReason(requestInfo?.status);
-    if (blockedReason) {
-      return { error: true, message: blockedReason };
-    }
+    const accessError = attachmentReviewAccessError(
+      requestInfo,
+      role,
+      departmentId,
+      user.id,
+    );
+    if (accessError) return { error: true, message: accessError };
 
     const reason = data.status === "rejected" ? data.reason?.trim() : null;
 
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from("requirements_attachments")
       .update({
         verification_status: data.status,
         rejection_reason: reason,
       })
-      .eq("id", data.attachmentId);
+      .eq("id", data.attachmentId)
+      .eq("verification_status", "pending")
+      .select("id");
 
     if (error) return { error: true, message: error.message };
+    if (!updated || updated.length === 0) {
+      return {
+        error: true,
+        message: "Another staff member already reviewed this document. Refresh and check their decision.",
+      };
+    }
 
     const { error: logError } = await supabase.from("application_logs").insert({
       request_id: attachment.request_id,
@@ -502,7 +661,7 @@ export const revertAttachmentVerificationFn = createServerFn({ method: "POST" })
     const { data: attachment, error: fetchError } = await supabase
       .from("requirements_attachments")
       .select(
-        "id, request_id, requirement_name, verification_status, requests(status, tracking_number, services_registry(department_id))",
+        "id, request_id, requirement_name, verification_status, requests(status, tracking_number, claimed_by, claimed_stage, claim_expires_at, services_registry(department_id))",
       )
       .eq("id", data.attachmentId)
       .single();
@@ -519,19 +678,13 @@ export const revertAttachmentVerificationFn = createServerFn({ method: "POST" })
       ? attachment.requests[0]
       : attachment.requests;
 
-    if (isDepartmentScopedRole(role)) {
-      const service = Array.isArray(requestInfo?.services_registry)
-        ? requestInfo.services_registry[0]
-        : requestInfo?.services_registry;
-      if (service?.department_id !== departmentId) {
-        return { error: true, message: "That document no longer exists." };
-      }
-    }
-
-    const blockedReason = documentReviewBlockedReason(requestInfo?.status);
-    if (blockedReason) {
-      return { error: true, message: blockedReason };
-    }
+    const accessError = attachmentReviewAccessError(
+      requestInfo,
+      role,
+      departmentId,
+      user.id,
+    );
+    if (accessError) return { error: true, message: accessError };
 
     const reason = data.reason.trim();
     const previousStatus = attachment.verification_status;
@@ -601,18 +754,5 @@ export const getAttachmentSignedUrlFn = createServerFn({ method: "GET" })
       }
     }
 
-    const fileUrl = data.previousIndex === undefined
-      ? attachment.file_url
-      : parsePreviousUploads(attachment.previous_uploads)[data.previousIndex]?.fileUrl;
-    if (!fileUrl) return { error: true, message: "That version no longer exists." };
-
-    const { data: signed, error: signError } = await supabase.storage
-      .from("request-documents")
-      .createSignedUrl(fileUrl, 300);
-
-    if (signError || !signed) {
-      return { error: true, message: "Could not generate a link for this file." };
-    }
-
-    return { error: false, url: signed.signedUrl };
+    return signAttachmentVersion(supabase, attachment, data.previousIndex);
   });

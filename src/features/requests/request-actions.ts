@@ -47,6 +47,8 @@ export interface RequestActionInput {
   attachments: { verificationStatus: string }[];
   /** Encoded at the counter: the applicant and their papers are already there. */
   isWalkIn?: boolean;
+  /** A temporary coordination lock, separate from role permission and workflow rules. */
+  actionBlockedReason?: string | null;
 }
 
 const DIALOG_OF: Partial<Record<RequestStatus, TransitionDialog>> = {
@@ -110,6 +112,7 @@ function blockedReason(
   input: RequestActionInput,
   paymentSettled: boolean,
 ): string | undefined {
+  if (input.actionBlockedReason) return input.actionBlockedReason;
   // Processing and everything after it assume every uploaded document is
   // accepted, the same rule advanceRequestStatusFn enforces.
   if (to === "processing" || to === "ready_for_release" || to === "released") {

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { VerificationFormPdfData } from "~/features/requests/pdf/types";
+import { downloadBlob } from "~/features/requests/pdf/downloadBlob";
 
 /** Build the same PDF for downloads and staff validation previews. */
 export async function buildVerificationFormPdf(data: VerificationFormPdfData) {
@@ -29,14 +30,10 @@ export function useVerificationFormPdfDownload() {
     try {
       const blob = await buildVerificationFormPdf(data);
 
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `CiviCheck-Verification-Form-${data.trackingNumber}.pdf`;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
+      downloadBlob(
+        blob,
+        `CiviCheck-Verification-Form-${data.trackingNumber}.pdf`,
+      );
     } finally {
       setDownloading(false);
     }
