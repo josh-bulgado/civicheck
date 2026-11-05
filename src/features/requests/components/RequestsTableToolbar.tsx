@@ -38,7 +38,7 @@ const STATUS_OPTIONS = [
 const PAYMENT_OPTIONS: Array<{ value: PaymentFilter | typeof ALL; label: string }> = [
   { value: ALL, label: "All payments" },
   { value: "unpaid", label: "Unpaid" },
-  { value: "verified", label: "Verified" },
+  { value: "verified", label: "Paid" },
 ];
 
 interface RequestsTableToolbarProps {

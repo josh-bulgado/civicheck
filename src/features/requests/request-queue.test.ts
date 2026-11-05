@@ -2,11 +2,19 @@ import { describe, expect, it } from "vitest";
 
 import {
   applyFilterChange,
+  getStatusBadgeVariant,
   parseNeedsFilter,
   parsePaymentFilter,
   parseRequestStatus,
   parseWorkflowStage,
 } from "./request-queue";
+
+describe("status badge variants", () => {
+  it("distinguishes validation blue from processing purple", () => {
+    expect(getStatusBadgeVariant("under_validation")).toBe("info");
+    expect(getStatusBadgeVariant("processing")).toBe("progress");
+  });
+});
 
 describe("search param parsers", () => {
   it("accepts only the known payment filters", () => {

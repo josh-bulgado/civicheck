@@ -122,8 +122,9 @@ export function getStatusBadgeVariant(status: string | null) {
     case "incomplete":
       return "warning" as const;
     case "under_validation":
-    case "processing":
       return "info" as const;
+    case "processing":
+      return "progress" as const;
     case "rejected":
       return "destructive" as const;
     case "ready_for_release":

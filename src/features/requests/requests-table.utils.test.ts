@@ -12,6 +12,7 @@ import {
   needsStaff,
   paymentDisplay,
   requestTurn,
+  showsPaymentColumn,
   waitTone,
   waitingRank,
 } from "./requests-table.utils";
@@ -105,11 +106,13 @@ describe("filterRequests", () => {
     request({ id: "b", status: "incomplete", applicantName: "Eduardo Llanes" }),
     request({ id: "c", status: "processing", paymentStatus: "verified" }),
     request({ id: "d", status: "ready_for_release", departmentId: "registration" }),
+    request({ id: "e", status: "released", paymentStatus: "verified" }),
+    request({ id: "f", status: "ready_for_release", feesDue: 0 }),
   ];
   const ids = (found: StaffRequestRow[]) => found.map((row) => row.id);
 
   it("returns everything with no criteria", () => {
-    expect(ids(filterRequests(rows, {}))).toEqual(["a", "b", "c", "d"]);
+    expect(ids(filterRequests(rows, {}))).toEqual(["a", "b", "c", "d", "e", "f"]);
   });
 
   it("narrows by stage and by status", () => {
@@ -117,9 +120,9 @@ describe("filterRequests", () => {
     expect(ids(filterRequests(rows, { status: "processing" }))).toEqual(["c"]);
   });
 
-  it("treats unpaid as not yet verified", () => {
-    expect(ids(filterRequests(rows, { payment: "unpaid" }))).toEqual(["a", "b", "d"]);
-    expect(ids(filterRequests(rows, { payment: "verified" }))).toEqual(["c"]);
+  it("filters paid and unpaid fee-bearing requests only in Release", () => {
+    expect(ids(filterRequests(rows, { payment: "unpaid" }))).toEqual(["d"]);
+    expect(ids(filterRequests(rows, { payment: "verified" }))).toEqual(["e"]);
   });
 
   it("keeps only requests waiting on staff for Needs you", () => {
@@ -131,6 +134,22 @@ describe("filterRequests", () => {
       ids(filterRequests(rows, { needs: true, stage: 3, search: "rowena" })),
     ).toEqual(["c"]);
     expect(ids(filterRequests(rows, { department: "registration", search: "eduardo" }))).toEqual([]);
+  });
+});
+
+describe("showsPaymentColumn", () => {
+  it("shows payment in All and Release views", () => {
+    expect(showsPaymentColumn({})).toBe(true);
+    expect(showsPaymentColumn({ stage: 4 })).toBe(true);
+    expect(showsPaymentColumn({ status: "ready_for_release" })).toBe(true);
+    expect(showsPaymentColumn({ status: "released" })).toBe(true);
+  });
+
+  it("hides payment in Submission, Validation and Processing views", () => {
+    expect(showsPaymentColumn({ stage: 1 })).toBe(false);
+    expect(showsPaymentColumn({ stage: 2 })).toBe(false);
+    expect(showsPaymentColumn({ stage: 3 })).toBe(false);
+    expect(showsPaymentColumn({ status: "processing" })).toBe(false);
   });
 });
 
@@ -229,23 +248,36 @@ describe("waitingRank", () => {
 });
 
 describe("paymentDisplay", () => {
-  it("is quiet until the applicant has been told to pay", () => {
-    for (const status of ["submitted", "under_validation", "incomplete"]) {
-      expect(paymentDisplay({ status, paymentStatus: "unpaid" })).toBe("not_due");
+  it("is blank before Release, even if a payment was already recorded", () => {
+    for (const status of ["submitted", "under_validation", "incomplete", "processing"]) {
+      expect(paymentDisplay({ status, paymentStatus: "verified", feesDue: 150 })).toBe(
+        "none",
+      );
     }
   });
 
-  it("reads unpaid from processing onward", () => {
-    expect(paymentDisplay({ status: "processing", paymentStatus: "unpaid" })).toBe("unpaid");
-    expect(paymentDisplay({ status: "ready_for_release", paymentStatus: "unpaid" })).toBe("unpaid");
+  it("reads paid and unpaid only in Release", () => {
+    expect(
+      paymentDisplay({
+        status: "ready_for_release",
+        paymentStatus: "unpaid",
+        feesDue: 150,
+      }),
+    ).toBe("unpaid");
+    expect(
+      paymentDisplay({ status: "released", paymentStatus: "verified", feesDue: 150 }),
+    ).toBe("paid");
   });
 
-  it("reads verified whenever payment is settled", () => {
-    expect(paymentDisplay({ status: "processing", paymentStatus: "verified" })).toBe("verified");
-    expect(paymentDisplay({ status: "released", paymentStatus: "verified" })).toBe("verified");
+  it("keeps fee-free requests distinct from paid requests", () => {
+    expect(
+      paymentDisplay({ status: "ready_for_release", paymentStatus: "unpaid", feesDue: 0 }),
+    ).toBe("no_fee");
   });
 
   it("has nothing to say about a rejected request", () => {
-    expect(paymentDisplay({ status: "rejected", paymentStatus: "unpaid" })).toBe("none");
+    expect(
+      paymentDisplay({ status: "rejected", paymentStatus: "unpaid", feesDue: 150 }),
+    ).toBe("none");
   });
 });
