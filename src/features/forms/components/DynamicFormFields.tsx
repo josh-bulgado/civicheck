@@ -360,6 +360,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                   }
                   const placeValidation = validateEventPlace(definitionField, value);
                   if (placeValidation !== true) return placeValidation;
+                  if (definitionField.noneLabel && value === NONE_ANSWER) return true;
                   if (isNameField(definitionField)) return validatePersonName(value);
                   if (
                     definitionField.type === "date" &&
@@ -638,7 +639,9 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         id={`dynamic-${definitionField.key}`}
                         placeholder={placeholder}
                         invalid={fieldState.invalid}
-                        noneLabel={definitionField.noneLabel}
+                        noneLabel={/(^|_)middle_name$/.test(definitionField.key)
+                          ? "No middle name"
+                          : definitionField.noneLabel}
                       />
                     ) : (
                       <Input

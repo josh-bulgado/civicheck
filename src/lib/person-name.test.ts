@@ -4,11 +4,11 @@ import { validateTemplateAnswers } from "../features/forms/form-template.utils";
 import type { FormTemplateDefinition } from "../features/forms/form-template.types";
 
 describe("service name validation", () => {
-  it.each(["123456", "@@@", "123-!", "１２３"])("rejects %s", (name) => {
+  it.each(["123456", "@@@", "123-!", "１２３", "Juan 2", "O'Connor", "Anne-Marie", "Juan.", "Juan\tCruz", "Juan\nCruz"])("rejects %s", (name) => {
     expect(validatePersonName(name)).toBe(INVALID_PERSON_NAME);
   });
 
-  it.each(["", " ", "Juan", "Muñoz", "O'Connor", "Anne-Marie", "李", "Juan 2"])(
+  it.each(["", " ", "Juan", "Muñoz", "Mun\u0303oz", "李", "Juan Miguel", "De la Cruz"])(
     "allows %s without changing required-field rules", (name) => {
       expect(validatePersonName(name)).toBe(true);
     },
@@ -19,6 +19,7 @@ describe("service name validation", () => {
     sections: [{ key: "details", step: "details", title: "Details", fields: [
       { key: "subjects", type: "person_group", label: "Names", required: true },
       { key: "requester_first_name", type: "text", label: "First name", required: false },
+      { key: "requester_middle_name", type: "text", label: "Middle name", required: false, noneLabel: "No middle name" },
       { key: "mother_maiden_name", type: "text", label: "Mother's maiden name", required: false },
     ] }],
   } as FormTemplateDefinition;
@@ -34,5 +35,16 @@ describe("service name validation", () => {
 
   it("allows an omitted optional middle name", () => {
     expect(validateTemplateAnswers(definition, { subjects: [subject] }).success).toBe(true);
+  });
+
+  it("preserves the no-middle-name checkbox and suffix", () => {
+    expect(validateTemplateAnswers(definition, {
+      subjects: [{ ...subject, suffix: "Jr." }], requester_middle_name: "N/A",
+    }).success).toBe(true);
+  });
+
+  it.each(["Juan 2", "Juan!", "Anne-Marie"])("rejects mixed characters in submitted names: %s", (name) => {
+    expect(validateTemplateAnswers(definition, { subjects: [{ ...subject, firstName: name }] }).success).toBe(false);
+    expect(validateTemplateAnswers(definition, { subjects: [subject], requester_first_name: name }).success).toBe(false);
   });
 });

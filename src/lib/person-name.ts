@@ -1,8 +1,10 @@
 export const INVALID_PERSON_NAME =
-  "Names can't contain only numbers or special characters.";
+  "Names can contain only letters and spaces.";
 
 export function validatePersonName(value: string): true | string {
-  return !value.trim() || /\p{L}/u.test(value) || INVALID_PERSON_NAME;
+  return !value.trim() ||
+    (/\p{L}/u.test(value) && /^[\p{L}\p{M} ]+$/u.test(value)) ||
+    INVALID_PERSON_NAME;
 }
 
 export function isNameField(field: { key: string; type: string }): boolean {

@@ -174,13 +174,13 @@ export const formFieldDefinitionSchema = z.object({
   inline: z.boolean().optional(),
   /**
    * On a text field, adds an "I don't have one" checkbox under the input (for
-   * example "I don't have a middle name"). Ticking it clears and disables the
+   * example "No middle name"). Ticking it clears and disables the
    * input; it is a display aid only and nothing extra is saved.
    */
   noneLabel: z.string().min(1).max(120).optional(),
   /**
    * On a `person_group` field, star the middle name: it must be filled in, or
-   * the "I don't have a middle name" box ticked. Enforced in the wizard.
+   * the "No middle name" box ticked. Enforced in the wizard.
    */
   requireMiddleName: z.boolean().optional(),
   /**

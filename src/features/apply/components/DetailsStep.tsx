@@ -189,7 +189,7 @@ function MiddleNameField({
               }}
               className="size-5.5 rounded-md border-[1.5px] border-[#b9c7de] dark:border-border-strong shadow-none [&_svg]:size-4"
             />
-            I don&rsquo;t have a middle name
+            No middle name
           </label>
         )}
       />
@@ -516,7 +516,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       mirroredOwner.current = null;
       return;
     }
-    // "N/A" is what the requester's "I don't have a middle name" box stores.
+    // "N/A" is what the requester's "No middle name" box stores.
     const none = requesterMiddle === NONE_ANSWER;
     const next = {
       first: requesterFirst,

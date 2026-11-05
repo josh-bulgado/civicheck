@@ -808,7 +808,7 @@ export function validateTemplateAnswers(
       if (placeValidation !== true) {
         return { success: false, message: placeValidation };
       }
-      if (isNameField(field) && validatePersonName(value) !== true) {
+      if (isNameField(field) && !(field.noneLabel && value === "N/A") && validatePersonName(value) !== true) {
         return { success: false, message: `${field.label}: ${INVALID_PERSON_NAME}` };
       }
 
