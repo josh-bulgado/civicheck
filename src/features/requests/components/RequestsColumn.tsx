@@ -19,9 +19,9 @@ import {
   requestTurn,
   waitTone,
   waitingRank,
+  type PaymentDisplay,
   type WaitTone,
 } from "../requests-table.utils";
-import { StageTracker } from "./StageTracker";
 
 /** The In stage column's id, so the page can sort by it before any click. */
 export const IN_STAGE_COLUMN = "inStage";
@@ -33,6 +33,15 @@ const WAIT_CLASS: Record<WaitTone, string> = {
   critical: "font-semibold text-tone-danger",
 };
 
+const PAYMENT_DETAILS: Record<
+  Exclude<PaymentDisplay, "none">,
+  { label: string; dot: string }
+> = {
+  paid: { label: "Paid", dot: "bg-health-success-dot" },
+  unpaid: { label: "Unpaid", dot: "bg-health-error-dot" },
+  no_fee: { label: "No fee", dot: "bg-health-neutral-dot" },
+};
+
 function NotApplicable() {
   return <span className="text-sm text-muted-foreground">-</span>;
 }
@@ -40,28 +49,22 @@ function NotApplicable() {
 function PaymentCell({ request }: { request: StaffRequestRow }) {
   const display = paymentDisplay(request);
   if (display === "none") return <NotApplicable />;
+  const details = PAYMENT_DETAILS[display];
 
   return (
     <div className="flex flex-col gap-0.5">
-      {display === "not_due" ? (
-        <span className="text-sm text-muted-foreground">Not due yet</span>
-      ) : (
-        <span className="flex items-center gap-2 text-sm">
-          <span
-            aria-hidden="true"
-            className={cn(
-              "size-1.5 shrink-0 rounded-full",
-              display === "verified"
-                ? "bg-health-success-dot"
-                : "bg-health-error-dot",
-            )}
-          />
-          {display === "verified" ? "Verified" : "Unpaid"}
-        </span>
-      )}
-      <span className="text-xs text-muted-foreground">
-        {formatPesoFee(request.feesDue)}
+      <span className="flex items-center gap-2 text-sm">
+        <span
+          aria-hidden="true"
+          className={cn("size-1.5 shrink-0 rounded-full", details.dot)}
+        />
+        {details.label}
       </span>
+      {request.feesDue > 0 ? (
+        <span className="text-xs text-muted-foreground">
+          {formatPesoFee(request.feesDue)}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -195,12 +198,9 @@ export function createRequestColumns({
           : 0,
       header: ({ column }) => <SortHeader column={column}>Status</SortHeader>,
       cell: ({ row }) => (
-        <div className="flex items-center gap-2.5">
-          <Badge variant={getStatusBadgeVariant(row.original.status)}>
-            {getStatusDetails(row.original.status).label}
-          </Badge>
-          <StageTracker status={row.original.status} />
-        </div>
+        <Badge variant={getStatusBadgeVariant(row.original.status)}>
+          {getStatusDetails(row.original.status).label}
+        </Badge>
       ),
     },
     {

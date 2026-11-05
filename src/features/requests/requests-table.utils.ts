@@ -81,12 +81,22 @@ export function filterRequests(
       matchesSearch(request, search) &&
       (!stage || isInStage(request.status, stage)) &&
       (!status || request.status === status) &&
-      // "Unpaid" is everything not yet verified, as the overview links mean it.
       (!payment ||
-        isPaymentSettled(request.paymentStatus) === (payment === "verified")) &&
+        (stageOf(request.status) === 4 &&
+          request.feesDue > 0 &&
+          isPaymentSettled(request.paymentStatus) === (payment === "verified"))) &&
       matchesDepartment(request, department) &&
       (!needs || needsStaff(request)),
   );
+}
+
+/** Payment is relevant in the full queue and while viewing Release-stage work. */
+export function showsPaymentColumn({
+  stage,
+  status,
+}: Pick<RequestQueueFilters, "stage" | "status">): boolean {
+  if (status) return stageOf(status) === 4;
+  return stage === undefined || stage === 4;
 }
 
 /** Counts behind the stage chips: they are both the overview and the filter. */
@@ -174,20 +184,18 @@ export function waitingRank(
 
 // ─── Payment ─────────────────────────────────────────────────────────────────
 
-/** Statuses from which the applicant has been told to pay at the cashier. */
-const PAYMENT_DUE_STATUSES = ["processing", "ready_for_release"];
-
-export type PaymentDisplay = "verified" | "unpaid" | "not_due" | "none";
+export type PaymentDisplay = "paid" | "unpaid" | "no_fee" | "none";
 
 /**
- * What the Payment column says. Unpaid is shown only once the applicant has
- * been told to pay, so a request still in validation does not read as overdue.
+ * What the Payment column says. Payment only becomes relevant in Release;
+ * earlier stages stay blank in the full queue instead of reading as overdue.
  */
 export function paymentDisplay({
   status,
   paymentStatus,
-}: TurnFields): PaymentDisplay {
-  if (isPaymentSettled(paymentStatus)) return "verified";
-  if (status === "rejected" || status === "cancelled") return "none";
-  return PAYMENT_DUE_STATUSES.includes(status) ? "unpaid" : "not_due";
+  feesDue,
+}: TurnFields & Pick<StaffRequestRow, "feesDue">): PaymentDisplay {
+  if (stageOf(status) !== 4) return "none";
+  if (feesDue <= 0) return "no_fee";
+  return isPaymentSettled(paymentStatus) ? "paid" : "unpaid";
 }

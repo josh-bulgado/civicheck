@@ -1,6 +1,7 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { cva, type VariantProps } from "class-variance-authority";
 
+import { useButtonGroupStyle } from "~/components/ui/button-group-context";
 import { cn } from "~/lib/utils";
 
 const buttonVariants = cva(
@@ -103,13 +104,20 @@ const buttonVariants = cva(
   },
 );
 
+export type ButtonVariantProps = VariantProps<typeof buttonVariants>;
+
 function Button({
   className,
-  variant = "default",
-  size = "lg",
-  shape = "pill",
+  variant: variantProp,
+  size: sizeProp,
+  shape: shapeProp,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonPrimitive.Props & ButtonVariantProps) {
+  const groupStyle = useButtonGroupStyle();
+  const variant = variantProp ?? groupStyle.variant ?? "default";
+  const size = sizeProp ?? groupStyle.size ?? "lg";
+  const shape = shapeProp ?? groupStyle.shape ?? "pill";
+
   return (
     <ButtonPrimitive
       data-slot="button"

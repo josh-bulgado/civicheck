@@ -59,7 +59,7 @@ export const caseSelectorOutcomeSchema = z.object({
 });
 
 export const caseSelectorDefinitionSchema = z.object({
-  title: z.string().min(1).max(160).default("Find the right service"),
+  title: z.string().min(1).max(160).default("Answer a few questions"),
   description: z.string().max(500).optional(),
   questions: z.array(caseSelectorQuestionSchema).min(1).max(10),
   outcomes: z.array(caseSelectorOutcomeSchema).min(1).max(100),

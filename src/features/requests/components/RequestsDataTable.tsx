@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useHotkeys, type HotkeyChord } from "@tanstack/react-hotkeys";
 import {
   useTable,
+  type ColumnVisibilityState,
   type SortingState,
 } from "@tanstack/react-table";
 import { DataTableCard } from "~/components/ui/data-table-card";
@@ -16,6 +17,7 @@ import {
   countByStage,
   countNeedingStaff,
   filterRequests,
+  showsPaymentColumn,
 } from "../requests-table.utils";
 import type { StaffRequestRow } from "../requests.queries";
 import { IN_STAGE_COLUMN, createRequestColumns } from "./RequestsColumn";
@@ -24,6 +26,8 @@ import { appTableFeatures } from "~/lib/table";
 
 /** Longest wait first: the oldest thing someone is waiting on is row one. */
 const DEFAULT_SORTING: SortingState = [{ id: IN_STAGE_COLUMN, desc: true }];
+const ALL_COLUMNS: ColumnVisibilityState = {};
+const WITHOUT_PAYMENT: ColumnVisibilityState = { payment: false };
 
 const NEXT_REQUEST_HOTKEY: HotkeyChord = "J";
 const PREVIOUS_REQUEST_HOTKEY: HotkeyChord = "K";
@@ -109,12 +113,15 @@ export function RequestsDataTable({
     () => createRequestColumns({ now, showDepartment: !scopedDepartmentName }),
     [now, scopedDepartmentName],
   );
+  const columnVisibility = showsPaymentColumn(filters)
+    ? ALL_COLUMNS
+    : WITHOUT_PAYMENT;
 
   const table = useTable({
     features: appTableFeatures,
     data: rows,
     columns,
-    state: { sorting },
+    state: { sorting, columnVisibility },
     onSortingChange: setSorting,
     initialState: { pagination: { pageIndex: 0, pageSize: 20 } },
   });

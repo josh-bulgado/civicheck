@@ -159,7 +159,7 @@ export function buildLegacyFormDefinition(
   return {
     schemaVersion: 1,
     sections: [
-      { key: "case", step: "case", title: "Case details", fields: caseFields },
+      { key: "case", step: "case", title: "Request details", fields: caseFields },
       {
         key: "details",
         step: "details",

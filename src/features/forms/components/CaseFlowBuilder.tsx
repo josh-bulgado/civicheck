@@ -81,9 +81,9 @@ export function CaseFlowBuilder({
             className="self-start"
             onClick={() =>
               onChange({
-                title: "Find the right service",
+                title: "Answer a few questions",
                 description:
-                  "Choose the answers that match this case. We’ll select the correct service.",
+                  "Your answers help us select the right service.",
                 questions: [
                   {
                     key: "case_question_1",

@@ -117,7 +117,11 @@ describe("soft and split shapes expose their intended radii", () => {
 
 describe("form and action controls expose their intended defaults", () => {
   const defaults = [
-    ["button.tsx", ['size = "lg"', 'shape = "pill"']],
+    [
+      "button.tsx",
+      ['groupStyle.size ?? "lg"', 'groupStyle.shape ?? "pill"'],
+    ],
+    ["button-group.tsx", ['size = "lg"', 'shape = "pill"']],
     ["input.tsx", ['fieldSize = "lg"', 'shape = "split"']],
     ["input-group.tsx", ['fieldSize = "lg"', 'shape = "split"']],
     ["select.tsx", ['size = "lg"', 'shape = "split"']],

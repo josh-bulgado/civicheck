@@ -6,6 +6,10 @@ type MarkProps = {
   inverse?: boolean;
 };
 
+type CiviCheckIdentityProps = MarkProps & {
+  prominent?: boolean;
+};
+
 /**
  * Text-only placeholder: no MOA is in place authorizing use of the CCRO or
  * City of Legazpi official seals, so render initials instead of the real
@@ -35,14 +39,31 @@ export function CiviCheckIdentity({
   className,
   compact = false,
   inverse = false,
-}: MarkProps) {
+  prominent = false,
+}: CiviCheckIdentityProps) {
   return (
-    <span className={cn("inline-flex min-w-0 items-center gap-3", className)}>
-      <OfficialMark label="CCRO" />
+    <span
+      className={cn(
+        "inline-flex min-w-0 items-center",
+        prominent ? "gap-2.5" : "gap-3",
+        className,
+      )}
+    >
+      <OfficialMark
+        label="CCRO"
+        className={
+          prominent
+            ? "size-10.5 border-2 border-brand-gold text-[10px] tracking-[0.02em]"
+            : undefined
+        }
+      />
       <span className="min-w-0 leading-tight">
         <span
           className={cn(
-            "block truncate text-lg font-extrabold tracking-[-0.025em]",
+            "block truncate",
+            prominent
+              ? "text-[23px] font-semibold tracking-[-0.02em]"
+              : "text-lg font-extrabold tracking-[-0.025em]",
             inverse ? "text-white" : "text-foreground",
           )}
         >

@@ -13,7 +13,10 @@ import {
   roleLabel,
   staffStatus,
 } from "../staff-table.utils";
-import { StaffRowActions } from "./StaffRowActions";
+import {
+  StaffRowActions,
+  type StaffRowActionHandlers,
+} from "./StaffRowActions";
 
 function getInitials(staffMember: StaffMember) {
   const initials = `${staffMember.firstName.charAt(0)}${staffMember.lastName.charAt(0)}`;
@@ -64,12 +67,7 @@ export function createStaffColumns({
   checkingStaffId: string | null;
   resendingStaffId: string | null;
   onCheckStatus: (staffMember: StaffMember) => void;
-  onManage: (staffMember: StaffMember) => void;
-  onResend: (staffMember: StaffMember) => void;
-  onCancel: (staffMember: StaffMember) => void;
-  onRemove: (staffMember: StaffMember) => void;
-  onReactivate: (staffMember: StaffMember) => void;
-}): AppColumnDef<StaffMember>[] {
+} & StaffRowActionHandlers): AppColumnDef<StaffMember>[] {
   return [
     {
       id: "member",

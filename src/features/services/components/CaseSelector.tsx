@@ -10,6 +10,7 @@ import {
 import type { CaseSelectorDefinition } from "~/features/forms/form-template.types";
 import { conditionRuleMatches } from "~/features/forms/form-template.utils";
 import { formatPesoFee } from "~/features/services/service-utils";
+import { applicantCopy } from "~/features/forms/applicant-copy";
 
 interface Service {
   service_code: string;
@@ -107,7 +108,7 @@ function SelectedServiceNote({ name }: { name: string }) {
         aria-hidden="true"
       />
       <span>
-        Selected: <span className="font-medium text-foreground">{name}</span>
+        Service selected: <span className="font-medium text-foreground">{name}</span>
       </span>
     </p>
   );
@@ -204,11 +205,10 @@ function LegacyCaseSelector({
           id="case-selector-title"
           className="text-pretty text-lg leading-tight font-bold text-foreground"
         >
-          Find the right service
+          Answer a few questions
         </h2>
         <p className="mt-0.5 max-w-2xl text-pretty text-sm leading-snug text-muted-foreground">
-          Choose the answers that match this case. We&rsquo;ll select the correct
-          service.
+          Your answers help us select the right service.
         </p>
       </div>
 
@@ -237,7 +237,7 @@ function LegacyCaseSelector({
         {showAge && (
           <FieldSet className="civic-enter-sm gap-3">
             <FieldLegend variant="label" className={choiceLegendClass}>
-              {stepPrefix(true)}Age of the person to be registered <RequiredMark />
+              {stepPrefix(true)}How old is the person being registered? <RequiredMark />
             </FieldLegend>
             <ChoiceGroup
               wide
@@ -256,7 +256,7 @@ function LegacyCaseSelector({
         {steps.hasProgram && age && (
           <FieldSet className="civic-enter-sm gap-3">
             <FieldLegend variant="label" className={choiceLegendClass}>
-              {stepPrefix(true)}Registration program <RequiredMark />
+              {stepPrefix(true)}How will the birth be registered? <RequiredMark />
             </FieldLegend>
             <ChoiceGroup
               wide
@@ -266,9 +266,11 @@ function LegacyCaseSelector({
               options={steps.programs.map((p) => ({
                 value: p,
                 label:
-                  p === "brap" ? "BRAP-assisted registration" : "Standard registration",
+                  p === "brap" ? "With BRAP assistance" : "Standard registration",
                 description:
-                  p === "brap" ? "PSA-assisted program" : "Regular filing process",
+                  p === "brap"
+                    ? "Assisted by PSA through BRAP"
+                    : "File through the regular process",
               }))}
             />
           </FieldSet>
@@ -375,6 +377,7 @@ function ConfiguredCaseSelector({
   const selectedService = services.find(
     (service) => service.service_code === selectedCode,
   );
+  const sectionTitle = applicantCopy(definition.title);
 
   return (
     <section
@@ -386,11 +389,11 @@ function ConfiguredCaseSelector({
           id="case-selector-title"
           className="text-pretty text-lg leading-tight font-bold text-foreground"
         >
-          {definition.title}
+          {sectionTitle}
           {/* A lone question that repeats the title has no legend of its own,
               so the heading is what the applicant answers. */}
           {visibleQuestions.length === 1 &&
-          sameSentence(visibleQuestions[0].label, definition.title) ? (
+          sameSentence(applicantCopy(visibleQuestions[0].label), sectionTitle) ? (
             <>
               {" "}
               <RequiredMark />
@@ -398,8 +401,8 @@ function ConfiguredCaseSelector({
           ) : null}
         </h2>
         <p className="mt-0.5 max-w-2xl text-pretty text-sm leading-snug text-muted-foreground">
-          {definition.description ??
-            "Choose the answers that match this case. We’ll select the correct service."}
+          {applicantCopy(definition.description) ??
+            "Your answers help us select the right service."}
         </p>
       </div>
 
@@ -409,18 +412,18 @@ function ConfiguredCaseSelector({
           // same sentence twice in a row, so the title names the group instead.
           const repeatsTitle =
             visibleQuestions.length === 1 &&
-            sameSentence(question.label, definition.title);
+            sameSentence(applicantCopy(question.label), sectionTitle);
           return (
             <FieldSet key={question.key} className="civic-enter-sm gap-3">
               {repeatsTitle ? null : (
                 <FieldLegend variant="label" className={choiceLegendClass}>
                   {visibleQuestions.length > 1 ? `${index + 1}. ` : ""}
-                  {formatFieldLabel(question.label)} <RequiredMark />
+                  {formatFieldLabel(applicantCopy(question.label))} <RequiredMark />
                 </FieldLegend>
               )}
               {question.description ? (
                 <p className="text-xs text-muted-foreground">
-                  {question.description}
+                  {applicantCopy(question.description)}
                 </p>
               ) : null}
               <ChoiceGroup
@@ -430,7 +433,10 @@ function ConfiguredCaseSelector({
                 onValueChange={(value) =>
                   publishAnswers({ ...answers, [question.key]: value })
                 }
-                options={question.options}
+                options={question.options.map((option) => ({
+                  ...option,
+                  label: applicantCopy(option.label),
+                }))}
                 labelledBy={repeatsTitle ? "case-selector-title" : undefined}
               />
             </FieldSet>
