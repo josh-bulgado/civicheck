@@ -5,7 +5,7 @@ import { requireActiveSession } from "~/server/auth";
 import { one } from "~/lib/embed";
 import { isDepartmentScopedRole } from "~/lib/permissions";
 import { normalizePaymentRange, paymentRangeBounds } from "~/features/requests/payment-history";
-import { requestFieldLabelsOf } from "~/features/requests/request-field-labels";
+import { requestFieldDisplayOf } from "~/features/requests/request-field-labels";
 import { readRequestMessages } from "~/features/requests/request-messages.server";
 import type { RequestClaim } from "~/features/requests/request-claims";
 import { REQUEST_QUEUE_SORTS } from "~/features/requests/request-queue";
@@ -616,7 +616,7 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       referenceNumberLabel: service?.reference_number_label ?? null,
       allowsMessages,
       messages,
-      fieldLabels: requestFieldLabelsOf(row),
+      ...requestFieldDisplayOf(row),
       applicantName: applicantNameOf(row),
       createdAt: row.created_at,
       updatedAt: row.updated_at,

@@ -1,68 +1,20 @@
 import type { ReactNode } from "react";
-import { isEstimatedDate } from "~/features/forms/estimated-date";
 import { groupFormData } from "~/features/requests/form-data-groups";
+import { formDataLabel, formatFormDataValue, type DetailsSource } from "~/features/requests/form-data-display";
+import { cn } from "~/lib/utils";
 
-/** The slice of a request (applicant or staff view) this card reads. */
-interface DetailsSource {
-  formData: Record<string, string | number | boolean | null>;
-  fieldLabels: Record<string, string>;
-  eventDateLabel: string | null;
-  eventPlaceLabel: string | null;
-  referenceNumberLabel: string | null;
-}
-
-function formatKey(key: string) {
-  return key
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
-/**
- * `event_date`/`event_place`/`reference_number` carry a per-service label
- * (e.g. "Date of birth" for a birth service) configured in Admin → Services —
- * show that instead of the generic humanized key when the service set one.
- */
-function formDataLabel(key: string, request: DetailsSource) {
-  if (request.fieldLabels[key]) return request.fieldLabels[key];
-  if (key === "event_date" && request.eventDateLabel) return request.eventDateLabel;
-  if (key === "event_place" && request.eventPlaceLabel) return request.eventPlaceLabel;
-  if (key === "reference_number" && request.referenceNumberLabel) {
-    return request.referenceNumberLabel;
-  }
-  return formatKey(key);
-}
-
-// Answers that hold a date and are shown as "September 9, 2026".
-const DATE_KEYS = new Set([
-  "event_date",
-  "death_date",
-  "marriage_date",
-  "record_date",
-  "registered_late_when",
-]);
-
-function formatValue(key: string, value: string | number | boolean) {
-  if (value === "") return "—";
-  if (DATE_KEYS.has(key)) {
-    if (isEstimatedDate(String(value))) return String(value);
-    const date = new Date(String(value));
-    if (!Number.isNaN(date.getTime())) {
-      return date.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
-    }
-  }
-  return String(value);
+function dialogFieldLabel(label: string) {
+  // Keep acronyms such as PSA and ID while using sentence case for words.
+  return label.replace(/\b[A-Z][a-z]+(?:['’][a-z]+)?\b/g, (word, offset: number) =>
+    offset === 0 ? word : word.toLowerCase(),
+  );
 }
 
 /**
  * The "Submitted details" card shared by the applicant and staff request
  * pages: answers grouped by who/what they describe. `showEmpty` is for staff,
  * where a blank field is worth seeing; `children` renders below the groups.
- * `variant="portal"` is the applicant page's softer card; staff keep the default.
+ * `dialog` uses compact, sentence-case fields for the applicant's full view.
  */
 export function SubmittedDetailsCard({
   request,
@@ -75,7 +27,7 @@ export function SubmittedDetailsCard({
 }: {
   request: DetailsSource;
   showEmpty?: boolean;
-  variant?: "dashboard" | "portal";
+  variant?: "dashboard" | "portal" | "dialog";
   bare?: boolean;
   /** `rows` puts each label beside its answer, under a small section title. */
   layout?: "stacked" | "rows";
@@ -87,9 +39,14 @@ export function SubmittedDetailsCard({
   children?: ReactNode;
 }) {
   const portal = variant === "portal";
+  const dialog = variant === "dialog";
   const groups = groupFormData(
     request.formData,
-    (key) => formDataLabel(key, request),
+    (key) => {
+      const label = formDataLabel(key, request);
+      // Authored labels may contain proper nouns, such as Legazpi City.
+      return dialog && !request.fieldLabels[key] ? dialogFieldLabel(label) : label;
+    },
     { includeEmpty: showEmpty },
   );
 
@@ -106,8 +63,8 @@ export function SubmittedDetailsCard({
             {group.rows.map(({ key, label, value }) => (
               <div key={key} className="contents">
                 <dt className="text-muted-foreground">{label}</dt>
-                <dd className="font-medium text-foreground capitalize break-words">
-                  {formatValue(key, value)}
+                <dd className="font-medium text-foreground break-words">
+                  {formatFormDataValue(key, value, request)}
                 </dd>
               </div>
             ))}
@@ -118,7 +75,7 @@ export function SubmittedDetailsCard({
   ) : (
   <div
     className={
-      portal
+      portal || dialog
         ? "flex flex-col divide-y divide-border-lighter"
         : "flex flex-col divide-y divide-border"
     }
@@ -127,7 +84,9 @@ export function SubmittedDetailsCard({
       <div key={group.id} className="py-4 first:pt-0 last:pb-0">
         <h3
           className={
-            portal
+            dialog
+              ? "mb-3 text-sm leading-[18px] font-semibold text-foreground"
+              : portal
               ? "mb-3 text-base font-semibold text-foreground"
               : "mb-3 text-sm font-semibold text-foreground"
           }
@@ -136,7 +95,9 @@ export function SubmittedDetailsCard({
         </h3>
         <dl
           className={
-            compact
+            dialog
+              ? "grid grid-cols-1 gap-x-8 gap-y-4 min-[480px]:grid-cols-2"
+              : compact
               ? "grid grid-cols-1 gap-x-6 gap-y-3.5 sm:grid-cols-2 xl:grid-cols-1"
               : "grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2"
           }
@@ -145,7 +106,9 @@ export function SubmittedDetailsCard({
             <div key={key} className="min-w-0">
               <dt
                 className={
-                  compact
+                  dialog
+                    ? "text-[11px] leading-[14px] text-muted-foreground"
+                    : compact
                     ? "mb-0.5 text-xs text-muted-foreground"
                     : "text-xs uppercase tracking-wide text-muted-foreground"
                 }
@@ -154,12 +117,14 @@ export function SubmittedDetailsCard({
               </dt>
               <dd
                 className={
-                  portal
-                    ? "text-[17px] text-foreground capitalize break-words"
-                    : "text-sm text-foreground capitalize break-words"
+                  dialog
+                    ? cn("mt-1 text-[13px] leading-[18px] wrap-anywhere", value === "" ? "text-muted-foreground" : "text-foreground")
+                    : portal
+                    ? "text-[17px] text-foreground break-words"
+                    : "text-sm text-foreground break-words"
                 }
               >
-                {formatValue(key, value)}
+                {formatFormDataValue(key, value, request)}
               </dd>
             </div>
           ))}

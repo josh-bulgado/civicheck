@@ -1,8 +1,8 @@
-# Service Editor Redesign — Design
+# Service Editor Redesign - Design
 
 Redesign of the admin **Edit Service** screen (`/admin/services/$serviceCode/edit`, rendered by `ServiceFormPage`). The design was iterated and approved as an interactive prototype; this document records the decisions so the prototype is not the only source.
 
-**Visual and behavioral reference (approved):** `docs/superpowers/specs/assets/2026-10-19-service-editor-prototype.html` — open it in a browser (serve it over `python3 -m http.server`; Playwright blocks `file:`). Where this document and the prototype disagree on behavior, this document wins; where they disagree on visual detail, the prototype wins.
+**Visual and behavioral reference (approved):** `docs/superpowers/specs/assets/2026-10-19-service-editor-prototype.html` - open it in a browser (serve it over `python3 -m http.server`; Playwright blocks `file:`). Where this document and the prototype disagree on behavior, this document wins; where they disagree on visual detail, the prototype wins.
 
 The prototype is HTML. It is a reference, not code to port: the real app keeps React, react-hook-form, shadcn/ui, Tailwind v3, dnd-kit and the existing tokens in `src/styles/app.css`.
 
@@ -27,7 +27,7 @@ In scope: the six tabs of the editor and the shell around them. Out of scope: an
 - **Fee breakdown is a compact table.** Columns: Charge | Amount | Charged | In total | When it applies.
   - *Charged* is a select: Flat (default) / per page / per copy / per document. *When it applies* is an optional short note (max 120 chars).
   - For rows marked **In total**, *Charged* and *When it applies* are disabled and ignored on save: an included row is a fixed part of the total.
-  - Footer: "Included total ₱X" with a status chip — **Matches**, **₱X short**, or **₱X over** — and, on mismatch, a bar "Set Total Fee to ₱X" that writes the included total into the Total Fee field.
+  - Footer: "Included total ₱X" with a status chip - **Matches**, **₱X short**, or **₱X over** - and, on mismatch, a bar "Set Total Fee to ₱X" that writes the included total into the Total Fee field.
   - Below the table, "What applicants see": a receipt-style preview of the included lines and the "also payable" lines, with unit and note.
 - Data: `FeeComponent` gains optional `unit` (`page | copy | document`) and `note` (string). No database change: `fee_components_are_valid` inspects only `label`, `amount` and `included`, and the column is `jsonb`. Old rows without the new keys must keep working everywhere. The column comment is updated by a migration for documentation only.
 
@@ -49,7 +49,7 @@ In scope: the six tabs of the editor and the shell around them. Out of scope: an
 - **No clickable `<tr>`** (tempertemper: clickable table rows are a bad idea). The first cell is one real `<button>` that opens the field sheet, with a visible focus ring and a hover underline on the label. After the sheet closes, focus returns to that button.
 - Reordering keeps dnd-kit (pointer from the grip only; keyboard sensor on the grip; Move Up/Down in the menu as the non-drag route).
 - Field sheet: Label, Stable Field Key (locked once published: "Locked because this key exists in a published version."), Field Type, Placeholder, Dropdown Options, "Applicant must answer this field", Show When.
-- **Dropdown Options editor** — Value | Label | remove, plus Add Option.
+- **Dropdown Options editor** - Value | Label | remove, plus Add Option.
   - A condition stores the option **value**, never the label (already true in `visibleWhen`, `caseSelector` and requirement `applies_when`). Summaries derive the label from the value, so renaming a label is safe.
   - An option used by any condition (another field's `visibleWhen`, a case-selector outcome, or a requirement's `applies_when`) has a **locked value** and cannot be removed; the row says what uses it.
   - A value is auto-derived from the label only for options added in this editor and only until the admin edits the value by hand; never for an option that is in use.
@@ -60,7 +60,7 @@ In scope: the six tabs of the editor and the shell around them. Out of scope: an
 - Group tabs with counts: **All / This variant / Conditional / Shared / Other**; default tab **Conditional** when it has rows, else All. Search looks across all groups.
 - Columns: Requirement | Applies to | Required.
   - *Requirement*: bold title (text before the first comma) with the rest muted beneath. A "No file" tag only when the row does not require an upload.
-  - *Applies to*: one line — a blue condition chip (e.g. "Age 18–20", "Exempt from license", "Not X") and a grey person chip (e.g. "Bride"). Only a person → only that chip. Neither → "Everyone". Chip logic = prototype functions `shortOne`, `whenShort`, `whoOf`: at most two conditions joined with " + " (match all) or " or " (match any), otherwise first condition plus "+N"; person chip comes from `upload_scope = specific_subject` (the role) or "Each person" for `each_subject`.
+  - *Applies to*: one line - a blue condition chip (e.g. "Age 18–20", "Exempt from license", "Not X") and a grey person chip (e.g. "Bride"). Only a person → only that chip. Neither → "Everyone". Chip logic = prototype functions `shortOne`, `whenShort`, `whoOf`: at most two conditions joined with " + " (match all) or " or " (match any), otherwise first condition plus "+N"; person chip comes from `upload_scope = specific_subject` (the role) or "Each person" for `each_subject`.
   - *Required*: a quiet check mark, or an amber "Optional" pill, then an always-visible muted "…" menu: Configure / Override for this variant / Remove.
 - First cell is one real button opening the Configure sheet; no row-level click handler; no `role` on rows.
 - Shared (inherited / other) rows are locked: static text and a lock icon, not buttons, until **Unlock to Edit** is pressed on the Shared tab.

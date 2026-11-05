@@ -22,7 +22,7 @@ export function RequestStatusHistory({ logs }: { logs: LogEntry[] }) {
   return (
     <section
       aria-labelledby="status-history-heading"
-      className="rounded-[28px] bg-card px-6 py-6 shadow-portal-card ring-2 ring-border-light md:px-9 md:py-8"
+      className="min-w-0 rounded-3xl border border-border-light bg-card p-5 sm:p-6"
     >
       <h2
         id="status-history-heading"
@@ -39,7 +39,7 @@ export function RequestStatusHistory({ logs }: { logs: LogEntry[] }) {
           return (
             <li
               key={log.id}
-              className="flex items-center gap-4 border-b border-border-lighter py-3.5 last:border-b-0 last:pb-0"
+              className="grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-b border-border-lighter py-3.5 last:border-b-0 last:pb-0 xl:grid-cols-[1rem_minmax(0,1fr)_auto]"
             >
               <span className="flex size-4 shrink-0 items-center justify-center" aria-hidden="true">
                 <span
@@ -56,7 +56,7 @@ export function RequestStatusHistory({ logs }: { logs: LogEntry[] }) {
               </span>
               <span
                 className={cn(
-                  "min-w-0 flex-1 text-lg leading-snug text-foreground",
+                  "min-w-0 text-sm leading-snug text-foreground",
                   current && "font-semibold",
                 )}
               >
@@ -64,7 +64,7 @@ export function RequestStatusHistory({ logs }: { logs: LogEntry[] }) {
               </span>
               <time
                 dateTime={log.createdAt}
-                className="shrink-0 text-[15px] text-muted-foreground"
+                className="col-start-2 text-xs text-muted-foreground xl:col-start-auto xl:text-right"
               >
                 {formatLogDateTime(log.createdAt)}
               </time>

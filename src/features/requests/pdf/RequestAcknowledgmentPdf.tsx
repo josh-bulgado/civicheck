@@ -1,6 +1,7 @@
 import { Document, Font, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import { getStatusDetails } from "~/features/services/request-status";
 import type { AcknowledgmentPdfData } from "~/features/requests/pdf/types";
+import { documentText } from "~/features/requests/pdf/document-text";
 
 // Wrap whole words instead of splitting them mid-word ("han-dles"). This module
 // only builds the acknowledgment, so the global setting is contained to it.
@@ -87,7 +88,7 @@ function nextAction(status: string) {
 /** What to do on arrival, in the order the office actually works. */
 function visitSteps(departmentName: string | null | undefined, feesDue: number) {
   const where = departmentName?.trim()
-    ? `the ${departmentName.trim()} department`
+    ? `the ${documentText(departmentName.trim())} department`
     : "the CCRO department that handles your request";
   return [
     {
@@ -271,13 +272,14 @@ function SectionTitle({ children }: { children: string }) {
 }
 
 export function RequestAcknowledgmentPdf({ data, qrDataUrl, generatedAt }: RequestAcknowledgmentPdfProps) {
+  const trackingNumber = documentText(data.trackingNumber);
   const status = getStatusDetails(data.status);
   const action = nextAction(data.status);
   const hasFee = data.feesDue > 0;
   const isClosed = data.status === "released" || data.status === "rejected" || data.status === "cancelled";
 
   return (
-    <Document title={`CiviCheck Acknowledgment ${data.trackingNumber}`} author="CiviCheck | City Civil Registrar Office, Legazpi" language="en-PH">
+    <Document title={`CiviCheck Acknowledgment ${trackingNumber}`} author="CiviCheck | City Civil Registrar Office, Legazpi" language="en-PH">
       <Page size="A4" style={styles.page}>
         <View style={styles.runningHeader} fixed>
           <Text style={styles.wordmark}>CiviCheck</Text>
@@ -292,13 +294,13 @@ export function RequestAcknowledgmentPdf({ data, qrDataUrl, generatedAt }: Reque
             <View style={styles.pass}>
               <Image src={qrDataUrl} style={styles.qrImage} />
               <Text style={styles.passLabel}>TRACKING NUMBER</Text>
-              <Text style={styles.trackingNumber}>{data.trackingNumber}</Text>
+              <Text style={styles.trackingNumber}>{trackingNumber}</Text>
               <Text style={styles.passHint}>Show the QR to staff, or give them this number.</Text>
             </View>
             <View style={styles.details}>
-              <Text style={styles.service}>{data.serviceName}</Text>
+              <Text style={styles.service}>{documentText(data.serviceName)}</Text>
               <View style={styles.action}>
-                <Text style={styles.actionStatus}>STATUS AT DOWNLOAD: {status.label.toUpperCase()}</Text>
+                <Text style={styles.actionStatus}>STATUS AT DOWNLOAD: {documentText(status.label.toUpperCase())}</Text>
                 <Text style={styles.actionTitle}>{action.title}</Text>
                 <Text style={styles.actionDetail}>{action.detail}</Text>
               </View>
@@ -320,7 +322,7 @@ export function RequestAcknowledgmentPdf({ data, qrDataUrl, generatedAt }: Reque
                 <View style={styles.fact}>
                   <Text style={styles.factLabel}>Estimated processing</Text>
                   <View style={styles.factBody}>
-                    <Text style={styles.factValue}>{data.processingTime?.trim() || "Confirm with CCRO staff"}</Text>
+                    <Text style={styles.factValue}>{documentText(data.processingTime?.trim() || "Confirm with CCRO staff")}</Text>
                   </View>
                 </View>
               </View>
@@ -335,19 +337,19 @@ export function RequestAcknowledgmentPdf({ data, qrDataUrl, generatedAt }: Reque
             : "No uploaded documents are recorded for this request. Check My Requests or contact the CCRO for submission instructions."}
         </Text>
         {data.documentWarning ? (
-          <Text style={[styles.sectionHint, styles.correctionText]}>{data.documentWarning}</Text>
+          <Text style={[styles.sectionHint, styles.correctionText]}>{documentText(data.documentWarning)}</Text>
         ) : null}
         {data.documents.map((document, index) => (
           <View key={document.id} style={styles.documentRow} wrap={false}>
             <Text style={styles.documentIndex}>{index + 1}.</Text>
             <View style={styles.documentBody}>
               <Text style={styles.documentName}>
-                {document.requirementName}{document.subjectRole?.trim() ? ` (${document.subjectRole})` : ""}
+                {documentText(document.requirementName)}{document.subjectRole?.trim() ? ` (${documentText(document.subjectRole)})` : ""}
               </Text>
               {document.verificationStatus === "rejected" ? (
                 <>
                   <Text style={[styles.documentNote, styles.correctionText]}>
-                    Staff feedback: {document.rejectionReason?.trim() || "Review the staff instructions in My Requests or contact the CCRO for details."}
+                    Staff feedback: {documentText(document.rejectionReason?.trim() || "Review the staff instructions in My Requests or contact the CCRO for details.")}
                   </Text>
                   {!isClosed ? <Text style={styles.documentNote}>Upload a corrected file in My Requests.</Text> : null}
                 </>
@@ -385,7 +387,7 @@ export function RequestAcknowledgmentPdf({ data, qrDataUrl, generatedAt }: Reque
           <View style={styles.footerRow}>
             <Text style={styles.footerText}>Generated {formatDate(generatedAt)} (UTC+8)</Text>
             <View style={styles.footerPageNumber} render={({ pageNumber }) => (
-              <Text style={styles.footerText}>{data.trackingNumber}  |  Page {pageNumber}</Text>
+              <Text style={styles.footerText}>{trackingNumber}  |  Page {pageNumber}</Text>
             )} />
           </View>
         </View>

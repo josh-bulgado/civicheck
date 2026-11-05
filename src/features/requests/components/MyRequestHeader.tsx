@@ -38,7 +38,7 @@ export function MyRequestHeader({
         {/* `min-w-0` lets a long service name wrap here instead of pushing the
             status off the edge. */}
         <div className="min-w-0 flex-1">
-          <h1 className="text-[28px] leading-[1.12] font-semibold tracking-[-0.02em] text-foreground md:text-[40px]">
+          <h1 className="portal-title text-pretty">
             {serviceName}
           </h1>
           <p className="mt-2 font-mono text-[15px] leading-[normal] text-muted-foreground">

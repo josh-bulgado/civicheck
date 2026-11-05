@@ -1,10 +1,6 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "~/components/ui/dialog";
-import { AttachmentPreview } from "~/features/requests/components/AttachmentPreview";
+import { FilePreviewDialogContent } from "~/components/file-preview/FilePreviewDialogContent";
+import { Dialog } from "~/components/ui/dialog";
+import { AttachmentPreview, getFileKind } from "~/features/requests/components/AttachmentPreview";
 
 /**
  * Previews a signed attachment URL. Open while `url` is set; the caller owns
@@ -23,21 +19,19 @@ export function AttachmentViewerDialog({
 }) {
   return (
     <Dialog open={url != null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>
-            {subjectRole ? `${subjectRole}: ` : ""}
-            {requirementName}
-          </DialogTitle>
-        </DialogHeader>
-        {url && (
+      {url && (
+        <FilePreviewDialogContent
+          title={`${subjectRole ? `${subjectRole}: ` : ""}${requirementName}`}
+          kind={getFileKind(url)}
+          url={url}
+        >
           <AttachmentPreview
             url={url}
             name={requirementName}
-            className="h-[75vh]"
+            className="min-h-0 flex-1"
           />
-        )}
-      </DialogContent>
+        </FilePreviewDialogContent>
+      )}
     </Dialog>
   );
 }

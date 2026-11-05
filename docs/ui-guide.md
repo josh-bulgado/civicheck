@@ -28,7 +28,7 @@ affected guidance rather than treating this snapshot as a second implementation.
 | --- | --- | --- |
 | Citizen home | [CitizenDashboard](../src/features/dashboard/pages/CitizenDashboard.tsx) | `portal-page`, `portal-title`, one current request and its next useful action, then attention items and secondary requests. |
 | Citizen request list | [MyRequestsPage](../src/features/requests/pages/MyRequestsPage.tsx) | Readable request rows, status pills, transaction references, and an actionable first-use empty state. |
-| Citizen request detail | [MyRequestDetailPage](../src/features/requests/pages/MyRequestDetailPage.tsx) | Reuse the feature's detail sections and status vocabulary. |
+| Citizen request detail | [MyRequestDetailPage](../src/features/requests/pages/MyRequestDetailPage.tsx) | Status pill in the header; progress and guidance beside a compact details/acknowledgment card; documents and status history start together in the next row. Show rejected files first with re-upload highlighting, followed by missing uploads and the remaining files. Preserve file numbering across those sections, actual image thumbnails, short document titles, and supporting text for examples and copy requirements. |
 | Staff queue | [RequestsPage](../src/features/requests/pages/RequestsPage.tsx) | `dashboard-page`, page header, filters, table, and pagination; preserve the route-owned filters and department scope. |
 | Admin list | [ServicesPage](../src/features/admin/services/pages/ServicesPage.tsx) | `PageHeaderCard` plus a feature table built on `DataTableCard`. |
 | Staff home | [StaffDashboard](../src/features/dashboard/StaffDashboard.tsx) | Operational priorities and available actions appropriate to the role. |
@@ -48,6 +48,9 @@ references and other code-like identifiers. Citizen titles use `portal-title`
 (28px on small screens, 38px from `md`); section headings use `portal-heading`.
 Admin list titles use the compact 18px heading in `PageHeaderCard`. Match the
 surface rather than applying one title size everywhere.
+
+Downloaded acknowledgment and verification PDFs use regular hyphens in place of
+em dashes, including text from service settings and form answers.
 
 **Color.** Use semantic utilities such as `bg-card`, `text-foreground`,
 `text-muted-foreground`, `text-body-2`, `bg-primary-soft`, and `border-border`.
@@ -106,7 +109,36 @@ use `aria-hidden="true"`; button icons use `data-icon="inline-start"` or
 `inline-end` so the wrapper controls sizing and spacing. Dialogs and sheets need
 their title components, including when the title is visually hidden.
 
+The citizen's full-details dialog uses `SubmittedDetailsCard` with
+`variant="dialog"`: sentence-case labels, compact grouped answers, and two
+columns where space permits. Its tracking badge and close action stay in the
+header while the body scrolls. Staff views retain their existing variants.
+
+Submitted answers use the option labels from the application's saved form
+template across services, with readable fallbacks such as Male, Female, Yes,
+and No for legacy records. Keep names, contact details, references, and notes
+as entered; display formatting must not change stored answers.
+
 ## Interaction and responsive behavior
+
+Uploaded photos and PDFs share
+[FilePreviewDialogContent](../src/components/file-preview/FilePreviewDialogContent.tsx)
+in the citizen request and application previews: a document title, file-type
+description, open-in-new-tab and close actions, followed by a separate toolbar
+and a bordered subtle canvas. Reuse
+[PreviewToolbar](../src/components/file-preview/PreviewToolbar.tsx) for zoom and
+Fit to window. Photos keep their natural size when smaller than the canvas,
+with an optional magnifier switch; PDFs add page navigation and retain scroll
+access to every page. Controls wrap above the canvas on small screens.
+While downloading or rendering, use `FilePreviewLoading` to keep the canvas
+visible with a loading indicator. Reveal decoded photos and rendered PDF pages
+with `civic-enter-fade`, which respects reduced-motion settings.
+
+The citizen request detail page introduces its header with `civic-enter-sm`,
+then staggers its guidance, summary, documents, and history groups with
+`civic-stagger` and `staggerStyle`. Key the page content by request ID so opening
+a different request replays the entrance while updates to the same request
+preserve the current content and interactions.
 
 - Make the current stage and next useful action clear to a citizen. Keep staff
   screens efficient for scanning and repeated work. Preserve existing role-aware

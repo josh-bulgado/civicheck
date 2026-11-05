@@ -37,7 +37,7 @@ export function LeadTracker({
 
   return (
     <ol
-      className={cn("flex min-w-0 w-full max-w-full overflow-hidden", className)}
+      className={cn("flex min-w-0 w-full max-w-full", className)}
       aria-label="Request progress"
     >
       {STAGES.map((stage) => {

@@ -682,9 +682,9 @@ input.inl[aria-invalid="true"] { background: var(--bad-soft); color: var(--bad-i
     { name: "Mailing address", key: "mailing_address", type: "Long text", required: false }
   ];
   var STEP_PH = [
-    "SUBMIT — what the applicant hands over, and what CCRO checks or signs.",
-    "PAY — what the cashier collects and issues.",
-    "CLAIM — what the applicant receives, and when."
+    "SUBMIT - what the applicant hands over, and what CCRO checks or signs.",
+    "PAY - what the cashier collects and issues.",
+    "CLAIM - what the applicant receives, and when."
   ];
   var BEH = {
     redirect_confirm: { label: "Offer switch", hint: "Applicants are offered a switch to the alternate track.", cap: "Applicants choose whether to switch.", icon: "switch", target: true, cta: true, alert: true },
@@ -751,9 +751,9 @@ input.inl[aria-invalid="true"] { background: var(--bad-soft); color: var(--bad-i
       { label: "Certified copy by the LCR", amount: "5.00", included: false, unit: "page", note: "" }
     ],
     steps: [
-      "SUBMIT — Present the accomplished application form and requirements at the CCRO window. Staff check and sign the form.",
-      "PAY — Pay the license fee at the City Treasurer’s cashier and keep the official receipt.",
-      "CLAIM — Return after the 10-day posting period to claim the marriage license."
+      "SUBMIT - Present the accomplished application form and requirements at the CCRO window. Staff check and sign the form.",
+      "PAY - Pay the license fee at the City Treasurer’s cashier and keep the official receipt.",
+      "CLAIM - Return after the 10-day posting period to claim the marriage license."
     ],
     roles: ["Bride", "Groom"], allowsMessages: false,
     enabled: true, trigger: "Intended date of marriage", days: 30, tz: "Asia/Manila", target: CURRENT,
@@ -1015,7 +1015,7 @@ input.inl[aria-invalid="true"] { background: var(--bad-soft); color: var(--bad-i
         return '<tr data-s="' + si + '" data-i="' + fi + '"><td class="c-grip"><span class="grip" aria-hidden="true" title="Drag to reorder">' + ic("grip", "fill") + "</span></td>" +
           '<td class="cb"><button type="button" class="cbtn" data-act="edit-field" data-s="' + si + '" data-i="' + fi + '"><span class="q"><span class="ti">' + ic(TYPE_ICON[f.type] || "text") + '</span><span class="q-t"><span class="q-l">' + esc(nm) + "</span>" +
           (f.shared ? "<small>" + ic("blocks") + "Shared · " + esc(f.shared) + "</small>" : "") + "</span></span></button></td>" +
-          '<td class="kcell">' + esc(f.key || "—") + '</td><td><span class="tchip">' + esc(f.type) + "</span></td>" +
+          '<td class="kcell">' + esc(f.key || "-") + '</td><td><span class="tchip">' + esc(f.type) + "</span></td>" +
           "<td>" + (f.required ? '<span class="rqb">Required</span>' : '<span class="opt">Optional</span>') + "</td><td>" + vis + "</td>" +
           '<td class="c-act"><button type="button" class="ib" data-act="row-menu" data-s="' + si + '" data-i="' + fi + '" aria-haspopup="menu" aria-label="Actions for ' + esc(nm) + '">' + ic("more", "fill") + "</button></td></tr>";
       }).join("");

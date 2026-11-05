@@ -12,7 +12,7 @@ describe("LeadTracker", () => {
   it("stays inside the lead card on narrow screens", () => {
     const html = render("processing");
 
-    expect(html).toContain("min-w-0 w-full max-w-full overflow-hidden");
+    expect(html).toContain("min-w-0 w-full max-w-full");
   });
 
   it("draws all four stages finished, and none under way, once a request is released", () => {

@@ -1,10 +1,28 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
-import { Minus, Plus, Search } from "lucide-react";
-import { Button } from "~/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type PointerEvent,
+} from "react";
+import { Search } from "lucide-react";
+import { FilePreviewLoading } from "~/components/file-preview/FilePreviewLoading";
+import { PreviewToolbar } from "~/components/file-preview/PreviewToolbar";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { Switch } from "~/components/ui/switch";
 import { cn } from "~/lib/utils";
 
-const IMAGE_ZOOMS = [1, 1.5, 2, 3];
+const IMAGE_ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
+const FIT_ZOOM_STEP = 2;
 const MAGNIFICATIONS = [2, 3, 4, 5];
 const MAGNIFIER_OPTIONS = MAGNIFICATIONS.map((value) => ({ value, label: `${value}×` }));
 const LENS_SIZE = 200;
@@ -30,17 +48,41 @@ function imageBounds(image: HTMLImageElement) {
 }
 
 /** Whole-image zoom and an adjustable lens for inspecting small details. */
-export function ImageMagnifier({ src, alt }: { src: string; alt: string }) {
+export function ImageMagnifier({
+  src,
+  alt,
+  onError,
+}: {
+  src: string;
+  alt: string;
+  onError?: () => void;
+}) {
   const frameRef = useRef<HTMLDivElement>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const zoomCenter = useRef<{ x: number; y: number } | null>(null);
   const instructionsId = useId();
+  const switchId = useId();
   const [enabled, setEnabled] = useState(false);
-  const [zoomStep, setZoomStep] = useState(0);
+  const [zoomStep, setZoomStep] = useState(FIT_ZOOM_STEP);
   const [magnification, setMagnification] = useState(3);
   const [lens, setLens] = useState<Lens | null>(null);
+  const [viewport, setViewport] = useState({ width: 0, height: 0 });
+  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  const [failed, setFailed] = useState(false);
   const zoom = IMAGE_ZOOMS[zoomStep];
+  const loaded = imageSize.width > 0;
+  // Fit large scans into the canvas, while keeping small photos at their
+  // natural size so the default preview doesn't make them blurry.
+  const fit = loaded
+    ? Math.min(
+        1,
+        Math.max(1, viewport.width - 48) / imageSize.width,
+        Math.max(1, viewport.height - 48) / imageSize.height,
+      )
+    : 1;
+  const imageWidth = imageSize.width * fit * zoom;
+  const imageHeight = imageSize.height * fit * zoom;
 
   function changeImageZoom(step: number) {
     const scroller = scrollerRef.current;
@@ -67,7 +109,13 @@ export function ImageMagnifier({ src, alt }: { src: string; alt: string }) {
   // A resize or page scroll changes the image's position beneath the pointer.
   useEffect(() => {
     const hideLens = () => setLens(null);
-    const observer = new ResizeObserver(hideLens);
+    const observer = new ResizeObserver(() => {
+      hideLens();
+      const scroller = scrollerRef.current;
+      if (scroller) {
+        setViewport({ width: scroller.clientWidth, height: scroller.clientHeight });
+      }
+    });
     if (frameRef.current) observer.observe(frameRef.current);
     if (imageRef.current) observer.observe(imageRef.current);
     window.addEventListener("scroll", hideLens, true);
@@ -134,15 +182,67 @@ export function ImageMagnifier({ src, alt }: { src: string; alt: string }) {
   }
 
   return (
-    <div className="relative h-full w-full">
+    <div className="civic-content-in flex h-full min-h-0 w-full flex-col">
+      <PreviewToolbar
+        zoom={zoom}
+        onZoomOut={() => changeImageZoom(Math.max(0, zoomStep - 1))}
+        onZoomIn={() => changeImageZoom(Math.min(IMAGE_ZOOMS.length - 1, zoomStep + 1))}
+        onFit={() => {
+          zoomCenter.current = null;
+          setLens(null);
+          setZoomStep(FIT_ZOOM_STEP);
+          scrollerRef.current?.scrollTo({ left: 0, top: 0 });
+        }}
+        canZoomOut={zoomStep > 0}
+        canZoomIn={zoomStep < IMAGE_ZOOMS.length - 1}
+        disabled={!loaded || failed}
+      >
+        <div className="ml-auto flex flex-wrap items-center gap-3">
+          {enabled ? (
+            <Select
+              items={MAGNIFIER_OPTIONS}
+              value={magnification}
+              onValueChange={(value) => {
+                if (value !== null) setMagnification(value);
+                setLens(null);
+              }}
+            >
+              <SelectTrigger size="sm" aria-label="Magnifier zoom">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="end" alignItemWithTrigger={false} className="min-w-20">
+                <SelectGroup>
+                  {MAGNIFICATIONS.map((value) => (
+                    <SelectItem key={value} value={value}>{value}×</SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          ) : null}
+          <label htmlFor={switchId} className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-foreground">
+            <Search className="size-4 text-muted-foreground" aria-hidden="true" />
+            Magnifier
+          </label>
+          <Switch
+            id={switchId}
+            checked={enabled}
+            disabled={!loaded || failed}
+            onCheckedChange={(checked) => {
+              setEnabled(checked);
+              setLens(null);
+            }}
+          />
+        </div>
+      </PreviewToolbar>
       <div
         ref={frameRef}
         role="region"
         aria-label={`Inspect ${alt}`}
+        aria-busy={!loaded && !failed}
         aria-describedby={instructionsId}
         tabIndex={0}
         className={cn(
-          "relative h-full w-full overflow-hidden rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+          "relative min-h-0 flex-1 overflow-hidden rounded-xl border border-border-light bg-surface-subtle outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
           enabled && "touch-none cursor-crosshair",
         )}
         onPointerEnter={movePointer}
@@ -175,18 +275,42 @@ export function ImageMagnifier({ src, alt }: { src: string; alt: string }) {
       >
         <div
           ref={scrollerRef}
-          className={cn("absolute inset-0 overflow-auto rounded-md", enabled && "touch-none")}
+          className={cn("absolute inset-0 overflow-auto", enabled && "touch-none")}
         >
-          <div style={{ width: `${zoom * 100}%`, height: `${zoom * 100}%` }}>
+          <div
+            className="flex min-h-full min-w-full items-center justify-center p-6"
+            style={{ width: Math.max(viewport.width, imageWidth + 48), height: Math.max(viewport.height, imageHeight + 48) }}
+          >
             <img
               ref={imageRef}
               src={src}
               alt={alt}
               draggable={false}
-              className="block h-full w-full object-contain select-none"
+              onLoad={(event) => {
+                setImageSize({
+                  width: event.currentTarget.naturalWidth,
+                  height: event.currentTarget.naturalHeight,
+                });
+                setFailed(false);
+              }}
+              onError={() => {
+                setFailed(true);
+                onError?.();
+              }}
+              className={cn(
+                "block max-w-none shrink-0 rounded-sm ring-1 ring-border-light select-none",
+                loaded && !failed ? "civic-enter-fade" : "invisible",
+              )}
+              style={{ width: imageWidth || undefined, height: imageHeight || undefined }}
             />
           </div>
         </div>
+        {!loaded && !failed ? <FilePreviewLoading label="Loading image" className="absolute inset-0" /> : null}
+        {failed ? (
+          <p role="alert" className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-body-strong">
+            This preview couldn’t be loaded. Close it and try again, or open the file in a new tab.
+          </p>
+        ) : null}
         {enabled && lens && (
           <div
             aria-hidden="true"
@@ -212,85 +336,10 @@ export function ImageMagnifier({ src, alt }: { src: string; alt: string }) {
           </div>
         )}
       </div>
-      <div className="absolute top-2 right-2 flex max-w-[calc(100%-1rem)] flex-wrap justify-end gap-2">
-        <div
-          role="group"
-          aria-label="Image zoom"
-          className="flex items-center gap-0.5 rounded-lg bg-background/90 p-0.5 shadow-sm ring-1 ring-border"
-        >
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Zoom out"
-            title="Zoom out the whole image"
-            disabled={zoomStep === 0}
-            onClick={() => changeImageZoom(zoomStep - 1)}
-          >
-            <Minus aria-hidden="true" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="min-w-10 px-1 tabular-nums"
-            aria-label="Fit image to preview"
-            title="Reset image zoom to fit"
-            onClick={() => changeImageZoom(0)}
-          >
-            {zoom === 1 ? "Fit" : `${zoom * 100}%`}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Zoom in"
-            title="Zoom in the whole image"
-            disabled={zoomStep === IMAGE_ZOOMS.length - 1}
-            onClick={() => changeImageZoom(zoomStep + 1)}
-          >
-            <Plus aria-hidden="true" />
-          </Button>
-        </div>
-        <div
-          role="group"
-          aria-label="Magnifier settings"
-          className="flex items-center gap-1 rounded-lg bg-background/90 p-0.5 shadow-sm ring-1 ring-border"
-        >
-          <Button
-            variant={enabled ? "secondary" : "ghost"}
-            size="sm"
-            aria-pressed={enabled}
-            title="Turn the magnifier on or off"
-            onClick={() => {
-              setEnabled((current) => !current);
-              setLens(null);
-            }}
-          >
-            <Search aria-hidden="true" />
-            Magnifier
-          </Button>
-          <Select
-            items={MAGNIFIER_OPTIONS}
-            value={magnification}
-            disabled={!enabled}
-            onValueChange={(value) => {
-              if (value !== null) setMagnification(value);
-              setLens(null);
-            }}
-          >
-            <SelectTrigger size="sm" aria-label="Magnifier zoom" title="Choose magnifier zoom">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent align="end" alignItemWithTrigger={false} className="min-w-20">
-              {MAGNIFICATIONS.map((value) => (
-                <SelectItem key={value} value={value}>{value}×</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
       <p
         id={instructionsId}
         className={cn(
-          "pointer-events-none absolute bottom-2 left-2 rounded-md bg-background/90 px-2 py-1 text-xs text-muted-foreground",
+          "shrink-0 px-1 pt-2 text-xs text-muted-foreground",
           !enabled && "sr-only",
         )}
       >

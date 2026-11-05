@@ -4,27 +4,27 @@ Civil Registry Document Request and Requirement Validation System, built for the
 Civil Registrar Office (CCRO) of the City Government of Legazpi.
 
 CiviCheck lets residents check exactly what documents they need *before* they submit a
-request for a birth, marriage, or death certificate, or a certified true copy (CTC) — then
+request for a birth, marriage, or death certificate, or a certified true copy (CTC) - then
 tracks that request from submission to release. For CCRO staff, it organizes incoming
 requests into a clear pipeline instead of loose paper/manual tracking.
 
 ## Tech stack
 
 - **Frontend:** React 19, TanStack Start (routing/rendering), Tailwind CSS v4, shadcn/ui
-- **Backend:** Supabase (auth, Postgres, realtime, storage) — no separate backend server
+- **Backend:** Supabase (auth, Postgres, realtime, storage) - no separate backend server
 - **Database:** PostgreSQL via Supabase, normalized relational schema, RLS-enforced
 - **Auth:** Supabase Auth with role-based access control (applicant / staff / admin)
 - **Package manager:** pnpm
 
 ## Users & roles
 
-- **Applicant / Citizen** — browses services, reviews requirement checklists, optionally
+- **Applicant / Citizen** - browses services, reviews requirement checklists, optionally
   pre-uploads documents, submits a request, tracks status in real time, gets notified,
   pays via QR at the CCRO cashier, claims the document.
-- **CCRO Staff** — reviews pre-validation uploads, validates walk-in documents, processes
+- **CCRO Staff** - reviews pre-validation uploads, validates walk-in documents, processes
   requests, marks requests ready for release, encodes walk-in requests for visitors
   without an account.
-- **Admin** — manages staff/admin accounts and roles, configures services and requirement
+- **Admin** - manages staff/admin accounts and roles, configures services and requirement
   checklists, monitors request activity, views reports, maintains system settings and
   audit logs.
 
@@ -35,12 +35,12 @@ Every request moves through an explicit `status` field on `requests`:
 `submitted` → `under_validation` → (`incomplete` / `rejected`) → `processing` →
 `ready_for_release` → `released`
 
-There is no separate approval stage — staff who process a request mark it ready for
+There is no separate approval stage - staff who process a request mark it ready for
 release themselves, and the cashier's payment verification is the only gate before
 `released`.
 
 Payment is tracked separately via `payment_status` (`unpaid` / `verified`) and is
-QR-verification only — the CCRO cashier handles the actual transaction.
+QR-verification only - the CCRO cashier handles the actual transaction.
 
 ## Getting started
 
@@ -157,8 +157,8 @@ authenticated user's role rather than using separate route files per role.
 - SMS notifications (in-system + email only)
 - Offline mode
 - Integration with external/national government databases (e.g. PSA)
-- Multi-office or multi-LGU deployment — this is CCRO-of-Legazpi-only
-- Advanced analytics / predictive reporting / BI — basic metrics only
+- Multi-office or multi-LGU deployment - this is CCRO-of-Legazpi-only
+- Advanced analytics / predictive reporting / BI - basic metrics only
 
 ## License
 

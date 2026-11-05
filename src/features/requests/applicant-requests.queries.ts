@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { parsePreviousUploads } from "./previous-uploads";
 import { requireActiveSession } from "~/server/auth";
 import { one } from "~/lib/embed";
-import { requestFieldLabelsOf } from "~/features/requests/request-field-labels";
+import { requestFieldDisplayOf } from "~/features/requests/request-field-labels";
 import { loadAddableUploads } from "~/features/requests/missing-uploads.server";
 import { readRequestMessages } from "~/features/requests/request-messages.server";
 import { loadServiceCatalogue } from "~/features/services/services.catalogue";
@@ -133,7 +133,7 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
       referenceNumberLabel: service?.reference_number_label ?? null,
       allowsMessages,
       messages,
-      fieldLabels: requestFieldLabelsOf(row),
+      ...requestFieldDisplayOf(row),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       attachments: (attachments.data ?? []).map((a) => ({
