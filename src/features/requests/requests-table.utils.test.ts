@@ -4,11 +4,14 @@ import {
   WAIT_CRITICAL_MS,
   WAIT_WARNING_MS,
   countByStage,
+  countNeedingAttention,
   countNeedingStaff,
   filterRequests,
   formatTimeInStage,
+  isMyWork,
   matchesDepartment,
   matchesSearch,
+  needsAttention,
   needsStaff,
   paymentDisplay,
   requestTurn,
@@ -36,6 +39,7 @@ function request(overrides: Partial<StaffRequestRow> = {}): StaffRequestRow {
     isWalkIn: false,
     createdAt: "2026-10-20T00:00:00Z",
     updatedAt: new Date(NOW - 5 * HOUR).toISOString(),
+    claim: null,
     ...overrides,
   };
 }
@@ -102,17 +106,45 @@ describe("matchesDepartment", () => {
 
 describe("filterRequests", () => {
   const rows = [
-    request({ id: "a", status: "submitted" }),
+    request({
+      id: "a",
+      status: "submitted",
+      updatedAt: new Date(NOW - 4 * DAY).toISOString(),
+    }),
     request({ id: "b", status: "incomplete", applicantName: "Eduardo Llanes" }),
-    request({ id: "c", status: "processing", paymentStatus: "verified" }),
+    request({
+      id: "c",
+      status: "processing",
+      paymentStatus: "verified",
+      updatedAt: new Date(NOW - 6 * DAY).toISOString(),
+    }),
     request({ id: "d", status: "ready_for_release", departmentId: "registration" }),
     request({ id: "e", status: "released", paymentStatus: "verified" }),
     request({ id: "f", status: "ready_for_release", feesDue: 0 }),
+    request({
+      id: "g",
+      claim: {
+        staffId: "staff-a",
+        staffName: "Rowena Staff",
+        stage: "submitted",
+        claimedAt: new Date(NOW - HOUR).toISOString(),
+        expiresAt: new Date(NOW + HOUR).toISOString(),
+        isMine: true,
+      },
+    }),
   ];
   const ids = (found: StaffRequestRow[]) => found.map((row) => row.id);
 
   it("returns everything with no criteria", () => {
-    expect(ids(filterRequests(rows, {}))).toEqual(["a", "b", "c", "d", "e", "f"]);
+    expect(ids(filterRequests(rows, {}))).toEqual([
+      "a",
+      "b",
+      "c",
+      "d",
+      "e",
+      "f",
+      "g",
+    ]);
   });
 
   it("narrows by stage and by status", () => {
@@ -125,13 +157,35 @@ describe("filterRequests", () => {
     expect(ids(filterRequests(rows, { payment: "verified" }))).toEqual(["e"]);
   });
 
-  it("keeps only requests waiting on staff for Needs you", () => {
-    expect(ids(filterRequests(rows, { needs: true }))).toEqual(["a", "c"]);
+  it("keeps only overdue staff waits for Needs attention", () => {
+    expect(ids(filterRequests(rows, { attention: true, now: NOW }))).toEqual([
+      "a",
+      "c",
+    ]);
+  });
+
+  it("preserves dashboard links to every request waiting on staff", () => {
+    expect(ids(filterRequests(rows, { needs: true, now: NOW }))).toEqual([
+      "a",
+      "c",
+      "g",
+    ]);
+  });
+
+  it("filters My work to requests actively claimed by the viewer", () => {
+    expect(ids(filterRequests(rows, { mine: true, now: NOW }))).toEqual(["g"]);
   });
 
   it("combines every filter", () => {
     expect(
-      ids(filterRequests(rows, { needs: true, stage: 3, search: "rowena" })),
+      ids(
+        filterRequests(rows, {
+          attention: true,
+          stage: 3,
+          search: "rowena",
+          now: NOW,
+        }),
+      ),
     ).toEqual(["c"]);
     expect(ids(filterRequests(rows, { department: "registration", search: "eduardo" }))).toEqual([]);
   });
@@ -176,6 +230,61 @@ describe("countNeedingStaff", () => {
         request({ status: "ready_for_release", paymentStatus: "verified" }),
       ]),
     ).toBe(2);
+  });
+});
+
+describe("isMyWork", () => {
+  const claim = {
+    staffId: "staff-a",
+    staffName: "Rowena Staff",
+    stage: "submitted",
+    claimedAt: new Date(NOW - HOUR).toISOString(),
+    expiresAt: new Date(NOW + HOUR).toISOString(),
+    isMine: true,
+  };
+
+  it("requires a current claim owned by the viewer", () => {
+    expect(isMyWork(request({ claim }), NOW)).toBe(true);
+    expect(isMyWork(request({ claim: { ...claim, isMine: false } }), NOW)).toBe(
+      false,
+    );
+    expect(
+      isMyWork(
+        request({
+          claim: {
+            ...claim,
+            expiresAt: new Date(NOW - 1).toISOString(),
+          },
+        }),
+        NOW,
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("needsAttention", () => {
+  it("requires both an overdue wait and a staff-owned turn", () => {
+    const overdue = new Date(NOW - WAIT_WARNING_MS).toISOString();
+    const recent = new Date(NOW - DAY).toISOString();
+    expect(needsAttention(request({ updatedAt: overdue }), NOW)).toBe(true);
+    expect(needsAttention(request({ updatedAt: recent }), NOW)).toBe(false);
+    expect(
+      needsAttention(request({ status: "incomplete", updatedAt: overdue }), NOW),
+    ).toBe(false);
+  });
+
+  it("counts only requests that need attention", () => {
+    const overdue = new Date(NOW - WAIT_WARNING_MS).toISOString();
+    expect(
+      countNeedingAttention(
+        [
+          request({ updatedAt: overdue }),
+          request({ updatedAt: new Date(NOW - DAY).toISOString() }),
+          request({ status: "released", updatedAt: overdue }),
+        ],
+        NOW,
+      ),
+    ).toBe(1);
   });
 });
 

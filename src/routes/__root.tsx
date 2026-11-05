@@ -23,7 +23,10 @@ import {
   getSupabaseServerClient,
   limitSessionToBrowser,
 } from "../utils/supabase";
-import { Toaster } from "~/components/ui/sonner";
+import {
+  DOCUMENT_DECISION_TOASTER_ID,
+  Toaster,
+} from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import type { AccountProfile } from "~/features/account/account.types";
 import { isInternalRole, type AccountStatus, type Role } from "~/lib/permissions";
@@ -185,6 +188,13 @@ function RootComponent() {
     <RootDocument>
       <Outlet />
       <Toaster />
+      <Toaster
+        id={DOCUMENT_DECISION_TOASTER_ID}
+        position="bottom-center"
+        offset={96}
+        mobileOffset={{ bottom: 96, left: 16, right: 16 }}
+        style={{ "--width": "30rem" } as React.CSSProperties}
+      />
       {mounted && import.meta.env.DEV && (
         <TanStackDevtools
           config={{ position: "bottom-left", inspectHotkey: ["Alt"] }}

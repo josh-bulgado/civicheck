@@ -3,6 +3,11 @@ import type { AppColumnDef } from "~/lib/table";
 import { QuietLink as Link } from "~/components/quiet-link";
 import { Badge } from "~/components/ui/badge";
 import { SortHeader } from "~/components/ui/data-table-column-header";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 import { formatPesoFee } from "~/features/services/service-utils";
 import { cn } from "~/lib/utils";
 import { formatRequestDate, getStatusBadgeVariant } from "../request-queue";
@@ -13,6 +18,7 @@ import {
   isRequestStatus,
 } from "../request-workflow";
 import type { StaffRequestRow } from "../requests.queries";
+import { isRequestClaimActive } from "../request-claims";
 import {
   formatTimeInStage,
   paymentDisplay,
@@ -25,6 +31,18 @@ import {
 
 /** The In stage column's id, so the page can sort by it before any click. */
 export const IN_STAGE_COLUMN = "inStage";
+
+export const REQUEST_COLUMN_LABELS = {
+  trackingNumber: "Tracking no.",
+  applicantName: "Applicant",
+  serviceName: "Service",
+  departmentName: "Department",
+  status: "Status",
+  handler: "Handler",
+  payment: "Payment",
+  createdAt: "Submitted",
+  [IN_STAGE_COLUMN]: "In stage",
+} as const;
 
 const WAIT_CLASS: Record<WaitTone, string> = {
   quiet: "font-medium text-muted-foreground",
@@ -133,11 +151,31 @@ export function createRequestColumns({
   now,
   showDepartment,
 }: RequestColumnOptions): AppColumnDef<StaffRequestRow>[] {
+  const departmentColumn: AppColumnDef<StaffRequestRow> = {
+    id: "departmentName",
+    accessorKey: "departmentName",
+    header: ({ column }) => (
+      <SortHeader column={column}>
+        {REQUEST_COLUMN_LABELS.departmentName}
+      </SortHeader>
+    ),
+    cell: ({ row }) => (
+      <span className="text-sm text-muted-foreground">
+        {row.original.departmentName}
+      </span>
+    ),
+  };
+
   return [
     {
       id: "trackingNumber",
       accessorKey: "trackingNumber",
-      header: ({ column }) => <SortHeader column={column}>Tracking no.</SortHeader>,
+      enableHiding: false,
+      header: ({ column }) => (
+        <SortHeader column={column}>
+          {REQUEST_COLUMN_LABELS.trackingNumber}
+        </SortHeader>
+      ),
       cell: ({ row }) => (
         <Link
           to="/requests/$requestId"
@@ -155,7 +193,11 @@ export function createRequestColumns({
     {
       id: "applicantName",
       accessorKey: "applicantName",
-      header: ({ column }) => <SortHeader column={column}>Applicant</SortHeader>,
+      header: ({ column }) => (
+        <SortHeader column={column}>
+          {REQUEST_COLUMN_LABELS.applicantName}
+        </SortHeader>
+      ),
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <span
@@ -175,20 +217,27 @@ export function createRequestColumns({
     {
       id: "serviceName",
       accessorKey: "serviceName",
-      header: ({ column }) => <SortHeader column={column}>Service</SortHeader>,
+      header: ({ column }) => (
+        <SortHeader column={column}>
+          {REQUEST_COLUMN_LABELS.serviceName}
+        </SortHeader>
+      ),
       cell: ({ row }) => (
-        <div className="flex max-w-60 flex-col">
-          <span className="truncate text-sm" title={row.original.serviceName}>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <span className="block min-w-72 max-w-96 truncate text-sm" />
+            }
+          >
             {row.original.serviceName}
-          </span>
-          {showDepartment ? (
-            <span className="truncate text-xs text-muted-foreground">
-              {row.original.departmentName}
-            </span>
-          ) : null}
-        </div>
+          </TooltipTrigger>
+          <TooltipContent align="start">
+            {row.original.serviceName}
+          </TooltipContent>
+        </Tooltip>
       ),
     },
+    ...(showDepartment ? [departmentColumn] : []),
     {
       id: "status",
       // Stage first, then the order statuses are listed in.
@@ -196,7 +245,9 @@ export function createRequestColumns({
         isRequestStatus(status)
           ? STAGE_OF[status] * 10 + REQUEST_STATUSES.indexOf(status)
           : 0,
-      header: ({ column }) => <SortHeader column={column}>Status</SortHeader>,
+      header: ({ column }) => (
+        <SortHeader column={column}>{REQUEST_COLUMN_LABELS.status}</SortHeader>
+      ),
       cell: ({ row }) => (
         <Badge variant={getStatusBadgeVariant(row.original.status)}>
           {getStatusDetails(row.original.status).label}
@@ -204,15 +255,44 @@ export function createRequestColumns({
       ),
     },
     {
+      id: "handler",
+      accessorFn: ({ claim, status }) =>
+        isRequestClaimActive(claim, status, now)
+          ? claim.isMine
+            ? "You"
+            : claim.staffName
+          : "Available",
+      header: ({ column }) => (
+        <SortHeader column={column}>{REQUEST_COLUMN_LABELS.handler}</SortHeader>
+      ),
+      cell: ({ row }) => {
+        const claim = row.original.claim;
+        if (!isRequestClaimActive(claim, row.original.status, now)) {
+          return <span className="text-sm text-muted-foreground">Available</span>;
+        }
+        return (
+          <Badge variant={claim.isMine ? "success" : "warning"}>
+            {claim.isMine ? "You" : claim.staffName}
+          </Badge>
+        );
+      },
+    },
+    {
       id: "payment",
       accessorFn: paymentDisplay,
-      header: ({ column }) => <SortHeader column={column}>Payment</SortHeader>,
+      header: ({ column }) => (
+        <SortHeader column={column}>{REQUEST_COLUMN_LABELS.payment}</SortHeader>
+      ),
       cell: ({ row }) => <PaymentCell request={row.original} />,
     },
     {
       id: "createdAt",
       accessorKey: "createdAt",
-      header: ({ column }) => <SortHeader column={column}>Submitted</SortHeader>,
+      header: ({ column }) => (
+        <SortHeader column={column}>
+          {REQUEST_COLUMN_LABELS.createdAt}
+        </SortHeader>
+      ),
       cell: ({ row }) => (
         <span className="text-xs whitespace-nowrap text-muted-foreground">
           {formatRequestDate(row.original.createdAt)}
@@ -224,7 +304,11 @@ export function createRequestColumns({
       accessorFn: waitingRank,
       // The longest wait is what staff look for, so the first click puts it on top.
       sortDescFirst: true,
-      header: ({ column }) => <SortHeader column={column}>In stage</SortHeader>,
+      header: ({ column }) => (
+        <SortHeader column={column}>
+          {REQUEST_COLUMN_LABELS[IN_STAGE_COLUMN]}
+        </SortHeader>
+      ),
       cell: ({ row }) => <TimeInStage request={row.original} now={now} />,
     },
   ];

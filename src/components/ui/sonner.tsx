@@ -2,7 +2,9 @@ import { Toaster as Sonner, type ToasterProps } from "sonner"
 import { useTheme } from "~/hooks/use-theme"
 import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
 
-const Toaster = ({ ...props }: ToasterProps) => {
+export const DOCUMENT_DECISION_TOASTER_ID = "document-decisions"
+
+const Toaster = ({ style, toastOptions, ...props }: ToasterProps) => {
   const { theme } = useTheme()
 
   return (
@@ -32,11 +34,14 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
           "--border-radius": "var(--radius)",
+          ...style,
         } as React.CSSProperties
       }
       toastOptions={{
+        ...toastOptions,
         classNames: {
           toast: "cn-toast",
+          ...toastOptions?.classNames,
         },
       }}
       {...props}

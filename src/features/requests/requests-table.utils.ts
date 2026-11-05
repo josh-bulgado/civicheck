@@ -4,6 +4,7 @@ import {
   type RequestQueueFilters,
 } from "./request-queue";
 import { isPaymentSettled, stageOf, type WorkflowStage } from "./request-workflow";
+import { isRequestClaimActive } from "./request-claims";
 import type { StaffRequestRow } from "./requests.queries";
 
 type TurnFields = Pick<StaffRequestRow, "status" | "paymentStatus">;
@@ -69,12 +70,24 @@ export function matchesDepartment(
 
 export interface RequestCriteria extends RequestQueueFilters {
   search?: string;
+  /** Shared loader clock, so SSR and hydration agree on overdue rows. */
+  now?: number;
 }
 
 /** The rows that pass every filter. The stage chips ignore `stage` to count. */
 export function filterRequests(
   requests: ReadonlyArray<StaffRequestRow>,
-  { search = "", stage, status, payment, department, needs }: RequestCriteria,
+  {
+    search = "",
+    stage,
+    status,
+    payment,
+    department,
+    needs,
+    mine,
+    attention,
+    now = Date.now(),
+  }: RequestCriteria,
 ): StaffRequestRow[] {
   return requests.filter(
     (request) =>
@@ -86,7 +99,9 @@ export function filterRequests(
           request.feesDue > 0 &&
           isPaymentSettled(request.paymentStatus) === (payment === "verified"))) &&
       matchesDepartment(request, department) &&
-      (!needs || needsStaff(request)),
+      (!needs || needsStaff(request)) &&
+      (!mine || isMyWork(request, now)) &&
+      (!attention || needsAttention(request, now)),
   );
 }
 
@@ -113,6 +128,26 @@ export function countByStage(
 
 export function countNeedingStaff(requests: ReadonlyArray<TurnFields>): number {
   return requests.filter(needsStaff).length;
+}
+
+/** A request belongs to My work only while the viewer's stage claim is active. */
+export function isMyWork(
+  request: Pick<StaffRequestRow, "claim" | "status">,
+  now: number,
+): boolean {
+  return (
+    isRequestClaimActive(request.claim, request.status, now) &&
+    request.claim.isMine
+  );
+}
+
+export function countNeedingAttention(
+  requests: ReadonlyArray<
+    TurnFields & Pick<StaffRequestRow, "updatedAt">
+  >,
+  now: number,
+): number {
+  return requests.filter((request) => needsAttention(request, now)).length;
 }
 
 // ─── Time in stage ───────────────────────────────────────────────────────────
@@ -156,6 +191,15 @@ export function waitTone(
   if (elapsed >= WAIT_CRITICAL_MS) return "critical";
   if (elapsed >= WAIT_WARNING_MS) return "warning";
   return "normal";
+}
+
+/** An attention item is a staff-owned wait at or beyond the warning threshold. */
+export function needsAttention(
+  request: TurnFields & Pick<StaffRequestRow, "updatedAt">,
+  now: number,
+): boolean {
+  const tone = waitTone(request, now);
+  return tone === "warning" || tone === "critical";
 }
 
 /** Larger than any epoch-millisecond timestamp, so turns never interleave. */

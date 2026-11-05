@@ -178,8 +178,8 @@ describe("InputGroup composition", () => {
   });
 
   it("carries the autofill surface across the whole group", () => {
-    expect(css).toContain(
-      '[data-slot="input-group"]:has(\n    > [data-slot="input-group-control"]:autofill',
+    expect(css).toMatch(
+      /\[data-slot="input-group"\]:has\(\s*>\s*\[data-slot="input-group-control"\]:autofill\s*\)/,
     );
     expect(css).toContain("box-shadow: inset 0 0 0 1000px var(--primary-soft)");
     expect(css).toContain("-webkit-text-fill-color: var(--foreground)");

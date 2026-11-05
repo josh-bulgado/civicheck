@@ -1,4 +1,4 @@
-import { Lock, MoreHorizontal } from "lucide-react";
+import { LoaderCircle, Lock, MoreHorizontal } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import {
   DropdownMenu,
@@ -37,10 +37,12 @@ export function RequestActionBar({
           disabled={busy || primary.blocked != null}
           onClick={() => onAction(primary)}
         >
-          {primary.blocked && (
+          {busy ? (
+            <LoaderCircle data-icon="inline-start" className="animate-spin" aria-hidden="true" />
+          ) : primary.blocked ? (
             <Lock data-icon="inline-start" aria-hidden="true" />
-          )}
-          {primary.label}
+          ) : null}
+          {busy ? "Updating…" : primary.label}
         </Button>
       )}
       {hasMenu && (
@@ -56,7 +58,7 @@ export function RequestActionBar({
               />
             }
           >
-            <MoreHorizontal aria-hidden="true" />
+            {busy ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <MoreHorizontal aria-hidden="true" />}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-56" variant="roomy">
             {secondary.map((action) => (

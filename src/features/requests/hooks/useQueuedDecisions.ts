@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { DOCUMENT_DECISION_TOASTER_ID } from "~/components/ui/sonner";
 
 export type Decision = "approved" | "rejected";
 
@@ -28,12 +29,18 @@ export interface QueuedDecisions {
   cancel: (id: string) => void;
   /** Takes back the newest decision still waiting; returns whether one was. */
   cancelLast: () => boolean;
-  /** Saves every waiting decision now, and resolves once they are saved. */
-  flush: () => Promise<void>;
+  /** Saves every waiting decision now. False means at least one save lost a race. */
+  flush: () => Promise<boolean>;
+}
+
+export interface DecisionSaveOptions {
+  /** False when a following request transition will refresh once for the batch. */
+  refresh?: boolean;
 }
 
 /** How long a decision can be taken back before it is saved. */
-export const UNDO_MS = 15000;
+export const UNDO_SECONDS = 10;
+export const UNDO_MS = UNDO_SECONDS * 1000;
 
 /**
  * Holds accept and reject decisions for a few seconds, so a slip can be undone
@@ -42,7 +49,12 @@ export const UNDO_MS = 15000;
  * is left is saved at that point, never dropped.
  */
 export function useQueuedDecisions(
-  onDecide: (id: string, status: Decision, reason?: string) => Promise<boolean>,
+  onDecide: (
+    id: string,
+    status: Decision,
+    reason?: string,
+    options?: DecisionSaveOptions,
+  ) => Promise<boolean>,
 ): QueuedDecisions {
   const [waiting, setWaiting] = useState<Record<string, WaitingDecision>>({});
   const held = useRef(new Map<string, Held>());
@@ -59,14 +71,14 @@ export function useQueuedDecisions(
   }, []);
 
   const save = useCallback(
-    async (id: string, item: Held) => {
+    async (id: string, item: Held, options?: DecisionSaveOptions) => {
       held.current.delete(id);
       window.clearTimeout(item.timer);
       try {
-        await onDecideRef.current(id, item.status, item.reason);
+        return await onDecideRef.current(id, item.status, item.reason, options);
       } finally {
-        // Dropped only now, after the page has the saved decision, so the row
-        // never flickers back to pending.
+        // Keep the optimistic row through the save attempt. A failed attempt
+        // refreshes from the server so another staff member's decision wins.
         forget(id);
       }
     },
@@ -101,7 +113,23 @@ export function useQueuedDecisions(
       newest.current = id;
       item.toastId = toast(`${status === "approved" ? "Accepted" : "Rejected"}: ${label}`, {
         duration: UNDO_MS,
-        action: { label: "Undo", onClick: () => cancel(id) },
+        toasterId: DOCUMENT_DECISION_TOASTER_ID,
+        style: {
+          minHeight: "5rem",
+          padding: "1rem 1.25rem",
+          gap: "0.75rem",
+          fontSize: "0.9375rem",
+        },
+        action: {
+          label: "Undo",
+          onClick: () => cancel(id),
+          actionButtonStyle: {
+            height: "2.75rem",
+            paddingInline: "1rem",
+            borderRadius: "var(--radius-md)",
+            fontSize: "0.875rem",
+          },
+        },
       });
     },
     [save, cancel],
@@ -115,7 +143,12 @@ export function useQueuedDecisions(
   }, [cancel]);
 
   const flush = useCallback(async () => {
-    await Promise.all([...held.current].map(([id, item]) => save(id, item)));
+    const saved = await Promise.all(
+      [...held.current].map(([id, item]) =>
+        save(id, item, { refresh: false }),
+      ),
+    );
+    return saved.every(Boolean);
   }, [save]);
 
   useEffect(() => {
@@ -125,7 +158,7 @@ export function useQueuedDecisions(
         window.clearTimeout(item.timer);
         // The decision is saved now, so its Undo toast would do nothing.
         toast.dismiss(item.toastId);
-        void onDecideRef.current(id, item.status, item.reason);
+        void onDecideRef.current(id, item.status, item.reason, { refresh: false });
       }
       pending.clear();
     };

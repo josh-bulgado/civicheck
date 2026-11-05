@@ -176,7 +176,7 @@ export const searchEverythingFn = createServerFn({ method: "GET" })
       .select(
         `id, tracking_number, request_type, status, created_at, form_data,
          services_registry(name, display_name, department_id, departments(id, name)),
-         profiles(first_name, last_name)`,
+         profiles!fk_requests_applicant(first_name, last_name)`,
       )
       .or(
         [

@@ -1,5 +1,5 @@
-import { useDeferredValue, useMemo, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useHotkeys, type HotkeyChord } from "@tanstack/react-hotkeys";
 import {
   useTable,
@@ -7,27 +7,28 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { DataTableCard } from "~/components/ui/data-table-card";
+import { DataTablePagination } from "~/components/ui/data-table-pagination";
 import type { Department } from "~/features/admin/departments.queries";
 import {
   EMPTY_FILTERS,
   applyFilterChange,
   type RequestQueueFilters,
 } from "../request-queue";
+import { showsPaymentColumn } from "../requests-table.utils";
+import type { RequestQueuePage } from "../requests.queries";
 import {
-  countByStage,
-  countNeedingStaff,
-  filterRequests,
-  showsPaymentColumn,
-} from "../requests-table.utils";
-import type { StaffRequestRow } from "../requests.queries";
-import { IN_STAGE_COLUMN, createRequestColumns } from "./RequestsColumn";
+  IN_STAGE_COLUMN,
+  REQUEST_COLUMN_LABELS,
+  createRequestColumns,
+} from "./RequestsColumn";
 import { RequestsTableToolbar } from "./RequestsTableToolbar";
 import { appTableFeatures } from "~/lib/table";
 
 /** Longest wait first: the oldest thing someone is waiting on is row one. */
 const DEFAULT_SORTING: SortingState = [{ id: IN_STAGE_COLUMN, desc: true }];
-const ALL_COLUMNS: ColumnVisibilityState = {};
-const WITHOUT_PAYMENT: ColumnVisibilityState = { payment: false };
+const COLUMN_LABELS_WITHOUT_PAYMENT = Object.fromEntries(
+  Object.entries(REQUEST_COLUMN_LABELS).filter(([id]) => id !== "payment"),
+);
 
 const NEXT_REQUEST_HOTKEY: HotkeyChord = "J";
 const PREVIOUS_REQUEST_HOTKEY: HotkeyChord = "K";
@@ -52,7 +53,7 @@ function focusRequestLink(step: 1 | -1) {
 }
 
 interface RequestsDataTableProps {
-  requests: StaffRequestRow[];
+  queue: RequestQueuePage;
   departments: Department[];
   filters: RequestQueueFilters;
   onFiltersChange: (filters: RequestQueueFilters) => void;
@@ -60,74 +61,111 @@ interface RequestsDataTableProps {
   onSearchChange: (value: string) => void;
   /** Staff/supervisor only ever see one department. */
   scopedDepartmentName?: string | null;
-  /** The loader's clock. See `createRequestColumns`. */
-  now: number;
 }
 
 export function RequestsDataTable({
-  requests,
+  queue,
   departments,
   filters,
   onFiltersChange,
   search,
   onSearchChange,
   scopedDepartmentName,
-  now,
 }: RequestsDataTableProps) {
   const navigate = useNavigate();
-  const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
-  // Typing stays responsive while a long queue re-filters behind it.
-  const deferredSearch = useDeferredValue(search);
+  const isQueueLoading = useRouterState({
+    select: (state) =>
+      state.isLoading &&
+      (state.location.pathname === "/requests" ||
+        state.location.pathname === "/requests/"),
+  });
+  const [showLoadingRows, setShowLoadingRows] = useState(false);
+  const [columnVisibility, setColumnVisibility] =
+    useState<ColumnVisibilityState>({});
 
-  const rows = useMemo(
-    () => filterRequests(requests, { ...filters, search: deferredSearch }),
-    [requests, filters, deferredSearch],
-  );
-
-  // Each count shows the rows every other filter leaves, so a chip never
-  // promises more than the table will show.
-  const stageCounts = useMemo(
+  useEffect(() => {
+    if (!isQueueLoading) {
+      setShowLoadingRows(false);
+      return;
+    }
+    const timeout = window.setTimeout(() => setShowLoadingRows(true), 250);
+    return () => window.clearTimeout(timeout);
+  }, [isQueueLoading]);
+  const sorting = useMemo<SortingState>(
     () =>
-      countByStage(
-        filterRequests(requests, {
-          ...filters,
-          stage: undefined,
-          search: deferredSearch,
-        }),
-      ),
-    [requests, filters, deferredSearch],
+      filters.sort
+        ? [{ id: filters.sort, desc: filters.desc ?? false }]
+        : DEFAULT_SORTING,
+    [filters.desc, filters.sort],
   );
-  const needsCount = useMemo(
-    () =>
-      countNeedingStaff(
-        filterRequests(requests, {
-          ...filters,
-          needs: undefined,
-          search: deferredSearch,
-        }),
-      ),
-    [requests, filters, deferredSearch],
+  const pagination = useMemo(
+    () => ({ pageIndex: queue.page, pageSize: queue.pageSize }),
+    [queue.page, queue.pageSize],
   );
 
   const columns = useMemo(
-    () => createRequestColumns({ now, showDepartment: !scopedDepartmentName }),
-    [now, scopedDepartmentName],
+    () =>
+      createRequestColumns({
+        now: queue.now,
+        showDepartment: !scopedDepartmentName,
+      }),
+    [queue.now, scopedDepartmentName],
   );
-  const columnVisibility = showsPaymentColumn(filters)
-    ? ALL_COLUMNS
-    : WITHOUT_PAYMENT;
+  const paymentColumnIsAvailable = showsPaymentColumn(filters);
+  const resolvedColumnVisibility = useMemo(
+    () =>
+      paymentColumnIsAvailable
+        ? columnVisibility
+        : { ...columnVisibility, payment: false },
+    [columnVisibility, paymentColumnIsAvailable],
+  );
 
   const table = useTable({
     features: appTableFeatures,
-    data: rows,
+    data: queue.rows,
     columns,
-    state: { sorting, columnVisibility },
-    onSortingChange: setSorting,
-    initialState: { pagination: { pageIndex: 0, pageSize: 20 } },
+    state: {
+      sorting,
+      pagination,
+      columnVisibility: resolvedColumnVisibility,
+    },
+    onSortingChange: (updater) => {
+      const next = typeof updater === "function" ? updater(sorting) : updater;
+      const sort = next[0] ?? DEFAULT_SORTING[0];
+      onFiltersChange({
+        ...filters,
+        sort: sort.id as RequestQueueFilters["sort"],
+        desc: sort.desc,
+        page: undefined,
+      });
+    },
+    onPaginationChange: (updater) => {
+      const next =
+        typeof updater === "function" ? updater(pagination) : updater;
+      onFiltersChange({
+        ...filters,
+        page: next.pageIndex || undefined,
+        pageSize: next.pageSize as RequestQueueFilters["pageSize"],
+      });
+    },
+    onColumnVisibilityChange: setColumnVisibility,
+    manualPagination: true,
+    manualSorting: true,
+    rowCount: queue.total,
+    autoResetPageIndex: false,
   });
 
   const hasActiveFilters =
-    search !== "" || Object.values(filters).some((value) => value !== undefined);
+    search !== "" ||
+    [
+      filters.stage,
+      filters.status,
+      filters.payment,
+      filters.department,
+      filters.needs,
+      filters.mine,
+      filters.attention,
+    ].some((value) => value !== undefined);
 
   const clearFilters = () => {
     onSearchChange("");
@@ -144,25 +182,57 @@ export function RequestsDataTable({
   return (
     <DataTableCard
       table={table}
-      toolbar={
+      columnLabels={
+        paymentColumnIsAvailable
+          ? REQUEST_COLUMN_LABELS
+          : COLUMN_LABELS_WITHOUT_PAYMENT
+      }
+      toolbar={(columnMenu) => (
         <RequestsTableToolbar
           search={search}
           onSearchChange={onSearchChange}
           filters={filters}
           onFilterChange={(patch) =>
-            onFiltersChange(applyFilterChange(filters, patch))
+            onFiltersChange({
+              ...applyFilterChange(filters, patch),
+              page: undefined,
+            })
           }
-          stageCounts={stageCounts}
-          needsCount={needsCount}
+          stageCounts={queue.stageCounts}
+          attentionCount={queue.attentionCount}
           departments={departments}
           scopedDepartmentName={scopedDepartmentName}
           hasActiveFilters={hasActiveFilters}
           onClear={clearFilters}
+          actions={columnMenu}
         />
-      }
+      )}
+      cellClassName="py-3"
       label="Requests"
+      loading={isQueueLoading && showLoadingRows}
       emptyLabel="No requests found matching your filters."
       onClearFilters={clearFilters}
+      footer={
+        <DataTablePagination
+          table={table}
+          pageCount={Math.ceil(queue.total / queue.pageSize)}
+          total={queue.total}
+          disabled={isQueueLoading}
+          onPageChange={(page) =>
+            onFiltersChange({
+              ...filters,
+              page: page || undefined,
+            })
+          }
+          onPageSizeChange={(pageSize) =>
+            onFiltersChange({
+              ...filters,
+              page: undefined,
+              pageSize: pageSize as RequestQueueFilters["pageSize"],
+            })
+          }
+        />
+      }
       getRowProps={(row) => ({
         // The tracking number is the keyboard-reachable control; this lets a
         // mouse click anywhere on the row open the request too.

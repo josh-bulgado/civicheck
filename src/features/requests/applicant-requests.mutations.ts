@@ -6,6 +6,7 @@ import { loadAddableUploads } from "~/features/requests/missing-uploads.server";
 import { requirementUploadKey } from "~/features/services/requirement-upload.utils";
 import { requireActiveSession } from "~/server/auth";
 import { getSupabaseAdminClient } from "~/utils/supabase";
+import { signAttachmentVersion } from "~/features/requests/attachment-signing.server";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
 const MAX_SIZE = 10 * 1024 * 1024;
@@ -28,20 +29,7 @@ export const getMyAttachmentSignedUrlFn = createServerFn({ method: "GET" })
       return { error: true, message: "That document no longer exists." };
     }
 
-    const fileUrl = data.previousIndex === undefined
-      ? attachment.file_url
-      : parsePreviousUploads(attachment.previous_uploads)[data.previousIndex]?.fileUrl;
-    if (!fileUrl) return { error: true, message: "That version no longer exists." };
-
-    const { data: signed, error: signError } = await supabase.storage
-      .from("request-documents")
-      .createSignedUrl(fileUrl, 300);
-
-    if (signError || !signed) {
-      return { error: true, message: "Could not generate a link for this file." };
-    }
-
-    return { error: false, url: signed.signedUrl };
+    return signAttachmentVersion(supabase, attachment, data.previousIndex);
   });
 
 /** Lets an applicant replace a rejected document from inside the authed app. */

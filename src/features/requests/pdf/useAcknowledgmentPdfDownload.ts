@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { AcknowledgmentPdfData } from "~/features/requests/pdf/types";
+import { downloadBlob } from "~/features/requests/pdf/downloadBlob";
 
 /**
  * Renders the acknowledgment PDF entirely client-side (QR generation + PDF
@@ -29,14 +30,7 @@ export function useAcknowledgmentPdfDownload() {
         RequestAcknowledgmentPdf({ data, qrDataUrl, generatedAt: new Date() }),
       ).toBlob();
 
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `CiviCheck-${data.trackingNumber}.pdf`;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, `CiviCheck-${data.trackingNumber}.pdf`);
     } finally {
       setDownloading(false);
     }

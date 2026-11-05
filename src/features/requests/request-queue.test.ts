@@ -3,9 +3,16 @@ import { describe, expect, it } from "vitest";
 import {
   applyFilterChange,
   getStatusBadgeVariant,
+  parseAttentionFilter,
+  parseMineFilter,
   parseNeedsFilter,
   parsePaymentFilter,
+  parseRequestPage,
+  parseRequestPageSize,
+  parseRequestSearch,
+  parseRequestSort,
   parseRequestStatus,
+  parseSortDirection,
   parseWorkflowStage,
 } from "./request-queue";
 
@@ -24,11 +31,13 @@ describe("search param parsers", () => {
     expect(parsePaymentFilter(undefined)).toBeUndefined();
   });
 
-  it("reads Needs you from the boolean or the string the URL carries", () => {
-    expect(parseNeedsFilter(true)).toBe(true);
+  it("reads Needs attention from the boolean or the string the URL carries", () => {
+    expect(parseAttentionFilter(true)).toBe(true);
+    expect(parseAttentionFilter("true")).toBe(true);
+    expect(parseAttentionFilter(false)).toBeUndefined();
+    expect(parseAttentionFilter("yes")).toBeUndefined();
     expect(parseNeedsFilter("true")).toBe(true);
-    expect(parseNeedsFilter(false)).toBeUndefined();
-    expect(parseNeedsFilter("yes")).toBeUndefined();
+    expect(parseMineFilter("true")).toBe(true);
   });
 
   it("keeps the existing stage and status parsers strict", () => {
@@ -37,19 +46,52 @@ describe("search param parsers", () => {
     expect(parseRequestStatus("incomplete")).toBe("incomplete");
     expect(parseRequestStatus("approved")).toBeUndefined();
   });
+
+  it("keeps queue paging and sorting inputs bounded", () => {
+    expect(parseRequestPage(2)).toBe(2);
+    expect(parseRequestPage(0)).toBeUndefined();
+    expect(parseRequestPage(100_001)).toBeUndefined();
+    expect(parseRequestPageSize("50")).toBe(50);
+    expect(parseRequestPageSize(500)).toBeUndefined();
+    expect(parseRequestSort("createdAt")).toBe("createdAt");
+    expect(parseRequestSort("drop table")).toBeUndefined();
+    expect(parseSortDirection("false")).toBe(false);
+    expect(parseRequestSearch("x".repeat(120))).toHaveLength(100);
+  });
 });
 
 describe("applyFilterChange", () => {
   it("applies a patch and leaves the other filters alone", () => {
     expect(
-      applyFilterChange({ department: "records", needs: true }, { payment: "unpaid" }),
-    ).toEqual({ department: "records", needs: true, payment: "unpaid" });
+      applyFilterChange(
+        { department: "records", attention: true },
+        { payment: "unpaid" },
+      ),
+    ).toEqual({ department: "records", attention: true, payment: "unpaid" });
   });
 
   it("drops the stage when a status is chosen, since a status implies one", () => {
     expect(applyFilterChange({ stage: 1 }, { status: "processing" })).toEqual({
       stage: undefined,
       status: "processing",
+    });
+  });
+
+  it("keeps work and attention filters mutually exclusive", () => {
+    expect(applyFilterChange({ needs: true }, { attention: true })).toEqual({
+      needs: undefined,
+      mine: undefined,
+      attention: true,
+    });
+    expect(applyFilterChange({ attention: true }, { needs: true })).toEqual({
+      attention: undefined,
+      needs: true,
+      mine: undefined,
+    });
+    expect(applyFilterChange({ needs: true }, { mine: true })).toEqual({
+      needs: undefined,
+      mine: true,
+      attention: undefined,
     });
   });
 
