@@ -1486,6 +1486,14 @@
     @apply flex w-full flex-col gap-4;
   }
 
+  /* The phone's fixed bottom bar must not cover an action the browser scrolls
+     into view while someone tabs through a citizen page. */
+  @media (max-width: 47.999rem) {
+    .portal-page :is(a, button) {
+      scroll-margin-block: 1rem 8.5rem;
+    }
+  }
+
   /* No border and no shadow: the ground color is what separates the cards. */
   .portal-card {
     @apply rounded-2xl bg-card;

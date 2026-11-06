@@ -18,8 +18,8 @@ const STAGES: WorkflowStage[] = [1, 2, 3, 4];
  * in its own stage, with the ones before it done (see `trackerProgress`).
  *
  * `captions` is the line under a stage's label, and `tag` a pill under the
- * stage the request is in. They are too wide for four phone columns, so they
- * show from tablet up.
+ * stage the request is in. They are too wide for the compact four-column
+ * tracker, so they show only in the wide dashboard composition.
  */
 export function LeadTracker({
   status,
@@ -54,10 +54,10 @@ export function LeadTracker({
             <div className="flex items-center">
               <span
                 className={cn(
-                  "flex size-7 shrink-0 items-center justify-center rounded-full border-3 md:size-[clamp(2rem,4.6vh,3.25rem)]",
+                  "flex size-7 shrink-0 items-center justify-center rounded-full border-3 xl:size-[clamp(2rem,4.6vh,3.25rem)]",
                   done && "border-primary-fill bg-primary-fill text-white",
                   here &&
-                    "border-primary bg-card shadow-[0_0_0_5px_rgba(11,77,162,0.18)] md:shadow-[0_0_0_clamp(5px,0.8vh,9px)_rgba(11,77,162,0.18)]",
+                    "border-primary bg-card shadow-[0_0_0_5px_rgba(11,77,162,0.18)] xl:shadow-[0_0_0_clamp(5px,0.8vh,9px)_rgba(11,77,162,0.18)]",
                   !done &&
                     !here &&
                     "border-[#d3deef] bg-card/70 dark:border-border-strong dark:bg-card",
@@ -65,14 +65,14 @@ export function LeadTracker({
               >
                 {done ? (
                   <Check
-                    className="size-3.5 md:size-[clamp(1rem,2.4vh,1.625rem)]"
+                    className="size-3.5 xl:size-[clamp(1rem,2.4vh,1.625rem)]"
                     strokeWidth={3}
                     aria-hidden="true"
                   />
                 ) : (
                   <span
                     className={cn(
-                      "size-2.25 rounded-full md:size-[clamp(0.625rem,1.5vh,1rem)]",
+                      "size-2.25 rounded-full xl:size-[clamp(0.625rem,1.5vh,1rem)]",
                       here ? "bg-primary" : "bg-muted-foreground/70",
                     )}
                     aria-hidden="true"
@@ -82,7 +82,7 @@ export function LeadTracker({
               {stage < 4 && (
                 <span
                   className={cn(
-                    "mx-1.5 h-0.75 flex-1 rounded-xs md:mx-[clamp(0.75rem,1.6vh,1.5rem)] md:h-[clamp(3px,0.5vh,6px)]",
+                    "mx-1.5 h-0.75 flex-1 rounded-xs xl:mx-[clamp(0.75rem,1.6vh,1.5rem)] xl:h-[clamp(3px,0.5vh,6px)]",
                     done ? "bg-primary" : "bg-[#b9c7de] dark:bg-border-strong",
                   )}
                   aria-hidden="true"
@@ -91,18 +91,18 @@ export function LeadTracker({
             </div>
             {/* Four labels share a phone's width, so they give way with an
                 ellipsis before they could run into each other. */}
-            <p className="mt-2.5 truncate text-[12.5px] leading-[normal] font-bold text-foreground md:mt-[clamp(0.625rem,1.8vh,1.25rem)] md:text-[clamp(1rem,2.4vh,1.375rem)]">
+            <p className="mt-2.5 truncate text-[12.5px] leading-[normal] font-bold text-foreground xl:mt-[clamp(0.625rem,1.8vh,1.25rem)] xl:text-[clamp(1rem,2.4vh,1.375rem)]">
               {STAGE_LABELS[stage]}
               <span className="sr-only">
                 {done ? " (done)" : here ? " (current)" : " (pending)"}
               </span>
             </p>
             {captions[stage] || (here && tag) ? (
-              <div className="hidden min-w-0 md:block">
+              <div className="hidden min-w-0 xl:block">
                 {captions[stage] ? (
                   <p
                     className={cn(
-                      "mt-0.5 leading-[normal] text-muted-foreground md:text-[clamp(0.875rem,2vh,1.1875rem)]",
+                      "mt-0.5 leading-[normal] text-muted-foreground xl:text-[clamp(0.875rem,2vh,1.1875rem)]",
                       "break-words",
                     )}
                   >
@@ -112,7 +112,7 @@ export function LeadTracker({
                 {here && tag ? (
                   <span
                     className={cn(
-                      "inline-flex max-w-full items-center rounded-full py-1 font-semibold whitespace-normal break-words md:mt-[clamp(0.375rem,1vh,0.625rem)] md:min-h-[clamp(1.5rem,3.2vh,2rem)] md:px-[clamp(0.75rem,1.6vh,1rem)] md:text-[clamp(0.75rem,1.6vh,0.9375rem)]",
+                      "inline-flex max-w-full items-center rounded-full py-1 font-semibold whitespace-normal break-words xl:mt-[clamp(0.375rem,1vh,0.625rem)] xl:min-h-[clamp(1.5rem,3.2vh,2rem)] xl:px-[clamp(0.75rem,1.6vh,1rem)] xl:text-[clamp(0.75rem,1.6vh,0.9375rem)]",
                       tag.tone === "action"
                         ? "bg-portal-danger-soft text-destructive"
                         : "bg-card/75 text-primary-hover",

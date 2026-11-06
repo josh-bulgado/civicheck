@@ -26,13 +26,13 @@ export function QuickStartPanel({ prominent = false }: QuickStartPanelProps) {
       <>
         <section
           style={bannerStyle("none")}
-          className="portal-banner flex flex-col items-start gap-6 rounded-hero px-5 py-7 md:flex-row md:items-center md:gap-8 md:px-10 md:py-9"
+          className="portal-banner flex flex-col items-start gap-6 rounded-hero px-5 py-7 xl:flex-row xl:items-center xl:gap-8 xl:px-10 xl:py-9"
         >
           <div className="min-w-0 flex-1">
-            <h2 className="text-[28px] leading-[1.15] font-bold tracking-normal text-foreground md:text-[42px]">
+            <h2 className="text-[28px] leading-[1.15] font-bold tracking-normal text-foreground xl:text-[42px]">
               What do you need today?
             </h2>
-            <p className="mt-3.5 text-[17px] leading-[normal] text-body-2 md:text-[19px]">
+            <p className="mt-3.5 text-[17px] leading-[normal] text-body-2 xl:text-[19px]">
               Pick a document. You'll see what to bring first.
             </p>
             <button
@@ -40,7 +40,7 @@ export function QuickStartPanel({ prominent = false }: QuickStartPanelProps) {
               onClick={openWelcomeTutorial}
               className={cn(
                 HOW_IT_WORKS,
-                "mt-4 inline-flex items-center text-[17px] font-bold md:text-lg",
+                "mt-4 inline-flex items-center text-[17px] font-bold xl:text-lg",
               )}
             >
               How it works
@@ -48,7 +48,7 @@ export function QuickStartPanel({ prominent = false }: QuickStartPanelProps) {
           </div>
           <QuietLink
             to="/services"
-            className="civic-press inline-flex h-13.5 max-md:w-full shrink-0 items-center justify-center rounded-full bg-card/78 px-7.5 text-[17px] font-semibold whitespace-nowrap text-foreground hover:bg-card md:h-13"
+            className="civic-press inline-flex h-13.5 w-full shrink-0 items-center justify-center rounded-full bg-card/78 px-7.5 text-[17px] font-semibold whitespace-nowrap text-foreground hover:bg-card xl:h-13 xl:w-auto"
           >
             See all services
           </QuietLink>
@@ -68,13 +68,13 @@ export function QuickStartPanel({ prominent = false }: QuickStartPanelProps) {
           <button
             type="button"
             onClick={openWelcomeTutorial}
-            className={cn(HOW_IT_WORKS, "py-1 text-sm")}
+            className={cn(HOW_IT_WORKS, "min-h-11 py-1 text-sm xl:min-h-0")}
           >
             How it works
           </button>
           <QuietLink
             to="/services"
-            className={cn(pillButton.light, "h-10 px-4.5 text-[15px] md:h-9 md:px-4 md:text-sm")}
+            className={cn(pillButton.light, "h-11 px-4.5 text-[15px] xl:h-9 xl:px-4 xl:text-sm")}
           >
             <span className="md:hidden">See all</span>
             <span className="max-md:hidden">See all services</span>

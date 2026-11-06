@@ -7,6 +7,13 @@ import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { Input } from "~/components/ui/input";
 import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemFooter,
+  ItemMedia,
+} from "~/components/ui/item";
+import {
   prepareUploadFile,
   uploadTypeOf,
 } from "~/features/apply/upload-image.utils";
@@ -183,35 +190,45 @@ function AddDocumentRow({
   }
 
   return (
-    <div data-upload-required={slot.isMandatory || undefined} className={cn("flex flex-col gap-3 rounded-2xl border border-border-lighter p-4 sm:flex-row sm:items-center", slot.isMandatory && "border-destructive/35 bg-portal-danger-soft/30")}>
-      <div className="min-w-0 flex-1">
+    <Item
+      data-upload-required={slot.isMandatory || undefined}
+      variant="outline"
+      shape="soft"
+      className={cn(
+        "flex-col items-stretch border-border-lighter sm:flex-row sm:items-center",
+        slot.isMandatory && "border-destructive/35 bg-portal-danger-soft/30",
+      )}
+    >
+      <ItemContent className="min-w-0 gap-0">
         <p className="text-sm leading-snug font-semibold text-foreground">
           {slot.subjectRole ? `${slot.subjectRole}: ` : ""}{display.title}
         </p>
         {display.detail && <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{display.detail}</p>}
         {!slot.isMandatory && <Badge variant="neutral" className="mt-2">Optional</Badge>}
-      </div>
-      <Input
-        ref={fileInput}
-        type="file"
-        accept={ACCEPT}
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) handleFile(file);
-          e.target.value = "";
-        }}
-      />
-      <Button
-        variant="outline"
-        className="h-12 shrink-0 rounded-full px-5 text-base font-semibold"
-        disabled={submitting}
-        onClick={() => fileInput.current?.click()}
-      >
-        <Upload data-icon="inline-start" />
-        {submitting ? "Uploading..." : "Upload"}
-      </Button>
-    </div>
+      </ItemContent>
+      <ItemActions className="w-full shrink-0 sm:w-auto">
+        <Input
+          ref={fileInput}
+          type="file"
+          accept={ACCEPT}
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleFile(file);
+            e.target.value = "";
+          }}
+        />
+        <Button
+          variant="outline"
+          className="h-12 w-full shrink-0 rounded-full px-5 text-base font-semibold sm:w-auto"
+          disabled={submitting}
+          onClick={() => fileInput.current?.click()}
+        >
+          <Upload data-icon="inline-start" />
+          {submitting ? "Uploading..." : "Upload"}
+        </Button>
+      </ItemActions>
+    </Item>
   );
 }
 
@@ -282,8 +299,16 @@ function AttachmentRow({
   }
 
   return (
-    <div data-reupload-required={needsReupload || undefined} className={cn("flex min-w-0 flex-col gap-3 rounded-2xl border border-border-lighter p-3", needsReupload && "border-destructive/40 bg-portal-danger-soft/40 ring-1 ring-destructive/10")}>
-      <div className="flex min-w-0 items-start gap-3">
+    <Item
+      data-reupload-required={needsReupload || undefined}
+      variant="outline"
+      shape="soft"
+      className={cn(
+        "min-w-0 items-start border-border-lighter",
+        needsReupload && "border-destructive/40 bg-portal-danger-soft/40 ring-1 ring-destructive/10",
+      )}
+    >
+      <ItemMedia>
         <AttachmentThumbnail
           attachmentId={doc.id}
           version={doc.verificationStatus}
@@ -291,64 +316,65 @@ function AttachmentRow({
           busy={viewing}
           onOpen={handleViewFile}
         />
-        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-          <button type="button" disabled={viewing} onClick={() => handleViewFile()}
-            className="min-h-11 min-w-0 cursor-pointer rounded-md text-left text-sm leading-snug font-semibold text-foreground outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait disabled:opacity-70"
-            aria-label={`View ${doc.subjectRole ? `${doc.subjectRole}: ` : ""}${doc.requirementName}`}>
-            <span className="block">{title ?? `${doc.subjectRole ? `${doc.subjectRole}: ` : ""}${display.title}`}</span>
-            {!title && display.detail && (
-              <span className="mt-1 block text-xs leading-relaxed font-normal text-muted-foreground">{display.detail}</span>
-            )}
-          </button>
-          {pending && (
-            <Badge variant="warning" className="h-7 gap-1.5 px-2.5">
-              <Clock3 aria-hidden="true" /> Pending review
-            </Badge>
+      </ItemMedia>
+      <ItemContent className="min-w-0 gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+        <button type="button" disabled={viewing} onClick={() => handleViewFile()}
+          className="min-h-11 min-w-0 cursor-pointer rounded-md text-left text-sm leading-snug font-semibold text-foreground outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait disabled:opacity-70"
+          aria-label={`View ${doc.subjectRole ? `${doc.subjectRole}: ` : ""}${doc.requirementName}`}>
+          <span className="block">{title ?? `${doc.subjectRole ? `${doc.subjectRole}: ` : ""}${display.title}`}</span>
+          {!title && display.detail && (
+            <span className="mt-1 block text-xs leading-relaxed font-normal text-muted-foreground">{display.detail}</span>
           )}
-          {!pending && !rejected && (
-            <Badge variant="success" className="h-7 gap-1.5 px-2.5"><CheckCircle2 aria-hidden="true" /> Approved</Badge>
-          )}
-          {rejected && (
-            <Badge variant="destructive" className="h-7 gap-1.5 px-2.5"><XCircle aria-hidden="true" /> {needsReupload ? "Re-upload required" : "Rejected"}</Badge>
-          )}
-        </div>
-      </div>
+        </button>
+        {pending && (
+          <Badge variant="warning" className="h-7 gap-1.5 px-2.5">
+            <Clock3 aria-hidden="true" /> Pending review
+          </Badge>
+        )}
+        {!pending && !rejected && (
+          <Badge variant="success" className="h-7 gap-1.5 px-2.5"><CheckCircle2 aria-hidden="true" /> Approved</Badge>
+        )}
+        {rejected && (
+          <Badge variant="destructive" className="h-7 gap-1.5 px-2.5"><XCircle aria-hidden="true" /> {needsReupload ? "Re-upload required" : "Rejected"}</Badge>
+        )}
+      </ItemContent>
+      <ItemFooter className="flex-col items-stretch gap-3">
+        {rejected && doc.rejectionReason && (
+          <p className="text-sm leading-snug text-destructive"><span className="font-semibold">Staff feedback: </span>{doc.rejectionReason}</p>
+        )}
 
-      {rejected && doc.rejectionReason && (
-        <p className="text-sm leading-snug text-destructive"><span className="font-semibold">Staff feedback: </span>{doc.rejectionReason}</p>
-      )}
+        {rejected && canResubmit && (
+          <>
+            <Input
+              ref={fileInput}
+              type="file"
+              accept={ACCEPT}
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFile(file);
+                e.target.value = "";
+              }}
+            />
+            <Button
+              className="h-12 w-full rounded-full text-base font-semibold"
+              disabled={submitting}
+              onClick={() => fileInput.current?.click()}
+            >
+              <Upload data-icon="inline-start" />
+              {submitting ? "Uploading..." : "Re-upload document"}
+            </Button>
+          </>
+        )}
 
-      {rejected && canResubmit && (
-        <>
-          <Input
-            ref={fileInput}
-            type="file"
-            accept={ACCEPT}
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleFile(file);
-              e.target.value = "";
-            }}
-          />
-          <Button
-            className="h-12 w-full rounded-full text-base font-semibold"
-            disabled={submitting}
-            onClick={() => fileInput.current?.click()}
-          >
-            <Upload data-icon="inline-start" />
-            {submitting ? "Uploading..." : "Re-upload document"}
-          </Button>
-        </>
-      )}
-
-      <PreviousUploads attachmentId={doc.id} uploads={doc.previousUploads ?? []} applicant />
+        <PreviousUploads attachmentId={doc.id} uploads={doc.previousUploads ?? []} applicant />
+      </ItemFooter>
       <AttachmentViewerDialog
         url={viewerUrl}
         subjectRole={doc.subjectRole}
         requirementName={doc.requirementName}
         onClose={() => setViewerUrl(null)}
       />
-    </div>
+    </Item>
   );
 }

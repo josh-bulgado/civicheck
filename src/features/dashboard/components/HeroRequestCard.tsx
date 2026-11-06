@@ -47,8 +47,8 @@ export function HeroRequestCard({ request, compact = false }: HeroRequestCardPro
   const trackerClassName = cn(
     "mt-5.5",
     compact
-      ? "md:mt-[clamp(0.875rem,2.6vh,2rem)]"
-      : "md:mt-[clamp(1rem,3.6vh,2.75rem)]",
+      ? "xl:mt-[clamp(0.875rem,2.6vh,2rem)]"
+      : "xl:mt-[clamp(1rem,3.6vh,2.75rem)]",
   );
 
   return (
@@ -60,10 +60,10 @@ export function HeroRequestCard({ request, compact = false }: HeroRequestCardPro
       // does not stretch to the bottom of the screen: that left the content
       // floating in empty blue.
       className={cn(
-        "portal-banner flex min-w-0 w-full max-w-full flex-col rounded-[28px] p-5.5 md:rounded-hero md:px-12",
+        "portal-banner flex min-w-0 w-full max-w-full flex-col rounded-[28px] p-5.5 xl:rounded-hero xl:px-12",
         compact
-          ? "md:py-[clamp(1.5rem,3.4vh,2.5rem)]"
-          : "md:py-[clamp(1.75rem,4vh,3rem)]",
+          ? "xl:py-[clamp(1.5rem,3.4vh,2.5rem)]"
+          : "xl:py-[clamp(1.75rem,4vh,3rem)]",
       )}
     >
       {/* Bold at its natural letter spacing, the same as the "What do you need
@@ -76,9 +76,9 @@ export function HeroRequestCard({ request, compact = false }: HeroRequestCardPro
         id="hero-headline"
         className={cn(
           long
-            ? "text-[26px] md:text-[clamp(1.875rem,4.8vh,2.875rem)]"
-            : "text-[28px] md:text-[clamp(2.125rem,5.4vh,3.25rem)]",
-          "min-w-0 leading-[1.15] font-bold tracking-normal text-foreground md:max-w-[min(var(--banner-text),68.75rem)]",
+            ? "text-[26px] xl:text-[clamp(1.875rem,4.8vh,2.875rem)]"
+            : "text-[28px] xl:text-[clamp(2.125rem,5.4vh,3.25rem)]",
+          "min-w-0 leading-[1.15] font-bold tracking-normal text-foreground xl:max-w-[min(var(--banner-text),68.75rem)]",
         )}
       >
         {lead ? (
@@ -92,7 +92,7 @@ export function HeroRequestCard({ request, compact = false }: HeroRequestCardPro
                 no short name can run to a sentence, so it is cut short rather
                 than pushing the state off the end. */}
             Your {limitLabel(label)}{" "}
-            <span className="whitespace-nowrap">
+            <span className="xl:whitespace-nowrap">
               {verb} <em className="text-primary not-italic">{emphasis}</em>
             </span>
           </>
@@ -100,17 +100,18 @@ export function HeroRequestCard({ request, compact = false }: HeroRequestCardPro
       </h2>
 
       {lead ? (
-        <p className="mt-2 text-base leading-[1.35] text-body-2 md:mt-[clamp(0.375rem,1vh,0.75rem)] md:max-w-[min(var(--banner-text),68.75rem)] md:text-[clamp(1.0625rem,2.4vh,1.5rem)]">
+        <p className="mt-2 text-base leading-[1.35] text-body-2 xl:mt-[clamp(0.375rem,1vh,0.75rem)] xl:max-w-[min(var(--banner-text),68.75rem)] xl:text-[clamp(1.0625rem,2.4vh,1.5rem)]">
           {lead.line}
         </p>
       ) : null}
 
-      {/* Under the sentence it answers, at its left edge. On a phone the
-          tracker and its note come first and this closes the card. */}
+      {/* Under the sentence it answers, at its left edge. In the compact
+          phone/tablet layout the tracker and its note come first and this
+          closes the card. */}
       <QuietLink
         to="/my-requests/$requestId"
         params={{ requestId: request.id }}
-        className="civic-press mt-4.5 inline-flex h-13.5 shrink-0 items-center justify-center self-start rounded-full bg-primary-fill px-7 text-[17px] font-semibold whitespace-nowrap text-white shadow-portal-button hover:bg-primary-fill-hover max-md:order-last max-md:w-full md:mt-[clamp(0.75rem,2.2vh,1.5rem)] md:h-[clamp(2.75rem,5vh,3.5rem)]"
+        className="civic-press mt-4.5 inline-flex h-13.5 shrink-0 items-center justify-center self-start rounded-full bg-primary-fill px-7 text-[17px] font-semibold whitespace-nowrap text-white shadow-portal-button hover:bg-primary-fill-hover max-xl:order-last max-xl:w-full xl:mt-[clamp(0.75rem,2.2vh,1.5rem)] xl:h-[clamp(2.75rem,5vh,3.5rem)]"
       >
         {heroActionLabel(request.status)}
       </QuietLink>
@@ -124,12 +125,12 @@ export function HeroRequestCard({ request, compact = false }: HeroRequestCardPro
         status={request.status}
         captions={leadCaptions(request, details)}
         tag={details.tag}
-        className={cn(trackerClassName, "md:max-w-[calc(70%+1.2rem)]")}
+        className={cn(trackerClassName, "xl:max-w-[calc(70%+1.2rem)]")}
       />
-      {/* The columns are too narrow for the note on a phone. A submitted or
+      {/* Compact tracker columns are too narrow for the note. A submitted or
           processing request has said all this under its headline. */}
       {details.note && !lead ? (
-        <p className="mt-4.5 text-[15px] leading-[1.4] font-semibold text-portal-ink-2 md:hidden">
+        <p className="mt-4.5 text-[15px] leading-[1.4] font-semibold text-portal-ink-2 xl:hidden">
           {details.note}
         </p>
       ) : null}

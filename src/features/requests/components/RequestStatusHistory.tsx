@@ -39,7 +39,7 @@ export function RequestStatusHistory({ logs }: { logs: LogEntry[] }) {
           return (
             <li
               key={log.id}
-              className="grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-b border-border-lighter py-3.5 last:border-b-0 last:pb-0 xl:grid-cols-[1rem_minmax(0,1fr)_auto]"
+              className="grid grid-cols-[1rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-b border-border-lighter py-3.5 last:border-b-0 last:pb-0 @lg:grid-cols-[1rem_minmax(0,1fr)_auto]"
             >
               <span className="flex size-4 shrink-0 items-center justify-center" aria-hidden="true">
                 <span
@@ -64,7 +64,7 @@ export function RequestStatusHistory({ logs }: { logs: LogEntry[] }) {
               </span>
               <time
                 dateTime={log.createdAt}
-                className="col-start-2 text-xs text-muted-foreground xl:col-start-auto xl:text-right"
+                className="col-start-2 text-xs text-muted-foreground @lg:col-start-auto @lg:text-right"
               >
                 {formatLogDateTime(log.createdAt)}
               </time>

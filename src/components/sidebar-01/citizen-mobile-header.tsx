@@ -50,7 +50,7 @@ export function CitizenMobileHeader({
       <QuietLink
         to="/dashboard"
         aria-label="CiviCheck, back to your dashboard"
-        className="flex min-w-0 flex-1 items-center gap-2.5 text-foreground max-[420px]:gap-0"
+        className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 text-foreground max-[420px]:gap-0"
       >
         {/* Text stand-in: the official emblem isn't cleared for use yet. */}
         <span

@@ -25,33 +25,33 @@ export function StageTracker({
   const current = status === "released" ? 5 : (stageOf(status) ?? 1);
 
   return (
-    <ol className={cn("grid grid-cols-4", className)} aria-label="Request progress">
+    <ol className={cn("@container grid grid-cols-4", className)} aria-label="Request progress">
       {STAGES.map((stage) => {
         const done = stage < current;
         const here = stage === current;
 
         return (
-          <li key={stage} aria-current={here ? "step" : undefined} className="min-w-0 pr-2 md:pr-3">
+          <li key={stage} aria-current={here ? "step" : undefined} className="min-w-0 pr-1 @sm:pr-2 @md:pr-3">
             <div className="flex items-center">
               <span
                 className={cn(
-                  "flex size-7 shrink-0 items-center justify-center rounded-full border-3 text-white md:size-10",
+                  "flex size-7 shrink-0 items-center justify-center rounded-full border-3 text-white @md:size-10",
                   done && "border-primary-fill bg-primary-fill",
                   here &&
-                    "border-primary bg-card shadow-[0_0_0_5px_rgba(11,77,162,0.18)] md:shadow-[0_0_0_7px_rgba(11,77,162,0.18)]",
+                    "border-primary bg-card shadow-[0_0_0_5px_rgba(11,77,162,0.18)] @md:shadow-[0_0_0_7px_rgba(11,77,162,0.18)]",
                   !done && !here && "border-[#b9c7de] dark:border-border-strong bg-card",
                 )}
               >
                 {done && (
                   <Check
-                    className="size-3.5 md:size-4.75"
+                    className="size-3.5 @md:size-4.75"
                     strokeWidth={3}
                     aria-hidden="true"
                   />
                 )}
                 {here && (
                   <span
-                    className="size-2.25 rounded-full bg-primary md:size-3"
+                    className="size-2.25 rounded-full bg-primary @md:size-3"
                     aria-hidden="true"
                   />
                 )}
@@ -59,18 +59,18 @@ export function StageTracker({
               {stage < 4 && (
                 <span
                   className={cn(
-                    "mx-1.5 h-0.75 flex-1 rounded-xs md:mx-3.5 md:h-1",
+                    "mx-1.5 h-0.75 flex-1 rounded-xs @md:mx-3.5 @md:h-1",
                     done ? "bg-primary" : "bg-[#b9c7de] dark:bg-border-strong",
                   )}
                   aria-hidden="true"
                 />
               )}
             </div>
-            {/* Four labels share a phone's width, so they tighten up there and
-                give way with an ellipsis before they could run into each other. */}
+            {/* Four labels share a phone's width, so they tighten and wrap there
+                instead of hiding a stage name behind an ellipsis. */}
             <p
               className={cn(
-                "mt-2.5 truncate text-[12.5px] leading-[normal] md:mt-4 md:text-lg",
+                "mt-2.5 text-[10px] leading-tight tracking-[-0.02em] whitespace-nowrap @sm:text-[12.5px] @sm:tracking-normal @md:mt-4 @md:text-lg @md:leading-[normal]",
                 done || here ? "font-bold text-foreground" : "font-medium text-muted-foreground",
               )}
             >

@@ -48,7 +48,7 @@ export function VerificationFormCard({
     <Button
       className={
         variant === "portal"
-          ? "h-11.5 shrink-0 rounded-full bg-primary-soft px-5 text-[15px] font-semibold text-primary hover:bg-primary-soft/70"
+          ? "h-11.5 w-full shrink-0 rounded-full bg-primary-soft px-5 text-[15px] font-semibold text-primary hover:bg-primary-soft/70 @xl:w-auto"
           : "shrink-0"
       }
       disabled={downloading}
@@ -76,7 +76,7 @@ export function VerificationFormCard({
   }
 
   return (
-    <section className="flex items-center gap-4 rounded-[28px] bg-card p-6 shadow-portal-card ring-2 ring-border-light md:p-7">
+    <section className="flex flex-col items-stretch gap-4 rounded-[28px] bg-card p-6 shadow-portal-card ring-2 ring-border-light @xl:flex-row @xl:items-center md:p-7">
       <div className="min-w-0 flex-1">
         <h2 className="text-[22px] leading-[normal] font-semibold text-foreground">
           Verification form

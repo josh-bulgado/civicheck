@@ -51,16 +51,16 @@ export function MyRequestSummary({ request }: { request: MyRequestDetail }) {
   }
 
   return (
-    <section aria-labelledby="submitted-details-heading" className="flex min-w-0 flex-col gap-4 rounded-3xl border border-border-light bg-card p-5">
+    <section aria-labelledby="submitted-details-heading" className="@container flex min-w-0 flex-col gap-4 rounded-3xl border border-border-light bg-card p-5">
       <Dialog>
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-col items-stretch gap-2 @xs:flex-row @xs:items-center @xs:justify-between">
           <h2 id="submitted-details-heading" className="min-w-0 text-base font-semibold text-foreground">Submitted details</h2>
-          <DialogTrigger render={<Button variant="secondary" size="sm" className="px-3 text-xs" />}>
+          <DialogTrigger render={<Button variant="secondary" size="sm" className="w-full px-3 text-xs @xs:w-auto" />}>
             View full details
           </DialogTrigger>
         </div>
         <DialogContent showCloseButton={false} className="flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-[40rem]">
-          <DialogHeader className="shrink-0 gap-2 border-b border-border-lighter px-6 py-5">
+          <DialogHeader className="shrink-0 gap-2 border-b border-border-lighter px-4 py-4 sm:px-6 sm:py-5">
             <div className="flex items-center justify-between gap-4">
               <DialogTitle className="text-xl leading-6 font-semibold">Submitted details</DialogTitle>
               <DialogClose render={<Button variant="secondary" size="icon-sm" shape="soft" />}>
@@ -71,10 +71,12 @@ export function MyRequestSummary({ request }: { request: MyRequestDetail }) {
             <DialogDescription className="text-xs leading-4">
               All the information submitted with your application.
             </DialogDescription>
-            <Badge variant="info" className="h-5 rounded-md px-2 font-mono text-[10px]">{request.trackingNumber}</Badge>
+            <Badge variant="info" className="h-5 max-w-full justify-start rounded-md px-2 font-mono text-[10px]">
+              <span className="min-w-0 truncate">{request.trackingNumber}</span>
+            </Badge>
           </DialogHeader>
           <div role="region" aria-label="Submitted application information" tabIndex={0}
-            className="min-h-0 overflow-y-auto overscroll-contain p-6 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring">
+            className="min-h-0 overflow-y-auto overscroll-contain p-4 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:p-6">
             <SubmittedDetailsCard request={request} showEmpty variant="dialog" bare />
             {hasSignature && (
               <section className="mt-4 border-t border-border-lighter pt-4">
@@ -92,7 +94,7 @@ export function MyRequestSummary({ request }: { request: MyRequestDetail }) {
       </Dialog>
 
       {highlights.length === 0 && <p className="text-sm text-muted-foreground">No applicant details were submitted.</p>}
-      <dl className="grid min-w-0 grid-cols-2 gap-x-5 gap-y-4">
+      <dl className="grid min-w-0 grid-cols-1 gap-x-5 gap-y-4 @sm:grid-cols-2">
         {highlights.map(({ key, label, value }) => (
           <div key={key} className="min-w-0">
             <dt className="text-[11px] leading-snug text-muted-foreground">{label}</dt>

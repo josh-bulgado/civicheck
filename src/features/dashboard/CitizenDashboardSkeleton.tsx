@@ -32,7 +32,7 @@ function TilesSkeleton({ strip = false }: { strip?: boolean }) {
         // A phone scrolls them sideways, with the next one peeking in.
         "max-md:-mx-5 max-md:flex max-md:gap-3 max-md:overflow-hidden max-md:px-5 md:grid md:grid-cols-2",
         strip
-          ? "auto-rows-[5rem] gap-3 md:auto-rows-[6rem] md:grid-cols-4 md:gap-4"
+          ? "auto-rows-[5rem] gap-3 md:auto-rows-[6rem] md:gap-4 xl:grid-cols-4"
           : "shrink-0 gap-4 md:gap-5 xl:grid-cols-4",
       )}
     >
@@ -64,14 +64,14 @@ function PromptSkeleton() {
         data-part="prompt"
         // Not `rounded-hero`: class merging does not know that name, so the
         // Skeleton's own radius would win and square the corners off.
-        className="flex flex-col items-start gap-6 rounded-[var(--radius-hero)] px-5 py-7 md:flex-row md:items-center md:gap-8 md:px-10 md:py-9"
+        className="flex flex-col items-start gap-6 rounded-[var(--radius-hero)] px-5 py-7 xl:flex-row xl:items-center xl:gap-8 xl:px-10 xl:py-9"
       >
         <div className="w-full min-w-0 flex-1">
-          <Mark className="h-8 w-4/5 md:h-12 md:w-96 md:max-w-full" />
-          <Mark className="mt-3.5 h-5 w-3/5 md:h-5.5 md:w-80 md:max-w-full" />
+          <Mark className="h-8 w-4/5 xl:h-12 xl:w-96 xl:max-w-full" />
+          <Mark className="mt-3.5 h-5 w-3/5 xl:h-5.5 xl:w-80 xl:max-w-full" />
           <Mark className="mt-4 h-10 w-32" />
         </div>
-        <Mark className="h-13.5 w-full shrink-0 rounded-full md:h-13 md:w-52" />
+        <Mark className="h-13.5 w-full shrink-0 rounded-full xl:h-13 xl:w-52" />
       </Skeleton>
       <TilesSkeleton />
     </>
@@ -80,8 +80,8 @@ function PromptSkeleton() {
 
 /**
  * The four stages, the ones already finished a shade darker, as the tracker
- * draws them. From tablet up the first `captioned` stages have a line under
- * their label, and the stage the request is in a pill when `tag` is set.
+ * draws them. In the wide layout the first `captioned` stages have a line
+ * under their label, and the stage the request is in a pill when `tag` is set.
  */
 function TrackerSkeleton({
   done,
@@ -103,39 +103,39 @@ function TrackerSkeleton({
         return (
           <div
             key={stage}
-            className={cn("min-w-0", stage < 4 ? "flex-1 pr-2 md:pr-3" : "shrink-0")}
+            className={cn("min-w-0", stage < 4 ? "flex-1 pr-2 xl:pr-3" : "shrink-0")}
           >
             <div className="flex items-center">
               <Mark
                 className={cn(
-                  "size-7 shrink-0 rounded-full md:size-[clamp(2rem,4.6vh,3.25rem)]",
+                  "size-7 shrink-0 rounded-full xl:size-[clamp(2rem,4.6vh,3.25rem)]",
                   finished && "bg-foreground/20",
                 )}
               />
               {stage < 4 && (
                 <Mark
                   className={cn(
-                    "mx-1.5 h-0.75 flex-1 md:mx-[clamp(0.75rem,1.6vh,1.5rem)] md:h-[clamp(3px,0.5vh,6px)]",
+                    "mx-1.5 h-0.75 flex-1 xl:mx-[clamp(0.75rem,1.6vh,1.5rem)] xl:h-[clamp(3px,0.5vh,6px)]",
                     finished && "bg-foreground/20",
                   )}
                 />
               )}
             </div>
-            <Mark className="mt-2.5 h-3.5 w-14 md:mt-[clamp(0.625rem,1.8vh,1.25rem)] md:h-[clamp(1rem,2.4vh,1.375rem)] md:w-24" />
+            <Mark className="mt-2.5 h-3.5 w-14 xl:mt-[clamp(0.625rem,1.8vh,1.25rem)] xl:h-[clamp(1rem,2.4vh,1.375rem)] xl:w-24" />
             {hasCaption || hasTag ? (
               // Release is only as wide as its label: what hangs under it takes
               // no width, as in the tracker.
-              <div className={cn("hidden md:block", stage === 4 && "w-0")}>
+              <div className={cn("hidden xl:block", stage === 4 && "w-0")}>
                 {hasCaption ? (
                   <Mark
                     className={cn(
-                      "mt-0.5 md:h-[clamp(1rem,2.4vh,1.4rem)]",
+                      "mt-0.5 xl:h-[clamp(1rem,2.4vh,1.4rem)]",
                       stage === 4 ? "w-40" : "w-5/6",
                     )}
                   />
                 ) : null}
                 {hasTag ? (
-                  <Mark className="w-28 rounded-full md:mt-[clamp(0.375rem,1vh,0.625rem)] md:h-[clamp(1.5rem,3.2vh,2rem)]" />
+                  <Mark className="w-28 rounded-full xl:mt-[clamp(0.375rem,1vh,0.625rem)] xl:h-[clamp(1.5rem,3.2vh,2rem)]" />
                 ) : null}
               </div>
             ) : null}
@@ -167,27 +167,27 @@ function HeroSkeleton({
     <Skeleton
       data-part="hero"
       className={cn(
-        "flex flex-col rounded-[28px] p-5.5 md:rounded-hero md:px-12",
+        "flex flex-col rounded-[28px] p-5.5 xl:rounded-hero xl:px-12",
         compact
-          ? "md:py-[clamp(1.5rem,3.4vh,2.5rem)]"
-          : "md:py-[clamp(1.75rem,4vh,3rem)]",
+          ? "xl:py-[clamp(1.5rem,3.4vh,2.5rem)]"
+          : "xl:py-[clamp(1.75rem,4vh,3rem)]",
       )}
     >
-      <Mark className="h-8 w-4/5 md:h-[clamp(2.125rem,5.4vh,3.25rem)] md:w-3/5" />
+      <Mark className="h-8 w-4/5 xl:h-[clamp(2.125rem,5.4vh,3.25rem)] xl:w-3/5" />
       {lead ? (
-        <Mark className="mt-2 h-5 w-3/5 md:mt-[clamp(0.375rem,1vh,0.75rem)] md:h-[clamp(1.0625rem,2.4vh,1.5rem)] md:w-2/5" />
+        <Mark className="mt-2 h-5 w-3/5 xl:mt-[clamp(0.375rem,1vh,0.75rem)] xl:h-[clamp(1.0625rem,2.4vh,1.5rem)] xl:w-2/5" />
       ) : null}
-      {/* On a phone the button closes the card, under the tracker. */}
-      <Mark className="mt-4.5 h-13.5 w-40 rounded-full max-md:order-last max-md:w-full md:mt-[clamp(0.75rem,2.2vh,1.5rem)] md:h-[clamp(2.75rem,5vh,3.5rem)]" />
+      {/* In the compact layout the button closes the card, under the tracker. */}
+      <Mark className="mt-4.5 h-13.5 w-40 rounded-full max-xl:order-last max-xl:w-full xl:mt-[clamp(0.75rem,2.2vh,1.5rem)] xl:h-[clamp(2.75rem,5vh,3.5rem)]" />
       <TrackerSkeleton
         done={done}
         captioned={captioned}
         tag={tag}
         className={cn(
-          "mt-5.5 md:max-w-[calc(70%+1.2rem)]",
+          "mt-5.5 xl:max-w-[calc(70%+1.2rem)]",
           compact
-            ? "md:mt-[clamp(0.875rem,2.6vh,2rem)]"
-            : "md:mt-[clamp(1rem,3.6vh,2.75rem)]",
+            ? "xl:mt-[clamp(0.875rem,2.6vh,2rem)]"
+            : "xl:mt-[clamp(1rem,3.6vh,2.75rem)]",
         )}
       />
     </Skeleton>
@@ -207,14 +207,14 @@ function AttentionSkeleton({ count }: { count: number }) {
         {Array.from({ length: count }, (_, row) => (
           <li
             key={row}
-            className="grid grid-cols-[3rem_minmax(0,1fr)] items-center gap-x-4 gap-y-3 py-3 md:grid-cols-[3rem_minmax(0,1fr)_auto]"
+            className="grid grid-cols-[3rem_minmax(0,1fr)] items-center gap-x-4 gap-y-3 py-3 xl:grid-cols-[3rem_minmax(0,1fr)_auto]"
           >
             <Skeleton className="size-12 rounded-2xl" />
             <div className="flex min-w-0 flex-col gap-1.5">
               <Skeleton className="h-5.5 w-3/5" />
               <Skeleton className="h-4.5 w-4/5" />
             </div>
-            <Skeleton className="h-11 w-28 rounded-full max-md:col-start-2" />
+            <Skeleton className="h-11 w-28 rounded-full max-xl:col-start-2" />
           </li>
         ))}
       </ul>
@@ -229,7 +229,7 @@ function OtherRequestsSkeleton({ count }: { count: number }) {
       <div className="mb-2 flex items-center justify-between gap-4">
         <Skeleton className="mx-1.5 h-5 w-40" />
       </div>
-      <ul className="grid gap-3 md:grid-cols-2 md:gap-4">
+      <ul className="grid gap-3 md:gap-4 xl:grid-cols-2">
         {Array.from({ length: count }, (_, row) => (
           <li
             key={row}
@@ -255,8 +255,8 @@ function StartRequestSkeleton() {
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
         <Skeleton className="mx-1.5 h-5 w-36" />
         <div className="flex items-center gap-2 md:gap-4">
-          <Skeleton className="h-5 w-20" />
-          <Skeleton className="h-10 w-24 rounded-full md:h-9 md:w-32" />
+          <Skeleton className="h-11 w-20 xl:h-5" />
+          <Skeleton className="h-11 w-24 rounded-full xl:h-9 xl:w-32" />
         </div>
       </div>
       <TilesSkeleton strip />
@@ -325,7 +325,7 @@ export function CitizenDashboardSkeleton() {
         <Skeleton className="h-8 w-72 max-w-full rounded-xl md:h-11" />
         {/* "All requests" only exists once there are requests. */}
         {shape.kind === "requests" && (
-          <Skeleton className="hidden h-12 w-36 rounded-full md:block" />
+          <Skeleton className="hidden h-12 w-36 rounded-full xl:block" />
         )}
       </div>
       <CitizenDashboardBodySkeleton shape={shape} />

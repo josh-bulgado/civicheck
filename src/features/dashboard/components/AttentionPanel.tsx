@@ -35,7 +35,7 @@ export function AttentionPanel({ items, seeAll = false }: AttentionPanelProps) {
           return (
             <li
               key={request.id}
-              className="grid grid-cols-[3rem_minmax(0,1fr)] items-center gap-x-4 gap-y-3 py-3 md:grid-cols-[3rem_minmax(0,1fr)_auto]"
+              className="grid grid-cols-[3rem_minmax(0,1fr)] items-center gap-x-4 gap-y-3 py-3 xl:grid-cols-[3rem_minmax(0,1fr)_auto]"
             >
               <span
                 className={cn(
@@ -59,7 +59,7 @@ export function AttentionPanel({ items, seeAll = false }: AttentionPanelProps) {
               <QuietLink
                 to="/my-requests/$requestId"
                 params={{ requestId: request.id }}
-                className="civic-press inline-flex h-11 items-center rounded-full bg-primary-fill px-5.5 text-[15px] font-semibold whitespace-nowrap text-white hover:bg-primary-fill-hover max-md:col-start-2 max-md:justify-self-start"
+                className="civic-press inline-flex h-11 items-center rounded-full bg-primary-fill px-5.5 text-[15px] font-semibold whitespace-nowrap text-white hover:bg-primary-fill-hover max-xl:col-start-2 max-xl:justify-self-start"
               >
                 {action}
               </QuietLink>

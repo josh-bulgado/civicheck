@@ -146,6 +146,9 @@ preserve the current content and interactions.
 - Keep long names, reference numbers, and translated/expanded copy from forcing
   page overflow. Use `min-w-0`, wrapping, and the existing mobile layouts.
   Tables may scroll horizontally inside their card; the entire page should not.
+- Keep the applicant dashboard's compact hero, single-column request rows, and
+  two-column service strip through tablet widths. Its desktop sidebar reduces
+  the page's usable width, so the wide dashboard composition starts at `xl`.
 - The wizard keeps a consistent main-card width when adding a sidebar, stacks
   the sidebar below on smaller screens, and offsets it below the sticky service
   band. Preserve that behavior and the `.apply-wizard` scroll-padding rules.
