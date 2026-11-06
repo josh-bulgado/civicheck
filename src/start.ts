@@ -61,7 +61,7 @@ function contentSecurityPolicy(nonce: string) {
     `style-src ${sources("'self'", "'unsafe-inline'", vercelPreview && "https://vercel.live")}`,
     `img-src ${sources("'self'", "data:", "blob:", supabase?.https, vercelPreview && "https://vercel.live https://vercel.com")}`,
     `font-src ${sources("'self'", "data:", vercelPreview && "https://vercel.live https://assets.vercel.com")}`,
-    `connect-src ${sources("'self'", supabase?.https, supabase?.wss, "https://www.google.com/recaptcha/", vercelPreview && "https://vercel.live wss://ws-us3.pusher.com")}`,
+    `connect-src ${sources("'self'", "blob:", supabase?.https, supabase?.wss, "https://www.google.com/recaptcha/", vercelPreview && "https://vercel.live wss://ws-us3.pusher.com")}`,
     "media-src 'self' blob:",
     "worker-src 'self' blob:",
     `frame-src ${sources("'self'", "blob:", "https://www.google.com/recaptcha/", "https://recaptcha.google.com/recaptcha/", vercelPreview && "https://vercel.live")}`,
