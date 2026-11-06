@@ -6,6 +6,7 @@ import { hasPermission, type Role } from "~/lib/permissions";
 import { getNotificationAudience } from "~/features/notifications/notification-audience";
 
 export type NotificationType =
+  | "registration_reminder"
   // applicant feed
   | "status_change"
   | "pre_validation_complete"
@@ -51,6 +52,8 @@ export interface NotificationRow {
    */
   serviceName: string | null;
   serviceCode?: string | null;
+  paymentStatus?: string | null;
+  feesDue?: number;
   target: NotificationTarget;
 }
 
@@ -72,7 +75,7 @@ export interface NotificationsPage {
 }
 
 const APPLICANT_FEED_COLUMNS =
-  "id, request_id, type, archived_at, subject, body, status, is_read, sent_at, requests!inner(tracking_number, applicant_id, request_type, services_registry(name, display_name))";
+  "id, request_id, type, archived_at, subject, body, status, is_read, sent_at, requests!inner(tracking_number, applicant_id, request_type, payment_status, fees_due, services_registry(name, display_name))";
 
 /** A `notifications` row, with its request, as `APPLICANT_FEED_COLUMNS` selects it. */
 interface ApplicantFeedRow {
@@ -89,11 +92,15 @@ interface ApplicantFeedRow {
     | {
         tracking_number: string;
         request_type: string | null;
+        payment_status?: string | null;
+        fees_due?: number | string | null;
         services_registry?: unknown;
       }
     | {
         tracking_number: string;
         request_type: string | null;
+        payment_status?: string | null;
+        fees_due?: number | string | null;
         services_registry?: unknown;
       }[]
     | null;
@@ -116,6 +123,8 @@ function toApplicantRow(row: ApplicantFeedRow): NotificationRow {
   const request = one<{
     tracking_number: string;
     request_type: string | null;
+    payment_status?: string | null;
+    fees_due?: number | string | null;
     services_registry?: unknown;
   }>(row.requests);
   const service = one<{ name?: string; display_name?: string | null }>(
@@ -129,6 +138,8 @@ function toApplicantRow(row: ApplicantFeedRow): NotificationRow {
     subject: row.subject,
     body: toFeedBody(row.body),
     serviceCode: request?.request_type ?? null,
+    paymentStatus: request?.payment_status ?? null,
+    feesDue: request?.fees_due == null ? undefined : Number(request.fees_due),
     status: row.status,
     isRead: row.is_read,
     sentAt: row.sent_at,

@@ -11,7 +11,7 @@ export function SeeAllRequestsLink() {
   return (
     <QuietLink
       to="/my-requests"
-      className={cn(pillButton.light, "h-10 px-4.5 text-[15px] md:h-9 md:px-4 md:text-sm")}
+      className={cn(pillButton.light, "h-11 px-4.5 text-[15px] xl:h-9 xl:px-4 xl:text-sm")}
     >
       See all requests
     </QuietLink>

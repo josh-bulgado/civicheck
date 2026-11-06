@@ -4,6 +4,7 @@ import {
   type RequestQueueFilters,
 } from "./request-queue";
 import { isPaymentSettled, stageOf, type WorkflowStage } from "./request-workflow";
+import { isRequestClaimActive } from "./request-claims";
 import type { StaffRequestRow } from "./requests.queries";
 
 type TurnFields = Pick<StaffRequestRow, "status" | "paymentStatus">;
@@ -69,24 +70,48 @@ export function matchesDepartment(
 
 export interface RequestCriteria extends RequestQueueFilters {
   search?: string;
+  /** Shared loader clock, so SSR and hydration agree on overdue rows. */
+  now?: number;
 }
 
 /** The rows that pass every filter. The stage chips ignore `stage` to count. */
 export function filterRequests(
   requests: ReadonlyArray<StaffRequestRow>,
-  { search = "", stage, status, payment, department, needs }: RequestCriteria,
+  {
+    search = "",
+    stage,
+    status,
+    payment,
+    department,
+    needs,
+    mine,
+    attention,
+    now = Date.now(),
+  }: RequestCriteria,
 ): StaffRequestRow[] {
   return requests.filter(
     (request) =>
       matchesSearch(request, search) &&
       (!stage || isInStage(request.status, stage)) &&
       (!status || request.status === status) &&
-      // "Unpaid" is everything not yet verified, as the overview links mean it.
       (!payment ||
-        isPaymentSettled(request.paymentStatus) === (payment === "verified")) &&
+        (stageOf(request.status) === 4 &&
+          request.feesDue > 0 &&
+          isPaymentSettled(request.paymentStatus) === (payment === "verified"))) &&
       matchesDepartment(request, department) &&
-      (!needs || needsStaff(request)),
+      (!needs || needsStaff(request)) &&
+      (!mine || isMyWork(request, now)) &&
+      (!attention || needsAttention(request, now)),
   );
+}
+
+/** Payment is relevant in the full queue and while viewing Release-stage work. */
+export function showsPaymentColumn({
+  stage,
+  status,
+}: Pick<RequestQueueFilters, "stage" | "status">): boolean {
+  if (status) return stageOf(status) === 4;
+  return stage === undefined || stage === 4;
 }
 
 /** Counts behind the stage chips: they are both the overview and the filter. */
@@ -103,6 +128,26 @@ export function countByStage(
 
 export function countNeedingStaff(requests: ReadonlyArray<TurnFields>): number {
   return requests.filter(needsStaff).length;
+}
+
+/** A request belongs to My work only while the viewer's stage claim is active. */
+export function isMyWork(
+  request: Pick<StaffRequestRow, "claim" | "status">,
+  now: number,
+): boolean {
+  return (
+    isRequestClaimActive(request.claim, request.status, now) &&
+    request.claim.isMine
+  );
+}
+
+export function countNeedingAttention(
+  requests: ReadonlyArray<
+    TurnFields & Pick<StaffRequestRow, "updatedAt">
+  >,
+  now: number,
+): number {
+  return requests.filter((request) => needsAttention(request, now)).length;
 }
 
 // ─── Time in stage ───────────────────────────────────────────────────────────
@@ -148,6 +193,15 @@ export function waitTone(
   return "normal";
 }
 
+/** An attention item is a staff-owned wait at or beyond the warning threshold. */
+export function needsAttention(
+  request: TurnFields & Pick<StaffRequestRow, "updatedAt">,
+  now: number,
+): boolean {
+  const tone = waitTone(request, now);
+  return tone === "warning" || tone === "critical";
+}
+
 /** Larger than any epoch-millisecond timestamp, so turns never interleave. */
 const TURN_STEP = 1e14;
 
@@ -174,20 +228,18 @@ export function waitingRank(
 
 // ─── Payment ─────────────────────────────────────────────────────────────────
 
-/** Statuses from which the applicant has been told to pay at the cashier. */
-const PAYMENT_DUE_STATUSES = ["processing", "ready_for_release"];
-
-export type PaymentDisplay = "verified" | "unpaid" | "not_due" | "none";
+export type PaymentDisplay = "paid" | "unpaid" | "no_fee" | "none";
 
 /**
- * What the Payment column says. Unpaid is shown only once the applicant has
- * been told to pay, so a request still in validation does not read as overdue.
+ * What the Payment column says. Payment only becomes relevant in Release;
+ * earlier stages stay blank in the full queue instead of reading as overdue.
  */
 export function paymentDisplay({
   status,
   paymentStatus,
-}: TurnFields): PaymentDisplay {
-  if (isPaymentSettled(paymentStatus)) return "verified";
-  if (status === "rejected" || status === "cancelled") return "none";
-  return PAYMENT_DUE_STATUSES.includes(status) ? "unpaid" : "not_due";
+  feesDue,
+}: TurnFields & Pick<StaffRequestRow, "feesDue">): PaymentDisplay {
+  if (stageOf(status) !== 4) return "none";
+  if (feesDue <= 0) return "no_fee";
+  return isPaymentSettled(paymentStatus) ? "paid" : "unpaid";
 }

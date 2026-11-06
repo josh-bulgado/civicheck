@@ -117,33 +117,26 @@ function RejectForm({ busy, onConfirm }: FormProps) {
 }
 
 /**
- * Release is final, so the checks it depends on are ticked on purpose. It is
- * also the applicant's one visit, so it is where the originals are matched to
- * the documents accepted online.
+ * Release is final, so staff confirm the claimant's authority and the handover.
  */
 function ReleaseForm({ busy, context, onConfirm }: FormProps) {
   const idPrefix = useId();
   const isEmailInquiry = context.serviceCode === "EMAIL_INQUIRY";
   const copies = `${context.copies} ${context.copies === 1 ? "copy" : "copies"}`;
   const uploads = context.attachments.length;
-  const items = [
-    isEmailInquiry
-      ? `I verified that the uploaded valid ID belongs to the requester, ${context.applicantName}.`
-      : `I checked the claimant’s valid ID against the requester, ${context.applicantName}.`,
+  const items = isEmailInquiry ? [
+    `I verified that the uploaded valid ID belongs to the requester, ${context.applicantName}.`,
     ...(uploads > 0
       ? [
-          isEmailInquiry
-            ? `I reviewed the ${uploads} uploaded ${uploads === 1 ? "file" : "files"} and confirmed ${uploads === 1 ? "it supports" : "they support"} this inquiry.`
-            : `The original documents match the ${uploads} uploaded ${uploads === 1 ? "file" : "files"} accepted online.`,
+          `I reviewed the ${uploads} uploaded ${uploads === 1 ? "file" : "files"} and confirmed ${uploads === 1 ? "it supports" : "they support"} this inquiry.`,
         ]
       : []),
-    isEmailInquiry
-      ? context.feesDue > 0
+    context.feesDue > 0
         ? `Payment is verified under OR ${context.orNumber ?? "-"}.`
-        : "The cashier confirmed no fee was due."
-      : context.feesDue > 0
-        ? `I am handing over ${copies}. Payment is verified under OR ${context.orNumber ?? "-"}.`
-        : `I am handing over ${copies}. The cashier confirmed no fee was due.`,
+        : "The cashier confirmed no fee was due.",
+  ] : [
+    "I verified the claimant’s identity and authority to receive the document.",
+    `I am handing over ${copies} to the claimant.`,
   ];
   const [checked, setChecked] = useState(() => items.map(() => false));
 

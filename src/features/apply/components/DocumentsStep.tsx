@@ -5,6 +5,16 @@ import { Camera, Check, ClipboardCheck, Files, FileText, FileX, X } from "lucide
 import { RequiredMark } from "~/components/ui/required-mark";
 import { Input } from "~/components/ui/input";
 import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "~/components/ui/item";
+import {
   AlertDialog,
   AlertDialogCancel,
   AlertDialogContent,
@@ -801,21 +811,23 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
         />
 
         {pageCount > 0 || (uploading && pendingFiles.length > 0) ? (
-          <ol className="flex flex-col border-t border-border-light bg-portal-panel">
+          <ItemGroup className="gap-0 border-t border-border-light bg-portal-panel">
             {documents.map((document, index) => {
               const fresh = freshPaths.current.has(document.storagePath);
               const beingRemoved =
                 removing && pendingAction.storagePath === document.storagePath;
               return (
-                <li
+                <Item
                   key={document.storagePath}
+                  role="listitem"
+                  size="sm"
                   className={cn(
-                    "border-b border-border-light px-5 py-3 transition-opacity last:border-b-0 sm:px-6",
+                    "rounded-none border-x-0 border-t-0 border-b-border-light bg-transparent px-5 py-3 transition-opacity last:border-b-0 sm:px-6",
                     fresh && "civic-upload-land",
                     beingRemoved && "opacity-55",
                   )}
                 >
-                  <div className="flex min-w-0 items-center gap-3.5">
+                  <ItemMedia className="gap-3.5">
                     <span className="relative flex size-8.5 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-primary">
                       <span className={cn(fresh && "civic-upload-number")}>{index + 1}</span>
                       {fresh ? (
@@ -834,14 +846,16 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
                       label={`File ${index + 1} of ${primary}`}
                       onUrlError={() => refreshPreviewUrl(document.storagePath)}
                     />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[15px] font-bold text-foreground">
-                        File {index + 1} · {document.fileName}
-                      </p>
-                      <p className="text-[13px] text-muted-foreground">
-                        {formatSize(document.fileSize)} · pending staff review
-                      </p>
-                    </div>
+                  </ItemMedia>
+                  <ItemContent className="min-w-0">
+                    <ItemTitle className="block w-full truncate text-[15px] font-bold text-foreground">
+                      File {index + 1} · {document.fileName}
+                    </ItemTitle>
+                    <ItemDescription className="line-clamp-none text-[13px]">
+                      {formatSize(document.fileSize)} · pending staff review
+                    </ItemDescription>
+                  </ItemContent>
+                  <ItemActions>
                     <button
                       type="button"
                       data-remove-file={document.storagePath}
@@ -862,14 +876,14 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
                     >
                       <X className="size-5" aria-hidden="true" />
                     </button>
-                  </div>
+                  </ItemActions>
                   {beingRemoved ? (
-                    <p className="mt-2 flex items-center gap-2 pl-12 text-[15px] font-semibold text-body-2">
+                    <ItemFooter className="mt-2 justify-start pl-12 text-[15px] font-semibold text-body-2">
                       <WizardSpinner className="size-4 border-2" />
                       Removing…
-                    </p>
+                    </ItemFooter>
                   ) : null}
-                </li>
+                </Item>
               );
             })}
 
@@ -877,45 +891,47 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
                 the connection's, what that means and a way out. */}
             {uploading
               ? pendingFiles.map((file, index) => (
-                  <li
+                  <Item
                     key={`${file.name}-${index}`}
-                    className="border-b border-border-light px-5 py-3 last:border-b-0 sm:px-6"
+                    role="listitem"
+                    size="sm"
+                    className="rounded-none border-x-0 border-t-0 border-b-border-light bg-transparent px-5 py-3 last:border-b-0 sm:px-6"
                   >
-                    <div className="flex min-w-0 items-center gap-3.5">
+                    <ItemMedia>
                       <span
                         className="flex size-8.5 shrink-0 items-center justify-center rounded-full bg-card text-sm font-bold text-muted-foreground"
                         aria-hidden="true"
                       >
                         {pageCount + index + 1}
                       </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[15px] font-bold text-foreground">
-                          {file.name}
-                        </p>
-                        <p className="text-[13px] text-muted-foreground">
-                          {formatSize(file.size)} · Uploading
-                        </p>
-                        <WizardBar className="mt-2 h-1.5" />
-                        {connection ? (
-                          <div className="mt-2 flex items-center justify-between gap-3">
-                            <span className="text-sm text-muted-foreground">
-                              Waiting for connection…
-                            </span>
-                            <button
-                              type="button"
-                              onClick={cancelUpload}
-                              className="civic-press rounded-full px-1 py-1 text-[15px] font-semibold text-body-2 hover:text-foreground"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  </li>
+                    </ItemMedia>
+                    <ItemContent className="min-w-0">
+                      <ItemTitle className="block w-full truncate text-[15px] font-bold text-foreground">
+                        {file.name}
+                      </ItemTitle>
+                      <ItemDescription className="line-clamp-none text-[13px]">
+                        {formatSize(file.size)} · Uploading
+                      </ItemDescription>
+                      <WizardBar className="mt-2 h-1.5" />
+                      {connection ? (
+                        <div className="mt-2 flex items-center justify-between gap-3">
+                          <span className="text-sm text-muted-foreground">
+                            Waiting for connection…
+                          </span>
+                          <button
+                            type="button"
+                            onClick={cancelUpload}
+                            className="civic-press rounded-full px-1 py-1 text-[15px] font-semibold text-body-2 hover:text-foreground"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : null}
+                    </ItemContent>
+                  </Item>
                 ))
               : null}
-          </ol>
+          </ItemGroup>
         ) : null}
 
         <div

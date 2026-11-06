@@ -239,7 +239,7 @@ export function SettingsProfilePanel({
                         htmlFor="profile-no-middle-name"
                         className="text-sm leading-snug text-foreground"
                       >
-                        I don&apos;t have a middle name
+                        No middle name
                       </FieldLabel>
                     </div>
                   )}

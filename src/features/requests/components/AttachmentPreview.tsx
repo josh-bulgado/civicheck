@@ -2,7 +2,7 @@ import { QuietAnchor } from "~/components/quiet-link";
 import { ExternalLink } from "lucide-react";
 import { PdfViewer } from "~/components/pdf/PdfViewer";
 import { Button } from "~/components/ui/button";
-import { DocumentSkeleton } from "~/components/feedback/PageSkeleton";
+import { FilePreviewLoading } from "~/components/file-preview/FilePreviewLoading";
 import { ImageMagnifier } from "~/features/requests/components/ImageMagnifier";
 import { useCachedFileUrl } from "~/lib/use-cached-file-url";
 import { cn } from "~/lib/utils";
@@ -22,12 +22,16 @@ export function AttachmentPreview({
   url,
   name,
   className,
+  kind,
+  onUrlError,
 }: {
   url: string;
   name: string;
   className?: string;
+  kind?: "image" | "pdf" | "other";
+  onUrlError?: () => void;
 }) {
-  const fileKind = getFileKind(url);
+  const fileKind = kind ?? getFileKind(url);
   // Each open signs a fresh link, but the file behind it is the same one, so
   // the bytes come from the in-memory cache after the first view. A failed
   // download falls back to the signed link itself.
@@ -48,13 +52,14 @@ export function AttachmentPreview({
       {fileKind === "image" || fileKind === "pdf" ? (
         fileReady ? (
           fileKind === "image" ? (
-            <ImageMagnifier key={fileSrc} src={fileSrc} alt={name} />
+            <ImageMagnifier key={fileSrc} src={fileSrc} alt={name} onError={onUrlError} />
           ) : (
-            <PdfViewer url={fileSrc} title={name} className="h-full w-full" />
+            <PdfViewer key={fileSrc} url={fileSrc} title={name} onError={onUrlError} className="h-full w-full" />
           )
         ) : (
-          <DocumentSkeleton
+          <FilePreviewLoading
             label={`Loading ${fileKind === "pdf" ? "PDF" : "image"}`}
+            showToolbar
           />
         )
       ) : (

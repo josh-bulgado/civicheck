@@ -33,7 +33,7 @@
 
 **Files:** `src/components/ui/button.tsx`, `input.tsx`, `select.tsx`, `card.tsx`, `tabs.tsx`
 
-**Interfaces — Produces:**
+**Interfaces - Produces:**
 - `Button`: `variant="raised"` (gradient primary), `size="touch"` (h-11, rounded-xl).
 - `Input`: `fieldSize?: "default" | "touch"`.
 - `SelectTrigger`: `size` also accepts `"touch"`.

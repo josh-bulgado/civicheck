@@ -29,7 +29,7 @@ The CCRO Administrator does not currently have a dedicated overview. After sign-
 
 ## Priority Roadmap
 
-### P0 — Must Be Ready for the Presentation
+### P0 - Must Be Ready for the Presentation
 
 #### 1. CCRO Admin Overview
 
@@ -60,7 +60,7 @@ The CCRO Administrator does not currently have a dedicated overview. After sign-
 - Reserve Insights and Configuration groups for the corresponding roadmap items.
 - Keep Browse Services available as a citizen-view preview, visually separate from administration tasks.
 
-### P1 — Implement Only If P0 Is Stable
+### P1 - Implement Only If P0 Is Stable
 
 #### 1. Operational Activity
 
@@ -70,7 +70,7 @@ The CCRO Administrator does not currently have a dedicated overview. After sign-
 
 **Implementation status: Proposed.** Add department information and a basic workload breakdown to the staff experience. Prefer simple, explainable counts over advanced performance scoring.
 
-### P2 — After the Presentation
+### P2 - After the Presentation
 
 The following additions are valuable but should not compete with the P0 presentation path:
 
@@ -109,14 +109,14 @@ For the presentation build, navigation must not contain empty destinations. Ship
 
 ## Two-Day Delivery Sequence
 
-### Day 1 — Operational Overview and Navigation
+### Day 1 - Operational Overview and Navigation
 
 1. Create the CCRO Admin Overview and make it the role's default landing page.
 2. Connect request-stage, incomplete-request, and ready-for-release/unpaid metrics to existing application data.
 3. Reorganize the CCRO navigation into Overview, Operations, and Management, while retaining access to all existing modules.
 4. Add credible loading, empty, and error states for the overview.
 
-### Day 2 — Required Reports and Presentation Readiness
+### Day 2 - Required Reports and Presentation Readiness
 
 1. Add the three basic reports: request volume, processing time, and incomplete-submission frequency.
 2. Verify CCRO and System Administrator route and data-access boundaries.

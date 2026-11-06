@@ -1,7 +1,7 @@
 import { validateEventPlace } from "../event-place";
 import { formatFieldLabel } from "~/features/forms/field-label";
 import { isNameField, validatePersonName } from "~/lib/person-name";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { addressDescendants } from "~/lib/requester-address";
 import { AddressLocationField } from "./AddressLocationField";
 import {
@@ -15,7 +15,7 @@ import { Phone } from "lucide-react";
 import { DatePicker } from "~/components/ui/date-picker";
 import { EstimatedDateField } from "./EstimatedDateField";
 import { isEstimatedDate, validateEstimatedDate, validateRegistrationDate } from "../estimated-date";
-import { todayKeyInTimeZone } from "../form-template.utils";
+import { selectableFieldOptions, todayKeyInTimeZone } from "../form-template.utils";
 import {
   Field,
   FieldDescription,
@@ -63,6 +63,7 @@ import type {
   FormStep,
   FormTemplateDefinition,
 } from "../form-template.types";
+import { applicantCopy } from "../applicant-copy";
 
 export type DynamicFieldValues = Record<string, string>;
 
@@ -271,7 +272,9 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
   );
 
   return sections.map((section, sectionIndex) => {
-    const fields = conditionMatches(section, values).filter(
+    const fields = conditionMatches(section, values).map((field) => (
+      field.type === "select" ? { ...field, options: selectableFieldOptions(field, values) } : field
+    )).filter(
       (field) => field.type !== "person_group",
     );
     const lead = renderSectionLead?.(section) ?? null;
@@ -310,11 +313,11 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                   : "text-sm font-semibold text-foreground"
               }
             >
-              {section.title}
+              {applicantCopy(section.title)}
             </h2>
             {section.description ? (
               <p className="text-xs text-muted-foreground">
-                {section.description}
+                {applicantCopy(section.description)}
               </p>
             ) : null}
           </div>
@@ -331,22 +334,33 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
           )}
         >
           {fields.map((definitionField) => (
+            <Fragment key={definitionField.key}>
+              {section.key === "details_requester" && definitionField.key === "requester_province" ? (
+                <h3 className={cn("col-span-full -mb-3", WIZARD_LABEL_CLASS)}>Address</h3>
+              ) : null}
             <Controller
               key={definitionField.key}
               control={control}
               name={definitionField.key as Path<TFieldValues>}
               rules={{
                 required: definitionField.required
-                  ? `${formatFieldLabel(definitionField.label)} is required`
+                  ? definitionField.type === "select"
+                    ? "Select an option."
+                    : "Enter a value."
                   : false,
                 validate: (value) => {
                   if (!value) return true;
+                  if (definitionField.type === "select" && definitionField.options?.length &&
+                    !definitionField.options.some((option) => option.value === value)) {
+                    return "Select a valid option";
+                  }
                   if (definitionField.key === "registered_late_when") {
                     const result = validateRegistrationDate(value, String(values.event_date ?? ""));
                     if (result !== true) return result;
                   }
                   const placeValidation = validateEventPlace(definitionField, value);
                   if (placeValidation !== true) return placeValidation;
+                  if (definitionField.noneLabel && value === NONE_ANSWER) return true;
                   if (isNameField(definitionField)) return validatePersonName(value);
                   if (
                     definitionField.type === "date" &&
@@ -365,7 +379,10 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                 },
                 maxLength: {
                   value: definitionField.type === "textarea" ? 2_000 : 240,
-                  message: `${formatFieldLabel(definitionField.label)} is too long`,
+                  message:
+                    definitionField.type === "textarea"
+                      ? "Use 2,000 characters or fewer."
+                      : "Use 240 characters or fewer.",
                 },
               }}
               render={({ field, fieldState }) => {
@@ -396,7 +413,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                   <>
                     {definitionField.helpText ? (
                       <FieldDescription>
-                        {definitionField.helpText}
+                        {applicantCopy(definitionField.helpText)}
                       </FieldDescription>
                     ) : null}
                     {selectedNotice ? (
@@ -415,10 +432,13 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                   </>
                 );
 
-                const options = definitionField.options ?? [];
+                const options = (definitionField.options ?? []).map((option) => ({
+                  ...option,
+                  label: applicantCopy(option.label),
+                }));
                 const legendLabel = (
                   <>
-                    {formatFieldLabel(definitionField.label)}
+                    {formatFieldLabel(applicantCopy(definitionField.label))}
                     {!definitionField.required ? " (optional)" : ""}
                     {showRequiredMarks && definitionField.required ? (
                       <>
@@ -619,7 +639,9 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         id={`dynamic-${definitionField.key}`}
                         placeholder={placeholder}
                         invalid={fieldState.invalid}
-                        noneLabel={definitionField.noneLabel}
+                        noneLabel={/(^|_)middle_name$/.test(definitionField.key)
+                          ? "No middle name"
+                          : definitionField.noneLabel}
                       />
                     ) : (
                       <Input
@@ -638,6 +660,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                 );
               }}
             />
+            </Fragment>
           ))}
         </FieldGroup>
       </section>

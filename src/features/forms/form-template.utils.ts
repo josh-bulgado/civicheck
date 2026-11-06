@@ -159,7 +159,7 @@ export function buildLegacyFormDefinition(
   return {
     schemaVersion: 1,
     sections: [
-      { key: "case", step: "case", title: "Case details", fields: caseFields },
+      { key: "case", step: "case", title: "Request details", fields: caseFields },
       {
         key: "details",
         step: "details",
@@ -698,6 +698,14 @@ export function canonicalizeTemplateAnswers(
   );
 }
 
+export function selectableFieldOptions(field: FormFieldDefinition, answers: Record<string, unknown>) {
+  const options = field.options ?? [];
+  if (field.key === "requester_relationship" && answers.record_type === "death") {
+    return options.filter((option) => option.value !== "owner");
+  }
+  return options;
+}
+
 export function validateTemplateAnswers(
   definition: FormTemplateDefinition,
   answers: TemplateAnswers,
@@ -800,7 +808,7 @@ export function validateTemplateAnswers(
       if (placeValidation !== true) {
         return { success: false, message: placeValidation };
       }
-      if (isNameField(field) && validatePersonName(value) !== true) {
+      if (isNameField(field) && !(field.noneLabel && value === "N/A") && validatePersonName(value) !== true) {
         return { success: false, message: `${field.label}: ${INVALID_PERSON_NAME}` };
       }
 
@@ -837,7 +845,7 @@ export function validateTemplateAnswers(
       if (
         field.type === "select" &&
         field.options?.length &&
-        !field.options.some((option) => option.value === value)
+        !selectableFieldOptions(field, effectiveAnswers).some((option) => option.value === value)
       ) {
         return { success: false, message: `${field.label} has an invalid selection.` };
       }

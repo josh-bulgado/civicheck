@@ -92,6 +92,7 @@ function sentence(event: HistoryEvent): ReactNode {
   const actor = <Actor name={event.actor} strong={event.important} />;
 
   if (event.status === "posting_updated") return <>{actor} updated the notice-posting date</>;
+  if (event.status === "hard_copies_validated") return <>{actor} validated the originals and hard copies at the office</>;
 
   if (event.kind === "status") {
     const status = getStatusDetails(event.status);

@@ -88,7 +88,7 @@ export function insertBlock(
           {
             key: block.step,
             step: block.step,
-            title: block.step === "case" ? "Case details" : "Your details",
+            title: block.step === "case" ? "Request details" : "Your details",
             fields,
           },
         ],

@@ -61,12 +61,12 @@ const CitizenDashboard = ({
       aria-busy={!ready}
     >
       <div className="flex items-center justify-between gap-4 md:gap-6">
-        <h1 className="portal-title min-w-0 max-md:truncate">
+        <h1 className="portal-title min-w-0 max-xl:truncate">
           Welcome back
           {firstName ? `, ${firstName}` : ""}
         </h1>
         {hasRequests && (
-          <QuietLink to="/my-requests" className={cn(pillButton.light, "max-md:hidden")}>
+          <QuietLink to="/my-requests" className={cn(pillButton.light, "max-xl:hidden")}>
             All requests
           </QuietLink>
         )}
@@ -133,7 +133,7 @@ function OtherRequests({
         </h2>
         {seeAll && <SeeAllRequestsLink />}
       </div>
-      <ul className="civic-stagger grid min-w-0 max-w-full gap-3 md:grid-cols-2 md:gap-4">
+      <ul className="civic-stagger grid min-w-0 max-w-full gap-3 md:gap-4 xl:grid-cols-2">
         {requests.map((request) => {
           const service =
             request.services_registry?.display_name ||

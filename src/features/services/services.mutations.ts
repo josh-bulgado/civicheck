@@ -1,6 +1,7 @@
 import { requiresVerificationSignature } from "~/features/apply/verification-signature";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { sameRequestDetails, sameRequestSubjects } from "./submission-protection";
 import { finalizeRequestUploadDraft } from "~/features/apply/apply-upload-drafts.server";
 import { requireActiveSession } from "~/server/auth";
 import { insertRequestWithTrackingNumber } from "~/features/requests/tracking-number";
@@ -43,6 +44,8 @@ const answersSchema = z
   .refine((answers) => Object.keys(answers).length <= 110, "Too many form answers");
 
 const submitRequestSchema = z.object({
+  submissionId: z.string().uuid(),
+  acknowledgedDuplicateId: z.string().uuid().optional(),
   serviceCode: z.string().trim().min(1),
   templateVersionId: z.string().uuid().nullable(),
   uploadDraftId: z.string().uuid().nullable(),
@@ -67,6 +70,13 @@ export const submitRequestFn = createServerFn({ method: "POST" })
   .validator(submitRequestSchema)
   .handler(async ({ data }) => {
     const { supabase, user } = await requireActiveSession("requests:create");
+    const admin = getSupabaseAdminClient();
+    const findSubmitted = () => admin.from("requests")
+      .select("id").eq("applicant_id", user.id)
+      .eq("submission_key", data.submissionId).maybeSingle();
+    const existing = await findSubmitted();
+    if (existing.error) return { error: true, message: "The submission could not be verified. Please try again." };
+    if (existing.data) return { error: false, existingRequestId: existing.data.id };
 
     // The wizard's upload step won't let an applicant past it without every
     // mandatory, applicable document attached — but that gate is purely
@@ -322,6 +332,40 @@ export const submitRequestFn = createServerFn({ method: "POST" })
       formData.requester_signed_at = new Date().toISOString();
     }
 
+    // Always check exact duplicates, including when a warning was acknowledged.
+    let possibleDuplicate: { id: string; trackingNumber: string; identical: boolean } | null = null;
+    let acknowledgedMatch = false;
+    for (let offset = 0; ; offset += 100) {
+      const { data: ongoing, error } = await admin.from("requests")
+        .select("id, tracking_number, form_data, copies")
+        .eq("applicant_id", user.id).eq("request_type", data.serviceCode)
+        .not("status", "in", "(released,rejected,cancelled)")
+        .order("id").range(offset, offset + 99);
+      if (error) return { error: true, message: "Existing requests could not be checked. Please try again." };
+      for (const request of ongoing ?? []) {
+        if (!sameRequestSubjects(formData, request.form_data ?? {})) continue;
+        const identical = sameRequestDetails(formData, request.form_data ?? {}, copies, request.copies ?? 1);
+        const match = { id: request.id as string, trackingNumber: request.tracking_number as string, identical };
+        if (identical) {
+          return {
+            error: true,
+            message: "An identical application is already ongoing. Open the existing request to follow its progress.",
+            duplicateRequest: match,
+          };
+        }
+        possibleDuplicate ??= match;
+        if (request.id === data.acknowledgedDuplicateId) acknowledgedMatch = true;
+      }
+      if (!ongoing || ongoing.length < 100) break;
+    }
+    if (possibleDuplicate && !acknowledgedMatch) {
+      return {
+        error: true,
+        message: "You have an ongoing request for the same service and subjects with different application details.",
+        duplicateRequest: possibleDuplicate,
+      };
+    }
+
     // Created with the service-role client on purpose. Everything above is the
     // only place an online request is validated (active form version, case and
     // timing gates, required documents), so applicants have no INSERT policy on
@@ -330,6 +374,7 @@ export const submitRequestFn = createServerFn({ method: "POST" })
     // comes from the session, never from the payload.
     const created = await insertRequestWithTrackingNumber(getSupabaseAdminClient(), {
       applicant_id: user.id,
+      submission_key: data.submissionId,
       request_type: data.serviceCode,
       form_data: formData,
       fees_due: feesDue,
@@ -337,6 +382,9 @@ export const submitRequestFn = createServerFn({ method: "POST" })
       form_template_version_id: templateVersionId,
     });
     if (created.error) {
+      // A simultaneous submission may have won the unique-key check.
+      const submitted = await findSubmitted();
+      if (submitted.data) return { error: false, existingRequestId: submitted.data.id };
       return { error: true, message: created.message };
     }
     const { requestId, trackingNumber } = created;

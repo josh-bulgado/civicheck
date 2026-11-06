@@ -1,17 +1,8 @@
-import { QuietAnchor } from "~/components/quiet-link";
 import { useEffect, useState } from "react";
-import { ExternalLink, FileText, Maximize2 } from "lucide-react";
-import { buttonVariants } from "~/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "~/components/ui/dialog";
-import { DocumentSkeleton } from "~/components/feedback/PageSkeleton";
-import { PdfViewer } from "~/components/pdf/PdfViewer";
+import { FileText, Maximize2 } from "lucide-react";
+import { FilePreviewDialogContent } from "~/components/file-preview/FilePreviewDialogContent";
+import { Dialog } from "~/components/ui/dialog";
+import { AttachmentPreview } from "~/features/requests/components/AttachmentPreview";
 import { useCachedFileUrl } from "~/lib/use-cached-file-url";
 import { cn } from "~/lib/utils";
 
@@ -68,7 +59,6 @@ export function DocumentPreview({
   }, [frameElement, nearViewport]);
 
   const image = useCachedFileUrl(url, !isPdf && nearViewport);
-  const pdf = useCachedFileUrl(url, isPdf && open);
 
   // The cached copy when there is one. If the download itself failed (an
   // expired link, say) fall back to the signed link so the existing
@@ -78,8 +68,6 @@ export function DocumentPreview({
       ? undefined
       : (image.src ?? (image.status === "failed" ? url : undefined));
   const canShowImage = imageSrc !== undefined;
-  const imageLoading =
-    !isPdf && url !== undefined && failedUrl !== url && !canShowImage;
 
   function handleImageError() {
     if (url) setFailedUrl(url);
@@ -144,69 +132,15 @@ export function DocumentPreview({
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        {/* Portaled outside the wizard, so the inks are set here rather than
-            inherited, the same as the camera dialog. */}
-        <DialogContent className="sm:max-w-3xl">
-          <DialogHeader>
-            <DialogTitle className="pr-10 text-lg leading-snug font-bold text-foreground">
-              {label}
-            </DialogTitle>
-            <DialogDescription className="text-[15px] leading-relaxed wrap-anywhere text-body-strong">
-              {fileName}
-            </DialogDescription>
-          </DialogHeader>
-
-          {isPdf ? (
-            pdf.status === "ready" || pdf.status === "failed" ? (
-              // A failed download falls through to the signed link, so the
-              // viewer's own error state and re-sign callback still apply.
-              <PdfViewer
-                url={pdf.src ?? url}
-                title={`Preview of ${label}`}
-                onError={onUrlError}
-                className="h-[65vh]"
-              />
-            ) : (
-              <DocumentSkeleton
-                label="Loading PDF"
-                className="h-[65vh] rounded-lg bg-surface-subtle"
-              />
-            )
-          ) : (
-            <div className="flex max-h-[65vh] min-h-40 w-full items-center justify-center overflow-auto rounded-lg bg-surface-subtle">
-              {canShowImage ? (
-                <img
-                  src={imageSrc}
-                  alt={`Preview of ${label}`}
-                  onError={handleImageError}
-                  className="max-h-[65vh] w-full object-contain"
-                />
-              ) : imageLoading ? (
-                <DocumentSkeleton label="Loading image" />
-              ) : (
-                <p
-                  role="alert"
-                  className="p-6 text-center text-sm text-body-strong"
-                >
-                  This preview couldn’t be loaded. The file is still uploaded —
-                  you can close this and try again.
-                </p>
-              )}
-            </div>
-          )}
-
-          <DialogFooter>
-            <QuietAnchor
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={buttonVariants({ variant: "outline" })}
-            >
-              <ExternalLink data-icon="inline-start" aria-hidden="true" />
-              Open in new tab
-            </QuietAnchor>
-          </DialogFooter>
-        </DialogContent>
+        <FilePreviewDialogContent title={label} kind={isPdf ? "pdf" : "image"} url={url} fileName={fileName}>
+          <AttachmentPreview
+            url={url}
+            name={label}
+            kind={isPdf ? "pdf" : "image"}
+            onUrlError={onUrlError}
+            className="min-h-0 flex-1"
+          />
+        </FilePreviewDialogContent>
       </Dialog>
     </>
   );

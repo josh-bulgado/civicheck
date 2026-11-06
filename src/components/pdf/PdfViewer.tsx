@@ -1,13 +1,15 @@
 import { QuietAnchor } from "~/components/quiet-link";
 import { useEffect, useRef, useState } from "react";
-import { ExternalLink, Minus, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import type {
   PDFDocumentLoadingTask,
   PDFDocumentProxy,
   RenderTask,
 } from "pdfjs-dist";
 import { Button } from "~/components/ui/button";
-import { DocumentSkeleton } from "~/components/feedback/PageSkeleton";
+import { FilePreviewLoading } from "~/components/file-preview/FilePreviewLoading";
+import { PreviewToolbar } from "~/components/file-preview/PreviewToolbar";
+import { cn } from "~/lib/utils";
 
 /**
  * Loads pdf.js on first use, in the browser only. pdf.js touches DOM globals
@@ -95,6 +97,8 @@ export function PdfViewer({ url, title, onError, className }: PdfViewerProps) {
   const [state, setState] = useState<ViewerState>({ phase: "loading" });
   const [zoomIndex, setZoomIndex] = useState(1);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
@@ -104,6 +108,8 @@ export function PdfViewer({ url, title, onError, className }: PdfViewerProps) {
     let task: PDFDocumentLoadingTask | null = null;
     const abort = new AbortController();
     setState({ phase: "loading" });
+    setCurrentPage(1);
+    setZoomIndex(1);
 
     void (async () => {
       try {
@@ -156,7 +162,10 @@ export function PdfViewer({ url, title, onError, className }: PdfViewerProps) {
   useEffect(() => {
     const scroller = scrollerRef.current;
     if (!scroller) return;
-    const measure = () => setContainerWidth(scroller.clientWidth);
+    const measure = () => {
+      setContainerWidth(scroller.clientWidth);
+      setContainerHeight(scroller.clientHeight);
+    };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(scroller);
@@ -164,13 +173,25 @@ export function PdfViewer({ url, title, onError, className }: PdfViewerProps) {
   }, [state.phase]);
 
   const zoom = ZOOM_STEPS[zoomIndex];
-  const pageWidth = Math.max(0, containerWidth - PAGE_GUTTER_PX * 2) * zoom;
+  const availableWidth = Math.max(0, containerWidth - PAGE_GUTTER_PX * 2);
+  const fitWidth = state.phase === "ready"
+    ? Math.min(availableWidth, Math.max(0, containerHeight - PAGE_GUTTER_PX * 2) / state.aspect)
+    : availableWidth;
+  const pageWidth = fitWidth * zoom;
+
+  function goToPage(pageNumber: number) {
+    const scroller = scrollerRef.current;
+    const page = scroller?.querySelector<HTMLElement>(`[data-pdf-page="${pageNumber}"]`);
+    if (!scroller || !page) return;
+    scroller.scrollTo({ top: scroller.scrollTop + page.getBoundingClientRect().top - scroller.getBoundingClientRect().top - PAGE_GUTTER_PX });
+    setCurrentPage(pageNumber);
+  }
 
   if (state.phase === "error") {
     return (
       <div
         role="alert"
-        className={`flex flex-col items-center justify-center gap-3 rounded-lg bg-surface-subtle p-6 text-center ${className ?? ""}`}
+        className={cn("flex flex-col items-center justify-center gap-3 rounded-xl border border-border-light bg-surface-subtle p-6 text-center", className)}
       >
         <p className="max-w-sm text-sm text-body-strong">
           This PDF couldn’t be shown here. The file is still uploaded.
@@ -192,58 +213,68 @@ export function PdfViewer({ url, title, onError, className }: PdfViewerProps) {
 
   return (
     <div
-      className={`flex min-h-0 flex-col overflow-hidden rounded-lg border border-border-light bg-surface-subtle ${className ?? ""}`}
+      className={cn("civic-content-in flex min-h-0 flex-col overflow-hidden", className)}
     >
-      <div className="flex items-center justify-between gap-2 border-b border-border-light bg-card px-3 py-1.5">
-        <p className="text-sm text-muted-foreground" aria-live="polite">
-          {state.phase === "ready"
-            ? `${state.doc.numPages} ${state.doc.numPages === 1 ? "page" : "pages"}`
-            : "Loading PDF…"}
-        </p>
-        <div className="flex items-center gap-1">
+      <PreviewToolbar
+        zoom={zoom}
+        onZoomOut={() => setZoomIndex((index) => Math.max(0, index - 1))}
+        onZoomIn={() => setZoomIndex((index) => Math.min(ZOOM_STEPS.length - 1, index + 1))}
+        onFit={() => setZoomIndex(1)}
+        canZoomOut={zoomIndex > 0}
+        canZoomIn={zoomIndex < ZOOM_STEPS.length - 1}
+        disabled={state.phase !== "ready"}
+      >
+        <div className="ml-auto flex items-center gap-1" role="group" aria-label="PDF pages">
           <Button
             type="button"
             variant="ghost"
-            size="icon-sm"
-            aria-label="Zoom out"
-            disabled={zoomIndex === 0}
-            onClick={() => setZoomIndex((index) => Math.max(0, index - 1))}
+            size="icon-touch"
+            shape="soft"
+            aria-label="Previous page"
+            disabled={state.phase !== "ready" || currentPage === 1}
+            onClick={() => goToPage(currentPage - 1)}
           >
-            <Minus aria-hidden="true" />
+            <ChevronLeft aria-hidden="true" />
           </Button>
-          <span
-            className="w-11 text-center text-sm font-semibold text-foreground tabular-nums"
-            aria-live="polite"
-          >
-            {Math.round(zoom * 100)}%
-          </span>
+          <p className="text-sm whitespace-nowrap text-muted-foreground tabular-nums" aria-live="polite">
+            {state.phase === "ready" ? `Page ${currentPage} of ${state.doc.numPages}` : "Loading PDF…"}
+          </p>
           <Button
             type="button"
             variant="ghost"
-            size="icon-sm"
-            aria-label="Zoom in"
-            disabled={zoomIndex === ZOOM_STEPS.length - 1}
-            onClick={() =>
-              setZoomIndex((index) =>
-                Math.min(ZOOM_STEPS.length - 1, index + 1),
-              )
-            }
+            size="icon-touch"
+            shape="soft"
+            aria-label="Next page"
+            disabled={state.phase !== "ready" || currentPage === state.doc.numPages}
+            onClick={() => goToPage(currentPage + 1)}
           >
-            <Plus aria-hidden="true" />
+            <ChevronRight aria-hidden="true" />
           </Button>
         </div>
-      </div>
+      </PreviewToolbar>
 
       <div
         ref={scrollerRef}
         tabIndex={0}
         role="region"
         aria-label={title}
-        className="min-h-0 flex-1 overflow-auto outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        aria-busy={state.phase === "loading"}
+        className="min-h-0 flex-1 overflow-auto rounded-xl border border-border-light bg-surface-subtle outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
         style={{ padding: PAGE_GUTTER_PX }}
+        onScroll={(event) => {
+          const scroller = event.currentTarget;
+          const top = scroller.getBoundingClientRect().top + PAGE_GUTTER_PX;
+          const pages = scroller.querySelectorAll<HTMLElement>("[data-pdf-page]");
+          for (const page of pages) {
+            if (page.getBoundingClientRect().bottom > top) {
+              setCurrentPage(Number(page.dataset.pdfPage));
+              break;
+            }
+          }
+        }}
       >
         {state.phase === "loading" ? (
-          <DocumentSkeleton label="Loading PDF" />
+          <FilePreviewLoading label="Loading PDF" />
         ) : (
           <div className="flex w-max min-w-full flex-col items-center gap-3">
             {Array.from({ length: state.doc.numPages }, (_, index) => (
@@ -352,15 +383,20 @@ function PdfPage({ doc, pageNumber, width, aspect, label }: PdfPageProps) {
   return (
     <div
       ref={wrapperRef}
+      data-pdf-page={pageNumber}
       role="img"
       aria-label={label}
+      aria-busy={status === "rendering" && shouldRender}
       // A document page: white in both themes until the canvas paints over it.
       className="relative shrink-0 bg-primary-foreground shadow-sm ring-1 ring-border-light"
       style={{ width, height: width * (measuredAspect ?? aspect) }}
     >
-      <canvas ref={canvasRef} className="block size-full" />
+      <canvas
+        ref={canvasRef}
+        className={cn("block size-full", status === "done" ? "civic-enter-fade" : "invisible")}
+      />
       {status === "rendering" && shouldRender ? (
-        <DocumentSkeleton
+        <FilePreviewLoading
           label={`Rendering ${label}`}
           className="absolute inset-0"
         />

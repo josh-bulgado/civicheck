@@ -31,40 +31,27 @@ import {
   useSeedDraftForGroup,
 } from "~/features/apply/hooks/useApplyDraft";
 import { discardRequestUploadDraftFn } from "~/features/apply/apply.mutations";
-import { ageInYears, diffInDays, toDateKey } from "~/lib/date";
+import { ageInYears } from "~/lib/date";
 import {
   CaseSelector,
   inferMaritalStatus,
 } from "~/features/services/components/CaseSelector";
+import { applicantCopy } from "~/features/forms/applicant-copy";
+import {
+  getMarriageLicenseTiming,
+  MARRIAGE_MINIMUM_LEAD_DAYS,
+} from "~/features/apply/marriage-license-timing";
 
-const MARRIAGE_LICENSE_CODE = "MARRIAGE_LICENSE";
-const MARRIAGE_NOTICE_DAYS = 10;
-const RECOMMENDED_MARRIAGE_LEAD_DAYS = 21;
-
-function formatLeadTime(days: number) {
-  if (days === 0) return "today";
-  if (days === 1) return "1 day away";
-  return `${days} days away`;
-}
-
-function getMarriageTimingNotice(serviceCode: string | undefined, intendedDate: string) {
-  if (serviceCode !== MARRIAGE_LICENSE_CODE || !intendedDate) return null;
-  const daysUntilMarriage = diffInDays(toDateKey(), intendedDate);
-  if (daysUntilMarriage < 0) return null;
-
-  if (daysUntilMarriage <= MARRIAGE_NOTICE_DAYS) {
-    return {
-      title: "Your intended marriage date is too soon",
-      description: `This date is ${formatLeadTime(daysUntilMarriage)}. A marriage license is issued only after the required 10-day public-notice period, and you must first attend the scheduled family-planning and pre-marriage counseling session. Choose a later date; planning at least 3 weeks ahead is safer.`,
-    };
-  }
-  if (daysUntilMarriage < RECOMMENDED_MARRIAGE_LEAD_DAYS) {
-    return {
-      title: "Allow more time before the wedding",
-      description: `This date is ${formatLeadTime(daysUntilMarriage)}. The schedule may be tight after the family-planning and pre-marriage counseling session, document processing, and the required 10-day public-notice period. Planning at least 3 weeks ahead is safer.`,
-    };
-  }
-  return null;
+function caseAnswersFrom(values: DynamicFieldValues) {
+  return {
+    purpose: values.purpose ?? "",
+    otherPurpose: values.purpose_other ?? "",
+    additionalNotes: values.additional_notes ?? "",
+    referenceNumber: values.reference_number ?? "",
+    placeType: values.place_type ?? "",
+    informantName: values.informant_name ?? "",
+    informantRelationship: values.informant_relationship ?? "",
+  };
 }
 
 // The seeded wording of the birth on-time rule. It states a problem, so the
@@ -80,10 +67,13 @@ function trackRedirectCopy(rule: EventTimingRule) {
   ) {
     return {
       title: `This birth date is over ${rule.windowDays} days ago`,
-      description: `Births registered after ${rule.windowDays} days use the Delayed Registration track.`,
+      description: `Births registered more than ${rule.windowDays} days after birth require Delayed Registration.`,
     };
   }
-  return { title: rule.title, description: rule.description };
+  return {
+    title: applicantCopy(rule.title),
+    description: applicantCopy(rule.description),
+  };
 }
 
 interface CaseStepProps {
@@ -175,14 +165,17 @@ export function CaseStep({
       return !field.required || (typeof value === "string" && value.trim() !== "");
     });
   const watchedEventDate = watchedValues.event_date ?? "";
-  const marriageTimingNotice = getMarriageTimingNotice(
+  const marriageTimingNotice = getMarriageLicenseTiming(
     selectedService.service_code,
     watchedEventDate,
   );
+  const marriageTimingBlocks = marriageTimingNotice?.blocksProgress === true;
 
   // Data-driven on-time window. The rule and its routing target live in the
   // published form template, so any current or future service can declare one.
-  const timing = evaluateTemplateEventTiming(definition, derivedCaseAnswers);
+  const timing = caseFields.some((field) => field.key === definition.eventTiming?.triggerField)
+    ? evaluateTemplateEventTiming(definition, derivedCaseAnswers)
+    : null;
   const timingRule = timing?.rule ?? null;
   const timingDeferred = timingRule?.requireDocumentFirst === true;
   const timingMismatch =
@@ -230,15 +223,7 @@ export function CaseStep({
       answers: { ...draft.answers, ...values },
       eventDate: values.event_date ?? "",
       eventPlace: values.event_place ?? "",
-      caseAnswers: {
-        purpose: values.purpose ?? "",
-        otherPurpose: values.purpose_other ?? "",
-        additionalNotes: values.additional_notes ?? "",
-        referenceNumber: values.reference_number ?? "",
-        placeType: values.place_type ?? "",
-        informantName: values.informant_name ?? "",
-        informantRelationship: values.informant_relationship ?? "",
-      },
+      caseAnswers: caseAnswersFrom(values),
       presetMarital: draft.selectedServiceCode
         ? inferMaritalStatus(selectedService.name)
         : null,
@@ -278,15 +263,7 @@ export function CaseStep({
         answers,
         eventDate: values.event_date ?? "",
         eventPlace: values.event_place ?? "",
-        caseAnswers: {
-          purpose: values.purpose ?? "",
-          otherPurpose: values.purpose_other ?? "",
-          additionalNotes: values.additional_notes ?? "",
-          referenceNumber: values.reference_number ?? "",
-          placeType: values.place_type ?? "",
-          informantName: values.informant_name ?? "",
-          informantRelationship: values.informant_relationship ?? "",
-        },
+        caseAnswers: caseAnswersFrom(values),
         documents: previous.documents.filter((document) =>
           visibleRequirementIds.has(document.requirementId),
         ),
@@ -298,10 +275,16 @@ export function CaseStep({
   function handleServiceSelect(code: string) {
     const currentValues = form.getValues();
     update((previous) => {
+      // CaseSelector publishes the new record type before resolving its service.
+      // Do not restore the old form values after that change cleared the draft.
+      const recordTypeChanged = previous.caseSelectorAnswers.record_type !== draft.caseSelectorAnswers.record_type;
+      const answers = recordTypeChanged
+        ? previous.answers
+        : { ...previous.answers, ...currentValues };
       if (!code) {
         return {
           selectedServiceCode: null,
-          answers: { ...previous.answers, ...currentValues },
+          answers,
         };
       }
       const answerBag = canonicalizeTemplateAnswers(definition, {
@@ -318,7 +301,7 @@ export function CaseStep({
       );
       return {
         selectedServiceCode: code,
-        answers: { ...previous.answers, ...currentValues },
+        answers,
         documents: previous.documents.filter((document) =>
           visibleRequirementIds.has(document.requirementId),
         ),
@@ -327,7 +310,7 @@ export function CaseStep({
   }
 
   return (
-    <WizardShell step={1} title="Tell us about your case">
+    <WizardShell step={1} title="Tell us about your request">
       <div className="flex flex-col gap-6">
         {isGroup ? (
           <CaseSelector
@@ -361,8 +344,8 @@ export function CaseStep({
             ["DEATH_ONTIME", "DEATH_DELAYED"].includes(selectedService.service_code) &&
             section.fields.some((field) => field.key === "event_date") ? (
               <p className="text-sm text-muted-foreground">
-                Enter the date and place of death exactly as written on the duly
-                accomplished Certificate of Death.
+                Enter the date and place of death exactly as shown on the
+                completed Certificate of Death.
               </p>
             ) : null
           }
@@ -398,8 +381,8 @@ export function CaseStep({
         {timingMismatch && timingRule ? (
           <EventTimingNotice
             behavior={timingRule.behavior}
-            title={timingRule.title}
-            description={timingRule.description}
+            title={applicantCopy(timingRule.title)}
+            description={applicantCopy(timingRule.description)}
             ctaLabel={timingRule.ctaLabel}
             onCta={() => setRedirectOpen(true)}
           />
@@ -410,10 +393,10 @@ export function CaseStep({
             variant="default"
             role="status"
             icon={CalendarClock}
-            title={timingDeferredNotice.rule.title}
+            title={applicantCopy(timingDeferredNotice.rule.title)}
           >
-            {timingDeferredNotice.rule.description} We&rsquo;ll confirm this
-            against your supporting document before processing.
+            {applicantCopy(timingDeferredNotice.rule.description)} We&rsquo;ll check the date
+            against your supporting document before processing your request.
           </NoticeAlert>
         ) : null}
 
@@ -423,6 +406,7 @@ export function CaseStep({
           continueReady={hasRequiredAnswers}
           continueDisabled={
             (isGroup && !draft.selectedServiceCode) ||
+            marriageTimingBlocks ||
             timingBlocks ||
             Boolean(blockingAgeFeedback) ||
             Boolean(blockingOptionNotice)
@@ -432,9 +416,11 @@ export function CaseStep({
               ? blockingAgeFeedback.notice.description
               : blockingOptionNotice
                 ? blockingOptionNotice.description
-                : timingBlocks
-                ? "Resolve the date above before continuing."
-                : undefined
+                : marriageTimingBlocks
+                  ? `Choose a marriage date at least ${MARRIAGE_MINIMUM_LEAD_DAYS} days from today.`
+                  : timingBlocks
+                    ? "Update the date or switch services before continuing."
+                    : undefined
           }
         />
       </div>
@@ -444,6 +430,7 @@ export function CaseStep({
         onOpenChange={setRedirectOpen}
         title={timingRule ? trackRedirectCopy(timingRule).title : ""}
         description={timingRule ? trackRedirectCopy(timingRule).description : ""}
+        switchLabel={timingRule?.ctaLabel || "Switch service"}
         onKeepEditing={() => setRedirectOpen(false)}
         onSwitch={handleSwitchTrack}
         // Closing, by any route, puts the cursor back on the date.

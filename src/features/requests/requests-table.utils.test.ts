@@ -4,14 +4,18 @@ import {
   WAIT_CRITICAL_MS,
   WAIT_WARNING_MS,
   countByStage,
+  countNeedingAttention,
   countNeedingStaff,
   filterRequests,
   formatTimeInStage,
+  isMyWork,
   matchesDepartment,
   matchesSearch,
+  needsAttention,
   needsStaff,
   paymentDisplay,
   requestTurn,
+  showsPaymentColumn,
   waitTone,
   waitingRank,
 } from "./requests-table.utils";
@@ -35,6 +39,7 @@ function request(overrides: Partial<StaffRequestRow> = {}): StaffRequestRow {
     isWalkIn: false,
     createdAt: "2026-10-20T00:00:00Z",
     updatedAt: new Date(NOW - 5 * HOUR).toISOString(),
+    claim: null,
     ...overrides,
   };
 }
@@ -101,15 +106,45 @@ describe("matchesDepartment", () => {
 
 describe("filterRequests", () => {
   const rows = [
-    request({ id: "a", status: "submitted" }),
+    request({
+      id: "a",
+      status: "submitted",
+      updatedAt: new Date(NOW - 4 * DAY).toISOString(),
+    }),
     request({ id: "b", status: "incomplete", applicantName: "Eduardo Llanes" }),
-    request({ id: "c", status: "processing", paymentStatus: "verified" }),
+    request({
+      id: "c",
+      status: "processing",
+      paymentStatus: "verified",
+      updatedAt: new Date(NOW - 6 * DAY).toISOString(),
+    }),
     request({ id: "d", status: "ready_for_release", departmentId: "registration" }),
+    request({ id: "e", status: "released", paymentStatus: "verified" }),
+    request({ id: "f", status: "ready_for_release", feesDue: 0 }),
+    request({
+      id: "g",
+      claim: {
+        staffId: "staff-a",
+        staffName: "Rowena Staff",
+        stage: "submitted",
+        claimedAt: new Date(NOW - HOUR).toISOString(),
+        expiresAt: new Date(NOW + HOUR).toISOString(),
+        isMine: true,
+      },
+    }),
   ];
   const ids = (found: StaffRequestRow[]) => found.map((row) => row.id);
 
   it("returns everything with no criteria", () => {
-    expect(ids(filterRequests(rows, {}))).toEqual(["a", "b", "c", "d"]);
+    expect(ids(filterRequests(rows, {}))).toEqual([
+      "a",
+      "b",
+      "c",
+      "d",
+      "e",
+      "f",
+      "g",
+    ]);
   });
 
   it("narrows by stage and by status", () => {
@@ -117,20 +152,58 @@ describe("filterRequests", () => {
     expect(ids(filterRequests(rows, { status: "processing" }))).toEqual(["c"]);
   });
 
-  it("treats unpaid as not yet verified", () => {
-    expect(ids(filterRequests(rows, { payment: "unpaid" }))).toEqual(["a", "b", "d"]);
-    expect(ids(filterRequests(rows, { payment: "verified" }))).toEqual(["c"]);
+  it("filters paid and unpaid fee-bearing requests only in Release", () => {
+    expect(ids(filterRequests(rows, { payment: "unpaid" }))).toEqual(["d"]);
+    expect(ids(filterRequests(rows, { payment: "verified" }))).toEqual(["e"]);
   });
 
-  it("keeps only requests waiting on staff for Needs you", () => {
-    expect(ids(filterRequests(rows, { needs: true }))).toEqual(["a", "c"]);
+  it("keeps only overdue staff waits for Needs attention", () => {
+    expect(ids(filterRequests(rows, { attention: true, now: NOW }))).toEqual([
+      "a",
+      "c",
+    ]);
+  });
+
+  it("preserves dashboard links to every request waiting on staff", () => {
+    expect(ids(filterRequests(rows, { needs: true, now: NOW }))).toEqual([
+      "a",
+      "c",
+      "g",
+    ]);
+  });
+
+  it("filters My work to requests actively claimed by the viewer", () => {
+    expect(ids(filterRequests(rows, { mine: true, now: NOW }))).toEqual(["g"]);
   });
 
   it("combines every filter", () => {
     expect(
-      ids(filterRequests(rows, { needs: true, stage: 3, search: "rowena" })),
+      ids(
+        filterRequests(rows, {
+          attention: true,
+          stage: 3,
+          search: "rowena",
+          now: NOW,
+        }),
+      ),
     ).toEqual(["c"]);
     expect(ids(filterRequests(rows, { department: "registration", search: "eduardo" }))).toEqual([]);
+  });
+});
+
+describe("showsPaymentColumn", () => {
+  it("shows payment in All and Release views", () => {
+    expect(showsPaymentColumn({})).toBe(true);
+    expect(showsPaymentColumn({ stage: 4 })).toBe(true);
+    expect(showsPaymentColumn({ status: "ready_for_release" })).toBe(true);
+    expect(showsPaymentColumn({ status: "released" })).toBe(true);
+  });
+
+  it("hides payment in Submission, Validation and Processing views", () => {
+    expect(showsPaymentColumn({ stage: 1 })).toBe(false);
+    expect(showsPaymentColumn({ stage: 2 })).toBe(false);
+    expect(showsPaymentColumn({ stage: 3 })).toBe(false);
+    expect(showsPaymentColumn({ status: "processing" })).toBe(false);
   });
 });
 
@@ -157,6 +230,61 @@ describe("countNeedingStaff", () => {
         request({ status: "ready_for_release", paymentStatus: "verified" }),
       ]),
     ).toBe(2);
+  });
+});
+
+describe("isMyWork", () => {
+  const claim = {
+    staffId: "staff-a",
+    staffName: "Rowena Staff",
+    stage: "submitted",
+    claimedAt: new Date(NOW - HOUR).toISOString(),
+    expiresAt: new Date(NOW + HOUR).toISOString(),
+    isMine: true,
+  };
+
+  it("requires a current claim owned by the viewer", () => {
+    expect(isMyWork(request({ claim }), NOW)).toBe(true);
+    expect(isMyWork(request({ claim: { ...claim, isMine: false } }), NOW)).toBe(
+      false,
+    );
+    expect(
+      isMyWork(
+        request({
+          claim: {
+            ...claim,
+            expiresAt: new Date(NOW - 1).toISOString(),
+          },
+        }),
+        NOW,
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("needsAttention", () => {
+  it("requires both an overdue wait and a staff-owned turn", () => {
+    const overdue = new Date(NOW - WAIT_WARNING_MS).toISOString();
+    const recent = new Date(NOW - DAY).toISOString();
+    expect(needsAttention(request({ updatedAt: overdue }), NOW)).toBe(true);
+    expect(needsAttention(request({ updatedAt: recent }), NOW)).toBe(false);
+    expect(
+      needsAttention(request({ status: "incomplete", updatedAt: overdue }), NOW),
+    ).toBe(false);
+  });
+
+  it("counts only requests that need attention", () => {
+    const overdue = new Date(NOW - WAIT_WARNING_MS).toISOString();
+    expect(
+      countNeedingAttention(
+        [
+          request({ updatedAt: overdue }),
+          request({ updatedAt: new Date(NOW - DAY).toISOString() }),
+          request({ status: "released", updatedAt: overdue }),
+        ],
+        NOW,
+      ),
+    ).toBe(1);
   });
 });
 
@@ -229,23 +357,36 @@ describe("waitingRank", () => {
 });
 
 describe("paymentDisplay", () => {
-  it("is quiet until the applicant has been told to pay", () => {
-    for (const status of ["submitted", "under_validation", "incomplete"]) {
-      expect(paymentDisplay({ status, paymentStatus: "unpaid" })).toBe("not_due");
+  it("is blank before Release, even if a payment was already recorded", () => {
+    for (const status of ["submitted", "under_validation", "incomplete", "processing"]) {
+      expect(paymentDisplay({ status, paymentStatus: "verified", feesDue: 150 })).toBe(
+        "none",
+      );
     }
   });
 
-  it("reads unpaid from processing onward", () => {
-    expect(paymentDisplay({ status: "processing", paymentStatus: "unpaid" })).toBe("unpaid");
-    expect(paymentDisplay({ status: "ready_for_release", paymentStatus: "unpaid" })).toBe("unpaid");
+  it("reads paid and unpaid only in Release", () => {
+    expect(
+      paymentDisplay({
+        status: "ready_for_release",
+        paymentStatus: "unpaid",
+        feesDue: 150,
+      }),
+    ).toBe("unpaid");
+    expect(
+      paymentDisplay({ status: "released", paymentStatus: "verified", feesDue: 150 }),
+    ).toBe("paid");
   });
 
-  it("reads verified whenever payment is settled", () => {
-    expect(paymentDisplay({ status: "processing", paymentStatus: "verified" })).toBe("verified");
-    expect(paymentDisplay({ status: "released", paymentStatus: "verified" })).toBe("verified");
+  it("keeps fee-free requests distinct from paid requests", () => {
+    expect(
+      paymentDisplay({ status: "ready_for_release", paymentStatus: "unpaid", feesDue: 0 }),
+    ).toBe("no_fee");
   });
 
   it("has nothing to say about a rejected request", () => {
-    expect(paymentDisplay({ status: "rejected", paymentStatus: "unpaid" })).toBe("none");
+    expect(
+      paymentDisplay({ status: "rejected", paymentStatus: "unpaid", feesDue: 150 }),
+    ).toBe("none");
   });
 });

@@ -100,7 +100,7 @@ export function CertificateTiles({
         // the screen's edge so the next one peeks in.
         "civic-stagger max-md:-mx-5 max-md:flex max-md:snap-x max-md:gap-3 max-md:overflow-x-auto max-md:px-5 max-md:pb-1 max-md:[scrollbar-width:none] md:grid md:grid-cols-2",
         strip
-          ? "auto-rows-[5rem] gap-3 md:auto-rows-[6rem] md:grid-cols-4 md:gap-4"
+          ? "auto-rows-[5rem] gap-3 md:auto-rows-[6rem] md:gap-4 xl:grid-cols-4"
           : "shrink-0 gap-4 md:gap-5 xl:grid-cols-4",
         className,
       )}

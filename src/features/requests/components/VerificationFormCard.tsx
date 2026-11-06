@@ -1,11 +1,11 @@
-import { Download } from "lucide-react";
+import { Download, FileText } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import type { VerificationFormPdfData } from "~/features/requests/pdf/types";
 import { useVerificationFormPdfDownload } from "~/features/requests/pdf/useVerificationFormPdfDownload";
 
 interface VerificationFormCardProps extends VerificationFormPdfData {
-  /** `portal` is the applicant's softer card; `staff` matches the dashboard panels. */
-  variant?: "portal" | "staff";
+  /** `action` embeds a compact row in the applicant's Actions card. */
+  variant?: "portal" | "staff" | "action";
 }
 
 /**
@@ -22,11 +22,33 @@ export function VerificationFormCard({
   const hasForm = typeof data.formData.requester_first_name === "string";
   if (!hasForm) return null;
 
+  if (variant === "action") {
+    return (
+      <div className="mt-3 flex flex-wrap items-center gap-3 rounded-2xl border border-border-lighter p-4">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary" aria-hidden="true">
+          <FileText className="size-6" />
+        </span>
+        <div className="min-w-0 flex-1 basis-40">
+          <h3 className="text-base font-semibold">Verification form</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {isEmailInquiry ? "Your completed form. No signature or office visit needed."
+              : isSigned ? "Your signed form, saved with this request."
+              : "Print your completed form and sign it at the CCRO."}
+          </p>
+        </div>
+        <Button variant="secondary" size="touch" disabled={downloading} onClick={() => download(data)}>
+          <Download data-icon="inline-start" aria-hidden="true" />
+          {downloading ? "Preparing..." : "Download PDF"}
+        </Button>
+      </div>
+    );
+  }
+
   const button = (
     <Button
       className={
         variant === "portal"
-          ? "h-11.5 shrink-0 rounded-full bg-primary-soft px-5 text-[15px] font-semibold text-primary hover:bg-primary-soft/70"
+          ? "h-11.5 w-full shrink-0 rounded-full bg-primary-soft px-5 text-[15px] font-semibold text-primary hover:bg-primary-soft/70 @xl:w-auto"
           : "shrink-0"
       }
       disabled={downloading}
@@ -54,7 +76,7 @@ export function VerificationFormCard({
   }
 
   return (
-    <section className="flex items-center gap-4 rounded-[28px] bg-card p-6 shadow-portal-card ring-2 ring-border-light md:p-7">
+    <section className="flex flex-col items-stretch gap-4 rounded-[28px] bg-card p-6 shadow-portal-card ring-2 ring-border-light @xl:flex-row @xl:items-center md:p-7">
       <div className="min-w-0 flex-1">
         <h2 className="text-[22px] leading-[normal] font-semibold text-foreground">
           Verification form

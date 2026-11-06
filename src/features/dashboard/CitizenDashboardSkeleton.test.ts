@@ -53,8 +53,8 @@ describe("dashboard skeleton formations", () => {
     const hero = (lead: boolean) =>
       render({ kind: "requests", hero: { lead, done: 1, captioned: 1, tag: false }, attention: 0, rows: 0 });
     expect(hero(true).length).toBeGreaterThan(hero(false).length);
-    expect(hero(true)).toContain("md:w-2/5");
-    expect(hero(false)).not.toContain("md:w-2/5");
+    expect(hero(true)).toContain("xl:w-2/5");
+    expect(hero(false)).not.toContain("xl:w-2/5");
   });
 
   it("shades the tracker stages that are finished", () => {
@@ -76,15 +76,15 @@ describe("dashboard skeleton formations", () => {
     expect(done(4)).toBe(7);
   });
 
-  it("draws a line under each captioned stage, and none on a phone", () => {
+  it("draws a line under each captioned stage only in the wide layout", () => {
     const html = render({
       kind: "requests",
       hero: { lead: false, done: 2, captioned: 3, tag: false },
       attention: 0,
       rows: 0,
     });
-    expect(count(html, "mt-0.5 md:h-[clamp(1rem,2.4vh,1.4rem)]")).toBe(3);
-    expect(count(html, "hidden md:block")).toBe(3);
+    expect(count(html, "mt-0.5 xl:h-[clamp(1rem,2.4vh,1.4rem)]")).toBe(3);
+    expect(count(html, "hidden xl:block")).toBe(3);
   });
 
   it("draws the pill under the stage the request is in, when there is one", () => {
@@ -96,7 +96,7 @@ describe("dashboard skeleton formations", () => {
           attention: 0,
           rows: 0,
         }),
-        "w-28 rounded-full md:mt-[clamp(0.375rem,1vh,0.625rem)]",
+        "w-28 rounded-full xl:mt-[clamp(0.375rem,1vh,0.625rem)]",
       );
     expect(pill(true)).toBe(1);
     expect(pill(false)).toBe(0);

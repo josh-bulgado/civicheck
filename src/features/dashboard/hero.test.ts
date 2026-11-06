@@ -397,22 +397,22 @@ describe("the Release caption and payment", () => {
 
   it("tells the applicant to bring the fee when one is owed", () => {
     expect(release({ fees_due: 150, payment_status: "unpaid" })).toBe(
-      "Bring ₱150.00 to pay at the CCRO cashier to claim your document",
+      "Please pay ₱150.00 at the CCRO cashier.",
     );
     // Fees are stored as numeric text by the database.
     expect(release({ fees_due: "1100", payment_status: null })).toContain("₱1,100.00");
   });
 
-  it("says nothing about payment for a free request", () => {
+  it("waits for cashier confirmation for a free request", () => {
     expect(release({ fees_due: 0, payment_status: "unpaid" })).toBe(
-      "Claim your document at the CCRO cashier",
+      "Please wait for the cashier to confirm that no payment is required.",
     );
-    expect(release({ fees_due: null, payment_status: "unpaid" })).not.toMatch(/pay|₱/i);
+    expect(release({ fees_due: null, payment_status: "unpaid" })).toBe("Please wait for the cashier to confirm that no payment is required.");
   });
 
   it("says nothing about payment once the cashier has verified it", () => {
     expect(release({ fees_due: 150, payment_status: "verified" })).toBe(
-      "Claim your document at the CCRO cashier",
+      "Your document is ready to be claimed from the CCRO staff.",
     );
   });
 });

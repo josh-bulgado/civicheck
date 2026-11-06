@@ -2,6 +2,7 @@ import { Document, Font, Image, Page, StyleSheet, Text, View } from "@react-pdf/
 import type { VerificationFormPdfData } from "~/features/requests/pdf/types";
 import { formatRequesterAddress } from "~/lib/requester-address";
 import { isEstimatedDate } from "~/features/forms/estimated-date";
+import { documentText } from "~/features/requests/pdf/document-text";
 
 // Wrap whole words instead of splitting them with a hyphen ("regis-tered"), so
 // names and places stay readable. Set globally, and again on each answer below
@@ -37,7 +38,7 @@ const stampFormatter = new Intl.DateTimeFormat("en-PH", {
 /** The answer for `key` as trimmed text, or "". */
 function text(data: VerificationFormPdfData["formData"], key: string) {
   const value = data[key];
-  return value == null ? "" : String(value).trim();
+  return value == null ? "" : documentText(String(value).trim());
 }
 
 function dateText(value: string) {
@@ -206,7 +207,7 @@ function Field({ label, value }: Row) {
       <Text style={styles.fieldLabel}>{label}:</Text>
       <View style={styles.fieldLine}>
         <Text style={styles.fieldValue} hyphenationCallback={keepWordsWhole}>
-          {value}
+          {documentText(value)}
         </Text>
       </View>
     </View>
@@ -223,6 +224,7 @@ export interface VerificationFormPdfProps {
 }
 
 export function VerificationFormPdf({ data, qrDataUrl, generatedAt }: VerificationFormPdfProps) {
+  const trackingNumber = documentText(data.trackingNumber);
   const answers = data.formData;
   const isEmailInquiry = typeof answers.what_to_verify === "string";
   const recordType = text(answers, "record_type");
@@ -255,7 +257,7 @@ export function VerificationFormPdf({ data, qrDataUrl, generatedAt }: Verificati
 
   return (
     <Document
-      title={`Verification Form ${data.trackingNumber}`}
+      title={`Verification Form ${trackingNumber}`}
       author="CiviCheck | City Civil Registrar Office, Legazpi"
       language="en-PH"
     >
@@ -265,7 +267,7 @@ export function VerificationFormPdf({ data, qrDataUrl, generatedAt }: Verificati
         <View style={styles.trackingBox}>
           <Image src={qrDataUrl} style={styles.qr} />
           <Text style={styles.trackingLabel}>TRACKING NO.</Text>
-          <Text style={styles.trackingValue}>{data.trackingNumber}</Text>
+          <Text style={styles.trackingValue}>{trackingNumber}</Text>
         </View>
 
         <Text style={styles.headerLine}>Republic of the Philippines</Text>

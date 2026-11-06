@@ -79,14 +79,16 @@ interface DocumentsWorkbenchProps {
   paused: boolean;
   canProcess: boolean;
   canReverse: boolean;
-  /** Ask "are you sure?" before a decision is saved, instead of offering undo. */
-  confirmDecisions: boolean;
+  /** Null only while this staff member owns the active stage lease. */
+  handlingBlockedReason: string | null;
+  /** Ask "are you sure?" before saving a rejection. Accepting always offers undo. */
+  confirmRejections: boolean;
   /** Decisions held for a few seconds so they can be undone, then saved. */
   decisions: QueuedDecisions;
   /** The open document, kept by the page so the overview can open one here. */
   selectedId: string | null;
   onSelectedIdChange: (id: string | null) => void;
-  /** Saves a decision at once, for services that ask for a confirm instead. */
+  /** Saves a confirmed rejection at once. */
   onDecide: (
     attachmentId: string,
     status: Decision,
@@ -97,8 +99,8 @@ interface DocumentsWorkbenchProps {
 
 /**
  * Review the uploaded documents: the list, a large preview, and the submitted
- * details side by side. Accept and reject are one key press. Unless the service
- * asks for a confirm, a decision is held for a few seconds so it can be undone.
+ * details side by side. Accepting is held for a few seconds so it can be undone.
+ * Rejection confirmation remains available for services that require it.
  */
 export function DocumentsWorkbench({
   request,
@@ -106,7 +108,8 @@ export function DocumentsWorkbench({
   paused,
   canProcess,
   canReverse,
-  confirmDecisions,
+  handlingBlockedReason,
+  confirmRejections,
   decisions,
   selectedId,
   onSelectedIdChange: setSelectedId,
@@ -169,7 +172,6 @@ export function DocumentsWorkbench({
     status: Decision;
     reason?: string;
   } | null>(null);
-  const confirmButton = useRef<HTMLButtonElement | null>(null);
 
   function select(id: string) {
     setSelectedId(id);
@@ -253,8 +255,13 @@ export function DocumentsWorkbench({
   }, [active, selectedDocId, selectedFileUrl, request.trackingNumber, request.copies, request.formData]);
 
   function decide(doc: Attachment, status: Decision, reason?: string) {
-    if (!canProcess || blockedReason || verdictOf(doc).status !== "pending") return;
-    if (confirmDecisions) {
+    if (
+      !canProcess ||
+      handlingBlockedReason ||
+      blockedReason ||
+      verdictOf(doc).status !== "pending"
+    ) return;
+    if (status === "rejected" && confirmRejections) {
       setConfirming({ doc, status, reason });
       return;
     }
@@ -266,7 +273,7 @@ export function DocumentsWorkbench({
   }
 
   async function confirmDecision() {
-    if (!confirming || blockedReason) return;
+    if (!confirming || handlingBlockedReason || blockedReason) return;
     setBusy(true);
     try {
       const ok = await onDecide(
@@ -286,7 +293,7 @@ export function DocumentsWorkbench({
   }
 
   async function reopen(doc: Attachment) {
-    if (!reopenReason.trim()) return;
+    if (!reopenReason.trim() || handlingBlockedReason) return;
     setBusy(true);
     try {
       const ok = await onRevert(doc.id, reopenReason.trim());
@@ -307,7 +314,11 @@ export function DocumentsWorkbench({
     : -1;
 
   const canDecide =
-    canProcess && !blockedReason && selected != null && selectedVerdict?.status === "pending";
+    canProcess &&
+    !handlingBlockedReason &&
+    !blockedReason &&
+    selected != null &&
+    selectedVerdict?.status === "pending";
   const rejectingSelected = selected != null && rejectingId === selected.doc.id;
 
   const controls: DecisionControls | null =
@@ -318,9 +329,8 @@ export function DocumentsWorkbench({
           reason: selectedVerdict.reason,
           held: selected.doc.id in decisions.waiting,
           canDecide,
-          blockedReason: canProcess ? blockedReason : null,
-          canReverse,
-          confirmDecisions,
+          blockedReason: canProcess ? handlingBlockedReason ?? blockedReason : null,
+          canReverse: canReverse && !handlingBlockedReason,
           busy,
           rejecting: rejectingSelected,
           rejection,
@@ -491,11 +501,9 @@ export function DocumentsWorkbench({
               <span className="flex items-center gap-1">
                 <Kbd>{hotkeyLabel(REJECT_HOTKEY)}</Kbd> reject
               </span>
-              {!confirmDecisions && (
-                <span className="flex items-center gap-1">
-                  <Kbd>{hotkeyLabel(UNDO_HOTKEY)}</Kbd> undo
-                </span>
-              )}
+              <span className="flex items-center gap-1">
+                <Kbd>{hotkeyLabel(UNDO_HOTKEY)}</Kbd> undo
+              </span>
             </>
           )}
         </p>
@@ -575,33 +583,23 @@ export function DocumentsWorkbench({
         open={confirming != null}
         onOpenChange={(open) => !open && !busy && setConfirming(null)}
       >
-        {/* Accepting is routine and reversible, so "Yes" takes focus and Enter
-            confirms. Rejecting keeps the default (Cancel) so a stray Enter
-            cannot fire it. */}
-        <AlertDialogContent
-          initialFocus={confirming?.status === "approved" ? confirmButton : true}
-        >
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {confirming?.status === "approved"
-                ? "Accept this document?"
-                : "Reject this document?"}
+              Reject this document?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {confirming?.status === "approved"
-                ? `"${confirming.doc.requirementName}" will be marked as accepted.`
-                : `"${confirming?.doc.requirementName}" will be marked as rejected and the applicant will see your reason.`}
+              {`"${confirming?.doc.requirementName}" will be marked as rejected and the applicant will see your reason.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              ref={confirmButton}
-              variant={confirming?.status === "approved" ? "success" : "destructive"}
+              variant="destructive"
               disabled={busy}
               onClick={confirmDecision}
             >
-              {confirming?.status === "approved" ? "Yes, accept" : "Yes, reject"}
+              Yes, reject
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

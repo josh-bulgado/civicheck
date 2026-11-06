@@ -1,4 +1,5 @@
-import { Building2, FilterX } from "lucide-react";
+import type { ReactNode } from "react";
+import { FilterX, ListFilter } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -6,9 +7,24 @@ import {
   FilterSelect,
   TableSearch,
 } from "~/components/ui/data-table-toolbar";
+import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "~/components/ui/sheet";
 import { Toggle } from "~/components/ui/toggle";
 import { ALL_DEPARTMENTS, departmentFilterOptions } from "~/features/admin/department-filter";
 import type { Department } from "~/features/admin/departments.queries";
+import { useIsMobile } from "~/hooks/use-mobile";
 import {
   STAGES,
   UNASSIGNED_DEPARTMENT_FILTER,
@@ -38,8 +54,186 @@ const STATUS_OPTIONS = [
 const PAYMENT_OPTIONS: Array<{ value: PaymentFilter | typeof ALL; label: string }> = [
   { value: ALL, label: "All payments" },
   { value: "unpaid", label: "Unpaid" },
-  { value: "verified", label: "Verified" },
+  { value: "verified", label: "Paid" },
 ];
+
+const WORK_OPTIONS = [
+  { value: ALL, label: "All work" },
+  { value: "mine", label: "My work" },
+  { value: "staff", label: "Waiting on staff" },
+];
+
+interface FilterSelectFieldProps {
+  id: string;
+  label: string;
+  value: string;
+  onValueChange: (value: string) => void;
+  options: ReadonlyArray<{ value: string; label: string }>;
+}
+
+function FilterSelectField({
+  id,
+  label,
+  value,
+  onValueChange,
+  options,
+}: FilterSelectFieldProps) {
+  return (
+    <Field className="gap-2">
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <FilterSelect
+        id={id}
+        label={label}
+        value={value}
+        onValueChange={onValueChange}
+        options={options}
+        triggerClassName="w-full"
+      />
+    </Field>
+  );
+}
+
+interface RequestFilterFieldsProps {
+  filters: RequestQueueFilters;
+  onFilterChange: (patch: Partial<RequestQueueFilters>) => void;
+  departments: Department[];
+  showDepartment: boolean;
+  hasActiveFilters: boolean;
+  onClear: () => void;
+}
+
+function RequestFilterFields({
+  filters,
+  onFilterChange,
+  departments,
+  showDepartment,
+  hasActiveFilters,
+  onClear,
+}: RequestFilterFieldsProps) {
+  return (
+    <FieldGroup className="gap-4">
+      <FilterSelectField
+        id="requests-work-filter"
+        label="Work"
+        value={filters.mine ? "mine" : filters.needs ? "staff" : ALL}
+        onValueChange={(value) =>
+          onFilterChange({
+            needs: value === "staff" ? true : undefined,
+            mine: value === "mine" ? true : undefined,
+            attention: undefined,
+          })
+        }
+        options={WORK_OPTIONS}
+      />
+      <FilterSelectField
+        id="requests-status-filter"
+        label="Status"
+        value={filters.status ?? ALL}
+        onValueChange={(value) =>
+          onFilterChange({
+            status: value === ALL ? undefined : parseRequestStatus(value),
+          })
+        }
+        options={STATUS_OPTIONS}
+      />
+      <FilterSelectField
+        id="requests-payment-filter"
+        label="Payment"
+        value={filters.payment ?? ALL}
+        onValueChange={(value) =>
+          onFilterChange({
+            payment:
+              value === "unpaid" || value === "verified" ? value : undefined,
+          })
+        }
+        options={PAYMENT_OPTIONS}
+      />
+      {showDepartment ? (
+        <FilterSelectField
+          id="requests-department-filter"
+          label="Department"
+          value={filters.department ?? ALL_DEPARTMENTS}
+          onValueChange={(value) =>
+            onFilterChange({
+              department: value === ALL_DEPARTMENTS ? undefined : value,
+            })
+          }
+          options={departmentFilterOptions(
+            departments,
+            UNASSIGNED_DEPARTMENT_FILTER,
+          )}
+        />
+      ) : null}
+      {hasActiveFilters ? (
+        <Button variant="ghost" size="lg" onClick={onClear} className="justify-start">
+          <FilterX aria-hidden="true" data-icon="inline-start" />
+          Clear all filters
+        </Button>
+      ) : null}
+    </FieldGroup>
+  );
+}
+
+interface RequestFiltersControlProps extends RequestFilterFieldsProps {
+  activeCount: number;
+}
+
+function RequestFiltersControl({
+  activeCount,
+  ...fieldProps
+}: RequestFiltersControlProps) {
+  const isMobile = useIsMobile();
+  const trigger = (
+    <Button
+      variant={activeCount > 0 ? "secondary" : "outline"}
+      size="lg"
+    />
+  );
+  const triggerContent = (
+    <>
+      <ListFilter aria-hidden="true" data-icon="inline-start" />
+      Filters
+      {activeCount > 0 ? (
+        <Badge variant="neutral" className="min-w-5 px-1.5 tabular-nums">
+          {activeCount}
+        </Badge>
+      ) : null}
+    </>
+  );
+  const fields = <RequestFilterFields {...fieldProps} />;
+
+  if (isMobile) {
+    return (
+      <Sheet>
+        <SheetTrigger render={trigger}>{triggerContent}</SheetTrigger>
+        <SheetContent side="right" className="w-[min(22rem,calc(100%-1rem))]">
+          <SheetHeader>
+            <SheetTitle>Filters</SheetTitle>
+            <SheetDescription>
+              Narrow the request queue. Changes apply immediately.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="px-4 pb-4">{fields}</div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  return (
+    <Popover>
+      <PopoverTrigger render={trigger}>{triggerContent}</PopoverTrigger>
+      <PopoverContent align="end" className="w-80">
+        <div className="mb-4 flex flex-col gap-1">
+          <p className="font-medium text-foreground">Filters</p>
+          <p className="text-sm text-muted-foreground">
+            Narrow the request queue. Changes apply immediately.
+          </p>
+        </div>
+        {fields}
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 interface RequestsTableToolbarProps {
   search: string;
@@ -48,13 +242,14 @@ interface RequestsTableToolbarProps {
   onFilterChange: (patch: Partial<RequestQueueFilters>) => void;
   /** Counts for every stage chip. They are the queue overview as well as the filter. */
   stageCounts: StageCounts;
-  /** How many requests waiting on staff the other filters leave. */
-  needsCount: number;
+  /** How many overdue staff waits the other filters leave. */
+  attentionCount: number;
   departments: Department[];
   /** Staff and supervisors only ever see one department: show it, not a picker. */
   scopedDepartmentName?: string | null;
   hasActiveFilters: boolean;
   onClear: () => void;
+  actions?: ReactNode;
 }
 
 export function RequestsTableToolbar({
@@ -63,11 +258,12 @@ export function RequestsTableToolbar({
   filters,
   onFilterChange,
   stageCounts,
-  needsCount,
+  attentionCount,
   departments,
   scopedDepartmentName,
   hasActiveFilters,
   onClear,
+  actions,
 }: RequestsTableToolbarProps) {
   const stageChips = [
     { value: ALL, label: "All", count: stageCounts.all },
@@ -78,9 +274,16 @@ export function RequestsTableToolbar({
       dotClassName: STAGE_TONES[stage].dot,
     })),
   ];
+  const secondaryFilterCount = [
+    filters.needs,
+    filters.mine,
+    filters.status,
+    filters.payment,
+    scopedDepartmentName ? undefined : filters.department,
+  ].filter(Boolean).length;
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-wrap items-center gap-3 2xl:flex-nowrap">
       <TableSearch
         value={search}
         onChange={onSearchChange}
@@ -99,70 +302,34 @@ export function RequestsTableToolbar({
         options={stageChips}
       />
 
-      {/* Combines with any stage, so it is a toggle rather than another chip. */}
+      {/* Urgency combines with any stage, so it is a toggle rather than a chip. */}
       <Toggle
         size="lg"
-        pressed={filters.needs === true}
+        pressed={filters.attention === true}
         onPressedChange={(pressed) =>
-          onFilterChange({ needs: pressed ? true : undefined })
+          onFilterChange({
+            attention: pressed ? true : undefined,
+            needs: undefined,
+            mine: undefined,
+          })
         }
-        className="rounded-full border border-border-strong px-3.5 font-semibold text-body-2 aria-pressed:border-primary aria-pressed:bg-primary-soft aria-pressed:text-primary"
+        className="shrink-0 rounded-full border border-border-strong px-3.5 font-semibold text-body-2 aria-pressed:border-primary aria-pressed:bg-primary-soft aria-pressed:text-primary"
       >
-        Needs You
-        <span className="tabular-nums opacity-70">{needsCount}</span>
+        Needs attention
+        <span className="tabular-nums opacity-70">{attentionCount}</span>
       </Toggle>
 
-      <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
-        <FilterSelect
-          id="requests-status-filter"
-          label="Status"
-          value={filters.status ?? ALL}
-          onValueChange={(value) =>
-            onFilterChange({
-              status: value === ALL ? undefined : parseRequestStatus(value),
-            })
-          }
-          options={STATUS_OPTIONS}
+      <div className="flex shrink-0 items-center gap-2 2xl:ml-auto">
+        <RequestFiltersControl
+          activeCount={secondaryFilterCount}
+          filters={filters}
+          onFilterChange={onFilterChange}
+          departments={departments}
+          showDepartment={!scopedDepartmentName}
+          hasActiveFilters={hasActiveFilters}
+          onClear={onClear}
         />
-        <FilterSelect
-          id="requests-payment-filter"
-          label="Payment"
-          triggerClassName="w-44"
-          value={filters.payment ?? ALL}
-          onValueChange={(value) =>
-            onFilterChange({
-              payment: value === "unpaid" || value === "verified" ? value : undefined,
-            })
-          }
-          options={PAYMENT_OPTIONS}
-        />
-        {scopedDepartmentName ? (
-          <Badge variant="neutral" className="h-10 gap-1.5 px-3 text-sm font-semibold">
-            <Building2 aria-hidden="true" className="size-3.5" />
-            {scopedDepartmentName}
-          </Badge>
-        ) : (
-          <FilterSelect
-            id="requests-department-filter"
-            label="Department"
-            value={filters.department ?? ALL_DEPARTMENTS}
-            onValueChange={(value) =>
-              onFilterChange({
-                department: value === ALL_DEPARTMENTS ? undefined : value,
-              })
-            }
-            options={departmentFilterOptions(
-              departments,
-              UNASSIGNED_DEPARTMENT_FILTER,
-            )}
-          />
-        )}
-        {hasActiveFilters ? (
-          <Button variant="ghost" size="lg" onClick={onClear}>
-            <FilterX aria-hidden="true" data-icon="inline-start" />
-            Clear Filters
-          </Button>
-        ) : null}
+        {actions}
       </div>
     </div>
   );

@@ -82,6 +82,33 @@ async function appendStaffAudit(
     throw new Error(`Audit event could not be recorded: ${error.message}`);
 }
 
+async function getInvitableStaffProfile(
+  adminSupabase: ReturnType<typeof getSupabaseAdminClient>,
+  staffId: string,
+) {
+  const { data: profile, error } = await adminSupabase
+    .from("profiles")
+    .select("first_name, role")
+    .eq("id", staffId)
+    .single();
+
+  if (
+    error ||
+    !profile ||
+    !INVITABLE_ROLES.includes(profile.role as Role)
+  ) {
+    return {
+      error: true as const,
+      message: readableSupabaseError(
+        error,
+        "The pending staff profile could not be found.",
+      ),
+    };
+  }
+
+  return { error: false as const, profile };
+}
+
 async function sendStaffInvitationEmail({
   email,
   firstName,
@@ -252,25 +279,9 @@ export const resendStaffInvitation = createServerFn({ method: "POST" })
       };
     }
 
-    const { data: profile, error: profileError } = await adminSupabase
-      .from("profiles")
-      .select("first_name, role")
-      .eq("id", user.id)
-      .single();
-
-    if (
-      profileError ||
-      !profile ||
-      !INVITABLE_ROLES.includes(profile.role as Role)
-    ) {
-      return {
-        error: true,
-        message: readableSupabaseError(
-          profileError,
-          "The pending staff profile could not be found.",
-        ),
-      };
-    }
+    const profileResult = await getInvitableStaffProfile(adminSupabase, user.id);
+    if (profileResult.error) return profileResult;
+    const { profile } = profileResult;
 
     try {
       await sendStaffInvitationEmail({
@@ -326,25 +337,8 @@ export const cancelStaffInvitation = createServerFn({ method: "POST" })
       };
     }
 
-    const { data: profile, error: profileError } = await adminSupabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (
-      profileError ||
-      !profile ||
-      !INVITABLE_ROLES.includes(profile.role as Role)
-    ) {
-      return {
-        error: true,
-        message: readableSupabaseError(
-          profileError,
-          "The pending staff profile could not be found.",
-        ),
-      };
-    }
+    const profileResult = await getInvitableStaffProfile(adminSupabase, user.id);
+    if (profileResult.error) return profileResult;
 
     await appendStaffAudit(
       adminSupabase,

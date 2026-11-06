@@ -34,14 +34,14 @@ export function MyRequestHeader({
         <ChevronLeft aria-hidden="true" className="size-4" />
         Back
       </QuietLink>
-      <div className="mt-4 flex items-start justify-between gap-4 md:gap-6">
+      <div className="mt-4 flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-6">
         {/* `min-w-0` lets a long service name wrap here instead of pushing the
             status off the edge. */}
         <div className="min-w-0 flex-1">
-          <h1 className="text-[28px] leading-[1.12] font-semibold tracking-[-0.02em] text-foreground md:text-[40px]">
+          <h1 className="portal-title text-pretty">
             {serviceName}
           </h1>
-          <p className="mt-2 font-mono text-[15px] leading-[normal] text-muted-foreground">
+          <p className="mt-2 font-mono text-[15px] leading-[normal] text-muted-foreground wrap-anywhere">
             {trackingNumber}
           </p>
           {note && (
@@ -50,7 +50,7 @@ export function MyRequestHeader({
             </p>
           )}
         </div>
-        <StatusPill status={status} className="h-10 shrink-0 text-base md:mt-1" />
+        <StatusPill status={status} className="h-10 shrink-0 text-base sm:mt-1" />
       </div>
     </header>
   );

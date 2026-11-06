@@ -1,4 +1,4 @@
-# Staff & admin in-system notifications — design
+# Staff & admin in-system notifications - design
 
 Status: draft for review · Date: 2026-10-10 · Path: architectural
 
@@ -215,9 +215,9 @@ wants the cashier involved, with a checkbox and no OR number. Changes:
 |---|---|
 | `request-workflow.ts` `isPaymentSettled` | Drop the `feesDue <= 0` shortcut. Settled means `payment_status === 'verified'` for every request. Consumers: `requests.mutations.ts` (release check) and `RequestDetailPage.tsx`. |
 | `requests.mutations.ts` `verifyPaymentFn` | Remove the "No fee is due" rejection. When the **stored** `fees_due <= 0`: no OR required; the caller must send an explicit `confirmNoFee: true`; set `payment_status = 'verified'` and leave `or_number` null. The server decides fee-free from the stored fee, never from the client. The status guard (`ready_for_release`, re-asserted in the update) is unchanged. |
-| `verifyPaymentFn` audit log | `action_status: 'payment_verified'`, remarks "Fee-free request confirmed by cashier — no payment due." (Reusing `payment_verified` keeps Payment History's daily count and listing working.) |
+| `verifyPaymentFn` audit log | `action_status: 'payment_verified'`, remarks "Fee-free request confirmed by cashier - no payment due." (Reusing `payment_verified` keeps Payment History's daily count and listing working.) |
 | `advanceRequestStatusFn` | Remove the branch that auto-sets `payment_status = 'verified'` on release; release is now unreachable without it. Update the comment above `paymentSettled`. |
-| `PaymentVerificationPanel.tsx` | For `feesDue <= 0` and `ready_for_release` and `canCollect`: show a "Confirm no fee is due" checkbox and a Confirm button instead of the OR input. After verification show "Fee-free — confirmed by cashier". Replace the "nothing for the cashier to verify" copy; non-cashier roles see "The cashier confirms fee-free requests before release." |
+| `PaymentVerificationPanel.tsx` | For `feesDue <= 0` and `ready_for_release` and `canCollect`: show a "Confirm no fee is due" checkbox and a Confirm button instead of the OR input. After verification show "Fee-free - confirmed by cashier". Replace the "nothing for the cashier to verify" copy; non-cashier roles see "The cashier confirms fee-free requests before release." |
 | Payment History | Fee-free confirmations appear with a blank OR number. `PaymentHistoryColumn` and the CSV export already null-guard `orNumber`. |
 
 Decision recorded: admin is **hard-blocked** from releasing a fee-free request

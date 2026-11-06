@@ -745,8 +745,8 @@ begin
           else format('Request %s: ready for payment verification', new.tracking_number)
         end,
         case when v_free
-          then format('%s — no fee is due. Confirm it at the counter.', v_label)
-          else format('%s — fee due ₱%s.', v_label, to_char(new.fees_due, 'FM999,999,990.00'))
+          then format('%s - no fee is due. Confirm it at the counter.', v_label)
+          else format('%s - fee due ₱%s.', v_label, to_char(new.fees_due, 'FM999,999,990.00'))
         end,
         array['cashier'],
         false
@@ -932,7 +932,7 @@ In `src/features/requests/request-workflow.ts`, replace:
 
 ```ts
 /**
- * A request can be released once the cashier has verified payment — or
+ * A request can be released once the cashier has verified payment - or
  * straight away when no fee is due, since there's nothing for the cashier to
  * collect. Shared by the release button and the server-side release check.
  */
@@ -945,7 +945,7 @@ with:
 
 ```ts
 /**
- * A request can be released only once the cashier has verified payment — or,
+ * A request can be released only once the cashier has verified payment - or,
  * for a fee-free request, confirmed that no fee is due. Both leave
  * `payment_status` at "verified". Shared by the release button and the
  * server-side release check.
@@ -976,7 +976,7 @@ with:
 Replace:
 
 ```ts
-    // The cashier verifies payment before the document leaves the counter —
+    // The cashier verifies payment before the document leaves the counter -
     // unless no fee is due, in which case there's nothing to collect.
     const paymentSettled = isPaymentSettled(Number(request.fees_due ?? 0), request.payment_status);
 ```
@@ -984,7 +984,7 @@ Replace:
 with:
 
 ```ts
-    // The cashier verifies payment — or confirms a fee-free request — before
+    // The cashier verifies payment - or confirms a fee-free request - before
     // the document leaves the counter.
     const paymentSettled = isPaymentSettled(request.payment_status);
 ```
@@ -993,7 +993,7 @@ Replace:
 
 ```ts
         status: toStatus,
-        // A free request never visits the cashier, so settle it on release —
+        // A free request never visits the cashier, so settle it on release -
         // otherwise it would read "Unpaid" forever.
         ...(toStatus === "released" && request.payment_status !== "verified"
           ? { payment_status: "verified" }
@@ -1034,7 +1034,7 @@ Replace this block:
 
 ```ts
     // Decided from the stored fee, never from the client. A free request has
-    // nothing to verify — the admin can release it directly.
+    // nothing to verify - the admin can release it directly.
     if (Number(request.fees_due ?? 0) <= 0) {
       return {
         error: true,
@@ -1093,11 +1093,11 @@ with:
 
 ```ts
       remarks: isFeeFree
-        ? "Fee-free request confirmed by cashier — no payment due."
+        ? "Fee-free request confirmed by cashier - no payment due."
         : `Payment verified against OR ${orNumber}.`,
 ```
 
-Also update the stale guard message in the same function from `"This request isn't ready for release yet — payment can only be verified once it's been approved for release."` to `"This request isn't ready for release yet — payment can only be verified once it has been marked ready for release."` (the word "approved" refers to a stage that no longer exists).
+Also update the stale guard message in the same function from `"This request isn't ready for release yet - payment can only be verified once it's been approved for release."` to `"This request isn't ready for release yet - payment can only be verified once it has been marked ready for release."` (the word "approved" refers to a stage that no longer exists).
 
 - [ ] **Step 5: Update the call site in `RequestDetailPage`**
 
@@ -1114,7 +1114,7 @@ In `src/features/requests/pages/RequestDetailPage.tsx`, replace:
 with:
 
 ```ts
-  // Release waits on the cashier — a payment check, or a fee-free confirmation.
+  // Release waits on the cashier - a payment check, or a fee-free confirmation.
   const paymentSettled = isPaymentSettled(request.paymentStatus);
 ```
 
@@ -1216,17 +1216,17 @@ export function PaymentVerificationPanel({
       {paymentStatus === "verified" ? (
         isFree ? (
           <p className="text-sm text-foreground">
-            No fee was due — this request is cleared for release.
+            No fee was due - this request is cleared for release.
           </p>
         ) : (
           <p className="text-sm text-foreground">
             Verified against OR{" "}
-            <span className="font-bold">{orNumber ?? "—"}</span>.
+            <span className="font-bold">{orNumber ?? "-"}</span>.
           </p>
         )
       ) : !isReadyForRelease ? (
         <p className="text-sm italic text-muted-foreground">
-          Payment can't be collected yet — this request is still{" "}
+          Payment can't be collected yet - this request is still{" "}
           {getStatusDetails(status).label.toLowerCase()}. It needs to be marked
           ready for release first.
         </p>
@@ -1768,7 +1768,7 @@ export const markAllNotificationsReadFn = createServerFn({ method: "POST" }).han
 
     // PostgREST only accepts a WHERE on the target table's own columns for
     // UPDATE, so the applicant-ownership join has to be resolved as a
-    // separate SELECT first — matches getMyNotificationsFn's filter shape.
+    // separate SELECT first - matches getMyNotificationsFn's filter shape.
     const { data: unread, error: fetchError } = await supabase
       .from("notifications")
       .select("id, requests!inner(applicant_id)")
@@ -1796,7 +1796,7 @@ export const markAllNotificationsReadFn = createServerFn({ method: "POST" }).han
 pnpm exec tsc --noEmit 2>&1 | sort > "$SCRATCH/tsc-now.txt"; diff "$SCRATCH/tsc-baseline.txt" "$SCRATCH/tsc-now.txt"
 ```
 
-Expected: the only new errors are in `NotificationsPage.tsx` / `notifications.tsx` (missing `target` use or the `TYPE_STYLE` record not covering the widened `NotificationType`). Those are fixed in Task 7. Any error in the two files edited here is a bug — fix it before moving on.
+Expected: the only new errors are in `NotificationsPage.tsx` / `notifications.tsx` (missing `target` use or the `TYPE_STYLE` record not covering the widened `NotificationType`). Those are fixed in Task 7. Any error in the two files edited here is a bug - fix it before moving on.
 
 - [ ] **Step 4: Commit**
 
@@ -2082,7 +2082,7 @@ with:
           </EmptyContent>
 ```
 
-Also replace the failure-copy constant so staff don't read "your" text that is applicant-specific only where it appears in a toast — leave `UPDATE_FAILED` as is (it is generic enough).
+Also replace the failure-copy constant so staff don't read "your" text that is applicant-specific only where it appears in a toast - leave `UPDATE_FAILED` as is (it is generic enough).
 
 - [ ] **Step 4: Rewrite the notifications route**
 
@@ -2293,7 +2293,7 @@ Replace:
 
 ```tsx
   // Sidebar badge tracks new notifications live, from wherever the applicant
-  // happens to be — not just while they're on the notifications page itself.
+  // happens to be - not just while they're on the notifications page itself.
   useRealtimeRefresh({ tables: ["notifications"], enabled: user?.role === "applicant" });
 ```
 
@@ -2301,7 +2301,7 @@ with:
 
 ```tsx
   // Sidebar badge tracks new notifications live, from wherever the reader
-  // happens to be — not just while they're on the notifications page itself.
+  // happens to be - not just while they're on the notifications page itself.
   const audience = user ? getNotificationAudience(user.role as Role) : null;
   useRealtimeRefresh({
     tables: [audience === "staff" ? "staff_notifications" : "notifications"],

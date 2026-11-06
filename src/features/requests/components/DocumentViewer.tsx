@@ -28,6 +28,7 @@ import {
   type RejectionReasonState,
 } from "~/features/requests/components/RejectionReasonPicker";
 import { DOCUMENT_REJECTION_REASONS } from "~/features/requests/rejection-reasons";
+import { UNDO_SECONDS } from "~/features/requests/hooks/useQueuedDecisions";
 import { cn } from "~/lib/utils";
 
 export const STATUS_LABEL: Record<string, string> = {
@@ -171,7 +172,6 @@ export interface DecisionControls {
   canDecide: boolean;
   blockedReason: string | null;
   canReverse: boolean;
-  confirmDecisions: boolean;
   busy: boolean;
   rejecting: boolean;
   rejection: RejectionReasonState;
@@ -260,9 +260,9 @@ export function DocumentDecisionBar({
             <XCircle data-icon="inline-start" aria-hidden="true" />
             Reject <Kbd>{c.rejectKey}</Kbd>
           </Button>
-          {!c.confirmDecisions && !c.blockedReason && (
+          {!c.blockedReason && (
             <span className="text-xs text-muted-foreground">
-              Moves to the next document. You can undo for a few seconds.
+              Accept moves to the next document. You can undo for {UNDO_SECONDS} seconds.
             </span>
           )}
         </div>

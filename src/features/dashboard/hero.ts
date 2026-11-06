@@ -227,8 +227,12 @@ export function heroServiceLabel(request: CitizenDashboardRequest): string {
  * card's own title already says.
  */
 export function heroNote(request: CitizenDashboardRequest): string {
+  if (request.request_type === "EMAIL_INQUIRY") {
+    if (request.status === "ready_for_release") return "Read CCRO's reply in the messages.";
+    if (request.status === "released") return "Keep CCRO's reply for your records.";
+  }
   const note =
-    getLogNote(request.status, null, "applicant", Number(request.fees_due ?? 0)) ?? "";
+    getLogNote(request.status, null, "applicant", Number(request.fees_due ?? 0), request.payment_status) ?? "";
   return note.replace(/^Your document is ready\.\s*/, "");
 }
 
@@ -295,14 +299,13 @@ function owesPayment(request: CitizenDashboardRequest): boolean {
 
 // Originals are checked during Processing; release covers payment and collection.
 function trackerNote(request: CitizenDashboardRequest): string | null {
+  if (request.status === "released" && request.request_type === "EMAIL_INQUIRY") return "Keep CCRO's reply for your records.";
   if (request.status === "ready_for_release" && request.request_type === "EMAIL_INQUIRY") {
     return "Read CCRO's reply in the messages";
   }
   if (request.status === "incomplete") return "One more document needed";
   if (request.status === "ready_for_release") {
-    return owesPayment(request)
-      ? `Bring ${formatPesoFee(request.fees_due)} to pay at the CCRO cashier to claim your document`
-      : "Claim your document at the CCRO cashier";
+    return getLogNote(request.status, null, "applicant", Number(request.fees_due ?? 0), request.payment_status);
   }
   return getLogNote(request.status, null, "applicant", Number(request.fees_due ?? 0));
 }

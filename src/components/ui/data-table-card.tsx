@@ -1,8 +1,16 @@
 import type { ComponentProps, ReactNode } from "react";
 import { flexRender, type RowData } from "@tanstack/react-table";
-import { SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { Columns3, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { DataTablePagination } from "~/components/ui/data-table-pagination";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -11,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
+import { Skeleton } from "~/components/ui/skeleton";
 import { cn } from "~/lib/utils";
 import type { AppRow, AppTable } from "~/lib/table";
 
@@ -26,7 +35,9 @@ type RowProps = ComponentProps<"tr"> & {
 interface DataTableCardProps<TData extends RowData> {
   table: AppTable<TData>;
   /** Search, chips and selects. Sits above the table behind a hairline. */
-  toolbar: ReactNode;
+  toolbar: ReactNode | ((columnMenu: ReactNode) => ReactNode);
+  /** Labels columns that users may show or hide. Omit to hide the chooser. */
+  columnLabels?: Readonly<Record<string, string>>;
   /** Names the table for screen readers, e.g. "Requests". */
   label: string;
   /** Shown, with a Clear Filters button, when no row survives the filters. */
@@ -41,6 +52,72 @@ interface DataTableCardProps<TData extends RowData> {
   className?: string;
   /** Visual treatment shared by the table header and rows. */
   variant?: ComponentProps<typeof Table>["variant"];
+  /** Replaces only the rows while fresh table data is loading. */
+  loading?: boolean;
+}
+
+export function DataTableLoadingRows({
+  columns,
+  rows = 6,
+  cellClassName,
+}: {
+  columns: number;
+  rows?: number;
+  cellClassName?: string;
+}) {
+  return Array.from({ length: rows }, (_, row) => (
+    <TableRow key={row} aria-hidden="true" className="hover:bg-transparent">
+      {Array.from({ length: columns }, (_, column) => (
+        <TableCell key={column} className={cellClassName}>
+          <Skeleton
+            className={cn(
+              "h-4 max-w-full",
+              column === 0 ? "w-32" : column === columns - 1 ? "w-16" : "w-24",
+            )}
+          />
+        </TableCell>
+      ))}
+    </TableRow>
+  ));
+}
+
+interface ColumnVisibilityMenuProps<TData extends RowData> {
+  table: AppTable<TData>;
+  labels: Readonly<Record<string, string>>;
+}
+
+function ColumnVisibilityMenu<TData extends RowData>({
+  table,
+  labels,
+}: ColumnVisibilityMenuProps<TData>) {
+  const columns = table
+    .getAllLeafColumns()
+    .filter((column) => column.getCanHide() && labels[column.id]);
+
+  if (columns.length === 0) return null;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={<Button variant="outline" size="lg" />}>
+        <Columns3 aria-hidden="true" data-icon="inline-start" />
+        Columns
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Show columns</DropdownMenuLabel>
+          {columns.map((column) => (
+            <DropdownMenuCheckboxItem
+              key={column.id}
+              checked={column.getIsVisible()}
+              onCheckedChange={(checked) => column.toggleVisibility(checked)}
+            >
+              {labels[column.id]}
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 /**
@@ -51,6 +128,7 @@ interface DataTableCardProps<TData extends RowData> {
 export function DataTableCard<TData extends RowData>({
   table,
   toolbar,
+  columnLabels,
   label,
   emptyLabel,
   onClearFilters,
@@ -60,8 +138,23 @@ export function DataTableCard<TData extends RowData>({
   cellClassName,
   className,
   variant = "entity",
+  loading = false,
 }: DataTableCardProps<TData>) {
   const rows = table.getRowModel().rows;
+  const columnMenu = columnLabels ? (
+    <ColumnVisibilityMenu table={table} labels={columnLabels} />
+  ) : null;
+  const toolbarContent =
+    typeof toolbar === "function" ? (
+      toolbar(columnMenu)
+    ) : columnMenu ? (
+      <div className="flex flex-wrap items-start gap-3">
+        <div className="min-w-0 flex-1">{toolbar}</div>
+        {columnMenu}
+      </div>
+    ) : (
+      toolbar
+    );
 
   return (
     <div
@@ -69,8 +162,14 @@ export function DataTableCard<TData extends RowData>({
         "overflow-hidden rounded-xl border border-border-strong bg-card",
         className,
       )}
+      aria-busy={loading || undefined}
     >
-      <div className="border-b border-border px-5 py-4">{toolbar}</div>
+      {loading ? (
+        <span className="sr-only" role="status">
+          Loading {label.toLowerCase()}
+        </span>
+      ) : null}
+      <div className="border-b border-border px-5 py-4">{toolbarContent}</div>
 
       <div className="overflow-x-auto">
         <Table variant={variant} aria-label={label}>
@@ -96,8 +195,13 @@ export function DataTableCard<TData extends RowData>({
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody className="civic-stagger-auto">
-            {rows.length > 0 ? (
+          <TableBody className="civic-stagger-auto ">
+            {loading ? (
+              <DataTableLoadingRows
+                columns={table.getVisibleLeafColumns().length}
+                cellClassName={cellClassName}
+              />
+            ) : rows.length > 0 ? (
               rows.map((row) => {
                 const { className: rowClassName, ...rowProps } =
                   getRowProps?.(row) ?? {};

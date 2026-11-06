@@ -5,6 +5,7 @@ const state = vi.hoisted(() => ({
   serviceCode: "MARRIAGE_LICENSE",
   writes: vi.fn(),
   notify: vi.fn(),
+  attachmentUpdateWins: true,
 }));
 
 vi.mock("@tanstack/react-start", () => ({
@@ -19,12 +20,21 @@ vi.mock("~/server/auth", () => ({
         eq: () => query,
         single: async () => ({ data: {
           id: "attachment", request_id: "request", requirement_name: "Bride: Valid ID",
+          verification_status: "pending",
           requests: { status: state.status, request_type: state.serviceCode,
-            tracking_number: "CCRO-2026-107218", services_registry: { department_id: "ccro" } },
+            tracking_number: "CCRO-2026-107218", claimed_by: "staff",
+            claimed_stage: state.status, claim_expires_at: "2099-01-01T00:00:00.000Z",
+            services_registry: { department_id: "ccro" } },
         }, error: null }),
         update: (values: unknown) => { state.writes(table, values); return query; },
         insert: (values: unknown) => { state.writes(table, values); return query; },
-        then: (resolve: (value: unknown) => unknown) => resolve({ data: [], error: null }),
+        then: (resolve: (value: unknown) => unknown) => resolve({
+          data:
+            table === "requirements_attachments" && state.attachmentUpdateWins
+              ? [{ id: "attachment" }]
+              : [],
+          error: null,
+        }),
       };
       return query;
     } },
@@ -32,7 +42,7 @@ vi.mock("~/server/auth", () => ({
 }));
 vi.mock("~/features/notifications/notifications.server", () => ({
   buildDocumentRejectedEmail: vi.fn(), buildPreValidationCompleteEmail: vi.fn(),
-  buildStatusChangeEmail: vi.fn(), dispatchApplicantNotification: state.notify,
+  buildStatusChangeEmail: vi.fn(), buildCashierClearedEmail: vi.fn(), dispatchApplicantNotification: state.notify,
 }));
 
 import { setAttachmentVerificationFn } from "./requests.mutations";
@@ -48,7 +58,22 @@ describe.each([
   beforeEach(() => {
     state.status = "submitted";
     state.serviceCode = serviceCode;
+    state.attachmentUpdateWins = true;
     vi.clearAllMocks();
+  });
+
+  it("does not overwrite a document another staff member already reviewed", async () => {
+    state.status = "under_validation";
+    state.attachmentUpdateWins = false;
+    const result = await setAttachmentVerificationFn({ data: {
+      attachmentId: "00000000-0000-4000-8000-000000000001",
+      status: "approved",
+    } });
+    expect(result).toEqual({
+      error: true,
+      message: "Another staff member already reviewed this document. Refresh and check their decision.",
+    });
+    expect(state.notify).not.toHaveBeenCalled();
   });
 
   it.each(["approved", "rejected"] as const)("blocks a direct %s call without changing files, status, audit or notifications", async (status) => {
@@ -82,6 +107,7 @@ describe.each([
 describe("a closed request's documents", () => {
   beforeEach(() => {
     state.serviceCode = "MARRIAGE_LICENSE";
+    state.attachmentUpdateWins = true;
     vi.clearAllMocks();
   });
 

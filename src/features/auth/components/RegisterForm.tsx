@@ -236,7 +236,7 @@ const RegisterForm = () => {
   return (
     <div className="auth-scope register-page">
       <main className="register-container">
-        <header className="register-header">
+        <header className="register-header civic-enter">
           <div className="register-navigation">
             <Link
               to="/login"
@@ -267,7 +267,10 @@ const RegisterForm = () => {
             </Alert>
           )}
 
-          <FieldSet disabled={isBusy} className="register-fields">
+          <FieldSet
+            disabled={isBusy}
+            className="register-fields civic-stagger-auto [--stagger-base:55ms]"
+          >
             <FieldSet className="gap-3">
               <FieldLegend className="register-label mb-0">Name</FieldLegend>
               <div className="register-name-row">
@@ -611,7 +614,7 @@ const RegisterForm = () => {
             />
           </FieldSet>
 
-          <div className="flex flex-col gap-3.5">
+          <div className="civic-enter flex flex-col gap-3.5 [--enter-delay:275ms]">
             {!lockout.isLocked && <Captcha onToken={captcha.onToken} error={captcha.error} resetKey={captcha.resetKey} />}
             <Button
               type="submit"
@@ -656,12 +659,14 @@ const RegisterForm = () => {
           </div>
         </form>
 
-        <AuthFormFooter>
-          Already have an account?
-          <Link to="/login" className={authLinkClass}>
-            Sign in
-          </Link>
-        </AuthFormFooter>
+        <div className="civic-enter-fade [--enter-delay:330ms]">
+          <AuthFormFooter>
+            Already have an account?
+            <Link to="/login" className={authLinkClass}>
+              Sign in
+            </Link>
+          </AuthFormFooter>
+        </div>
       </main>
     </div>
   );

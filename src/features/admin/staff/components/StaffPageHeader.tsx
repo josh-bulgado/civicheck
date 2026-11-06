@@ -16,7 +16,7 @@ export function StaffPageHeader({
     >
       <Button variant="raised" size="lg" onClick={onInvite}>
         <UserPlus aria-hidden="true" data-icon="inline-start" />
-        Invite Staff
+        Add staff member
       </Button>
     </PageHeaderCard>
   );

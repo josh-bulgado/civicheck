@@ -36,9 +36,13 @@ import {
   type RequestStatus,
 } from "~/features/requests/request-workflow";
 import { quickReplies } from "~/features/requests/request-messages";
-import { useQueuedDecisions } from "~/features/requests/hooks/useQueuedDecisions";
+import {
+  useQueuedDecisions,
+  type DecisionSaveOptions,
+} from "~/features/requests/hooks/useQueuedDecisions";
 import { DocumentsWorkbench } from "~/features/requests/components/DocumentsWorkbench";
 import { RequestActionBar } from "~/features/requests/components/RequestActionBar";
+import { RequestClaimControl } from "~/features/requests/components/RequestClaimControl";
 import { RequestChatDrawer } from "~/features/requests/components/RequestChatDrawer";
 import { RequestDetailHeader } from "~/features/requests/components/RequestDetailHeader";
 import { RequestHistoryLog } from "~/features/requests/components/RequestHistoryLog";
@@ -47,10 +51,11 @@ import { RequestNextBar } from "~/features/requests/components/RequestNextBar";
 import { RequestOverview } from "~/features/requests/components/RequestOverview";
 import { RequestTransitionDialog } from "~/features/requests/components/RequestTransitionDialog";
 import { VerificationFormCard } from "~/features/requests/components/VerificationFormCard";
+import { requestClaimBlockedReason } from "~/features/requests/request-claims";
 
-// On-time birth registration is split by parents' marital status.
-const CONFIRM_DECISION_SERVICE_CODES = ["OTCOLB-MARITAL", "OTCOLB-NONMARITAL"];
-
+// On-time birth registration is split by parents' marital status. Rejections
+// still ask for confirmation; accepting always uses the reversible undo flow.
+const CONFIRM_REJECTION_SERVICE_CODES = ["OTCOLB-MARITAL", "OTCOLB-NONMARITAL"];
 const CHAT_HOTKEY: HotkeyChord = "C";
 
 const DIALOG_TARGET: Record<TransitionDialog, RequestStatus> = {
@@ -87,9 +92,7 @@ export default function RequestDetailPage({
   const today = usePostingToday(needsMarriagePosting(request.serviceCode) && request.status === "processing");
   const canReverse = can("requests:reverse_verification");
   const hasChat = request.allowsMessages && !request.isWalkIn;
-  // Accept/reject confirmation is rolling out service by service — on-time
-  // birth registration first. The others get an undo instead.
-  const confirmDecisions = CONFIRM_DECISION_SERVICE_CODES.includes(
+  const confirmRejections = CONFIRM_REJECTION_SERVICE_CODES.includes(
     request.serviceCode.toUpperCase(),
   );
 
@@ -103,15 +106,17 @@ export default function RequestDetailPage({
     attachmentId: string,
     status: "approved" | "rejected",
     reason?: string,
+    options?: DecisionSaveOptions,
   ) {
     const res = await setAttachmentVerificationFn({
       data: { attachmentId, status, reason },
     });
     if (res.error) {
       toast.error(res.message);
+      if (options?.refresh !== false) await onUpdated();
       return false;
     }
-    await onUpdated();
+    if (options?.refresh !== false) await onUpdated();
     return true;
   }
 
@@ -134,6 +139,11 @@ export default function RequestDetailPage({
 
   const decisions = useQueuedDecisions(handleAttachmentDecision);
 
+  const handlingBlockedReason = canProcess
+    ? requestClaimBlockedReason(request.claim, request.status)
+    : null;
+  const ownsStageClaim = canProcess && handlingBlockedReason == null;
+
   // What the page shows right away: a decision still in its undo window counts.
   const attachments = request.attachments.map((doc) => {
     const held = decisions.waiting[doc.id];
@@ -151,6 +161,7 @@ export default function RequestDetailPage({
     canProcess,
     attachments,
     isWalkIn: request.isWalkIn,
+    actionBlockedReason: handlingBlockedReason,
   };
   const plan = planRequestActions(planInput);
   const summary = describeRequestProgress(planInput);
@@ -179,12 +190,17 @@ export default function RequestDetailPage({
     try {
       // Decisions still in their undo window are saved first, so the server
       // checks the same documents the staff member is looking at.
-      await decisions.flush();
+      const decisionsSaved = await decisions.flush();
+      if (!decisionsSaved) {
+        await onUpdated();
+        return false;
+      }
       const res = await advanceRequestStatusFn({
         data: { requestId: request.id, toStatus: to, remarks },
       });
       if (res.error) {
         toast.error("Could not update this request", { description: res.message });
+        await onUpdated();
         return false;
       }
       toast.success(`Moved to ${getStatusDetails(to).label}`);
@@ -259,6 +275,14 @@ export default function RequestDetailPage({
                 Chat <Kbd>{hotkeyLabel(CHAT_HOTKEY)}</Kbd>
               </Button>
             )}
+            {canProcess && (plan.primary || plan.secondary.length > 0 || plan.reject) && (
+              <RequestClaimControl
+                requestId={request.id}
+                status={request.status}
+                claim={request.claim}
+                onUpdated={onUpdated}
+              />
+            )}
             <RequestActionBar plan={plan} busy={busy} onAction={handleAction} />
           </div>
         }
@@ -268,7 +292,7 @@ export default function RequestDetailPage({
         key={`${request.id}-${request.postingStartDate}`}
         serviceCode={request.serviceCode} status={request.status}
         postingStartDate={request.postingStartDate} postingEndDate={request.postingEndDate}
-        editor={canProcess ? {
+        editor={ownsStageClaim ? {
           requestId: request.id, updatedAt: request.updatedAt, createdAt: request.createdAt, onSaved: onUpdated,
         } : undefined}
       />
@@ -342,7 +366,8 @@ export default function RequestDetailPage({
             paused={dialog != null || chatOpen}
             canProcess={canProcess}
             canReverse={canReverse}
-            confirmDecisions={confirmDecisions}
+            handlingBlockedReason={handlingBlockedReason}
+            confirmRejections={confirmRejections}
             decisions={decisions}
             selectedId={selectedDocId}
             onSelectedIdChange={setSelectedDocId}

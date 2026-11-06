@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { DOCUMENT_RELEASED, readyForReleaseInstruction } from "~/features/services/release-instructions";
 import { QuietLink } from "~/components/quiet-link";
 import {
   Banknote,
@@ -51,6 +52,7 @@ export const TYPE_STYLE: Record<
   NotificationType,
   { icon: LucideIcon; unreadClass: string }
 > = {
+  registration_reminder: { icon: FileWarning, unreadClass: "bg-primary-fill text-white" },
   status_change: { icon: RefreshCw, unreadClass: "bg-primary-fill text-white" },
   pre_validation_complete: { icon: CircleCheckBig, unreadClass: "bg-primary-fill text-white" },
   document_rejected: { icon: FileWarning, unreadClass: "bg-destructive text-white dark:text-background" },
@@ -103,6 +105,7 @@ export function feedTitle(subject: string): string {
   const title = subject
     .replace(/^Request\s+\S+:\s*/i, "")
     .replace(/^now\s+/i, "")
+    .replace(/^ready to claim$/i, "Ready for Release")
     .trim();
   return title ? title.charAt(0).toUpperCase() + title.slice(1) : subject;
 }
@@ -114,6 +117,9 @@ export function feedTitle(subject: string): string {
  * doesn't already say. What's left, if anything, is what the applicant needs.
  */
 export function feedDetail(notification: NotificationRow): string | null {
+  if (notification.type === "registration_reminder") {
+    return notification.body.replace(/\n\nOpen "My Requests" for the full details\.$/, "").trim();
+  }
   if (notification.type === "pre_validation_complete") {
     return "Once your request is in Processing, go to the CCRO office and bring your original documents and submit hard copies of your requirements for final validation. Bring your tracking number or a printout of your acknowledgment.";
   }
@@ -136,17 +142,19 @@ export function feedDetail(notification: NotificationRow): string | null {
     const instruction = "CCRO is currently reviewing your uploaded documents. We’ll notify you of updates or needed corrections.";
     if (!paragraphs.includes(instruction)) paragraphs.unshift(instruction);
   }
-  if (notification.type === "status_change" && /^ready for release$/i.test(feedTitle(notification.subject))) {
+  if (notification.type === "status_change" && /^ready (for release|to claim)$/i.test(feedTitle(notification.subject))) {
     const instruction = notification.serviceCode === "EMAIL_INQUIRY"
       ? "Read CCRO's reply in the messages."
-      : "Pay any outstanding fee at the cashier to claim your document. Open your request for the exact amount.";
-    if (!paragraphs.includes(instruction)) paragraphs.unshift(instruction);
+      : readyForReleaseInstruction(notification.paymentStatus, notification.feesDue);
+    const notes = paragraphs.filter((text) => !/^(Pay any outstanding fee|Please pay |Please wait for (CCRO staff|the cashier)|Your document is ready|Read CCRO's reply)/.test(text));
+    return [instruction, ...notes].join(" ");
   }
   if (notification.type === "status_change" && /^released$/i.test(feedTitle(notification.subject))) {
     const instruction = notification.serviceCode === "EMAIL_INQUIRY"
       ? "Keep CCRO's reply for your records."
-      : "Please claim your requested document from the CCRO staff.";
-    if (!paragraphs.includes(instruction)) paragraphs.unshift(instruction);
+      : DOCUMENT_RELEASED;
+    const notes = paragraphs.filter((text) => text !== "Please claim your requested document from the CCRO staff." && text !== DOCUMENT_RELEASED && text !== "Keep CCRO's reply for your records.");
+    return [instruction, ...notes].join(" ");
   }
   return paragraphs.length > 0 ? paragraphs.join(" ") : null;
 }

@@ -117,7 +117,11 @@ describe("soft and split shapes expose their intended radii", () => {
 
 describe("form and action controls expose their intended defaults", () => {
   const defaults = [
-    ["button.tsx", ['size = "lg"', 'shape = "pill"']],
+    [
+      "button.tsx",
+      ['groupStyle.size ?? "lg"', 'groupStyle.shape ?? "pill"'],
+    ],
+    ["button-group.tsx", ['size = "lg"', 'shape = "pill"']],
     ["input.tsx", ['fieldSize = "lg"', 'shape = "split"']],
     ["input-group.tsx", ['fieldSize = "lg"', 'shape = "split"']],
     ["select.tsx", ['size = "lg"', 'shape = "split"']],
@@ -174,8 +178,8 @@ describe("InputGroup composition", () => {
   });
 
   it("carries the autofill surface across the whole group", () => {
-    expect(css).toContain(
-      '[data-slot="input-group"]:has(\n    > [data-slot="input-group-control"]:autofill',
+    expect(css).toMatch(
+      /\[data-slot="input-group"\]:has\(\s*>\s*\[data-slot="input-group-control"\]:autofill\s*\)/,
     );
     expect(css).toContain("box-shadow: inset 0 0 0 1000px var(--primary-soft)");
     expect(css).toContain("-webkit-text-fill-color: var(--foreground)");

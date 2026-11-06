@@ -1,10 +1,10 @@
 import { onTimeRegistrationNotice } from "./on-time-registration";
 import { getLogNote } from "~/features/requests/request-workflow";
-import { formatPesoFee } from "~/features/services/service-utils";
+import { readyForReleaseInstruction } from "~/features/services/release-instructions";
 
 /** What the applicant is told to do next on their request page. */
 export type NextStepsView =
-  | { kind: "steps"; steps: string[] }
+  | { kind: "steps"; steps: string[]; registrationNotice?: string }
   | { kind: "line"; text: string };
 
 interface NextStepsInput {
@@ -36,10 +36,14 @@ export function nextSteps(input: NextStepsInput): NextStepsView | null {
 
   if (status === "released" || status === "rejected" || status === "cancelled") return null;
 
+  const registrationNotice = onTimeRegistrationNotice(input.serviceCode, input.formData);
+  const notice = registrationNotice ? { registrationNotice } : {};
+
   // Requirements accepted online; the hard copies still need the final check.
   if (status === "processing") {
     return {
       kind: "steps",
+      ...notice,
       steps: [
         "Go to the CCRO office for final validation",
         "Bring your original documents and hard copies of your requirements",
@@ -48,7 +52,6 @@ export function nextSteps(input: NextStepsInput): NextStepsView | null {
     };
   }
 
-  const registrationNotice = onTimeRegistrationNotice(input.serviceCode, input.formData);
   if (status === "under_validation") {
     const subject = input.allowsMessages ? "your inquiry" : "your uploaded documents";
     const instruction = `CCRO is currently reviewing ${subject}. We’ll notify you of updates or needed corrections.`;
@@ -62,24 +65,24 @@ export function nextSteps(input: NextStepsInput): NextStepsView | null {
     return { kind: "line", text: registrationNotice };
   }
 
+  if (status === "submitted") {
+    return {
+      kind: "line",
+      text: input.allowsMessages
+        ? "No need to visit yet. Your inquiry is awaiting staff review."
+        : "No need to visit yet. Your uploaded requirements are awaiting staff review.",
+    };
+  }
+
   if (status === "ready_for_release") {
+    // Staff have completed the office check, so the countdown stops here.
     // An inquiry is answered in the thread: no visit, so no originals.
     if (input.allowsMessages) {
       return { kind: "steps", steps: ["Read CCRO's reply in the messages"] };
     }
-    if (input.feesDue <= 0) {
-      return { kind: "steps", steps: ["Claim your document at the CCRO"] };
-    }
-    // Already paid: nothing more to say about money.
-    if (input.paymentStatus === "verified") {
-      return { kind: "steps", steps: ["Claim your document"] };
-    }
     return {
       kind: "steps",
-      steps: [
-        `Bring ${formatPesoFee(input.feesDue)} to pay at the CCRO cashier`,
-        "Claim your document",
-      ],
+      steps: [readyForReleaseInstruction(input.paymentStatus, input.feesDue)],
     };
   }
 

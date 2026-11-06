@@ -1,4 +1,4 @@
-# Request message thread (Email Inquiry) — design
+# Request message thread (Email Inquiry) - design
 
 Status: draft for review · Date: 2026-10-13 · Path: architectural
 
