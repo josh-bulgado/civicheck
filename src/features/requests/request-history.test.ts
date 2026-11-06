@@ -335,3 +335,14 @@ describe("building the history", () => {
     expect(buildHistory([], 0, NOW)).toEqual([]);
   });
 });
+
+it("keeps identity and handover confirmations separate and names who confirmed each", () => {
+  const days=buildHistory([
+    log("identity_verified","Verified the claimant identity and authority to receive the document.",23,10,0,"Nicole"),
+    log("handover_confirmed","Confirmed handover of 2 copies.",23,10,0,"Nicole"),
+  ],0,NOW);
+  const items=days.flatMap(day=>day.items);
+  expect(items).toHaveLength(2);
+  expect(items.every(item=>item.kind==="event"&&item.event.actor==="Nicole"&&item.event.tone==="success")).toBe(true);
+  expect(items.some(item=>item.kind==="event"&&item.event.label==="confirmed handover of 2 copies.")).toBe(true);
+});

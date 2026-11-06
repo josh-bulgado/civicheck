@@ -248,3 +248,29 @@ describe("drafting the incomplete notice", () => {
     expect(buildIncompleteNote([])).toBe("");
   });
 });
+
+it("asks for the originals check before registration readiness, but not online inquiries", () => {
+  const registration = input({status:"processing",serviceCode:"OTCOLB-MARITAL"});
+  expect(planRequestActions(registration).primary?.dialog).toBe("originals");
+  expect(planRequestActions({...registration,serviceCode:"EMAIL_INQUIRY"}).primary?.dialog).toBeUndefined();
+  expect(planRequestActions({...registration,serviceCode:"CTC_ISSUANCE"}).primary?.dialog).toBeUndefined();
+});
+
+it("reuses current registration checks but keeps collection checks for other services", async () => {
+  const {needsOriginalDocumentCheck,hasCurrentOriginalDocumentCheck}=await import("./request-workflow");
+  expect(needsOriginalDocumentCheck("OTCOLB-MARITAL","released",true)).toBe(false);
+  expect(needsOriginalDocumentCheck("OTCOLB-MARITAL","released",false)).toBe(true);
+  expect(needsOriginalDocumentCheck("CTC_ISSUANCE","released",true)).toBe(true);
+  const check={actionStatus:"hard_copies_validated",createdAt:"2026-11-06T01:00:00Z"};
+  expect(hasCurrentOriginalDocumentCheck([check])).toBe(true);
+  expect(hasCurrentOriginalDocumentCheck([check,{actionStatus:"under_validation",createdAt:"2026-11-06T02:00:00Z"}])).toBe(false);
+});
+
+it("asks for a reason only when returning from later stages", () => {
+  for(const status of ["processing","ready_for_release"]){
+    const plan=planRequestActions(input({status}));
+    expect(plan.secondary.find(action=>action.to==="under_validation")?.dialog).toBe("return");
+  }
+  expect(planRequestActions(input({status:"submitted"})).primary?.dialog).toBeUndefined();
+  expect(planRequestActions(input({status:"incomplete"})).primary?.dialog).toBeUndefined();
+});

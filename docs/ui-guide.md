@@ -119,6 +119,21 @@ template across services, with readable fallbacks such as Male, Female, Yes,
 and No for legacy records. Keep names, contact details, references, and notes
 as entered; display formatting must not change stored answers.
 
+Staff must confirm checking the originals before marking registration requests
+ready for release. Release reuses that recorded check unless documents changed
+or the request returned to validation. Other physical services confirm at
+release; older ready registrations without a recorded check also confirm there.
+The confirmation is
+enforced by the server and database, and History records the staff member and
+time separately from upload acceptance. Email inquiries stay online-only.
+
+Returning a request from Processing or Ready for Release requires a reason.
+The staff detail page shows outstanding return and document-review concerns
+above the tabs, with who raised them and when, until validation moves forward.
+Physical release requires separate identity/authority and handover confirmations;
+each is enforced on the server and recorded separately in staff History.
+Online inquiries require identity verification but no physical handover.
+
 ## Interaction and responsive behavior
 
 Uploaded photos and PDFs share

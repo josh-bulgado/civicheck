@@ -15,7 +15,9 @@ export function RequestStatusHistory({ logs }: { logs: LogEntry[] }) {
     .filter(
       (log) =>
         log.actionStatus !== "document_approved" &&
-        log.actionStatus !== "document_reverted",
+        log.actionStatus !== "document_reverted" &&
+        log.actionStatus !== "identity_verified" &&
+        log.actionStatus !== "handover_confirmed",
     )
     .reverse();
 

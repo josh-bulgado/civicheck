@@ -12,11 +12,18 @@ import {
   getTransitionLabel,
   isPaymentSettled,
   nextStatuses,
+  needsOriginalDocumentCheck,
   type RequestStatus,
 } from "~/features/requests/request-workflow";
 
 /** Actions that need more than a click open one of these first. */
-export type TransitionDialog = "incomplete" | "reject" | "release";
+export type TransitionDialog = "incomplete" | "reject" | "release" | "originals" | "return";
+
+export interface TransitionConfirmations {
+  originalsConfirmed?: boolean;
+  identityVerified?: boolean;
+  handoverConfirmed?: boolean;
+}
 
 export interface PlannedAction {
   to: RequestStatus;
@@ -164,7 +171,10 @@ export function planRequestActions(input: RequestActionInput): RequestActionPlan
         ? "Mark the archive check ready for completion after the cashier's fee confirmation."
         : effectOf(input.status, to, paymentSettled),
     blocked: blockedReason(to, input, paymentSettled),
-    dialog: DIALOG_OF[to],
+    dialog: to === "under_validation" && ["processing", "ready_for_release"].includes(input.status ?? "")
+      ? "return"
+      : to === "ready_for_release" && needsOriginalDocumentCheck(input.serviceCode, to)
+        ? "originals" : DIALOG_OF[to],
   });
 
   const actions = new Map(allowed.map((to) => [to, make(to)]));
