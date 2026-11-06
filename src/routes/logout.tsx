@@ -2,6 +2,7 @@ import { redirect, createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { clearSessionScope, getSupabaseServerClient } from "../utils/supabase";
 import { clearCurrentUser } from "~/features/auth/current-user";
+import { Spinner } from "~/components/ui/spinner";
 
 const logoutFn = createServerFn({ method: "POST" }).handler(async () => {
   const supabase = getSupabaseServerClient();
@@ -23,6 +24,10 @@ const logoutFn = createServerFn({ method: "POST" }).handler(async () => {
 
 export const Route = createFileRoute("/logout")({
   preload: false,
+  // Signing out leaves the portal; page-shaped placeholders imply its content
+  // is being loaded again. Use the same immediate feedback from every page.
+  pendingMs: 0,
+  pendingComponent: LogoutPending,
   loader: () => {
     // Drop the cached identity before the session goes, so nothing downstream
     // can read a signed-out user back out of the cache.
@@ -30,3 +35,17 @@ export const Route = createFileRoute("/logout")({
     return logoutFn();
   },
 });
+
+function LogoutPending() {
+  return (
+    <main
+      id="main-content"
+      className="flex min-h-svh items-center justify-center bg-background px-6 text-foreground"
+    >
+      <div role="status" className="flex flex-col items-center gap-4 text-center">
+        <Spinner aria-hidden="true" className="size-6 motion-reduce:animate-none" />
+        <p className="text-sm font-medium">Signing out…</p>
+      </div>
+    </main>
+  );
+}

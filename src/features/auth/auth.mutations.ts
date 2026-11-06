@@ -155,8 +155,8 @@ async function sendSignupOtpEmail(
       category: "auth",
       to: params.email,
       subject: "Your CiviCheck email verification code",
-      html: renderVerificationEmail(otp),
-      text: renderVerificationEmailText(otp),
+      html: renderVerificationEmail(otp, params.firstName),
+      text: renderVerificationEmailText(otp, params.firstName),
     });
   } catch (sendError) {
     console.error("Resend sending error:", sendError);

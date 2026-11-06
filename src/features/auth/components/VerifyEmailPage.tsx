@@ -43,10 +43,10 @@ export function VerifyEmailPage() {
   const isResending =
     (signup ? signupMutation : resendOtpMutation).status === "pending" ||
     (pending.sendCodeOnArrival === true && resendOtpMutation.status === "idle");
-  const rejection = verifyOtpMutation.data?.error
-    ? verifyOtpMutation.data.message
-    : verifyOtpMutation.status === "error"
-      ? "We could not reach the account service. Please try again in a moment."
+  const rejection = verifyOtpMutation.status === "error"
+    ? "We could not reach the account service. Please try again in a moment."
+    : verifyOtpMutation.data?.error
+      ? verifyOtpMutation.data.message
       : null;
 
   return (
@@ -55,9 +55,9 @@ export function VerifyEmailPage() {
         <AuthBackLink to="/login">Back to sign in</AuthBackLink>
 
         <AuthStepHeading title="Check your email">
-          We&apos;ve sent a verification code to{" "}
-          <AuthEmphasis>{email}</AuthEmphasis>. Enter it below to confirm your
-          account.
+          We&apos;ve sent a verification code to
+          <br />
+          <AuthEmphasis>{email}</AuthEmphasis>
         </AuthStepHeading>
 
         {resendOtpMutation.status === "error" && (
@@ -84,6 +84,8 @@ export function VerifyEmailPage() {
             }
           }}
           submitLabel="Confirm account"
+          description="Enter your 8-digit code, or paste it to confirm automatically."
+          autoSubmitOnPaste
         />
       </div>
     </AuthCenteredLayout>

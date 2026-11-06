@@ -29,7 +29,11 @@ vi.mock("~/utils/supabase", () => ({
 vi.mock("~/server/auth-users", () => ({ findAuthUserByEmail: state.findUser }));
 vi.mock("~/utils/app-url", () => ({ getAppUrl: () => "https://app.test" }));
 vi.mock("~/utils/resend", () => ({ sendEmail: state.mail }));
-vi.mock("~/utils/email-template", () => ({ renderOtpEmail: (input: unknown) => JSON.stringify(input), renderVerificationEmail: vi.fn(), renderVerificationEmailText: vi.fn() }));
+vi.mock("~/utils/email-template", () => ({
+  renderPasswordResetEmail: (code: string) => JSON.stringify({ code }),
+  renderPasswordResetEmailText: vi.fn(),
+  renderVerificationEmail: vi.fn(), renderVerificationEmailText: vi.fn(),
+}));
 vi.mock("./captcha.server", () => ({ verifyInvisibleCaptcha: state.verifyCaptcha, verifyCaptcha: vi.fn(), issueOAuthCaptchaProof: vi.fn() }));
 vi.mock("~/features/system-admin/security-center.server", () => ({ recordAuthenticationSecurityEvent: vi.fn(), recordSessionStarted: vi.fn() }));
 

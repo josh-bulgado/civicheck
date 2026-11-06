@@ -109,6 +109,19 @@ use `aria-hidden="true"`; button icons use `data-icon="inline-start"` or
 `inline-end` so the wrapper controls sizing and spacing. Dialogs and sheets need
 their title components, including when the title is visually hidden.
 
+Logout uses an immediate, full-page “Signing out…” status with the shared
+`Spinner` in [the logout route](../src/routes/logout.tsx). Keep that transition
+consistent across portal pages instead of showing a content skeleton.
+
+Verification keeps the signup email fixed, displays it on its own line, and
+uses eight separate code boxes with an inline resend action. Standalone auth
+steps use an arrow-only back link with a screen-reader label, matching signup.
+On signup verification, an explicit paste of exactly eight digits (optionally
+separated by spaces or hyphens) submits one server check. Typed, partial, and
+longer codes keep the manual confirm action. Code entry and resend pause while
+checking; only server acceptance continues to the dashboard. Digit fill,
+checking, and rejection motion respects reduced-motion preferences.
+
 The citizen's full-details dialog uses `SubmittedDetailsCard` with
 `variant="dialog"`: sentence-case labels, compact grouped answers, and two
 columns where space permits. Its tracking badge and close action stay in the
