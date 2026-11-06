@@ -184,7 +184,7 @@ function DashboardLayout() {
         // 10px, the panel floats on the ground from `md`, and on a phone the page
         // fills the screen.
         <SidebarInset className="min-w-0 bg-transparent p-0 md:p-2.5 md:pl-0">
-          <div className={`flex w-full flex-1 flex-col md:rounded-panel md:shadow-portal-panel ${isCcroAdmin ? "bg-portal-panel" : "bg-workspace"}`}>
+          <div className={`flex min-w-0 w-full flex-1 flex-col md:rounded-panel md:shadow-portal-panel ${isCcroAdmin ? "bg-portal-panel" : "bg-workspace"}`}>
             <header className="flex h-16 shrink-0 items-center justify-between px-4 sm:px-6 lg:px-8">
               <div className="flex min-w-0 items-center gap-3">
                 {/* From md the toggle lives in the sidebar, as in the applicant
@@ -203,7 +203,7 @@ function DashboardLayout() {
             <main
               id="main-content"
               tabIndex={-1}
-              className="civic-workspace flex flex-1 flex-col px-4 pt-1 pb-4 text-foreground sm:px-6 sm:pb-6 lg:px-8 lg:pb-8"
+              className="civic-workspace flex min-w-0 flex-1 flex-col px-4 pt-1 pb-4 text-foreground sm:px-6 sm:pb-6 lg:px-8 lg:pb-8"
             >
               <Outlet />
             </main>

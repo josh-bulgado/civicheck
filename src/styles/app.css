@@ -1001,7 +1001,7 @@
 
   /* Shared page dimensions stay fixed through loading and navigation. */
   .dashboard-page {
-    @apply mx-auto w-full  space-y-6;
+    @apply mx-auto min-w-0 w-full space-y-6;
   }
 
   /* The cashier counter's slip: a sheet with torn top and bottom edges. The

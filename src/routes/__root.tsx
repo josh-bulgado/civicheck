@@ -14,9 +14,6 @@ import { NotFound } from "../components/NotFound";
 import { ThemeScope } from "~/components/theme-scope";
 import { OfflineBanner } from "~/components/errors/OfflineBanner";
 import appCss from "../styles/app.css?url";
-// Link public-page styles explicitly so they are present on the first server render.
-import landingCss from "../features/landing/landing.css?url";
-import publicPagesCss from "../styles/public-pages.css?url";
 import { seo } from "../utils/seo";
 import {
   clearSessionScope,
@@ -143,8 +140,6 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "stylesheet", href: landingCss },
-      { rel: "stylesheet", href: publicPagesCss },
       {
         rel: "apple-touch-icon",
         sizes: "180x180",

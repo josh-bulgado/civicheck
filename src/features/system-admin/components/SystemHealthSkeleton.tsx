@@ -1,5 +1,4 @@
 import { Skeleton } from "~/components/ui/skeleton";
-import "../system-health.css";
 
 /** Keep the overview's actual tiles and responsive layout while readings load. */
 export function SystemHealthSkeleton() {

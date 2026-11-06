@@ -159,7 +159,7 @@ export function DataTableCard<TData extends RowData>({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-xl border border-border-strong bg-card",
+        "min-w-0 max-w-full overflow-hidden rounded-xl border border-border-strong bg-card",
         className,
       )}
       aria-busy={loading || undefined}
@@ -171,7 +171,7 @@ export function DataTableCard<TData extends RowData>({
       ) : null}
       <div className="border-b border-border px-5 py-4">{toolbarContent}</div>
 
-      <div className="overflow-x-auto">
+      <div className="min-w-0 overflow-x-auto">
         <Table variant={variant} aria-label={label}>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

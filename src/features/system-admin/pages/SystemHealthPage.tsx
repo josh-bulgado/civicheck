@@ -23,8 +23,6 @@ import { useHealthSampling } from "../hooks/useHealthSampling";
 import { isOpenIncident, summaryText } from "../system-health.model";
 import { formatHealthClock } from "../system-health.utils";
 import type { SystemHealthDashboard } from "../system-admin.types";
-import "../system-health.css";
-import "../system-health-details.css";
 
 export type HealthView = "overview" | "data";
 type HealthDialog = "maintenance" | "limits" | "incidents" | "settings" | null;

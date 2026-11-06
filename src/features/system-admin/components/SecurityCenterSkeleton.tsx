@@ -1,5 +1,4 @@
 import { Skeleton } from "~/components/ui/skeleton";
-import "../security-center.css";
 
 export function SecurityCenterSkeleton() {
   return (

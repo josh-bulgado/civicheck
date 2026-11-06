@@ -15,7 +15,6 @@ import { SecurityPolicySection } from "../components/SecurityPolicySection";
 import { SecurityPostureSummary } from "../components/SecurityPostureSummary";
 import { formatSecurityTimestamp } from "../security-center.utils";
 import type { SecurityCenterDashboard } from "../system-admin.types";
-import "../security-center.css";
 
 type SecurityTab = "findings" | "access" | "activity" | "controls";
 
