@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { ReportProblemDialog } from "~/features/feedback/components/ReportProblemDialog";
 
 // Auth-only layer: every signed-in area of the app (the dashboard shell and
 // the apply wizard alike) nests under here for the session + active-account
@@ -6,7 +7,7 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 // gets the sidebar shell is decided by whether it nests under `_dashboard`
 // too, not by this guard.
 export const Route = createFileRoute("/_authed")({
-  component: () => <Outlet />,
+  component: AuthenticatedLayout,
   beforeLoad: ({ context, location }) => {
     if (!context.user || context.user.accountStatus !== "active")
       throw redirect({ to: "/login", search: { redirect: location.href } });
@@ -21,3 +22,8 @@ export const Route = createFileRoute("/_authed")({
     }
   },
 });
+
+function AuthenticatedLayout() {
+  const { user } = Route.useRouteContext();
+  return <><Outlet />{user?.role === "applicant" && <ReportProblemDialog />}</>;
+}

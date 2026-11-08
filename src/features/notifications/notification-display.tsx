@@ -89,6 +89,7 @@ export function linkFor(
         <QuietLink
           to="/my-requests/$requestId"
           params={{ requestId: target.requestId }}
+          search={{ feedback: target.feedback || undefined }}
           onClick={onClick}
           {...props}
         />

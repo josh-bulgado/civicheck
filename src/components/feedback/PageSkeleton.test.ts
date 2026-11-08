@@ -13,6 +13,7 @@ import { CashierCounterSkeleton } from "~/features/cashier/components/CashierCou
 import { LandingPageSkeleton } from "~/features/landing/components/LandingPageSkeleton";
 import { SystemHealthSkeleton } from "~/features/system-admin/components/SystemHealthSkeleton";
 import { SecurityCenterSkeleton } from "~/features/system-admin/components/SecurityCenterSkeleton";
+import { LoginPageSkeleton } from "~/features/auth/components/LoginPageSkeleton";
 
 describe("loading UI", () => {
   it.each([
@@ -24,6 +25,7 @@ describe("loading UI", () => {
     ["document", DocumentSkeleton],
     ["cashier", CashierCounterSkeleton],
     ["landing", LandingPageSkeleton],
+    ["login", LoginPageSkeleton],
     ["system health", SystemHealthSkeleton],
     ["security center", SecurityCenterSkeleton],
   ] as [string, ComponentType][])(

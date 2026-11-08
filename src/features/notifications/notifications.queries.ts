@@ -27,7 +27,7 @@ export type NotificationType =
  * number pre-filled.
  */
 export type NotificationTarget =
-  | { to: "/my-requests/$requestId"; requestId: string }
+  | { to: "/my-requests/$requestId"; requestId: string; feedback?: boolean }
   | { to: "/requests/$requestId"; requestId: string }
   | { to: "/cashier"; tracking: string };
 
@@ -145,7 +145,8 @@ function toApplicantRow(row: ApplicantFeedRow): NotificationRow {
     sentAt: row.sent_at,
     trackingNumber: request?.tracking_number ?? "",
     serviceName: service?.display_name || service?.name || request?.request_type || null,
-    target: { to: "/my-requests/$requestId", requestId: row.request_id },
+    target: { to: "/my-requests/$requestId", requestId: row.request_id,
+      ...(row.type === "status_change" && /:\s*(?:now\s+)?released$/i.test(row.subject) ? { feedback: true } : {}) },
   };
 }
 

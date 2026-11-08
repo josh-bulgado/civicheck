@@ -1,6 +1,7 @@
 import { Check } from "lucide-react";
 import {
   STAGE_LABELS,
+  isRequestStatus,
   stageOf,
   type WorkflowStage,
 } from "~/features/requests/request-workflow";
@@ -29,6 +30,7 @@ export function StageTracker({
       {STAGES.map((stage) => {
         const done = stage < current;
         const here = stage === current;
+        const live = here && isRequestStatus(status) && status !== "rejected" && status !== "cancelled";
 
         return (
           <li key={stage} aria-current={here ? "step" : undefined} className="min-w-0 pr-1 @sm:pr-2 @md:pr-3">
@@ -39,6 +41,7 @@ export function StageTracker({
                   done && "border-primary-fill bg-primary-fill",
                   here &&
                     "border-primary bg-card shadow-[0_0_0_5px_rgba(11,77,162,0.18)] @md:shadow-[0_0_0_7px_rgba(11,77,162,0.18)]",
+                  live && "civic-live-step",
                   !done && !here && "border-[#b9c7de] dark:border-border-strong bg-card",
                 )}
               >

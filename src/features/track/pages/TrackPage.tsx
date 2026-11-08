@@ -17,6 +17,7 @@ import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Spinner } from "~/components/ui/spinner";
 import { PanelSkeleton } from "~/components/feedback/PageSkeleton";
+import { enterDelay } from "~/components/motion/stagger";
 import SiteHeader from "~/features/landing/components/SiteHeader";
 import SiteFooter from "~/features/landing/components/SiteFooter";
 import {
@@ -156,12 +157,13 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
       <SiteHeader />
 
       <main className="public-track-main">
-          <h1 className="public-page-title">
-            Track an existing request
-          </h1>
+        <h1 className="public-page-title civic-enter-sm">
+          Track an existing request
+        </h1>
 
         <form
-          className="public-tracking-form"
+          className="public-tracking-form civic-enter"
+          style={enterDelay(80)}
           onSubmit={form.handleSubmit(onSubmit)}
           noValidate
         >

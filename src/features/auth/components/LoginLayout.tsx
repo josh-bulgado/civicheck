@@ -1,28 +1,61 @@
 import type { ReactNode } from "react";
 import { CiviCheckIdentity } from "~/components/brand/civic-identity";
 import { QuietLink as Link } from "~/components/quiet-link";
+import { Skeleton } from "~/components/ui/skeleton";
+import { cn } from "~/lib/utils";
+import "../login.css";
 
-export function LoginLayout({ children }: { children: ReactNode }) {
+export function LoginLayout({
+  children,
+  loading = false,
+}: {
+  children: ReactNode;
+  loading?: boolean;
+}) {
   return (
-    <div className="login-page">
+    <div
+      className="login-page"
+      data-page-skeleton={loading || undefined}
+      role={loading ? "status" : undefined}
+      aria-label={loading ? "Loading sign-in page" : undefined}
+      aria-busy={loading || undefined}
+    >
       <div className="login-container">
-        <header className="login-header civic-enter-fade">
-          <Link to="/" aria-label="CiviCheck home" className="login-home">
-            <CiviCheckIdentity compact className="login-identity" />
-          </Link>
+        <header
+          className={cn("login-header", !loading && "civic-enter-fade")}
+          aria-hidden={loading || undefined}
+        >
+          {loading ? (
+            <div className="login-home">
+              <CiviCheckIdentity compact className="login-identity" />
+            </div>
+          ) : (
+            <Link to="/" aria-label="CiviCheck home" className="login-home">
+              <CiviCheckIdentity compact className="login-identity" />
+            </Link>
+          )}
         </header>
 
         <main className="login-main">
-          <div className="login-form-column civic-enter">{children}</div>
-          <div className="login-artwork civic-enter-fade" aria-hidden="true">
-            <img
-              src="/login/login-documents.webp"
-              width={660}
-              height={495}
-              alt=""
-              draggable={false}
-              decoding="async"
-            />
+          <div className={cn("login-form-column", !loading && "civic-enter")}>
+            {children}
+          </div>
+          <div
+            className={cn("login-artwork", !loading && "civic-enter-fade")}
+            aria-hidden="true"
+          >
+            {loading ? (
+              <Skeleton className="aspect-[4/3] rounded-4xl" />
+            ) : (
+              <img
+                src="/login/login-documents.webp"
+                width={660}
+                height={495}
+                alt=""
+                draggable={false}
+                decoding="async"
+              />
+            )}
           </div>
         </main>
       </div>

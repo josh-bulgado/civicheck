@@ -13,16 +13,21 @@ import { VerificationFormCard } from "~/features/requests/components/Verificatio
 import { isClosedRequestStatus } from "~/features/requests/document-review";
 import { nextSteps } from "~/features/requests/next-steps";
 import { getRejectionNotice } from "~/features/requests/request-workflow";
+import { RequestFeedbackCard } from "~/features/feedback/components/RequestFeedbackCard";
 
 interface MyRequestDetailPageProps {
   request: MyRequestDetail;
   /** Called after a mutation succeeds, so the route can re-run its loader. */
   onUpdated: () => void;
+  feedbackRequested?: boolean;
+  onFeedbackRequestHandled?: () => void;
 }
 
 export default function MyRequestDetailPage({
   request,
   onUpdated,
+  feedbackRequested = false,
+  onFeedbackRequestHandled = () => {},
 }: MyRequestDetailPageProps) {
   const next = nextSteps({
     postingStartDate: request.postingStartDate,
@@ -50,6 +55,9 @@ export default function MyRequestDetailPage({
       <div className="civic-stagger grid min-w-0 grid-cols-1 items-start gap-5 md:gap-6 @4xl:grid-cols-[minmax(0,1fr)_22rem] @5xl:grid-cols-[minmax(0,1fr)_24rem] @6xl:grid-cols-[minmax(0,1fr)_28rem]">
         <div className="flex min-w-0 flex-col gap-5 md:gap-6" style={staggerStyle(0, 60)}>
           <NextStepsCard status={request.status} next={next} />
+          {request.status === "released" && <RequestFeedbackCard requestId={request.id} feedback={request.feedback}
+            feedbackUnavailable={request.feedbackUnavailable}
+            requested={feedbackRequested} onRequestHandled={onFeedbackRequestHandled} onUpdated={onUpdated} />}
           <MarriagePostingPanel serviceCode={request.serviceCode} status={request.status}
             postingStartDate={request.postingStartDate} postingEndDate={request.postingEndDate} />
         </div>

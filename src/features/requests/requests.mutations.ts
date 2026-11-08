@@ -364,6 +364,7 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
       remarks,
       request.request_type,
       { paymentStatus: request.payment_status, feesDue: Number(request.fees_due ?? 0) },
+      data.requestId,
     );
     await dispatchApplicantNotification(supabase, data.requestId, notificationContent);
 

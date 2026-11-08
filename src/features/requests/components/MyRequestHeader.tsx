@@ -1,6 +1,7 @@
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Copy } from "lucide-react";
+import { toast } from "sonner";
 import { QuietLink } from "~/components/quiet-link";
-import { buttonVariants } from "~/components/ui/button";
+import { Button, buttonVariants } from "~/components/ui/button";
 import { StatusPill } from "~/features/requests/components/StatusPill";
 import { cn } from "~/lib/utils";
 
@@ -21,6 +22,15 @@ export function MyRequestHeader({
   status: string;
   note?: string | null;
 }) {
+  async function copyTrackingNumber() {
+    try {
+      await navigator.clipboard.writeText(trackingNumber);
+      toast.success(`Copied ${trackingNumber}`);
+    } catch {
+      toast.error("Could not copy. Select the number and copy it instead.");
+    }
+  }
+
   return (
     <header>
       <QuietLink
@@ -41,9 +51,21 @@ export function MyRequestHeader({
           <h1 className="portal-title text-pretty">
             {serviceName}
           </h1>
-          <p className="mt-2 font-mono text-[15px] leading-[normal] text-muted-foreground wrap-anywhere">
-            {trackingNumber}
-          </p>
+          <div className="mt-2 flex min-w-0 items-center gap-1">
+            <p className="min-w-0 font-mono text-[15px] leading-[normal] text-muted-foreground select-all wrap-anywhere">
+              {trackingNumber}
+            </p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Copy tracking number"
+              title="Copy tracking number"
+              onClick={copyTrackingNumber}
+            >
+              <Copy aria-hidden="true" />
+            </Button>
+          </div>
           {note && (
             <p className="mt-3 max-w-prose text-[17px] leading-snug text-body-2 text-pretty">
               {note}

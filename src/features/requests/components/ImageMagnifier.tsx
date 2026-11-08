@@ -71,7 +71,7 @@ export function ImageMagnifier({
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [failed, setFailed] = useState(false);
   const zoom = IMAGE_ZOOMS[zoomStep];
-  const loaded = imageSize.width > 0;
+  const loaded = imageSize.width > 0 && viewport.width > 0 && viewport.height > 0;
   // Fit large scans into the canvas, while keeping small photos at their
   // natural size so the default preview doesn't make them blurry.
   const fit = loaded
@@ -109,15 +109,18 @@ export function ImageMagnifier({
   // A resize or page scroll changes the image's position beneath the pointer.
   useEffect(() => {
     const hideLens = () => setLens(null);
-    const observer = new ResizeObserver(() => {
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return;
       hideLens();
-      const scroller = scrollerRef.current;
-      if (scroller) {
-        setViewport({ width: scroller.clientWidth, height: scroller.clientHeight });
-      }
+      // Fit against the canvas, whose size does not depend on the scrollbars.
+      // Measuring the scroller and observing the resized image feeds scrollbar
+      // changes back into the fit calculation, making the photo jump.
+      const { width, height } = entry.contentRect;
+      setViewport((current) => current.width === width && current.height === height
+        ? current
+        : { width, height });
     });
     if (frameRef.current) observer.observe(frameRef.current);
-    if (imageRef.current) observer.observe(imageRef.current);
     window.addEventListener("scroll", hideLens, true);
     return () => {
       observer.disconnect();
@@ -279,7 +282,7 @@ export function ImageMagnifier({
         >
           <div
             className="flex min-h-full min-w-full items-center justify-center p-6"
-            style={{ width: Math.max(viewport.width, imageWidth + 48), height: Math.max(viewport.height, imageHeight + 48) }}
+            style={{ width: imageWidth + 48, height: imageHeight + 48 }}
           >
             <img
               ref={imageRef}

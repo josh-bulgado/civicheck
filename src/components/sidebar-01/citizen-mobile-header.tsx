@@ -1,10 +1,11 @@
 "use client";
 
-import * as React from "react";
+import { useState } from "react";
 import { useLocation } from "@tanstack/react-router";
 import { QuietLink } from "~/components/quiet-link";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
-import { LogOut, Search, Settings } from "lucide-react";
+import { Bug, LogOut, Search, Settings } from "lucide-react";
+import { openProblemReport } from "~/features/feedback/problem-report-events";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { openCommandPalette } from "~/components/sidebar-01/command-palette";
+import { SettingsDialog } from "~/features/account/components/SettingsDialog";
 import {
   getDisplayName,
   getInitials,
@@ -21,12 +23,6 @@ import {
 import { ThemeSwitch } from "~/components/theme-switch";
 import { NotificationsPopover } from "~/features/notifications/components/NotificationsPopover";
 import { loadPaletteDefaults } from "~/features/search/palette-defaults";
-
-const SettingsDialog = React.lazy(() =>
-  import("~/features/account/components/SettingsDialog").then((module) => ({
-    default: module.SettingsDialog,
-  })),
-);
 
 interface CitizenMobileHeaderProps {
   account: AccountProfile | null;
@@ -47,8 +43,7 @@ export function CitizenMobileHeader({
   unreadNotifications,
 }: CitizenMobileHeaderProps) {
   const { pathname } = useLocation();
-  const [settingsTab, setSettingsTab] = React.useState<SettingsTab | null>(null);
-  const [settingsLoaded, setSettingsLoaded] = React.useState(false);
+  const [settingsTab, setSettingsTab] = useState<SettingsTab | null>(null);
   const name = account ? getDisplayName(account) : "CiviCheck User";
 
   return (
@@ -111,10 +106,7 @@ export function CitizenMobileHeader({
           className="w-56 rounded-[20px] bg-popover p-2 shadow-portal-menu ring-0"
         >
           <DropdownMenuItem
-            onClick={() => {
-              setSettingsLoaded(true);
-              setSettingsTab("profile");
-            }}
+            onClick={() => setSettingsTab("profile")}
             className="h-12 gap-3 rounded-[14px] px-3.5 text-[15px] font-medium focus:bg-portal-panel"
           >
             <Settings className="size-5 text-primary!" aria-hidden="true" />
@@ -128,19 +120,20 @@ export function CitizenMobileHeader({
             <LogOut className="size-5" aria-hidden="true" />
             Log out
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={openProblemReport} className="h-12 gap-3 rounded-[14px] px-3.5 text-[15px] font-medium">
+            <Bug className="size-5 text-primary" aria-hidden="true" />Report a problem
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {account && settingsLoaded ? (
-        <React.Suspense fallback={null}>
-          <SettingsDialog
-            open={settingsTab !== null}
-            onOpenChange={(open) => setSettingsTab(open ? "profile" : null)}
-            tab={settingsTab ?? "profile"}
-            onTabChange={setSettingsTab}
-            account={account}
-          />
-        </React.Suspense>
+      {account ? (
+        <SettingsDialog
+          open={settingsTab !== null}
+          onOpenChange={(open) => setSettingsTab(open ? "profile" : null)}
+          tab={settingsTab ?? "profile"}
+          onTabChange={setSettingsTab}
+          account={account}
+        />
       ) : null}
     </header>
   );

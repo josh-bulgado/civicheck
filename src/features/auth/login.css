@@ -99,7 +99,7 @@
 .login-page .login-google-icon { width: 32px; height: 32px; }
 .login-footer { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 9px; margin-top: 28px; color: var(--login-muted); font-size: 20px; line-height: 1.5; }
 .login-artwork { position: relative; top: -64px; min-width: 0; pointer-events: none; user-select: none; }
-.login-artwork > img { display: block; width: calc(100% + 20px); max-width: 660px; height: auto; }
+.login-artwork > :is(img, [data-slot="skeleton"]) { display: block; width: calc(100% + 20px); max-width: 660px; height: auto; }
 
 .dark .login-page {
   --login-ink: #eef3fb;
@@ -116,7 +116,7 @@
 .dark .login-page .login-google { border-color: var(--login-border); }
 
 @media (min-width: 1400px) {
-  .login-artwork > img { width: calc(100% + 60px); }
+  .login-artwork > :is(img, [data-slot="skeleton"]) { width: calc(100% + 60px); }
 }
 
 @media (max-width: 1199px) {

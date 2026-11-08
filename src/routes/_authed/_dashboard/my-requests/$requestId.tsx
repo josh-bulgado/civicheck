@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { z } from "zod";
 import { createFileRoute, getRouteApi, useRouter } from "@tanstack/react-router";
 import { hasPermission, type Role } from "~/lib/permissions";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
@@ -13,6 +14,9 @@ import { invalidateNotificationPreview } from "~/features/notifications/notifica
 const dashboardLayout = getRouteApi("/_authed/_dashboard");
 
 export const Route = createFileRoute("/_authed/_dashboard/my-requests/$requestId")({
+  validateSearch: (search: Record<string, unknown>) => z.object({
+    feedback: z.preprocess(value => value === true || value === "true" ? true : undefined, z.boolean().optional()),
+  }).parse(search),
   beforeLoad: ({ context, location }) => {
     if (!context.user || !hasPermission(context.user.role as Role, "requests:view_own"))
       denyAccess(location);
@@ -27,6 +31,7 @@ export const Route = createFileRoute("/_authed/_dashboard/my-requests/$requestId
 
 function MyRequestDetailRoute() {
   const request = Route.useLoaderData();
+  const { feedback } = Route.useSearch();
   const router = useRouter();
   const { unreadRequestIds } = dashboardLayout.useLoaderData();
   const hasUnread = unreadRequestIds.includes(request.id);
@@ -52,5 +57,7 @@ function MyRequestDetailRoute() {
     tables: ["requests", "application_logs", "requirements_attachments", "request_messages"],
   });
 
-  return <MyRequestDetailPage request={request} onUpdated={() => router.invalidate()} />;
+  return <MyRequestDetailPage request={request} feedbackRequested={feedback}
+    onFeedbackRequestHandled={() => { if (feedback) void router.navigate({ to: "/my-requests/$requestId", params: { requestId: request.id }, search: {}, replace: true }); }}
+    onUpdated={() => { void router.invalidate(); }} />;
 }

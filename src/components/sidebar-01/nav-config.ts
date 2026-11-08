@@ -11,6 +11,7 @@ import {
   History,
   LayoutDashboard,
   ListChecks,
+  MessageSquare,
   Shield,
   ShieldAlert,
   UsersRound,
@@ -128,6 +129,9 @@ const NAV_ENTRIES = {
     icon: BarChart3,
     anyOf: ["dashboard:admin"],
   },
+  "admin-feedback": {
+    title: "Feedback & Reports", url: "/admin/feedback", icon: MessageSquare, anyOf: ["dashboard:admin"],
+  },
 
   // ── Platform administration ───────────────────────────────────────────────
   "system-health": {
@@ -202,7 +206,7 @@ const ROLE_LAYOUTS: Record<Role, GroupLayout[]> = {
     { id: "home", itemIds: ["admin-overview"] },
     { id: "operations", label: "Operations", itemIds: ["request-queue"] },
     { id: "management", label: "Management", itemIds: ["admin-services", "admin-staff"] },
-    { id: "insights", label: "Insights", itemIds: ["admin-reports", "payment-history"] },
+    { id: "insights", label: "Insights", itemIds: ["admin-reports", "admin-feedback", "payment-history"] },
     { id: "notifications", itemIds: ["notifications"] },
   ],
   system_admin: [

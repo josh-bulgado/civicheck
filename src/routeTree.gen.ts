@@ -35,6 +35,7 @@ import { Route as AuthedDashboardStaffDashboardRouteImport } from './routes/_aut
 import { Route as AuthedApplyServiceCodeRouteRouteImport } from './routes/_authed/apply/$serviceCode/route'
 import { Route as AuthedDashboardserviceServicesRouteImport } from './routes/_authed/_dashboard/(service)/services'
 import { Route as AuthedDashboardAdminIndexRouteImport } from './routes/_authed/_dashboard/admin/index'
+import { Route as AuthedDashboardAdminFeedbackRouteImport } from './routes/_authed/_dashboard/admin/feedback'
 import { Route as AuthedDashboardAdminReportsRouteImport } from './routes/_authed/_dashboard/admin/reports'
 import { Route as AuthedDashboardAdminServicesRouteImport } from './routes/_authed/_dashboard/admin/services'
 import { Route as AuthedDashboardAdminStaffRouteImport } from './routes/_authed/_dashboard/admin/staff'
@@ -191,6 +192,12 @@ const AuthedDashboardAdminIndexRoute =
     path: '/admin/',
     getParentRoute: () => AuthedDashboardRouteRoute,
   } as any)
+const AuthedDashboardAdminFeedbackRoute =
+  AuthedDashboardAdminFeedbackRouteImport.update({
+    id: '/admin/feedback',
+    path: '/admin/feedback',
+    getParentRoute: () => AuthedDashboardRouteRoute,
+  } as any)
 const AuthedDashboardAdminReportsRoute =
   AuthedDashboardAdminReportsRouteImport.update({
     id: '/admin/reports',
@@ -336,6 +343,7 @@ export interface FileRoutesByFullPath {
   '/payment-history': typeof AuthedDashboardPaymentHistoryRoute
   '/staff-dashboard': typeof AuthedDashboardStaffDashboardRoute
   '/services': typeof AuthedDashboardserviceServicesRoute
+  '/admin/feedback': typeof AuthedDashboardAdminFeedbackRoute
   '/admin/reports': typeof AuthedDashboardAdminReportsRoute
   '/admin/services': typeof AuthedDashboardAdminServicesRoute
   '/admin/staff': typeof AuthedDashboardAdminStaffRoute
@@ -381,6 +389,7 @@ export interface FileRoutesByTo {
   '/payment-history': typeof AuthedDashboardPaymentHistoryRoute
   '/staff-dashboard': typeof AuthedDashboardStaffDashboardRoute
   '/services': typeof AuthedDashboardserviceServicesRoute
+  '/admin/feedback': typeof AuthedDashboardAdminFeedbackRoute
   '/admin/reports': typeof AuthedDashboardAdminReportsRoute
   '/admin/services': typeof AuthedDashboardAdminServicesRoute
   '/admin/staff': typeof AuthedDashboardAdminStaffRoute
@@ -430,6 +439,7 @@ export interface FileRoutesById {
   '/_authed/_dashboard/payment-history': typeof AuthedDashboardPaymentHistoryRoute
   '/_authed/_dashboard/staff-dashboard': typeof AuthedDashboardStaffDashboardRoute
   '/_authed/_dashboard/(service)/services': typeof AuthedDashboardserviceServicesRoute
+  '/_authed/_dashboard/admin/feedback': typeof AuthedDashboardAdminFeedbackRoute
   '/_authed/_dashboard/admin/reports': typeof AuthedDashboardAdminReportsRoute
   '/_authed/_dashboard/admin/services': typeof AuthedDashboardAdminServicesRoute
   '/_authed/_dashboard/admin/staff': typeof AuthedDashboardAdminStaffRoute
@@ -478,6 +488,7 @@ export interface FileRouteTypes {
     | '/payment-history'
     | '/staff-dashboard'
     | '/services'
+    | '/admin/feedback'
     | '/admin/reports'
     | '/admin/services'
     | '/admin/staff'
@@ -523,6 +534,7 @@ export interface FileRouteTypes {
     | '/payment-history'
     | '/staff-dashboard'
     | '/services'
+    | '/admin/feedback'
     | '/admin/reports'
     | '/admin/services'
     | '/admin/staff'
@@ -571,6 +583,7 @@ export interface FileRouteTypes {
     | '/_authed/_dashboard/payment-history'
     | '/_authed/_dashboard/staff-dashboard'
     | '/_authed/_dashboard/(service)/services'
+    | '/_authed/_dashboard/admin/feedback'
     | '/_authed/_dashboard/admin/reports'
     | '/_authed/_dashboard/admin/services'
     | '/_authed/_dashboard/admin/staff'
@@ -797,6 +810,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedDashboardAdminIndexRouteImport
       parentRoute: typeof AuthedDashboardRouteRoute
     }
+    '/_authed/_dashboard/admin/feedback': {
+      id: '/_authed/_dashboard/admin/feedback'
+      path: '/admin/feedback'
+      fullPath: '/admin/feedback'
+      preLoaderRoute: typeof AuthedDashboardAdminFeedbackRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
+    }
     '/_authed/_dashboard/admin/reports': {
       id: '/_authed/_dashboard/admin/reports'
       path: '/admin/reports'
@@ -947,6 +967,7 @@ interface AuthedDashboardRouteRouteChildren {
   AuthedDashboardPaymentHistoryRoute: typeof AuthedDashboardPaymentHistoryRoute
   AuthedDashboardStaffDashboardRoute: typeof AuthedDashboardStaffDashboardRoute
   AuthedDashboardserviceServicesRoute: typeof AuthedDashboardserviceServicesRoute
+  AuthedDashboardAdminFeedbackRoute: typeof AuthedDashboardAdminFeedbackRoute
   AuthedDashboardAdminReportsRoute: typeof AuthedDashboardAdminReportsRoute
   AuthedDashboardAdminServicesRoute: typeof AuthedDashboardAdminServicesRoute
   AuthedDashboardAdminStaffRoute: typeof AuthedDashboardAdminStaffRoute
@@ -972,6 +993,7 @@ const AuthedDashboardRouteRouteChildren: AuthedDashboardRouteRouteChildren = {
   AuthedDashboardPaymentHistoryRoute: AuthedDashboardPaymentHistoryRoute,
   AuthedDashboardStaffDashboardRoute: AuthedDashboardStaffDashboardRoute,
   AuthedDashboardserviceServicesRoute: AuthedDashboardserviceServicesRoute,
+  AuthedDashboardAdminFeedbackRoute: AuthedDashboardAdminFeedbackRoute,
   AuthedDashboardAdminReportsRoute: AuthedDashboardAdminReportsRoute,
   AuthedDashboardAdminServicesRoute: AuthedDashboardAdminServicesRoute,
   AuthedDashboardAdminStaffRoute: AuthedDashboardAdminStaffRoute,

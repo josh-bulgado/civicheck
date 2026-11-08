@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DOCUMENT_RELEASED, READY_TO_CLAIM, readyForReleaseInstruction } from "~/features/services/release-instructions";
 import { sendEmail } from "~/utils/resend";
+import { getAppUrl } from "~/utils/app-url";
 import { getStatusDetails } from "~/features/services/request-status";
 import type { NotificationType } from "~/features/notifications/notifications.queries";
 import {
@@ -52,6 +53,7 @@ export function buildStatusChangeEmail(
   remarks?: string | null,
   serviceCode?: string | null,
   payment?: { paymentStatus: string | null; feesDue: number },
+  requestId?: string,
 ): NotificationContent {
   if (status === "processing") {
     return composeContent(
@@ -80,7 +82,7 @@ export function buildStatusChangeEmail(
     );
   }
   if (status === "released") {
-    return composeContent(
+    const content = composeContent(
       "status_change",
       `Request ${trackingNumber}: now Released`,
       [
@@ -92,6 +94,12 @@ export function buildStatusChangeEmail(
       ].filter(Boolean),
       `open "My Requests" for the full details.`,
     );
+    if (!requestId) return content;
+    const feedbackUrl = `${getAppUrl()}/my-requests/${encodeURIComponent(requestId)}?feedback=true`;
+    return { ...content,
+      text: `${content.text}\n\nYou can give optional feedback about Civicheck from this completed request.`,
+      html: `${content.html}<p><a href="${escapeHtml(feedbackUrl)}">Give feedback about your Civicheck experience</a> (optional)</p>`,
+    };
   }
   const label = getStatusDetails(status).label;
   const subject = `Request ${trackingNumber}: now ${label}`;

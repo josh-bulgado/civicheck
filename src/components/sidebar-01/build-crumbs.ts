@@ -65,6 +65,7 @@ const TRAILS: Record<string, Trail> = {
   ],
   "/admin/staff": page("admin-staff"),
   "/admin/reports": page("admin-reports"),
+  "/admin/feedback": page("admin-feedback"),
   "/system-admin/health": page("system-health"),
   "/system-admin/security": page("system-security"),
   "/system-admin/accounts": page("system-accounts"),

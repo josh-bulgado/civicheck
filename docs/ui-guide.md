@@ -29,6 +29,8 @@ affected guidance rather than treating this snapshot as a second implementation.
 | Citizen home | [CitizenDashboard](../src/features/dashboard/pages/CitizenDashboard.tsx) | `portal-page`, `portal-title`, one current request and its next useful action, then attention items and secondary requests. |
 | Citizen request list | [MyRequestsPage](../src/features/requests/pages/MyRequestsPage.tsx) | Readable request rows, status pills, transaction references, and an actionable first-use empty state. |
 | Citizen request detail | [MyRequestDetailPage](../src/features/requests/pages/MyRequestDetailPage.tsx) | Status pill in the header; progress and guidance beside a compact details/acknowledgment card; documents and status history start together in the next row. Show rejected files first with re-upload highlighting, followed by missing uploads and the remaining files. Preserve file numbering across those sections, actual image thumbnails, short document titles, and supporting text for examples and copy requirements. |
+| Citizen feedback | [RequestFeedbackCard](../src/features/feedback/components/RequestFeedbackCard.tsx) | Released requests offer an optional survey in a dialog. Five stars use labelled radio choices, a required overall rating, and optional ease rating, topics, and comment. Submitted responses are read-only. |
+| Feedback and problem review | [AdminFeedbackPage](../src/features/feedback/components/AdminFeedbackPage.tsx) | Separate survey and problem-report tabs, service/date filters, server pagination, full filtered survey summaries, and a review dialog. Only admins can read other citizens' submissions. |
 | Staff queue | [RequestsPage](../src/features/requests/pages/RequestsPage.tsx) | `dashboard-page`, page header, filters, table, and pagination; preserve the route-owned filters and department scope. |
 | Admin list | [ServicesPage](../src/features/admin/services/pages/ServicesPage.tsx) | `PageHeaderCard` plus a feature table built on `DataTableCard`. |
 | Staff home | [StaffDashboard](../src/features/dashboard/StaffDashboard.tsx) | Operational priorities and available actions appropriate to the role. |
@@ -40,6 +42,25 @@ The dashboard shell and citizen navigation are already composed in
 `src/components/sidebar-01`. Extend those instead of introducing a second shell
 inside a feature page. Keep routes responsible for their existing loaders,
 permission checks, search parameters, and pending components.
+
+Use `QuietLink` and `QuietAnchor` for every app link. Server-rendered links keep
+their native destinations. After hydration, the shared component suppresses
+browser hover destinations while preserving link roles, keyboard activation,
+router preloading, modified clicks, file downloads, and native context menus.
+Keep composed primitives' supplied role and tab index; never bypass the shared
+component with a plain router `Link` or `<a>` in UI source.
+
+Problem reporting is available from the citizen sidebar, mobile account menu,
+and application footer. These open the same dialog mounted in the authenticated
+layout, preserving the current page and the applicant's request context when
+available. Record only the page path, without search parameters or submitted form
+answers. Reports show a reference after saving; survey and report failures retain
+entered values. These are independent Civicheck feedback forms; they do not
+change a request's status or payment flow.
+
+Keep optional feedback-loading failures inside the feedback card, with a retry
+action; they must not prevent a citizen opening the completed request or its
+documents. A failed read must be distinct from having no saved response.
 
 ## Visual language
 
@@ -97,7 +118,7 @@ design change.
 | Form controls | [Field](../src/components/ui/field.tsx), `FieldGroup`, `FieldLabel`, `FieldDescription`, `FieldError`, and existing input/select wrappers. Keep labels associated with controls; use `data-invalid` on the field and `aria-invalid` on its input. |
 | Settings sections | [SettingGroup](../src/components/ui/setting-group.tsx) for its labeled section header and padded/divided content. |
 | Request status | [StatusPill](../src/features/requests/components/StatusPill.tsx) and [request-status.ts](../src/features/services/request-status.ts). Reuse `getStatusDetails`, audience-specific notes, and timeline helpers instead of inventing labels or colors. |
-| Other status badges | [Badge](../src/components/ui/badge.tsx): `info`, `progress`, `success`, `warning`, `neutral`, `destructive`; service classifications have their own variants. One-line badges remain pills; badges allowed to wrap keep a fixed soft radius as they grow taller. |
+| Other status badges | [Badge](../src/components/ui/badge.tsx): `info`, `progress`, `success`, `warning`, `neutral`, `destructive`; service classifications have their own variants. |
 | Notifications | Existing [Sonner wrapper](../src/components/ui/sonner.tsx) and `toast` from `sonner`. The root already mounts the toaster. Generic Base UI examples recommending a different toast system do not describe this project. |
 | Empty/error states | [Empty](../src/components/ui/empty.tsx), [Alert](../src/components/ui/alert.tsx), and the feature's existing error handling. Distinguish no records yet from no filter matches. |
 | Loading | [PageSkeleton / TablePageSkeleton](../src/components/feedback/PageSkeleton.tsx), feature skeletons, [Skeleton](../src/components/ui/skeleton.tsx), and [Spinner](../src/components/ui/spinner.tsx). Match the loaded layout and preserve the router's pending timing. |
@@ -109,9 +130,18 @@ use `aria-hidden="true"`; button icons use `data-icon="inline-start"` or
 `inline-end` so the wrapper controls sizing and spacing. Dialogs and sheets need
 their title components, including when the title is visually hidden.
 
+Citizen request headers place a copy button beside the tracking number. Copy
+the complete number, confirm success with Sonner, and keep the number selectable
+with a helpful error if clipboard access fails.
+
 Logout uses an immediate, full-page “Signing out…” status with the shared
 `Spinner` in [the logout route](../src/routes/logout.tsx). Keep that transition
 consistent across portal pages instead of showing a content skeleton.
+
+Login uses [LoginPageSkeleton](../src/features/auth/components/LoginPageSkeleton.tsx)
+for both route and parent pending states. It shares `LoginLayout` and its CSS
+with the loaded form, including responsive field sizes and artwork visibility.
+Keep the loading layout immediately visible and preserve router pending timing.
 
 Verification keeps the signup email fixed, displays it on its own line, and
 uses eight separate code boxes with an inline resend action. Standalone auth
@@ -158,15 +188,51 @@ and a bordered subtle canvas. Reuse
 Fit to window. Photos keep their natural size when smaller than the canvas,
 with an optional magnifier switch; PDFs add page navigation and retain scroll
 access to every page. Controls wrap above the canvas on small screens.
+Image fitting measures the outer canvas's content box. Keep scrollbar and image
+size changes out of that measurement so the photo stays still while inspecting it.
 While downloading or rendering, use `FilePreviewLoading` to keep the canvas
 visible with a loading indicator. Reveal decoded photos and rendered PDF pages
 with `civic-enter-fade`, which respects reduced-motion settings.
+
+The landing hero introduces its headline, actions, and checklist with staggered
+`civic-enter` delays; the process section uses `Reveal` below the fold. The
+checklist uses the local Tabs `glide` indicator as a sliding pill and a sideways
+content entrance with staggered rows. Keep the card focused on the checklist
+without playback labels or a countdown bar. Automatic
+rotation pauses on hover, keyboard focus, hidden tabs, or the pause control, and
+starts disabled for reduced motion. Preserve those pause behaviors.
+
+The landing page, Requirements, and Track request use the same header widths,
+maximum width, and responsive gutters from `landing.css`. Keep active navigation
+links the same font weight so changing pages does not shift the logo or links.
+
+Public Requirements and Track request pages introduce their headings with
+`civic-enter-sm`, followed by delayed controls or the tracking form using
+`enterDelay`. Requirements rows use `civic-stagger` with delays capped at the
+sixth row; expanded details fade in with `civic-content-in`. Keep skeletons
+immediately visible and preserve the shared reduced-motion behavior.
 
 The citizen request detail page introduces its header with `civic-enter-sm`,
 then staggers its guidance, summary, documents, and history groups with
 `civic-stagger` and `staggerStyle`. Key the page content by request ID so opening
 a different request replays the entrance while updates to the same request
 preserve the current content and interactions.
+
+Status history keeps its original solid circles: 16px for the current entry,
+12px for earlier entries, with no icons. Animate only a halo in the circle's
+own color: a ripple for validation, a working pulse for processing, a slow
+breath for readiness, a centered ripple for uploads/resubmissions, and a double
+pulse for attention or rejection. Every halo repeats so entries remain visibly
+animated after the page entrance or scrolling. Current halos cycle every
+2.4 to 4 seconds; past entries use a slower, softer gray halo. The halo starts
+outside the solid dot; keep its spread compact and opacity low, with just
+enough color to remain visible beyond the static ring. Keep every halo centered
+on its solid circle throughout the animation. Reduced motion
+removes the halo. Preserve the original spacing, labels, and timestamps.
+
+The request-page `StageTracker` uses `civic-live-step` for a gentle outward ripple
+around the current stage. Completed, future, rejected, and cancelled stages stay
+still. This halo also stops when reduced motion is enabled.
 
 - Make the current stage and next useful action clear to a citizen. Keep staff
   screens efficient for scanning and repeated work. Preserve existing role-aware
@@ -182,10 +248,7 @@ preserve the current content and interactions.
   band. Preserve that behavior and the `.apply-wizard` scroll-padding rules.
 - Service-editor typography is intentionally scoped by `data-service-editor` in
   `app.css`. Preserve the scope, `min-h-0` scroll layout, and safe-area padding
-  instead of changing shared controls to achieve an editor-only adjustment. The
-  Requirements table keeps its semantic rows but stacks applicability and status
-  into a compact two-column row below `md`; do not restore a forced minimum width
-  that makes the editor scroll horizontally.
+  instead of changing shared controls to achieve an editor-only adjustment.
 - Reuse `civic-enter`, `civic-content-in`, `civic-stagger`, `civic-press`, and
   [stagger helpers](../src/components/motion/stagger.ts) for appropriate motion.
   [Reveal](../src/components/motion/reveal.tsx) is for below-fold sections on long
@@ -234,3 +297,6 @@ Run checks appropriate to the change: `pnpm.cmd build` includes TypeScript,
 `pnpm.cmd lint` checks source, and focused tests cover changed behavior. Keep
 documentation-only work to link/content validation. Update this guide when a
 deliberate shared UI convention changes.
+
+Image fitting, zoom, magnifier, and resize regressions run without authentication:
+`pnpm.cmd exec playwright test --config=tests/file-preview/playwright.config.ts`.

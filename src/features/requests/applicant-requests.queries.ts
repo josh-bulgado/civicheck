@@ -6,6 +6,8 @@ import { requestFieldDisplayOf } from "~/features/requests/request-field-labels"
 import { loadAddableUploads } from "~/features/requests/missing-uploads.server";
 import { readRequestMessages } from "~/features/requests/request-messages.server";
 import { loadServiceCatalogue } from "~/features/services/services.catalogue";
+import { readRequestFeedback } from "~/features/feedback/feedback.server";
+import type { RequestFeedback } from "~/features/feedback/feedback";
 
 /** The service a request is for, as the applicant's list embeds it. */
 export interface RequestServiceName {
@@ -114,6 +116,17 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
           )
         : [];
 
+    // An optional survey must not block access to a completed request.
+    let feedback: RequestFeedback | null = null;
+    let feedbackUnavailable = false;
+    if (row.status === "released") {
+      try {
+        feedback = await readRequestFeedback(supabase, row.id);
+      } catch {
+        feedbackUnavailable = true;
+      }
+    }
+
     return {
       id: row.id,
       trackingNumber: row.tracking_number,
@@ -133,6 +146,8 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
       referenceNumberLabel: service?.reference_number_label ?? null,
       allowsMessages,
       messages,
+      feedback,
+      feedbackUnavailable,
       ...requestFieldDisplayOf(row),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
