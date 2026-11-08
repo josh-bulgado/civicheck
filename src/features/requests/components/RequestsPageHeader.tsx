@@ -1,10 +1,20 @@
-import { useState } from "react";
-import { QrCode } from "lucide-react";
+import { lazy, Suspense, useState } from "react";
+import { Plus, QrCode } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { PageHeaderCard } from "~/components/ui/page-header-card";
-import { QrScannerDialog } from "./QrScannerDialog";
-import { WalkInIntakeDialog } from "./WalkInIntakeDialog";
 import type { EncodableService } from "../walk-in-intake.queries";
+
+const loadQrScannerDialog = () =>
+  import("./QrScannerDialog").then(({ QrScannerDialog }) => ({
+    default: QrScannerDialog,
+  }));
+const loadWalkInIntakeDialog = () =>
+  import("./WalkInIntakeDialog").then(({ WalkInIntakeDialog }) => ({
+    default: WalkInIntakeDialog,
+  }));
+
+const LazyQrScannerDialog = lazy(loadQrScannerDialog);
+const LazyWalkInIntakeDialog = lazy(loadWalkInIntakeDialog);
 
 interface RequestsPageHeaderProps {
   /** Set when the viewer is department-scoped (staff/supervisor). */
@@ -28,6 +38,7 @@ export function RequestsPageHeader({
   onScan,
 }: RequestsPageHeaderProps) {
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [walkInOpen, setWalkInOpen] = useState(false);
 
   return (
     <PageHeaderCard
@@ -42,23 +53,48 @@ export function RequestsPageHeader({
           size="lg"
           shape="pill"
           onClick={() => setScannerOpen(true)}
+          onPointerEnter={() => void loadQrScannerDialog()}
+          onFocus={() => void loadQrScannerDialog()}
         >
           <QrCode aria-hidden="true" data-icon="inline-start" />
           Scan Tracking QR
         </Button>
         {encodableServices ? (
-          <WalkInIntakeDialog
-            services={encodableServices}
-            onChanged={() => onWalkInEncoded?.()}
-          />
+          <Button
+            type="button"
+            shape="pill"
+            size="lg"
+            disabled={encodableServices.length === 0}
+            onClick={() => setWalkInOpen(true)}
+            onPointerEnter={() => void loadWalkInIntakeDialog()}
+            onFocus={() => void loadWalkInIntakeDialog()}
+          >
+            <Plus aria-hidden="true" data-icon="inline-start" />
+            Encode Walk-in
+          </Button>
         ) : null}
       </div>
 
-      <QrScannerDialog
-        open={scannerOpen}
-        onOpenChange={setScannerOpen}
-        onDecode={onScan}
-      />
+      {scannerOpen ? (
+        <Suspense fallback={null}>
+          <LazyQrScannerDialog
+            open
+            onOpenChange={setScannerOpen}
+            onDecode={onScan}
+          />
+        </Suspense>
+      ) : null}
+      {walkInOpen && encodableServices ? (
+        <Suspense fallback={null}>
+          <LazyWalkInIntakeDialog
+            services={encodableServices}
+            onChanged={() => onWalkInEncoded?.()}
+            open
+            onOpenChange={setWalkInOpen}
+            showTrigger={false}
+          />
+        </Suspense>
+      ) : null}
     </PageHeaderCard>
   );
 }

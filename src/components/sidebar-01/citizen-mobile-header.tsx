@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import * as React from "react";
 import { useLocation } from "@tanstack/react-router";
 import { QuietLink } from "~/components/quiet-link";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
@@ -12,7 +12,6 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { openCommandPalette } from "~/components/sidebar-01/command-palette";
-import { SettingsDialog } from "~/features/account/components/SettingsDialog";
 import {
   getDisplayName,
   getInitials,
@@ -22,6 +21,12 @@ import {
 import { ThemeSwitch } from "~/components/theme-switch";
 import { NotificationsPopover } from "~/features/notifications/components/NotificationsPopover";
 import { loadPaletteDefaults } from "~/features/search/palette-defaults";
+
+const SettingsDialog = React.lazy(() =>
+  import("~/features/account/components/SettingsDialog").then((module) => ({
+    default: module.SettingsDialog,
+  })),
+);
 
 interface CitizenMobileHeaderProps {
   account: AccountProfile | null;
@@ -42,7 +47,8 @@ export function CitizenMobileHeader({
   unreadNotifications,
 }: CitizenMobileHeaderProps) {
   const { pathname } = useLocation();
-  const [settingsTab, setSettingsTab] = useState<SettingsTab | null>(null);
+  const [settingsTab, setSettingsTab] = React.useState<SettingsTab | null>(null);
+  const [settingsLoaded, setSettingsLoaded] = React.useState(false);
   const name = account ? getDisplayName(account) : "CiviCheck User";
 
   return (
@@ -105,7 +111,10 @@ export function CitizenMobileHeader({
           className="w-56 rounded-[20px] bg-popover p-2 shadow-portal-menu ring-0"
         >
           <DropdownMenuItem
-            onClick={() => setSettingsTab("profile")}
+            onClick={() => {
+              setSettingsLoaded(true);
+              setSettingsTab("profile");
+            }}
             className="h-12 gap-3 rounded-[14px] px-3.5 text-[15px] font-medium focus:bg-portal-panel"
           >
             <Settings className="size-5 text-primary!" aria-hidden="true" />
@@ -122,14 +131,16 @@ export function CitizenMobileHeader({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {account ? (
-        <SettingsDialog
-          open={settingsTab !== null}
-          onOpenChange={(open) => setSettingsTab(open ? "profile" : null)}
-          tab={settingsTab ?? "profile"}
-          onTabChange={setSettingsTab}
-          account={account}
-        />
+      {account && settingsLoaded ? (
+        <React.Suspense fallback={null}>
+          <SettingsDialog
+            open={settingsTab !== null}
+            onOpenChange={(open) => setSettingsTab(open ? "profile" : null)}
+            tab={settingsTab ?? "profile"}
+            onTabChange={setSettingsTab}
+            account={account}
+          />
+        </React.Suspense>
       ) : null}
     </header>
   );

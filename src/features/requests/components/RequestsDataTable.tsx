@@ -32,6 +32,36 @@ const COLUMN_LABELS_WITHOUT_PAYMENT = Object.fromEntries(
 
 const NEXT_REQUEST_HOTKEY: HotkeyChord = "J";
 const PREVIOUS_REQUEST_HOTKEY: HotkeyChord = "K";
+const MINUTE_MS = 60_000;
+
+/** One clock for every age and expiring claim in the visible page. */
+function useRequestQueueClock(loaderNow: number) {
+  const [currentTime, setCurrentTime] = useState(loaderNow);
+
+  useEffect(() => {
+    let timer: number | undefined;
+    const refresh = () => {
+      const now = Date.now();
+      setCurrentTime(now);
+      window.clearTimeout(timer);
+      timer = window.setTimeout(refresh, MINUTE_MS - (now % MINUTE_MS));
+    };
+    const handleVisibility = () => {
+      if (!document.hidden) refresh();
+    };
+
+    refresh();
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [loaderNow]);
+
+  return currentTime;
+}
 
 /**
  * Moves focus to the next or previous request link. The links are the rows'
@@ -82,6 +112,7 @@ export function RequestsDataTable({
   const [showLoadingRows, setShowLoadingRows] = useState(false);
   const [columnVisibility, setColumnVisibility] =
     useState<ColumnVisibilityState>({});
+  const currentTime = useRequestQueueClock(queue.now);
 
   useEffect(() => {
     if (!isQueueLoading) {
@@ -106,10 +137,10 @@ export function RequestsDataTable({
   const columns = useMemo(
     () =>
       createRequestColumns({
-        now: queue.now,
+        now: currentTime,
         showDepartment: !scopedDepartmentName,
       }),
-    [queue.now, scopedDepartmentName],
+    [currentTime, scopedDepartmentName],
   );
   const paymentColumnIsAvailable = showsPaymentColumn(filters);
   const resolvedColumnVisibility = useMemo(

@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import type { AppColumnDef } from "~/lib/table";
 import { QuietLink as Link } from "~/components/quiet-link";
 import { Badge } from "~/components/ui/badge";
@@ -94,39 +93,13 @@ function TimeInStage({
   request: StaffRequestRow;
   now: number;
 }) {
-  const [currentTime, setCurrentTime] = useState(now);
   const closed = requestTurn(request) === "none";
-
-  // Each age owns its clock so ticking never rebuilds the table or its controls.
-  useEffect(() => {
-    const startedAt = Date.parse(request.updatedAt);
-    if (closed || !Number.isFinite(startedAt)) return;
-
-    let timer: number | undefined;
-    const refreshClock = () => {
-      const current = Date.now();
-      setCurrentTime(current);
-      window.clearTimeout(timer);
-      // Align to this request's next completed minute, even after a sleeping tab.
-      const elapsed = Math.max(0, current - startedAt);
-      timer = window.setTimeout(refreshClock, 60_000 - (elapsed % 60_000));
-    };
-
-    refreshClock();
-    window.addEventListener("focus", refreshClock);
-    document.addEventListener("visibilitychange", refreshClock);
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener("focus", refreshClock);
-      document.removeEventListener("visibilitychange", refreshClock);
-    };
-  }, [now, request.updatedAt, closed]);
 
   // A released or rejected request is not waiting on anyone.
   if (closed) return <NotApplicable />;
 
-  const elapsed = formatTimeInStage(request.updatedAt, currentTime);
-  const tone = waitTone(request, currentTime);
+  const elapsed = formatTimeInStage(request.updatedAt, now);
+  const tone = waitTone(request, now);
   return (
     <span
       className={cn("text-sm whitespace-nowrap tabular-nums", WAIT_CLASS[tone])}
@@ -141,7 +114,7 @@ function TimeInStage({
 }
 
 interface RequestColumnOptions {
-  /** The loader's clock, so the server and the browser agree on every age. */
+  /** One shared clock, initially the loader's so SSR and hydration agree. */
   now: number;
   /** Admins see several departments; a scoped account sees one, so it is noise. */
   showDepartment: boolean;
