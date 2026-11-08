@@ -97,7 +97,7 @@ design change.
 | Form controls | [Field](../src/components/ui/field.tsx), `FieldGroup`, `FieldLabel`, `FieldDescription`, `FieldError`, and existing input/select wrappers. Keep labels associated with controls; use `data-invalid` on the field and `aria-invalid` on its input. |
 | Settings sections | [SettingGroup](../src/components/ui/setting-group.tsx) for its labeled section header and padded/divided content. |
 | Request status | [StatusPill](../src/features/requests/components/StatusPill.tsx) and [request-status.ts](../src/features/services/request-status.ts). Reuse `getStatusDetails`, audience-specific notes, and timeline helpers instead of inventing labels or colors. |
-| Other status badges | [Badge](../src/components/ui/badge.tsx): `info`, `progress`, `success`, `warning`, `neutral`, `destructive`; service classifications have their own variants. |
+| Other status badges | [Badge](../src/components/ui/badge.tsx): `info`, `progress`, `success`, `warning`, `neutral`, `destructive`; service classifications have their own variants. One-line badges remain pills; badges allowed to wrap keep a fixed soft radius as they grow taller. |
 | Notifications | Existing [Sonner wrapper](../src/components/ui/sonner.tsx) and `toast` from `sonner`. The root already mounts the toaster. Generic Base UI examples recommending a different toast system do not describe this project. |
 | Empty/error states | [Empty](../src/components/ui/empty.tsx), [Alert](../src/components/ui/alert.tsx), and the feature's existing error handling. Distinguish no records yet from no filter matches. |
 | Loading | [PageSkeleton / TablePageSkeleton](../src/components/feedback/PageSkeleton.tsx), feature skeletons, [Skeleton](../src/components/ui/skeleton.tsx), and [Spinner](../src/components/ui/spinner.tsx). Match the loaded layout and preserve the router's pending timing. |
@@ -182,7 +182,10 @@ preserve the current content and interactions.
   band. Preserve that behavior and the `.apply-wizard` scroll-padding rules.
 - Service-editor typography is intentionally scoped by `data-service-editor` in
   `app.css`. Preserve the scope, `min-h-0` scroll layout, and safe-area padding
-  instead of changing shared controls to achieve an editor-only adjustment.
+  instead of changing shared controls to achieve an editor-only adjustment. The
+  Requirements table keeps its semantic rows but stacks applicability and status
+  into a compact two-column row below `md`; do not restore a forced minimum width
+  that makes the editor scroll horizontally.
 - Reuse `civic-enter`, `civic-content-in`, `civic-stagger`, `civic-press`, and
   [stagger helpers](../src/components/motion/stagger.ts) for appropriate motion.
   [Reveal](../src/components/motion/reveal.tsx) is for below-fold sections on long
