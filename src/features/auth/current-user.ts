@@ -17,6 +17,7 @@
 import type { AccountProfile } from "~/features/account/account.types";
 import { clearFileCache } from "~/lib/file-preview-cache";
 import { clearAuditEventsCache } from "~/features/system-admin/audit-events.cache";
+import { clearRequestQueueMetadata } from "~/features/requests/request-queue-metadata.cache";
 import type { Role } from "~/lib/permissions";
 
 type CurrentUser = AccountProfile | null;
@@ -98,4 +99,5 @@ export function clearCurrentUser(): void {
   // not outlive that identity in this tab.
   clearFileCache();
   clearAuditEventsCache();
+  clearRequestQueueMetadata();
 }

@@ -1,3 +1,4 @@
+import { useCallback, useEffect } from "react";
 import {
   createFileRoute,
   useNavigate,
@@ -10,6 +11,11 @@ import {
   getMyDepartmentScopeFn,
 } from "~/features/requests/requests.queries";
 import { getEncodableServicesFn } from "~/features/requests/walk-in-intake.queries";
+import {
+  primeRequestQueueMetadata,
+  readRequestQueueMetadata,
+  requestQueueMetadataKey,
+} from "~/features/requests/request-queue-metadata.cache";
 import {
   parseDepartmentFilter,
   parseAttentionFilter,
@@ -69,8 +75,13 @@ export const Route = createFileRoute("/_authed/_dashboard/requests/")({
   loader: async ({ context, deps }) => {
     const role = context.user!.role as Role;
     const canEncode = hasPermission(role, "requests:encode_walkin");
+    const metadataKey = requestQueueMetadataKey(
+      context.user!.id,
+      role,
+      canEncode,
+    );
 
-    const [queue, departments, scope, services] = await Promise.all([
+    const [queue, metadata] = await Promise.all([
       getRequestQueuePageFn({
         data: {
           ...deps,
@@ -80,12 +91,17 @@ export const Route = createFileRoute("/_authed/_dashboard/requests/")({
           desc: deps.sort ? (deps.desc ?? false) : true,
         },
       }),
-      getActiveDepartments(),
-      getMyDepartmentScopeFn(),
-      canEncode ? getEncodableServicesFn() : Promise.resolve([]),
+      readRequestQueueMetadata(metadataKey, async () => {
+        const [departments, scope, services] = await Promise.all([
+          getActiveDepartments(),
+          getMyDepartmentScopeFn(),
+          canEncode ? getEncodableServicesFn() : Promise.resolve([]),
+        ]);
+        return { departments, scope, services };
+      }),
     ]);
 
-    return { queue, departments, scope, services, canEncode };
+    return { queue, ...metadata, metadataKey, canEncode };
   },
   staleTime: 15_000,
   // Keep the current queue visible while filters or pagination load new rows.
@@ -94,12 +110,27 @@ export const Route = createFileRoute("/_authed/_dashboard/requests/")({
 });
 
 function RequestQueueRoute() {
-  const { queue, departments, scope, services, canEncode } =
+  const { queue, departments, scope, services, metadataKey, canEncode } =
     Route.useLoaderData();
   const filters = Route.useSearch();
   const navigate = useNavigate({ from: "/requests/" });
   const router = useRouter();
-  useRealtimeRefresh({ tables: ["requests", "application_logs"] });
+  const refreshQueue = useCallback(
+    () =>
+      router.invalidate({
+        filter: (match) => match.routeId === Route.id,
+      }),
+    [router],
+  );
+
+  useEffect(() => {
+    primeRequestQueueMetadata(metadataKey, { departments, scope, services });
+  }, [departments, metadataKey, scope, services]);
+
+  useRealtimeRefresh({
+    tables: ["requests", "application_logs"],
+    onRefresh: () => void refreshQueue(),
+  });
 
   return (
     <div>
@@ -110,7 +141,7 @@ function RequestQueueRoute() {
         onFiltersChange={(next) => navigate({ search: next })}
         scopedDepartmentName={scope.isScoped ? scope.departmentName : null}
         encodableServices={canEncode ? services : null}
-        onWalkInEncoded={() => router.invalidate()}
+        onWalkInEncoded={() => void refreshQueue()}
       />
     </div>
   );

@@ -384,7 +384,7 @@ export function RequirementsSection({
           </div>
         </CardHeader>
       ) : null}
-      <CardContent className="flex flex-col gap-4 pt-4">
+      <CardContent className="flex min-w-0 flex-col gap-4 pt-4">
         {sharedWith.length > 0 ? (
           <Alert variant="warning">
             <AlertTriangle aria-hidden="true" />
@@ -401,8 +401,8 @@ export function RequirementsSection({
           <PanelSkeleton label="Loading checklist" rows={3} className="py-4" />
         ) : (
           <>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="relative sm:max-w-sm sm:flex-1">
+            <div className="flex min-w-0 items-center justify-between gap-2 sm:gap-3">
+              <div className="relative min-w-0 flex-1 sm:max-w-sm">
                 <Search
                   aria-hidden="true"
                   className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
@@ -488,7 +488,7 @@ export function RequirementsSection({
                   setQuery("");
                   setTab(next as RequirementTab);
                 }}
-                className="gap-3"
+                className="min-w-0 gap-3"
               >
                 <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
                   <div className="max-w-full overflow-x-auto">
@@ -546,7 +546,10 @@ export function RequirementsSection({
                   ) : null}
                 </div>
 
-                <TabsContent value={activeTab} className="flex flex-col gap-3">
+                <TabsContent
+                  value={activeTab}
+                  className="flex min-w-0 flex-col gap-3"
+                >
                   {activeTab === "other" ? (
                     <p className="text-xs text-muted-foreground">
                       Scoped by a condition that excludes this variant. Edit it

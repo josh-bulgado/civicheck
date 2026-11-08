@@ -15,9 +15,31 @@ export default defineConfig({
     // including when pnpm resolves dependencies through different real paths.
     dedupe: ["react", "react-dom"],
   },
-  plugins: [devtools(), tailwindcss(), tanstackStart(), viteReact(), nitro({
-    // TanStack server functions share Nitro's Vercel function, including login
-    // and reset. Leave room for bounded waitUntil email delivery after response.
-    vercel: { functions: { maxDuration: 60 } },
-  })],
+  plugins: [
+    devtools(),
+    tailwindcss(),
+    tanstackStart({
+      router: {
+        codeSplittingOptions: {
+          // Keep each route's data and UI together instead of placing every
+          // route loader in the application-wide critical bundle.
+          defaultBehavior: [
+            [
+              "loader",
+              "component",
+              "pendingComponent",
+              "errorComponent",
+              "notFoundComponent",
+            ],
+          ],
+        },
+      },
+    }),
+    viteReact(),
+    nitro({
+      // TanStack server functions share Nitro's Vercel function, including login
+      // and reset. Leave room for bounded waitUntil email delivery after response.
+      vercel: { functions: { maxDuration: 60 } },
+    }),
+  ],
 });

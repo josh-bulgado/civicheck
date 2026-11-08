@@ -94,6 +94,9 @@ function sentence(event: HistoryEvent): ReactNode {
   if (event.status === "posting_updated") return <>{actor} updated the notice-posting date</>;
   if (event.status === "hard_copies_validated") return <>{actor} validated the originals and hard copies at the office</>;
 
+  if (event.status === "identity_verified" || event.status === "handover_confirmed") {
+    return <>{actor} {event.label}</>;
+  }
   if (event.kind === "status") {
     const status = getStatusDetails(event.status);
     return (

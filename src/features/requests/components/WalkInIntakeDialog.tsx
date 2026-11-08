@@ -35,13 +35,19 @@ import {
 interface WalkInIntakeDialogProps {
   services: EncodableService[];
   onChanged: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  showTrigger?: boolean;
 }
 
 export function WalkInIntakeDialog({
   services,
   onChanged,
+  open,
+  onOpenChange,
+  showTrigger = true,
 }: WalkInIntakeDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [requirementsOpen, setRequirementsOpen] = useState(false);
   const [serviceCode, setServiceCode] = useState("");
@@ -88,6 +94,12 @@ export function WalkInIntakeDialog({
     setRequirementsOpen(false);
   }
 
+  function setDialogOpen(next: boolean) {
+    if (open === undefined) setInternalOpen(next);
+    onOpenChange?.(next);
+    if (!next) reset();
+  }
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setSubmitting(true);
@@ -121,23 +133,22 @@ export function WalkInIntakeDialog({
 
   return (
     <>
-      <Button
-        type="button"
-        shape="pill"
-        size="lg"
-        onClick={() => setOpen(true)}
-        disabled={services.length === 0}
-      >
-        <Plus aria-hidden="true" data-icon="inline-start" />
-        Encode Walk-in
-      </Button>
+      {showTrigger ? (
+        <Button
+          type="button"
+          shape="pill"
+          size="lg"
+          onClick={() => setDialogOpen(true)}
+          disabled={services.length === 0}
+        >
+          <Plus aria-hidden="true" data-icon="inline-start" />
+          Encode Walk-in
+        </Button>
+      ) : null}
 
       <Dialog
-        open={open}
-        onOpenChange={(next) => {
-          setOpen(next);
-          if (!next) reset();
-        }}
+        open={open ?? internalOpen}
+        onOpenChange={setDialogOpen}
       >
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
@@ -273,7 +284,7 @@ export function WalkInIntakeDialog({
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={() => setOpen(false)}
+                    onClick={() => setDialogOpen(false)}
                   >
                     Cancel
                   </Button>
@@ -305,10 +316,7 @@ export function WalkInIntakeDialog({
               </Alert>
               <div className="flex justify-end">
                 <Button
-                  onClick={() => {
-                    setOpen(false);
-                    reset();
-                  }}
+                  onClick={() => setDialogOpen(false)}
                 >
                   Done
                 </Button>

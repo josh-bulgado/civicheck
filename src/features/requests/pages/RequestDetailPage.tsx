@@ -30,9 +30,11 @@ import {
   planRequestActions,
   type PlannedAction,
   type TransitionDialog,
+  type TransitionConfirmations,
 } from "~/features/requests/request-actions";
 import {
   getStatusDetails,
+  hasCurrentOriginalDocumentCheck,
   type RequestStatus,
 } from "~/features/requests/request-workflow";
 import { quickReplies } from "~/features/requests/request-messages";
@@ -45,6 +47,7 @@ import { RequestActionBar } from "~/features/requests/components/RequestActionBa
 import { RequestClaimControl } from "~/features/requests/components/RequestClaimControl";
 import { RequestChatDrawer } from "~/features/requests/components/RequestChatDrawer";
 import { RequestDetailHeader } from "~/features/requests/components/RequestDetailHeader";
+import { RequestHandoffConcerns } from "~/features/requests/components/RequestHandoffConcerns";
 import { RequestHistoryLog } from "~/features/requests/components/RequestHistoryLog";
 import { RequestMessagesCard } from "~/features/requests/components/RequestMessagesCard";
 import { RequestNextBar } from "~/features/requests/components/RequestNextBar";
@@ -59,6 +62,8 @@ const CONFIRM_REJECTION_SERVICE_CODES = ["OTCOLB-MARITAL", "OTCOLB-NONMARITAL"];
 const CHAT_HOTKEY: HotkeyChord = "C";
 
 const DIALOG_TARGET: Record<TransitionDialog, RequestStatus> = {
+  return: "under_validation",
+  originals: "ready_for_release",
   incomplete: "incomplete",
   reject: "rejected",
   release: "released",
@@ -185,7 +190,7 @@ export default function RequestDetailPage({
     onTabChange("documents");
   }
 
-  async function runTransition(to: RequestStatus, remarks: string) {
+  async function runTransition(to: RequestStatus, remarks: string, confirmations: TransitionConfirmations = {}) {
     setBusy(true);
     try {
       // Decisions still in their undo window are saved first, so the server
@@ -196,7 +201,7 @@ export default function RequestDetailPage({
         return false;
       }
       const res = await advanceRequestStatusFn({
-        data: { requestId: request.id, toStatus: to, remarks },
+        data: { requestId: request.id, toStatus: to, remarks, ...confirmations },
       });
       if (res.error) {
         toast.error("Could not update this request", { description: res.message });
@@ -223,8 +228,8 @@ export default function RequestDetailPage({
     void runTransition(action.to, noteShown ? note.trim() : "");
   }
 
-  async function handleDialogConfirm(type: TransitionDialog, text: string) {
-    if (await runTransition(DIALOG_TARGET[type], text)) setDialog(null);
+  async function handleDialogConfirm(type: TransitionDialog, text: string, confirmations: TransitionConfirmations = {}) {
+    if (await runTransition(DIALOG_TARGET[type], text, confirmations)) setDialog(null);
   }
 
   // Escape goes back to the queue once nothing else is open. A note being
@@ -295,6 +300,13 @@ export default function RequestDetailPage({
         editor={ownsStageClaim ? {
           requestId: request.id, updatedAt: request.updatedAt, createdAt: request.createdAt, onSaved: onUpdated,
         } : undefined}
+      />
+
+      <RequestHandoffConcerns
+        status={request.status}
+        logs={request.logs}
+        attachments={attachments}
+        onViewHistory={() => onTabChange("history")}
       />
 
       <Tabs value={tab} onValueChange={(value) => onTabChange(value as RequestDetailTab)} className="gap-4">
@@ -402,6 +414,7 @@ export default function RequestDetailPage({
         context={{
           serviceCode: request.serviceCode,
           applicantName: request.applicantName,
+          originalsAlreadyChecked: hasCurrentOriginalDocumentCheck(request.logs),
           copies: request.copies,
           feesDue: request.feesDue,
           orNumber: request.orNumber,

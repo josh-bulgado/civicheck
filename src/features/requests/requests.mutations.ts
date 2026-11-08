@@ -16,6 +16,7 @@ import {
   isPaymentSettled,
   isRequestStatus,
   needsOfficeFinalValidation,
+  needsOriginalDocumentCheck,
   type RequestStatus,
 } from "~/features/requests/request-workflow";
 import {
@@ -31,6 +32,9 @@ import { signAttachmentVersion } from "~/features/requests/attachment-signing.se
 const advanceRequestStatusSchema = z.object({
   requestId: z.string().uuid(),
   toStatus: z.string(),
+  originalsConfirmed: z.boolean().optional(),
+  identityVerified: z.boolean().optional(),
+  handoverConfirmed: z.boolean().optional(),
   remarks: z.string().optional(),
 });
 const verifyPaymentSchema = z.object({
@@ -204,70 +208,18 @@ export const releaseRequestStageFn = createServerFn({ method: "POST" })
     return { error: false };
   });
 
-/**
- * Processing and release both mean every uploaded requirement is accepted
- * (CLAUDE.md §4). The moment a document stops being accepted — its decision is
- * reopened, or it is rejected — the request no longer qualifies, so it goes back
- * to validation where staff can finish the re-check (and mark it incomplete if
- * need be). Any other status is left alone.
- *
- * Payment is not touched: a payment the cashier already verified stays verified
- * and carries over when the request is marked ready for release again.
- *
- * The note is audience-neutral on purpose: applicants see status entries, and
- * the staff member's reason for reopening lives in the `document_reverted` log
- * they don't see. Returns whether the request actually moved.
- */
-async function returnToValidationIfNeeded(
+/** Notify only after the database has committed a return to validation. */
+async function notifyReturnToValidation(
   supabase: SupabaseClient,
-  request: {
-    id: string;
-    status: string | null;
-    trackingNumber: string | null;
-    actorId: string;
-  },
+  request: { id: string; trackingNumber: string | null },
 ) {
-  if (
-    !isRequestStatus(request.status) ||
-    !RETURNABLE_TO_VALIDATION.includes(request.status)
-  ) {
-    return false;
-  }
-
-  const { data: updated, error } = await supabase
-    .from("requests")
-    .update({ status: "under_validation", updated_at: new Date().toISOString() })
-    // Re-assert the status we read, same as advanceRequestStatusFn.
-    .eq("id", request.id)
-    .eq("status", request.status)
-    .select("id");
-
-  if (error) {
-    console.error("Failed to return request to validation", error);
-    return false;
-  }
-  if (!updated || updated.length === 0) return false;
-
-  const remarks = "Returned to validation — staff are re-checking a document.";
-  const { error: logError } = await supabase.from("application_logs").insert({
-    request_id: request.id,
-    performed_by_profile_id: request.actorId,
-    action_status: "under_validation",
-    remarks,
-  });
-  if (logError) {
-    console.error("Failed to write return-to-validation audit log", logError);
-  }
-
   if (request.trackingNumber) {
     const content = buildStatusChangeEmail(
-      "under_validation",
-      request.trackingNumber,
-      remarks,
+      "under_validation", request.trackingNumber,
+      "Returned to validation — staff are re-checking a document.",
     );
     await dispatchApplicantNotification(supabase, request.id, content);
   }
-  return true;
 }
 
 export const advanceRequestStatusFn = createServerFn({ method: "POST" })
@@ -363,7 +315,28 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
       if (blocked) return { error: true, message: blocked };
     }
 
+    let originalsAlreadyChecked = false;
+    if (toStatus === "released" && needsOriginalDocumentCheck(request.request_type, "ready_for_release")) {
+      const { data: checked, error } = await supabase.rpc("has_current_original_document_check", {
+        p_request_id: data.requestId,
+      });
+      if (error) return { error: true, message: error.message };
+      originalsAlreadyChecked = checked === true;
+    }
+    if (needsOriginalDocumentCheck(request.request_type, toStatus, originalsAlreadyChecked) && data.originalsConfirmed !== true) {
+      return { error: true, message: "Confirm that you checked the original documents before continuing." };
+    }
+    if (toStatus === "released" && data.identityVerified !== true) {
+      return { error: true, message: "Confirm that you verified the claimant's identity and authority." };
+    }
+    if (toStatus === "released" && request.request_type !== "EMAIL_INQUIRY" && data.handoverConfirmed !== true) {
+      return { error: true, message: "Confirm that you are handing over the document." };
+    }
     const remarks = data.remarks?.trim();
+    const returning = toStatus === "under_validation" && RETURNABLE_TO_VALIDATION.includes(from);
+    if (returning && !remarks) {
+      return { error: true, message: "Explain what needs rechecking before returning to validation." };
+    }
     if (REASON_REQUIRED.includes(toStatus) && !remarks) {
       return {
         error: true,
@@ -371,38 +344,19 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
       };
     }
 
-    const { data: updated, error: updateError } = await supabase
-      .from("requests")
-      .update({
+    const { error: updateError } = await supabase.rpc("save_staff_request_action", {
+      p_request_id: data.requestId,
+      p_expected_status: from,
+      p_action: "status",
+      p_values: {
         status: toStatus,
-        updated_at: new Date().toISOString(),
-      })
-      // Re-assert the status we read, so two staff acting at once can't both win.
-      .eq("id", data.requestId)
-      .eq("status", from)
-      .select("id");
-
-    if (updateError) {
-      return { error: true, message: updateError.message };
-    }
-    if (!updated || updated.length === 0) {
-      return {
-        error: true,
-        message: "Someone else just updated this request. Refresh and try again.",
-      };
-    }
-
-    const { error: logError } = await supabase.from("application_logs").insert({
-      request_id: data.requestId,
-      performed_by_profile_id: user.id,
-      action_status: toStatus,
-      // Kept audience-neutral on purpose; the applicant and staff views each
-      // swap in their own descriptive note when displaying this fallback.
-      remarks: remarks || `Advanced from "${getStatusDetails(from).label}".`,
+        originals_confirmed: data.originalsConfirmed === true,
+        identity_verified: data.identityVerified === true,
+        handover_confirmed: data.handoverConfirmed === true,
+      },
+      p_remarks: remarks || `Advanced from "${getStatusDetails(from).label}".`,
     });
-    if (logError) {
-      console.error("Failed to write request status audit log", logError);
-    }
+    if (updateError) return { error: true, message: updateError.message };
 
     const notificationContent = buildStatusChangeEmail(
       toStatus,
@@ -442,18 +396,17 @@ export const saveMarriagePostingFn = createServerFn({ method: "POST" })
     if (data.postingStartDate < postingToday(new Date(request.created_at))) {
       return { error: true, message: "The posting date cannot precede the request." };
     }
-    const { data: updated, error: updateError } = await supabase.from("requests")
-      .update({ posting_start_date: data.postingStartDate })
-      .eq("id", data.requestId).eq("status", "processing")
-      .eq("updated_at", data.expectedUpdatedAt).select("id");
-    if (updateError) return { error: true, message: updateError.message };
-    if (!updated?.length) return { error: true, message: "This request changed. Refresh and try again." };
-    const { error: logError } = await supabase.from("application_logs").insert({
-      request_id: data.requestId, performed_by_profile_id: user.id,
-      action_status: "posting_updated",
-      remarks: `Notice-posting date recorded: ${data.postingStartDate}. Posting lasts 10 calendar days.`,
+    const { error: updateError } = await supabase.rpc("save_staff_request_action", {
+      p_request_id: data.requestId,
+      p_expected_status: request.status,
+      p_action: "posting_updated",
+      p_values: {
+        posting_start_date: data.postingStartDate,
+        expected_updated_at: data.expectedUpdatedAt,
+      },
+      p_remarks: `Notice-posting date recorded: ${data.postingStartDate}. Posting lasts 10 calendar days.`,
     });
-    if (logError) console.error("Failed to record posting audit log", logError);
+    if (updateError) return { error: true, message: updateError.message };
     return { error: false };
   });
 
@@ -461,7 +414,7 @@ export const saveMarriagePostingFn = createServerFn({ method: "POST" })
 export const verifyPaymentFn = createServerFn({ method: "POST" })
   .validator(verifyPaymentSchema)
   .handler(async ({ data }) => {
-    const { supabase, user } = await requireActiveSession("requests:collect_payment");
+    const { supabase } = await requireActiveSession("requests:collect_payment");
 
     const { data: request, error: fetchError } = await supabase
       .from("requests")
@@ -496,44 +449,18 @@ export const verifyPaymentFn = createServerFn({ method: "POST" })
       }
     }
 
-    const { data: updated, error } = await supabase
-      .from("requests")
-      .update({
-        payment_status: "verified",
-        or_number: orNumber,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", data.requestId)
-      // Re-assert everything the decision above was based on, so a concurrent
-      // change can't slip payment through after this check passed: the status,
-      // the stored fee (fee vs. fee-free decides whether an OR is required),
-      // and that it is still unpaid (a second click must not overwrite the OR).
-      .eq("status", "ready_for_release")
-      .eq("fees_due", request.fees_due)
-      .eq("payment_status", "unpaid")
-      .select("id");
-
-    if (error) {
-      if (error.code === "23505") {
-        return { error: true, message: "That OR number is already recorded." };
-      }
-      return { error: true, message: error.message };
-    }
-    if (!updated || updated.length === 0) {
-      return {
-        error: true,
-        message: "This request changed while you were working on it. Refresh and try again.",
-      };
-    }
-
-    await supabase.from("application_logs").insert({
-      request_id: data.requestId,
-      performed_by_profile_id: user.id,
-      action_status: "payment_verified",
-      remarks: isFeeFree
+    const { error } = await supabase.rpc("save_staff_request_action", {
+      p_request_id: data.requestId,
+      p_expected_status: request.status,
+      p_action: "payment_verified",
+      p_values: { fees_due: request.fees_due, or_number: orNumber, confirm_no_fee: data.confirmNoFee === true },
+      p_remarks: isFeeFree
         ? "Fee-free request confirmed by cashier — no payment due."
         : `Payment verified against OR ${orNumber}.`,
     });
+    if (error) {
+      return { error: true, message: error.code === "23505" ? "That OR number is already recorded." : error.message };
+    }
 
     if (request.request_type !== "EMAIL_INQUIRY" && request.tracking_number) {
       await dispatchApplicantNotification(supabase, data.requestId, buildCashierClearedEmail(request.tracking_number));
@@ -578,46 +505,22 @@ export const setAttachmentVerificationFn = createServerFn({ method: "POST" })
 
     const reason = data.status === "rejected" ? data.reason?.trim() : null;
 
-    const { data: updated, error } = await supabase
-      .from("requirements_attachments")
-      .update({
-        verification_status: data.status,
-        rejection_reason: reason,
-      })
-      .eq("id", data.attachmentId)
-      .eq("verification_status", "pending")
-      .select("id");
-
-    if (error) return { error: true, message: error.message };
-    if (!updated || updated.length === 0) {
-      return {
-        error: true,
-        message: "Another staff member already reviewed this document. Refresh and check their decision.",
-      };
-    }
-
-    const { error: logError } = await supabase.from("application_logs").insert({
-      request_id: attachment.request_id,
-      performed_by_profile_id: user.id,
-      action_status: data.status === "approved" ? "document_approved" : "document_rejected",
-      remarks:
-        data.status === "approved"
-          ? `Approved "${attachment.requirement_name}".`
-          : `Rejected "${attachment.requirement_name}": ${reason}`,
+    const { data: returnedToValidation, error } = await supabase.rpc("save_staff_request_action", {
+      p_request_id: attachment.request_id,
+      p_expected_status: requestInfo?.status,
+      p_action: "document_review",
+      p_attachment_id: data.attachmentId,
+      p_expected_verification: "pending",
+      p_values: { verification_status: data.status, rejection_reason: reason },
+      p_remarks: data.status === "approved"
+        ? `Approved "${attachment.requirement_name}".`
+        : `Rejected "${attachment.requirement_name}": ${reason}`,
     });
-    if (logError) {
-      console.error("Failed to write attachment verification audit log", logError);
-    }
-
-    // Normally a rejection can't land past validation (every document is
-    // already accepted there, and the reopen moves the request back first), but
-    // a stale page can still get here.
-    if (data.status === "rejected") {
-      await returnToValidationIfNeeded(supabase, {
+    if (error) return { error: true, message: error.message };
+    if (returnedToValidation) {
+      await notifyReturnToValidation(supabase, {
         id: attachment.request_id,
-        status: requestInfo?.status ?? null,
         trackingNumber: requestInfo?.tracking_number ?? null,
-        actorId: user.id,
       });
     }
 
@@ -705,40 +608,22 @@ export const revertAttachmentVerificationFn = createServerFn({ method: "POST" })
     const reason = data.reason.trim();
     const previousStatus = attachment.verification_status;
 
-    const { data: reopened, error } = await supabase
-      .from("requirements_attachments")
-      .update({ verification_status: "pending", rejection_reason: null })
-      .eq("id", data.attachmentId)
-      // Only the decision we read; a concurrent change is refreshed, not overwritten.
-      .eq("verification_status", previousStatus)
-      .select("id");
-
+    const { data: returnedToValidation, error } = await supabase.rpc("save_staff_request_action", {
+      p_request_id: attachment.request_id,
+      p_expected_status: requestInfo?.status,
+      p_action: "document_reverted",
+      p_attachment_id: data.attachmentId,
+      p_expected_verification: previousStatus,
+      p_values: {},
+      p_remarks: `Reopened "${attachment.requirement_name}" (was ${previousStatus}): ${reason}`,
+    });
     if (error) return { error: true, message: error.message };
-    if (!reopened || reopened.length === 0) {
-      return {
-        error: true,
-        message: "Someone else just updated this document. Refresh and try again.",
-      };
+    if (returnedToValidation) {
+      await notifyReturnToValidation(supabase, {
+        id: attachment.request_id,
+        trackingNumber: requestInfo?.tracking_number ?? null,
+      });
     }
-
-    const { error: logError } = await supabase.from("application_logs").insert({
-      request_id: attachment.request_id,
-      performed_by_profile_id: user.id,
-      action_status: "document_reverted",
-      remarks: `Reopened "${attachment.requirement_name}" (was ${previousStatus}): ${reason}`,
-    });
-    if (logError) {
-      console.error("Failed to write attachment reversal audit log", logError);
-    }
-
-    // Reopening a decision means this document is no longer accepted, so a
-    // request already in processing or release has to be re-validated.
-    const returnedToValidation = await returnToValidationIfNeeded(supabase, {
-      id: attachment.request_id,
-      status: requestInfo?.status ?? null,
-      trackingNumber: requestInfo?.tracking_number ?? null,
-      actorId: user.id,
-    });
 
     return { error: false, returnedToValidation };
   });

@@ -1,3 +1,4 @@
+import * as React from "react";
 import { QuietAnchor } from "~/components/quiet-link";
 import {
   createFileRoute,
@@ -10,19 +11,12 @@ import {
   SidebarTrigger,
 } from "~/components/ui/sidebar";
 import { AppSidebar } from "~/components/sidebar-01/app-sidebar";
-import { CitizenBottomBar } from "~/components/sidebar-01/citizen-bottom-bar";
-import { CitizenMobileHeader } from "~/components/sidebar-01/citizen-mobile-header";
-import { CitizenTopBar } from "~/components/sidebar-01/citizen-top-bar";
 import { CommandPalette } from "~/components/sidebar-01/command-palette";
+import { PageSkeleton } from "~/components/feedback/PageSkeleton";
 import { CityGovernmentIdentity } from "~/components/brand/civic-identity";
 import { ThemeSwitch } from "~/components/theme-switch";
 import { DashboardBreadcrumbs } from "~/components/sidebar-01/dashboard-breadcrumbs";
-import {
-  CITIZEN_INSET_CLASS,
-  CITIZEN_MAIN_CLASS,
-  CITIZEN_PANEL_CLASS,
-  WORKSPACE_SIDEBAR_STYLE,
-} from "~/components/sidebar-01/workspace";
+import { WORKSPACE_SIDEBAR_STYLE } from "~/components/sidebar-01/workspace";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { getUnreadNotificationSummaryFn } from "~/features/notifications/notifications.queries";
 import { invalidateNotificationPreview } from "~/features/notifications/notification-preview-cache";
@@ -33,9 +27,20 @@ import {
 import { NewNotificationToasts } from "~/features/notifications/components/NewNotificationToasts";
 import { invalidatePaletteDefaults } from "~/features/search/palette-defaults";
 import { getNotificationAudience } from "~/features/notifications/notification-audience";
-import { WelcomeTutorial } from "~/features/onboarding/components/WelcomeTutorial";
 import { getHealthAttention } from "~/features/system-admin/system-health.functions";
 import { hasPermission, type Role } from "~/lib/permissions";
+
+const CitizenDashboardShell = React.lazy(() =>
+  import("~/components/sidebar-01/citizen-dashboard-shell").then((module) => ({
+    default: module.CitizenDashboardShell,
+  })),
+);
+
+const WelcomeTutorial = React.lazy(() =>
+  import("~/features/onboarding/components/WelcomeTutorial").then((module) => ({
+    default: module.WelcomeTutorial,
+  })),
+);
 
 // Dashboard-shell layer: sidebar + top bar, for the browse/manage pages that
 // benefit from persistent navigation. The apply wizard deliberately sits
@@ -47,15 +52,16 @@ export const Route = createFileRoute("/_authed/_dashboard")({
     // The badge must never take the whole dashboard down with it. The bell's
     // popover list is deliberately not loaded here: it is fetched when the bell
     // is used, and cached (see notification-preview-cache).
-    const unread =
+    // System Health's dot follows the same rule. Start both independent reads
+    // together so neither adds a second server round trip to dashboard loads.
+    const [unread, healthNeedsAttention] = await Promise.all([
       context.user && getNotificationAudience(context.user.role as Role)
-        ? await getUnreadNotificationSummaryFn().catch(() => null)
-        : null;
-    // System Health's dot. Like the badge, it must never take the dashboard down with it.
-    const healthNeedsAttention =
+        ? getUnreadNotificationSummaryFn().catch(() => null)
+        : Promise.resolve(null),
       context.user && hasPermission(context.user.role as Role, "health:view")
-        ? await getHealthAttention().catch(() => false)
-        : false;
+        ? getHealthAttention().catch(() => false)
+        : Promise.resolve(false),
+    ]);
     return {
       healthNeedsAttention,
       unreadNotifications: unread?.count ?? 0,
@@ -158,33 +164,29 @@ function DashboardLayout() {
           <Outlet />
         </main>
       ) : isCitizen ? (
-        // The frame's sizes live in workspace.ts, shared with the loading frame.
-        <SidebarInset className={CITIZEN_INSET_CLASS}>
-          <div className={CITIZEN_PANEL_CLASS}>
-            <CitizenMobileHeader
-              account={user ?? null}
-              userId={user?.id ?? ""}
-              unreadNotifications={unreadNotifications}
-            />
-            <CitizenTopBar
-              userId={user?.id ?? ""}
-              unreadNotifications={unreadNotifications}
-            />
-            <main
-              id="main-content"
-              tabIndex={-1}
-              className={CITIZEN_MAIN_CLASS}
-            >
-              <Outlet />
-            </main>
-          </div>
-        </SidebarInset>
+        <React.Suspense
+          fallback={
+            <SidebarInset className="min-w-0 bg-transparent p-0 md:p-2.5 md:pl-0">
+              <main
+                id="main-content"
+                className="civic-workspace min-w-0 w-full bg-workspace p-4 text-foreground sm:p-6 lg:p-8"
+              >
+                <PageSkeleton />
+              </main>
+            </SidebarInset>
+          }
+        >
+          <CitizenDashboardShell
+            account={user ?? null}
+            unreadNotifications={unreadNotifications}
+          />
+        </React.Suspense>
       ) : (
         // The same frame as the applicant's: the sidebar column carries the left
         // 10px, the panel floats on the ground from `md`, and on a phone the page
         // fills the screen.
         <SidebarInset className="min-w-0 bg-transparent p-0 md:p-2.5 md:pl-0">
-          <div className={`flex w-full flex-1 flex-col md:rounded-panel md:shadow-portal-panel ${isCcroAdmin ? "bg-portal-panel" : "bg-workspace"}`}>
+          <div className={`flex min-w-0 w-full flex-1 flex-col md:rounded-panel md:shadow-portal-panel ${isCcroAdmin ? "bg-portal-panel" : "bg-workspace"}`}>
             <header className="flex h-16 shrink-0 items-center justify-between px-4 sm:px-6 lg:px-8">
               <div className="flex min-w-0 items-center gap-3">
                 {/* From md the toggle lives in the sidebar, as in the applicant
@@ -203,19 +205,22 @@ function DashboardLayout() {
             <main
               id="main-content"
               tabIndex={-1}
-              className="civic-workspace flex flex-1 flex-col px-4 pt-1 pb-4 text-foreground sm:px-6 sm:pb-6 lg:px-8 lg:pb-8"
+              className="civic-workspace flex min-w-0 flex-1 flex-col px-4 pt-1 pb-4 text-foreground sm:px-6 sm:pb-6 lg:px-8 lg:pb-8"
             >
               <Outlet />
             </main>
           </div>
         </SidebarInset>
       )}
-      {isCitizen && <CitizenBottomBar unreadNotifications={unreadNotifications} />}
       {user && audience && <NewNotificationToasts userId={user.id} lifted={isCitizen} />}
       <CommandPalette userId={user?.id} />
       {/* Lives here rather than on the dashboard page so a control anywhere in
           this layout can open it with `openWelcomeTutorial()`. */}
-      {isCitizen && <WelcomeTutorial />}
+      {isCitizen && (
+        <React.Suspense fallback={null}>
+          <WelcomeTutorial />
+        </React.Suspense>
+      )}
     </SidebarProvider>
   );
 }

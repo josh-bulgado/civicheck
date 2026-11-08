@@ -283,7 +283,7 @@ export function RequestsTableToolbar({
   ].filter(Boolean).length;
 
   return (
-    <div className="flex flex-wrap items-center gap-3 2xl:flex-nowrap">
+    <div className="flex flex-wrap items-center gap-3">
       <TableSearch
         value={search}
         onChange={onSearchChange}
@@ -291,16 +291,18 @@ export function RequestsTableToolbar({
         label="Search requests"
       />
 
-      <FilterChips
-        label="Filter by stage"
-        value={filters.stage ? String(filters.stage) : ALL}
-        onValueChange={(value) =>
-          onFilterChange({
-            stage: value === ALL ? undefined : parseWorkflowStage(Number(value)),
-          })
-        }
-        options={stageChips}
-      />
+      <div className="-m-1 max-w-full shrink-0 overflow-x-auto p-1 [&>div]:flex-nowrap">
+        <FilterChips
+          label="Filter by stage"
+          value={filters.stage ? String(filters.stage) : ALL}
+          onValueChange={(value) =>
+            onFilterChange({
+              stage: value === ALL ? undefined : parseWorkflowStage(Number(value)),
+            })
+          }
+          options={stageChips}
+        />
+      </div>
 
       {/* Urgency combines with any stage, so it is a toggle rather than a chip. */}
       <Toggle

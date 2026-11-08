@@ -168,52 +168,75 @@ function renderCodePanel(code: string) {
 }
 
 const VERIFICATION_EMAIL_COPY = {
-  heading: "Verify your email for CiviCheck",
-  introduction:
-    "We received a request to create a CiviCheck account using this email address.",
+  heading: "Your verification code for CiviCheck is",
   instructions:
-    "Enter the following code on the CiviCheck email verification page to continue:",
-  expiry: "This code can be used once and expires 1 hour after it was requested.",
-  security: "Keep this code private. CiviCheck will never ask you to share it by email.",
-  ignore: "If you did not request this account, you can ignore this email.",
+    "This is your one-time verification code. The code is only valid for",
+  expiry: "60 minutes.",
+  closing: "Thank you,",
+  signature: "The CiviCheck team",
 };
 
-/** Plain text and HTML carry the same signup instructions and code. */
-export function renderVerificationEmailText(code: string) {
-  return [
-    VERIFICATION_EMAIL_COPY.heading,
-    "Hello,",
-    VERIFICATION_EMAIL_COPY.introduction,
-    VERIFICATION_EMAIL_COPY.instructions,
-    code,
-    VERIFICATION_EMAIL_COPY.expiry,
-    VERIFICATION_EMAIL_COPY.security,
-    VERIFICATION_EMAIL_COPY.ignore,
-    "CiviCheck",
-  ].join("\n\n");
+const PASSWORD_RESET_EMAIL_COPY = {
+  ...VERIFICATION_EMAIL_COPY,
+  heading: "Your password reset code for CiviCheck is",
+  instructions:
+    "Use this one-time code to reset your CiviCheck password. The code is only valid for",
+  expiry: "10 minutes.",
+  note: "If you did not request a password reset, you can safely ignore this email. Your password stays the same.",
+};
+
+type CodeEmailCopy = typeof VERIFICATION_EMAIL_COPY & { note?: string };
+
+function codeEmailGreeting(firstName?: string) {
+  const name = firstName?.trim();
+  return name ? `Hi ${name},` : "Hi,";
 }
 
-/** Simple, visible account-confirmation message shared by signup and resend. */
-export function renderVerificationEmail(code: string) {
+function renderCodeEmailText(code: string, firstName: string | undefined, copy: CodeEmailCopy) {
+  return [
+    `${copy.heading}\n${code}`,
+    codeEmailGreeting(firstName),
+    `${copy.instructions} ${copy.expiry}`,
+    copy.note,
+    `${copy.closing}\n${copy.signature}`,
+  ].filter(Boolean).join("\n\n");
+}
+
+function renderCodeEmail(code: string, firstName: string | undefined, copy: CodeEmailCopy) {
   return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>${escapeHtml(VERIFICATION_EMAIL_COPY.heading)}</title>
+    <title>${escapeHtml(copy.heading)}</title>
   </head>
-  <body style="margin:0;padding:24px;background-color:#ffffff;font-family:${FONT_STACK};font-size:16px;line-height:1.6;color:#202124;">
-    <h1 style="margin:0 0 24px;font-size:22px;line-height:1.4;">${escapeHtml(VERIFICATION_EMAIL_COPY.heading)}</h1>
-    <p style="margin:0 0 16px;">Hello,</p>
-    <p style="margin:0 0 16px;">${escapeHtml(VERIFICATION_EMAIL_COPY.introduction)}</p>
-    <p style="margin:0 0 16px;">${escapeHtml(VERIFICATION_EMAIL_COPY.instructions)}</p>
-    <p style="margin:0 0 24px;font-family:${CODE_FONT_STACK};font-size:28px;font-weight:700;letter-spacing:2px;">${escapeHtml(code)}</p>
-    <p style="margin:0 0 16px;">${escapeHtml(VERIFICATION_EMAIL_COPY.expiry)}</p>
-    <p style="margin:0 0 16px;">${escapeHtml(VERIFICATION_EMAIL_COPY.security)}</p>
-    <p style="margin:0 0 24px;">${escapeHtml(VERIFICATION_EMAIL_COPY.ignore)}</p>
-    <p style="margin:0;">CiviCheck</p>
+  <body style="margin:0;padding:16px;background-color:#ffffff;font-family:${FONT_STACK};font-size:14px;line-height:1.6;color:#202124;">
+    <h1 style="margin:0;font-size:16px;font-weight:400;line-height:1.5;">${escapeHtml(copy.heading)}</h1>
+    <p style="margin:0 0 24px;font-size:16px;line-height:1.5;"><strong>${escapeHtml(code)}</strong></p>
+    <p style="margin:0 0 12px;">${escapeHtml(codeEmailGreeting(firstName))}</p>
+    <p style="margin:0 0 16px;">${escapeHtml(copy.instructions)} <strong>${escapeHtml(copy.expiry)}</strong></p>
+    ${copy.note ? `<p style="margin:0 0 16px;">${escapeHtml(copy.note)}</p>` : ""}
+    <p style="margin:0;">${escapeHtml(copy.closing)}<br />${escapeHtml(copy.signature)}</p>
   </body>
 </html>`;
+}
+
+/** Plain text and HTML carry the same signup instructions and code. */
+export function renderVerificationEmailText(code: string, firstName?: string) {
+  return renderCodeEmailText(code, firstName, VERIFICATION_EMAIL_COPY);
+}
+
+/** Simple, visible account-confirmation message shared by signup and resend. */
+export function renderVerificationEmail(code: string, firstName?: string) {
+  return renderCodeEmail(code, firstName, VERIFICATION_EMAIL_COPY);
+}
+
+export function renderPasswordResetEmailText(code: string, firstName?: string) {
+  return renderCodeEmailText(code, firstName, PASSWORD_RESET_EMAIL_COPY);
+}
+
+export function renderPasswordResetEmail(code: string, firstName?: string) {
+  return renderCodeEmail(code, firstName, PASSWORD_RESET_EMAIL_COPY);
 }
 
 type OtpEmailOptions = {

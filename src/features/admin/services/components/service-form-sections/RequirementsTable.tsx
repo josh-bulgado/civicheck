@@ -28,6 +28,7 @@ import type { ConditionSource } from "~/features/forms/components/ConditionRuleB
 import {
   EDITOR_ROW_MENU_TRIGGER,
 } from "~/features/forms/components/EditorSheetParts";
+import { cn } from "~/lib/utils";
 import { requirementChips, splitRequirementTitle } from "../requirement-chips";
 import type {
   RequirementScope,
@@ -69,8 +70,8 @@ function RequirementCellText({
 }) {
   return (
     <>
-      <span className="flex min-w-0 items-baseline gap-2">
-        <span className="truncate text-sm font-semibold text-foreground group-hover/req:underline">
+      <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <span className="min-w-0 break-words text-sm leading-5 font-semibold text-foreground group-hover/req:underline">
           {title}
         </span>
         {noFile ? (
@@ -80,7 +81,7 @@ function RequirementCellText({
         ) : null}
       </span>
       {detail ? (
-        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+        <span className="mt-0.5 block break-words text-xs leading-5 text-muted-foreground">
           {detail}
         </span>
       ) : null}
@@ -124,8 +125,8 @@ function RequirementTableRow({
       : "Shared with other variants. Unlock to edit.";
 
   return (
-    <TableRow className="focus-within:bg-muted/50">
-      <TableCell className="px-3.5 py-2">
+    <TableRow className="grid grid-cols-[minmax(0,1fr)_8.5rem] focus-within:bg-muted/50 md:table-row">
+      <TableCell className="col-start-1 row-start-1 block min-w-0 px-3 py-3 whitespace-normal md:table-cell md:px-3.5 md:py-2">
         {isLocked ? (
           <div className="block min-w-0 py-1" title={fullName}>
             <RequirementCellText title={title} detail={detail} noFile={noFile} />
@@ -144,32 +145,46 @@ function RequirementTableRow({
         )}
       </TableCell>
 
-      <TableCell className="px-3.5 py-2">
+      <TableCell className="col-start-1 row-start-2 block min-w-0 px-3 pt-0 pb-3 whitespace-normal md:table-cell md:px-3.5 md:py-2">
         {chips.condition || chips.person ? (
-          <div className="flex min-w-0 items-center gap-1.5">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <span className="mr-0.5 text-xs font-medium tracking-wide text-muted-foreground uppercase md:hidden">
+              {"Applies to: "}
+            </span>
             {chips.condition ? (
-              <Badge variant="info" className="min-w-0">
-                <span className="truncate">{chips.condition}</span>
+              <Badge
+                variant="info"
+                className="h-auto min-h-5 max-w-full min-w-0 whitespace-normal"
+              >
+                <span className="break-words">{chips.condition}</span>
               </Badge>
             ) : null}
             {chips.person ? (
-              <Badge variant="neutral" className="min-w-0">
-                <span className="truncate">{chips.person}</span>
+              <Badge
+                variant="neutral"
+                className="h-auto min-h-5 max-w-full min-w-0 whitespace-normal"
+              >
+                <span className="break-words">{chips.person}</span>
               </Badge>
             ) : null}
           </div>
         ) : (
-          <span className="text-sm text-muted-foreground">Everyone</span>
+          <span className="text-sm text-muted-foreground">
+            <span className="mr-1 text-xs font-medium tracking-wide uppercase md:hidden">
+              {"Applies to: "}
+            </span>
+            Everyone
+          </span>
         )}
       </TableCell>
 
-      <TableCell className="px-3.5 py-2">
-        <div className="flex items-center justify-between gap-1.5">
+      <TableCell className="col-start-2 row-span-2 row-start-1 block px-2 py-3 whitespace-normal md:table-cell md:px-3.5 md:py-2">
+        <div className="flex flex-col items-end gap-2 md:flex-row md:items-center md:justify-between md:gap-1.5">
           {value.is_mandatory ? (
-            <span className="inline-flex text-tone-success">
-              <Check aria-hidden="true" className="size-4" />
-              <span className="sr-only">Required</span>
-            </span>
+            <Badge variant="success">
+              <Check aria-hidden="true" data-icon="inline-start" />
+              Required
+            </Badge>
           ) : (
             <Badge variant="warning">Optional</Badge>
           )}
@@ -195,7 +210,7 @@ function RequirementTableRow({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className={EDITOR_ROW_MENU_TRIGGER}
+                      className={cn(EDITOR_ROW_MENU_TRIGGER, "size-11")}
                       aria-label={`Actions for ${fullName}`}
                     />
                   }
@@ -267,21 +282,21 @@ export function RequirementsTable({
       ref={ref}
       className="overflow-hidden rounded-xl border border-border bg-background"
     >
-      <Table className="min-w-[40rem] table-fixed">
-        <TableHeader>
+      <Table className="table-fixed">
+        <TableHeader className="hidden md:table-header-group">
           <TableRow className="bg-surface-subtle hover:bg-surface-subtle">
             <TableHead className="px-3.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
               Requirement
             </TableHead>
-            <TableHead className="w-64 px-3.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            <TableHead className="w-52 px-3.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
               Applies to
             </TableHead>
-            <TableHead className="w-40 px-3.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              Required
+            <TableHead className="w-36 px-3.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              Status
             </TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody>
+        <TableBody className="block md:table-row-group">
           {entries.map((entry) => (
             <RequirementTableRow
               key={entry.id}

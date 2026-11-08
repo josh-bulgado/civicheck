@@ -4,7 +4,6 @@ import { useMutation } from "~/hooks/useMutation";
 import { hintCurrentUser } from "../current-user";
 import { verifySignupOtpFn } from "../auth.mutations";
 import { startFreshSession } from "../start-fresh-session";
-import { toast } from "sonner";
 
 export function useVerifySignupOtp() {
   const router = useRouter();
@@ -13,7 +12,8 @@ export function useVerifySignupOtp() {
     fn: verifySignupOtpFn,
     onSuccess: async (ctx) => {
       if (ctx.data?.error) {
-        toast.error(ctx.data.message);
+        // Code entry owns the inline error so a failed automatic check has
+        // one clear place to recover, without a duplicate toast.
         return;
       }
 

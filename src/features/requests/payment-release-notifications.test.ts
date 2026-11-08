@@ -6,7 +6,7 @@ const state=vi.hoisted(()=>({
 }));
 vi.mock("@tanstack/react-start",()=>({createServerFn:()=>({validator:()=>({handler:(fn:unknown)=>fn})})}));
 vi.mock("~/server/auth",()=>({requireActiveSession:async()=>({
-  user:{id:"cashier"},supabase:{from:()=>{
+  user:{id:"cashier"},supabase:{rpc:async()=>({data:false,error:null}),from:()=>{
     const query={
       select:()=>query,eq:()=>query,
       single:async()=>({data:{id:"request",status:state.status,fees_due:state.fees,tracking_number:"TEST",request_type:state.service},error:null}),

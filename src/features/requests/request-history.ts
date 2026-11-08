@@ -172,6 +172,16 @@ function toEvent(log: LogEntry, feesDue: number): HistoryEvent {
     };
   }
 
+  if (log.actionStatus === "identity_verified" || log.actionStatus === "handover_confirmed") {
+    const label = log.remarks ?? (log.actionStatus === "identity_verified"
+      ? "Verified the claimant's identity and authority."
+      : "Confirmed the document handover.");
+    return {
+      ...base, kind: "status", document: null, note: null,
+      label: label.charAt(0).toLowerCase() + label.slice(1), tone: "success", important: true,
+    };
+  }
+
   // A remark staff typed is worth a line; the canned one only repeats the status.
   const note = getLogNote(log.actionStatus, log.remarks ?? null, "staff", feesDue);
   const canned = getLogNote(log.actionStatus, null, "staff", feesDue);

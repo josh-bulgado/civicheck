@@ -97,7 +97,7 @@ design change.
 | Form controls | [Field](../src/components/ui/field.tsx), `FieldGroup`, `FieldLabel`, `FieldDescription`, `FieldError`, and existing input/select wrappers. Keep labels associated with controls; use `data-invalid` on the field and `aria-invalid` on its input. |
 | Settings sections | [SettingGroup](../src/components/ui/setting-group.tsx) for its labeled section header and padded/divided content. |
 | Request status | [StatusPill](../src/features/requests/components/StatusPill.tsx) and [request-status.ts](../src/features/services/request-status.ts). Reuse `getStatusDetails`, audience-specific notes, and timeline helpers instead of inventing labels or colors. |
-| Other status badges | [Badge](../src/components/ui/badge.tsx): `info`, `progress`, `success`, `warning`, `neutral`, `destructive`; service classifications have their own variants. |
+| Other status badges | [Badge](../src/components/ui/badge.tsx): `info`, `progress`, `success`, `warning`, `neutral`, `destructive`; service classifications have their own variants. One-line badges remain pills; badges allowed to wrap keep a fixed soft radius as they grow taller. |
 | Notifications | Existing [Sonner wrapper](../src/components/ui/sonner.tsx) and `toast` from `sonner`. The root already mounts the toaster. Generic Base UI examples recommending a different toast system do not describe this project. |
 | Empty/error states | [Empty](../src/components/ui/empty.tsx), [Alert](../src/components/ui/alert.tsx), and the feature's existing error handling. Distinguish no records yet from no filter matches. |
 | Loading | [PageSkeleton / TablePageSkeleton](../src/components/feedback/PageSkeleton.tsx), feature skeletons, [Skeleton](../src/components/ui/skeleton.tsx), and [Spinner](../src/components/ui/spinner.tsx). Match the loaded layout and preserve the router's pending timing. |
@@ -109,6 +109,19 @@ use `aria-hidden="true"`; button icons use `data-icon="inline-start"` or
 `inline-end` so the wrapper controls sizing and spacing. Dialogs and sheets need
 their title components, including when the title is visually hidden.
 
+Logout uses an immediate, full-page “Signing out…” status with the shared
+`Spinner` in [the logout route](../src/routes/logout.tsx). Keep that transition
+consistent across portal pages instead of showing a content skeleton.
+
+Verification keeps the signup email fixed, displays it on its own line, and
+uses eight separate code boxes with an inline resend action. Standalone auth
+steps use an arrow-only back link with a screen-reader label, matching signup.
+On signup verification, an explicit paste of exactly eight digits (optionally
+separated by spaces or hyphens) submits one server check. Typed, partial, and
+longer codes keep the manual confirm action. Code entry and resend pause while
+checking; only server acceptance continues to the dashboard. Digit fill,
+checking, and rejection motion respects reduced-motion preferences.
+
 The citizen's full-details dialog uses `SubmittedDetailsCard` with
 `variant="dialog"`: sentence-case labels, compact grouped answers, and two
 columns where space permits. Its tracking badge and close action stay in the
@@ -118,6 +131,21 @@ Submitted answers use the option labels from the application's saved form
 template across services, with readable fallbacks such as Male, Female, Yes,
 and No for legacy records. Keep names, contact details, references, and notes
 as entered; display formatting must not change stored answers.
+
+Staff must confirm checking the originals before marking registration requests
+ready for release. Release reuses that recorded check unless documents changed
+or the request returned to validation. Other physical services confirm at
+release; older ready registrations without a recorded check also confirm there.
+The confirmation is
+enforced by the server and database, and History records the staff member and
+time separately from upload acceptance. Email inquiries stay online-only.
+
+Returning a request from Processing or Ready for Release requires a reason.
+The staff detail page shows outstanding return and document-review concerns
+above the tabs, with who raised them and when, until validation moves forward.
+Physical release requires separate identity/authority and handover confirmations;
+each is enforced on the server and recorded separately in staff History.
+Online inquiries require identity verification but no physical handover.
 
 ## Interaction and responsive behavior
 
@@ -154,7 +182,10 @@ preserve the current content and interactions.
   band. Preserve that behavior and the `.apply-wizard` scroll-padding rules.
 - Service-editor typography is intentionally scoped by `data-service-editor` in
   `app.css`. Preserve the scope, `min-h-0` scroll layout, and safe-area padding
-  instead of changing shared controls to achieve an editor-only adjustment.
+  instead of changing shared controls to achieve an editor-only adjustment. The
+  Requirements table keeps its semantic rows but stacks applicability and status
+  into a compact two-column row below `md`; do not restore a forced minimum width
+  that makes the editor scroll horizontally.
 - Reuse `civic-enter`, `civic-content-in`, `civic-stagger`, `civic-press`, and
   [stagger helpers](../src/components/motion/stagger.ts) for appropriate motion.
   [Reveal](../src/components/motion/reveal.tsx) is for below-fold sections on long

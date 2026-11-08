@@ -4,7 +4,7 @@ import { getSupabaseAdminClient, secureCookiesEnabled } from "~/utils/supabase";
 import { bucketKey, getClientIp } from "~/server/rate-limit";
 import { findAuthUserByEmail } from "~/server/auth-users";
 import { sendEmail } from "~/utils/resend";
-import { renderOtpEmail } from "~/utils/email-template";
+import { renderPasswordResetEmail, renderPasswordResetEmailText } from "~/utils/email-template";
 import { RECOVERY_INVALID_CODE, RECOVERY_WRONG_CODE } from "./recovery";
 
 const RESET_COOKIE = "civicheck-password-reset";
@@ -54,15 +54,13 @@ export async function deliverRecoveryCode(email: string, reservation: Awaited<Re
     .select("id").maybeSingle();
   if (error) throw new Error("Recovery challenge unavailable");
   if (!data) return;
+  const firstName = typeof user.user_metadata?.first_name === "string"
+    ? user.user_metadata.first_name : undefined;
   await sendEmail({
     category: "auth",
     to: user.email, subject: "Reset your CiviCheck password",
-    html: renderOtpEmail({
-      preheader: "Use this code to reset your CiviCheck password.", heading: "Reset your password",
-      paragraphs: ["We received a request to reset the password for your CiviCheck account. Enter the code below to continue."],
-      code: reservation.code, noteLines: ["This code expires in 10 minutes and can only be used once."],
-      footerNote: "If you did not request a password reset, you can safely ignore this email. Your password stays the same.",
-    }),
+    html: renderPasswordResetEmail(reservation.code, firstName),
+    text: renderPasswordResetEmailText(reservation.code, firstName),
   });
 }
 

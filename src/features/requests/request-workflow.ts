@@ -106,6 +106,35 @@ export function needsOfficeFinalValidation(serviceCode: string | null | undefine
   );
 }
 
+/** Physical checks happen before readiness for registrations and at handover. */
+export function needsOriginalDocumentCheck(
+  serviceCode: string | null | undefined,
+  toStatus: string,
+  originalsAlreadyChecked = false,
+): boolean {
+  if (serviceCode?.toUpperCase() === "EMAIL_INQUIRY") return false;
+  const checkedDuringProcessing = needsOfficeFinalValidation(serviceCode) ||
+    ["BIRTH_ONTIME", "BIRTH_DELAYED"].includes(serviceCode?.toUpperCase() ?? "");
+  return toStatus === "released"
+    ? !checkedDuringProcessing || !originalsAlreadyChecked
+    : toStatus === "ready_for_release" && checkedDuringProcessing;
+}
+
+/** Reopened or changed documents require another physical check. */
+export function hasCurrentOriginalDocumentCheck(
+  logs: readonly { actionStatus: string; createdAt: string }[],
+): boolean {
+  const invalidating = [
+    "under_validation", "incomplete", "document_reverted", "document_rejected",
+    "document_resubmitted", "document_uploaded",
+  ];
+  const lastChange = Math.max(-Infinity, ...logs
+    .filter((log) => invalidating.includes(log.actionStatus))
+    .map((log) => Date.parse(log.createdAt)));
+  return logs.some((log) => log.actionStatus === "hard_copies_validated" &&
+    Date.parse(log.createdAt) > lastChange);
+}
+
 /** Statuses that end the request's life — nothing transitions out of these. */
 export const TERMINAL_STATUSES: RequestStatus[] = ["rejected", "released", "cancelled"];
 

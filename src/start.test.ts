@@ -34,6 +34,7 @@ it("allows Google's checkbox dependencies through the production CSP using scope
     "'self'", "blob:", "https://www.google.com/recaptcha/", "https://recaptcha.google.com/recaptcha/",
   ]);
   expect(directives["connect-src"]).toContain("https://www.google.com/recaptcha/");
+  expect(directives["connect-src"]).toContain("blob:");
   expect(directives["connect-src"]).not.toContain("https://www.google.com");
   expect(directives["script-src"]).not.toContain("'unsafe-inline'");
 });

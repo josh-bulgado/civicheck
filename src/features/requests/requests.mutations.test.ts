@@ -14,7 +14,11 @@ vi.mock("@tanstack/react-start", () => ({
 vi.mock("~/server/auth", () => ({
   requireActiveSession: async () => ({
     user: { id: "staff" }, role: "admin", departmentId: null,
-    supabase: { from: (table: string) => {
+    supabase: { rpc: async (_name: string, args: {p_values: unknown}) => {
+      if (!state.attachmentUpdateWins) return {data: null, error: {message: "Another staff member already reviewed this document. Refresh and check their decision."}};
+      state.writes("requirements_attachments", args.p_values);
+      return {data: false, error: null};
+    }, from: (table: string) => {
       const query = {
         select: () => query,
         eq: () => query,

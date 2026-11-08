@@ -4,10 +4,18 @@ import { SystemHealthSkeleton } from "~/features/system-admin/components/SystemH
 import { getSystemHealth } from "~/features/system-admin/system-health.functions";
 import { hasPermission, type Role } from "~/lib/permissions";
 import { denyAccess } from "~/lib/access";
+import systemHealthCss from "~/features/system-admin/system-health.css?url";
+import systemHealthDetailsCss from "~/features/system-admin/system-health-details.css?url";
 
 type HealthSearch = { view?: "data" };
 
 export const Route = createFileRoute("/_authed/_dashboard/system-admin/health")({
+  head: () => ({
+    links: [
+      { rel: "stylesheet", href: systemHealthCss },
+      { rel: "stylesheet", href: systemHealthDetailsCss },
+    ],
+  }),
   // The Data & Privacy view can be linked to. Overview is the default and keeps the URL clean.
   validateSearch: (search: Record<string, unknown>): HealthSearch => ({
     view: search.view === "data" ? "data" : undefined,

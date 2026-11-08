@@ -68,6 +68,7 @@ vi.mock("~/utils/resend", () => ({ sendEmail: state.sendEmail }));
 vi.mock("~/utils/app-url", () => ({ getAppUrl: () => "https://civicheck.test" }));
 vi.mock("~/utils/email-template", () => ({
   renderOtpEmail: vi.fn(), renderVerificationEmail: vi.fn(), renderVerificationEmailText: vi.fn(),
+  renderPasswordResetEmail: vi.fn(), renderPasswordResetEmailText: vi.fn(),
 }));
 vi.mock("~/server/auth", () => ({ requireActiveSession: vi.fn() }));
 vi.mock("~/server/auth-users", () => ({ findAuthUserByEmail: async () => null }));

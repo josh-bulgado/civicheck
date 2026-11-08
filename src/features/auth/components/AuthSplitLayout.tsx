@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ChevronLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { QuietLink as Link } from "~/components/quiet-link";
 import { CiviCheckIdentity } from "~/components/brand/civic-identity";
 import { enterDelay } from "~/components/motion/stagger";
@@ -92,7 +92,7 @@ export function AuthCenteredLayout({
   );
 }
 
-/** Pill at the top of a standalone auth step that returns to the screen before it. */
+/** Arrow-only return link, matching the create-account screen's back action. */
 export function AuthBackLink({
   to,
   children,
@@ -104,12 +104,12 @@ export function AuthBackLink({
     <Link
       to={to}
       className={cn(
-        buttonVariants({ size: "sm", shape: "pill" }),
-        "w-fit gap-1 pl-2 pr-3 text-[13px] font-medium hover:bg-primary-fill-hover",
+        buttonVariants({ variant: "ghost", size: "icon-touch", shape: "pill" }),
+        "-ml-3 text-body",
       )}
     >
-      <ChevronLeft aria-hidden="true" className="size-4" />
-      {children}
+      <ArrowLeft aria-hidden="true" className="size-5" />
+      <span className="sr-only">{children}</span>
     </Link>
   );
 }

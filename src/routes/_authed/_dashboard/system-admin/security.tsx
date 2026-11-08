@@ -4,8 +4,12 @@ import { SecurityCenterPage } from "~/features/system-admin/pages/SecurityCenter
 import { getSecurityCenter } from "~/features/system-admin/security-center.functions";
 import { hasPermission, type Role } from "~/lib/permissions";
 import { denyAccess } from "~/lib/access";
+import securityCenterCss from "~/features/system-admin/security-center.css?url";
 
 export const Route = createFileRoute("/_authed/_dashboard/system-admin/security")({
+  head: () => ({
+    links: [{ rel: "stylesheet", href: securityCenterCss }],
+  }),
   beforeLoad: ({ context, location }) => {
     if (
       !context.user ||

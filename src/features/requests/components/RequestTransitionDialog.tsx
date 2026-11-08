@@ -19,11 +19,14 @@ import {
 import {
   buildIncompleteNote,
   type TransitionDialog,
+  type TransitionConfirmations,
 } from "~/features/requests/request-actions";
+import { needsOriginalDocumentCheck } from "~/features/requests/request-workflow";
 import { REQUEST_REJECTION_REASONS } from "~/features/requests/rejection-reasons";
 
 interface RequestContext {
   serviceCode: string;
+  originalsAlreadyChecked?: boolean;
   applicantName: string;
   copies: number;
   feesDue: number;
@@ -40,7 +43,7 @@ interface FormProps {
   busy: boolean;
   context: RequestContext;
   /** `note` is the message the applicant sees, or the history note for release. */
-  onConfirm: (note: string) => void;
+  onConfirm: (note: string, confirmations?: TransitionConfirmations) => void;
 }
 
 /** The notice the applicant gets, drafted from the rejected documents. */
@@ -122,6 +125,9 @@ function RejectForm({ busy, onConfirm }: FormProps) {
 function ReleaseForm({ busy, context, onConfirm }: FormProps) {
   const idPrefix = useId();
   const isEmailInquiry = context.serviceCode === "EMAIL_INQUIRY";
+  const needsOriginals = needsOriginalDocumentCheck(
+    context.serviceCode, "released", context.originalsAlreadyChecked,
+  );
   const copies = `${context.copies} ${context.copies === 1 ? "copy" : "copies"}`;
   const uploads = context.attachments.length;
   const items = isEmailInquiry ? [
@@ -135,6 +141,9 @@ function ReleaseForm({ busy, context, onConfirm }: FormProps) {
         ? `Payment is verified under OR ${context.orNumber ?? "-"}.`
         : "The cashier confirmed no fee was due.",
   ] : [
+    ...(needsOriginals
+      ? ["I checked the originals and hard copies against the submitted details and any uploaded copies."]
+      : []),
     "I verified the claimant’s identity and authority to receive the document.",
     `I am handing over ${copies} to the claimant.`,
   ];
@@ -174,7 +183,14 @@ function ReleaseForm({ busy, context, onConfirm }: FormProps) {
         <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
         <AlertDialogAction
           disabled={busy || !checked.every(Boolean)}
-          onClick={() => onConfirm("")}
+          onClick={() => {
+            const identityIndex = isEmailInquiry || !needsOriginals ? 0 : 1;
+            onConfirm("", {
+              originalsConfirmed: needsOriginals && checked[0] === true,
+              identityVerified: checked[identityIndex] === true,
+              handoverConfirmed: !isEmailInquiry && checked[identityIndex + 1] === true,
+            });
+          }}
         >
           {isEmailInquiry ? "Complete inquiry" : "Release document"}
         </AlertDialogAction>
@@ -183,15 +199,80 @@ function ReleaseForm({ busy, context, onConfirm }: FormProps) {
   );
 }
 
+function OriginalsForm({ busy, context, onConfirm }: FormProps) {
+  const checkboxId = useId();
+  const [checked, setChecked] = useState(false);
+  return (
+    <>
+      <AlertDialogHeader>
+        <AlertDialogTitle>Confirm you checked the originals</AlertDialogTitle>
+        <AlertDialogDescription>
+          Check the originals and hard copies for {context.applicantName} before
+          marking this request ready for release. Your confirmation is recorded in History.
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <div className="flex items-start gap-3">
+        <Checkbox
+          id={checkboxId}
+          checked={checked}
+          disabled={busy}
+          onCheckedChange={(value) => setChecked(value === true)}
+          className="mt-0.5"
+        />
+        <Label htmlFor={checkboxId} className="leading-snug">
+          I checked the originals and hard copies against the submitted details and any uploaded copies.
+        </Label>
+      </div>
+      <AlertDialogFooter>
+        <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+        <AlertDialogAction disabled={busy || !checked} onClick={() => onConfirm("", { originalsConfirmed: checked })}>
+          Mark ready for release
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </>
+  );
+}
+
+function ReturnForm({ busy, onConfirm }: FormProps) {
+  const fieldId = useId();
+  const [reason, setReason] = useState("");
+  return (
+    <>
+      <AlertDialogHeader>
+        <AlertDialogTitle>Return this request to validation?</AlertDialogTitle>
+        <AlertDialogDescription>
+          Explain what needs rechecking. The reason is recorded in History and
+          shared with the applicant. Accepted document decisions stay accepted
+          until a supervisor or admin reopens them.
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor={fieldId}>Reason for returning</Label>
+        <Textarea id={fieldId} rows={4} disabled={busy} value={reason}
+          onChange={(event) => setReason(event.target.value)}
+          placeholder="Which document or detail needs rechecking, and why?" />
+      </div>
+      <AlertDialogFooter>
+        <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+        <AlertDialogAction disabled={busy || !reason.trim()} onClick={() => onConfirm(reason.trim())}>
+          Return to validation
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </>
+  );
+}
+
 const FORMS = {
+  return: ReturnForm,
+  originals: OriginalsForm,
   incomplete: IncompleteForm,
   reject: RejectForm,
   release: ReleaseForm,
 } satisfies Record<TransitionDialog, (props: FormProps) => React.ReactNode>;
 
 /**
- * The three steps that ask for more than a click: marking incomplete, rejecting
- * and releasing. Each form owns its own state, so it starts fresh every time the
+ * Steps that need confirmation: checking originals, marking incomplete,
+ * rejecting and releasing. Each form owns its own state, so it starts fresh every time the
  * dialog opens. Cancel is focused first for reject and release, so a stray Enter
  * cannot fire either.
  */
@@ -206,7 +287,7 @@ export function RequestTransitionDialog({
   busy: boolean;
   context: RequestContext;
   onClose: () => void;
-  onConfirm: (type: TransitionDialog, note: string) => void;
+  onConfirm: (type: TransitionDialog, note: string, confirmations?: TransitionConfirmations) => void;
 }) {
   const Form = type ? FORMS[type] : null;
 
@@ -218,9 +299,10 @@ export function RequestTransitionDialog({
       <AlertDialogContent>
         {type && Form && (
           <Form
+            key={type === "release" ? String(context.originalsAlreadyChecked) : type}
             busy={busy}
             context={context}
-            onConfirm={(note) => onConfirm(type, note)}
+            onConfirm={(note, confirmations) => onConfirm(type, note, confirmations)}
           />
         )}
       </AlertDialogContent>

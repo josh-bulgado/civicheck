@@ -69,3 +69,13 @@ describe("the staff history log", () => {
     );
   });
 });
+
+it("shows who checked the originals and the review time", () => {
+  const html = renderToStaticMarkup(<RequestHistoryLog feesDue={0} logs={[{
+    id:"originals", actionStatus:"hard_copies_validated", actorName:"Nicole Mier",
+    createdAt:at(10,30), remarks:"Checked the original documents and hard copies against the uploaded copies and submitted details.",
+  }]} />);
+  expect(html).toContain("Nicole Mier");
+  expect(html).toContain("validated the originals and hard copies at the office");
+  expect(html).toContain('dateTime="' + at(10,30) + '"');
+});
