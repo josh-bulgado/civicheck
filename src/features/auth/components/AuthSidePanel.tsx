@@ -1,7 +1,8 @@
-import { LazyMotion, MotionConfig, m } from "framer-motion";
+import { LazyMotion, MotionConfig } from "framer-motion";
+import * as m from "framer-motion/m";
 import type { ReactNode } from "react";
 
-const loadMotionFeatures = () => import("framer-motion").then((mod) => mod.domAnimation);
+const loadMotionFeatures = () => import("./auth-motion-features").then((mod) => mod.default);
 
 // Same curves as `--ease-civic` / `--ease-civic-emphasized` in app.css.
 const easeCivic = [0.22, 0.61, 0.36, 1] as const;
