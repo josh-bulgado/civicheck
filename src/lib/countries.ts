@@ -1,4 +1,4 @@
-import countries from "i18n-iso-countries";
+import countries from "i18n-iso-countries/index";
 import english from "i18n-iso-countries/langs/en.json";
 
 countries.registerLocale(english);
