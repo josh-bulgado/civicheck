@@ -200,7 +200,7 @@ export function ReportProblemDialog() {
             <DialogFooter>
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 onClick={() => setOpen(false)}
                 disabled={pending}
               >

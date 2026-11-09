@@ -136,14 +136,18 @@ export function RequestFeedbackCard({
     return (
       <Card variant="soft" aria-label="Feedback unavailable">
         <CardHeader>
-          <CardTitle><h2>Feedback is temporarily unavailable</h2></CardTitle>
+          <CardTitle>
+            <h2>Feedback is temporarily unavailable</h2>
+          </CardTitle>
           <CardDescription>
             We couldn't load your feedback. Try again to view your response or
             give feedback.
           </CardDescription>
         </CardHeader>
         <CardFooter>
-          <Button variant="outline" onClick={onUpdated}>Retry feedback</Button>
+          <Button variant="outline" onClick={onUpdated}>
+            Retry feedback
+          </Button>
         </CardFooter>
       </Card>
     );
@@ -334,7 +338,7 @@ export function RequestFeedbackCard({
             <DialogFooter>
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 onClick={close}
                 disabled={pending}
               >
