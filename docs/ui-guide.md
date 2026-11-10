@@ -186,7 +186,10 @@ name, with where to secure it on a separate line.
 For walk-in birth, marriage and death intake, staff first confirm that the physical
 papers are complete and acceptable. That acceptance and its staff/time history
 are saved with a new request in Processing, skipping the initial online review
-stages. Final registration and release checks still apply. Other walk-in services
+stages. Legitimation walk-in intake uses the same acceptance flow and also records
+the couple's personal appearance. It omits filer and eligibility questions;
+marriage place remains optional, and the COLB father-name answer filters the
+Admission of Paternity requirement. Final registration and release checks still apply. Other walk-in services
 keep their existing intake flow. Staff must confirm checking the originals before
 marking registration requests ready for release. Release reuses that recorded check unless documents changed
 or the request returned to validation. Other physical services confirm at

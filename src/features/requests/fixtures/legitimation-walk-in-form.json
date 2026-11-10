@@ -1,0 +1,148 @@
+{
+  "sections": [
+    {
+      "key": "case",
+      "step": "case",
+      "title": "Case details",
+      "fields": [
+        {
+          "key": "event_date",
+          "type": "date",
+          "label": "Child's date of birth",
+          "required": true,
+          "dateDirection": "past"
+        },
+        {
+          "key": "event_place",
+          "type": "text",
+          "label": "Place where the child was born or registered",
+          "required": true,
+          "placeholder": "e.g. Legazpi City, Albay"
+        },
+        {
+          "key": "reference_number",
+          "type": "text",
+          "label": "Registry number of the child's birth certificate (if known)",
+          "required": false
+        },
+        {
+          "key": "marriage_date",
+          "type": "date",
+          "label": "Date of the parents' marriage",
+          "helpText": "Legitimation applies to a child born before the parents married each other, so this should be after the child's date of birth.",
+          "required": true,
+          "dateDirection": "past"
+        },
+        {
+          "key": "marriage_place",
+          "type": "text",
+          "label": "Place of the parents' marriage",
+          "required": true,
+          "placeholder": "e.g. Legazpi City, Albay"
+        },
+        {
+          "key": "father_on_record",
+          "type": "select",
+          "label": "Is the father's name on the child's birth certificate?",
+          "options": [
+            {
+              "label": "Yes, the father's name is on it",
+              "value": "yes"
+            },
+            {
+              "label": "No, the father's name is blank",
+              "value": "no"
+            },
+            {
+              "label": "Not sure",
+              "value": "not_sure"
+            }
+          ],
+          "helpText": "Check the Certificate of Live Birth. If the father's name is blank, an Admission of Paternity is also needed.",
+          "required": true
+        },
+        {
+          "key": "free_to_marry",
+          "type": "select",
+          "label": "Were both parents free to marry each other when the child was conceived?",
+          "options": [
+            {
+              "label": "Yes",
+              "value": "yes"
+            },
+            {
+              "label": "No",
+              "value": "no",
+              "notice": {
+                "title": "The child may not qualify for legitimation",
+                "variant": "warning",
+                "description": "Legitimation generally requires that the parents could have married each other when the child was conceived. You can still continue; CCRO staff will review your case.",
+                "blocksProgress": false
+              }
+            },
+            {
+              "label": "Not sure",
+              "value": "not_sure"
+            }
+          ],
+          "helpText": "That means neither parent was married to someone else at the time.",
+          "required": true
+        },
+        {
+          "key": "filer_relationship",
+          "type": "select",
+          "label": "Who is filing this request?",
+          "options": [
+            {
+              "label": "The father",
+              "value": "father"
+            },
+            {
+              "label": "The mother",
+              "value": "mother"
+            },
+            {
+              "label": "Both parents",
+              "value": "both_parents"
+            },
+            {
+              "label": "Another relative",
+              "value": "other_relative"
+            }
+          ],
+          "required": false
+        },
+        {
+          "key": "additional_notes",
+          "type": "textarea",
+          "label": "Additional notes",
+          "blockKey": "additional_notes",
+          "required": false,
+          "placeholder": "Any special requests or instructions…"
+        }
+      ]
+    },
+    {
+      "key": "details",
+      "step": "details",
+      "title": "Your details",
+      "fields": [
+        {
+          "key": "subjects",
+          "type": "person_group",
+          "label": "Person named on the record",
+          "required": true
+        },
+        {
+          "key": "contact_number",
+          "type": "phone",
+          "label": "Contact number",
+          "blockKey": "contact_number",
+          "required": false,
+          "placeholder": "9171234567"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1
+}

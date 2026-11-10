@@ -2,6 +2,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 import config from "~/features/services/fixtures/birth-delayed-requirements.json";
 import marriageForms from "./fixtures/marriage-walk-in-forms.json";
 import deathForms from "./fixtures/death-walk-in-forms.json";
+import legitimationForm from "./fixtures/legitimation-walk-in-form.json";
 import { parseFormTemplateDefinition } from "~/features/forms/form-template.utils";
 import { emptySubject } from "~/lib/subject-fields";
 
@@ -52,6 +53,7 @@ vi.mock("~/features/requests/tracking-number", () => ({
 vi.mock("~/features/services/services.catalogue", () => ({
   loadServiceCatalogue: async () => ({
     formTemplatesByService: new Map([
+      ["LEGITIMATION", { templateId: "legitimation", versionId: "published", definition: parseFormTemplateDefinition(legitimationForm) }],
       ...(["DEATH_ONTIME", "DEATH_DELAYED"] as const).map(code => [code, {
         templateId: code, versionId: "published",
         definition: parseFormTemplateDefinition(code === "DEATH_ONTIME" ? deathForms.death_ontime : deathForms.death_delayed),
@@ -70,6 +72,7 @@ vi.mock("~/features/services/services.catalogue", () => ({
       ],
     ]),
     servicesByCode: new Map([
+      ["LEGITIMATION", { party_roles: ["Child", "Mother", "Father"] }],
       ["DEATH_ONTIME", { party_roles: ["Subject"] }],
       ["DEATH_DELAYED", { party_roles: ["Subject"] }],
       ["MARRIAGE_ONTIME", { party_roles: ["Bride", "Groom"] }],
@@ -214,6 +217,34 @@ it.each(["MARRIAGE_ONTIME", "MARRIAGE_DELAYED"])("encodes the complete %s form a
 });
 
 const deceased = [{ ...emptySubject("Subject"), firstName: "Juan", middleName: "Santos", lastName: "Cruz", sex: "male" }];
+it("encodes legitimation from checked papers without redundant eligibility or filer questions", async () => {
+  state.serviceCode = "LEGITIMATION";
+  state.departmentId = state.serviceDepartment = "legal";
+  const people = ["Child", "Mother", "Father"].map(role => ({
+    ...emptySubject(role), firstName: role === "Father" ? "Juan" : "Ana", middleName: "Santos", lastName: "Cruz", sex: role === "Father" ? "male" : "female",
+  }));
+  const input = {
+    ...data, serviceCode: "LEGITIMATION", subjects: people, coupleAppearanceConfirmed: true,
+    answers: { subjects: people, event_date: "2000-01-01", event_place: "Legazpi City, Albay", marriage_date: "2005-01-01", father_on_record: "no" },
+  };
+  expect((await encodeWalkInFn({ data: input })).error).toBe(false);
+  expect(state.create).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+    status: "processing", walk_in_accepted_by: "staff", form_template_version_id: "published",
+    form_data: expect.objectContaining({ party2_role: "Mother", party3_role: "Father", father_on_record: "no", couple_appearance_confirmed: "true" }),
+  }));
+  state.create.mockClear();
+  for (const patch of [
+    { physicalDocumentsConfirmed: false }, { coupleAppearanceConfirmed: false },
+    { coupleAppearanceConfirmed: undefined }, { templateVersionId: "old" },
+    { answers: { ...input.answers, father_on_record: "" } },
+    { answers: { ...input.answers, father_on_record: "not_sure" } },
+    { answers: { ...input.answers, marriage_date: "" } },
+    { answers: { ...input.answers, subjects: people.slice(0, 2) } },
+  ]) expect((await encodeWalkInFn({ data: { ...input, ...patch } })).error).toBe(true);
+  state.serviceDepartment = "birth";
+  expect((await encodeWalkInFn({ data: input })).error).toBe(true);
+  expect(state.create).not.toHaveBeenCalled();
+});
 it.each(["DEATH_ONTIME", "DEATH_DELAYED"])("encodes checked %s papers with the death form and validation", async serviceCode => {
   state.serviceCode = serviceCode;
   state.departmentId = state.serviceDepartment = "death";

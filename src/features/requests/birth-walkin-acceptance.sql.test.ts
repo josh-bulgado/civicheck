@@ -40,6 +40,10 @@ beforeAll(async () => {
   const deathMigration = readFileSync(new URL("../../../supabase/migrations/20261110130610_accept_checked_death_walkins.sql", import.meta.url), "utf8");
   await db.exec(deathMigration);
   await db.exec(deathMigration);
+  const legitimationMigration = readFileSync(new URL("../../../supabase/migrations/20261110142639_accept_checked_legitimation_walkins.sql", import.meta.url), "utf8");
+  await db.exec(legitimationMigration);
+  await db.exec(legitimationMigration);
+  await db.exec(`insert into services_registry values('LEGITIMATION','${other}')`);
   await db.exec(`insert into services_registry values('DEATH_ONTIME','${other}'),('DEATH_DELAYED','${other}')`);
   await db.exec(`insert into services_registry values('MARRIAGE_ONTIME','${other}'),('MARRIAGE_DELAYED','${other}')`);
 }, 30_000);
@@ -62,6 +66,23 @@ it("records staff acceptance, time, and processing history together", async () =
   expect(String(result.rows[0].walk_in_accepted_at)).not.toContain("1900");
   expect((await db.query("select performed_by_profile_id,action_status from application_logs order by created_at")).rows)
     .toEqual([{performed_by_profile_id: actor,action_status: "walk_in_accepted"},{performed_by_profile_id: actor,action_status: "processing"}]);
+});
+it("accepts legitimation only with the couple present and records it in History", async () => {
+  const input = { request_type: "LEGITIMATION", form_data: { intake_channel: "walk_in", couple_appearance_confirmed: "true" } };
+  for (const value of [undefined, false, "false"]) {
+    await expect(insert({ ...input, form_data: { intake_channel: "walk_in", couple_appearance_confirmed: value } })).rejects.toThrow(/both parents/);
+  }
+  await expect(insert({ ...input, walk_in_accepted_by: null })).rejects.toThrow();
+  await expect(insert({ ...input, walk_in_accepted_by: other })).rejects.toThrow();
+  await expect(insert({ ...input, payment_status: "verified" })).rejects.toThrow();
+  await db.exec("reset role; update services_registry set department_id=null where service_code='LEGITIMATION'; set role authenticated");
+  await expect(insert(input)).rejects.toThrow(/department/);
+  await db.exec(`reset role; update services_registry set department_id='${other}' where service_code='LEGITIMATION'; set role authenticated`);
+  const result = await insert(input);
+  expect(result.rows[0]).toMatchObject({ status: "processing", payment_status: "unpaid", walk_in_accepted_by: actor });
+  const logs = (await db.query<{ remarks: string }>("select remarks from application_logs order by created_at")).rows;
+  expect(logs[0].remarks).toContain("Both parents personally appeared");
+  expect(logs[1].remarks).toContain("legitimation request");
 });
 it.each(["MARRIAGE_ONTIME", "MARRIAGE_DELAYED"])("accepts checked %s papers with marriage audit history", async (request_type) => {
   const result = await insert({ request_type });

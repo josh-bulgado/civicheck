@@ -18,7 +18,8 @@ import {
 } from "~/features/forms/form-template.utils";
 import { emptySubject, reconcileSubjects } from "~/lib/subject-fields";
 import type { EncodableService } from "../walk-in-intake.queries";
-import { birthCaseForService, prepareWalkInBirth } from "../walk-in-birth";
+import { prepareWalkInBirth } from "../walk-in-birth";
+import { walkInCaseForService } from "../walk-in-legitimation";
 import { isWalkInDeath, isWalkInMarriage } from "../walk-in-registration";
 
 export function WalkInRegistrationFields({
@@ -36,12 +37,14 @@ export function WalkInRegistrationFields({
     answers: TemplateAnswers;
     templateVersionId: string | null;
     physicalDocumentsConfirmed: boolean;
+    coupleAppearanceConfirmed?: boolean;
   }) => Promise<void>;
   onCancel: () => void;
   onAnswersChange: (answers: TemplateAnswers) => void;
 }) {
   const [error, setError] = useState("");
   const [physicalDocumentsConfirmed, setPhysicalDocumentsConfirmed] = useState(false);
+  const [coupleAppearanceConfirmed, setCoupleAppearanceConfirmed] = useState(false);
   const form = useForm<DetailsValues>({
     defaultValues: {
       ...Object.fromEntries((service.registrationForm?.definition.sections ?? [])
@@ -54,9 +57,10 @@ export function WalkInRegistrationFields({
   const template = service.registrationForm;
   const marriage = isWalkInMarriage(service.serviceCode);
   const death = isWalkInDeath(service.serviceCode);
+  const legitimation = service.serviceCode === "LEGITIMATION";
   useEffect(() => {
     if (!template) return;
-    const selectedCase = birthCaseForService(template.definition, service.serviceCode);
+    const selectedCase = walkInCaseForService(template.definition, service.serviceCode);
     const publish = () => {
       const text = Object.fromEntries(Object.entries(form.getValues()).filter(
         (entry): entry is [string, string] => typeof entry[1] === "string",
@@ -66,6 +70,7 @@ export function WalkInRegistrationFields({
     publish();
     const subscription = form.watch(() => {
       setPhysicalDocumentsConfirmed(false);
+      setCoupleAppearanceConfirmed(false);
       publish();
     });
     return () => subscription.unsubscribe();
@@ -78,7 +83,7 @@ export function WalkInRegistrationFields({
         </AlertDescription>
       </Alert>
     );
-  const { definition, answers: caseAnswers } = birthCaseForService(template.definition, service.serviceCode);
+  const { definition, answers: caseAnswers } = walkInCaseForService(template.definition, service.serviceCode);
   const caseDefinition = {
     ...definition,
     sections: definition.sections.map((section) => ({
@@ -113,6 +118,10 @@ export function WalkInRegistrationFields({
   const timing = evaluateTemplateEventTiming(definition, values);
 
   async function submit() {
+    if (legitimation && !coupleAppearanceConfirmed) {
+      setError("Confirm that both parents personally appeared before encoding.");
+      return;
+    }
     if (!physicalDocumentsConfirmed) {
       setError("Check and accept the physical documents before encoding.");
       return;
@@ -141,18 +150,21 @@ export function WalkInRegistrationFields({
       answers,
       templateVersionId: template.versionId,
       physicalDocumentsConfirmed,
+      ...(legitimation ? { coupleAppearanceConfirmed } : {}),
     });
   }
 
   return (
     <fieldset disabled={submitting} className="min-w-0 space-y-6">
       <p className="text-sm text-muted-foreground">
-        Enter the visitor's {death ? "death" : marriage ? "marriage" : "birth"} registration details. Check the applicant’s physical documents.
+        {legitimation
+          ? "Enter the child's and parents' details from the birth and marriage certificates. Check the physical papers and the couple's personal appearance."
+          : <>Enter the visitor's {death ? "death" : marriage ? "marriage" : "birth"} registration details. Check the applicant’s physical documents.</>}
       </p>
       <DynamicFormFields
         definition={caseDefinition}
         step="case"
-        singleColumn={marriage || death}
+        singleColumn={marriage || death || legitimation}
         control={form.control}
         values={values}
         showRequiredMarks
@@ -207,6 +219,13 @@ export function WalkInRegistrationFields({
           onCheckedChange={(checked) => setPhysicalDocumentsConfirmed(checked === true)} />
         <span>I checked the physical documents. The required papers are complete and acceptable.</span>
       </label>
+      {legitimation ? (
+        <label className="flex min-h-11 items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm">
+          <Checkbox className="mt-0.5" checked={coupleAppearanceConfirmed}
+            onCheckedChange={(checked) => setCoupleAppearanceConfirmed(checked === true)} />
+          <span>Both parents personally appeared.</span>
+        </label>
+      ) : null}
       {error ? (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -224,7 +243,7 @@ export function WalkInRegistrationFields({
         <Button
           type="button"
           onClick={() => void submit()}
-          disabled={submitting || !physicalDocumentsConfirmed}
+          disabled={submitting || !physicalDocumentsConfirmed || (legitimation && !coupleAppearanceConfirmed)}
         >
           {submitting ? "Encoding..." : "Encode request"}
         </Button>

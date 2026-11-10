@@ -11,3 +11,7 @@ export function isWalkInDeath(serviceCode: string) {
 export function isWalkInRegistration(serviceCode: string) {
   return isWalkInBirth(serviceCode) || isWalkInMarriage(serviceCode) || isWalkInDeath(serviceCode);
 }
+
+export function isWalkInDetailedIntake(serviceCode: string) {
+  return isWalkInRegistration(serviceCode) || serviceCode === "LEGITIMATION";
+}

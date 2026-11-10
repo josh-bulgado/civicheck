@@ -7,8 +7,9 @@ import { requireActiveSession } from "~/server/auth";
 import { clampCopies, totalFee } from "~/features/services/service-utils";
 import { loadServiceCatalogue } from "~/features/services/services.catalogue";
 import type { TemplateAnswers } from "~/features/forms/form-template.types";
-import { birthCaseForService, prepareWalkInBirth } from "./walk-in-birth";
-import { isWalkInRegistration } from "./walk-in-registration";
+import { prepareWalkInBirth } from "./walk-in-birth";
+import { walkInCaseForService } from "./walk-in-legitimation";
+import { isWalkInDetailedIntake } from "./walk-in-registration";
 
 export const encodeWalkInFn = createServerFn({ method: "POST" })
   .validator(
@@ -23,6 +24,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       answers?: TemplateAnswers;
       templateVersionId?: string | null;
       physicalDocumentsConfirmed?: boolean;
+      coupleAppearanceConfirmed?: boolean;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -69,7 +71,10 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
     }
     let registrationFormData: Record<string, string> | null = null;
     let templateVersionId: string | null = null;
-    if (isWalkInRegistration(service.service_code)) {
+    if (isWalkInDetailedIntake(service.service_code)) {
+      if (service.service_code === "LEGITIMATION" && data.coupleAppearanceConfirmed !== true) {
+        return { error: true, message: "Confirm that both parents personally appeared before encoding." };
+      }
       if (data.physicalDocumentsConfirmed !== true) {
         return { error: true, message: "Confirm that the physical documents are complete and acceptable before encoding." };
       }
@@ -84,7 +89,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       if (activeError || active.active_version_id !== template.versionId || data.templateVersionId !== template.versionId) {
         return { error: true, message: "The registration form has changed. Reload the page and review your answers." };
       }
-      const selectedCase = birthCaseForService(template.definition, service.service_code);
+      const selectedCase = walkInCaseForService(template.definition, service.service_code);
       const prepared = prepareWalkInBirth(selectedCase.definition, { ...data.answers, ...selectedCase.answers }, registryService.party_roles?.length ? registryService.party_roles : ["Subject"]);
       if (prepared.error) return prepared;
       if (prepared.serviceCode && prepared.serviceCode !== service.service_code) {
@@ -111,6 +116,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
         }),
         encoded_by: user.id,
         intake_channel: "walk_in",
+        ...(service.service_code === "LEGITIMATION" ? { couple_appearance_confirmed: "true" } : {}),
       },
     });
 
