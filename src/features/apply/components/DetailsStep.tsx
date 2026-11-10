@@ -1,3 +1,4 @@
+import { REQUESTER_NAME_KEYS, requesterNameAnswers, requiresAccountRequester } from "../requester-name";
 import { formatFieldLabel } from "~/features/forms/field-label";
 import { validatePersonName } from "~/lib/person-name";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
@@ -365,6 +366,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   const selectedService =
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
   const definition = selectedService.form_template!.definition;
+  const lockRequesterName = requiresAccountRequester(selectedService.service_code);
   const detailsFields = fieldsForStep(definition, "details");
   const personGroupField = detailsFields.find((field) => field.type === "person_group");
   const hasPersonGroup = Boolean(personGroupField);
@@ -420,29 +422,16 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     },
   });
 
-  const requesterPrefilled = useRef(false);
   useEffect(() => {
-    if (!hydrated || !user || requesterPrefilled.current) return;
-    // The requester is the signed-in applicant, even when the record belongs to someone else.
-    if (!detailsFields.some((field) => field.key === "requester_first_name")) return;
-    requesterPrefilled.current = true;
-    const current = form.getValues();
-    // Preserve saved names and anything already typed, including a married name.
-    if (current.requester_first_name || current.requester_middle_name || current.requester_last_name) return;
-    // The form's reactive values come from the draft. Persist the prefill there
-    // so draft hydration or subject reconciliation cannot reset it to blanks.
+    if (!hydrated || !user || !lockRequesterName) return;
+    const names = requesterNameAnswers(user);
+    const keys = REQUESTER_NAME_KEYS.filter((key) => detailsFields.some((field) => field.key === key));
+    if (!keys.length || keys.every((key) => draft.answers[key] === names[key])) return;
     update((previous) => {
-      if (previous.answers.requester_first_name || previous.answers.requester_middle_name || previous.answers.requester_last_name) return {};
-      return {
-        answers: {
-          ...previous.answers,
-          requester_first_name: user.firstName,
-          requester_middle_name: user.hasNoMiddleName ? NONE_ANSWER : user.middleName,
-          requester_last_name: user.lastName,
-        },
-      };
+      if (keys.every((key) => previous.answers[key] === names[key])) return {};
+      return { answers: { ...previous.answers, ...Object.fromEntries(keys.map((key) => [key, names[key]])) } };
     });
-  }, [hydrated, user, detailsFields, form, update]);
+  }, [hydrated, user, lockRequesterName, detailsFields, draft.answers, update]);
 
   const subjectFields = useFieldArray({ control: form.control, name: "subjects" });
   const showRoleLabels = hasPersonGroup && subjectFields.fields.length > 1;
@@ -705,7 +694,13 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       <div className="flex flex-col gap-6">
         {ownerBlockInSection ? null : ownerBlock}
 
+        {lockRequesterName && detailsFields.some((field) => field.key === "requester_first_name") ? (
+          <p className="text-sm text-portal-ink-2">
+            You are the requester for this online application. Your name comes from your account profile and cannot be changed here. Another requester must use their own account or apply in person.
+          </p>
+        ) : null}
         <DynamicFormFields
+          readOnlyKeys={lockRequesterName ? REQUESTER_NAME_KEYS : []}
           definition={definition}
           step="details"
           onDateChange={(key, value) => {

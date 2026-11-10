@@ -1,3 +1,4 @@
+import { REQUESTER_NAME_KEYS, requesterNameAnswers, requiresAccountRequester } from "~/features/apply/requester-name";
 import { requiresVerificationSignature } from "~/features/apply/verification-signature";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -171,7 +172,27 @@ export const submitRequestFn = createServerFn({ method: "POST" })
     // Hidden questions are dropped before anything reads the bag, so a value
     // sent for a question the applicant was never shown cannot decide which
     // documents are required.
-    const answerBag = canonicalizeTemplateAnswers(definition, data.answers);
+    const answers = { ...data.answers };
+    const requesterKeys = REQUESTER_NAME_KEYS.filter((key) => requiresAccountRequester(data.serviceCode) &&
+      definition.sections.some((section) => section.fields.some((field) => field.key === key)),
+    );
+    if (requesterKeys.length) {
+      const { data: profile, error } = await supabase.from("profiles")
+        .select("first_name, middle_name, last_name, suffix, has_no_middle_name")
+        .eq("id", user.id).maybeSingle();
+      if (error || !profile || !profile.first_name?.trim() || !profile.last_name?.trim()) {
+        return { error: true, message: "Complete your name in your account profile before submitting." };
+      }
+      const names = requesterNameAnswers({
+        firstName: profile.first_name,
+        middleName: profile.middle_name ?? "",
+        lastName: profile.last_name,
+        suffix: profile.suffix ?? "",
+        hasNoMiddleName: profile.has_no_middle_name === true,
+      });
+      for (const key of requesterKeys) answers[key] = names[key];
+    }
+    const answerBag = canonicalizeTemplateAnswers(definition, answers);
     const selectorValidation = validateCaseSelectorAnswers(
       definition,
       answerBag,

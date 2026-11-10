@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({
   ongoing: [] as { id: string; tracking_number: string; form_data: Record<string, string>; copies: number }[],
   create: vi.fn(),
+  requesterFields: false,
+  profile: { first_name: "Ana", middle_name: null as string | null, last_name: "Reyes", suffix: "", has_no_middle_name: true } as { first_name: string; middle_name: string | null; last_name: string; suffix: string; has_no_middle_name: boolean } | null,
 }));
 vi.mock("@tanstack/react-start", () => ({
   createServerFn: () => ({
@@ -15,8 +17,8 @@ vi.mock("@tanstack/react-start", () => ({
 vi.mock("~/server/auth", () => ({
   requireActiveSession: async () => ({
     user: { id: "owner" },
-    supabase: { from: () => {
-      const q = { select: () => q, eq: () => q, maybeSingle: async () => ({ data: null, error: null }) };
+    supabase: { from: (table: string) => {
+      const q = { select: () => q, eq: () => q, maybeSingle: async () => ({ data: table === "profiles" ? state.profile : null, error: null }) };
       return q;
     } },
   }),
@@ -42,7 +44,9 @@ vi.mock("~/features/services/services.catalogue", () => ({
   }),
 }));
 vi.mock("~/features/forms/form-template.utils", () => ({
-  buildLegacyFormDefinition: () => ({ sections: [] }),
+  buildLegacyFormDefinition: () => ({ sections: state.requesterFields ? [{ fields: [
+    { key: "requester_first_name" }, { key: "requester_middle_name" }, { key: "requester_last_name" }, { key: "requester_suffix" },
+  ] }] : [] }),
   canonicalizeTemplateAnswers: (_: unknown, answers: unknown) => answers,
   flattenTemplateAnswers: (_: unknown, answers: unknown) => ({ ...(answers as object) }),
   parseFormTemplateDefinition: vi.fn(),
@@ -59,6 +63,8 @@ const submit = (acknowledgedDuplicateId?: string) => submitRequestFn({ data: {
 } });
 beforeEach(() => {
   vi.clearAllMocks();
+  state.requesterFields = false;
+  state.profile = { first_name: "Ana", middle_name: null, last_name: "Reyes", suffix: "", has_no_middle_name: true };
   state.ongoing = [{ id: duplicateId, tracking_number: "CCRO-EXISTING", form_data: { ...answers }, copies: 1 }];
   state.create.mockResolvedValue({ error: false, requestId: "new", trackingNumber: "CCRO-NEW" });
 });
@@ -93,6 +99,28 @@ describe("shared submission duplicate rules", () => {
     }));
     state.ongoing.push(exact);
     expect((await submit()).duplicateRequest?.identical).toBe(true);
+    expect(state.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("online requester identity", () => {
+  const send = () => submitRequestFn({ data: {
+    serviceCode: "EMAIL_INQUIRY", submissionId: "00000000-0000-4000-8000-000000000002",
+    templateVersionId: null, uploadDraftId: null,
+    answers: { ...answers, requester_first_name: "Someone", requester_last_name: "Else", requester_middle_name: "Fake", requester_suffix: "Jr." },
+  } });
+  it("uses the saved profile instead of tampered requester names and preserves the owner", async () => {
+    state.requesterFields = true;
+    state.ongoing = [];
+    expect((await send()).error).toBe(false);
+    expect(state.create.mock.calls[0][1].form_data).toMatchObject({
+      ...answers, requester_first_name: "Ana", requester_last_name: "Reyes", requester_middle_name: "N/A", requester_suffix: "",
+    });
+  });
+  it("blocks submission when the profile cannot be read", async () => {
+    state.requesterFields = true;
+    state.profile = null;
+    expect((await send()).error).toBe(true);
     expect(state.create).not.toHaveBeenCalled();
   });
 });

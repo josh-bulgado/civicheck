@@ -8,6 +8,11 @@ affected guidance rather than treating this snapshot as a second implementation.
 
 ## Project foundation
 
+For CTC issuance, Email Inquiry, and Electronic Endorsement online applications,
+requester names come from the signed-in account profile.
+Keep these name fields read-only, including the no-middle-name checkbox;
+document owner fields remain separate. Submission also uses the saved profile name.
+
 - React and TypeScript with TanStack Start/Router. Routes live in `src/routes`;
   feature pages and their components live in `src/features`.
 - [components.json](../components.json) configures shadcn `base-vega`, Base UI,

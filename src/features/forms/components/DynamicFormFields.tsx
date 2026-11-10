@@ -83,6 +83,7 @@ function TextWithNoneOption({
   placeholder,
   invalid,
   noneLabel,
+  readOnly = false,
 }: {
   field: {
     value: string | undefined;
@@ -95,6 +96,7 @@ function TextWithNoneOption({
   placeholder?: string;
   invalid: boolean;
   noneLabel: string;
+  readOnly?: boolean;
 }) {
   const none = field.value === NONE_ANSWER;
   return (
@@ -107,6 +109,7 @@ function TextWithNoneOption({
         autoComplete="off"
         placeholder={placeholder}
         maxLength={240}
+        readOnly={readOnly}
         disabled={none}
         aria-invalid={invalid}
         className={cn(
@@ -116,6 +119,7 @@ function TextWithNoneOption({
       />
       <label className="-mt-2.5 flex min-h-11 cursor-pointer items-center gap-2.5 text-[15px] leading-none text-portal-ink-2">
         <Checkbox
+          disabled={readOnly}
           checked={none}
           onCheckedChange={(checked) => {
             if (checked === true) {
@@ -243,6 +247,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
   showRequiredMarks = false,
   showSectionTitles = false,
   singleColumn = false,
+  readOnlyKeys = [],
   renderSectionLead,
 }: {
   definition: FormTemplateDefinition;
@@ -265,6 +270,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
   showSectionTitles?: boolean;
   /** Stacks every field on its own row instead of pairing short inputs. */
   singleColumn?: boolean;
+  readOnlyKeys?: readonly string[];
   /**
    * Content drawn under a section's heading, before its fields. The details step
    * uses it to place the person-name block (which has its own inputs) inside the
@@ -661,6 +667,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         id={`dynamic-${definitionField.key}`}
                         placeholder={placeholder}
                         invalid={fieldState.invalid}
+                        readOnly={readOnlyKeys.includes(definitionField.key)}
                         noneLabel={/(^|_)middle_name$/.test(definitionField.key)
                           ? "No middle name"
                           : definitionField.noneLabel}
@@ -669,6 +676,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                       <Input
                         {...field}
                         id={`dynamic-${definitionField.key}`}
+                        readOnly={readOnlyKeys.includes(definitionField.key)}
                         autoComplete="off"
                         placeholder={placeholder}
                         maxLength={240}
