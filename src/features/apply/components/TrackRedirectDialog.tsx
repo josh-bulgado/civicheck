@@ -30,7 +30,7 @@ interface TrackRedirectDialogProps {
  * A misclicked date must not force an unwanted redirect, which is why it asks.
  *
  * It is guidance, not an error, so it is calm: a plain white panel, a blue
- * glyph, two equal buttons and no X (the buttons, Escape and a click outside
+ * glyph, two buttons and no X (the buttons, Escape and a click outside
  * are the ways out). Focus starts on the switch action, so Enter answers yes only
  * when that is where the person already is.
  */
@@ -69,12 +69,11 @@ export function TrackRedirectDialog({
           {description} Everything you&rsquo;ve entered carries over.
         </DialogDescription>
 
-        {/* Same size and weight: neither answer is the louder one. */}
-        <div className="mt-7 flex gap-2.5">
+        <div className="mt-7 flex flex-col gap-2.5 sm:flex-row">
           <button
             type="button"
             onClick={onKeepEditing}
-            className="civic-press h-13 min-w-0 flex-1 rounded-full border border-border bg-card px-4 text-base font-semibold whitespace-nowrap text-foreground transition-colors hover:border-primary focus-visible:ring-4 focus-visible:ring-primary/20"
+            className="civic-press min-h-13 min-w-0 flex-1 rounded-full border border-border bg-card px-4 py-3 text-base leading-snug font-semibold whitespace-normal text-foreground transition-colors hover:border-primary focus-visible:ring-4 focus-visible:ring-primary/20"
           >
             Edit date
           </button>
@@ -82,7 +81,7 @@ export function TrackRedirectDialog({
             ref={switchButton}
             type="button"
             onClick={onSwitch}
-            className="civic-press h-13 min-w-0 flex-1 rounded-full border border-primary-fill bg-primary-fill px-4 text-base font-semibold whitespace-nowrap text-white transition-colors hover:bg-primary-fill-hover focus:ring-4 focus:ring-primary/20 focus:outline-none"
+            className="civic-press min-h-13 min-w-0 flex-[2] rounded-full border border-primary-fill bg-primary-fill px-4 py-3 text-base leading-snug font-semibold whitespace-normal text-white transition-colors hover:bg-primary-fill-hover focus:ring-4 focus:ring-primary/20 focus:outline-none"
           >
             {switchLabel}
           </button>
