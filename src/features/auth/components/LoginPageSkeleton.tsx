@@ -1,59 +1,46 @@
-import { Skeleton } from "~/components/ui/skeleton";
+import { Eye, Lock, Mail } from "lucide-react";
+import { Button } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
+import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "~/components/ui/input-group";
+import { GoogleIcon } from "./GoogleIcon";
+import { RecaptchaNotice } from "./InvisibleCaptcha";
 import { LoginLayout } from "./LoginLayout";
-import "../invisible-captcha.css";
 
+/** Session restoration disables the form; its fixed copy and artwork stay visible. */
 export function LoginPageSkeleton() {
   return (
     <LoginLayout loading>
-      <div className="login-form-content" aria-hidden="true">
-        <div className="login-title">
-          <div className="flex h-lh items-center">
-            <Skeleton className="h-[0.85em] w-4/5" />
-          </div>
-        </div>
-        <div className="login-fields flex flex-col">
-          {[0, 1].map((field) => (
-            <div key={field} className="login-field">
-              <div className="login-input">
-                <Skeleton className="size-full rounded-full" />
-              </div>
-            </div>
+      <div className="login-form-content">
+        <h1 className="login-title">Welcome back</h1>
+        <FieldGroup className="login-fields">
+          {[{ id: "email", label: "Email address", icon: Mail }, { id: "password", label: "Password", icon: Lock }].map(({ id, label, icon: Icon }) => (
+            <Field key={id} className="login-field">
+              <FieldLabel htmlFor={`loading-login-${id}`} className="sr-only">{label}</FieldLabel>
+              <InputGroup shape="pill" fieldSize="touch" className="login-input">
+                <InputGroupAddon><Icon aria-hidden="true" /></InputGroupAddon>
+                <InputGroupInput id={`loading-login-${id}`} disabled placeholder={label} type={id === "password" ? "password" : "email"} />
+                {id === "password" ? <InputGroupAddon align="inline-end"><Eye aria-hidden="true" /></InputGroupAddon> : null}
+              </InputGroup>
+            </Field>
           ))}
           <div className="login-options">
-            <div className="login-link flex h-lh items-center gap-3">
-              <Skeleton className="size-[1.2em] shrink-0" />
-              <Skeleton className="h-[0.8em] w-[7.5em]" />
-            </div>
-            <div className="login-link flex h-lh items-center">
-              <Skeleton className="h-[0.8em] w-[8em]" />
-            </div>
+            <Field orientation="horizontal" className="w-auto">
+              <Checkbox id="loading-keep-signed-in" disabled />
+              <div className="login-session-label"><FieldLabel htmlFor="loading-keep-signed-in">Keep me signed in</FieldLabel></div>
+            </Field>
+            <span className="login-link">Forgot password?</span>
           </div>
           <div className="login-actions">
-            <div className="login-submit overflow-hidden rounded-full">
-              <Skeleton className="size-full rounded-full" />
-            </div>
-            <div className="recaptcha-notice">
-              <Skeleton className="mx-auto mt-1.5 h-3 w-11/12" />
-              <Skeleton className="mx-auto mt-1.5 h-3 w-3/5" />
-            </div>
-            <div className="login-divider">
-              <span />
-              <div className="flex h-lh items-center">
-                <Skeleton className="h-[0.8em] w-[1em]" />
-              </div>
-              <span />
-            </div>
-            <div className="login-google overflow-hidden rounded-full">
-              <Skeleton className="size-full rounded-full" />
-            </div>
+            <Button disabled data-size="invisible" shape="pill" size="touch" className="login-submit">Sign in</Button>
+            <RecaptchaNotice />
+            <div className="login-divider" aria-hidden="true"><span />or<span /></div>
+            <Button disabled variant="outline" shape="pill" size="touch" className="login-google">
+              <GoogleIcon className="login-google-icon" />Continue with Google
+            </Button>
           </div>
-        </div>
-        <div className="login-footer">
-          <div className="flex h-[1.5em] w-full items-center justify-center gap-2">
-            <Skeleton className="h-[0.8em] w-1/3" />
-            <Skeleton className="h-[0.8em] w-1/3" />
-          </div>
-        </div>
+        </FieldGroup>
+        <div className="login-footer">New to CiviCheck?<span className="login-link">Create an account</span></div>
       </div>
     </LoginLayout>
   );

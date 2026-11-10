@@ -1,4 +1,5 @@
 import { WizardBar, WizardSkeleton } from "~/features/apply/components/wizard-feedback";
+import { CiviCheckIdentity } from "~/components/brand/civic-identity";
 
 /** One upload slot as it will look: icon tile, two lines, two pill buttons. */
 export function SlotCardSkeleton() {
@@ -35,8 +36,7 @@ export function WizardPageSkeleton() {
 
       <div className="flex flex-col gap-4 px-5 pt-5 pb-4 sm:px-8 md:flex-row md:items-center md:gap-6 md:px-14 md:pt-7 md:pb-6.5">
         <div className="flex items-center gap-2.5 md:w-60">
-          <WizardSkeleton className="size-10.5 rounded-full" />
-          <WizardSkeleton className="h-6 w-28 rounded-full" />
+          <CiviCheckIdentity compact prominent />
         </div>
         <div className="flex items-center gap-3.5 md:mx-auto md:max-w-245 md:flex-1">
           {[0, 1, 2, 3].map((step) => (

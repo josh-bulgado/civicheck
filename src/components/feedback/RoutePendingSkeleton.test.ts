@@ -1,4 +1,4 @@
-import { createElement } from "react";
+import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CitizenPortalFrameSkeleton } from "~/features/dashboard/CitizenPortalFrameSkeleton";
@@ -6,6 +6,7 @@ import { SystemHealthSkeleton } from "~/features/system-admin/components/SystemH
 import { SecurityCenterSkeleton } from "~/features/system-admin/components/SecurityCenterSkeleton";
 import type { IdentityHint } from "~/features/auth/current-user";
 import { LoginPageSkeleton } from "~/features/auth/components/LoginPageSkeleton";
+import { LandingPageSkeleton } from "~/features/landing/components/LandingPageSkeleton";
 import { PageSkeleton } from "./PageSkeleton";
 import { RoutePendingSkeleton } from "./RoutePendingSkeleton";
 
@@ -19,6 +20,10 @@ vi.mock("~/features/auth/current-user", async (importOriginal) => ({
   ...await importOriginal<typeof import("~/features/auth/current-user")>(),
   peekCurrentUser: () => known.hint,
 }));
+vi.mock("~/components/quiet-link", async (importOriginal) => ({
+  ...await importOriginal<typeof import("~/components/quiet-link")>(),
+  QuietLink: ({ children, to, className }: { children?: ReactNode; to?: string; className?: string }) => createElement("a", { href: to, className }, children),
+}));
 
 const render = () => renderToStaticMarkup(createElement(RoutePendingSkeleton));
 
@@ -28,6 +33,7 @@ beforeEach(() => {
 
 describe("parent route loading", () => {
   it.each([
+    ["/", LandingPageSkeleton],
     ["/login", LoginPageSkeleton],
     ["/login/", LoginPageSkeleton],
     ["/system-admin/health", SystemHealthSkeleton],
@@ -62,10 +68,27 @@ describe("the applicant's dashboard before parent loaders finish", () => {
     },
   );
 
-  it("only changes /dashboard", () => {
+  it("keeps the applicant frame and the destination heading on other portal pages", () => {
     location.pathname = "/my-requests";
     known.hint = { id: "u1", role: "applicant" };
 
-    expect(render()).toContain(renderToStaticMarkup(createElement(PageSkeleton)));
+    const html = render();
+    expect(html).toContain("citizen-portal");
+    expect(html).toContain('<h1 class="portal-title">My requests</h1>');
+    expect(html).not.toContain("Welcome back");
+  });
+
+  it.each([
+    ["/notifications", "Notifications"],
+    ["/admin/services", "Services"],
+    ["/admin/staff", "Staff Management"],
+    ["/admin/reports", "Reports"],
+    ["/payment-history", "Payment History"],
+    ["/requests", "Request Queue"],
+    ["/system-admin/accounts", "Accounts Center"],
+    ["/system-admin/audit", "Audit Center"],
+  ])("keeps the known heading at %s during parent loading", (pathname, heading) => {
+    location.pathname = pathname;
+    expect(render()).toMatch(new RegExp(`<h1[^>]*>${heading}</h1>`));
   });
 });

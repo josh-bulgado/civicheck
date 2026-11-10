@@ -30,6 +30,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # Testing
+/playwright.config.ts
 /playwright.feedback.config.ts
 # Local Playwright verification scripts
 /tests/feedback/

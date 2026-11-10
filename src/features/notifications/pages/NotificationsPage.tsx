@@ -24,7 +24,7 @@ import {
   updateNotificationFn,
   type NotificationAction,
 } from "~/features/notifications/notifications.mutations";
-import { MarkAllReadButton } from "~/features/notifications/components/MarkAllReadButton";
+import { PortalNotificationsHeader } from "~/features/notifications/components/PortalNotificationsHeader";
 import {
   NotificationMenuItems,
   type RowHandlers,
@@ -259,17 +259,7 @@ function PortalNotifications({
 
   return (
     <div className="portal-page gap-4.5 md:gap-7">
-      <div className="flex items-center justify-between gap-x-6 gap-y-3">
-        <h1 className="portal-title">Notifications</h1>
-        {/* Always here. It is lit while something is unread, and quiet (not
-            gone) once nothing is, so it does not come and go under the cursor. */}
-        <MarkAllReadButton
-          hasUnread={unreadCount > 0 && !isMarkingAll}
-          onClick={onMarkAllRead}
-          className="h-10 px-4 text-sm md:h-12 md:px-6 md:text-base"
-          compactLabel="Mark all read"
-        />
-      </div>
+      <PortalNotificationsHeader hasUnread={unreadCount > 0 && !isMarkingAll} onMarkAllRead={onMarkAllRead} />
 
       {notifications.length === 0 ? (
         <Empty className="civic-enter-scale gap-5 rounded-[28px] bg-card px-8 py-16 shadow-portal-card">

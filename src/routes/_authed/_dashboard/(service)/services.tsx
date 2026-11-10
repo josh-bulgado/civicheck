@@ -39,9 +39,14 @@ export const Route = createFileRoute("/_authed/_dashboard/(service)/services")({
   // realtime below covers the case where the edit happens while this page is
   // already open.
   staleTime: 5 * 60_000,
-  pendingComponent: CatalogPageSkeleton,
+  pendingComponent: ServicesPending,
   component: ServicesRoute,
 });
+
+function ServicesPending() {
+  const { user } = Route.useRouteContext();
+  return <CatalogPageSkeleton audience={user?.role === "applicant" ? "applicant" : "staff"} />;
+}
 
 function ServicesRoute() {
   const { services, scope, usage } = Route.useLoaderData();

@@ -28,7 +28,7 @@ affected guidance rather than treating this snapshot as a second implementation.
 | --- | --- | --- |
 | Citizen home | [CitizenDashboard](../src/features/dashboard/pages/CitizenDashboard.tsx) | `portal-page`, `portal-title`, one current request and its next useful action, then attention items and secondary requests. |
 | Citizen request list | [MyRequestsPage](../src/features/requests/pages/MyRequestsPage.tsx) | Readable request rows, status pills, transaction references, and an actionable first-use empty state. |
-| Citizen request detail | [MyRequestDetailPage](../src/features/requests/pages/MyRequestDetailPage.tsx) | Status pill in the header; progress and guidance beside a compact details/acknowledgment card; documents and status history start together in the next row. Show rejected files first with re-upload highlighting, followed by missing uploads and the remaining files. Preserve file numbering across those sections, actual image thumbnails, short document titles, and supporting text for examples and copy requirements. |
+| Citizen request detail | [MyRequestDetailPage](../src/features/requests/pages/MyRequestDetailPage.tsx) | Status pill in the header; independent desktop columns keep documents below progress and guidance, with status history in its own tile directly below the compact details/acknowledgment card. On smaller screens, keep details and history together between progress and documents. Show rejected files first with re-upload highlighting, followed by missing uploads and the remaining files. Preserve file numbering across those sections, actual image thumbnails, short document titles, and supporting text for examples and copy requirements. |
 | Citizen feedback | [RequestFeedbackCard](../src/features/feedback/components/RequestFeedbackCard.tsx) | Released requests offer an optional survey in a dialog. Five stars use labelled radio choices, a required overall rating, and optional ease rating, topics, and comment. Submitted responses are read-only. |
 | Feedback and problem review | [AdminFeedbackPage](../src/features/feedback/components/AdminFeedbackPage.tsx) | Separate survey and problem-report tabs, service/date filters, server pagination, full filtered survey summaries, and a review dialog. Only admins can read other citizens' submissions. |
 | Staff queue | [RequestsPage](../src/features/requests/pages/RequestsPage.tsx) | `dashboard-page`, page header, filters, table, and pagination; preserve the route-owned filters and department scope. |
@@ -310,6 +310,15 @@ Use `pnpm` instead of `pnpm.cmd` on non-Windows shells.
 
 ## Verify a UI change
 
+Loading views keep fixed page titles, navigation, labels, action text, and
+bundled artwork visible. Scope skeletons and loading announcements to content
+that is still being fetched: rows, counts, current requirements, request names,
+submitted answers, status history, and live readings. Do not show an empty state
+or a zero count before the read completes. Data-dependent actions keep their
+labels but stay disabled until the required data is available. Share fixed
+headers between the loaded and pending views where practical, and use the
+destination-specific content fallback when a parent loader is pending.
+
 For a visible change, inspect the affected screen in a browser at a narrow mobile
 width and a desktop width, in light and dark themes. Check the relevant loading,
 empty, error, validation, disabled, and success states. Exercise the changed
@@ -325,3 +334,9 @@ deliberate shared UI convention changes.
 
 Image fitting, zoom, magnifier, and resize regressions run without authentication:
 `pnpm.cmd exec playwright test --config=tests/file-preview/playwright.config.ts`.
+
+Loading-view regressions also run without authentication:
+`pnpm.cmd exec playwright test --config=tests/loading/playwright.config.ts`.
+These use controlled delayed reads to check that headings and navigation remain
+visible before data resolves, and check loading layouts at mobile and desktop
+widths in both themes.

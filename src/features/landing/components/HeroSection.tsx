@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Pause, Play } from "lucide-react";
 import { QuietLink as Link } from "~/components/quiet-link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { Skeleton } from "~/components/ui/skeleton";
 import { enterDelay, staggerStyle } from "~/components/motion/stagger";
 import type { FeaturedChecklist } from "../landing.queries";
 import { landingAssets } from "../landing-assets";
@@ -15,7 +16,7 @@ const documentTypes = [
 
 const CHECKLIST_INTERVAL_MS = 5000;
 
-function ChecklistCard({ checklists }: { checklists: FeaturedChecklist[] }) {
+function ChecklistCard({ checklists, loading = false }: { checklists: FeaturedChecklist[]; loading?: boolean }) {
   const [activeGroup, setActiveGroup] = useState(documentTypes[0].group);
   const [rotationEnabled, setRotationEnabled] = useState(true);
   const [hovered, setHovered] = useState(false);
@@ -86,7 +87,11 @@ function ChecklistCard({ checklists }: { checklists: FeaturedChecklist[] }) {
             <div className="landing-checklist-body">
               <h2>{title}</h2>
               {checklist ? <p className="sr-only">{checklist.displayName}</p> : null}
-              {checklist ? (
+              {loading ? (
+                <div role="status" aria-busy="true" aria-label="Loading requirements" className="flex flex-col gap-4 py-4">
+                  {[0, 1, 2].map((row) => <Skeleton key={row} aria-hidden="true" className="h-8 w-full" />)}
+                </div>
+              ) : checklist ? (
                 <ol className="landing-requirements civic-stagger">
                   {checklist.items.map((item, index) => (
                     <li key={item.name} style={staggerStyle(index)}>
@@ -136,7 +141,7 @@ function ChecklistCard({ checklists }: { checklists: FeaturedChecklist[] }) {
   );
 }
 
-const HeroSection = ({ checklists }: { checklists: FeaturedChecklist[] }) => (
+const HeroSection = ({ checklists, loading = false }: { checklists: FeaturedChecklist[]; loading?: boolean }) => (
   <section className="landing-hero" aria-labelledby="landing-title">
     <img className="landing-hero-background" src={landingAssets.background} alt="" aria-hidden="true" draggable={false} />
     <div className="landing-hero-content">
@@ -158,7 +163,7 @@ const HeroSection = ({ checklists }: { checklists: FeaturedChecklist[] }) => (
         <img className="landing-certificate-art" src={landingAssets.certificate} alt="" aria-hidden="true" draggable={false} />
         <img className="landing-id-art" src={landingAssets.id} alt="" aria-hidden="true" draggable={false} />
         <div className="landing-checklist-entrance civic-enter" style={enterDelay(180)}>
-          <ChecklistCard checklists={checklists} />
+          <ChecklistCard checklists={checklists} loading={loading} />
         </div>
       </div>
     </div>

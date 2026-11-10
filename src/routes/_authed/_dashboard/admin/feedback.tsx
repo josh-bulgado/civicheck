@@ -37,7 +37,7 @@ export const Route = createFileRoute("/_authed/_dashboard/admin/feedback")({
   staleTime: 0,
   pendingMs: 250,
   pendingMinMs: 250,
-  pendingComponent: TablePageSkeleton,
+  pendingComponent: () => <TablePageSkeleton title="Feedback & Reports" label="Loading feedback and reports" columnLabels={["Request / report", "Service", "Response", "Submitted", "Status", "Review"]} />,
   errorComponent: FeedbackError,
   component: FeedbackRoute,
 });

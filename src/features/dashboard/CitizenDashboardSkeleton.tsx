@@ -1,6 +1,7 @@
 import { Skeleton } from "~/components/ui/skeleton";
 import { peekCurrentUser } from "~/features/auth/current-user";
 import { cn } from "~/lib/utils";
+import { CertificateTiles } from "./components/CertificateTiles";
 import {
   EMPTY_SHAPE,
   readDashboardShape,
@@ -22,37 +23,10 @@ function Mark({ className }: { className?: string }) {
   );
 }
 
-/** The four document tiles: bounded artwork panels, or the slim row under a request. */
+/** Document categories and artwork are fixed, so they need no database placeholder. */
 function TilesSkeleton({ strip = false }: { strip?: boolean }) {
   return (
-    <div
-      data-part={strip ? "tile-strip" : "tiles"}
-      aria-hidden="true"
-      className={cn(
-        // A phone scrolls them sideways, with the next one peeking in.
-        "max-md:-mx-5 max-md:flex max-md:gap-3 max-md:overflow-hidden max-md:px-5 md:grid md:grid-cols-2",
-        strip
-          ? "auto-rows-[5rem] gap-3 md:auto-rows-[6rem] md:gap-4 xl:grid-cols-4"
-          : "shrink-0 gap-4 md:gap-5 xl:grid-cols-4",
-      )}
-    >
-      {[0, 1, 2, 3].map((tile) => (
-        <Skeleton
-          key={tile}
-          className={cn(
-            "max-md:h-47.5 max-md:w-39.5 max-md:shrink-0 max-md:rounded-4xl",
-            strip ? "rounded-4xl" : "rounded-[28px]",
-          )}
-        >
-          {strip ? null : (
-            <>
-              <span className="hidden aspect-[6/5] max-h-72 w-full md:block" />
-              <span className="hidden h-32 md:block" />
-            </>
-          )}
-        </Skeleton>
-      ))}
-    </div>
+    <div data-part={strip ? "tile-strip" : "tiles"}><CertificateTiles strip={strip} /></div>
   );
 }
 
@@ -60,19 +34,17 @@ function TilesSkeleton({ strip = false }: { strip?: boolean }) {
 function PromptSkeleton() {
   return (
     <>
-      <Skeleton
+      <section
         data-part="prompt"
-        // Not `rounded-hero`: class merging does not know that name, so the
-        // Skeleton's own radius would win and square the corners off.
-        className="flex flex-col items-start gap-6 rounded-[var(--radius-hero)] px-5 py-7 xl:flex-row xl:items-center xl:gap-8 xl:px-10 xl:py-9"
+        className="flex flex-col items-start gap-6 rounded-hero bg-(image:--portal-hero) px-5 py-7 xl:flex-row xl:items-center xl:gap-8 xl:px-10 xl:py-9"
       >
         <div className="w-full min-w-0 flex-1">
-          <Mark className="h-8 w-4/5 xl:h-12 xl:w-96 xl:max-w-full" />
-          <Mark className="mt-3.5 h-5 w-3/5 xl:h-5.5 xl:w-80 xl:max-w-full" />
-          <Mark className="mt-4 h-10 w-32" />
+          <h2 className="text-[28px] leading-[1.15] font-bold text-foreground xl:text-[42px]">What do you need today?</h2>
+          <p className="mt-3.5 text-[17px] text-body-2 xl:text-[19px]">Pick a document. You'll see what to bring first.</p>
+          <span className="mt-4 inline-flex py-2 text-[17px] font-bold text-primary">How it works</span>
         </div>
-        <Mark className="h-13.5 w-full shrink-0 rounded-full xl:h-13 xl:w-52" />
-      </Skeleton>
+        <span className="inline-flex h-13.5 w-full shrink-0 items-center justify-center rounded-full bg-card/78 px-7.5 text-[17px] font-semibold text-foreground xl:h-13 xl:w-auto">See all services</span>
+      </section>
       <TilesSkeleton />
     </>
   );
@@ -121,7 +93,7 @@ function TrackerSkeleton({
                 />
               )}
             </div>
-            <Mark className="mt-2.5 h-3.5 w-14 xl:mt-[clamp(0.625rem,1.8vh,1.25rem)] xl:h-[clamp(1rem,2.4vh,1.375rem)] xl:w-24" />
+            <span className="mt-2.5 block text-[10px] font-semibold text-muted-foreground sm:text-xs xl:text-base">{["Submission", "Validation", "Processing", "Release"][stage - 1]}</span>
             {hasCaption || hasTag ? (
               // Release is only as wide as its label: what hangs under it takes
               // no width, as in the tracker.
@@ -202,7 +174,7 @@ function AttentionSkeleton({ count }: { count: number }) {
       aria-hidden="true"
       className="rounded-[28px] bg-card px-5 pt-5 pb-2 shadow-portal-card md:px-7 md:pt-5 md:pb-2"
     >
-      <Skeleton className="h-7 w-52 max-w-full" />
+      <h2 className="text-xl font-semibold text-foreground">Needs your attention</h2>
       <ul className="mt-2 flex flex-col divide-y divide-border-lighter">
         {Array.from({ length: count }, (_, row) => (
           <li
@@ -253,10 +225,10 @@ function StartRequestSkeleton() {
       className="flex flex-col gap-3.5 md:gap-2.5"
     >
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-        <Skeleton className="mx-1.5 h-5 w-36" />
+        <h2 className="px-1.5 text-xl font-semibold text-foreground md:text-[15px] md:text-muted-foreground">Start a new request</h2>
         <div className="flex items-center gap-2 md:gap-4">
-          <Skeleton className="h-11 w-20 xl:h-5" />
-          <Skeleton className="h-11 w-24 rounded-full xl:h-9 xl:w-32" />
+          <span className="text-sm font-semibold text-primary">How it works</span>
+          <span className="text-sm font-semibold text-primary">See all services</span>
         </div>
       </div>
       <TilesSkeleton strip />
@@ -315,17 +287,17 @@ function expectedShape(): DashboardShape {
   return (id && readDashboardShape(id)) || EMPTY_SHAPE;
 }
 
-/** The whole dashboard while the route's own data loads: title row, then the body. */
+/** Keep the greeting and fixed actions visible while request data loads. */
 export function CitizenDashboardSkeleton() {
   const shape = expectedShape();
 
   return (
     <div className="portal-page flex-1 gap-4.5 md:gap-5" aria-busy="true">
       <div className="flex items-center justify-between gap-4 md:gap-6">
-        <Skeleton className="h-8 w-72 max-w-full rounded-xl md:h-11" />
+        <h1 className="portal-title min-w-0 max-xl:truncate">Welcome back</h1>
         {/* "All requests" only exists once there are requests. */}
         {shape.kind === "requests" && (
-          <Skeleton className="hidden h-12 w-36 rounded-full xl:block" />
+          <span className="hidden text-sm font-semibold text-primary xl:block">All requests</span>
         )}
       </div>
       <CitizenDashboardBodySkeleton shape={shape} />

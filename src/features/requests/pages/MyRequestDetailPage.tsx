@@ -52,7 +52,7 @@ export default function MyRequestDetailPage({
         />
       </div>
 
-      <div className="civic-stagger grid min-w-0 grid-cols-1 items-start gap-5 md:gap-6 @4xl:grid-cols-[minmax(0,1fr)_22rem] @5xl:grid-cols-[minmax(0,1fr)_24rem] @6xl:grid-cols-[minmax(0,1fr)_28rem]">
+      <div className="civic-stagger grid min-w-0 grid-cols-1 items-start gap-5 md:gap-6 @4xl:grid-cols-[minmax(0,1fr)_22rem] @4xl:grid-rows-[auto_1fr] @5xl:grid-cols-[minmax(0,1fr)_24rem] @6xl:grid-cols-[minmax(0,1fr)_28rem]">
         <div className="flex min-w-0 flex-col gap-5 md:gap-6" style={staggerStyle(0, 60)}>
           <NextStepsCard status={request.status} next={next} />
           {request.status === "released" && <RequestFeedbackCard requestId={request.id} feedback={request.feedback}
@@ -62,8 +62,18 @@ export default function MyRequestDetailPage({
             postingStartDate={request.postingStartDate} postingEndDate={request.postingEndDate} />
         </div>
 
-        <div className="min-w-0 @4xl:col-start-2 @4xl:row-start-1" style={staggerStyle(1, 60)}>
+        <div className="@container flex min-w-0 flex-col gap-5 md:gap-6 @4xl:col-start-2 @4xl:row-span-2 @4xl:row-start-1" style={staggerStyle(1, 60)}>
           <MyRequestSummary request={request} />
+          <RequestStatusHistory logs={request.logs} />
+          <VerificationFormCard
+            trackingNumber={request.trackingNumber}
+            copies={request.copies}
+            formData={request.formData}
+          />
+          {request.allowsMessages && (
+            <RequestMessagesCard requestId={request.id} messages={request.messages}
+              viewer="applicant" onSent={onUpdated} variant="portal" />
+          )}
         </div>
 
         <div className="flex min-w-0 flex-col gap-5 md:gap-6 @4xl:col-start-1 @4xl:row-start-2" style={staggerStyle(2, 60)}>
@@ -76,19 +86,6 @@ export default function MyRequestDetailPage({
           />
           {canCancelCtcRequest(request.status, request.serviceCode, request.formData) && (
             <CancelRequestCard requestId={request.id} onCancelled={onUpdated} />
-          )}
-        </div>
-
-        <div className="@container flex min-w-0 flex-col gap-5 md:gap-6 @4xl:col-start-2 @4xl:row-start-2" style={staggerStyle(3, 60)}>
-          <RequestStatusHistory logs={request.logs} />
-          <VerificationFormCard
-            trackingNumber={request.trackingNumber}
-            copies={request.copies}
-            formData={request.formData}
-          />
-          {request.allowsMessages && (
-            <RequestMessagesCard requestId={request.id} messages={request.messages}
-              viewer="applicant" onSent={onUpdated} variant="portal" />
           )}
         </div>
       </div>

@@ -1,4 +1,8 @@
 import { Skeleton } from "~/components/ui/skeleton";
+import { PageHeaderCard } from "~/components/ui/page-header-card";
+import { PortalNotificationsHeader } from "../components/PortalNotificationsHeader";
+import { Input } from "~/components/ui/input";
+import { Button } from "~/components/ui/button";
 import type { NotificationAudience } from "~/features/notifications/notification-audience";
 
 const ROWS = [0, 1, 2, 3];
@@ -21,12 +25,9 @@ function PortalRowSkeleton() {
 /** The applicant's feed: title and "Mark all read", then a labelled card of rows. */
 function PortalSkeleton() {
   return (
-    <div className="portal-page gap-4.5 md:gap-7" aria-label="Loading your notifications…">
-      <div className="flex items-center justify-between gap-x-6 gap-y-3">
-        <Skeleton className="h-10 w-52 rounded-xl md:h-12" />
-        <Skeleton className="h-10 w-32 rounded-full md:h-12 md:w-44" />
-      </div>
-      <div className="@container flex flex-col gap-6 md:gap-7">
+    <div className="portal-page gap-4.5 md:gap-7">
+      <PortalNotificationsHeader />
+      <div className="@container flex flex-col gap-6 md:gap-7" role="status" aria-busy="true" aria-label="Loading your notifications">
         <section className="flex flex-col gap-2.5 md:gap-3">
           <Skeleton className="ml-1 h-4 w-14 rounded-md" />
           <ul className="divide-y divide-border-lighter overflow-hidden rounded-4xl bg-card shadow-portal-card md:rounded-[28px]">
@@ -57,13 +58,12 @@ function StaffRowSkeleton() {
 /** The CCRO feed: the header card, then one card with the toolbar and a day group. */
 function StaffSkeleton() {
   return (
-    <div className="dashboard-page" aria-label="Loading notifications…">
-      <Skeleton className="h-[4.5rem] rounded-xl" />
-      <div className="overflow-hidden rounded-xl border border-border-strong bg-card">
+    <div className="dashboard-page">
+      <PageHeaderCard title="Notifications" description="CCRO Administration" />
+      <div className="overflow-hidden rounded-xl border border-border-strong bg-card" role="status" aria-busy="true" aria-label="Loading notifications">
         <div className="flex flex-wrap items-center gap-3 border-b border-border px-5 py-4">
-          <Skeleton className="h-10 w-full max-w-md rounded-lg" />
-          <Skeleton className="h-10 w-72 rounded-full" />
-          <Skeleton className="h-10 w-28 rounded-full" />
+          <Input disabled placeholder="Search by tracking number or alert…" aria-label="Search notifications" className="h-10 w-full max-w-md rounded-lg" />
+          {["All", "Unread", "Archived", "Needs You"].map((filter) => <Button key={filter} disabled variant="outline" size="sm">{filter}</Button>)}
         </div>
         <Skeleton className="h-8 rounded-none" />
         <div className="divide-y divide-border-lighter">

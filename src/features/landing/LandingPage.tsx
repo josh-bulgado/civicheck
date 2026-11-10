@@ -6,12 +6,13 @@ import { Reveal } from "~/components/motion/reveal";
 
 type LandingPageProps = {
   featuredChecklists: FeaturedChecklist[];
+  loading?: boolean;
 };
 
-const LandingPage = ({ featuredChecklists }: LandingPageProps) => (
+const LandingPage = ({ featuredChecklists, loading }: LandingPageProps) => (
   <div className="landing-page">
     <main>
-      <HeroSection checklists={featuredChecklists} />
+      <HeroSection checklists={featuredChecklists} loading={loading} />
       <Reveal>
         <HowItWorksSection />
       </Reveal>
