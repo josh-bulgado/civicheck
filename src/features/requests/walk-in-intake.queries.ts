@@ -3,7 +3,7 @@ import { isDepartmentScopedRole } from "~/lib/permissions";
 import { requireActiveSession } from "~/server/auth";
 import { loadServiceCatalogue } from "~/features/services/services.catalogue";
 import type { PublishedFormTemplate } from "~/features/forms/form-template.types";
-import { isWalkInBirth } from "./walk-in-birth";
+import { isWalkInRegistration } from "./walk-in-registration";
 
 export interface EncodableService {
   serviceCode: string;
@@ -15,7 +15,7 @@ export interface EncodableService {
   processingTime: string;
   /** Who this service asks about, e.g. ["Subject"] or ["Bride", "Groom"]. */
   partyRoles: string[];
-  birthForm?: PublishedFormTemplate;
+  registrationForm?: PublishedFormTemplate;
 }
 
 export const getEncodableServicesFn = createServerFn({ method: "GET" }).handler(
@@ -38,7 +38,7 @@ export const getEncodableServicesFn = createServerFn({ method: "GET" }).handler(
 
     const { data, error } = await query;
     if (error) throw new Error(error.message);
-    const catalogue = (data ?? []).some((service) => isWalkInBirth(service.service_code))
+    const catalogue = (data ?? []).some((service) => isWalkInRegistration(service.service_code))
       ? await loadServiceCatalogue()
       : null;
 
@@ -50,7 +50,7 @@ export const getEncodableServicesFn = createServerFn({ method: "GET" }).handler(
       displayGroup: service.display_group,
       processingTime: service.processing_time,
       partyRoles: service.party_roles?.length ? service.party_roles : ["Subject"],
-      birthForm: isWalkInBirth(service.service_code) ? catalogue?.formTemplatesByService.get(service.service_code) : undefined,
+      registrationForm: isWalkInRegistration(service.service_code) ? catalogue?.formTemplatesByService.get(service.service_code) : undefined,
     }));
   },
 );

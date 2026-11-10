@@ -1,0 +1,265 @@
+{
+  "marriage_delayed": {
+    "sections": [
+      {
+        "key": "case",
+        "step": "case",
+        "title": "Case details",
+        "fields": [
+          {
+            "key": "registration_type",
+            "type": "select",
+            "label": "What do you need to register?",
+            "options": [
+              {
+                "label": "Delayed registration — the marriage was never registered",
+                "value": "delayed"
+              },
+              {
+                "label": "Reconstruction of a Marriage Certificate",
+                "value": "reconstruction"
+              }
+            ],
+            "helpText": "This changes which documents you need.",
+            "required": true
+          },
+          {
+            "key": "marriage_license_basis",
+            "type": "select",
+            "label": "Was a marriage license issued for this marriage?",
+            "options": [
+              {
+                "label": "Yes, a marriage license was issued",
+                "value": "with_license"
+              },
+              {
+                "label": "No, exempt under Article 34 (lived together for at least 5 years)",
+                "value": "article_34"
+              },
+              {
+                "label": "No, a marriage under P.D. 1083 (Code of Muslim Personal Laws)",
+                "value": "pd_1083"
+              }
+            ],
+            "helpText": "With a marriage license, registration is on time within 15 days. Under Article 34 or P.D. 1083, the period is 30 days.",
+            "required": true,
+            "visibleWhen": {
+              "field": "registration_type",
+              "value": "delayed",
+              "operator": "equals"
+            }
+          },
+          {
+            "key": "has_children",
+            "type": "select",
+            "label": "Do the couple have children?",
+            "options": [
+              {
+                "label": "Yes",
+                "value": "yes"
+              },
+              {
+                "label": "No",
+                "value": "no"
+              }
+            ],
+            "helpText": "If they do, the children's birth certificates are needed to show the correct date of marriage.",
+            "required": true,
+            "visibleWhen": {
+              "field": "registration_type",
+              "value": "reconstruction",
+              "operator": "equals"
+            }
+          },
+          {
+            "key": "event_date",
+            "type": "date",
+            "label": "Date of marriage",
+            "required": true,
+            "dateDirection": "past"
+          },
+          {
+            "key": "event_place",
+            "type": "text",
+            "label": "Place of marriage",
+            "required": true,
+            "placeholder": "e.g. Legazpi City, Albay"
+          }
+        ]
+      },
+      {
+        "key": "details",
+        "step": "details",
+        "title": "Your details",
+        "fields": [
+          {
+            "key": "subjects",
+            "type": "person_group",
+            "label": "Person named on the record",
+            "required": true
+          },
+          {
+            "key": "contact_number",
+            "type": "phone",
+            "label": "Contact number",
+            "blockKey": "contact_number",
+            "required": false,
+            "placeholder": "9171234567"
+          }
+        ]
+      }
+    ],
+    "eventTiming": {
+      "title": "This marriage is still within the on-time registration period",
+      "behavior": "redirect_confirm",
+      "ctaLabel": "Switch to On-Time Registration",
+      "mismatch": "inside_window",
+      "timezone": "Asia/Manila",
+      "windowDays": 15,
+      "appliesWhen": {
+        "field": "registration_type",
+        "value": "delayed",
+        "operator": "equals"
+      },
+      "description": "With a marriage license, the on-time period is 15 days. Under Article 34 or P.D. 1083, it is 30 days. Use On-Time Registration while the marriage is within its applicable period.",
+      "triggerField": "event_date",
+      "targetServiceCode": "MARRIAGE_ONTIME",
+      "windowDaysByAnswer": {
+        "field": "marriage_license_basis",
+        "values": {
+          "pd_1083": 30,
+          "article_34": 30,
+          "with_license": 15
+        }
+      },
+      "requireDocumentFirst": false
+    },
+    "schemaVersion": 1
+  },
+  "marriage_ontime": {
+    "sections": [
+      {
+        "key": "case",
+        "step": "case",
+        "title": "Case details",
+        "fields": [
+          {
+            "key": "marriage_license_basis",
+            "type": "select",
+            "label": "Was a marriage license issued for this marriage?",
+            "options": [
+              {
+                "label": "Yes, a marriage license was issued",
+                "value": "with_license"
+              },
+              {
+                "label": "No, exempt under Article 34 (lived together for at least 5 years)",
+                "value": "article_34"
+              },
+              {
+                "label": "No, a marriage under P.D. 1083 (Code of Muslim Personal Laws)",
+                "value": "pd_1083"
+              }
+            ],
+            "helpText": "With a license, a marriage is registered on time within 15 days. Without one (Article 34 or P.D. 1083) the window is 30 days, and Article 34 also needs an Affidavit of Cohabitation.",
+            "required": true
+          },
+          {
+            "key": "has_marriage_agreement",
+            "type": "select",
+            "label": "Do you have a Dowry Agreement, Marriage Settlement, or Prenuptial Agreement to attach?",
+            "options": [
+              {
+                "label": "Yes",
+                "value": "yes"
+              },
+              {
+                "label": "No",
+                "value": "no"
+              }
+            ],
+            "required": true
+          },
+          {
+            "key": "solemnized_in_legazpi",
+            "type": "select",
+            "label": "Was the marriage solemnized in Legazpi City?",
+            "options": [
+              {
+                "label": "Yes",
+                "value": "yes"
+              },
+              {
+                "label": "No",
+                "value": "no",
+                "notice": {
+                  "title": "We can only register marriages solemnized in Legazpi City",
+                  "variant": "destructive",
+                  "description": "On-time registration here covers marriages solemnized in Legazpi City. Register at the Local Civil Registrar of the city or municipality where the marriage took place.",
+                  "blocksProgress": true
+                }
+              }
+            ],
+            "required": true
+          },
+          {
+            "key": "event_date",
+            "type": "date",
+            "label": "Date of marriage",
+            "required": true,
+            "dateDirection": "past"
+          },
+          {
+            "key": "event_place",
+            "type": "text",
+            "label": "Place of marriage",
+            "required": true,
+            "placeholder": "e.g. Legazpi City, Albay"
+          }
+        ]
+      },
+      {
+        "key": "details",
+        "step": "details",
+        "title": "Your details",
+        "fields": [
+          {
+            "key": "subjects",
+            "type": "person_group",
+            "label": "Person named on the record",
+            "required": true
+          },
+          {
+            "key": "contact_number",
+            "type": "phone",
+            "label": "Contact number",
+            "blockKey": "contact_number",
+            "required": false,
+            "placeholder": "9171234567"
+          }
+        ]
+      }
+    ],
+    "eventTiming": {
+      "title": "This date is outside the on-time window",
+      "behavior": "redirect_confirm",
+      "ctaLabel": "Switch to Delayed Registration",
+      "mismatch": "outside_window",
+      "timezone": "Asia/Manila",
+      "windowDays": 30,
+      "description": "A marriage with a license is registered on time within 15 days; one without a license (Article 34 or P.D. 1083) within 30 days. Use the registration track that matches the marriage date.",
+      "triggerField": "event_date",
+      "targetServiceCode": "MARRIAGE_DELAYED",
+      "windowDaysByAnswer": {
+        "field": "marriage_license_basis",
+        "values": {
+          "pd_1083": 30,
+          "article_34": 30,
+          "with_license": 15
+        }
+      },
+      "requireDocumentFirst": false
+    },
+    "schemaVersion": 1
+  }
+}

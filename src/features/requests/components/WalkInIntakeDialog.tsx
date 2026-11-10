@@ -25,8 +25,8 @@ import type { EncodableService } from "~/features/requests/walk-in-intake.querie
 import { CopiesStepper } from "~/features/services/components/CopiesStepper";
 import { ServiceRequirementsDialog } from "~/features/services/components/ServiceRequirementsDialog";
 import { formatPesoFee } from "~/features/services/service-utils";
-import { WalkInBirthFields } from "./WalkInBirthFields";
-import { isWalkInBirth } from "../walk-in-birth";
+import { WalkInRegistrationFields } from "./WalkInRegistrationFields";
+import { isWalkInRegistration } from "../walk-in-registration";
 import type { TemplateAnswers } from "~/features/forms/form-template.types";
 import { digitsOnly } from "~/lib/phone";
 import {
@@ -56,7 +56,7 @@ export function WalkInIntakeDialog({
   const submissionPending = useRef(false);
   const [requirementsOpen, setRequirementsOpen] = useState(false);
   const [serviceCode, setServiceCode] = useState("");
-  const [birthAnswers, setBirthAnswers] = useState<TemplateAnswers>({});
+  const [registrationAnswers, setRegistrationAnswers] = useState<TemplateAnswers>({});
   const [subjects, setSubjects] = useState<SubjectFields[]>([
     emptySubject("Subject"),
   ]);
@@ -94,7 +94,7 @@ export function WalkInIntakeDialog({
 
   function reset() {
     setServiceCode("");
-    setBirthAnswers({});
+    setRegistrationAnswers({});
     setSubjects([emptySubject("Subject")]);
     setPurpose("");
     setFatherName("");
@@ -113,7 +113,7 @@ export function WalkInIntakeDialog({
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (selectedService && isWalkInBirth(serviceCode)) return;
+    if (selectedService && isWalkInRegistration(serviceCode)) return;
     await encodeRequest({
       serviceCode,
       subjects,
@@ -186,7 +186,7 @@ export function WalkInIntakeDialog({
                     <FieldLabel htmlFor="walkin-service">
                       Service requested
                     </FieldLabel>
-                    {selectedService && isWalkInBirth(serviceCode) ? (
+                    {selectedService && isWalkInRegistration(serviceCode) ? (
                       <span role="status" className="rounded-md bg-primary-soft px-3 py-1 text-sm font-semibold text-primary">
                         Fee: {formatPesoFee(selectedService.fee)}
                       </span>
@@ -197,7 +197,7 @@ export function WalkInIntakeDialog({
                       items={services.map((service) => ({ value: service.serviceCode, label: service.name }))}
                       value={serviceCode}
                       disabled={submitting}
-                      onValueChange={(value) => { setServiceCode(value ?? ""); setBirthAnswers({}); }}
+                      onValueChange={(value) => { setServiceCode(value ?? ""); setRegistrationAnswers({}); }}
                     >
                       <SelectTrigger
                         id="walkin-service"
@@ -232,9 +232,9 @@ export function WalkInIntakeDialog({
                   </div>
                 </Field>
 
-                {selectedService && isWalkInBirth(serviceCode) ? (
-                  <WalkInBirthFields key={serviceCode} service={selectedService} submitting={submitting}
-                    onSubmit={encodeRequest} onAnswersChange={setBirthAnswers} onCancel={() => setDialogOpen(false)} />
+                {selectedService && isWalkInRegistration(serviceCode) ? (
+                  <WalkInRegistrationFields key={serviceCode} service={selectedService} submitting={submitting}
+                    onSubmit={encodeRequest} onAnswersChange={setRegistrationAnswers} onCancel={() => setDialogOpen(false)} />
                 ) : <>
                 {selectedService?.feePerCopy ? (
                   <CopiesStepper
@@ -372,7 +372,7 @@ export function WalkInIntakeDialog({
       {selectedService && (
         <ServiceRequirementsDialog
           serviceCode={
-            isWalkInBirth(serviceCode) ? selectedService.serviceCode : selectedService.displayGroup ?? selectedService.serviceCode
+            isWalkInRegistration(serviceCode) ? selectedService.serviceCode : selectedService.displayGroup ?? selectedService.serviceCode
           }
           title={selectedService.name}
           fee={selectedService.fee}
@@ -380,7 +380,7 @@ export function WalkInIntakeDialog({
           processingTime={selectedService.processingTime}
           open={requirementsOpen}
           onOpenChange={setRequirementsOpen}
-          answers={isWalkInBirth(serviceCode) ? birthAnswers : undefined}
+          answers={isWalkInRegistration(serviceCode) ? registrationAnswers : undefined}
         />
       )}
     </>

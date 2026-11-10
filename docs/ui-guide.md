@@ -162,7 +162,13 @@ template across services, with readable fallbacks such as Male, Female, Yes,
 and No for legacy records. Keep names, contact details, references, and notes
 as entered; display formatting must not change stored answers.
 
-The walk-in birth requirements dialog filters by the selected service and current
+Birth and on-time/delayed marriage walk-in intake use their published registration
+forms, shared name fields, date checks, and physical-document confirmation. The
+accepted request starts in Processing with staff acceptance recorded; payment
+and posting requirements still apply. Marriage names use Husband and Maiden Name
+of Wife labels. Marriage License keeps its existing intake form.
+
+The walk-in registration requirements dialog filters by the selected service and current
 answers. Matched conditions say "Applies to this request"; unanswered conditions
 keep "Depends on case answers". General service references keep their case labels.
 Requirement rows show copy quantities and other instructions below the document

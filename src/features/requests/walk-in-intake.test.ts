@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import config from "~/features/services/fixtures/birth-delayed-requirements.json";
+import marriageForms from "./fixtures/marriage-walk-in-forms.json";
 import { parseFormTemplateDefinition } from "~/features/forms/form-template.utils";
 import { emptySubject } from "~/lib/subject-fields";
 
@@ -50,6 +51,10 @@ vi.mock("~/features/requests/tracking-number", () => ({
 vi.mock("~/features/services/services.catalogue", () => ({
   loadServiceCatalogue: async () => ({
     formTemplatesByService: new Map([
+      ...(["MARRIAGE_ONTIME", "MARRIAGE_DELAYED"] as const).map(code => [code, {
+        templateId: code, versionId: "published",
+        definition: parseFormTemplateDefinition(code === "MARRIAGE_ONTIME" ? marriageForms.marriage_ontime : marriageForms.marriage_delayed),
+      }] as const),
       [
         "DCOLB-0079-NORMAL-MARITAL",
         {
@@ -60,6 +65,8 @@ vi.mock("~/features/services/services.catalogue", () => ({
       ],
     ]),
     servicesByCode: new Map([
+      ["MARRIAGE_ONTIME", { party_roles: ["Bride", "Groom"] }],
+      ["MARRIAGE_DELAYED", { party_roles: ["Bride", "Groom"] }],
       ["DCOLB-0079-NORMAL-MARITAL", { party_roles: ["Child", "Mother"] }],
     ]),
   }),
@@ -162,4 +169,39 @@ it("saves the optional father full name on CTC walk-ins and rejects invalid name
   state.create.mockClear();
   expect((await encodeWalkInFn({data: {...data, serviceCode: "CTC-LOCAL", fatherName: "123"}})).error).toBe(true);
   expect(state.create).not.toHaveBeenCalled();
+});
+
+const marriageSubjects = ["Bride", "Groom"].map(role => ({ ...emptySubject(role), firstName: role === "Bride" ? "Ana" : "Juan", middleName: "Santos", lastName: "Cruz" }));
+it.each(["MARRIAGE_ONTIME", "MARRIAGE_DELAYED"])("encodes the complete %s form after physical acceptance", async serviceCode => {
+  state.serviceCode = serviceCode;
+  state.departmentId = state.serviceDepartment = "marriage";
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
+  const answers = {
+    subjects: marriageSubjects, marriage_license_basis: "with_license", solemnized_in_legazpi: "yes",
+    has_marriage_agreement: "no", registration_type: "delayed", event_place: "Legazpi City, Albay",
+    event_date: serviceCode === "MARRIAGE_ONTIME" ? today : "2000-01-01",
+  };
+  const input = { ...data, serviceCode, subjects: marriageSubjects, answers };
+  expect((await encodeWalkInFn({ data: input })).error).toBe(false);
+  expect(state.create).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+    status: "processing", walk_in_accepted_by: "staff", form_template_version_id: "published",
+    form_data: expect.objectContaining({ event_date: answers.event_date, event_place: answers.event_place,
+      subject_role: "Bride", party2_role: "Groom", intake_channel: "walk_in" }),
+  }));
+  state.create.mockClear();
+  for (const patch of [
+    { physicalDocumentsConfirmed: false }, { templateVersionId: "old" },
+    { answers: { ...answers, event_date: serviceCode === "MARRIAGE_ONTIME" ? "2000-01-01" : today } },
+    { answers: { ...answers, event_place: "" } },
+    { answers: { ...answers, subjects: [{ ...marriageSubjects[0], middleName: "" }, marriageSubjects[1]] } },
+  ]) expect((await encodeWalkInFn({ data: { ...input, ...patch } })).error).toBe(true);
+  expect(state.create).not.toHaveBeenCalled();
+  if (serviceCode === "MARRIAGE_DELAYED") {
+    expect((await encodeWalkInFn({ data: { ...input, answers: {
+      ...answers, registration_type: "reconstruction", has_children: "no", event_date: today,
+    } } })).error).toBe(false);
+    expect(state.create).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      form_data: expect.objectContaining({ registration_type: "reconstruction", has_children: "no" }),
+    }));
+  }
 });

@@ -34,6 +34,10 @@ beforeAll(async () => {
   await db.exec("create trigger guard_request_workflow before insert or update on requests for each row execute function guard_request_workflow()");
   await db.exec(migration);
   await db.exec(migration);
+  const marriageMigration = readFileSync(new URL("../../../supabase/migrations/20261110104615_accept_checked_marriage_walkins.sql", import.meta.url), "utf8");
+  await db.exec(marriageMigration);
+  await db.exec(marriageMigration);
+  await db.exec(`insert into services_registry values('MARRIAGE_ONTIME','${other}'),('MARRIAGE_DELAYED','${other}')`);
 }, 30_000);
 afterAll(() => db.close());
 beforeEach(async () => {
@@ -54,6 +58,18 @@ it("records staff acceptance, time, and processing history together", async () =
   expect(String(result.rows[0].walk_in_accepted_at)).not.toContain("1900");
   expect((await db.query("select performed_by_profile_id,action_status from application_logs order by created_at")).rows)
     .toEqual([{performed_by_profile_id: actor,action_status: "walk_in_accepted"},{performed_by_profile_id: actor,action_status: "processing"}]);
+});
+it.each(["MARRIAGE_ONTIME", "MARRIAGE_DELAYED"])("accepts checked %s papers with marriage audit history", async (request_type) => {
+  const result = await insert({ request_type });
+  expect(result.rows[0]).toMatchObject({ status: "processing", payment_status: "unpaid", walk_in_accepted_by: actor });
+  expect((await db.query<{ remarks: string }>("select remarks from application_logs where action_status='processing'")).rows[0].remarks).toContain("marriage request");
+});
+it.each(["MARRIAGE_ONTIME", "MARRIAGE_DELAYED"])("keeps %s acceptance within the department and protects payment", async (request_type) => {
+  await db.exec(`reset role; update services_registry set department_id=null where service_code='${request_type}'; set role authenticated`);
+  await expect(insert({ request_type })).rejects.toThrow(/department/);
+  await db.exec(`reset role; update services_registry set department_id='${other}' where service_code='${request_type}'; set role authenticated`);
+  await expect(insert({ request_type, payment_status: "verified" })).rejects.toThrow();
+  await expect(insert({ request_type, walk_in_accepted_by: other })).rejects.toThrow();
 });
 it("does not save an accepted request if its audit history fails", async () => {
   await db.exec("set test.fail_history='yes'");

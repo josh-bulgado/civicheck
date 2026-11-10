@@ -7,7 +7,8 @@ import { requireActiveSession } from "~/server/auth";
 import { clampCopies, totalFee } from "~/features/services/service-utils";
 import { loadServiceCatalogue } from "~/features/services/services.catalogue";
 import type { TemplateAnswers } from "~/features/forms/form-template.types";
-import { birthCaseForService, isWalkInBirth, prepareWalkInBirth } from "./walk-in-birth";
+import { birthCaseForService, prepareWalkInBirth } from "./walk-in-birth";
+import { isWalkInRegistration } from "./walk-in-registration";
 
 export const encodeWalkInFn = createServerFn({ method: "POST" })
   .validator(
@@ -66,9 +67,9 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
     if (fatherName.length > 240 || validatePersonName(fatherName) !== true) {
       return { error: true, message: "Enter a valid father's full name (240 characters or fewer)." };
     }
-    let birthFormData: Record<string, string> | null = null;
+    let registrationFormData: Record<string, string> | null = null;
     let templateVersionId: string | null = null;
-    if (isWalkInBirth(service.service_code)) {
+    if (isWalkInRegistration(service.service_code)) {
       if (data.physicalDocumentsConfirmed !== true) {
         return { error: true, message: "Confirm that the physical documents are complete and acceptable before encoding." };
       }
@@ -76,21 +77,21 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       const template = catalogue.formTemplatesByService.get(service.service_code);
       const registryService = catalogue.servicesByCode.get(service.service_code);
       if (!template || !registryService || !data.answers || !template.versionId) {
-        return { error: true, message: "Reload the page and complete the birth registration form." };
+        return { error: true, message: "Reload the page and complete the registration form." };
       }
       const { data: active, error: activeError } = await supabase.from("form_templates")
         .select("active_version_id").eq("id", template.templateId).single();
       if (activeError || active.active_version_id !== template.versionId || data.templateVersionId !== template.versionId) {
-        return { error: true, message: "The birth form has changed. Reload the page and review your answers." };
+        return { error: true, message: "The registration form has changed. Reload the page and review your answers." };
       }
       const selectedCase = birthCaseForService(template.definition, service.service_code);
       const prepared = prepareWalkInBirth(selectedCase.definition, { ...data.answers, ...selectedCase.answers }, registryService.party_roles?.length ? registryService.party_roles : ["Subject"]);
       if (prepared.error) return prepared;
       if (prepared.serviceCode && prepared.serviceCode !== service.service_code) {
-        return { error: true, message: "The selected service does not match the birth registration answers." };
+        return { error: true, message: "The selected service does not match the registration answers." };
       }
       subjects = prepared.subjects;
-      birthFormData = prepared.formData;
+      registrationFormData = prepared.formData;
       templateVersionId = template.versionId;
     }
 
@@ -102,7 +103,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       ...(templateVersionId ? { form_template_version_id: templateVersionId } : {}),
       ...(templateVersionId ? { status: "processing", walk_in_accepted_by: user.id } : {}),
       form_data: {
-        ...(birthFormData ?? {
+        ...(registrationFormData ?? {
           ...flattenSubjects(subjects),
           purpose: data.purpose?.trim() || null,
           contact_number: data.contactNumber?.trim() || null,

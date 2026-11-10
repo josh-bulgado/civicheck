@@ -479,6 +479,11 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         id={legendId}
                         className={cn(
                           choiceLegendClass,
+                          !stacked &&
+                          ["has_marriage_agreement", "solemnized_in_legazpi"].includes(definitionField.key) &&
+                            fields.some((item) => item.key === "has_marriage_agreement") &&
+                            fields.some((item) => item.key === "solemnized_in_legazpi") &&
+                            "sm:float-left sm:flex-1",
                           ["additional_identity", "marital"].includes(definitionField.key) &&
                             fields.some((item) => item.key === "additional_identity") &&
                             fields.some((item) => item.key === "marital") &&

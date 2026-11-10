@@ -19,8 +19,9 @@ import {
 import { emptySubject, reconcileSubjects } from "~/lib/subject-fields";
 import type { EncodableService } from "../walk-in-intake.queries";
 import { birthCaseForService, prepareWalkInBirth } from "../walk-in-birth";
+import { isWalkInMarriage } from "../walk-in-registration";
 
-export function WalkInBirthFields({
+export function WalkInRegistrationFields({
   service,
   submitting,
   onSubmit,
@@ -43,14 +44,15 @@ export function WalkInBirthFields({
   const [physicalDocumentsConfirmed, setPhysicalDocumentsConfirmed] = useState(false);
   const form = useForm<DetailsValues>({
     defaultValues: {
-      ...Object.fromEntries((service.birthForm?.definition.sections ?? [])
+      ...Object.fromEntries((service.registrationForm?.definition.sections ?? [])
         .flatMap((section) => section.fields)
         .filter((field) => field.type !== "person_group")
         .map((field) => [field.key, ""])),
       subjects: service.partyRoles.map(emptySubject),
     },
   });
-  const template = service.birthForm;
+  const template = service.registrationForm;
+  const marriage = isWalkInMarriage(service.serviceCode);
   useEffect(() => {
     if (!template) return;
     const selectedCase = birthCaseForService(template.definition, service.serviceCode);
@@ -71,7 +73,7 @@ export function WalkInBirthFields({
     return (
       <Alert>
         <AlertDescription>
-          The birth form is unavailable. Reload the page and try again.
+          The registration form is unavailable. Reload the page and try again.
         </AlertDescription>
       </Alert>
     );
@@ -80,7 +82,14 @@ export function WalkInBirthFields({
     ...definition,
     sections: definition.sections.map((section) => ({
       ...section,
-      fields: section.fields.map((field) => field.key === "event_date" ? { ...field, helpText: undefined } : field),
+      fields: section.fields.map((field) => {
+        if (field.key === "event_date") return { ...field, helpText: undefined };
+        if (marriage && field.key === "event_place") return {
+          ...field,
+          placeholder: "e.g. St. Gregory the Great Cathedral, Legazpi City, Albay",
+        };
+        return field;
+      }),
     })),
   };
   const watched = form.watch();
@@ -137,11 +146,12 @@ export function WalkInBirthFields({
   return (
     <fieldset disabled={submitting} className="min-w-0 space-y-6">
       <p className="text-sm text-muted-foreground">
-        Enter the visitor's birth registration details. Check the applicant’s physical documents.
+        Enter the visitor's {marriage ? "marriage" : "birth"} registration details. Check the applicant’s physical documents.
       </p>
       <DynamicFormFields
         definition={caseDefinition}
         step="case"
+        singleColumn={marriage}
         control={form.control}
         values={values}
         showRequiredMarks
@@ -175,7 +185,7 @@ export function WalkInBirthFields({
                   <h3 className="font-bold">
                     {role.toLowerCase() === "mother"
                       ? "Mother's Maiden Name"
-                      : role}
+                      : marriage ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[role] ?? role) : role}
                   </h3>
                   <SubjectFieldGrid
                     control={form.control}
