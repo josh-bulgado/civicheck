@@ -37,6 +37,10 @@ beforeAll(async () => {
   const marriageMigration = readFileSync(new URL("../../../supabase/migrations/20261110104615_accept_checked_marriage_walkins.sql", import.meta.url), "utf8");
   await db.exec(marriageMigration);
   await db.exec(marriageMigration);
+  const deathMigration = readFileSync(new URL("../../../supabase/migrations/20261110130610_accept_checked_death_walkins.sql", import.meta.url), "utf8");
+  await db.exec(deathMigration);
+  await db.exec(deathMigration);
+  await db.exec(`insert into services_registry values('DEATH_ONTIME','${other}'),('DEATH_DELAYED','${other}')`);
   await db.exec(`insert into services_registry values('MARRIAGE_ONTIME','${other}'),('MARRIAGE_DELAYED','${other}')`);
 }, 30_000);
 afterAll(() => db.close());
@@ -106,4 +110,18 @@ it("keeps payment, release transitions, and acceptance history protected", async
   await expect(db.exec("update requests set walk_in_accepted_by=null")).rejects.toThrow(/cannot be changed/);
   await db.exec("update requests set status='under_validation'");
   expect((await db.query<{status: string}>("select status from requests")).rows[0].status).toBe("under_validation");
+});
+
+it.each(["DEATH_ONTIME", "DEATH_DELAYED"])("accepts checked %s documents with death audit history", async request_type => {
+  const result = await insert({ request_type });
+  expect(result.rows[0]).toMatchObject({ status: "processing", payment_status: "unpaid", walk_in_accepted_by: actor });
+  expect((await db.query<{remarks: string}>("select remarks from application_logs where action_status='processing'")).rows[0].remarks).toContain("death request");
+});
+it.each(["DEATH_ONTIME", "DEATH_DELAYED"])("protects %s department, payment and acceptance identity", async request_type => {
+  await db.exec(`reset role; update services_registry set department_id=null where service_code='${request_type}'; set role authenticated`);
+  await expect(insert({ request_type })).rejects.toThrow(/department/);
+  await db.exec(`reset role; update services_registry set department_id='${other}' where service_code='${request_type}'; set role authenticated`);
+  await expect(insert({ request_type, payment_status: "verified" })).rejects.toThrow();
+  await expect(insert({ request_type, walk_in_accepted_by: other })).rejects.toThrow();
+  await expect(insert({ request_type, walk_in_accepted_by: null })).rejects.toThrow();
 });

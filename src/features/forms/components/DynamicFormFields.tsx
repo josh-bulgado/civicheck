@@ -409,6 +409,9 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                 const placeholder =
                   /place.*\b(birth|born)\b/i.test(definitionField.label)
                     ? "e.g., Hospital/clinic or house no., street, barangay, city/municipality, province."
+                    : definitionField.key === "event_place" &&
+                        definition.eventTiming?.targetServiceCode === "DEATH_ONTIME"
+                      ? "e.g. Hospital name or house/street, barangay, city/municipality, province"
                     : definitionField.placeholder;
 
                 const selectedNotice =

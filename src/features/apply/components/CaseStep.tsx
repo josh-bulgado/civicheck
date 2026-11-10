@@ -415,7 +415,9 @@ export function CaseStep({
             blockingAgeFeedback
               ? blockingAgeFeedback.notice.description
               : blockingOptionNotice
-                ? blockingOptionNotice.description
+                ? selectedService.service_code === "DEATH_DELAYED"
+                  ? undefined
+                  : blockingOptionNotice.description
                 : marriageTimingBlocks
                   ? `Choose a marriage date at least ${MARRIAGE_MINIMUM_LEAD_DAYS} days from today.`
                   : timingBlocks

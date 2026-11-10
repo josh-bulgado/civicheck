@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import config from "~/features/services/fixtures/birth-delayed-requirements.json";
 import marriageForms from "./fixtures/marriage-walk-in-forms.json";
+import deathForms from "./fixtures/death-walk-in-forms.json";
 import { parseFormTemplateDefinition } from "~/features/forms/form-template.utils";
 import { emptySubject } from "~/lib/subject-fields";
 
@@ -51,6 +52,10 @@ vi.mock("~/features/requests/tracking-number", () => ({
 vi.mock("~/features/services/services.catalogue", () => ({
   loadServiceCatalogue: async () => ({
     formTemplatesByService: new Map([
+      ...(["DEATH_ONTIME", "DEATH_DELAYED"] as const).map(code => [code, {
+        templateId: code, versionId: "published",
+        definition: parseFormTemplateDefinition(code === "DEATH_ONTIME" ? deathForms.death_ontime : deathForms.death_delayed),
+      }] as const),
       ...(["MARRIAGE_ONTIME", "MARRIAGE_DELAYED"] as const).map(code => [code, {
         templateId: code, versionId: "published",
         definition: parseFormTemplateDefinition(code === "MARRIAGE_ONTIME" ? marriageForms.marriage_ontime : marriageForms.marriage_delayed),
@@ -65,6 +70,8 @@ vi.mock("~/features/services/services.catalogue", () => ({
       ],
     ]),
     servicesByCode: new Map([
+      ["DEATH_ONTIME", { party_roles: ["Subject"] }],
+      ["DEATH_DELAYED", { party_roles: ["Subject"] }],
       ["MARRIAGE_ONTIME", { party_roles: ["Bride", "Groom"] }],
       ["MARRIAGE_DELAYED", { party_roles: ["Bride", "Groom"] }],
       ["DCOLB-0079-NORMAL-MARITAL", { party_roles: ["Child", "Mother"] }],
@@ -203,5 +210,42 @@ it.each(["MARRIAGE_ONTIME", "MARRIAGE_DELAYED"])("encodes the complete %s form a
     expect(state.create).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       form_data: expect.objectContaining({ registration_type: "reconstruction", has_children: "no" }),
     }));
+  }
+});
+
+const deceased = [{ ...emptySubject("Subject"), firstName: "Juan", middleName: "Santos", lastName: "Cruz", sex: "male" }];
+it.each(["DEATH_ONTIME", "DEATH_DELAYED"])("encodes checked %s papers with the death form and validation", async serviceCode => {
+  state.serviceCode = serviceCode;
+  state.departmentId = state.serviceDepartment = "death";
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
+  const answers = {
+    subjects: deceased, died_in_legazpi: "yes", disposal_method: "buried", embalmed: "yes",
+    death_registration_basis: "beyond_30_days", event_place: "Gogon, Legazpi City, Albay",
+    event_date: serviceCode === "DEATH_ONTIME" ? today : "2000-01-01",
+  };
+  const input = { ...data, serviceCode, subjects: deceased, answers };
+  expect((await encodeWalkInFn({ data: input })).error).toBe(false);
+  expect(state.create).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+    status: "processing", walk_in_accepted_by: "staff", form_template_version_id: "published",
+    form_data: expect.objectContaining({ event_date: answers.event_date, event_place: answers.event_place,
+      subject_first_name: "Juan", died_in_legazpi: "yes", disposal_method: "buried", intake_channel: "walk_in" }),
+  }));
+  state.create.mockClear();
+  for (const patch of [
+    { physicalDocumentsConfirmed: false }, { templateVersionId: "old" },
+    { answers: { ...answers, event_date: serviceCode === "DEATH_ONTIME" ? "2000-01-01" : today } },
+    { answers: { ...answers, died_in_legazpi: "no" } },
+    { answers: { ...answers, event_place: "" } },
+    { answers: { ...answers, embalmed: "" } },
+    { answers: { ...answers, subjects: [{ ...deceased[0], middleName: "" }] } },
+  ]) expect((await encodeWalkInFn({ data: { ...input, ...patch } })).error).toBe(true);
+  expect(state.create).not.toHaveBeenCalled();
+  state.serviceDepartment = "birth";
+  expect((await encodeWalkInFn({ data: input })).error).toBe(true);
+  state.serviceDepartment = "death";
+  if (serviceCode === "DEATH_DELAYED") {
+    expect((await encodeWalkInFn({ data: { ...input, answers: {
+      ...answers, death_registration_basis: "no_existing_record", event_date: today,
+    } } })).error).toBe(false);
   }
 });

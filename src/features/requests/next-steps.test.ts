@@ -13,6 +13,14 @@ const ready = (over: { feesDue: number; paymentStatus: string | null; allowsMess
   });
 
 describe("what to do next once a request is ready for release", () => {
+  it("directs delayed death applicants to pay during posting and wait before claiming", () => {
+    const input = { status: "processing", serviceCode: "DEATH_DELAYED", postingStartDate: "2026-11-10",
+      paymentStatus: "unpaid", feesDue: 620, allowsMessages: false, attachments: [], logs: [] };
+    const unpaid = nextSteps(input);
+    expect(unpaid?.kind === "steps" && unpaid.steps.at(-1)).toBe("Pay at the CCRO cashier, then wait for the posting period and registration to finish before claiming.");
+    const paid = nextSteps({ ...input, paymentStatus: "verified" });
+    expect(paid?.kind === "steps" && paid.steps.at(-1)).toBe("Payment is verified. Wait for the posting period and registration to finish before claiming.");
+  });
   it("adds bringing the fee, with the amount, when one is owed", () => {
     expect(ready({ feesDue: 150, paymentStatus: "unpaid" })).toEqual({
       kind: "steps",

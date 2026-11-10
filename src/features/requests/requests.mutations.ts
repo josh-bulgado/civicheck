@@ -1,3 +1,4 @@
+import { canVerifyPayment } from "./payment-eligibility";
 import { createServerFn } from "@tanstack/react-start";
 import { loadAddableUploads } from "./missing-uploads.server";
 import { attachmentVersionSchema } from "./previous-uploads";
@@ -419,18 +420,18 @@ export const verifyPaymentFn = createServerFn({ method: "POST" })
 
     const { data: request, error: fetchError } = await supabase
       .from("requests")
-      .select("id, status, fees_due, tracking_number, request_type")
+      .select("id, status, fees_due, tracking_number, request_type, posting_start_date")
       .eq("id", data.requestId)
       .single();
 
     if (fetchError || !request) {
       return { error: true, message: "That request no longer exists." };
     }
-    if (request.status !== "ready_for_release") {
+    if (!canVerifyPayment(request.status, request.request_type, request.posting_start_date)) {
       return {
         error: true,
         message:
-          "This request isn't ready for release yet — payment can only be verified once it has been marked ready for release.",
+          "Payment requires readiness for release, or delayed death processing with a recorded notice-posting date.",
       };
     }
 
@@ -463,7 +464,7 @@ export const verifyPaymentFn = createServerFn({ method: "POST" })
       return { error: true, message: error.code === "23505" ? "That OR number is already recorded." : error.message };
     }
 
-    if (request.request_type !== "EMAIL_INQUIRY" && request.tracking_number) {
+    if (request.status === "ready_for_release" && request.request_type !== "EMAIL_INQUIRY" && request.tracking_number) {
       await dispatchApplicantNotification(supabase, data.requestId, buildCashierClearedEmail(request.tracking_number));
     }
     return { error: false };

@@ -43,6 +43,14 @@ The dashboard shell and citizen navigation are already composed in
 inside a feature page. Keep routes responsible for their existing loaders,
 permission checks, search parameters, and pending components.
 
+Delayed death registration asks whether the basis is more than 30 days since
+death or no existing LCR/PSA record. The latter permits dates within 30 days;
+staff still verify the supporting documents. Its burial certificate is mandatory
+when Buried is selected and does not apply when Cremated is selected.
+The cashier can verify delayed-death payment during Processing once staff record
+the notice-posting date. Payment does not complete posting or make the document
+ready to claim; those messages wait until Ready for Release.
+
 Use `QuietLink` and `QuietAnchor` for every app link. Server-rendered links keep
 their native destinations. After hydration, the shared component suppresses
 browser hover destinations while preserving link roles, keyboard activation,
@@ -162,11 +170,12 @@ template across services, with readable fallbacks such as Male, Female, Yes,
 and No for legacy records. Keep names, contact details, references, and notes
 as entered; display formatting must not change stored answers.
 
-Birth and on-time/delayed marriage walk-in intake use their published registration
+Birth and on-time/delayed marriage and death walk-in intake use their published registration
 forms, shared name fields, date checks, and physical-document confirmation. The
 accepted request starts in Processing with staff acceptance recorded; payment
 and posting requirements still apply. Marriage names use Husband and Maiden Name
-of Wife labels. Marriage License keeps its existing intake form.
+of Wife labels. Death uses Name of the deceased and its death-specific case questions.
+Marriage License keeps its existing intake form.
 
 The walk-in registration requirements dialog filters by the selected service and current
 answers. Matched conditions say "Applies to this request"; unanswered conditions
@@ -174,7 +183,7 @@ keep "Depends on case answers". General service references keep their case label
 Requirement rows show copy quantities and other instructions below the document
 name, with where to secure it on a separate line.
 
-For walk-in birth intake, staff first confirm that the physical
+For walk-in birth, marriage and death intake, staff first confirm that the physical
 papers are complete and acceptable. That acceptance and its staff/time history
 are saved with a new request in Processing, skipping the initial online review
 stages. Final registration and release checks still apply. Other walk-in services

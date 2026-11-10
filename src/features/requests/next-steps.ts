@@ -48,6 +48,11 @@ export function nextSteps(input: NextStepsInput): NextStepsView | null {
         "Go to the CCRO office for final validation",
         "Bring your original documents and hard copies of your requirements",
         "Bring your tracking number (a printout of your acknowledgment, or write it down)",
+        ...(input.serviceCode === "DEATH_DELAYED" && input.postingStartDate
+          ? [input.paymentStatus === "verified"
+            ? "Payment is verified. Wait for the posting period and registration to finish before claiming."
+            : "Pay at the CCRO cashier, then wait for the posting period and registration to finish before claiming."]
+          : []),
       ],
     };
   }

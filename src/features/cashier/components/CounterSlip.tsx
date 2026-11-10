@@ -195,7 +195,9 @@ export function CounterSlip({
               <Stamp tone="warning">Not Ready</Stamp>
               <p className="max-w-[48%] text-sm text-pretty text-muted-foreground">
                 Payment can&rsquo;t be collected yet. This request is still{" "}
-                {status.label.toLowerCase()} and needs to be marked ready for release first.
+                {status.label.toLowerCase()}. {result.serviceCode === "DEATH_DELAYED"
+                  ? "Staff must record the notice-posting date during processing first."
+                  : "It needs to be marked ready for release first."}
               </p>
             </>
           ) : null}
@@ -208,7 +210,7 @@ export function CounterSlip({
               <p className="max-w-[48%] text-sm text-pretty text-muted-foreground">
                 {result.feesDue > 0
                   ? "Payment was verified earlier. Nothing to collect."
-                  : "No fee was due. This request is cleared for release."}
+                  : "No fee was due. The cashier has confirmed it."}
               </p>
             </>
           ) : null}
@@ -222,7 +224,9 @@ export function CounterSlip({
                 {verified.free
                   ? "Fee-free request confirmed."
                   : `${formatPeso(result.feesDue)} recorded.`}{" "}
-                The applicant claims the document at the release window.
+                {result.status === "ready_for_release"
+                  ? "The applicant claims the document at the release window."
+                  : "The applicant must wait for posting and registration to finish before claiming."}
               </p>
             </>
           ) : null}

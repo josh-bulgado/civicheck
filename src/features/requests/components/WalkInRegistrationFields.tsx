@@ -19,7 +19,7 @@ import {
 import { emptySubject, reconcileSubjects } from "~/lib/subject-fields";
 import type { EncodableService } from "../walk-in-intake.queries";
 import { birthCaseForService, prepareWalkInBirth } from "../walk-in-birth";
-import { isWalkInMarriage } from "../walk-in-registration";
+import { isWalkInDeath, isWalkInMarriage } from "../walk-in-registration";
 
 export function WalkInRegistrationFields({
   service,
@@ -53,6 +53,7 @@ export function WalkInRegistrationFields({
   });
   const template = service.registrationForm;
   const marriage = isWalkInMarriage(service.serviceCode);
+  const death = isWalkInDeath(service.serviceCode);
   useEffect(() => {
     if (!template) return;
     const selectedCase = birthCaseForService(template.definition, service.serviceCode);
@@ -146,12 +147,12 @@ export function WalkInRegistrationFields({
   return (
     <fieldset disabled={submitting} className="min-w-0 space-y-6">
       <p className="text-sm text-muted-foreground">
-        Enter the visitor's {marriage ? "marriage" : "birth"} registration details. Check the applicant’s physical documents.
+        Enter the visitor's {death ? "death" : marriage ? "marriage" : "birth"} registration details. Check the applicant’s physical documents.
       </p>
       <DynamicFormFields
         definition={caseDefinition}
         step="case"
-        singleColumn={marriage}
+        singleColumn={marriage || death}
         control={form.control}
         values={values}
         showRequiredMarks
@@ -185,6 +186,7 @@ export function WalkInRegistrationFields({
                   <h3 className="font-bold">
                     {role.toLowerCase() === "mother"
                       ? "Mother's Maiden Name"
+                      : death ? "Name of the deceased"
                       : marriage ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[role] ?? role) : role}
                   </h3>
                   <SubjectFieldGrid

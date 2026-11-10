@@ -156,6 +156,8 @@ export interface RequestQueuePage {
 
 /** A `requests` row as `lookupRequestsByTrackingFn` selects it. */
 interface CashierLookupRow {
+  request_type: string;
+  posting_start_date: string | null;
   id: string;
   tracking_number: string;
   status: string;
@@ -362,6 +364,8 @@ export const getAllRequestsFn = createServerFn({ method: "GET" }).handler(async 
 });
 
 export interface CashierLookupResult {
+  serviceCode?: string;
+  postingStartDate?: string | null;
   id: string;
   trackingNumber: string;
   status: string;
@@ -382,6 +386,8 @@ function toCashierLookupResult(row: CashierLookupRow): CashierLookupResult {
 
   return {
     id: row.id,
+    serviceCode: row.request_type,
+    postingStartDate: row.posting_start_date,
     trackingNumber: row.tracking_number,
     status: row.status,
     paymentStatus: row.payment_status,
@@ -407,7 +413,7 @@ export const lookupRequestsByTrackingFn = createServerFn({ method: "GET" })
     const { data: found, error } = await supabase
       .from("requests")
       .select(
-        `id, tracking_number, status, payment_status, or_number, fees_due,
+        `id, tracking_number, request_type, posting_start_date, status, payment_status, or_number, fees_due,
          subject_first_name:form_data->>subject_first_name,
          subject_last_name:form_data->>subject_last_name,
          services_registry(name, display_name),
@@ -420,14 +426,14 @@ export const lookupRequestsByTrackingFn = createServerFn({ method: "GET" })
     return ((found ?? []) as CashierLookupRow[]).map(toCashierLookupResult);
   });
 
-/** How many requests are ready for release but still unpaid, for the cashier dashboard. */
+/** Requests eligible for payment that remain unpaid. */
 export const getAwaitingPaymentCountFn = createServerFn({ method: "GET" }).handler(async () => {
   const { supabase } = await requireActiveSession("requests:collect_payment");
 
   const { count, error } = await supabase
     .from("requests")
     .select("id", { count: "exact", head: true })
-    .eq("status", "ready_for_release")
+    .or("status.eq.ready_for_release,and(status.eq.processing,request_type.eq.DEATH_DELAYED,posting_start_date.not.is.null)")
     .neq("payment_status", "verified");
 
   if (error) throw new Error(error.message);

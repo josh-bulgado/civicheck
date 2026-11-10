@@ -1,3 +1,4 @@
+import { canVerifyPayment } from "../payment-eligibility";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -9,6 +10,8 @@ import { getStatusDetails } from "~/features/requests/request-workflow";
 
 export function PaymentVerificationPanel({
   requestId,
+  serviceCode,
+  postingStartDate,
   status,
   feesDue,
   copies = 1,
@@ -17,6 +20,8 @@ export function PaymentVerificationPanel({
   onVerified,
 }: {
   requestId: string;
+  serviceCode?: string;
+  postingStartDate?: string | null;
   status: string;
   feesDue: number;
   /** Shown beside the fee so the cashier can see what the total covers. */
@@ -27,7 +32,7 @@ export function PaymentVerificationPanel({
 }) {
   const { can } = usePermissions();
   const canCollect = can("requests:collect_payment");
-  const isReadyForRelease = status === "ready_for_release";
+  const paymentAllowed = canVerifyPayment(status, serviceCode, postingStartDate);
 
   const [value, setValue] = useState("");
   const [noFeeConfirmed, setNoFeeConfirmed] = useState(false);
@@ -62,7 +67,7 @@ export function PaymentVerificationPanel({
       {paymentStatus === "verified" ? (
         isFree ? (
           <p className="text-sm text-foreground">
-            No fee was due — this request is cleared for release.
+            No fee was due. The cashier has confirmed it.
           </p>
         ) : (
           <p className="text-sm text-foreground">
@@ -70,11 +75,12 @@ export function PaymentVerificationPanel({
             <span className="font-bold">{orNumber ?? "—"}</span>.
           </p>
         )
-      ) : !isReadyForRelease ? (
+      ) : !paymentAllowed ? (
         <p className="text-sm italic text-muted-foreground">
           Payment can't be collected yet — this request is still{" "}
-          {getStatusDetails(status).label.toLowerCase()}. It needs to be marked
-          ready for release first.
+          {getStatusDetails(status).label.toLowerCase()}. {serviceCode === "DEATH_DELAYED"
+            ? "Staff must record the notice-posting date during processing first."
+            : "It needs to be marked ready for release first."}
         </p>
       ) : canCollect && isFree ? (
         <div className="flex flex-col gap-3">

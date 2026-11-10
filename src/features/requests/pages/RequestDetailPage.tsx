@@ -348,9 +348,11 @@ export default function RequestDetailPage({
             >
               {/* A request with no fee has nothing to collect until the cashier
                   confirms it at release, so the card appears only then. */}
-              {(request.feesDue > 0 || request.status === "ready_for_release") && (
+              {(request.feesDue > 0 || request.status === "ready_for_release" || (request.serviceCode === "DEATH_DELAYED" && request.status === "processing" && request.postingStartDate)) && (
                 <PaymentVerificationPanel
                   requestId={request.id}
+                  serviceCode={request.serviceCode}
+                  postingStartDate={request.postingStartDate}
                   status={request.status}
                   feesDue={request.feesDue}
                   copies={request.copies}
