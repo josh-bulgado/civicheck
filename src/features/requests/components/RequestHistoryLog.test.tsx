@@ -79,3 +79,13 @@ it("shows who checked the originals and the review time", () => {
   expect(html).toContain("validated the originals and hard copies at the office");
   expect(html).toContain('dateTime="' + at(10,30) + '"');
 });
+
+it("shows the walk-in acceptance actor and time", () => {
+  const html = renderToStaticMarkup(<RequestHistoryLog feesDue={0} logs={[{
+    id: "walkin-acceptance", actionStatus: "walk_in_accepted", actorName: "Birth Staff",
+    createdAt: at(10, 30), remarks: "Checked the physical documents. The required papers are complete and acceptable.",
+  }]} />);
+  expect(html).toContain("Birth Staff");
+  expect(html).toContain("checked and accepted the walk-in");
+  expect(html).toContain('dateTime="' + at(10, 30) + '"');
+});

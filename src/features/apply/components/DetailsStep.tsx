@@ -65,7 +65,7 @@ type DetailsSubject = {
   noMiddleName?: boolean;
 };
 
-type DetailsValues = Record<string, string | DetailsSubject[]> & {
+export type DetailsValues = Record<string, string | DetailsSubject[]> & {
   subjects: DetailsSubject[];
 };
 
@@ -202,7 +202,7 @@ function MiddleNameField({
  * from `md` up, with suffix and sex wrapping beneath, so every party's inputs
  * sit on the same columns and an unequal field count leaves nothing stranded.
  */
-function SubjectFieldGrid({
+export function SubjectFieldGrid({
   husband = false,
   control,
   setValue,

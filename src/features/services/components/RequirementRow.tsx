@@ -1,4 +1,6 @@
 import { MapPin } from "lucide-react";
+import type { TemplateAnswers } from "~/features/forms/form-template.types";
+import { conditionRuleMatches } from "~/features/forms/form-template.utils";
 import type { ServiceRequirement } from "~/features/admin/services/services.types";
 import {
   CASE_TAG_LABELS,
@@ -10,15 +12,19 @@ import {
 export function RequirementRow({
   requirement,
   tone,
+  answers,
 }: {
   requirement: ServiceRequirement;
   tone: "required" | "conditional";
+  answers?: TemplateAnswers;
 }) {
   const { caseLabel, name } = splitCaseLabel(requirement.requirement_name);
   const { primary, secondary } = parseRequirementName(name);
-  const source = requirement.where_to_secure ?? secondary;
+  const source = requirement.where_to_secure;
   const caseTag = requirement.applies_when
-    ? "Depends on case answers"
+    ? answers && conditionRuleMatches(requirement.applies_when, answers)
+      ? "Applies to this request"
+      : "Depends on case answers"
     : requirement.case_tag
       ? (CASE_TAG_LABELS[requirement.case_tag] ?? null)
       : null;
@@ -35,6 +41,9 @@ export function RequirementRow({
           </span>
         )}
       </div>
+      {secondary && (
+        <p className="text-xs leading-snug text-body-strong">{secondary}</p>
+      )}
       {source && (
         <p
           className={`flex items-start gap-1.5 text-xs leading-snug ${

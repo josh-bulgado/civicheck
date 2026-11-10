@@ -162,8 +162,18 @@ template across services, with readable fallbacks such as Male, Female, Yes,
 and No for legacy records. Keep names, contact details, references, and notes
 as entered; display formatting must not change stored answers.
 
-Staff must confirm checking the originals before marking registration requests
-ready for release. Release reuses that recorded check unless documents changed
+The walk-in birth requirements dialog filters by the selected service and current
+answers. Matched conditions say "Applies to this request"; unanswered conditions
+keep "Depends on case answers". General service references keep their case labels.
+Requirement rows show copy quantities and other instructions below the document
+name, with where to secure it on a separate line.
+
+For walk-in birth intake, staff first confirm that the physical
+papers are complete and acceptable. That acceptance and its staff/time history
+are saved with a new request in Processing, skipping the initial online review
+stages. Final registration and release checks still apply. Other walk-in services
+keep their existing intake flow. Staff must confirm checking the originals before
+marking registration requests ready for release. Release reuses that recorded check unless documents changed
 or the request returned to validation. Other physical services confirm at
 release; older ready registrations without a recorded check also confirm there.
 The confirmation is

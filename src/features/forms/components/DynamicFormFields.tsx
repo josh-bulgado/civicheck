@@ -207,6 +207,7 @@ function planFieldSpans(
   };
 
   for (const field of fields) {
+    if (field.key === "father_last_name") closeRun();
     const placement =
       field.type === "select" && isChoiceGroup(field.options ?? [])
         ? (choicePlacements.get(field.key) ?? "full")
@@ -223,8 +224,12 @@ function planFieldSpans(
     } else {
       run.push(field.key);
     }
+    if (field.key === "father_first_name") closeRun();
   }
   closeRun();
+  for (const key of ["father_last_name", "father_middle_name", "father_first_name"]) {
+    if (keys.has(key)) spans.set(key, "third");
+  }
   return spans;
 }
 
@@ -335,6 +340,9 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
         >
           {fields.map((definitionField) => (
             <Fragment key={definitionField.key}>
+              {definitionField.key === "father_last_name" ? (
+                <h3 className="col-span-full font-bold text-foreground">Father's Name</h3>
+              ) : null}
               {section.key === "details_requester" && definitionField.key === "requester_province" ? (
                 <h3 className={cn("col-span-full -mb-3", WIZARD_LABEL_CLASS)}>Address</h3>
               ) : null}
@@ -469,7 +477,13 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                       <FieldLegend
                         variant="label"
                         id={legendId}
-                        className={choiceLegendClass}
+                        className={cn(
+                          choiceLegendClass,
+                          ["additional_identity", "marital"].includes(definitionField.key) &&
+                            fields.some((item) => item.key === "additional_identity") &&
+                            fields.some((item) => item.key === "marital") &&
+                            "sm:min-h-[2lh]",
+                        )}
                       >
                         {legendLabel}
                       </FieldLegend>

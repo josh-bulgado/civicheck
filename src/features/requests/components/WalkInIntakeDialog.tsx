@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -24,6 +24,10 @@ import { encodeWalkInFn } from "~/features/requests/walk-in-intake.mutations";
 import type { EncodableService } from "~/features/requests/walk-in-intake.queries";
 import { CopiesStepper } from "~/features/services/components/CopiesStepper";
 import { ServiceRequirementsDialog } from "~/features/services/components/ServiceRequirementsDialog";
+import { formatPesoFee } from "~/features/services/service-utils";
+import { WalkInBirthFields } from "./WalkInBirthFields";
+import { isWalkInBirth } from "../walk-in-birth";
+import type { TemplateAnswers } from "~/features/forms/form-template.types";
 import { digitsOnly } from "~/lib/phone";
 import {
   emptySubject,
@@ -49,16 +53,20 @@ export function WalkInIntakeDialog({
 }: WalkInIntakeDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const submissionPending = useRef(false);
   const [requirementsOpen, setRequirementsOpen] = useState(false);
   const [serviceCode, setServiceCode] = useState("");
+  const [birthAnswers, setBirthAnswers] = useState<TemplateAnswers>({});
   const [subjects, setSubjects] = useState<SubjectFields[]>([
     emptySubject("Subject"),
   ]);
   const [purpose, setPurpose] = useState("");
+  const [fatherName, setFatherName] = useState("");
   const [contactNumber, setContactNumber] = useState("");
   const [copies, setCopies] = useState(1);
   const [encodedRequest, setEncodedRequest] = useState<{
     trackingNumber: string;
+    status: "submitted" | "processing";
   } | null>(null);
 
   const selectedService = services.find(
@@ -86,8 +94,10 @@ export function WalkInIntakeDialog({
 
   function reset() {
     setServiceCode("");
+    setBirthAnswers({});
     setSubjects([emptySubject("Subject")]);
     setPurpose("");
+    setFatherName("");
     setContactNumber("");
     setCopies(1);
     setEncodedRequest(null);
@@ -95,6 +105,7 @@ export function WalkInIntakeDialog({
   }
 
   function setDialogOpen(next: boolean) {
+    if (submissionPending.current) return;
     if (open === undefined) setInternalOpen(next);
     onOpenChange?.(next);
     if (!next) reset();
@@ -102,17 +113,23 @@ export function WalkInIntakeDialog({
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (selectedService && isWalkInBirth(serviceCode)) return;
+    await encodeRequest({
+      serviceCode,
+      subjects,
+      purpose,
+      fatherName,
+      contactNumber,
+      copies: selectedService?.feePerCopy ? copies : undefined,
+    });
+  }
+
+  async function encodeRequest(data: Parameters<typeof encodeWalkInFn>[0]["data"]) {
+    if (submissionPending.current) return;
+    submissionPending.current = true;
     setSubmitting(true);
     try {
-      const result = await encodeWalkInFn({
-        data: {
-          serviceCode,
-          subjects,
-          purpose,
-          contactNumber,
-          copies: selectedService?.feePerCopy ? copies : undefined,
-        },
-      });
+      const result = await encodeWalkInFn({ data });
 
       if (result.error) {
         toast.error("Could not encode this walk-in", {
@@ -121,12 +138,15 @@ export function WalkInIntakeDialog({
         return;
       }
 
-      setEncodedRequest({ trackingNumber: result.trackingNumber });
+      setEncodedRequest({ trackingNumber: result.trackingNumber, status: result.status });
       onChanged();
       toast.success("Walk-in request encoded", {
         description: `Tracking number ${result.trackingNumber}`,
       });
+    } catch (error) {
+      toast.error("Could not encode this walk-in", { description: error instanceof Error ? error.message : "Please try again." });
     } finally {
+      submissionPending.current = false;
       setSubmitting(false);
     }
   }
@@ -162,20 +182,29 @@ export function WalkInIntakeDialog({
             <form onSubmit={handleSubmit}>
               <FieldGroup>
                 <Field>
-                  <FieldLabel htmlFor="walkin-service">
-                    Service requested
-                  </FieldLabel>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <FieldLabel htmlFor="walkin-service">
+                      Service requested
+                    </FieldLabel>
+                    {selectedService && isWalkInBirth(serviceCode) ? (
+                      <span role="status" className="rounded-md bg-primary-soft px-3 py-1 text-sm font-semibold text-primary">
+                        Fee: {formatPesoFee(selectedService.fee)}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-col gap-2 sm:flex-row">
                     <Select
+                      items={services.map((service) => ({ value: service.serviceCode, label: service.name }))}
                       value={serviceCode}
-                      onValueChange={(value) => setServiceCode(value ?? "")}
+                      disabled={submitting}
+                      onValueChange={(value) => { setServiceCode(value ?? ""); setBirthAnswers({}); }}
                     >
                       <SelectTrigger
                         id="walkin-service"
-                        className="flex-1"
+                        className="w-full min-w-0 max-w-full sm:flex-1"
                         shape="split"
                       >
-                        <SelectValue placeholder="Select a department service" />
+                        <SelectValue className="min-w-0 truncate" placeholder="Select a department service" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
@@ -203,6 +232,10 @@ export function WalkInIntakeDialog({
                   </div>
                 </Field>
 
+                {selectedService && isWalkInBirth(serviceCode) ? (
+                  <WalkInBirthFields key={serviceCode} service={selectedService} submitting={submitting}
+                    onSubmit={encodeRequest} onAnswersChange={setBirthAnswers} onCancel={() => setDialogOpen(false)} />
+                ) : <>
                 {selectedService?.feePerCopy ? (
                   <CopiesStepper
                     value={copies}
@@ -253,6 +286,14 @@ export function WalkInIntakeDialog({
                   </div>
                 ))}
 
+                {serviceCode.startsWith("CTC-") || serviceCode === "CTC_ISSUANCE" ? (
+                  <Field>
+                    <FieldLabel htmlFor="walkin-father-name">Father's full name (birth records, optional)</FieldLabel>
+                    <Input id="walkin-father-name" value={fatherName} maxLength={240}
+                      onChange={(event) => setFatherName(event.target.value)} />
+                  </Field>
+                ) : null}
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field>
                     <FieldLabel htmlFor="walkin-contact">
@@ -301,17 +342,19 @@ export function WalkInIntakeDialog({
                     {submitting ? "Encoding..." : "Encode request"}
                   </Button>
                 </div>
+                </>}
               </FieldGroup>
             </form>
           ) : (
             <div className="flex flex-col gap-5">
               <Alert>
                 <AlertTitle>
-                  Request {encodedRequest.trackingNumber} is ready
+                  Request {encodedRequest.trackingNumber} encoded
                 </AlertTitle>
                 <AlertDescription>
-                  The request has been submitted and is ready for staff to
-                  process.
+                  {encodedRequest.status === "processing"
+                    ? "The physical papers were accepted. The request is now in Processing."
+                    : "The request has been submitted and is ready for staff to process."}
                 </AlertDescription>
               </Alert>
               <div className="flex justify-end">
@@ -329,7 +372,7 @@ export function WalkInIntakeDialog({
       {selectedService && (
         <ServiceRequirementsDialog
           serviceCode={
-            selectedService.displayGroup ?? selectedService.serviceCode
+            isWalkInBirth(serviceCode) ? selectedService.serviceCode : selectedService.displayGroup ?? selectedService.serviceCode
           }
           title={selectedService.name}
           fee={selectedService.fee}
@@ -337,6 +380,7 @@ export function WalkInIntakeDialog({
           processingTime={selectedService.processingTime}
           open={requirementsOpen}
           onOpenChange={setRequirementsOpen}
+          answers={isWalkInBirth(serviceCode) ? birthAnswers : undefined}
         />
       )}
     </>

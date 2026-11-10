@@ -19,12 +19,14 @@ import {
 import { FactsStrip } from "~/features/services/components/FactsStrip";
 import { useServiceOverview } from "~/features/services/hooks/useServiceOverview";
 import type { ServiceRequirement } from "~/features/admin/services/services.types";
+import type { TemplateAnswers } from "~/features/forms/form-template.types";
 import {
   cleanStepText,
   formatFee,
   formatServiceCode,
   getVisitBadge,
   summarizeWait,
+  isRequirementApplicable,
 } from "~/features/services/service-utils";
 
 interface ServiceRequirementsDialogProps {
@@ -42,6 +44,7 @@ interface ServiceRequirementsDialogProps {
    * the Apply button and its helper copy are hidden entirely.
    */
   onApply?: () => void;
+  answers?: TemplateAnswers;
 }
 
 const badgeToneClasses = {
@@ -58,12 +61,14 @@ export function ServiceRequirementsDialog({
   open,
   onOpenChange,
   onApply,
+  answers,
 }: ServiceRequirementsDialogProps) {
   const { overview, loading, error, retry } = useServiceOverview(serviceCode, open);
 
   const visitBadge = getVisitBadge(processingTime);
   const isGroup = overview?.isGroup ?? false;
-  const requirements = (overview?.requirements ?? []) as ServiceRequirement[];
+  const requirements = ((overview?.requirements ?? []) as ServiceRequirement[])
+    .filter((requirement) => !answers || isRequirementApplicable(requirement, serviceCode, answers));
   const mandatoryReqs = requirements.filter((req) => req.is_mandatory);
   const conditionalReqs = requirements.filter((req) => !req.is_mandatory);
 
@@ -94,8 +99,9 @@ export function ServiceRequirementsDialog({
             {title}
           </DialogTitle>
           <DialogDescription>
-            Everything you need to prepare before filing this request at the
-            City Civil Registrar Office.
+            {answers
+              ? "Requirements based on the selected service and current answers. Unanswered questions may still change this list."
+              : "Everything you need to prepare before filing this request at the City Civil Registrar Office."}
           </DialogDescription>
         </DialogHeader>
 
@@ -105,7 +111,7 @@ export function ServiceRequirementsDialog({
               {
                 icon: Wallet,
                 label: "Fee at cashier",
-                value: formatFee(fee, displayGroup),
+                value: formatFee(fee, answers ? null : displayGroup),
                 hint: "Paid at the CCRO cashier",
               },
               {
@@ -166,9 +172,9 @@ export function ServiceRequirementsDialog({
                 </section>
               )}
 
-              <RequiredDocuments requirements={mandatoryReqs} />
+              <RequiredDocuments requirements={mandatoryReqs} answers={answers} />
 
-              <ConditionalDocuments requirements={conditionalReqs} />
+              <ConditionalDocuments requirements={conditionalReqs} answers={answers} />
 
               <OfficeSteps steps={steps} />
             </div>

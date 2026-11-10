@@ -36,7 +36,8 @@ describe("delayed birth documents match the applicant's answers", () => {
         expect(names.some((name) => name.startsWith("Certificate of Indigency"))).toBe(program === "brap");
         expect(names.some((name) => name.startsWith("Any additional proof"))).toBe(program === "brap" && identity === "yes");
         expect(names.filter((name) => name.includes("Disinterested"))).toHaveLength(1);
-        expect(names).toHaveLength(10 + Number(foreign === "yes") + (program === "brap" ? 2 + Number(identity === "yes") : 0));
+        expect(names.some((name) => name.startsWith("Sworn Attestation"))).toBe(marital === "non-marital" && age >= 7 && age <= 17);
+        expect(names).toHaveLength(10 + Number(foreign === "yes") + (program === "brap" ? 2 + Number(identity === "yes") : 0) + Number(marital === "non-marital" && age >= 7 && age <= 17));
         expect(checklist(age,program,marital,foreign,identity,"yes").ids).toEqual(checklist(age,program,marital,foreign,identity).ids);
       }
     }
