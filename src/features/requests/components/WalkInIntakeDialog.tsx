@@ -6,7 +6,6 @@ import { Button } from "~/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
@@ -170,12 +169,9 @@ export function WalkInIntakeDialog({
         open={open ?? internalOpen}
         onOpenChange={setDialogOpen}
       >
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+        <DialogContent aria-describedby={undefined} className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Department walk-in intake</DialogTitle>
-            <DialogDescription>
-              Encode the request for the visitor waiting at the counter.
-            </DialogDescription>
           </DialogHeader>
 
           {!encodedRequest ? (

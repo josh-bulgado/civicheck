@@ -507,6 +507,10 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                     data-invalid={fieldState.invalid}
                     className={cn(
                       SPAN_CLASS[spans.get(definitionField.key) ?? "half"],
+                      !stacked && ["reference_number", "marriage_date"].includes(definitionField.key) &&
+                        fields.some((item) => item.key === "father_on_record") &&
+                        fields.some((item) => item.key === "marriage_date") &&
+                        "sm:self-end",
                       // The tiles above a free-text box sit tight against its
                       // label; a few extra pixels keep them apart.
                       stacked &&

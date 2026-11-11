@@ -17,6 +17,10 @@ affected guidance rather than treating this snapshot as a second implementation.
 
 ## Project foundation
 
+Walk-in intake starts with the service selection and fields. Omit generic
+introductory instructions; retain field guidance, service-specific notices,
+validation messages, and required confirmations.
+
 When a requester is the record owner, name autofill includes the applicable
 suffix and preserves names the applicant has edited. Existing separate middle-name
 fields offer No middle name. Record-dependent headings and event-place examples

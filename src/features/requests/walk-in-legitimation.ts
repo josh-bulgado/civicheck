@@ -65,7 +65,7 @@ export function walkInCaseForService(definition: FormTemplateDefinition, service
           .filter((field) => !["free_to_marry", "filer_relationship", "purpose", "purpose_other"].includes(field.key))
           .map((field) => {
             if (surnameChange && field.key === "event_place") return {
-              ...field, label: "Child's place of birth (as recorded)",
+              ...field, label: "Child's Place of Birth",
             };
             if (field.key === "marriage_place") return { ...field, required: false };
             if (field.key === "father_on_record") return {

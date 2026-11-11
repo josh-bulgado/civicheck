@@ -189,19 +189,6 @@ export function WalkInRegistrationFields({
 
   return (
     <fieldset disabled={submitting} className="min-w-0 space-y-6">
-      {!marriageLicense ? <p className="text-sm text-muted-foreground">
-        {petition
-          ? "Copy the petition details from the papers. Record the owner's name and sex as currently written on the record. Check filing documents and authority to file. Publication and PSA affirmation are completed later."
-          : surnameChange
-          ? "Enter the child's name as recorded on the birth certificate and both parents' names. Check the physical papers and the signing and personal appearance requirements for the child's age."
-          : supplemental
-          ? "Enter the details from the civil registry certificate and supplemental affidavit. Check the required originals and copies, and confirm personal appearance."
-          : courtDecree
-          ? "Enter the decision details and names exactly as shown on the court papers. Check the four-copy requirements and the additional certificate if another court issued the decision."
-          : legitimation
-          ? "Enter the child's and parents' details from the birth and marriage certificates. Check the physical papers and the couple's personal appearance."
-          : <>Enter the visitor's {death ? "death" : marriage ? "marriage" : "birth"} registration details. Check the applicant’s physical documents.</>}
-      </p> : null}
       {surnameChange ? (
         <div className="space-y-2 text-sm text-muted-foreground">
           <p>Personal appearance: mother/legal guardian for ages 0-7; child with notarized attestation of the mother/legal guardian for ages 7-17; child for ages 18 and above. The Charter includes age 7 in both ranges; staff determine the applicable signing requirement.</p>
