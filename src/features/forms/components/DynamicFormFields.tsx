@@ -347,6 +347,9 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
         >
           {fields.map((definitionField) => (
             <Fragment key={definitionField.key}>
+              {definitionField.key === "mother_first_name" ? (
+                <h3 className="col-span-full font-bold text-foreground">Mother's Maiden Name</h3>
+              ) : null}
               {definitionField.key === "father_last_name" ? (
                 <h3 className="col-span-full font-bold text-foreground">Father's Name</h3>
               ) : null}
@@ -442,7 +445,10 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                 }));
                 const legendLabel = (
                   <>
-                    {formatFieldLabel(applicantCopy(definitionField.label))}
+                    {formatFieldLabel(applicantCopy(
+                      ({ mother_first_name: "First name", mother_middle_name: "Middle name", mother_last_name: "Last name" } as Record<string, string>)[definitionField.key]
+                        ?? definitionField.label,
+                    ))}
                     {!definitionField.required ? " (optional)" : ""}
                     {showRequiredMarks && definitionField.required ? (
                       <>

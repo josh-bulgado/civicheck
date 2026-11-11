@@ -34,6 +34,12 @@ and retains the saved instructions about originals, photocopies, and copies each
 
 For CTC issuance, Email Inquiry, and Electronic Endorsement online applications,
 requester names come from the signed-in account profile.
+Autofilled requester names select No middle name when the saved middle name is
+blank or the account's no-middle-name flag is set; owner autofill carries this
+choice too. CTC Local/Abroad and Email Inquiry birth-record forms collect the
+mother's maiden name as first, middle, and maiden last name, with No middle name
+available for the middle part. Verification PDFs join the parts and retain support
+for older requests saved with one mother-maiden-name field.
 Keep these name fields read-only, including the no-middle-name checkbox;
 document owner fields remain separate. Submission also uses the saved profile name.
 

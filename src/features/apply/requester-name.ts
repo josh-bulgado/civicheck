@@ -15,7 +15,7 @@ export function requesterNameAnswers(profile: {
 }) {
   return {
     requester_first_name: profile.firstName,
-    requester_middle_name: profile.hasNoMiddleName ? "N/A" : profile.middleName,
+    requester_middle_name: profile.hasNoMiddleName || !profile.middleName.trim() ? "N/A" : profile.middleName,
     requester_last_name: profile.lastName,
     requester_suffix: profile.suffix ?? "",
   };

@@ -3,6 +3,7 @@ import type { VerificationFormPdfData } from "~/features/requests/pdf/types";
 import { formatRequesterAddress } from "~/lib/requester-address";
 import { isEstimatedDate } from "~/features/forms/estimated-date";
 import { documentText } from "~/features/requests/pdf/document-text";
+import { motherMaidenName } from "~/features/forms/mother-maiden-name";
 
 // Wrap whole words instead of splitting them with a hyphen ("regis-tered"), so
 // names and places stay readable. Set globally, and again on each answer below
@@ -105,7 +106,7 @@ function ownerRows(data: VerificationFormPdfData["formData"], recordType: string
           { label: "Full Name", value: ownerName },
           { label: "Date of Birth", value: dateText(text(data, "event_date")) },
           { label: "Place of Birth", value: text(data, "event_place") },
-          { label: "Maiden Name of Mother", value: text(data, "mother_maiden_name") },
+          { label: "Maiden Name of Mother", value: documentText(motherMaidenName(data)) },
           { label: "Name of Father", value: text(data, "father_name") },
         ] satisfies Row[],
         showsLateRegistration: true,

@@ -565,7 +565,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       return;
     }
     // "N/A" is what the requester's "No middle name" box stores.
-    const none = requesterMiddle === NONE_ANSWER;
+    const none = requesterMiddle === NONE_ANSWER || !requesterMiddle;
     const next = {
       first: requesterFirst,
       middle: none ? "" : requesterMiddle,
