@@ -1,5 +1,5 @@
 import { requiresVerificationSignature } from "~/features/apply/verification-signature";
-import { physicalCopyGuidance } from "~/features/services/physical-copy-guidance";
+import { delayedBirthUploadGuidance, physicalCopyGuidance } from "~/features/services/physical-copy-guidance";
 import { surnameChangeRequirementName } from "~/features/services/surname-change";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -129,6 +129,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
   const selectedService =
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
   const definition = selectedService.form_template!.definition;
+  const isDelayedBirth = selectedService.service_code === "BIRTH_DELAYED" || selectedService.service_code.startsWith("DCOLB-");
   const requirements = useMemo(() => savedRequirements.map(requirement => ({
     ...requirement,
     requirement_name: surnameChangeRequirementName(requirement.requirement_name, selectedService.service_code, draft.answers.event_date),
@@ -628,7 +629,9 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
     const isOnTimeColb =
       ["BIRTH_ONTIME", "OTCOLB-MARITAL", "OTCOLB-NONMARITAL"].includes(selectedService.service_code) &&
       /certificate of live birth/i.test(req.requirement_name);
-    const copyGuidance = physicalCopyGuidance(req.requirement_name);
+    const copyGuidance = isDelayedBirth
+      ? delayedBirthUploadGuidance(req.requirement_name)
+      : physicalCopyGuidance(req.requirement_name);
     const primary = isOnTimeColb
       ? "Certificate of Live Birth (COLB)"
       : parseRequirementName(req.requirement_name).primary;
@@ -1030,6 +1033,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
                     <li key={requirement.id}>
                       {signsVerificationOnline && requirement.requirement_name.startsWith("Verification Form")
                         ? "Verification Form: sign online in the next step. No printing needed."
+                        : isDelayedBirth ? requirement.requirement_name
                         : parseRequirementName(requirement.requirement_name).primary}
                     </li>
                   ))}

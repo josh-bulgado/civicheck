@@ -5,6 +5,8 @@ import { conditionRuleSchema } from "~/features/forms/form-template.types";
 import { canonicalizeTemplateAnswers, parseFormTemplateDefinition, resolveCaseSelectorServiceCode } from "~/features/forms/form-template.utils";
 import { isRequirementApplicable } from "./service-utils";
 import { expandRequirementUploadSlots } from "./requirement-upload.utils";
+import { visibleFieldsForStep } from "~/features/forms/components/DynamicFormFields";
+import { applicantCopy } from "~/features/forms/applicant-copy";
 
 const definition = parseFormTemplateDefinition(config.definition);
 const requirements: ServiceRequirement[] = config.requirements.map((row) => ({
@@ -24,6 +26,30 @@ function checklist(age: number, program: string, marital: string, foreign: strin
 }
 
 describe("delayed birth documents match the applicant's answers", () => {
+  it("includes the COLB for an 80+ standard non-marital out-of-town case with a foreign parent", () => {
+    const result = checklist(87, "normal", "non-marital", "yes", "no", "yes");
+    expect(result.code).toBe("DCOLB-80UP-NORMAL-NONMARITAL");
+    expect(result.names).toContain("Four (4) copies of duly accomplished Certificate of Live Birth");
+    expect(result.names.some((name) => name.startsWith("Valid passport"))).toBe(true);
+    expect(result.names.some((name) => name.startsWith("Sworn Attestation"))).toBe(false);
+  });
+  it("shows the additional identity question only after BRAP is selected", () => {
+    for (const program of ["", "normal", "brap", "normal", "brap"]) {
+      const fields = visibleFieldsForStep(definition, "case", { program });
+      expect(fields.some((field) => field.key === "additional_identity")).toBe(program === "brap");
+      const answers = canonicalizeTemplateAnswers(definition, {
+        program, additional_identity: "yes",
+      });
+      expect(answers.additional_identity).toBe(program === "brap" ? "yes" : undefined);
+    }
+  });
+
+  it("hides the additional identity help text in published templates", () => {
+    const field = definition.sections.flatMap((section) => section.fields)
+      .find((field) => field.key === "additional_identity")!;
+    expect(applicantCopy(field.helpText)).toBe("");
+  });
+
   it.each([6,7,17,18,79,80])("checks every document combination at age %s", (age) => {
     for (const program of ["normal","brap"]) for (const marital of ["marital","non-marital"]) {
       for (const foreign of ["yes","no"]) for (const identity of ["yes","no"]) {

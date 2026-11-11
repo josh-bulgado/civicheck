@@ -45,7 +45,9 @@ import {
   canonicalizeTemplateAnswers,
   evaluateTemplateEventTiming,
   fieldsForStep,
+  resolveCaseSelectorServiceCode,
 } from "~/features/forms/form-template.utils";
+import { delayedBirthLayout } from "../delayed-birth-layout";
 import { isRequirementApplicable } from "~/features/services/service-utils";
 import type { ServiceDetail } from "~/features/services/services.queries";
 import {
@@ -385,7 +387,8 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   const [redirectOpen, setRedirectOpen] = useState(false);
   const selectedService =
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
-  const definition = selectedService.form_template!.definition;
+  const definition = delayedBirthLayout(selectedService.form_template!.definition, selectedService.service_code);
+  const isDelayedBirth = selectedService.service_code === "BIRTH_DELAYED" || selectedService.service_code.startsWith("DCOLB-");
   const lockRequesterName = requiresAccountRequester(selectedService.service_code);
   const lockAccountParty = requiresMarriageAccountParty(selectedService.service_code);
   const detailsFields = fieldsForStep(definition, "details");
@@ -507,6 +510,39 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     ),
     ...watchedValues,
   } as unknown as DynamicFieldValues;
+
+  const liveBirthDate = isDelayedBirth ? visibilityValues.event_date : "";
+  const liveBirthService = isDelayedBirth && liveBirthDate
+    ? resolveCaseSelectorServiceCode(definition, canonicalizeTemplateAnswers(definition, {
+      ...draft.answers,
+      ...watchedValues,
+      ...draft.caseSelectorAnswers,
+    }))
+    : null;
+
+  useEffect(() => {
+    if (!hydrated || !liveBirthService || !services.some((service) => service.service_code === liveBirthService)) return;
+    if (draft.selectedServiceCode === liveBirthService && draft.answers.event_date === liveBirthDate) return;
+    // Save the current inputs before changing services so the form keeps edits.
+    const values = form.getValues();
+    update((previous) => {
+      const answers = {
+        ...previous.answers,
+        ...Object.fromEntries(Object.entries(values).filter(([, value]) => typeof value === "string")),
+        ...(personGroupField ? { [personGroupField.key]: values.subjects } : {}),
+      };
+      const answerBag = canonicalizeTemplateAnswers(definition, { ...answers, ...previous.caseSelectorAnswers });
+      return {
+        selectedServiceCode: liveBirthService,
+        eventDate: liveBirthDate,
+        subjects: values.subjects,
+        answers,
+        documents: previous.documents.filter((document) => requirements.some((requirement) =>
+          requirement.id === document.requirementId && isRequirementApplicable(requirement, liveBirthService, answerBag),
+        )),
+      };
+    });
+  }, [hydrated, liveBirthService, liveBirthDate, draft.selectedServiceCode, draft.answers.event_date, services, form, update, personGroupField, definition, requirements]);
 
   const detailsTiming = definition.eventTiming && detailsFields.some((field) => field.key === definition.eventTiming?.triggerField)
     ? evaluateTemplateEventTiming(definition, visibilityValues)
@@ -657,18 +693,22 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
         ...answers,
         ...previous.caseSelectorAnswers,
       });
+      const selectedServiceCode = definition !== selectedService.form_template!.definition
+        ? resolveCaseSelectorServiceCode(definition, answerBag) ?? previous.selectedServiceCode
+        : previous.selectedServiceCode;
       const visibleRequirementIds = new Set(
         requirements
           .filter((requirement) =>
             isRequirementApplicable(
               requirement,
-              previous.selectedServiceCode,
+              selectedServiceCode,
               answerBag,
             ),
           )
           .map((requirement) => requirement.id),
       );
       return {
+        selectedServiceCode,
         subjects,
         contactNumber:
           typeof values.contact_number === "string"
@@ -721,6 +761,27 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
               readOnlyName={lockAccountParty && subjectField.role === accountRole}
               lockedNoMiddleName={accountHasNoMiddleName}
             />
+            {isDelayedBirth && subjectField.role === "Child" ? (
+              <DynamicFormFields
+                definition={{
+                  ...definition,
+                  sections: definition.sections.map((section) => ({
+                    ...section,
+                    fields: section.fields.filter((field) => ["event_date", "event_place"].includes(field.key)),
+                  })),
+                }}
+                step="details"
+                hideSectionTitles
+                showRequiredMarks
+                control={form.control}
+                values={visibilityValues}
+                onDateChange={(key, value) => {
+                  if (key !== definition.eventTiming?.triggerField) return;
+                  const timing = evaluateTemplateEventTiming(definition, { ...visibilityValues, [key]: value });
+                  if (timing?.evaluation.mismatched && timing.rule.behavior === "redirect_confirm") setRedirectOpen(true);
+                }}
+              />
+            ) : null}
           </PartySection>
         ))}
       </div>
@@ -764,7 +825,13 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
 
         <DynamicFormFields
           readOnlyKeys={lockRequesterName ? REQUESTER_NAME_KEYS : []}
-          definition={definition}
+          definition={isDelayedBirth && showRoleLabels && subjectFields.fields.some((field) => field.role === "Child") ? {
+            ...definition,
+            sections: definition.sections.map((section) => ({
+              ...section,
+              fields: section.fields.filter((field) => !["event_date", "event_place"].includes(field.key)),
+            })),
+          } : definition}
           step="details"
           onDateChange={(key, value) => {
             if (key !== definition.eventTiming?.triggerField) return;

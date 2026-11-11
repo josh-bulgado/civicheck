@@ -38,6 +38,7 @@ import {
 } from "~/features/services/components/CaseSelector";
 import { applicantCopy } from "~/features/forms/applicant-copy";
 import { surnameChangeCaseDefinition } from "~/features/services/surname-change";
+import { delayedBirthLayout } from "../delayed-birth-layout";
 
 function caseAnswersFrom(values: DynamicFieldValues) {
   return {
@@ -92,7 +93,30 @@ export function CaseStep({
   const selectedService =
     services.find((service) => service.service_code === draft.selectedServiceCode) ??
     services[0];
-  const definition = selectedService.form_template!.definition;
+  const definition = delayedBirthLayout(selectedService.form_template!.definition, selectedService.service_code);
+  const isDelayedBirth = serviceCode === "birth_delayed" ||
+    selectedService.service_code === "BIRTH_DELAYED" ||
+    selectedService.service_code.startsWith("DCOLB-");
+  const requestDetailKeys = new Set([
+    "event_date", "event_place", "informant_relationship", "informant_name",
+  ]);
+  const caseDefinition = surnameChangeCaseDefinition(definition, selectedService.service_code);
+  const questionDefinition = {
+    ...caseDefinition,
+    sections: caseDefinition.sections.map((section) => ({
+      ...section,
+      fields: section.fields.filter((field) => !requestDetailKeys.has(field.key) &&
+        !(isGroup && field.key === "additional_identity"))
+        .sort((a, b) => Number(a.key === "place_type") - Number(b.key === "place_type")),
+    })),
+  };
+  const requestDetailsDefinition = isDelayedBirth ? {
+    ...caseDefinition,
+    sections: caseDefinition.sections.map((section) => ({
+      ...section,
+      fields: section.fields.filter((field) => requestDetailKeys.has(field.key)),
+    })),
+  } : caseDefinition;
   const caseSelectorDefinition =
     services[0]?.form_template?.definition.caseSelector;
   const caseFields = fieldsForStep(definition, "case").filter(
@@ -139,10 +163,12 @@ export function CaseStep({
       typeof value === "string" ? [[key, value]] : [],
     ),
   );
-  const blockingAgeFeedback = getDerivedAnswerFeedback(
+  // The birth date on the next page determines the final age-specific service.
+  if (isDelayedBirth && !selectorContextAnswers.age) selectorContextAnswers.age = "0-79";
+  const blockingAgeFeedback = (isDelayedBirth ? [] : getDerivedAnswerFeedback(
     definition,
     derivedCaseAnswers,
-  ).find((feedback) => feedback.notice.blocksProgress);
+  )).find((feedback) => feedback.notice.blocksProgress);
   const blockingOptionNotice = getSelectedOptionNotices(
     definition,
     derivedCaseAnswers,
@@ -252,8 +278,8 @@ export function CaseStep({
       );
       return {
         answers,
-        eventDate: values.event_date ?? "",
-        eventPlace: values.event_place ?? "",
+        eventDate: values.event_date ?? previous.eventDate,
+        eventPlace: values.event_place ?? previous.eventPlace,
         caseAnswers: caseAnswersFrom(values),
         documents: previous.documents.filter((document) =>
           visibleRequirementIds.has(document.requirementId),
@@ -311,6 +337,26 @@ export function CaseStep({
             definition={caseSelectorDefinition}
             answers={draft.caseSelectorAnswers}
             contextAnswers={selectorContextAnswers}
+            showQuestionNumbers={!isDelayedBirth}
+            hideBottomDivider={isDelayedBirth}
+            renderAfterQuestion={isDelayedBirth ? (key) => key === "program" ? (
+              <div className="w-full min-w-0 [&_fieldset]:min-w-0 [&_[data-slot=radio-group]]:min-w-0">
+              <DynamicFormFields
+                definition={{
+                  ...caseDefinition,
+                  sections: caseDefinition.sections.map((section) => ({
+                    ...section,
+                    fields: section.fields.filter((field) => field.key === "additional_identity"),
+                  })),
+                }}
+                step="case"
+                showRequiredMarks
+                hideSectionTitles
+                control={form.control}
+                values={{ ...draft.caseSelectorAnswers, ...watchedValues }}
+              />
+              </div>
+            ) : null : undefined}
             onAnswersChange={(caseSelectorAnswers) =>
               update((previous) => ({
                 caseSelectorAnswers,
@@ -322,8 +368,19 @@ export function CaseStep({
           />
         ) : null}
 
+        {isDelayedBirth ? (
+          <DynamicFormFields
+            definition={questionDefinition}
+            step="case"
+            showRequiredMarks
+            hideSectionTitles
+            control={form.control}
+            values={{ ...draft.caseSelectorAnswers, ...watchedValues }}
+          />
+        ) : null}
+
         <DynamicFormFields
-          definition={surnameChangeCaseDefinition(definition, selectedService.service_code)}
+          definition={requestDetailsDefinition}
           step="case"
           showRequiredMarks
           control={form.control}
@@ -332,7 +389,7 @@ export function CaseStep({
           values={{ ...draft.caseSelectorAnswers, ...watchedValues }}
           onDateChange={handleEventDateChange}
           // With the service questions above, head the fields as their own block.
-          showSectionTitles={isGroup}
+          showSectionTitles={isGroup || isDelayedBirth}
         />
 
         {draft.selectedServiceCode && selectedService.fee_per_copy ? (

@@ -1,5 +1,5 @@
 import { formatFieldLabel } from "~/features/forms/field-label";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { FieldLegend, FieldSet } from "~/components/ui/field";
 import { RequiredMark } from "~/components/ui/required-mark";
 import {
@@ -25,6 +25,9 @@ interface CaseSelectorProps {
   answers?: Record<string, string>;
   contextAnswers?: Record<string, string>;
   onAnswersChange?: (answers: Record<string, string>) => void;
+  showQuestionNumbers?: boolean;
+  hideBottomDivider?: boolean;
+  renderAfterQuestion?: (key: string) => ReactNode;
   /**
    * Pre-answered dimensions — set when the applicant arrived here via the
    * On-Time/Delayed birth-registration redirect, which already knows the
@@ -300,6 +303,9 @@ function ConfiguredCaseSelector({
   onAnswersChange,
   presetAge,
   presetMarital,
+  showQuestionNumbers = true,
+  hideBottomDivider = false,
+  renderAfterQuestion,
 }: CaseSelectorProps & { definition: CaseSelectorDefinition }) {
   function resolve(nextAnswers: Record<string, string>) {
     const answerBag = { ...contextAnswers, ...nextAnswers };
@@ -378,7 +384,9 @@ function ConfiguredCaseSelector({
   return (
     <section
       aria-labelledby="case-selector-title"
-      className="border-y border-border-light py-5 sm:py-6"
+      className={hideBottomDivider
+        ? "border-t border-border-light pt-5 sm:pt-6"
+        : "border-y border-border-light py-5 sm:py-6"}
     >
       <div>
         <h2
@@ -411,10 +419,11 @@ function ConfiguredCaseSelector({
             visibleQuestions.length === 1 &&
             sameSentence(applicantCopy(question.label), sectionTitle);
           return (
-            <FieldSet key={question.key} className="civic-enter-sm gap-3">
+            <div key={question.key} className="flex flex-col gap-6">
+            <FieldSet className="civic-enter-sm gap-3">
               {repeatsTitle ? null : (
                 <FieldLegend variant="label" className={choiceLegendClass}>
-                  {visibleQuestions.length > 1 ? `${index + 1}. ` : ""}
+                  {showQuestionNumbers && visibleQuestions.length > 1 ? `${index + 1}. ` : ""}
                   {formatFieldLabel(applicantCopy(question.label))} <RequiredMark />
                 </FieldLegend>
               )}
@@ -437,6 +446,8 @@ function ConfiguredCaseSelector({
                 labelledBy={repeatsTitle ? "case-selector-title" : undefined}
               />
             </FieldSet>
+            {renderAfterQuestion?.(question.key)}
+            </div>
           );
         })}
 

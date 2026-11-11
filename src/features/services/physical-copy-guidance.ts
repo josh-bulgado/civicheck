@@ -1,5 +1,12 @@
 import { describeRequirement } from "./requirement-display";
 
+export function delayedBirthUploadGuidance(requirementName: string): string | null {
+  const detail = describeRequirement(requirementName).detail;
+  return detail
+    ? `Upload one complete copy of each document (all pages). Physical document instructions: ${detail}`
+    : physicalCopyGuidance(requirementName);
+}
+
 export function physicalCopyGuidance(requirementName: string): string | null {
   const hasCopyCount = /\b(?:\d+|one|two|three|four|five)\s*\)?\s+(?:(?:original|certified|xerox|PSA)(?:\/certified)?\s+)*(?:copies|copy|photocopies|photocopy)\b/i.test(requirementName);
   if (!hasCopyCount) return null;

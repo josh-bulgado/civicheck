@@ -348,10 +348,10 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
           {fields.map((definitionField) => (
             <Fragment key={definitionField.key}>
               {definitionField.key === "mother_first_name" ? (
-                <h3 className="col-span-full font-bold text-foreground">Mother's Maiden Name</h3>
+                <h3 className="col-span-full text-xl leading-[normal] font-bold text-foreground">Mother's Maiden Name</h3>
               ) : null}
               {definitionField.key === "father_last_name" ? (
-                <h3 className="col-span-full font-bold text-foreground">Father's Name</h3>
+                <h3 className="col-span-full text-xl leading-[normal] font-bold text-foreground">Father's Name</h3>
               ) : null}
               {section.key === "details_requester" && definitionField.key === "requester_province" ? (
                 <h3 className={cn("col-span-full -mb-3", WIZARD_LABEL_CLASS)}>Address</h3>
@@ -418,7 +418,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                     : undefined;
                 const common = (
                   <>
-                    {definitionField.helpText ? (
+                    {applicantCopy(definitionField.helpText) ? (
                       <FieldDescription>
                         {applicantCopy(definitionField.helpText)}
                       </FieldDescription>

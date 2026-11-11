@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { physicalCopyGuidance } from "./physical-copy-guidance";
+import { delayedBirthUploadGuidance, physicalCopyGuidance } from "./physical-copy-guidance";
 
 it.each([
   ["Letter Request, 3 copies", "3 copies"],
@@ -15,4 +15,13 @@ it.each([
 it("does not turn a number of documents into a physical-copy count", () => {
   expect(physicalCopyGuidance("At least 3 supporting documents")).toBeNull();
   expect(physicalCopyGuidance("Valid ID")).toBeNull();
+});
+
+it.each([
+  ["Four (4) copies of duly accomplished Certificate of Live Birth", "Four (4) copies"],
+  ["Barangay Residency Certificate — 1 original or certified photocopy", "1 original or certified photocopy"],
+  ["Valid ID of the registrant / informant — with personal appearance", "personal appearance"],
+  ["Acknowledgement / Admission of Paternity + Affidavit to Use Surname of Father - with IDs of parents and child (for Non-Marital Child)", "IDs of parents and child"],
+])("keeps delayed-birth physical instructions visible: %s", (name, detail) => {
+  expect(delayedBirthUploadGuidance(name)).toContain(detail);
 });
