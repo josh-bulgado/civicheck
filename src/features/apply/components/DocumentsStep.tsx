@@ -1,5 +1,6 @@
 import { requiresVerificationSignature } from "~/features/apply/verification-signature";
 import { physicalCopyGuidance } from "~/features/services/physical-copy-guidance";
+import { surnameChangeRequirementName } from "~/features/services/surname-change";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Camera, Check, ClipboardCheck, Files, FileText, FileX, X } from "lucide-react";
@@ -116,7 +117,7 @@ interface DocumentsStepProps {
   services: ServiceDetail["services"];
 }
 
-export function DocumentsStep({ serviceCode, requirements, services }: DocumentsStepProps) {
+export function DocumentsStep({ serviceCode, requirements: savedRequirements, services }: DocumentsStepProps) {
   const navigate = useNavigate();
   const { draft, update, hydrated } = useApplyDraft(serviceCode);
   // The draft as of the latest render. A "Try again" button keeps the
@@ -128,6 +129,10 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
   const selectedService =
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
   const definition = selectedService.form_template!.definition;
+  const requirements = useMemo(() => savedRequirements.map(requirement => ({
+    ...requirement,
+    requirement_name: surnameChangeRequirementName(requirement.requirement_name, selectedService.service_code, draft.answers.event_date),
+  })), [savedRequirements, selectedService.service_code, draft.answers.event_date]);
   const signsVerificationOnline = requiresVerificationSignature(
     selectedService.service_code,
     draft.caseSelectorAnswers.record_type ?? draft.answers.record_type,

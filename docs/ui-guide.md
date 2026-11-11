@@ -355,6 +355,12 @@ required personal appearance, signatures, and attestation for the child's age.
 Accepted requests start in Processing and remain unpaid. Display the base fee
 separately from conditional paternity and per-page charges.
 
+Surname-change case fields omit helper paragraphs in both applicant and walk-in
+forms. Keep the first three applicant controls aligned. Affidavit instructions
+show only the signer and appearance wording for the entered birth date; age 7
+needs staff verification because the Charter's ranges overlap. Keep the same
+requirement ID and upload slot when the displayed wording changes.
+
 Start with the repository's Intent skill check from `AGENTS.md`. Use the local
 `civicheck-ui` skill to apply this guide, the installed `shadcn` skill for component
 APIs and registry operations, `frontend-design` when developing a visual

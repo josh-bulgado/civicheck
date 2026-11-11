@@ -4,6 +4,7 @@ import { SignaturePad } from "./SignaturePad";
 import { VerificationFormPreview } from "./VerificationFormPreview";
 import { requiresVerificationSignature } from "../verification-signature";
 import { formatFieldLabel } from "~/features/forms/field-label";
+import { surnameChangeRequirementName } from "~/features/services/surname-change";
 import { useNavigate } from "@tanstack/react-router";
 import { SubmittedRequestRedirect } from "./SubmittedRequestRedirect";
 import { QuietLink } from "~/components/quiet-link";
@@ -399,7 +400,7 @@ export function ReviewStep({
             <div className="flex flex-col gap-3.5 sm:col-span-2">
               {activeDocumentsWithPositions.map(
                 ({ document: doc, fileNumber, fileTotal }) => {
-                  const name = doc.requirementName.replace(/\s*[—–]\s*/g, " - ");
+                  const name = surnameChangeRequirementName(doc.requirementName, selectedService.service_code, answerBag.event_date).replace(/\s*[—–]\s*/g, " - ");
                   const suffix = fileTotal > 1 ? ` · file ${fileNumber} of ${fileTotal}` : "";
                   return (
                     <div key={doc.storagePath} className="flex items-center gap-3.5">

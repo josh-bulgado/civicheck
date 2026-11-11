@@ -1,6 +1,7 @@
 import { MapPin } from "lucide-react";
 import type { TemplateAnswers } from "~/features/forms/form-template.types";
 import { conditionRuleMatches } from "~/features/forms/form-template.utils";
+import { surnameChangeRequirementName } from "~/features/services/surname-change";
 import type { ServiceRequirement } from "~/features/admin/services/services.types";
 import {
   CASE_TAG_LABELS,
@@ -18,7 +19,11 @@ export function RequirementRow({
   tone: "required" | "conditional";
   answers?: TemplateAnswers;
 }) {
-  const { caseLabel, name } = splitCaseLabel(requirement.requirement_name);
+  const { caseLabel, name } = splitCaseLabel(surnameChangeRequirementName(
+    requirement.requirement_name,
+    requirement.service_code ?? requirement.requirement_group,
+    answers?.event_date,
+  ));
   const { primary, secondary } = parseRequirementName(name);
   const source = requirement.where_to_secure;
   const caseTag = requirement.applies_when

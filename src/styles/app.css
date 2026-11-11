@@ -2246,6 +2246,16 @@ input[aria-hidden="true"][tabindex="-1"] {
   }
 }
 
+@media (min-width: 64rem) {
+  .surname-change-case label:is(
+    [for="dynamic-event_date"],
+    [for="dynamic-event_place"],
+    [for="dynamic-reference_number"]
+  ) {
+    min-height: 2lh;
+  }
+}
+
 /* Skeletons hold the page layout while data arrives; do not fade the page itself. */
 [data-page-skeleton] {
   animation: none;

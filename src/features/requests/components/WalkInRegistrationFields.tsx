@@ -17,6 +17,7 @@ import {
   canonicalizeTemplateAnswers,
 } from "~/features/forms/form-template.utils";
 import { emptySubject, reconcileSubjects } from "~/lib/subject-fields";
+import { surnameChangeCaseDefinition } from "~/features/services/surname-change";
 import type { EncodableService } from "../walk-in-intake.queries";
 import { prepareWalkInBirth } from "../walk-in-birth";
 import { isWalkInPetition, prepareWalkInPetition } from "../walk-in-petition";
@@ -98,9 +99,10 @@ export function WalkInRegistrationFields({
       </Alert>
     );
   const { definition, answers: caseAnswers } = walkInCaseForService(template.definition, service.serviceCode);
+  const displayDefinition = surnameChangeCaseDefinition(definition, service.serviceCode);
   const caseDefinition = {
-    ...definition,
-    sections: definition.sections.map((section) => ({
+    ...displayDefinition,
+    sections: displayDefinition.sections.map((section) => ({
       ...section,
       fields: section.fields.map((field) => {
         if (field.key === "event_date") return { ...field, helpText: undefined };
@@ -189,12 +191,6 @@ export function WalkInRegistrationFields({
 
   return (
     <fieldset disabled={submitting} className="min-w-0 space-y-6">
-      {surnameChange ? (
-        <div className="space-y-2 text-sm text-muted-foreground">
-          <p>Personal appearance: mother/legal guardian for ages 0-7; child with notarized attestation of the mother/legal guardian for ages 7-17; child for ages 18 and above. The Charter includes age 7 in both ranges; staff determine the applicable signing requirement.</p>
-          <p>The base fee is {service.fee.toLocaleString("en-PH", { style: "currency", currency: "PHP" })}. Also payable: ₱100 if with paternity and ₱5 per certified-photocopy page. Confirm additional charges from the papers.</p>
-        </div>
-      ) : null}
       <DynamicFormFields
         definition={caseDefinition}
         step="case"

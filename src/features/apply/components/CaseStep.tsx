@@ -37,6 +37,7 @@ import {
   inferMaritalStatus,
 } from "~/features/services/components/CaseSelector";
 import { applicantCopy } from "~/features/forms/applicant-copy";
+import { surnameChangeCaseDefinition } from "~/features/services/surname-change";
 
 function caseAnswersFrom(values: DynamicFieldValues) {
   return {
@@ -301,7 +302,7 @@ export function CaseStep({
 
   return (
     <WizardShell step={1} title="Tell us about your request">
-      <div className="flex flex-col gap-6">
+      <div className={selectedService.service_code === "RA9255_SURNAME" ? "surname-change-case flex flex-col gap-6" : "flex flex-col gap-6"}>
         {isGroup ? (
           <CaseSelector
             services={services}
@@ -322,7 +323,7 @@ export function CaseStep({
         ) : null}
 
         <DynamicFormFields
-          definition={definition}
+          definition={surnameChangeCaseDefinition(definition, selectedService.service_code)}
           step="case"
           showRequiredMarks
           control={form.control}
