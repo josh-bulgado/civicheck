@@ -4,7 +4,7 @@ import { INVALID_PERSON_NAME, isNameField, validatePersonName } from "~/lib/pers
 import { flattenSubjects, type SubjectFields } from "~/lib/subject-fields";
 import { addressAreas, addressCities } from "~/lib/requester-address";
 import { countryOptions } from "~/lib/countries";
-import { isEstimatedDate, validateEstimatedDate, validateRegistrationDate } from "./estimated-date";
+import { validateDateAnswer } from "./date-validation";
 import {
   conditionRuleSchema,
   formTemplateDefinitionSchema,
@@ -856,24 +856,8 @@ export function validateTemplateAnswers(
         return { success: false, message: blockingNotice.description };
       }
       if (field.type === "date") {
-        if (field.key === "registered_late_when") {
-          const result = validateRegistrationDate(value, answerString(effectiveAnswers, "event_date"));
-          if (result !== true) return { success: false, message: result };
-        }
-        if (field.allowEstimate && isEstimatedDate(value)) {
-          const result = validateEstimatedDate(value, todayKey);
-          if (result !== true) return { success: false, message: result };
-          continue;
-        }
-        if (!fromDateKey(value)) {
-          return { success: false, message: `${field.label} must be a valid date.` };
-        }
-        if (field.dateDirection === "past" && value > todayKey) {
-          return { success: false, message: `${field.label} cannot be in the future.` };
-        }
-        if (field.dateDirection === "future" && value < todayKey) {
-          return { success: false, message: `${field.label} cannot be in the past.` };
-        }
+        const result = validateDateAnswer(field, value, effectiveAnswers, todayKey);
+        if (result !== true) return { success: false, message: result };
       }
     }
   }

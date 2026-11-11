@@ -17,6 +17,17 @@ affected guidance rather than treating this snapshot as a second implementation.
 
 ## Project foundation
 
+When a requester is the record owner, name autofill includes the applicable
+suffix and preserves names the applicant has edited. Existing separate middle-name
+fields offer No middle name. Record-dependent headings and event-place examples
+follow the selected birth, death, or marriage record in online and detailed
+walk-in forms. Completed-event dates use the Philippine calendar day and are
+validated in both the form and submission. Late-registration dates cannot precede
+the selected record's event date. Marriage License age brackets continue to use
+the intended marriage date; registration age brackets continue to use today's date.
+Upload guidance distinguishes one complete uploaded copy from physical copies
+and retains the saved instructions about originals, photocopies, and copies each.
+
 For CTC issuance, Email Inquiry, and Electronic Endorsement online applications,
 requester names come from the signed-in account profile.
 Keep these name fields read-only, including the no-middle-name checkbox;

@@ -541,6 +541,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     middle: string;
     none: boolean;
     last: string;
+    suffix: string;
   } | null>(null);
   const textOf = (value: unknown) => (typeof value === "string" ? value.trim() : "");
   const relationship = textOf(watchedValues.requester_relationship);
@@ -555,6 +556,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   const requesterFirst = textOf(watchedValues.requester_first_name);
   const requesterMiddle = textOf(watchedValues.requester_middle_name);
   const requesterLast = textOf(watchedValues.requester_last_name);
+  const requesterSuffix = textOf(lockRequesterName && user ? user.suffix : watchedValues.requester_suffix);
   useEffect(() => {
     if (!hasPersonGroup || roles.length !== 1) return;
     if ((isMarriageRecord && !emailRecordOwner) || recordType === "death" ||
@@ -569,6 +571,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       middle: none ? "" : requesterMiddle,
       none,
       last: requesterLast,
+      suffix: subjectFieldVisibility(roles[0], form.getValues("subjects.0.sex")).showSuffix ? requesterSuffix : "",
     };
     const owner = form.getValues("subjects.0");
     if (!owner) return;
@@ -576,6 +579,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       !owner.firstName?.trim() &&
       !owner.middleName?.trim() &&
       !owner.lastName?.trim() &&
+      !owner.suffix?.trim() &&
       !owner.noMiddleName;
     const last = mirroredOwner.current;
     const ownerUntouched =
@@ -583,16 +587,18 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       owner.firstName === last.first &&
       owner.middleName === last.middle &&
       owner.lastName === last.last &&
+      (owner.suffix ?? "") === last.suffix &&
       Boolean(owner.noMiddleName) === last.none;
     if (!ownerBlank && !ownerUntouched) return;
     form.setValue("subjects.0.firstName", next.first);
     form.setValue("subjects.0.middleName", next.middle);
     form.setValue("subjects.0.lastName", next.last);
+    form.setValue("subjects.0.suffix", next.suffix);
     form.setValue("subjects.0.noMiddleName", next.none);
     mirroredOwner.current = next;
     // `form`, `roles` and `hasPersonGroup` are stable for a given service.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMarriageRecord, recordType, relationship, emailRecordOwner, requesterFirst, requesterMiddle, requesterLast]);
+  }, [isMarriageRecord, recordType, relationship, emailRecordOwner, requesterFirst, requesterMiddle, requesterLast, requesterSuffix]);
 
   // The role comes from the field array, not the watched values: `role` has no
   // input of its own, so `shouldUnregister` drops it from the watched rows.

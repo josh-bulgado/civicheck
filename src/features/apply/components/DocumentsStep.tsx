@@ -1,4 +1,5 @@
 import { requiresVerificationSignature } from "~/features/apply/verification-signature";
+import { physicalCopyGuidance } from "~/features/services/physical-copy-guidance";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Camera, Check, ClipboardCheck, Files, FileText, FileX, X } from "lucide-react";
@@ -622,10 +623,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
     const isOnTimeColb =
       ["BIRTH_ONTIME", "OTCOLB-MARITAL", "OTCOLB-NONMARITAL"].includes(selectedService.service_code) &&
       /certificate of live birth/i.test(req.requirement_name);
-    const needsFourPhysicalCopies =
-      isOnTimeColb ||
-      (/certificate/i.test(req.requirement_name) &&
-        /\b(?:4\)?|four)\s+(?:original\s+)?copies\b/i.test(req.requirement_name));
+    const copyGuidance = physicalCopyGuidance(req.requirement_name);
     const primary = isOnTimeColb
       ? "Certificate of Live Birth (COLB)"
       : parseRequirementName(req.requirement_name).primary;
@@ -737,8 +735,8 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
               >
                 {isDropTarget
                   ? "Drop to add to this document."
-                  : needsFourPhysicalCopies
-                    ? "Required · upload one copy (all pages). Bring 4 physical copies to CCRO."
+                  : copyGuidance
+                    ? copyGuidance
                   : pageCount > 0
                     ? "Keep photos in reading order. A multi-page PDF can stay as one file."
                     : "Required · add a PDF or photograph each page."}

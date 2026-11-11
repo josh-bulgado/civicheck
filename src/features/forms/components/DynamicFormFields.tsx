@@ -1,4 +1,4 @@
-import { validateEventPlace } from "../event-place";
+import { eventPlacePlaceholder, validateEventPlace } from "../event-place";
 import { formatFieldLabel } from "~/features/forms/field-label";
 import { isNameField, validatePersonName } from "~/lib/person-name";
 import { Fragment, type ReactNode } from "react";
@@ -14,7 +14,7 @@ import { Checkbox } from "~/components/ui/checkbox";
 import { Phone } from "lucide-react";
 import { DatePicker } from "~/components/ui/date-picker";
 import { EstimatedDateField } from "./EstimatedDateField";
-import { isEstimatedDate, validateEstimatedDate, validateRegistrationDate } from "../estimated-date";
+import { registrationEventDate, validateDateAnswer } from "../date-validation";
 import { selectableFieldOptions, todayKeyInTimeZone } from "../form-template.utils";
 import {
   Field,
@@ -41,7 +41,6 @@ import {
 } from "~/components/ui/select";
 import { RequiredMark } from "~/components/ui/required-mark";
 import { Textarea } from "~/components/ui/textarea";
-import { toDateKey } from "~/lib/date";
 import { mobileDigits } from "~/lib/phone";
 import { cn } from "~/lib/utils";
 import {
@@ -370,20 +369,12 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                     !definitionField.options.some((option) => option.value === value)) {
                     return "Select a valid option";
                   }
-                  if (definitionField.key === "registered_late_when") {
-                    const result = validateRegistrationDate(value, String(values.event_date ?? ""));
-                    if (result !== true) return result;
-                  }
                   const placeValidation = validateEventPlace(definitionField, value);
                   if (placeValidation !== true) return placeValidation;
                   if (definitionField.noneLabel && value === NONE_ANSWER) return true;
                   if (isNameField(definitionField)) return validatePersonName(value);
-                  if (
-                    definitionField.type === "date" &&
-                    definitionField.allowEstimate &&
-                    isEstimatedDate(value)
-                  ) {
-                    return validateEstimatedDate(value, todayKeyInTimeZone());
+                  if (definitionField.type === "date") {
+                    return validateDateAnswer(definitionField, value, values, todayKeyInTimeZone());
                   }
                   if (
                     definitionField.type === "phone" &&
@@ -414,13 +405,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                   locationKey += ":" + values.requester_city;
                 }
 
-                const placeholder =
-                  /place.*\b(birth|born)\b/i.test(definitionField.label)
-                    ? "e.g., Hospital/clinic or house no., street, barangay, city/municipality, province."
-                    : definitionField.key === "event_place" &&
-                        definition.eventTiming?.targetServiceCode === "DEATH_ONTIME"
-                      ? "e.g. Hospital name or house/street, barangay, city/municipality, province"
-                    : definitionField.placeholder;
+                const placeholder = eventPlacePlaceholder(definitionField, values.record_type);
 
                 const selectedNotice =
                   definitionField.type === "select"
@@ -569,7 +554,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                     ) : definitionField.type === "date" ? (
                       definitionField.allowEstimate ? (
                         <EstimatedDateField
-                          min={definitionField.key === "registered_late_when" ? String(values.event_date || "") : undefined}
+                          min={definitionField.key === "registered_late_when" ? registrationEventDate(values) : undefined}
                           id={`dynamic-${definitionField.key}`}
                           value={field.value ?? ""}
                           onChange={(value) => {
@@ -591,14 +576,14 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                           onBlur={field.onBlur}
                           max={
                             definitionField.dateDirection === "past"
-                              ? toDateKey()
+                              ? todayKeyInTimeZone()
                               : undefined
                           }
                           min={
                             definitionField.key === "registered_late_when"
-                              ? String(values.event_date || "")
+                              ? registrationEventDate(values)
                               : definitionField.dateDirection === "future"
-                              ? toDateKey()
+                              ? todayKeyInTimeZone()
                               : undefined
                           }
                           // The label is right above, so without a placeholder of its

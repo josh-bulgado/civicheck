@@ -245,7 +245,10 @@ export function WalkInRegistrationFields({
                   <h3 className="font-bold">
                     {role.toLowerCase() === "mother"
                       ? "Mother's Maiden Name"
-                      : petition || supplemental ? "Person named on the record"
+                      : (petition || supplemental) && roles.length === 1
+                        ? (definition.sections.flatMap((section) => section.fields)
+                          .find((field) => field.type === "person_group")?.labelByAnswer?.labels[String(values.record_type ?? "")]
+                          ?? "Person named on the record")
                       : surnameChange && role === "Child" ? "Child's name on the birth certificate"
                       : death ? "Name of the deceased"
                       : marriage ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[role] ?? role) : role}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateEventPlace } from "./event-place";
+import { eventPlacePlaceholder, validateEventPlace } from "./event-place";
 import { formTemplateDefinitionSchema } from "./form-template.types";
 import { validateTemplateAnswers } from "./form-template.utils";
 
@@ -44,4 +44,21 @@ it("validates multiline place fields", () => {
   expect(validateEventPlace({ key: "event_place", label: "Place of death", type: "textarea" }, "123!")).toBe(
     "Place of death can't contain only numbers or special characters.",
   );
+});
+
+it("uses the selected record for generic location examples", () => {
+  const field = { key: "event_place", label: "Place of the event on the record" };
+  expect(eventPlacePlaceholder(field, "birth")).toContain("Hospital/clinic");
+  expect(eventPlacePlaceholder(field, "death")).toContain("Hospital/clinic");
+  expect(eventPlacePlaceholder(field, "marriage")).toContain("ceremony venue");
+  expect(eventPlacePlaceholder(field, "other")).toBeUndefined();
+});
+
+it("preserves court, registration-location, intended-venue, and unrelated field examples", () => {
+  for (const field of [
+    { key: "event_place", label: "Court that issued the decision" },
+    { key: "event_place", label: "Intended place of marriage" },
+    { key: "event_place", label: "Place where the child was born or registered" },
+    { key: "event_date", label: "Date of birth" },
+  ]) expect(eventPlacePlaceholder({ ...field, placeholder: "Existing example" }, "birth")).toBe("Existing example");
 });
