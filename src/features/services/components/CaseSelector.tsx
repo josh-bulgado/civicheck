@@ -1,6 +1,5 @@
 import { formatFieldLabel } from "~/features/forms/field-label";
 import { useEffect, useState } from "react";
-import { CheckCircle2 } from "lucide-react";
 import { FieldLegend, FieldSet } from "~/components/ui/field";
 import { RequiredMark } from "~/components/ui/required-mark";
 import {
@@ -91,22 +90,14 @@ function sameSentence(a: string, b: string) {
   return normalize(a) === normalize(b);
 }
 
-/**
- * Quiet confirmation of the service the answers resolved to. The docket above
- * the form already carries the name and fee, so this stays a single muted line
- * (and the live region still announces the result to screen readers).
- */
+// The service summary shows the name; announce changes for screen readers.
 function SelectedServiceNote({ name }: { name: string }) {
   return (
     <p
       role="status"
       aria-live="polite"
-      className="civic-enter-sm flex items-start gap-2 text-sm text-muted-foreground"
+      className="sr-only"
     >
-      <CheckCircle2
-        className="mt-0.5 size-4 shrink-0 text-success"
-        aria-hidden="true"
-      />
       <span>
         Service selected: <span className="font-medium text-foreground">{name}</span>
       </span>
@@ -207,9 +198,6 @@ function LegacyCaseSelector({
         >
           Answer a few questions
         </h2>
-        <p className="mt-0.5 max-w-2xl text-pretty text-sm leading-snug text-muted-foreground">
-          Your answers help us select the right service.
-        </p>
       </div>
 
       <div className="mt-6 flex flex-col gap-6">
@@ -378,6 +366,14 @@ function ConfiguredCaseSelector({
     (service) => service.service_code === selectedCode,
   );
   const sectionTitle = applicantCopy(definition.title);
+  const description = applicantCopy(definition.description);
+  const showDescription = description && ![
+    "Your answers help us select the right service.",
+    "Your answers help us select the correct service, fee, process, and requirements.",
+    "Select the child’s case so we can apply the correct fee, parties, and requirements.",
+    "The fee depends on whether the request originates in the Philippines or abroad.",
+    "Answer each question; at least one must be Yes. Online submission is for staff review. Staff must verify all applicable requirements before accepting the petition. Publication documents are submitted later, as described in the service steps.",
+  ].includes(description);
 
   return (
     <section
@@ -400,10 +396,11 @@ function ConfiguredCaseSelector({
             </>
           ) : null}
         </h2>
-        <p className="mt-0.5 max-w-2xl text-pretty text-sm leading-snug text-muted-foreground">
-          {applicantCopy(definition.description) ??
-            "Your answers help us select the right service."}
-        </p>
+        {showDescription ? (
+          <p className="mt-0.5 max-w-2xl text-pretty text-sm leading-snug text-muted-foreground">
+            {description}
+          </p>
+        ) : null}
       </div>
 
       <div className="mt-6 flex flex-col gap-6">

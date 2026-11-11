@@ -246,6 +246,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
   onFieldChange,
   showRequiredMarks = false,
   showSectionTitles = false,
+  hideSectionTitles = false,
   singleColumn = false,
   readOnlyKeys = [],
   renderSectionLead,
@@ -268,6 +269,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
    * the page reads as headed blocks.
    */
   showSectionTitles?: boolean;
+  hideSectionTitles?: boolean;
   /** Stacks every field on its own row instead of pairing short inputs. */
   singleColumn?: boolean;
   readOnlyKeys?: readonly string[];
@@ -300,7 +302,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
       for (const field of fields)
         spans.set(field.key, field.inline ? "inline" : "full");
     }
-    const titled = showSectionTitles || sections.length > 1;
+    const titled = !hideSectionTitles && (showSectionTitles || sections.length > 1);
     // Stacked sections after the first are set apart with a rule and generous
     // room, so the applicant sees where one block ends and the next begins.
     const setApart = stacked && sectionIndex > 0;

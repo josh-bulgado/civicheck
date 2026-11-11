@@ -1,9 +1,25 @@
 import type { FormTemplateDefinition } from "~/features/forms/form-template.types";
+import { ACCOUNT_PARTY_ROLE, requiresMarriageAccountParty } from "~/features/apply/marriage-account-party";
+import { marriageLicenseWalkInDefinition } from "./walk-in-marriage-license";
 import { isWalkInCourtDecree } from "./walk-in-registration";
 import { birthCaseForService } from "./walk-in-birth";
 import { isWalkInPetition, petitionCaseForService } from "./walk-in-petition";
 
 export function walkInCaseForService(definition: FormTemplateDefinition, serviceCode: string) {
+  if (serviceCode === "MARRIAGE_LICENSE") return {
+    answers: {} as Record<string, string>,
+    definition: marriageLicenseWalkInDefinition(definition),
+  };
+  if (requiresMarriageAccountParty(serviceCode)) return {
+    answers: {} as Record<string, string>,
+    definition: {
+      ...definition,
+      sections: definition.sections.map((section) => ({
+        ...section,
+        fields: section.fields.filter((field) => field.key !== ACCOUNT_PARTY_ROLE),
+      })).filter((section) => section.fields.length > 0),
+    },
+  };
   if (isWalkInPetition(serviceCode)) return petitionCaseForService(definition, serviceCode);
   if (serviceCode === "SUPPLEMENTAL_REPORT") {
     // The sworn affidavit already explains why the entry was omitted.

@@ -1,4 +1,5 @@
 import { REQUESTER_NAME_KEYS, requesterNameAnswers, requiresAccountRequester } from "../requester-name";
+import { ACCOUNT_PARTY_ROLE, accountPartyName, isMarriageAccountRole, requiresMarriageAccountParty } from "../marriage-account-party";
 import { formatFieldLabel } from "~/features/forms/field-label";
 import { validatePersonName } from "~/lib/person-name";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
@@ -123,20 +124,25 @@ function MiddleNameField({
   setValue,
   index,
   required = false,
+  readOnly = false,
+  lockedNoMiddleName = false,
 }: {
   control: Control<DetailsValues>;
   setValue: UseFormSetValue<DetailsValues>;
   index: number;
   /** Starred: filled in, or the "I don't have one" box ticked. */
   required?: boolean;
+  readOnly?: boolean;
+  lockedNoMiddleName?: boolean;
 }) {
   const inputId = `subject-${index}-middleName`;
-  const none = useWatch({ control, name: `subjects.${index}.noMiddleName` }) === true;
+  const watchedNone = useWatch({ control, name: `subjects.${index}.noMiddleName` }) === true;
+  const none = readOnly ? lockedNoMiddleName : watchedNone;
 
   return (
     <Field>
       <FieldLabel htmlFor={inputId} className={WIZARD_LABEL_CLASS}>
-        Middle Name {required ? <RequiredMark /> : null}
+        Middle Name {required && !none ? <RequiredMark /> : null}
       </FieldLabel>
       <Controller
         control={control}
@@ -145,6 +151,7 @@ function MiddleNameField({
           // Read the box from the form values, not from this render: ticking it
           // re-runs this check, and it must see the box as ticked.
           validate: (value, formValues) => {
+            if (readOnly && lockedNoMiddleName) return true;
             if (formValues.subjects?.[index]?.noMiddleName === true) return true;
             if (required && !(value ?? "").trim()) return "Middle name is required";
             return validatePersonName(value ?? "");
@@ -158,11 +165,12 @@ function MiddleNameField({
               maxLength={120}
               autoComplete="off"
               aria-invalid={fieldState.invalid}
-              className={cn(WIZARD_CONTROL_CLASS, none && "border-border-light bg-portal-panel")}
+              className={cn(WIZARD_CONTROL_CLASS, (none || readOnly) && "border-border-light bg-portal-panel", readOnly && "cursor-default text-portal-ink-2")}
               {...field}
               // A ticked box shows "N/A" (the saved name stays blank).
               value={none ? "N/A" : (field.value ?? "")}
               disabled={none}
+              readOnly={readOnly}
             />
             {fieldState.invalid && <WizardFieldError error={fieldState.error} />}
           </>
@@ -176,7 +184,8 @@ function MiddleNameField({
           // margin pulls the box up to the input without shrinking that target.
           <label className="-mt-2.5 flex min-h-11 cursor-pointer items-center gap-2.5 text-[15px] leading-none text-portal-ink-2">
             <Checkbox
-              checked={field.value === true}
+              disabled={readOnly}
+              checked={readOnly ? lockedNoMiddleName : field.value === true}
               onCheckedChange={(checked) => {
                 const next = checked === true;
                 field.onChange(next);
@@ -211,6 +220,8 @@ export function SubjectFieldGrid({
   role,
   requireMiddleName = false,
   hideSex = false,
+  readOnlyName = false,
+  lockedNoMiddleName = false,
 }: {
   control: Control<DetailsValues>;
   setValue: UseFormSetValue<DetailsValues>;
@@ -219,6 +230,8 @@ export function SubjectFieldGrid({
   husband?: boolean;
   requireMiddleName?: boolean;
   hideSex?: boolean;
+  readOnlyName?: boolean;
+  lockedNoMiddleName?: boolean;
 }) {
   const watchedSex = useWatch({ control, name: `subjects.${index}.sex` });
   const { showSuffix, showSex } = subjectFieldVisibility(role, watchedSex);
@@ -234,11 +247,12 @@ export function SubjectFieldGrid({
             <FieldLabel htmlFor={`subject-${index}-firstName`} className={WIZARD_LABEL_CLASS}>First Name <RequiredMark /></FieldLabel>
             <Input
               id={`subject-${index}-firstName`}
+              readOnly={readOnlyName}
               placeholder="Juan"
               maxLength={120}
               autoComplete="off"
               aria-invalid={fieldState.invalid}
-              className={WIZARD_CONTROL_CLASS}
+              className={cn(WIZARD_CONTROL_CLASS, readOnlyName && "cursor-default border-border-light bg-portal-panel text-portal-ink-2")}
               {...field}
             />
             {fieldState.invalid && <WizardFieldError error={fieldState.error} />}
@@ -250,6 +264,8 @@ export function SubjectFieldGrid({
         setValue={setValue}
         index={index}
         required={requireMiddleName}
+        readOnly={readOnlyName}
+        lockedNoMiddleName={lockedNoMiddleName}
       />
       <Controller
         control={control}
@@ -260,11 +276,12 @@ export function SubjectFieldGrid({
             <FieldLabel htmlFor={`subject-${index}-lastName`} className={WIZARD_LABEL_CLASS}>Last Name <RequiredMark /></FieldLabel>
             <Input
               id={`subject-${index}-lastName`}
+              readOnly={readOnlyName}
               placeholder="Dela Cruz"
               maxLength={120}
               autoComplete="off"
               aria-invalid={fieldState.invalid}
-              className={WIZARD_CONTROL_CLASS}
+              className={cn(WIZARD_CONTROL_CLASS, readOnlyName && "cursor-default border-border-light bg-portal-panel text-portal-ink-2")}
               {...field}
             />
             {fieldState.invalid && <WizardFieldError error={fieldState.error} />}
@@ -279,6 +296,7 @@ export function SubjectFieldGrid({
             <Field>
               <FieldLabel htmlFor={`subject-${index}-suffix`} className={WIZARD_LABEL_CLASS}>Suffix</FieldLabel>
               <Select
+                disabled={readOnlyName}
                 items={SUFFIXES}
                 value={field.value || NO_SUFFIX}
                 onValueChange={(value) =>
@@ -369,6 +387,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
   const definition = selectedService.form_template!.definition;
   const lockRequesterName = requiresAccountRequester(selectedService.service_code);
+  const lockAccountParty = requiresMarriageAccountParty(selectedService.service_code);
   const detailsFields = fieldsForStep(definition, "details");
   const personGroupField = detailsFields.find((field) => field.type === "person_group");
   const hasPersonGroup = Boolean(personGroupField);
@@ -443,6 +462,42 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   // imply it) sex, plus every visible required template field. The Next button
   // reads this to show when the step is ready.
   const watchedValues = form.watch();
+  const accountRole = lockAccountParty ? watchedValues[ACCOUNT_PARTY_ROLE] : undefined;
+  const accountHasNoMiddleName = user ? accountPartyName(user).noMiddleName : false;
+  const previousAccountRole = useRef(draft.answers[ACCOUNT_PARTY_ROLE]);
+  useEffect(() => {
+    if (!hydrated || !lockAccountParty || !user || !isMarriageAccountRole(accountRole)) return;
+    const names = accountPartyName(user);
+    const current = reconcileSubjects(form.getValues("subjects"), roles);
+    if (previousAccountRole.current !== accountRole) {
+      const oldIndex = roles.indexOf(String(previousAccountRole.current));
+      if (oldIndex >= 0) current[oldIndex] = reconcileSubjects([], [roles[oldIndex]])[0];
+    }
+    previousAccountRole.current = accountRole;
+    const index = roles.indexOf(accountRole);
+    if (index < 0) return;
+    // Suffixes are not collected for the Bride role.
+    const next = { ...names, suffix: accountRole === "Bride" ? "" : names.suffix };
+    const unchanged = Object.entries(next).every(([key, value]) =>
+      current[index][key as keyof DetailsSubject] === value,
+    );
+    if (unchanged && draft.answers[ACCOUNT_PARTY_ROLE] === accountRole) return;
+    current[index] = { ...current[index], ...next };
+    current.forEach((subject, subjectIndex) => {
+      form.setValue(`subjects.${subjectIndex}.firstName`, subject.firstName);
+      form.setValue(`subjects.${subjectIndex}.middleName`, subject.middleName);
+      form.setValue(`subjects.${subjectIndex}.lastName`, subject.lastName);
+      form.setValue(`subjects.${subjectIndex}.suffix`, subject.suffix);
+      form.setValue(`subjects.${subjectIndex}.noMiddleName`, subject.noMiddleName === true);
+    });
+    form.clearErrors(`subjects.${index}.middleName`);
+    update((previous) => ({
+      subjects: current,
+      answers: { ...previous.answers, [ACCOUNT_PARTY_ROLE]: accountRole, ...(personGroupField ? { [personGroupField.key]: current } : {}) },
+    }));
+    // Roles are compared by their contents, and form methods are stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, lockAccountParty, accountRole, user, roles.join("|"), draft.answers[ACCOUNT_PARTY_ROLE], update]);
   // Fields here can depend on an answer from the case step (the record type), so
   // visibility is worked out from those earlier answers plus what is typed here.
   const visibilityValues = {
@@ -548,7 +603,8 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       return Boolean(
         subject?.firstName?.trim() &&
           subject.lastName?.trim() &&
-          (!requireMiddleName || subject.middleName?.trim() || subject.noMiddleName) &&
+          (!requireMiddleName || subject.middleName?.trim() || subject.noMiddleName ||
+            (lockAccountParty && field.role === accountRole && accountHasNoMiddleName)) &&
           (isMarriageRecord || impliedSex(field.role) !== null || subject.sex),
       );
     });
@@ -560,6 +616,10 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     });
 
   function onSubmit(values: DetailsValues) {
+    if (lockAccountParty && !isMarriageAccountRole(values[ACCOUNT_PARTY_ROLE])) {
+      form.setError(ACCOUNT_PARTY_ROLE, { message: "Select your role." });
+      return;
+    }
     if (timingBlocks) {
       setRedirectOpen(true);
       return;
@@ -567,7 +627,12 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     // Hidden suffix/sex controls are unregistered by React Hook Form. Convert
     // the submitted rows back to complete SubjectFields objects before saving
     // them in either `subjects` location in the draft.
-    const subjects = reconcileSubjects(values.subjects, roles).map((subject) => isMarriageRecord ? { ...subject, sex: "male" } : subject);
+    const subjects = reconcileSubjects(values.subjects, roles).map((subject) => {
+      const next = isMarriageRecord ? { ...subject, sex: "male" } : subject;
+      return lockAccountParty && subject.role === values[ACCOUNT_PARTY_ROLE] && user
+        ? { ...next, ...accountPartyName(user), suffix: subject.role === "Bride" ? "" : (user.suffix ?? "") }
+        : next;
+    });
     const dynamicValues = Object.fromEntries(
       detailsFields
         .filter((field) => field.type !== "person_group")
@@ -647,6 +712,8 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
               role={subjectField.role}
               husband={isMarriageRecord}
               requireMiddleName={requireMiddleName}
+              readOnlyName={lockAccountParty && subjectField.role === accountRole}
+              lockedNoMiddleName={accountHasNoMiddleName}
             />
           </PartySection>
         ))}
@@ -685,22 +752,10 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     <WizardShell
       step={2}
       title={ownerBlockInSection ? "Your details" : "Who is this document for?"}
-      description={
-        ownerBlockInSection
-          ? "Tell us who is making this request, then who the record is for."
-          : showRoleLabels
-            ? "Enter each party's full name exactly as it should appear on the civil registry record."
-            : "Enter the full name of the person named on the civil registry record, exactly as it should appear."
-      }
     >
       <div className="flex flex-col gap-6">
         {ownerBlockInSection ? null : ownerBlock}
 
-        {lockRequesterName && detailsFields.some((field) => field.key === "requester_first_name") ? (
-          <p className="text-sm text-portal-ink-2">
-            You are the requester for this online application. Your name comes from your account profile and cannot be changed here. Another requester must use their own account or apply in person.
-          </p>
-        ) : null}
         <DynamicFormFields
           readOnlyKeys={lockRequesterName ? REQUESTER_NAME_KEYS : []}
           definition={definition}
@@ -712,6 +767,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
           }}
           showRequiredMarks
           showSectionTitles={detailSections.length > 1}
+          hideSectionTitles={lockAccountParty}
           control={form.control}
           onFieldChange={(key, value) => form.setValue(key, value, { shouldDirty: true, shouldValidate: true })}
           values={visibilityValues}
@@ -724,7 +780,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
 
         {timingMismatch ? (
           <EventTimingNotice behavior={timingMismatch.rule.behavior} title={timingMismatch.rule.title}
-            description={timingMismatch.rule.description} ctaLabel={timingMismatch.rule.ctaLabel}
+            description="" ctaLabel={timingMismatch.rule.ctaLabel}
             onCta={() => setRedirectOpen(true)} />
         ) : null}
         <WizardFooterActions
@@ -737,7 +793,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
         />
       </div>
       <TrackRedirectDialog open={redirectOpen} onOpenChange={setRedirectOpen}
-        title={detailsTiming?.rule.title ?? ""} description={detailsTiming?.rule.description ?? ""}
+        title={detailsTiming?.rule.title ?? ""} description=""
         switchLabel={detailsTiming?.rule.ctaLabel ?? "Switch service"}
         onKeepEditing={() => setRedirectOpen(false)} onSwitch={switchRegistrationTrack}
         returnFocusTo={() => detailsTiming ? document.getElementById(`dynamic-${detailsTiming.rule.triggerField}`) : null} />

@@ -89,6 +89,9 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       if (service.service_code === "LEGITIMATION" && data.coupleAppearanceConfirmed !== true) {
         return { error: true, message: "Confirm that both parents personally appeared before encoding." };
       }
+      if (service.service_code === "MARRIAGE_LICENSE" && data.coupleAppearanceConfirmed !== true) {
+        return { error: true, message: "Confirm that both applicants personally appeared before encoding." };
+      }
       if (data.physicalDocumentsConfirmed !== true) {
         return { error: true, message: "Confirm that the physical documents are complete and acceptable before encoding." };
       }
@@ -135,6 +138,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
         ...(isWalkInPetition(service.service_code) ? { petition_authority_confirmed: "true", physical_documents_confirmed: "true" } : {}),
         ...(service.service_code === "SUPPLEMENTAL_REPORT" ? { personal_appearance_confirmed: "true" } : {}),
         ...(service.service_code === "LEGITIMATION" ? { couple_appearance_confirmed: "true" } : {}),
+        ...(service.service_code === "MARRIAGE_LICENSE" ? { couple_appearance_confirmed: "true", physical_documents_confirmed: "true" } : {}),
         ...(service.service_code === "RA9255_SURNAME" ? { personal_appearance_confirmed: "true" } : {}),
       },
     });

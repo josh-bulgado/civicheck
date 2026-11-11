@@ -1,4 +1,5 @@
 import { REQUESTER_NAME_KEYS, requesterNameAnswers, requiresAccountRequester } from "~/features/apply/requester-name";
+import { ACCOUNT_PARTY_ROLE, accountPartyName, isMarriageAccountRole, requiresMarriageAccountParty } from "~/features/apply/marriage-account-party";
 import { requiresVerificationSignature } from "~/features/apply/verification-signature";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -176,7 +177,8 @@ export const submitRequestFn = createServerFn({ method: "POST" })
     const requesterKeys = REQUESTER_NAME_KEYS.filter((key) => requiresAccountRequester(data.serviceCode) &&
       definition.sections.some((section) => section.fields.some((field) => field.key === key)),
     );
-    if (requesterKeys.length) {
+    const marriageAccountParty = requiresMarriageAccountParty(data.serviceCode);
+    if (requesterKeys.length || marriageAccountParty) {
       const { data: profile, error } = await supabase.from("profiles")
         .select("first_name, middle_name, last_name, suffix, has_no_middle_name")
         .eq("id", user.id).maybeSingle();
@@ -191,6 +193,29 @@ export const submitRequestFn = createServerFn({ method: "POST" })
         hasNoMiddleName: profile.has_no_middle_name === true,
       });
       for (const key of requesterKeys) answers[key] = names[key];
+      if (marriageAccountParty) {
+        const role = answers[ACCOUNT_PARTY_ROLE];
+        if (!isMarriageAccountRole(role)) {
+          return { error: true, message: "Select whether you are the bride or groom, or husband or wife." };
+        }
+        const personFields = definition.sections.flatMap((section) => section.fields)
+          .filter((field) => field.type === "person_group");
+        const personField = personFields[0];
+        const parties = personField ? answers[personField.key] : undefined;
+        if (personFields.length !== 1 || !Array.isArray(parties) || parties.length !== 2 ||
+          parties.filter((party) => party.role === "Bride").length !== 1 ||
+          parties.filter((party) => party.role === "Groom").length !== 1) {
+          return { error: true, message: "Enter both parties on the marriage application." };
+        }
+        const accountName = accountPartyName({
+          firstName: profile.first_name, middleName: profile.middle_name ?? "",
+          lastName: profile.last_name, suffix: profile.suffix ?? "",
+          hasNoMiddleName: profile.has_no_middle_name === true,
+        });
+        answers[personField.key] = parties.map((party) => party.role === role
+          ? { ...party, ...accountName, suffix: role === "Bride" ? "" : accountName.suffix }
+          : party);
+      }
     }
     const answerBag = canonicalizeTemplateAnswers(definition, answers);
     const selectorValidation = validateCaseSelectorAnswers(

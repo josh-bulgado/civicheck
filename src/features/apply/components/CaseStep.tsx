@@ -37,10 +37,6 @@ import {
   inferMaritalStatus,
 } from "~/features/services/components/CaseSelector";
 import { applicantCopy } from "~/features/forms/applicant-copy";
-import {
-  getMarriageLicenseTiming,
-  MARRIAGE_MINIMUM_LEAD_DAYS,
-} from "~/features/apply/marriage-license-timing";
 
 function caseAnswersFrom(values: DynamicFieldValues) {
   return {
@@ -164,12 +160,6 @@ export function CaseStep({
       const value = watchedValues[field.key];
       return !field.required || (typeof value === "string" && value.trim() !== "");
     });
-  const watchedEventDate = watchedValues.event_date ?? "";
-  const marriageTimingNotice = getMarriageLicenseTiming(
-    selectedService.service_code,
-    watchedEventDate,
-  );
-  const marriageTimingBlocks = marriageTimingNotice?.blocksProgress === true;
 
   // Data-driven on-time window. The rule and its routing target live in the
   // published form template, so any current or future service can declare one.
@@ -331,10 +321,6 @@ export function CaseStep({
           />
         ) : null}
 
-      {["COURT-ANNULMENT", "COURT-FOREIGN-ADOPTION"].includes(selectedService.service_code) ? (
-        <p className="text-sm text-muted-foreground">Online applications cover foreign decrees or adoption and annulment or declaration of nullity of marriage. Legal separation is listed in the Citizen&apos;s Charter but is not available as an online option. For legal separation, visit CCRO for guidance.</p>
-      ) : null}
-
         <DynamicFormFields
           definition={definition}
           step="case"
@@ -344,15 +330,6 @@ export function CaseStep({
           // visibility alongside the form's own values.
           values={{ ...draft.caseSelectorAnswers, ...watchedValues }}
           onDateChange={handleEventDateChange}
-          renderSectionLead={(section) =>
-            ["DEATH_ONTIME", "DEATH_DELAYED"].includes(selectedService.service_code) &&
-            section.fields.some((field) => field.key === "event_date") ? (
-              <p className="text-sm text-muted-foreground">
-                Enter the date and place of death exactly as shown on the
-                completed Certificate of Death.
-              </p>
-            ) : null
-          }
           // With the service questions above, head the fields as their own block.
           showSectionTitles={isGroup}
         />
@@ -369,24 +346,14 @@ export function CaseStep({
         <DerivedAnswerAlerts
           definition={definition}
           answers={derivedCaseAnswers}
+          compact={selectedService.service_code === "MARRIAGE_LICENSE"}
         />
-
-        {marriageTimingNotice ? (
-          <NoticeAlert
-            variant="warning"
-            role="status"
-            icon={CalendarClock}
-            title={marriageTimingNotice.title}
-          >
-            {marriageTimingNotice.description}
-          </NoticeAlert>
-        ) : null}
 
         {timingMismatch && timingRule ? (
           <EventTimingNotice
             behavior={timingRule.behavior}
             title={applicantCopy(timingRule.title)}
-            description={applicantCopy(timingRule.description)}
+            description=""
             ctaLabel={timingRule.ctaLabel}
             onCta={() => setRedirectOpen(true)}
           />
@@ -398,10 +365,7 @@ export function CaseStep({
             role="status"
             icon={CalendarClock}
             title={applicantCopy(timingDeferredNotice.rule.title)}
-          >
-            {applicantCopy(timingDeferredNotice.rule.description)} We&rsquo;ll check the date
-            against your supporting document before processing your request.
-          </NoticeAlert>
+          >{null}</NoticeAlert>
         ) : null}
 
         <WizardFooterActions
@@ -410,23 +374,22 @@ export function CaseStep({
           continueReady={hasRequiredAnswers}
           continueDisabled={
             (isGroup && !draft.selectedServiceCode) ||
-            marriageTimingBlocks ||
             timingBlocks ||
             Boolean(blockingAgeFeedback) ||
             Boolean(blockingOptionNotice)
           }
           note={
             blockingAgeFeedback
-              ? blockingAgeFeedback.notice.description
+              ? selectedService.service_code === "MARRIAGE_LICENSE"
+                ? blockingAgeFeedback.notice.title
+                : blockingAgeFeedback.notice.description
               : blockingOptionNotice
                 ? selectedService.service_code === "DEATH_DELAYED"
                   ? undefined
                   : blockingOptionNotice.description
-                : marriageTimingBlocks
-                  ? `Choose a marriage date at least ${MARRIAGE_MINIMUM_LEAD_DAYS} days from today.`
-                  : timingBlocks
-                    ? "Update the date or switch services before continuing."
-                    : undefined
+                : timingBlocks
+                  ? "Update the date or switch services before continuing."
+                  : undefined
           }
         />
       </div>
@@ -435,7 +398,7 @@ export function CaseStep({
         open={redirectOpen}
         onOpenChange={setRedirectOpen}
         title={timingRule ? trackRedirectCopy(timingRule).title : ""}
-        description={timingRule ? trackRedirectCopy(timingRule).description : ""}
+        description=""
         switchLabel={timingRule?.ctaLabel || "Switch service"}
         onKeepEditing={() => setRedirectOpen(false)}
         onSwitch={handleSwitchTrack}

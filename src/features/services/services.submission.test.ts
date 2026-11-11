@@ -4,6 +4,7 @@ const state = vi.hoisted(() => ({
   ongoing: [] as { id: string; tracking_number: string; form_data: Record<string, string>; copies: number }[],
   create: vi.fn(),
   requesterFields: false,
+  marriageFields: false,
   profile: { first_name: "Ana", middle_name: null as string | null, last_name: "Reyes", suffix: "", has_no_middle_name: true } as { first_name: string; middle_name: string | null; last_name: string; suffix: string; has_no_middle_name: boolean } | null,
 }));
 vi.mock("@tanstack/react-start", () => ({
@@ -44,7 +45,9 @@ vi.mock("~/features/services/services.catalogue", () => ({
   }),
 }));
 vi.mock("~/features/forms/form-template.utils", () => ({
-  buildLegacyFormDefinition: () => ({ sections: state.requesterFields ? [{ fields: [
+  buildLegacyFormDefinition: () => ({ sections: state.marriageFields ? [{ fields: [
+    { key: "account_party_role", type: "select" }, { key: "subjects", type: "person_group" },
+  ] }] : state.requesterFields ? [{ fields: [
     { key: "requester_first_name" }, { key: "requester_middle_name" }, { key: "requester_last_name" }, { key: "requester_suffix" },
   ] }] : [] }),
   canonicalizeTemplateAnswers: (_: unknown, answers: unknown) => answers,
@@ -64,6 +67,7 @@ const submit = (acknowledgedDuplicateId?: string) => submitRequestFn({ data: {
 beforeEach(() => {
   vi.clearAllMocks();
   state.requesterFields = false;
+  state.marriageFields = false;
   state.profile = { first_name: "Ana", middle_name: null, last_name: "Reyes", suffix: "", has_no_middle_name: true };
   state.ongoing = [{ id: duplicateId, tracking_number: "CCRO-EXISTING", form_data: { ...answers }, copies: 1 }];
   state.create.mockResolvedValue({ error: false, requestId: "new", trackingNumber: "CCRO-NEW" });
@@ -122,5 +126,56 @@ describe("online requester identity", () => {
     state.profile = null;
     expect((await send()).error).toBe(true);
     expect(state.create).not.toHaveBeenCalled();
+  });
+});
+
+describe.each(["MARRIAGE_LICENSE", "MARRIAGE_ONTIME", "MARRIAGE_DELAYED"])("account party for %s", (serviceCode) => {
+  const parties = ["Bride", "Groom"].map((role) => ({
+    role, firstName: "Someone", middleName: "Other", lastName: "Else",
+    suffix: "", sex: role === "Bride" ? "female" : "male",
+  }));
+  const send = (role?: string, subjects = parties) => submitRequestFn({ data: {
+    serviceCode, submissionId: "00000000-0000-4000-8000-000000000002",
+    templateVersionId: null, uploadDraftId: null,
+    answers: { ...(role ? { account_party_role: role } : {}), subjects },
+  } });
+  beforeEach(() => {
+    state.marriageFields = true;
+    state.ongoing = [];
+  });
+  it.each(["Bride", "Groom"])("overwrites tampered %s names with the saved profile and preserves the partner", async (role) => {
+    expect((await send(role)).error).toBe(false);
+    const saved = state.create.mock.calls[0][1].form_data;
+    expect(saved.account_party_role).toBe(role);
+    expect(saved.subjects.find((p: { role: string }) => p.role === role)).toMatchObject({
+      firstName: "Ana", middleName: "", lastName: "Reyes", suffix: "", noMiddleName: true,
+    });
+    expect(saved.subjects.find((p: { role: string }) => p.role !== role))
+      .toEqual(parties.find((p) => p.role !== role));
+  });
+  it.each([undefined, "Other", "Wife"])("rejects a missing or invalid internal role: %s", async (role) => {
+    expect((await send(role)).error).toBe(true);
+    expect(state.create).not.toHaveBeenCalled();
+  });
+  it("rejects missing profiles", async () => {
+    state.profile = null;
+    expect((await send("Bride")).error).toBe(true);
+    expect(state.create).not.toHaveBeenCalled();
+  });
+  it("treats a blank account middle name as no middle name even without the old profile flag", async () => {
+    state.profile!.has_no_middle_name = false;
+    expect((await send("Bride")).error).toBe(false);
+    expect(state.create.mock.calls[0][1].form_data.subjects[0]).toMatchObject({ middleName: "", noMiddleName: true });
+  });
+  it("rejects duplicated roles instead of overwriting two people", async () => {
+    expect((await send("Bride", [parties[0], parties[0]])).error).toBe(true);
+    expect(state.create).not.toHaveBeenCalled();
+  });
+  it("preserves the account middle name and suffix for the groom", async () => {
+    state.profile = { first_name: "Juan", middle_name: "Santos", last_name: "Reyes", suffix: "Jr.", has_no_middle_name: false };
+    expect((await send("Groom")).error).toBe(false);
+    expect(state.create.mock.calls[0][1].form_data.subjects[1]).toMatchObject({
+      firstName: "Juan", middleName: "Santos", lastName: "Reyes", suffix: "Jr.", noMiddleName: false,
+    });
   });
 });

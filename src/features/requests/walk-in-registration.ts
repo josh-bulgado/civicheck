@@ -19,5 +19,5 @@ export function isWalkInCourtDecree(serviceCode: string) {
 
 export function isWalkInDetailedIntake(serviceCode: string) {
   if (isWalkInPetition(serviceCode)) return true;
-  return isWalkInRegistration(serviceCode) || ["LEGITIMATION", "SUPPLEMENTAL_REPORT", "RA9255_SURNAME"].includes(serviceCode) || isWalkInCourtDecree(serviceCode);
+  return isWalkInRegistration(serviceCode) || ["MARRIAGE_LICENSE", "LEGITIMATION", "SUPPLEMENTAL_REPORT", "RA9255_SURNAME"].includes(serviceCode) || isWalkInCourtDecree(serviceCode);
 }

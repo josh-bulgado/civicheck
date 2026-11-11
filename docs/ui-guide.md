@@ -22,6 +22,18 @@ requester names come from the signed-in account profile.
 Keep these name fields read-only, including the no-middle-name checkbox;
 document owner fields remain separate. Submission also uses the saved profile name.
 
+Marriage License asks whether the account holder is the Bride or Groom.
+On-time and delayed Marriage Certificate applications ask Husband or Wife.
+The selected party's name comes from the account and is read-only, including
+the no-middle-name choice and suffix. The partner's name stays editable.
+A blank account middle name or an explicit "No middle name" setting shows N/A
+with the checked, locked checkbox when the applicant selects their marriage role.
+The role is saved with the draft; changing it clears the previous account slot.
+Hide the extra "Your role" and "Your details" section headings on these forms;
+keep the role question and individual party headings.
+Submission uses the saved profile name for the selected party. Staff walk-in
+intake omits this account-role question.
+
 - React and TypeScript with TanStack Start/Router. Routes live in `src/routes`;
   feature pages and their components live in `src/features`.
 - [components.json](../components.json) configures shadcn `base-vega`, Base UI,
@@ -189,7 +201,25 @@ forms, shared name fields, date checks, and physical-document confirmation. The
 accepted request starts in Processing with staff acceptance recorded; payment
 and posting requirements still apply. Marriage names use Husband and Maiden Name
 of Wife labels. Death uses Name of the deceased and its death-specific case questions.
-Marriage License keeps its existing intake form.
+Marriage License walk-in intake copies both applicants' names, birth dates,
+nationality, civil status, and optional contact number from their application.
+Use age at application for its conditional checklist. Staff confirm the physical
+filing papers and both applicants' personal appearance before encoding.
+Omit account-role, wedding-plan, purpose, upload, and posting-date questions.
+The request starts Processing unpaid; counseling and posting remain later steps.
+Application screens omit generic service-selection explanations and the
+requester/owner introduction that repeats section headings. The selected-service
+confirmation is announced to screen readers; the summary shows its name visually.
+Keep authorization notes and the existing upload/review instructions visible.
+Omit standalone name-entry, account-requester, court-scope, death-date, fee-origin,
+petition-introduction, and deferred-date explanations. Marriage-license age
+notices show only blocking titles; registration-window notices keep their titles
+and switch actions without explanatory bodies. Validation, account-name locks,
+service routing, and requirement rules still apply.
+Do not show a posting-period warning beside the intended wedding date or impose
+a minimum lead-time cutoff. Keep posting guidance in the service instructions
+and request progress. Keep the Charter's P1,100 total; do not infer a separate solemnization
+amount from the incomplete fee breakdown on PDF page 12.
 
 The walk-in registration requirements dialog filters by the selected service and current
 answers. Matched conditions say "Applies to this request"; unanswered conditions

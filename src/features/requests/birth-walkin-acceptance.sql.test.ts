@@ -61,6 +61,10 @@ beforeAll(async () => {
   const ra9255Migration = readFileSync(new URL("../../../supabase/migrations/20261111031308_accept_checked_ra9255_walkins.sql", import.meta.url), "utf8");
   await db.exec(ra9255Migration);
   await db.exec(ra9255Migration);
+  const licenseMigration = readFileSync(new URL("../../../supabase/migrations/20261111094134_accept_checked_marriage_license_walkins.sql", import.meta.url), "utf8");
+  await db.exec(licenseMigration);
+  await db.exec(licenseMigration);
+  await db.exec(`insert into services_registry values('MARRIAGE_LICENSE','${other}')`);
   await db.exec(`insert into services_registry values('RA9255_SURNAME','${other}')`);
 }, 30_000);
 afterAll(() => db.close());
@@ -102,6 +106,32 @@ async function insert(patch: Record<string, unknown> = {}) {
   return db.query<{status: string; payment_status: string; walk_in_accepted_by: string; walk_in_accepted_at: string}>(`insert into requests(id,${keys.join(",")}) values($1,${keys.map((_, i) => `$${i+2}`).join(",")}) returning *`,
     [requestId,...Object.values(values).map((value) => value && typeof value === "object" ? JSON.stringify(value) : value)]);
 }
+
+it("accepts Marriage License filing papers and appearance without completing later steps", async () => {
+  const result = await insert({ request_type: "MARRIAGE_LICENSE", form_template_version_id: other,
+    form_data: { intake_channel: "walk_in", physical_documents_confirmed: "true", couple_appearance_confirmed: "true" } });
+  expect(result.rows[0]).toMatchObject({ status: "processing", payment_status: "unpaid", walk_in_accepted_by: actor });
+  const logs = (await db.query<{ remarks: string }>("select remarks from application_logs")).rows;
+  expect(logs).toHaveLength(2);
+  expect(logs.every(log => log.remarks.includes("marriage-license application") && log.remarks.includes("remain pending"))).toBe(true);
+  await expect(db.exec("update requests set walk_in_accepted_by=null")).rejects.toThrow(/cannot be changed/);
+  await expect(db.exec("update requests set payment_status='verified'")).rejects.toThrow(/Only the cashier/);
+});
+
+it("rejects unchecked Marriage License papers, missing appearance, wrong departments, and paid intake", async () => {
+  const input = { request_type: "MARRIAGE_LICENSE", form_template_version_id: other,
+    form_data: { intake_channel: "walk_in", physical_documents_confirmed: "true", couple_appearance_confirmed: "true" } };
+  for (const patch of [
+    { form_data: { ...input.form_data, physical_documents_confirmed: "false" } },
+    { form_data: { ...input.form_data, couple_appearance_confirmed: "false" } },
+    { form_template_version_id: null }, { walk_in_accepted_by: other }, { payment_status: "verified" },
+  ]) await expect(insert({ ...input, ...patch })).rejects.toThrow();
+  await db.exec("reset role; update services_registry set department_id=null where service_code='MARRIAGE_LICENSE'; set role authenticated");
+  await expect(insert(input)).rejects.toThrow(/department/);
+  await db.exec(`reset role; update services_registry set department_id='${other}' where service_code='MARRIAGE_LICENSE'; set role authenticated; set test.fail_history='yes'`);
+  await expect(insert(input)).rejects.toThrow(/History unavailable/);
+  expect((await db.query("select id from requests")).rows).toHaveLength(0);
+});
 
 it("records staff acceptance, time, and processing history together", async () => {
   const result = await insert({walk_in_accepted_at: "1900-01-01"});

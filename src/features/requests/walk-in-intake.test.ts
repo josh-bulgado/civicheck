@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import config from "~/features/services/fixtures/birth-delayed-requirements.json";
 import marriageForms from "./fixtures/marriage-walk-in-forms.json";
+import marriageLicenseForm from "./fixtures/marriage-license-form.json";
 import deathForms from "./fixtures/death-walk-in-forms.json";
 import courtForm from "./fixtures/court-decree-walk-in-form.json";
 import legitimationForm from "./fixtures/legitimation-walk-in-form.json";
@@ -56,6 +57,7 @@ vi.mock("~/features/requests/tracking-number", () => ({
 vi.mock("~/features/services/services.catalogue", () => ({
   loadServiceCatalogue: async () => ({
     formTemplatesByService: new Map([
+      ["MARRIAGE_LICENSE", { templateId: "marriage_license", versionId: "published", definition: parseFormTemplateDefinition(marriageLicenseForm) }],
       ["RA9255_SURNAME", { templateId: "ra9255", versionId: "published", definition: parseFormTemplateDefinition(ra9255Form.definition) }],
       ["SUPPLEMENTAL_REPORT", { templateId: "supplemental", versionId: "published", definition: parseFormTemplateDefinition(supplementalForm) }],
       ...["COURT-ANNULMENT", "COURT-FOREIGN-ADOPTION"].map(code => [code, {
@@ -80,6 +82,7 @@ vi.mock("~/features/services/services.catalogue", () => ({
       ],
     ]),
     servicesByCode: new Map([
+      ["MARRIAGE_LICENSE", { party_roles: ["Bride", "Groom"] }],
       ["RA9255_SURNAME", { party_roles: ["Child", "Mother", "Father"] }],
       ["SUPPLEMENTAL_REPORT", { party_roles: ["Subject"] }],
       ["COURT-ANNULMENT", { party_roles: ["Husband", "Wife"] }],
@@ -171,6 +174,40 @@ beforeEach(() => {
     requestId: "new",
     trackingNumber: "CCRO-TEST",
   });
+});
+
+it("encodes checked Marriage License papers without account-role, wedding plans, purpose, or uploads", async () => {
+  state.serviceCode = "MARRIAGE_LICENSE";
+  state.departmentId = state.serviceDepartment = "marriage";
+  const people = ["Bride", "Groom"].map((role) => ({
+    ...emptySubject(role), firstName: role === "Bride" ? "Ana" : "Juan", middleName: "Santos", lastName: "Cruz",
+  }));
+  const answers = {
+    subjects: people, bride_date_of_birth: "1990-01-01", groom_date_of_birth: "1988-01-01",
+    bride_nationality: "filipino", groom_nationality: "foreign", bride_civil_status: "widowed", groom_civil_status: "single",
+    account_party_role: "Groom", event_date: "2099-01-01", event_place: "unused", purpose: "unused",
+  };
+  const input = { serviceCode: "MARRIAGE_LICENSE", subjects: people, answers, templateVersionId: "published",
+    physicalDocumentsConfirmed: true, coupleAppearanceConfirmed: true };
+  expect(await encodeWalkInFn({ data: input })).toMatchObject({ error: false, status: "processing" });
+  const saved = state.create.mock.calls[0][1];
+  expect(saved).toMatchObject({ applicant_id: null, status: "processing", walk_in_accepted_by: "staff", form_template_version_id: "published",
+    form_data: { subject_role: "Bride", party2_role: "Groom", subject_first_name: "Ana", party2_first_name: "Juan",
+      bride_civil_status: "widowed", groom_nationality: "foreign", physical_documents_confirmed: "true", couple_appearance_confirmed: "true", encoded_by: "staff" },
+  });
+  for (const key of ["account_party_role", "event_date", "event_place", "purpose", "posting_start_date", "counseling_completed"])
+    expect(saved.form_data).not.toHaveProperty(key);
+  state.create.mockClear();
+  for (const patch of [
+    { physicalDocumentsConfirmed: false }, { coupleAppearanceConfirmed: false },
+    { coupleAppearanceConfirmed: undefined }, { templateVersionId: "old" }, { answers: undefined },
+    ...["bride_date_of_birth", "groom_date_of_birth", "bride_nationality", "groom_civil_status"].map(key => ({ answers: { ...answers, [key]: "" } })),
+    { answers: { ...answers, bride_date_of_birth: "2020-01-01" } },
+    { answers: { ...answers, subjects: people.slice(0, 1) } },
+  ]) expect((await encodeWalkInFn({ data: { ...input, ...patch } })).error).toBe(true);
+  state.departmentId = "birth";
+  expect((await encodeWalkInFn({ data: input })).error).toBe(true);
+  expect(state.create).not.toHaveBeenCalled();
 });
 
 it("saves the template answers with staff walk-in identity and the registry fee", async () => {

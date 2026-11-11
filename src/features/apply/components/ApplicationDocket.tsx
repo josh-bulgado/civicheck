@@ -136,11 +136,9 @@ export function ApplicationDocket({
             {serviceName}
           </h2>
 
-          {selectionPending || serviceFamily ? (
+          {!selectionPending && serviceFamily ? (
             <p className="mt-0.5 hidden text-sm text-pretty text-muted-foreground md:block">
-              {selectionPending
-                ? "Answer the questions below to identify the exact service."
-                : serviceFamily}
+              {serviceFamily}
             </p>
           ) : null}
         </div>

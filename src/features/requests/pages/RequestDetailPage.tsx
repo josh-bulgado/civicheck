@@ -301,6 +301,7 @@ export default function RequestDetailPage({
       />
 
       <MarriagePostingPanel
+        showGuidance={false}
         key={`${request.id}-${request.postingStartDate}`}
         serviceCode={request.serviceCode} status={request.status}
         postingStartDate={request.postingStartDate} postingEndDate={request.postingEndDate}
