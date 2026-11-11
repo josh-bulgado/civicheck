@@ -21,7 +21,8 @@ import type { EncodableService } from "../walk-in-intake.queries";
 import { prepareWalkInBirth } from "../walk-in-birth";
 import { prepareWalkInSupplemental } from "../walk-in-supplemental";
 import { walkInCaseForService } from "../walk-in-legitimation";
-import { isWalkInDeath, isWalkInMarriage } from "../walk-in-registration";
+import { prepareWalkInCourtDecree } from "../walk-in-court-decree";
+import { isWalkInCourtDecree, isWalkInDeath, isWalkInMarriage } from "../walk-in-registration";
 
 export function WalkInRegistrationFields({
   service,
@@ -58,6 +59,7 @@ export function WalkInRegistrationFields({
     },
   });
   const template = service.registrationForm;
+  const courtDecree = isWalkInCourtDecree(service.serviceCode);
   const marriage = isWalkInMarriage(service.serviceCode);
   const death = isWalkInDeath(service.serviceCode);
   const legitimation = service.serviceCode === "LEGITIMATION";
@@ -147,7 +149,7 @@ export function WalkInRegistrationFields({
       ),
     };
     for (const field of personFields) answers[field.key] = subjects;
-    const prepare = supplemental ? prepareWalkInSupplemental : prepareWalkInBirth;
+    const prepare = supplemental ? prepareWalkInSupplemental : courtDecree ? prepareWalkInCourtDecree : prepareWalkInBirth;
     const prepared = prepare(definition, answers, roles);
     if (prepared.error) {
       setError(prepared.message);
@@ -170,6 +172,8 @@ export function WalkInRegistrationFields({
       <p className="text-sm text-muted-foreground">
         {supplemental
           ? "Enter the details from the civil registry certificate and supplemental affidavit. Check the required originals and copies, and confirm personal appearance."
+          : courtDecree
+          ? "Enter the decision details and names exactly as shown on the court papers. Check the four-copy requirements and the additional certificate if another court issued the decision."
           : legitimation
           ? "Enter the child's and parents' details from the birth and marriage certificates. Check the physical papers and the couple's personal appearance."
           : <>Enter the visitor's {death ? "death" : marriage ? "marriage" : "birth"} registration details. Check the applicant’s physical documents.</>}
@@ -177,7 +181,7 @@ export function WalkInRegistrationFields({
       <DynamicFormFields
         definition={caseDefinition}
         step="case"
-        singleColumn={marriage || death || legitimation || supplemental}
+        singleColumn={marriage || death || legitimation || supplemental || courtDecree}
         control={form.control}
         values={values}
         showRequiredMarks
@@ -220,7 +224,7 @@ export function WalkInRegistrationFields({
                     setValue={form.setValue}
                     index={index}
                     role={role}
-                    hideSex={supplemental}
+                    hideSex={supplemental || courtDecree}
                     requireMiddleName
                   />
                 </div>
@@ -232,7 +236,9 @@ export function WalkInRegistrationFields({
       <label className="flex min-h-11 items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm">
         <Checkbox className="mt-0.5" checked={physicalDocumentsConfirmed}
           onCheckedChange={(checked) => setPhysicalDocumentsConfirmed(checked === true)} />
-        <span>I checked the physical documents. The required papers are complete and acceptable.</span>
+        <span>{courtDecree
+          ? "I checked the required four copies of the court papers and, for a decision outside RTC Legazpi, the Certificate of Registration and Authenticity. The papers are complete and acceptable."
+          : "I checked the physical documents. The required papers are complete and acceptable."}</span>
       </label>
       {legitimation ? (
         <label className="flex min-h-11 items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm">

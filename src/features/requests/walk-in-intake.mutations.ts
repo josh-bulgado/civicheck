@@ -10,7 +10,8 @@ import type { TemplateAnswers } from "~/features/forms/form-template.types";
 import { prepareWalkInBirth } from "./walk-in-birth";
 import { prepareWalkInSupplemental } from "./walk-in-supplemental";
 import { walkInCaseForService } from "./walk-in-legitimation";
-import { isWalkInDetailedIntake } from "./walk-in-registration";
+import { prepareWalkInCourtDecree } from "./walk-in-court-decree";
+import { isWalkInCourtDecree, isWalkInDetailedIntake } from "./walk-in-registration";
 
 export const encodeWalkInFn = createServerFn({ method: "POST" })
   .validator(
@@ -95,7 +96,8 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
         return { error: true, message: "The registration form has changed. Reload the page and review your answers." };
       }
       const selectedCase = walkInCaseForService(template.definition, service.service_code);
-      const prepare = service.service_code === "SUPPLEMENTAL_REPORT" ? prepareWalkInSupplemental : prepareWalkInBirth;
+      const prepare = service.service_code === "SUPPLEMENTAL_REPORT" ? prepareWalkInSupplemental
+        : isWalkInCourtDecree(service.service_code) ? prepareWalkInCourtDecree : prepareWalkInBirth;
       const prepared = prepare(selectedCase.definition, { ...data.answers, ...selectedCase.answers }, registryService.party_roles?.length ? registryService.party_roles : ["Subject"]);
       if (prepared.error) return prepared;
       if (prepared.serviceCode && prepared.serviceCode !== service.service_code) {

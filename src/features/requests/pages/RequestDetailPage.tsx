@@ -63,6 +63,7 @@ const CHAT_HOTKEY: HotkeyChord = "C";
 
 const DIALOG_TARGET: Record<TransitionDialog, RequestStatus> = {
   return: "under_validation",
+  court: "processing",
   originals: "ready_for_release",
   incomplete: "incomplete",
   reject: "rejected",
@@ -218,6 +219,12 @@ export default function RequestDetailPage({
   }
 
   function handleAction(action: PlannedAction) {
+    if (action.to === "processing" &&
+      ["COURT-ANNULMENT", "COURT-FOREIGN-ADOPTION"].includes(request.serviceCode) &&
+      !["yes", "no"].includes(String(request.formData.issued_by_rtc_legazpi ?? ""))) {
+      setDialog("court");
+      return;
+    }
     if (action.dialog) {
       setDialog(action.dialog);
       return;

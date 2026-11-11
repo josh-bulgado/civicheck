@@ -1,4 +1,5 @@
 import type { FormTemplateDefinition } from "~/features/forms/form-template.types";
+import { isWalkInCourtDecree } from "./walk-in-registration";
 import { birthCaseForService } from "./walk-in-birth";
 
 export function walkInCaseForService(definition: FormTemplateDefinition, serviceCode: string) {
@@ -17,6 +18,21 @@ export function walkInCaseForService(definition: FormTemplateDefinition, service
       },
     };
   }
+  if (isWalkInCourtDecree(serviceCode)) return {
+    answers: {} as Record<string, string>,
+    definition: {
+      ...definition,
+      sections: definition.sections.map((section) => ({
+        ...section,
+        fields: section.fields.filter((field) => !["purpose", "purpose_other"].includes(field.key))
+          .map((field) => field.key === "issued_by_rtc_legazpi" ? {
+            ...field,
+            options: field.options?.filter((option) => option.value !== "not_sure"),
+            helpText: "Check the decision. For another issuing court, verify the Certificate of Registration and Authenticity from the Local Civil Registrar where that court is located.",
+          } : field),
+      })),
+    },
+  };
   if (serviceCode !== "LEGITIMATION") return birthCaseForService(definition, serviceCode);
 
   // Staff check eligibility from the papers; only the COLB answer changes the checklist.

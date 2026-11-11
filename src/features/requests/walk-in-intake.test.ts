@@ -2,6 +2,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 import config from "~/features/services/fixtures/birth-delayed-requirements.json";
 import marriageForms from "./fixtures/marriage-walk-in-forms.json";
 import deathForms from "./fixtures/death-walk-in-forms.json";
+import courtForm from "./fixtures/court-decree-walk-in-form.json";
 import legitimationForm from "./fixtures/legitimation-walk-in-form.json";
 import supplementalForm from "./fixtures/supplemental-walk-in-form.json";
 import { parseFormTemplateDefinition } from "~/features/forms/form-template.utils";
@@ -54,6 +55,9 @@ vi.mock("~/features/requests/tracking-number", () => ({
 vi.mock("~/features/services/services.catalogue", () => ({
   loadServiceCatalogue: async () => ({
     formTemplatesByService: new Map([
+      ...["COURT-ANNULMENT", "COURT-FOREIGN-ADOPTION"].map(code => [code, {
+        templateId: "court_decree", versionId: "published", definition: parseFormTemplateDefinition(courtForm),
+      }] as const),
       ["SUPPLEMENTAL_REPORT", { templateId: "supplemental", versionId: "published", definition: parseFormTemplateDefinition(supplementalForm) }],
       ["LEGITIMATION", { templateId: "legitimation", versionId: "published", definition: parseFormTemplateDefinition(legitimationForm) }],
       ...(["DEATH_ONTIME", "DEATH_DELAYED"] as const).map(code => [code, {
@@ -74,6 +78,8 @@ vi.mock("~/features/services/services.catalogue", () => ({
       ],
     ]),
     servicesByCode: new Map([
+      ["COURT-ANNULMENT", { party_roles: ["Husband", "Wife"] }],
+      ["COURT-FOREIGN-ADOPTION", { party_roles: ["Subject"] }],
       ["SUPPLEMENTAL_REPORT", { party_roles: ["Subject"] }],
       ["LEGITIMATION", { party_roles: ["Child", "Mother", "Father"] }],
       ["DEATH_ONTIME", { party_roles: ["Subject"] }],
@@ -306,5 +312,33 @@ it.each(["birth", "death", "marriage"])("encodes a checked supplemental %s recor
   ]) expect((await encodeWalkInFn({ data: { ...input, ...patch } })).error).toBe(true);
   state.departmentId = "birth";
   expect((await encodeWalkInFn({ data: input })).error).toBe(true);
+  expect(state.create).not.toHaveBeenCalled();
+});
+
+it.each(["COURT-ANNULMENT", "COURT-FOREIGN-ADOPTION"])("encodes checked %s court papers without purpose or sex", async serviceCode => {
+  state.serviceCode=serviceCode;state.departmentId=state.serviceDepartment="legal";
+  const people=(serviceCode === "COURT-ANNULMENT" ? ["Husband","Wife"] : ["Subject"]).map(role => ({
+    ...emptySubject(role),firstName:"Ana",middleName:"Santos",lastName:"Cruz",sex:"",
+  }));
+  const answers={subjects:people,event_date:"2000-01-01",event_place:"RTC Legazpi City",issued_by_rtc_legazpi:"yes"};
+  const input={...data,serviceCode,subjects:people,answers};
+  expect((await encodeWalkInFn({data:input})).error).toBe(false);
+  expect(state.create).toHaveBeenCalledWith(expect.anything(),expect.objectContaining({
+    status:"processing",walk_in_accepted_by:"staff",form_template_version_id:"published",
+    form_data:expect.objectContaining({event_date:"2000-01-01",issued_by_rtc_legazpi:"yes",subject_first_name:"Ana"}),
+  }));
+  expect(state.create.mock.calls.at(-1)?.[1].form_data).not.toHaveProperty("purpose");
+  state.create.mockClear();
+  for (const patch of [
+    {physicalDocumentsConfirmed:false}, {templateVersionId:"old"},
+    {answers:{...answers,issued_by_rtc_legazpi:"not_sure"}},
+    {answers:{...answers,issued_by_rtc_legazpi:""}},
+    {answers:{...answers,event_date:""}}, {answers:{...answers,event_place:""}},
+    {answers:{...answers,subjects:[]}},
+  ]) expect((await encodeWalkInFn({data:{...input,...patch}})).error).toBe(true);
+  expect(state.create).not.toHaveBeenCalled();
+  expect((await encodeWalkInFn({data:{...input,answers:{...answers,issued_by_rtc_legazpi:"no"}}})).error).toBe(false);
+  state.create.mockClear();state.departmentId="birth";
+  expect((await encodeWalkInFn({data:input})).error).toBe(true);
   expect(state.create).not.toHaveBeenCalled();
 });

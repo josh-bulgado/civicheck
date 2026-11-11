@@ -43,6 +43,10 @@ beforeAll(async () => {
   const legitimationMigration = readFileSync(new URL("../../../supabase/migrations/20261110142639_accept_checked_legitimation_walkins.sql", import.meta.url), "utf8");
   await db.exec(legitimationMigration);
   await db.exec(legitimationMigration);
+  const courtMigration = readFileSync(new URL("../../../supabase/migrations/20261111030534_accept_checked_court_decree_walkins.sql", import.meta.url), "utf8");
+  await db.exec(courtMigration);
+  await db.exec(courtMigration);
+  await db.exec(`insert into services_registry values('COURT-ANNULMENT','${other}'),('COURT-FOREIGN-ADOPTION','${other}')`);
   const supplementalMigration = readFileSync(new URL("../../../supabase/migrations/20261111030617_accept_checked_supplemental_walkins.sql", import.meta.url), "utf8");
   await db.exec(supplementalMigration);
   await db.exec(supplementalMigration);
@@ -169,4 +173,20 @@ it("rejects supplemental acceptance from another department", async () => {
   } finally {
     await db.exec(`reset role; update services_registry set department_id='${other}' where service_code='SUPPLEMENTAL_REPORT'; set role authenticated`);
   }
+});
+
+it.each(["COURT-ANNULMENT", "COURT-FOREIGN-ADOPTION"])("accepts checked %s court papers and audits the staff member", async request_type => {
+  const result=await insert({request_type,form_data:{intake_channel:"walk_in",issued_by_rtc_legazpi:"no"}});
+  expect(result.rows[0]).toMatchObject({status:"processing",payment_status:"unpaid",walk_in_accepted_by:actor});
+  expect((await db.query("select remarks from application_logs order by created_at")).rows)
+    .toEqual([{remarks:expect.stringContaining("Checked four copies")},{remarks:expect.stringContaining("Accepted walk-in court-decree")}]);
+});
+it.each(["", "not_sure"])("refuses unchecked court location (%s)", async answer => {
+  await expect(insert({request_type:"COURT-ANNULMENT",form_data:{intake_channel:"walk_in",issued_by_rtc_legazpi:answer}}))
+    .rejects.toThrow(/Check whether RTC Legazpi/);
+});
+it("rolls back court intake when its history cannot be recorded", async () => {
+  await db.exec("set test.fail_history='yes'");
+  await expect(insert({request_type:"COURT-ANNULMENT",form_data:{intake_channel:"walk_in",issued_by_rtc_legazpi:"yes"}})).rejects.toThrow("History unavailable");
+  expect((await db.query("select id from requests")).rows).toHaveLength(0);
 });

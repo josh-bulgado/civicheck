@@ -1,0 +1,82 @@
+{
+  "sections": [
+    {
+      "key": "case",
+      "step": "case",
+      "title": "Case details",
+      "fields": [
+        {
+          "key": "event_date",
+          "type": "date",
+          "label": "Date of the court decision",
+          "required": true,
+          "dateDirection": "past"
+        },
+        {
+          "key": "event_place",
+          "type": "text",
+          "label": "Court that issued the decision",
+          "required": true,
+          "placeholder": "e.g. Legazpi City, Albay"
+        },
+        {
+          "key": "reference_number",
+          "type": "text",
+          "label": "Case/docket number (if known)",
+          "required": false
+        },
+        {
+          "key": "issued_by_rtc_legazpi",
+          "type": "select",
+          "label": "Was the decision issued by the RTC of Legazpi City?",
+          "options": [
+            {
+              "label": "Yes, the RTC of Legazpi City issued it",
+              "value": "yes"
+            },
+            {
+              "label": "No, another court issued it",
+              "value": "no"
+            },
+            {
+              "label": "Not sure",
+              "value": "not_sure"
+            }
+          ],
+          "helpText": "If another court issued it, you also need a Certificate of Registration and Authenticity from the Local Civil Registrar where that court is located.",
+          "required": true
+        },
+        {
+          "key": "additional_notes",
+          "type": "textarea",
+          "label": "Additional notes",
+          "blockKey": "additional_notes",
+          "required": false,
+          "placeholder": "Any special requests or instructions…"
+        }
+      ]
+    },
+    {
+      "key": "details",
+      "step": "details",
+      "title": "Your details",
+      "fields": [
+        {
+          "key": "subjects",
+          "type": "person_group",
+          "label": "Person named on the record",
+          "required": true
+        },
+        {
+          "key": "contact_number",
+          "type": "phone",
+          "label": "Contact number",
+          "blockKey": "contact_number",
+          "required": false,
+          "placeholder": "9171234567"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1
+}

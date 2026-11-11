@@ -262,7 +262,41 @@ function ReturnForm({ busy, onConfirm }: FormProps) {
   );
 }
 
+function CourtForm({ busy, onConfirm }: FormProps) {
+  const checkboxId = useId();
+  const [checked, setChecked] = useState(false);
+  return (
+    <>
+      <AlertDialogHeader>
+        <AlertDialogTitle>Verify the issuing court</AlertDialogTitle>
+        <AlertDialogDescription>
+          The issuing court was not confirmed in the application. Check the
+          decision before completing validation. If a court outside RTC Legazpi
+          issued it, verify the Certificate of Registration and Authenticity
+          from the Local Civil Registrar where that court is located. Mark the
+          request incomplete if this certificate is missing.
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <div className="flex items-start gap-3">
+        <Checkbox id={checkboxId} checked={checked} disabled={busy}
+          onCheckedChange={(value) => setChecked(value === true)} />
+        <Label htmlFor={checkboxId} className="leading-snug">
+          I verified the issuing court and the additional certificate, if required.
+        </Label>
+      </div>
+      <AlertDialogFooter>
+        <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+        <AlertDialogAction disabled={busy || !checked}
+          onClick={() => onConfirm("", { courtIssuerConfirmed: checked })}>
+          Move to processing
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </>
+  );
+}
+
 const FORMS = {
+  court: CourtForm,
   return: ReturnForm,
   originals: OriginalsForm,
   incomplete: IncompleteForm,

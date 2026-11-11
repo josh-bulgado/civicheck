@@ -12,6 +12,10 @@ export function isWalkInRegistration(serviceCode: string) {
   return isWalkInBirth(serviceCode) || isWalkInMarriage(serviceCode) || isWalkInDeath(serviceCode);
 }
 
+export function isWalkInCourtDecree(serviceCode: string) {
+  return ["COURT-ANNULMENT", "COURT-FOREIGN-ADOPTION"].includes(serviceCode);
+}
+
 export function isWalkInDetailedIntake(serviceCode: string) {
-  return isWalkInRegistration(serviceCode) || ["LEGITIMATION", "SUPPLEMENTAL_REPORT"].includes(serviceCode);
+  return isWalkInRegistration(serviceCode) || ["LEGITIMATION", "SUPPLEMENTAL_REPORT"].includes(serviceCode) || isWalkInCourtDecree(serviceCode);
 }
