@@ -13,7 +13,11 @@ export function isWalkInRegistration(serviceCode: string) {
   return isWalkInBirth(serviceCode) || isWalkInMarriage(serviceCode) || isWalkInDeath(serviceCode);
 }
 
+export function isWalkInCourtDecree(serviceCode: string) {
+  return ["COURT-ANNULMENT", "COURT-FOREIGN-ADOPTION"].includes(serviceCode);
+}
+
 export function isWalkInDetailedIntake(serviceCode: string) {
   if (isWalkInPetition(serviceCode)) return true;
-  return isWalkInRegistration(serviceCode) || ["LEGITIMATION", "RA9255_SURNAME"].includes(serviceCode);
+  return isWalkInRegistration(serviceCode) || ["LEGITIMATION", "SUPPLEMENTAL_REPORT", "RA9255_SURNAME"].includes(serviceCode) || isWalkInCourtDecree(serviceCode);
 }

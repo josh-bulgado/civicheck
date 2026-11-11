@@ -17,9 +17,10 @@ import {
 } from "~/features/requests/request-workflow";
 
 /** Actions that need more than a click open one of these first. */
-export type TransitionDialog = "incomplete" | "reject" | "release" | "originals" | "return";
+export type TransitionDialog = "incomplete" | "reject" | "release" | "originals" | "return" | "court";
 
 export interface TransitionConfirmations {
+  courtIssuerConfirmed?: boolean;
   originalsConfirmed?: boolean;
   identityVerified?: boolean;
   handoverConfirmed?: boolean;

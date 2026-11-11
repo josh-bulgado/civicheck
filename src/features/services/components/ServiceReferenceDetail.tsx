@@ -123,6 +123,10 @@ export function ServiceReferenceDetail({
         </Button>
       </header>
 
+      {routeCode === "court_decree" ? (
+        <p className="text-sm text-muted-foreground">Online applications cover foreign decrees or adoption and annulment or declaration of nullity of marriage. Legal separation is listed in the Citizen&apos;s Charter but is not available as an online option. For legal separation, visit CCRO for guidance.</p>
+      ) : null}
+
       {isGroup ? (
         <div className="flex flex-col gap-2">
           <p

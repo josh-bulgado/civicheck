@@ -33,6 +33,7 @@ import { signAttachmentVersion } from "~/features/requests/attachment-signing.se
 const advanceRequestStatusSchema = z.object({
   requestId: z.string().uuid(),
   toStatus: z.string(),
+  courtIssuerConfirmed: z.boolean().optional(),
   originalsConfirmed: z.boolean().optional(),
   identityVerified: z.boolean().optional(),
   handoverConfirmed: z.boolean().optional(),
@@ -267,6 +268,13 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
       };
     }
 
+    if (toStatus === "processing" &&
+      ["COURT-ANNULMENT", "COURT-FOREIGN-ADOPTION"].includes(request.request_type) &&
+      !["yes", "no"].includes(String(request.form_data?.issued_by_rtc_legazpi ?? "")) &&
+      data.courtIssuerConfirmed !== true) {
+      return { error: true, message: "Verify the issuing court and the additional certificate, if required, before completing validation." };
+    }
+
     // Requirement validation is the whole point of this system — a request
     // can't move into processing, or on toward release, while an uploaded
     // document is still pending/rejected. Requests with zero pre-uploaded
@@ -351,6 +359,7 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
       p_action: "status",
       p_values: {
         status: toStatus,
+        court_issuer_confirmed: data.courtIssuerConfirmed === true,
         originals_confirmed: data.originalsConfirmed === true,
         identity_verified: data.identityVerified === true,
         handover_confirmed: data.handoverConfirmed === true,

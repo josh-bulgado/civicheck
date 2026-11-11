@@ -10,7 +10,9 @@ import type { TemplateAnswers } from "~/features/forms/form-template.types";
 import { prepareWalkInBirth } from "./walk-in-birth";
 import { isWalkInPetition, prepareWalkInPetition } from "./walk-in-petition";
 import { walkInCaseForService } from "./walk-in-legitimation";
-import { isWalkInDetailedIntake } from "./walk-in-registration";
+import { prepareWalkInCourtDecree } from "./walk-in-court-decree";
+import { prepareWalkInSupplemental } from "./walk-in-supplemental";
+import { isWalkInCourtDecree, isWalkInDetailedIntake } from "./walk-in-registration";
 
 export const encodeWalkInFn = createServerFn({ method: "POST" })
   .validator(
@@ -81,6 +83,9 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       if (service.service_code === "RA9255_SURNAME" && data.personalAppearanceConfirmed !== true) {
         return { error: true, message: "Confirm the required personal appearance, signatures, and attestation for the child's age before encoding." };
       }
+      if (service.service_code === "SUPPLEMENTAL_REPORT" && data.personalAppearanceConfirmed !== true) {
+        return { error: true, message: "Confirm the applicant's personal appearance before encoding." };
+      }
       if (service.service_code === "LEGITIMATION" && data.coupleAppearanceConfirmed !== true) {
         return { error: true, message: "Confirm that both parents personally appeared before encoding." };
       }
@@ -99,7 +104,9 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
         return { error: true, message: "The registration form has changed. Reload the page and review your answers." };
       }
       const selectedCase = walkInCaseForService(template.definition, service.service_code);
-      const prepared = (isWalkInPetition(service.service_code) ? prepareWalkInPetition : prepareWalkInBirth)(selectedCase.definition, { ...data.answers, ...selectedCase.answers }, registryService.party_roles?.length ? registryService.party_roles : ["Subject"]);
+      const prepare = service.service_code === "SUPPLEMENTAL_REPORT" ? prepareWalkInSupplemental
+        : isWalkInCourtDecree(service.service_code) ? prepareWalkInCourtDecree : prepareWalkInBirth;
+      const prepared = (isWalkInPetition(service.service_code) ? prepareWalkInPetition : prepare)(selectedCase.definition, { ...data.answers, ...selectedCase.answers }, registryService.party_roles?.length ? registryService.party_roles : ["Subject"]);
       if (prepared.error) return prepared;
       if (prepared.serviceCode && prepared.serviceCode !== service.service_code) {
         return { error: true, message: "The selected service does not match the registration answers." };
@@ -126,6 +133,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
         encoded_by: user.id,
         intake_channel: "walk_in",
         ...(isWalkInPetition(service.service_code) ? { petition_authority_confirmed: "true", physical_documents_confirmed: "true" } : {}),
+        ...(service.service_code === "SUPPLEMENTAL_REPORT" ? { personal_appearance_confirmed: "true" } : {}),
         ...(service.service_code === "LEGITIMATION" ? { couple_appearance_confirmed: "true" } : {}),
         ...(service.service_code === "RA9255_SURNAME" ? { personal_appearance_confirmed: "true" } : {}),
       },

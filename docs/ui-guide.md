@@ -366,3 +366,15 @@ Loading-view regressions also run without authentication:
 These use controlled delayed reads to check that headings and navigation remain
 visible before data resolves, and check loading layouts at mobile and desktop
 widths in both themes.
+
+Court-decree online options cover foreign decree/adoption and annulment/nullity;
+show the legal-separation coverage note beside the application case selector.
+When the issuing court is uncertain, the Processing confirmation requires staff
+to verify the court and the additional certificate if applicable. The check is
+recorded in request history.
+
+Legal staff encode court-decree walk-ins from checked physical papers. Ask for
+the decision date, issuing court, optional docket number, names on the decree,
+and optional contact/notes. Do not ask for purpose, sex, or uploads. The RTC
+Legazpi answer must be Yes or No. Physical acceptance records the staff member
+and starts Processing; payment and release keep their existing checks.
