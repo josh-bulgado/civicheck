@@ -8,6 +8,7 @@ import { clampCopies, totalFee } from "~/features/services/service-utils";
 import { loadServiceCatalogue } from "~/features/services/services.catalogue";
 import type { TemplateAnswers } from "~/features/forms/form-template.types";
 import { prepareWalkInBirth } from "./walk-in-birth";
+import { isWalkInPetition, prepareWalkInPetition } from "./walk-in-petition";
 import { walkInCaseForService } from "./walk-in-legitimation";
 import { isWalkInDetailedIntake } from "./walk-in-registration";
 
@@ -24,6 +25,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       answers?: TemplateAnswers;
       templateVersionId?: string | null;
       physicalDocumentsConfirmed?: boolean;
+      petitionAuthorityConfirmed?: boolean;
       coupleAppearanceConfirmed?: boolean;
       personalAppearanceConfirmed?: boolean;
     }) => data,
@@ -73,6 +75,9 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
     let registrationFormData: Record<string, string> | null = null;
     let templateVersionId: string | null = null;
     if (isWalkInDetailedIntake(service.service_code)) {
+      if (isWalkInPetition(service.service_code) && data.petitionAuthorityConfirmed !== true) {
+        return { error: true, message: "Confirm that the petitioner's identity and authority to file were checked." };
+      }
       if (service.service_code === "RA9255_SURNAME" && data.personalAppearanceConfirmed !== true) {
         return { error: true, message: "Confirm the required personal appearance, signatures, and attestation for the child's age before encoding." };
       }
@@ -94,7 +99,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
         return { error: true, message: "The registration form has changed. Reload the page and review your answers." };
       }
       const selectedCase = walkInCaseForService(template.definition, service.service_code);
-      const prepared = prepareWalkInBirth(selectedCase.definition, { ...data.answers, ...selectedCase.answers }, registryService.party_roles?.length ? registryService.party_roles : ["Subject"]);
+      const prepared = (isWalkInPetition(service.service_code) ? prepareWalkInPetition : prepareWalkInBirth)(selectedCase.definition, { ...data.answers, ...selectedCase.answers }, registryService.party_roles?.length ? registryService.party_roles : ["Subject"]);
       if (prepared.error) return prepared;
       if (prepared.serviceCode && prepared.serviceCode !== service.service_code) {
         return { error: true, message: "The selected service does not match the registration answers." };
@@ -120,6 +125,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
         }),
         encoded_by: user.id,
         intake_channel: "walk_in",
+        ...(isWalkInPetition(service.service_code) ? { petition_authority_confirmed: "true", physical_documents_confirmed: "true" } : {}),
         ...(service.service_code === "LEGITIMATION" ? { couple_appearance_confirmed: "true" } : {}),
         ...(service.service_code === "RA9255_SURNAME" ? { personal_appearance_confirmed: "true" } : {}),
       },

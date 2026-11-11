@@ -1,5 +1,14 @@
 # Civicheck UI guide
 
+Legal staff use petition walk-in intake for R.A. 9048/10172. Record the scope,
+record owner's name and sex as recorded, record reference, and proposed changes.
+Clerical correction uses the selected service directly; combined petitions keep
+the scope choices needed for their fields and checklist. Do not ask online
+eligibility questions or require uploads. Staff confirm the filing papers and
+authority to file before the request starts Processing. Publication and PSA
+affirmation remain later office steps; intake does not mark payment or release
+complete. The existing limitation on applying indigency exemptions remains.
+
 Use this guide when creating or changing Civicheck screens. It describes the
 existing application, with source files to read before implementing a pattern.
 An explicit design request can change these conventions; ordinary feature work

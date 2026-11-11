@@ -44,6 +44,10 @@ beforeAll(async () => {
   await db.exec(legitimationMigration);
   await db.exec(legitimationMigration);
   await db.exec(`insert into services_registry values('LEGITIMATION','${other}')`);
+  const petitionMigration = readFileSync(new URL("../../../supabase/migrations/20261111030938_accept_checked_petition_walkins.sql", import.meta.url), "utf8");
+  await db.exec(petitionMigration);
+  await db.exec(petitionMigration);
+  await db.exec(`insert into services_registry values('RA9048-CFN','${other}'),('RA9048-CCE','${other}')`);
   await db.exec(`insert into services_registry values('DEATH_ONTIME','${other}'),('DEATH_DELAYED','${other}')`);
   await db.exec(`insert into services_registry values('MARRIAGE_ONTIME','${other}'),('MARRIAGE_DELAYED','${other}')`);
   const ra9255Migration = readFileSync(new URL("../../../supabase/migrations/20261111031308_accept_checked_ra9255_walkins.sql", import.meta.url), "utf8");
@@ -52,6 +56,33 @@ beforeAll(async () => {
   await db.exec(`insert into services_registry values('RA9255_SURNAME','${other}')`);
 }, 30_000);
 afterAll(() => db.close());
+it.each(["RA9048-CFN", "RA9048-CCE"])("accepts checked %s filings with pending publication and immutable audit", async request_type => {
+  const input = { request_type, form_template_version_id: other, form_data: {
+    intake_channel: "walk_in", physical_documents_confirmed: "true", petition_authority_confirmed: "true",
+  } };
+  const result = await insert(input);
+  expect(result.rows[0]).toMatchObject({ status: "processing", payment_status: "unpaid", walk_in_accepted_by: actor });
+  const logs = (await db.query<{remarks: string}>("select remarks from application_logs")).rows;
+  expect(logs).toHaveLength(2);
+  expect(logs.every(log => log.remarks.includes("petition") && log.remarks.includes("remain pending"))).toBe(true);
+  await expect(db.exec("update requests set walk_in_accepted_by=null")).rejects.toThrow(/cannot be changed/);
+  await expect(db.exec("update requests set status='released'")).rejects.toThrow(/cannot move/);
+});
+it("rejects unconfirmed petition intake, other departments, and paid-at-creation requests", async () => {
+  const input = { request_type: "RA9048-CCE", form_template_version_id: other, form_data: {
+    intake_channel: "walk_in", physical_documents_confirmed: "true", petition_authority_confirmed: "true",
+  } };
+  for (const patch of [
+    { form_data: { ...input.form_data, physical_documents_confirmed: "false" } },
+    { form_data: { ...input.form_data, petition_authority_confirmed: "false" } },
+    { form_template_version_id: null }, { payment_status: "verified" }, { walk_in_accepted_by: null },
+  ]) await expect(insert({ ...input, ...patch })).rejects.toThrow();
+  await db.exec("reset role; update services_registry set department_id=null where service_code='RA9048-CCE'; set role authenticated");
+  await expect(insert(input)).rejects.toThrow(/department/);
+  await db.exec(`reset role; update services_registry set department_id='${other}' where service_code='RA9048-CCE'; set role authenticated; set test.fail_history='yes'`);
+  await expect(insert(input)).rejects.toThrow(/History unavailable/);
+  expect((await db.query("select * from requests")).rows).toHaveLength(0);
+});
 beforeEach(async () => {
   await db.exec("reset role; set test.role='staff'; set test.fail_history='no'; delete from application_logs; delete from requests; set role authenticated");
 });

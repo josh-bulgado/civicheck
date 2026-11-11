@@ -1,4 +1,5 @@
 import { isWalkInBirth } from "./walk-in-birth";
+import { isWalkInPetition } from "./walk-in-petition";
 
 export function isWalkInMarriage(serviceCode: string) {
   return ["MARRIAGE_ONTIME", "MARRIAGE_DELAYED"].includes(serviceCode);
@@ -13,5 +14,6 @@ export function isWalkInRegistration(serviceCode: string) {
 }
 
 export function isWalkInDetailedIntake(serviceCode: string) {
+  if (isWalkInPetition(serviceCode)) return true;
   return isWalkInRegistration(serviceCode) || ["LEGITIMATION", "RA9255_SURNAME"].includes(serviceCode);
 }

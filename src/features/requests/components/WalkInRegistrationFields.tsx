@@ -19,6 +19,7 @@ import {
 import { emptySubject, reconcileSubjects } from "~/lib/subject-fields";
 import type { EncodableService } from "../walk-in-intake.queries";
 import { prepareWalkInBirth } from "../walk-in-birth";
+import { isWalkInPetition, prepareWalkInPetition } from "../walk-in-petition";
 import { walkInCaseForService } from "../walk-in-legitimation";
 import { isWalkInDeath, isWalkInMarriage } from "../walk-in-registration";
 
@@ -37,6 +38,7 @@ export function WalkInRegistrationFields({
     answers: TemplateAnswers;
     templateVersionId: string | null;
     physicalDocumentsConfirmed: boolean;
+    petitionAuthorityConfirmed?: boolean;
     coupleAppearanceConfirmed?: boolean;
     personalAppearanceConfirmed?: boolean;
   }) => Promise<void>;
@@ -45,6 +47,7 @@ export function WalkInRegistrationFields({
 }) {
   const [error, setError] = useState("");
   const [physicalDocumentsConfirmed, setPhysicalDocumentsConfirmed] = useState(false);
+  const [petitionAuthorityConfirmed, setPetitionAuthorityConfirmed] = useState(false);
   const [coupleAppearanceConfirmed, setCoupleAppearanceConfirmed] = useState(false);
   const [personalAppearanceConfirmed, setPersonalAppearanceConfirmed] = useState(false);
   const form = useForm<DetailsValues>({
@@ -61,6 +64,7 @@ export function WalkInRegistrationFields({
   const death = isWalkInDeath(service.serviceCode);
   const legitimation = service.serviceCode === "LEGITIMATION";
   const surnameChange = service.serviceCode === "RA9255_SURNAME";
+  const petition = isWalkInPetition(service.serviceCode);
   useEffect(() => {
     if (!template) return;
     const selectedCase = walkInCaseForService(template.definition, service.serviceCode);
@@ -73,6 +77,7 @@ export function WalkInRegistrationFields({
     publish();
     const subscription = form.watch(() => {
       setPhysicalDocumentsConfirmed(false);
+      setPetitionAuthorityConfirmed(false);
       setCoupleAppearanceConfirmed(false);
       setPersonalAppearanceConfirmed(false);
       publish();
@@ -122,6 +127,10 @@ export function WalkInRegistrationFields({
   const timing = evaluateTemplateEventTiming(definition, values);
 
   async function submit() {
+    if (petition && !petitionAuthorityConfirmed) {
+      setError("Confirm that the petitioner's identity and authority to file were checked.");
+      return;
+    }
     if (surnameChange && !personalAppearanceConfirmed) {
       setError("Confirm the required personal appearance, signatures, and attestation for the child's age before encoding.");
       return;
@@ -146,7 +155,7 @@ export function WalkInRegistrationFields({
       ),
     };
     for (const field of personFields) answers[field.key] = subjects;
-    const prepared = prepareWalkInBirth(definition, answers, roles);
+    const prepared = (petition ? prepareWalkInPetition : prepareWalkInBirth)(definition, answers, roles);
     if (prepared.error) {
       setError(prepared.message);
       return;
@@ -158,6 +167,7 @@ export function WalkInRegistrationFields({
       answers,
       templateVersionId: template.versionId,
       physicalDocumentsConfirmed,
+      ...(petition ? { petitionAuthorityConfirmed } : {}),
       ...(legitimation ? { coupleAppearanceConfirmed } : {}),
       ...(surnameChange ? { personalAppearanceConfirmed } : {}),
     });
@@ -166,7 +176,9 @@ export function WalkInRegistrationFields({
   return (
     <fieldset disabled={submitting} className="min-w-0 space-y-6">
       <p className="text-sm text-muted-foreground">
-        {surnameChange
+        {petition
+          ? "Copy the petition details from the papers. Record the owner's name and sex as currently written on the record. Check filing documents and authority to file. Publication and PSA affirmation are completed later."
+        : surnameChange
           ? "Enter the child's name as recorded on the birth certificate and both parents' names. Check the physical papers and the signing and personal appearance requirements for the child's age."
           : legitimation
           ? "Enter the child's and parents' details from the birth and marriage certificates. Check the physical papers and the couple's personal appearance."
@@ -181,7 +193,7 @@ export function WalkInRegistrationFields({
       <DynamicFormFields
         definition={caseDefinition}
         step="case"
-        singleColumn={marriage || death || legitimation || surnameChange}
+        singleColumn={marriage || death || legitimation || surnameChange || petition}
         control={form.control}
         values={values}
         showRequiredMarks
@@ -215,6 +227,7 @@ export function WalkInRegistrationFields({
                   <h3 className="font-bold">
                     {role.toLowerCase() === "mother"
                       ? "Mother's Maiden Name"
+                      : petition ? "Person named on the record"
                       : surnameChange && role === "Child" ? "Child's name on the birth certificate"
                       : death ? "Name of the deceased"
                       : marriage ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[role] ?? role) : role}
@@ -235,7 +248,9 @@ export function WalkInRegistrationFields({
       <label className="flex min-h-11 items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm">
         <Checkbox className="mt-0.5" checked={physicalDocumentsConfirmed}
           onCheckedChange={(checked) => setPhysicalDocumentsConfirmed(checked === true)} />
-        <span>I checked the physical documents. The required papers are complete and acceptable.</span>
+        <span>{petition
+          ? "I checked the physical documents required at filing. They are complete and acceptable for initial processing. Publication documents will be checked at the appropriate later step."
+          : "I checked the physical documents. The required papers are complete and acceptable."}</span>
       </label>
       {legitimation ? (
         <label className="flex min-h-11 items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm">
@@ -256,6 +271,13 @@ export function WalkInRegistrationFields({
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
+      {petition ? (
+        <label className="flex min-h-11 items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm">
+          <Checkbox className="mt-0.5" checked={petitionAuthorityConfirmed}
+            onCheckedChange={(checked) => setPetitionAuthorityConfirmed(checked === true)} />
+          <span>I checked the petitioner's identity and authority to file this petition.</span>
+        </label>
+      ) : null}
       <div className="flex justify-end gap-3">
         <Button
           type="button"
@@ -268,7 +290,7 @@ export function WalkInRegistrationFields({
         <Button
           type="button"
           onClick={() => void submit()}
-          disabled={submitting || !physicalDocumentsConfirmed || (legitimation && !coupleAppearanceConfirmed) || (surnameChange && !personalAppearanceConfirmed)}
+          disabled={submitting || !physicalDocumentsConfirmed || (petition && !petitionAuthorityConfirmed) || (legitimation && !coupleAppearanceConfirmed) || (surnameChange && !personalAppearanceConfirmed)}
         >
           {submitting ? "Encoding..." : "Encode request"}
         </Button>

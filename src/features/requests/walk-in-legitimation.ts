@@ -1,7 +1,9 @@
 import type { FormTemplateDefinition } from "~/features/forms/form-template.types";
 import { birthCaseForService } from "./walk-in-birth";
+import { isWalkInPetition, petitionCaseForService } from "./walk-in-petition";
 
 export function walkInCaseForService(definition: FormTemplateDefinition, serviceCode: string) {
+  if (isWalkInPetition(serviceCode)) return petitionCaseForService(definition, serviceCode);
   const surnameChange = serviceCode === "RA9255_SURNAME";
   if (serviceCode !== "LEGITIMATION" && !surnameChange) return birthCaseForService(definition, serviceCode);
 
