@@ -46,6 +46,10 @@ beforeAll(async () => {
   await db.exec(`insert into services_registry values('LEGITIMATION','${other}')`);
   await db.exec(`insert into services_registry values('DEATH_ONTIME','${other}'),('DEATH_DELAYED','${other}')`);
   await db.exec(`insert into services_registry values('MARRIAGE_ONTIME','${other}'),('MARRIAGE_DELAYED','${other}')`);
+  const ra9255Migration = readFileSync(new URL("../../../supabase/migrations/20261111031308_accept_checked_ra9255_walkins.sql", import.meta.url), "utf8");
+  await db.exec(ra9255Migration);
+  await db.exec(ra9255Migration);
+  await db.exec(`insert into services_registry values('RA9255_SURNAME','${other}')`);
 }, 30_000);
 afterAll(() => db.close());
 beforeEach(async () => {
@@ -66,6 +70,48 @@ it("records staff acceptance, time, and processing history together", async () =
   expect(String(result.rows[0].walk_in_accepted_at)).not.toContain("1900");
   expect((await db.query("select performed_by_profile_id,action_status from application_logs order by created_at")).rows)
     .toEqual([{performed_by_profile_id: actor,action_status: "walk_in_accepted"},{performed_by_profile_id: actor,action_status: "processing"}]);
+});
+it.each(["yes", "no"])("accepts checked R.A. 9255 with acknowledgment %s and appearance history", async father_on_record => {
+  const result = await insert({ request_type: "RA9255_SURNAME", form_data: {
+    intake_channel: "walk_in", father_on_record, personal_appearance_confirmed: "true",
+  } });
+  expect(result.rows[0]).toMatchObject({ status: "processing", payment_status: "unpaid", walk_in_accepted_by: actor });
+  const logs = (await db.query<{ action_status: string; remarks: string }>("select action_status,remarks from application_logs order by created_at")).rows;
+  expect(logs.map(log => log.action_status)).toEqual(["walk_in_accepted", "processing"]);
+  expect(logs.every(log => log.remarks.includes("R.A. 9255") && log.remarks.includes("personal appearance"))).toBe(true);
+  await expect(db.exec("update requests set walk_in_accepted_by=null")).rejects.toThrow(/cannot be changed/);
+  await expect(db.exec("update requests set payment_status='verified'")).rejects.toThrow(/Only the cashier/);
+  await expect(db.exec("update requests set status='released'")).rejects.toThrow(/cannot move/);
+});
+it("rejects uncertain acknowledgment or missing appearance for direct R.A. 9255 inserts", async () => {
+  for (const father_on_record of [undefined, "", "not_sure", "other"]) {
+    await expect(insert({ request_type: "RA9255_SURNAME", form_data: {
+      intake_channel: "walk_in", father_on_record, personal_appearance_confirmed: "true",
+    } })).rejects.toThrow(/acknowledgment/);
+  }
+  for (const personal_appearance_confirmed of [undefined, false, "false"]) {
+    await expect(insert({ request_type: "RA9255_SURNAME", form_data: {
+      intake_channel: "walk_in", father_on_record: "yes", personal_appearance_confirmed,
+    } })).rejects.toThrow(/personal appearance/);
+  }
+  expect((await db.query("select * from requests")).rows).toHaveLength(0);
+});
+it("protects R.A. 9255 department, staff identity, payment, and atomic audit history", async () => {
+  const input = { request_type: "RA9255_SURNAME", form_data: {
+    intake_channel: "walk_in", father_on_record: "no", personal_appearance_confirmed: "true",
+  } };
+  for (const patch of [
+    { walk_in_accepted_by: other }, { walk_in_accepted_by: null }, { applicant_id: actor },
+    { payment_status: "verified" }, { or_number: "fake" }, { status: "ready_for_release" },
+  ]) await expect(insert({ ...input, ...patch })).rejects.toThrow();
+  await db.exec("set test.role='applicant'");
+  await expect(insert(input)).rejects.toThrow(/Only staff/);
+  await db.exec("reset role; set test.role='staff'; update services_registry set department_id=null where service_code='RA9255_SURNAME'; set role authenticated");
+  await expect(insert(input)).rejects.toThrow(/department/);
+  await db.exec(`reset role; update services_registry set department_id='${other}' where service_code='RA9255_SURNAME'; set role authenticated; set test.fail_history='yes'`);
+  await expect(insert(input)).rejects.toThrow("History unavailable");
+  expect((await db.query("select * from requests")).rows).toHaveLength(0);
+  expect((await db.query("select * from application_logs")).rows).toHaveLength(0);
 });
 it("accepts legitimation only with the couple present and records it in History", async () => {
   const input = { request_type: "LEGITIMATION", form_data: { intake_channel: "walk_in", couple_appearance_confirmed: "true" } };

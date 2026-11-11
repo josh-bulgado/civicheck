@@ -292,6 +292,15 @@ still. This halo also stops when reduced motion is enabled.
 
 ## Working with skills and registries
 
+R.A. 9255 walk-in intake uses the checked-paper form for legal staff. Keep the
+child's name as recorded on the birth certificate, both parents' names, birth
+details, and the acknowledgment answer. Registry number, contact number, and
+notes are optional. Omit online filer/purpose questions and uploads. Staff must
+resolve acknowledgment to Yes or No and confirm physical documents and the
+required personal appearance, signatures, and attestation for the child's age.
+Accepted requests start in Processing and remain unpaid. Display the base fee
+separately from conditional paternity and per-page charges.
+
 Start with the repository's Intent skill check from `AGENTS.md`. Use the local
 `civicheck-ui` skill to apply this guide, the installed `shadcn` skill for component
 APIs and registry operations, `frontend-design` when developing a visual

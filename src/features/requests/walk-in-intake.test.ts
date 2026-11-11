@@ -3,6 +3,7 @@ import config from "~/features/services/fixtures/birth-delayed-requirements.json
 import marriageForms from "./fixtures/marriage-walk-in-forms.json";
 import deathForms from "./fixtures/death-walk-in-forms.json";
 import legitimationForm from "./fixtures/legitimation-walk-in-form.json";
+import ra9255Form from "../forms/fixtures/ra9255-charter.json";
 import { parseFormTemplateDefinition } from "~/features/forms/form-template.utils";
 import { emptySubject } from "~/lib/subject-fields";
 
@@ -31,7 +32,7 @@ vi.mock("~/server/auth", () => ({
           maybeSingle: async () => ({
             data: {
               service_code: state.serviceCode,
-              fee: 500,
+              fee: state.serviceCode === "RA9255_SURNAME" ? 355 : 500,
               fee_per_copy: false,
               department_id: state.serviceDepartment,
             },
@@ -53,6 +54,7 @@ vi.mock("~/features/requests/tracking-number", () => ({
 vi.mock("~/features/services/services.catalogue", () => ({
   loadServiceCatalogue: async () => ({
     formTemplatesByService: new Map([
+      ["RA9255_SURNAME", { templateId: "ra9255", versionId: "published", definition: parseFormTemplateDefinition(ra9255Form.definition) }],
       ["LEGITIMATION", { templateId: "legitimation", versionId: "published", definition: parseFormTemplateDefinition(legitimationForm) }],
       ...(["DEATH_ONTIME", "DEATH_DELAYED"] as const).map(code => [code, {
         templateId: code, versionId: "published",
@@ -72,6 +74,7 @@ vi.mock("~/features/services/services.catalogue", () => ({
       ],
     ]),
     servicesByCode: new Map([
+      ["RA9255_SURNAME", { party_roles: ["Child", "Mother", "Father"] }],
       ["LEGITIMATION", { party_roles: ["Child", "Mother", "Father"] }],
       ["DEATH_ONTIME", { party_roles: ["Subject"] }],
       ["DEATH_DELAYED", { party_roles: ["Subject"] }],
@@ -82,6 +85,49 @@ vi.mock("~/features/services/services.catalogue", () => ({
   }),
 }));
 import { encodeWalkInFn } from "./walk-in-intake.mutations";
+
+it.each(["yes", "no"])("accepts checked R.A. 9255 walk-ins with acknowledgment %s and no online filer questions", async (fatherOnRecord) => {
+  state.serviceCode = "RA9255_SURNAME";
+  state.departmentId = state.serviceDepartment = "legal";
+  const people = ["Child", "Mother", "Father"].map(role => ({
+    ...emptySubject(role), firstName: role === "Father" ? "Juan" : "Ana", middleName: "Santos", lastName: "Cruz", sex: role === "Father" ? "male" : "female",
+  }));
+  const answers = { subjects: people, event_date: "2010-01-01", event_place: "Legazpi City, Albay", father_on_record: fatherOnRecord };
+  const input = {
+    serviceCode: "RA9255_SURNAME", subjects: people, templateVersionId: "published",
+    physicalDocumentsConfirmed: true, personalAppearanceConfirmed: true,
+    answers: { ...answers, filer_relationship: "other_relative", purpose: "ignored" },
+  };
+  const result = await encodeWalkInFn({ data: input });
+  expect(result).toMatchObject({ error: false, status: "processing" });
+  const saved = state.create.mock.calls[0][1];
+  expect(saved).toMatchObject({
+    applicant_id: null, request_type: "RA9255_SURNAME", status: "processing", fees_due: 355,
+    form_template_version_id: "published", walk_in_accepted_by: "staff",
+    form_data: {
+      subject_first_name: "Ana", party2_role: "Mother", party3_role: "Father",
+      father_on_record: fatherOnRecord, personal_appearance_confirmed: "true", encoded_by: "staff", intake_channel: "walk_in",
+    },
+  });
+  expect(saved.form_data).not.toHaveProperty("filer_relationship");
+  expect(saved.form_data).not.toHaveProperty("purpose");
+  expect(saved.form_data).not.toHaveProperty("couple_appearance_confirmed");
+  state.create.mockClear();
+  for (const patch of [
+    { physicalDocumentsConfirmed: false }, { personalAppearanceConfirmed: false },
+    { personalAppearanceConfirmed: undefined }, { personalAppearanceConfirmed: "true" as unknown as boolean },
+    { templateVersionId: "old" }, { answers: undefined },
+    ...["", "not_sure", "invalid"].map(value => ({ answers: { ...answers, father_on_record: value } })),
+    { answers: { ...answers, event_date: "" } }, { answers: { ...answers, event_place: "" } },
+    { answers: { ...answers, subjects: people.slice(0, 2) } },
+  ]) expect((await encodeWalkInFn({ data: { ...input, ...patch } })).error).toBe(true);
+  state.version = "new-version";
+  expect((await encodeWalkInFn({ data: input })).error).toBe(true);
+  state.version = "published";
+  state.departmentId = "birth";
+  expect((await encodeWalkInFn({ data: input })).error).toBe(true);
+  expect(state.create).not.toHaveBeenCalled();
+});
 
 const subjects = ["Child", "Mother"].map((role) => ({
   ...emptySubject(role),

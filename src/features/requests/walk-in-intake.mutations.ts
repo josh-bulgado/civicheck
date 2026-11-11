@@ -25,6 +25,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       templateVersionId?: string | null;
       physicalDocumentsConfirmed?: boolean;
       coupleAppearanceConfirmed?: boolean;
+      personalAppearanceConfirmed?: boolean;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -72,6 +73,9 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
     let registrationFormData: Record<string, string> | null = null;
     let templateVersionId: string | null = null;
     if (isWalkInDetailedIntake(service.service_code)) {
+      if (service.service_code === "RA9255_SURNAME" && data.personalAppearanceConfirmed !== true) {
+        return { error: true, message: "Confirm the required personal appearance, signatures, and attestation for the child's age before encoding." };
+      }
       if (service.service_code === "LEGITIMATION" && data.coupleAppearanceConfirmed !== true) {
         return { error: true, message: "Confirm that both parents personally appeared before encoding." };
       }
@@ -117,6 +121,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
         encoded_by: user.id,
         intake_channel: "walk_in",
         ...(service.service_code === "LEGITIMATION" ? { couple_appearance_confirmed: "true" } : {}),
+        ...(service.service_code === "RA9255_SURNAME" ? { personal_appearance_confirmed: "true" } : {}),
       },
     });
 

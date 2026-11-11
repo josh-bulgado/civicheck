@@ -38,6 +38,7 @@ export function WalkInRegistrationFields({
     templateVersionId: string | null;
     physicalDocumentsConfirmed: boolean;
     coupleAppearanceConfirmed?: boolean;
+    personalAppearanceConfirmed?: boolean;
   }) => Promise<void>;
   onCancel: () => void;
   onAnswersChange: (answers: TemplateAnswers) => void;
@@ -45,6 +46,7 @@ export function WalkInRegistrationFields({
   const [error, setError] = useState("");
   const [physicalDocumentsConfirmed, setPhysicalDocumentsConfirmed] = useState(false);
   const [coupleAppearanceConfirmed, setCoupleAppearanceConfirmed] = useState(false);
+  const [personalAppearanceConfirmed, setPersonalAppearanceConfirmed] = useState(false);
   const form = useForm<DetailsValues>({
     defaultValues: {
       ...Object.fromEntries((service.registrationForm?.definition.sections ?? [])
@@ -58,6 +60,7 @@ export function WalkInRegistrationFields({
   const marriage = isWalkInMarriage(service.serviceCode);
   const death = isWalkInDeath(service.serviceCode);
   const legitimation = service.serviceCode === "LEGITIMATION";
+  const surnameChange = service.serviceCode === "RA9255_SURNAME";
   useEffect(() => {
     if (!template) return;
     const selectedCase = walkInCaseForService(template.definition, service.serviceCode);
@@ -71,6 +74,7 @@ export function WalkInRegistrationFields({
     const subscription = form.watch(() => {
       setPhysicalDocumentsConfirmed(false);
       setCoupleAppearanceConfirmed(false);
+      setPersonalAppearanceConfirmed(false);
       publish();
     });
     return () => subscription.unsubscribe();
@@ -118,6 +122,10 @@ export function WalkInRegistrationFields({
   const timing = evaluateTemplateEventTiming(definition, values);
 
   async function submit() {
+    if (surnameChange && !personalAppearanceConfirmed) {
+      setError("Confirm the required personal appearance, signatures, and attestation for the child's age before encoding.");
+      return;
+    }
     if (legitimation && !coupleAppearanceConfirmed) {
       setError("Confirm that both parents personally appeared before encoding.");
       return;
@@ -151,20 +159,29 @@ export function WalkInRegistrationFields({
       templateVersionId: template.versionId,
       physicalDocumentsConfirmed,
       ...(legitimation ? { coupleAppearanceConfirmed } : {}),
+      ...(surnameChange ? { personalAppearanceConfirmed } : {}),
     });
   }
 
   return (
     <fieldset disabled={submitting} className="min-w-0 space-y-6">
       <p className="text-sm text-muted-foreground">
-        {legitimation
+        {surnameChange
+          ? "Enter the child's name as recorded on the birth certificate and both parents' names. Check the physical papers and the signing and personal appearance requirements for the child's age."
+          : legitimation
           ? "Enter the child's and parents' details from the birth and marriage certificates. Check the physical papers and the couple's personal appearance."
           : <>Enter the visitor's {death ? "death" : marriage ? "marriage" : "birth"} registration details. Check the applicant’s physical documents.</>}
       </p>
+      {surnameChange ? (
+        <div className="space-y-2 text-sm text-muted-foreground">
+          <p>Personal appearance: mother/legal guardian for ages 0-7; child with notarized attestation of the mother/legal guardian for ages 7-17; child for ages 18 and above. The Charter includes age 7 in both ranges; staff determine the applicable signing requirement.</p>
+          <p>The base fee is {service.fee.toLocaleString("en-PH", { style: "currency", currency: "PHP" })}. Also payable: ₱100 if with paternity and ₱5 per certified-photocopy page. Confirm additional charges from the papers.</p>
+        </div>
+      ) : null}
       <DynamicFormFields
         definition={caseDefinition}
         step="case"
-        singleColumn={marriage || death || legitimation}
+        singleColumn={marriage || death || legitimation || surnameChange}
         control={form.control}
         values={values}
         showRequiredMarks
@@ -198,6 +215,7 @@ export function WalkInRegistrationFields({
                   <h3 className="font-bold">
                     {role.toLowerCase() === "mother"
                       ? "Mother's Maiden Name"
+                      : surnameChange && role === "Child" ? "Child's name on the birth certificate"
                       : death ? "Name of the deceased"
                       : marriage ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[role] ?? role) : role}
                   </h3>
@@ -226,6 +244,13 @@ export function WalkInRegistrationFields({
           <span>Both parents personally appeared.</span>
         </label>
       ) : null}
+      {surnameChange ? (
+        <label className="flex min-h-11 items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm">
+          <Checkbox className="mt-0.5" checked={personalAppearanceConfirmed}
+            onCheckedChange={(checked) => setPersonalAppearanceConfirmed(checked === true)} />
+          <span>I verified the required personal appearance, signatures, and attestation for the child's age.</span>
+        </label>
+      ) : null}
       {error ? (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -243,7 +268,7 @@ export function WalkInRegistrationFields({
         <Button
           type="button"
           onClick={() => void submit()}
-          disabled={submitting || !physicalDocumentsConfirmed || (legitimation && !coupleAppearanceConfirmed)}
+          disabled={submitting || !physicalDocumentsConfirmed || (legitimation && !coupleAppearanceConfirmed) || (surnameChange && !personalAppearanceConfirmed)}
         >
           {submitting ? "Encoding..." : "Encode request"}
         </Button>
