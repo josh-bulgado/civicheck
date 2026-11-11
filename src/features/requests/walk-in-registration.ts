@@ -13,5 +13,5 @@ export function isWalkInRegistration(serviceCode: string) {
 }
 
 export function isWalkInDetailedIntake(serviceCode: string) {
-  return isWalkInRegistration(serviceCode) || serviceCode === "LEGITIMATION";
+  return isWalkInRegistration(serviceCode) || ["LEGITIMATION", "SUPPLEMENTAL_REPORT"].includes(serviceCode);
 }

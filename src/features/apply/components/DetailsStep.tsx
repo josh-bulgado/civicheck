@@ -210,6 +210,7 @@ export function SubjectFieldGrid({
   index,
   role,
   requireMiddleName = false,
+  hideSex = false,
 }: {
   control: Control<DetailsValues>;
   setValue: UseFormSetValue<DetailsValues>;
@@ -217,6 +218,7 @@ export function SubjectFieldGrid({
   role: string;
   husband?: boolean;
   requireMiddleName?: boolean;
+  hideSex?: boolean;
 }) {
   const watchedSex = useWatch({ control, name: `subjects.${index}.sex` });
   const { showSuffix, showSex } = subjectFieldVisibility(role, watchedSex);
@@ -303,7 +305,7 @@ export function SubjectFieldGrid({
           )}
         />
       )}
-      {showSex && !husband && (
+      {showSex && !husband && !hideSex && (
         <Controller
           control={control}
           name={`subjects.${index}.sex`}

@@ -3,6 +3,7 @@ import config from "~/features/services/fixtures/birth-delayed-requirements.json
 import marriageForms from "./fixtures/marriage-walk-in-forms.json";
 import deathForms from "./fixtures/death-walk-in-forms.json";
 import legitimationForm from "./fixtures/legitimation-walk-in-form.json";
+import supplementalForm from "./fixtures/supplemental-walk-in-form.json";
 import { parseFormTemplateDefinition } from "~/features/forms/form-template.utils";
 import { emptySubject } from "~/lib/subject-fields";
 
@@ -53,6 +54,7 @@ vi.mock("~/features/requests/tracking-number", () => ({
 vi.mock("~/features/services/services.catalogue", () => ({
   loadServiceCatalogue: async () => ({
     formTemplatesByService: new Map([
+      ["SUPPLEMENTAL_REPORT", { templateId: "supplemental", versionId: "published", definition: parseFormTemplateDefinition(supplementalForm) }],
       ["LEGITIMATION", { templateId: "legitimation", versionId: "published", definition: parseFormTemplateDefinition(legitimationForm) }],
       ...(["DEATH_ONTIME", "DEATH_DELAYED"] as const).map(code => [code, {
         templateId: code, versionId: "published",
@@ -72,6 +74,7 @@ vi.mock("~/features/services/services.catalogue", () => ({
       ],
     ]),
     servicesByCode: new Map([
+      ["SUPPLEMENTAL_REPORT", { party_roles: ["Subject"] }],
       ["LEGITIMATION", { party_roles: ["Child", "Mother", "Father"] }],
       ["DEATH_ONTIME", { party_roles: ["Subject"] }],
       ["DEATH_DELAYED", { party_roles: ["Subject"] }],
@@ -279,4 +282,29 @@ it.each(["DEATH_ONTIME", "DEATH_DELAYED"])("encodes checked %s papers with the d
       ...answers, death_registration_basis: "no_existing_record", event_date: today,
     } } })).error).toBe(false);
   }
+});
+
+it.each(["birth", "death", "marriage"])("encodes a checked supplemental %s record without unnecessary questions", async record_type => {
+  state.serviceCode = "SUPPLEMENTAL_REPORT";
+  state.departmentId = state.serviceDepartment = "legal";
+  const people = [{ ...emptySubject("Subject"), firstName: "Ana", middleName: "Santos", lastName: "Cruz" }];
+  const answers = { subjects: people, record_type, event_date: "2000-01-01", event_place: "Legazpi City",
+    entry_to_supplement: "Citizenship", information_to_add: "Filipino", purpose: "unused", additional_notes: "unused" };
+  const input = { ...data, serviceCode: "SUPPLEMENTAL_REPORT", subjects: people, answers, personalAppearanceConfirmed: true };
+  expect((await encodeWalkInFn({ data: input })).error).toBe(false);
+  const saved = state.create.mock.calls.at(-1)?.[1];
+  expect(saved).toMatchObject({ applicant_id: null, status: "processing", walk_in_accepted_by: "staff",
+    form_data: { record_type, entry_to_supplement: "Citizenship", information_to_add: "Filipino", personal_appearance_confirmed: "true" } });
+  expect(saved.form_data).not.toHaveProperty("purpose");
+  expect(saved.form_data).not.toHaveProperty("additional_notes");
+  expect(saved.form_data.subject_sex).toBeFalsy();
+  state.create.mockClear();
+  for (const patch of [
+    { physicalDocumentsConfirmed: false }, { personalAppearanceConfirmed: false }, { templateVersionId: "old" },
+    ...["record_type", "event_date", "event_place", "entry_to_supplement", "information_to_add"].map(key => ({ answers: { ...answers, [key]: "" } })),
+    { answers: { ...answers, subjects: [] } }, { answers: { ...answers, record_type: "other" } },
+  ]) expect((await encodeWalkInFn({ data: { ...input, ...patch } })).error).toBe(true);
+  state.departmentId = "birth";
+  expect((await encodeWalkInFn({ data: input })).error).toBe(true);
+  expect(state.create).not.toHaveBeenCalled();
 });

@@ -8,6 +8,7 @@ import { clampCopies, totalFee } from "~/features/services/service-utils";
 import { loadServiceCatalogue } from "~/features/services/services.catalogue";
 import type { TemplateAnswers } from "~/features/forms/form-template.types";
 import { prepareWalkInBirth } from "./walk-in-birth";
+import { prepareWalkInSupplemental } from "./walk-in-supplemental";
 import { walkInCaseForService } from "./walk-in-legitimation";
 import { isWalkInDetailedIntake } from "./walk-in-registration";
 
@@ -25,6 +26,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       templateVersionId?: string | null;
       physicalDocumentsConfirmed?: boolean;
       coupleAppearanceConfirmed?: boolean;
+      personalAppearanceConfirmed?: boolean;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -72,6 +74,9 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
     let registrationFormData: Record<string, string> | null = null;
     let templateVersionId: string | null = null;
     if (isWalkInDetailedIntake(service.service_code)) {
+      if (service.service_code === "SUPPLEMENTAL_REPORT" && data.personalAppearanceConfirmed !== true) {
+        return { error: true, message: "Confirm the applicant's personal appearance before encoding." };
+      }
       if (service.service_code === "LEGITIMATION" && data.coupleAppearanceConfirmed !== true) {
         return { error: true, message: "Confirm that both parents personally appeared before encoding." };
       }
@@ -90,7 +95,8 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
         return { error: true, message: "The registration form has changed. Reload the page and review your answers." };
       }
       const selectedCase = walkInCaseForService(template.definition, service.service_code);
-      const prepared = prepareWalkInBirth(selectedCase.definition, { ...data.answers, ...selectedCase.answers }, registryService.party_roles?.length ? registryService.party_roles : ["Subject"]);
+      const prepare = service.service_code === "SUPPLEMENTAL_REPORT" ? prepareWalkInSupplemental : prepareWalkInBirth;
+      const prepared = prepare(selectedCase.definition, { ...data.answers, ...selectedCase.answers }, registryService.party_roles?.length ? registryService.party_roles : ["Subject"]);
       if (prepared.error) return prepared;
       if (prepared.serviceCode && prepared.serviceCode !== service.service_code) {
         return { error: true, message: "The selected service does not match the registration answers." };
@@ -116,6 +122,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
         }),
         encoded_by: user.id,
         intake_channel: "walk_in",
+        ...(service.service_code === "SUPPLEMENTAL_REPORT" ? { personal_appearance_confirmed: "true" } : {}),
         ...(service.service_code === "LEGITIMATION" ? { couple_appearance_confirmed: "true" } : {}),
       },
     });

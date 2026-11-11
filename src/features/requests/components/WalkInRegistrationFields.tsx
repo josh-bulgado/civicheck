@@ -19,6 +19,7 @@ import {
 import { emptySubject, reconcileSubjects } from "~/lib/subject-fields";
 import type { EncodableService } from "../walk-in-intake.queries";
 import { prepareWalkInBirth } from "../walk-in-birth";
+import { prepareWalkInSupplemental } from "../walk-in-supplemental";
 import { walkInCaseForService } from "../walk-in-legitimation";
 import { isWalkInDeath, isWalkInMarriage } from "../walk-in-registration";
 
@@ -38,6 +39,7 @@ export function WalkInRegistrationFields({
     templateVersionId: string | null;
     physicalDocumentsConfirmed: boolean;
     coupleAppearanceConfirmed?: boolean;
+    personalAppearanceConfirmed?: boolean;
   }) => Promise<void>;
   onCancel: () => void;
   onAnswersChange: (answers: TemplateAnswers) => void;
@@ -45,6 +47,7 @@ export function WalkInRegistrationFields({
   const [error, setError] = useState("");
   const [physicalDocumentsConfirmed, setPhysicalDocumentsConfirmed] = useState(false);
   const [coupleAppearanceConfirmed, setCoupleAppearanceConfirmed] = useState(false);
+  const [personalAppearanceConfirmed, setPersonalAppearanceConfirmed] = useState(false);
   const form = useForm<DetailsValues>({
     defaultValues: {
       ...Object.fromEntries((service.registrationForm?.definition.sections ?? [])
@@ -58,6 +61,7 @@ export function WalkInRegistrationFields({
   const marriage = isWalkInMarriage(service.serviceCode);
   const death = isWalkInDeath(service.serviceCode);
   const legitimation = service.serviceCode === "LEGITIMATION";
+  const supplemental = service.serviceCode === "SUPPLEMENTAL_REPORT";
   useEffect(() => {
     if (!template) return;
     const selectedCase = walkInCaseForService(template.definition, service.serviceCode);
@@ -71,6 +75,7 @@ export function WalkInRegistrationFields({
     const subscription = form.watch(() => {
       setPhysicalDocumentsConfirmed(false);
       setCoupleAppearanceConfirmed(false);
+      setPersonalAppearanceConfirmed(false);
       publish();
     });
     return () => subscription.unsubscribe();
@@ -118,6 +123,10 @@ export function WalkInRegistrationFields({
   const timing = evaluateTemplateEventTiming(definition, values);
 
   async function submit() {
+    if (supplemental && !personalAppearanceConfirmed) {
+      setError("Confirm the applicant's personal appearance before encoding.");
+      return;
+    }
     if (legitimation && !coupleAppearanceConfirmed) {
       setError("Confirm that both parents personally appeared before encoding.");
       return;
@@ -138,7 +147,8 @@ export function WalkInRegistrationFields({
       ),
     };
     for (const field of personFields) answers[field.key] = subjects;
-    const prepared = prepareWalkInBirth(definition, answers, roles);
+    const prepare = supplemental ? prepareWalkInSupplemental : prepareWalkInBirth;
+    const prepared = prepare(definition, answers, roles);
     if (prepared.error) {
       setError(prepared.message);
       return;
@@ -151,20 +161,23 @@ export function WalkInRegistrationFields({
       templateVersionId: template.versionId,
       physicalDocumentsConfirmed,
       ...(legitimation ? { coupleAppearanceConfirmed } : {}),
+      ...(supplemental ? { personalAppearanceConfirmed } : {}),
     });
   }
 
   return (
     <fieldset disabled={submitting} className="min-w-0 space-y-6">
       <p className="text-sm text-muted-foreground">
-        {legitimation
+        {supplemental
+          ? "Enter the details from the civil registry certificate and supplemental affidavit. Check the required originals and copies, and confirm personal appearance."
+          : legitimation
           ? "Enter the child's and parents' details from the birth and marriage certificates. Check the physical papers and the couple's personal appearance."
           : <>Enter the visitor's {death ? "death" : marriage ? "marriage" : "birth"} registration details. Check the applicant’s physical documents.</>}
       </p>
       <DynamicFormFields
         definition={caseDefinition}
         step="case"
-        singleColumn={marriage || death || legitimation}
+        singleColumn={marriage || death || legitimation || supplemental}
         control={form.control}
         values={values}
         showRequiredMarks
@@ -198,6 +211,7 @@ export function WalkInRegistrationFields({
                   <h3 className="font-bold">
                     {role.toLowerCase() === "mother"
                       ? "Mother's Maiden Name"
+                      : supplemental ? "Person named on the record"
                       : death ? "Name of the deceased"
                       : marriage ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[role] ?? role) : role}
                   </h3>
@@ -206,6 +220,7 @@ export function WalkInRegistrationFields({
                     setValue={form.setValue}
                     index={index}
                     role={role}
+                    hideSex={supplemental}
                     requireMiddleName
                   />
                 </div>
@@ -226,6 +241,13 @@ export function WalkInRegistrationFields({
           <span>Both parents personally appeared.</span>
         </label>
       ) : null}
+      {supplemental ? (
+        <label className="flex min-h-11 items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm">
+          <Checkbox className="mt-0.5" checked={personalAppearanceConfirmed}
+            onCheckedChange={(checked) => setPersonalAppearanceConfirmed(checked === true)} />
+          <span>The applicant personally appeared.</span>
+        </label>
+      ) : null}
       {error ? (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -243,7 +265,7 @@ export function WalkInRegistrationFields({
         <Button
           type="button"
           onClick={() => void submit()}
-          disabled={submitting || !physicalDocumentsConfirmed || (legitimation && !coupleAppearanceConfirmed)}
+          disabled={submitting || !physicalDocumentsConfirmed || (legitimation && !coupleAppearanceConfirmed) || (supplemental && !personalAppearanceConfirmed)}
         >
           {submitting ? "Encoding..." : "Encode request"}
         </Button>
