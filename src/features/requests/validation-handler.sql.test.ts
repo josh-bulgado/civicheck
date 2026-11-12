@@ -39,7 +39,12 @@ beforeEach(async () => {
   `);
 });
 
-const claim = async () => (await db.query(
+const claim = async () => (await db.query<{
+  claimed_by: string | null;
+  claimed_stage: string | null;
+  claimed_at: Date | null;
+  claim_expires_at: Date | null;
+}>(
   "select claimed_by, claimed_stage, claimed_at, claim_expires_at from requests where id=1",
 )).rows[0];
 const emptyClaim = {
