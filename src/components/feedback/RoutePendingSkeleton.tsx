@@ -1,6 +1,5 @@
 import { useRouterState } from "@tanstack/react-router";
 import { peekCurrentUser } from "~/features/auth/current-user";
-import { LoginPageSkeleton } from "~/features/auth/components/LoginPageSkeleton";
 import { CitizenPortalFrameSkeleton } from "~/features/dashboard/CitizenPortalFrameSkeleton";
 import { SystemHealthSkeleton } from "~/features/system-admin/components/SystemHealthSkeleton";
 import { SecurityCenterSkeleton } from "~/features/system-admin/components/SecurityCenterSkeleton";
@@ -9,17 +8,15 @@ import { Sidebar, SidebarInset, SidebarProvider } from "~/components/ui/sidebar"
 import { Skeleton } from "~/components/ui/skeleton";
 import { WORKSPACE_SIDEBAR_STYLE } from "~/components/sidebar-01/workspace";
 import { CiviCheckIdentity } from "~/components/brand/civic-identity";
-import { LandingPageSkeleton } from "~/features/landing/components/LandingPageSkeleton";
 import { WizardPageSkeleton } from "~/features/apply/components/WizardPageSkeleton";
 
 /** Parent loaders (including session restoration) use the destination's tiles. */
 export function RoutePendingSkeleton() {
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const pathname = useRouterState({ select: (state) => state.location.pathname.replace(/\/$/, "") || "/" });
 
-  if (pathname === "/") return <LandingPageSkeleton />;
-  if (pathname === "/login" || pathname === "/login/") {
-    return <LoginPageSkeleton />;
-  }
+  // These simple pages use their entrance animation without a loading layout,
+  // including when a parent or a lazy route chunk is still pending.
+  if (["/", "/login", "/signup", "/forgot-password", "/verify-email"].includes(pathname)) return null;
   if (pathname.startsWith("/apply/")) return <WizardPageSkeleton />;
 
   // A known applicant gets the same fixed frame on every portal destination.

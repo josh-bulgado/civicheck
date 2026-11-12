@@ -227,10 +227,13 @@ Logout uses an immediate, full-page “Signing out…” status with the shared
 `Spinner` in [the logout route](../src/routes/logout.tsx). Keep that transition
 consistent across portal pages instead of showing a content skeleton.
 
-Login uses [LoginPageSkeleton](../src/features/auth/components/LoginPageSkeleton.tsx)
-for both route and parent pending states. It shares `LoginLayout` and its CSS
-with the loaded form, including responsive field sizes and artwork visibility.
-Keep the loading layout immediately visible and preserve router pending timing.
+Login, create account, forgot password, OTP verification, and returning to the landing page use
+[simplePageTransition](../src/components/motion/simple-page-transition.ts) for
+both mobile and desktop navigation. Keep the current page visible until the
+destination is ready, with no skeleton or minimum loading delay. Parent and lazy
+route fallbacks also omit skeletons for these destinations. Auth forms use a
+simple fade entrance that respects reduced motion; the landing page retains its
+existing entrance animations. The password-recovery OTP step also fades in.
 
 Verification keeps the signup email fixed, displays it on its own line, and
 uses eight separate code boxes with an inline resend action. Standalone auth
@@ -305,6 +308,13 @@ each is enforced on the server and recorded separately in staff History.
 Online inquiries require identity verification but no physical handover.
 
 ## Interaction and responsive behavior
+
+The [welcome tutorial](../src/features/onboarding/components/WelcomeTutorial.tsx)
+fits the mobile viewport without scrolling. Mobile slides use compact artwork,
+type, and spacing, and only the current slide determines the content height.
+Keep the progress dots and action row outside the shrinking content area so
+Skip, Show me, Back, and Next stay visible. Short viewports omit the decorative
+artwork to leave room for the full instructions and touch-sized actions.
 
 Uploaded photos and PDFs share
 [FilePreviewDialogContent](../src/components/file-preview/FilePreviewDialogContent.tsx)

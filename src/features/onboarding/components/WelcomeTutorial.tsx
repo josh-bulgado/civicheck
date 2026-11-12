@@ -75,6 +75,8 @@ const tone = (h: number) =>
 const ICON_ENTER = { "--enter-delay": "140ms" } as CSSProperties;
 const TEXT_ENTER = { "--stagger-base": "200ms" } as CSSProperties;
 const CONTROLS_ENTER = { "--enter-delay": "320ms" } as CSSProperties;
+const SLIDE_TITLE_CLASS = "text-[22px] font-extrabold leading-tight tracking-[-0.02em] text-foreground text-balance sm:text-[28px] [@media(max-height:540px)]:text-xl";
+const SLIDE_BODY_CLASS = "mx-auto mt-3 max-w-[440px] text-[15px] leading-normal text-body-strong text-pretty sm:mt-3.5 sm:text-lg sm:leading-relaxed [@media(max-height:540px)]:mt-2 [@media(max-height:540px)]:text-sm [@media(max-height:540px)]:leading-normal";
 
 /** The tutorial dialog. Mounted once in the dashboard layout so "How it works" works on every page. */
 export function WelcomeTutorial() {
@@ -121,9 +123,9 @@ export function WelcomeTutorial() {
     >
       <DialogContent
         showCloseButton={false}
-        className="max-h-[calc(100dvh-2rem)] gap-0 overflow-y-auto overflow-x-hidden rounded-[20px] p-0 shadow-[0_24px_60px_rgba(15,27,45,0.3)] sm:max-w-[580px] data-open:slide-in-from-bottom-8 data-open:duration-(--duration-slow) data-open:ease-(--ease-civic-emphasized) motion-reduce:data-open:animate-none motion-reduce:data-closed:animate-none"
+        className="flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden rounded-[20px] p-0 shadow-[0_24px_60px_rgba(15,27,45,0.3)] sm:max-w-[580px] data-open:slide-in-from-bottom-8 data-open:duration-(--duration-slow) data-open:ease-(--ease-civic-emphasized) motion-reduce:data-open:animate-none motion-reduce:data-closed:animate-none"
       >
-        <div className="overflow-hidden">
+        <div className="min-h-0 overflow-hidden">
           <div
             className="flex transition-transform duration-[380ms] ease-[cubic-bezier(.22,.61,.36,1)] motion-reduce:transition-none"
             style={{ transform: `translateX(-${index * 100}%)` }}
@@ -132,36 +134,41 @@ export function WelcomeTutorial() {
               const t = tone(slide.hue);
               const Icon = slide.icon;
               return (
-                <div key={slide.title} className="min-w-0 flex-[0_0_100%]" style={t} aria-hidden={i !== index}>
+                <div
+                  key={slide.title}
+                  className={cn("min-w-0 flex-[0_0_100%]", i !== index && "max-sm:h-0 max-sm:overflow-hidden [@media(max-height:540px)]:h-0 [@media(max-height:540px)]:overflow-hidden")}
+                  style={t}
+                  aria-hidden={i !== index}
+                >
                   <div
-                    className="relative flex h-[clamp(120px,26vh,220px)] items-center justify-center overflow-hidden bg-(--tone-soft) dark:bg-(--tone-soft-dark)"
+                    className="relative flex h-[clamp(72px,16dvh,128px)] items-center justify-center overflow-hidden bg-(--tone-soft) sm:h-[clamp(120px,26dvh,220px)] dark:bg-(--tone-soft-dark) [@media(max-height:540px)]:hidden"
                   >
                     <span className="absolute -bottom-[70px] -left-10 size-[200px] rounded-full border-[32px] border-(--tone-ring) dark:border-(--tone-ring-dark)" />
                     <span className="absolute -top-[50px] -right-[30px] size-[140px] rounded-full border-[22px] border-(--tone-ring) dark:border-(--tone-ring-dark)" />
                     <span
-                      className="civic-enter-scale relative flex size-[104px] items-center justify-center rounded-[28px] bg-card text-(--tone-ink) shadow-[0_12px_28px_-12px_rgba(15,27,45,0.35)] dark:text-(--tone-ink-dark)"
+                      className="civic-enter-scale relative flex size-16 items-center justify-center rounded-[20px] bg-card text-(--tone-ink) shadow-[0_12px_28px_-12px_rgba(15,27,45,0.35)] sm:size-[104px] sm:rounded-[28px] dark:text-(--tone-ink-dark)"
                       style={ICON_ENTER}
                     >
-                      <Icon className="size-[52px]" strokeWidth={1.75} aria-hidden="true" />
+                      <Icon className="size-8 sm:size-[52px]" strokeWidth={1.75} aria-hidden="true" />
                     </span>
                   </div>
-                  <div className="civic-stagger-auto px-9 pt-7 pb-2 text-center" style={TEXT_ENTER}>
-                    <p className="mb-2.5 text-sm font-bold uppercase tracking-[0.1em] text-(--tone-ink) dark:text-(--tone-ink-dark)">
+                  <div className="civic-stagger-auto px-5 pt-5 pb-2 text-center sm:px-9 sm:pt-7 [@media(max-height:540px)]:px-5 [@media(max-height:540px)]:pt-4" style={TEXT_ENTER}>
+                    <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.1em] text-(--tone-ink) sm:mb-2.5 sm:text-sm dark:text-(--tone-ink-dark) [@media(max-height:540px)]:text-[11px]">
                       {slide.kicker}
                     </p>
                     {i === index ? (
                       <>
-                        <DialogTitle className="text-[28px] font-extrabold leading-tight tracking-[-0.02em] text-foreground text-balance">
+                        <DialogTitle className={SLIDE_TITLE_CLASS}>
                           {slide.title}
                         </DialogTitle>
-                        <DialogDescription className="mx-auto mt-3.5 max-w-[440px] text-lg leading-relaxed text-body-strong text-pretty">
+                        <DialogDescription className={SLIDE_BODY_CLASS}>
                           {slide.body}
                         </DialogDescription>
                       </>
                     ) : (
                       <>
-                        <p className="text-[28px] font-extrabold leading-tight tracking-[-0.02em] text-foreground text-balance">{slide.title}</p>
-                        <p className="mx-auto mt-3.5 max-w-[440px] text-lg leading-relaxed text-body-strong text-pretty">{slide.body}</p>
+                        <p className={SLIDE_TITLE_CLASS}>{slide.title}</p>
+                        <p className={SLIDE_BODY_CLASS}>{slide.body}</p>
                       </>
                     )}
                   </div>
@@ -171,8 +178,8 @@ export function WelcomeTutorial() {
           </div>
         </div>
 
-        <div className="civic-enter-fade" style={CONTROLS_ENTER}>
-          <div className="flex justify-center gap-2 pt-5 pb-1" role="tablist" aria-label="Tutorial slides">
+        <div className="civic-enter-fade shrink-0" style={CONTROLS_ENTER}>
+          <div className="flex justify-center gap-2 pt-2 pb-1 sm:pt-5 [@media(max-height:540px)]:pt-2" role="tablist" aria-label="Tutorial slides">
             {SLIDES.map((slide, i) => (
               <button
                 key={slide.title}
@@ -193,11 +200,11 @@ export function WelcomeTutorial() {
             ))}
           </div>
 
-          <div className="flex items-center justify-between gap-3 px-7 pt-4 pb-6">
-            <Button type="button" variant="ghost" onClick={back} className="h-13 px-4.5 text-[17px] font-semibold">
+          <div className="flex items-center justify-between gap-3 px-5 pt-2 pb-4 sm:px-7 sm:pt-4 sm:pb-6 [@media(max-height:540px)]:px-5 [@media(max-height:540px)]:pt-2 [@media(max-height:540px)]:pb-4">
+            <Button type="button" variant="ghost" size="touch" onClick={back} className="font-semibold sm:h-13 sm:px-4.5 sm:text-[17px] [@media(max-height:540px)]:h-11 [@media(max-height:540px)]:text-sm">
               {isFirst ? "Skip" : "Back"}
             </Button>
-            <Button type="button" onClick={next} className="h-13 px-5.5 text-[17px] font-bold">
+            <Button type="button" size="touch" onClick={next} className="font-bold sm:h-13 sm:px-5.5 sm:text-[17px] [@media(max-height:540px)]:h-11 [@media(max-height:540px)]:text-sm">
               {isFirst ? "Show me" : isLast ? "Find my document" : "Next"}
             </Button>
           </div>

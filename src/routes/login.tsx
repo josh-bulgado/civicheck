@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LoginForm } from "~/features/auth/components/LoginForm";
-import { LoginPageSkeleton } from "~/features/auth/components/LoginPageSkeleton";
+import { simplePageTransition } from "~/components/motion/simple-page-transition";
 
 type LoginSearch = {
   redirect?: string;
@@ -10,7 +10,7 @@ type LoginSearch = {
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
-  pendingComponent: LoginPageSkeleton,
+  ...simplePageTransition,
   validateSearch: (search: Record<string, unknown>): LoginSearch => ({
     redirect: (search.redirect as string) || undefined,
     error: (search.error as string) || undefined,

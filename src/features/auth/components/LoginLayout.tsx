@@ -36,7 +36,7 @@ export function LoginLayout({
         </header>
 
         <main className="login-main">
-          <div className={cn("login-form-column", !loading && "civic-enter")}>
+          <div className={cn("login-form-column", !loading && "civic-enter-fade")}>
             {children}
           </div>
           <div

@@ -82,7 +82,7 @@ export function AuthCenteredLayout({
 
       <div
         className={cn(
-          "civic-enter mx-auto flex w-full max-w-85 flex-1 flex-col justify-center py-10",
+          "civic-enter-fade mx-auto flex w-full max-w-85 flex-1 flex-col justify-center py-10",
           className,
         )}
       >
