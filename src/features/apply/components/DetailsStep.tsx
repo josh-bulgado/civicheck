@@ -39,6 +39,7 @@ import {
 import {
   WIZARD_CONTROL_CLASS,
   WIZARD_LABEL_CLASS,
+  FORM_GROUP_CLASS,
   WizardFieldError,
 } from "~/features/forms/components/wizard-field";
 import {
@@ -106,8 +107,8 @@ function subjectFieldVisibility(role: string, sex: string | undefined) {
 function PartySection({ role, children }: { role: string; children: ReactNode }) {
   const headingId = useId();
   return (
-    <div role="group" aria-labelledby={headingId} className="flex flex-col gap-4">
-      <h2 id={headingId} className="text-xl leading-[normal] font-bold text-foreground">
+    <div role="group" aria-labelledby={headingId} className="flex flex-col gap-4 border-t border-border-light pt-6">
+      <h2 id={headingId} className={FORM_GROUP_CLASS}>
         {role.trim().toLowerCase() === "mother" ? "Mother’s Maiden Name" : formatFieldLabel(role)}
       </h2>
       {children}
@@ -748,7 +749,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
             role={
               useSpouseLabels
                 ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[subjectField.role] ?? subjectField.role)
-                : subjectField.role
+                : subjectField.role === "Mother" ? "Mother's Maiden Name" : subjectField.role
             }
           >
             <SubjectFieldGrid
@@ -789,8 +790,8 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       subjectFields.fields.map((subjectField, index) =>
         ownerLabel ? (
           // A heading that names whose name this is ("Full name of the deceased").
-          <div key={subjectField.id} className="flex flex-col gap-3">
-            <span className={WIZARD_LABEL_CLASS}>{formatFieldLabel(ownerLabel)}</span>
+          <div key={subjectField.id} className="flex flex-col gap-3 border-t border-border-light pt-6">
+            <span className={FORM_GROUP_CLASS}>{formatFieldLabel(ownerLabel)}</span>
             <SubjectFieldGrid
               control={form.control}
               setValue={form.setValue}

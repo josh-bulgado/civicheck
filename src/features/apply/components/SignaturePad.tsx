@@ -1,6 +1,7 @@
 import { useRef, type PointerEvent } from "react";
 import { Button } from "~/components/ui/button";
 import { RequiredMark } from "~/components/ui/required-mark";
+import { FORM_SECTION_CLASS } from "~/features/forms/components/wizard-field";
 
 export function SignaturePad({ onChange, disabled }: {
   onChange: (value: string) => void;
@@ -24,7 +25,7 @@ export function SignaturePad({ onChange, disabled }: {
 
   return (
     <section className="rounded-[18px] border border-border-light p-5">
-      <h2 className="text-lg font-bold">Certification and signature <RequiredMark /></h2>
+      <h2 className={FORM_SECTION_CLASS}>Certification and signature <RequiredMark /></h2>
       <p className="mt-2 text-base">I hereby certify that the above information is true and correct.</p>
       <p id="signature-help" className="mt-2 text-sm text-muted-foreground">
         Requester: draw your signature below using your finger, stylus, or mouse.

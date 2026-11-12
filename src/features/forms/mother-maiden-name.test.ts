@@ -1,14 +1,46 @@
 import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 import { expect, it } from "vitest";
-import { motherMaidenName } from "./mother-maiden-name";
+import { motherMaidenName, wifeMaidenName } from "./mother-maiden-name";
 import { canonicalizeTemplateAnswers, fieldsForStep, parseFormTemplateDefinition, validateTemplateAnswers } from "./form-template.utils";
 
 it("joins the name for PDFs and keeps older requests readable", () => {
+  expect(wifeMaidenName({ wife_first_name: "Maria", wife_middle_name: "N/A", wife_last_name: "Santos" })).toBe("Maria Santos");
+  expect(wifeMaidenName({ wife_maiden_name: "Maria Reyes Santos" })).toBe("Maria Reyes Santos");
   expect(motherMaidenName({ mother_first_name: "Maria", mother_middle_name: "N/A", mother_last_name: "Santos" })).toBe("Maria Santos");
   expect(motherMaidenName({ mother_first_name: "Maria", mother_middle_name: "Reyes", mother_last_name: "Santos", mother_maiden_name: "Old value" })).toBe("Maria Reyes Santos");
   expect(motherMaidenName({ mother_maiden_name: "Maria Reyes Santos" })).toBe("Maria Reyes Santos");
 });
+
+it("splits existing wife and mother fields without changing old versions or conditions", async () => {
+  const db = new PGlite();
+  try {
+    await db.exec(`create table form_templates(id int primary key,active_version_id uuid,updated_at timestamptz);
+      create table form_template_versions(id uuid default gen_random_uuid(),template_id int,version int,status text,definition jsonb,published_at timestamptz);`);
+    const original = { schemaVersion: 1, sections: [{ key: "details", step: "details", title: "Details", fields: [
+      { key: "record_type", type: "select", label: "Record", required: true, options: [{ value: "birth", label: "Birth" }, { value: "marriage", label: "Marriage" }] },
+      { key: "subjects", type: "person_group", label: "Owner", required: false },
+      { key: "wife_maiden_name", type: "text", label: "Maiden name of wife", required: true, visibleWhen: { field: "record_type", operator: "equals", value: "marriage" } },
+      { key: "mother_maiden_name", type: "text", label: "Mother's maiden name", required: false, visibleWhen: { field: "record_type", operator: "equals", value: "birth" } },
+    ] }] };
+    await db.exec("insert into form_templates(id) values(1)");
+    await db.query("insert into form_template_versions(template_id,version,status,definition) values(1,1,'published',$1)", [JSON.stringify(original)]);
+    await db.exec("update form_templates set active_version_id=(select id from form_template_versions)");
+    const sql=readFileSync(new URL("../../../supabase/migrations/20261112161131_split_remaining_maiden_names.sql",import.meta.url),"utf8");
+    await db.exec(sql);
+    await db.exec(sql);
+    const {rows}=await db.query<{definition:unknown}>("select definition from form_template_versions order by version");
+    expect(rows).toHaveLength(2);
+    expect(rows[0].definition).toEqual(original);
+    const form=parseFormTemplateDefinition(rows[1].definition);
+    expect(fieldsForStep(form,"details").filter(f=>/^(wife|mother)_/.test(f.key)).map(f=>f.key)).toEqual(["wife_first_name","wife_middle_name","wife_last_name","mother_first_name","mother_middle_name","mother_last_name"]);
+    const answers={record_type:"marriage",wife_first_name:"Maria",wife_middle_name:"N/A",wife_last_name:"Santos"};
+    expect(validateTemplateAnswers(form,answers).success).toBe(true);
+    expect(validateTemplateAnswers(form,{...answers,wife_middle_name:""}).success).toBe(false);
+    expect(validateTemplateAnswers(form,{...answers,wife_last_name:"123"}).success).toBe(false);
+    expect(canonicalizeTemplateAnswers(form,{...answers,record_type:"birth"})).not.toHaveProperty("wife_first_name");
+  } finally { await db.close(); }
+},30_000);
 
 it("splits both templates, keeps birth-only visibility and old versions, and can run twice", async () => {
   const db = new PGlite();

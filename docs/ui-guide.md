@@ -17,6 +17,40 @@ affected guidance rather than treating this snapshot as a second implementation.
 
 ## Project foundation
 
+Birth registration uses its existing Mother person group for the mother's maiden
+name; do not add a duplicate name group. Birth-record selections in Electronic
+Endorsement, Other Certificates, and Supplemental Report use the same three
+mother-name fields as CTC, including No middle name. Detailed walk-ins retain
+these fields; death and marriage selections do not show them.
+
+Online forms use heading sizes from `wizard-field.tsx`: page titles 32px,
+section headings 24px, and person-name groups and Address 20px. Walk-in section
+and name-group headings match the 15px field labels. Walk-ins use dividers
+between sections, name groups, and the physical-document confirmation.
+Field labels stay 15px, including the optional Father's Full Name field.
+Online and walk-in forms separate sections, person-name groups, and Address
+with full-width borders in normal layout flow. Keep padding after each border
+and a full grid row for name-group headings so controls cannot overlap a divider.
+Optional Father's Full Name remains a field without its own divider.
+
+Other Certificates walk-in intake records the selected birth, death, or marriage
+record, the person's name, event date and place, optional registry number and
+contact number, purpose, and optional notes. Marriage also asks for the maiden
+name of wife and labels the main name as the husband. Existing mother and wife
+maiden-name questions use First Name, Middle Name with No middle name, and Maiden
+Last Name in both online and detailed walk-in forms. Verification PDFs join the
+parts and keep support for older requests saved with one wife-maiden-name field.
+For Other Certificates birth records, the owner's date and place precede the
+mother's name. Optional Father's Full Name follows the mother's name without a
+divider, in both the online and walk-in form.
+All three records ask
+Registered Late? and, when Yes, the registration date, using the CTC fields.
+Omit sex and uploads. Staff check
+the original Application/Verification Form and agency letter-request before
+encoding. Accepted requests start Processing and unpaid, with the accepting
+staff member recorded. Charter item 15, PDF pages 22-23, documents the physical
+papers and record search; the digital intake fields are system behavior.
+
 Walk-in intake starts with the service selection and fields. Omit generic
 introductory instructions; retain field guidance, service-specific notices,
 validation messages, and required confirmations.

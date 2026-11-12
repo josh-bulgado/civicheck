@@ -1,6 +1,7 @@
 import { RegistrationNoticeText } from "~/features/requests/components/RegistrationNoticeText";
 import { onTimeRegistrationNotice } from "~/features/requests/on-time-registration";
 import { SignaturePad } from "./SignaturePad";
+import { FORM_SECTION_CLASS } from "~/features/forms/components/wizard-field";
 import { VerificationFormPreview } from "./VerificationFormPreview";
 import { requiresVerificationSignature } from "../verification-signature";
 import { formatFieldLabel } from "~/features/forms/field-label";
@@ -535,7 +536,7 @@ function ReviewBlock({
   return (
     <section className="overflow-hidden rounded-[18px] border border-border-light">
       <div className="flex items-center justify-between gap-3 bg-portal-panel px-5.5 py-3.5">
-        <h2 className="text-[17px] leading-[normal] font-bold text-foreground">{title}</h2>
+        <h2 className={FORM_SECTION_CLASS}>{title}</h2>
         <button
           type="button"
           onClick={onEdit}

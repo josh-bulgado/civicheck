@@ -107,7 +107,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
         return { error: true, message: "The registration form has changed. Reload the page and review your answers." };
       }
       const selectedCase = walkInCaseForService(template.definition, service.service_code);
-      const prepare = service.service_code === "SUPPLEMENTAL_REPORT" ? prepareWalkInSupplemental
+      const prepare = ["SUPPLEMENTAL_REPORT", "OTHER_CERT"].includes(service.service_code) ? prepareWalkInSupplemental
         : isWalkInCourtDecree(service.service_code) ? prepareWalkInCourtDecree : prepareWalkInBirth;
       const prepared = (isWalkInPetition(service.service_code) ? prepareWalkInPetition : prepare)(selectedCase.definition, { ...data.answers, ...selectedCase.answers }, registryService.party_roles?.length ? registryService.party_roles : ["Subject"]);
       if (prepared.error) return prepared;
@@ -135,6 +135,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
         }),
         encoded_by: user.id,
         intake_channel: "walk_in",
+        ...(service.service_code === "OTHER_CERT" ? { physical_documents_confirmed: "true" } : {}),
         ...(isWalkInPetition(service.service_code) ? { petition_authority_confirmed: "true", physical_documents_confirmed: "true" } : {}),
         ...(service.service_code === "SUPPLEMENTAL_REPORT" ? { personal_appearance_confirmed: "true" } : {}),
         ...(service.service_code === "LEGITIMATION" ? { couple_appearance_confirmed: "true" } : {}),

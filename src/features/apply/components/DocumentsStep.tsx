@@ -1,4 +1,5 @@
 import { requiresVerificationSignature } from "~/features/apply/verification-signature";
+import { FORM_SECTION_CLASS } from "~/features/forms/components/wizard-field";
 import { delayedBirthUploadGuidance, physicalCopyGuidance } from "~/features/services/physical-copy-guidance";
 import { surnameChangeRequirementName } from "~/features/services/surname-change";
 import { useNavigate } from "@tanstack/react-router";
@@ -730,7 +731,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
                       pendingAction.total ?? 1,
                     )} of ${pendingAction.total ?? 1}…`}
               </p>
-            ) : (
+            ) : selectedService.service_code !== "OTHER_CERT" || isDropTarget ? (
               <p
                 className={cn(
                   "mt-1 text-[15px] leading-snug",
@@ -749,7 +750,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
                     ? "Keep photos in reading order. A multi-page PDF can stay as one file."
                     : "Required · add a PDF or photograph each page."}
               </p>
-            )}
+            ) : null}
 
             {note && !slotFailure ? (
               <p className="mt-1.5 text-[15px] leading-snug text-warning-strong">{note}</p>
@@ -1004,7 +1005,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
           ? uploadGroups.map((group) => (
               <section key={group.role ?? "request"} className="flex flex-col gap-3.5">
                 <div>
-                  <h2 className="text-xl leading-[normal] font-bold text-foreground">
+                  <h2 className={FORM_SECTION_CLASS}>
                     {group.role ? `${group.role}’s documents` : "Shared documents"}
                   </h2>
                   {group.name ? (
@@ -1021,7 +1022,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
             <div className="flex items-start gap-3.5">
               <ClipboardCheck className="mt-0.5 size-5.5 shrink-0 text-primary" />
               <div className="min-w-0">
-                <h2 className="text-lg font-bold text-foreground">
+                <h2 className={FORM_SECTION_CLASS}>
                   {signsVerificationOnline
                     ? "Sign online - no upload needed"
                     : selectedService.service_code === "EMAIL_INQUIRY"

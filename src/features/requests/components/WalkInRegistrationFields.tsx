@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Alert, AlertDescription } from "~/components/ui/alert";
@@ -8,6 +8,7 @@ import {
   type DetailsValues,
 } from "~/features/apply/components/DetailsStep";
 import { DynamicFormFields } from "~/features/forms/components/DynamicFormFields";
+import { FORM_GROUP_CLASS } from "~/features/forms/components/wizard-field";
 import { DerivedAnswerAlerts } from "~/features/forms/components/DerivedAnswerAlerts";
 import { EventTimingNotice } from "~/features/forms/components/EventTimingNotice";
 import type { TemplateAnswers } from "~/features/forms/form-template.types";
@@ -62,6 +63,7 @@ export function WalkInRegistrationFields({
       subjects: service.partyRoles.map(emptySubject),
     },
   });
+  const watched = useWatch({ control: form.control });
   const template = service.registrationForm;
   const courtDecree = isWalkInCourtDecree(service.serviceCode);
   const marriage = isWalkInMarriage(service.serviceCode);
@@ -71,6 +73,7 @@ export function WalkInRegistrationFields({
   const petition = isWalkInPetition(service.serviceCode);
   const surnameChange = service.serviceCode === "RA9255_SURNAME";
   const supplemental = service.serviceCode === "SUPPLEMENTAL_REPORT";
+  const otherCertificate = service.serviceCode === "OTHER_CERT";
   useEffect(() => {
     if (!template) return;
     const selectedCase = walkInCaseForService(template.definition, service.serviceCode);
@@ -114,7 +117,6 @@ export function WalkInRegistrationFields({
       }),
     })),
   };
-  const watched = form.watch();
   const textValues = Object.fromEntries(
     Object.entries(watched).filter(
       (entry): entry is [string, string] => typeof entry[1] === "string",
@@ -170,7 +172,7 @@ export function WalkInRegistrationFields({
       ),
     };
     for (const field of personFields) answers[field.key] = subjects;
-    const prepare = supplemental ? prepareWalkInSupplemental : courtDecree ? prepareWalkInCourtDecree : prepareWalkInBirth;
+    const prepare = supplemental || otherCertificate ? prepareWalkInSupplemental : courtDecree ? prepareWalkInCourtDecree : prepareWalkInBirth;
     const prepared = (petition ? prepareWalkInPetition : prepare)(definition, answers, roles);
     if (prepared.error) {
       setError(prepared.message);
@@ -190,7 +192,7 @@ export function WalkInRegistrationFields({
   }
 
   return (
-    <fieldset disabled={submitting} className="min-w-0 space-y-6">
+    <fieldset disabled={submitting} className="min-w-0 space-y-6 [&>section]:border-t [&>section]:border-border-light [&>section]:pt-5">
       <DynamicFormFields
         definition={caseDefinition}
         step="case"
@@ -225,8 +227,8 @@ export function WalkInRegistrationFields({
             <div className="space-y-6">
               {roles.map((role, index) => (
                 <div key={role} className="space-y-3">
-                  <h3 className="font-bold">
-                    {role.toLowerCase() === "mother"
+                  {!otherCertificate || values.record_type === "marriage" ? <h3 className={FORM_GROUP_CLASS}>
+                    {otherCertificate ? "Name of Husband" : role.toLowerCase() === "mother"
                       ? "Mother's Maiden Name"
                       : (petition || supplemental) && roles.length === 1
                         ? (definition.sections.flatMap((section) => section.fields)
@@ -235,13 +237,14 @@ export function WalkInRegistrationFields({
                       : surnameChange && role === "Child" ? "Child's name on the birth certificate"
                       : death ? "Name of the deceased"
                       : marriage ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[role] ?? role) : role}
-                  </h3>
+                  </h3> : null}
                   <SubjectFieldGrid
                     control={form.control}
                     setValue={form.setValue}
                     index={index}
                     role={role}
-                    hideSex={courtDecree || supplemental}
+                    hideSex={courtDecree || supplemental || otherCertificate}
+                    husband={otherCertificate && values.record_type === "marriage"}
                     requireMiddleName
                   />
                 </div>
@@ -250,11 +253,14 @@ export function WalkInRegistrationFields({
           ) : null
         }
       />
+      <div className="border-t border-border-light" role="separator" />
       <label className="flex min-h-11 items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm">
         <Checkbox className="mt-0.5" checked={physicalDocumentsConfirmed}
           onCheckedChange={(checked) => setPhysicalDocumentsConfirmed(checked === true)} />
         <span>{petition
           ? "I checked the physical documents required at filing. They are complete and acceptable for initial processing. Publication documents will be checked at the appropriate later step."
+          : otherCertificate
+          ? "I checked the original Application/Verification Form and the agency letter-request. Both are complete and acceptable for processing."
           : courtDecree
           ? "I checked the required four copies of the court papers and, for a decision outside RTC Legazpi, the Certificate of Registration and Authenticity. The papers are complete and acceptable."
           : "I checked the physical documents. The required papers are complete and acceptable."}</span>

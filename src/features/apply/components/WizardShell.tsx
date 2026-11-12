@@ -1,4 +1,5 @@
 import { enterDelay } from "~/components/motion/stagger";
+import { FORM_TITLE_CLASS } from "~/features/forms/components/wizard-field";
 
 interface WizardShellProps {
   step: 1 | 2 | 3 | 4;
@@ -32,7 +33,7 @@ export function WizardShell({
       >
         <div className="civic-enter rounded-[28px] bg-card p-5 shadow-portal-card sm:p-7 md:px-10 md:pt-9 md:pb-8">
           <div className="flex flex-col gap-2 pb-6">
-            <h1 className="text-[clamp(1.5rem,2.4vw,2rem)] leading-[1.15] font-semibold tracking-[-0.02em] text-foreground">
+            <h1 className={FORM_TITLE_CLASS}>
               {title}
             </h1>
             {description ? (

@@ -10,6 +10,10 @@ import { FieldError } from "~/components/ui/field";
 /** Label above a field, and the legend above a group of choice tiles. */
 export const WIZARD_LABEL_CLASS = "text-[15px] font-semibold text-portal-ink-2";
 
+export const FORM_TITLE_CLASS = "text-[32px] leading-[1.15] font-semibold tracking-[-0.02em] text-foreground";
+export const FORM_SECTION_CLASS = "text-[24px] leading-tight font-bold text-foreground";
+export const FORM_GROUP_CLASS = "text-[20px] leading-normal font-bold text-foreground";
+
 // An invalid control gets a tinted face and a solid 1px ring on top of the red
 // border, so the error is visible without relying on the border hue alone.
 const INVALID_CONTROL_CLASS =

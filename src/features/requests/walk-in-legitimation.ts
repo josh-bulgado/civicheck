@@ -1,4 +1,4 @@
-import type { FormTemplateDefinition } from "~/features/forms/form-template.types";
+import type { FormFieldDefinition, FormTemplateDefinition } from "~/features/forms/form-template.types";
 import { ACCOUNT_PARTY_ROLE, requiresMarriageAccountParty } from "~/features/apply/marriage-account-party";
 import { marriageLicenseWalkInDefinition } from "./walk-in-marriage-license";
 import { isWalkInCourtDecree } from "./walk-in-registration";
@@ -6,6 +6,34 @@ import { birthCaseForService } from "./walk-in-birth";
 import { isWalkInPetition, petitionCaseForService } from "./walk-in-petition";
 
 export function walkInCaseForService(definition: FormTemplateDefinition, serviceCode: string) {
+  if (serviceCode === "OTHER_CERT") {
+    const motherFields: FormFieldDefinition[] = ["first", "middle", "last"].map((part) => ({
+      key: `mother_${part}_name`,
+      type: "text",
+      label: `Mother's ${part} name`,
+      required: true,
+      inline: true,
+      ...(part === "middle" ? { noneLabel: "No middle name" } : {}),
+      visibleWhen: { field: "record_type", operator: "equals", value: "birth" },
+    }));
+    const fatherField: FormFieldDefinition = {
+      key: "father_name", type: "text", label: "Father's Full Name", required: false,
+      visibleWhen: { field: "record_type", operator: "equals", value: "birth" },
+    };
+    return {
+      answers: {} as Record<string, string>,
+      definition: {
+        ...definition,
+        sections: definition.sections.map((section) => ({
+          ...section,
+          fields: section.fields
+            .filter((field) => field.key !== "father_name" && !motherFields.some((mother) => mother.key === field.key))
+            .flatMap((field) => section.step === "details" && field.key === "event_place"
+              ? [field, ...motherFields, fatherField] : [field]),
+        })),
+      },
+    };
+  }
   if (serviceCode === "MARRIAGE_LICENSE") return {
     answers: {} as Record<string, string>,
     definition: marriageLicenseWalkInDefinition(definition),
@@ -24,7 +52,8 @@ export function walkInCaseForService(definition: FormTemplateDefinition, service
   if (serviceCode === "SUPPLEMENTAL_REPORT") {
     // The sworn affidavit already explains why the entry was omitted.
     const keys = ["record_type", "event_date", "event_place", "reference_number",
-      "entry_to_supplement", "information_to_add", "subjects", "contact_number"];
+      "entry_to_supplement", "information_to_add", "subjects", "contact_number",
+      "mother_first_name", "mother_middle_name", "mother_last_name"];
     return {
       answers: {} as Record<string, string>,
       definition: {

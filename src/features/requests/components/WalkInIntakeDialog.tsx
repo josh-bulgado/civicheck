@@ -20,11 +20,12 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { encodeWalkInFn } from "~/features/requests/walk-in-intake.mutations";
-import type { EncodableService } from "~/features/requests/walk-in-intake.queries";
+import { getEncodableServicesFn, type EncodableService } from "~/features/requests/walk-in-intake.queries";
 import { CopiesStepper } from "~/features/services/components/CopiesStepper";
 import { ServiceRequirementsDialog } from "~/features/services/components/ServiceRequirementsDialog";
 import { formatPesoFee } from "~/features/services/service-utils";
 import { WalkInRegistrationFields } from "./WalkInRegistrationFields";
+import { FORM_TITLE_CLASS, WIZARD_LABEL_CLASS } from "~/features/forms/components/wizard-field";
 import { isWalkInDetailedIntake } from "../walk-in-registration";
 import type { TemplateAnswers } from "~/features/forms/form-template.types";
 import { digitsOnly } from "~/lib/phone";
@@ -51,6 +52,9 @@ export function WalkInIntakeDialog({
   showTrigger = true,
 }: WalkInIntakeDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
+  const [currentServices, setCurrentServices] = useState(services);
+  const [loadingServices, setLoadingServices] = useState(false);
+  const [servicesError, setServicesError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const submissionPending = useRef(false);
   const [requirementsOpen, setRequirementsOpen] = useState(false);
@@ -68,9 +72,24 @@ export function WalkInIntakeDialog({
     status: "submitted" | "processing";
   } | null>(null);
 
-  const selectedService = services.find(
+  const selectedService = currentServices.find(
     (service) => service.serviceCode === serviceCode,
   );
+
+  useEffect(() => {
+    if (!(open ?? internalOpen)) return;
+    let active = true;
+    setLoadingServices(true);
+    setServicesError(false);
+    getEncodableServicesFn().then((latest) => {
+      if (active) setCurrentServices(latest);
+    }).catch(() => {
+      if (active) setServicesError(true);
+    }).finally(() => {
+      if (active) setLoadingServices(false);
+    });
+    return () => { active = false; };
+  }, [open, internalOpen]);
 
   // Most services ask about one person; Marriage License asks about two.
   // Resize the subject list to match whenever the selected service changes.
@@ -112,6 +131,7 @@ export function WalkInIntakeDialog({
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (loadingServices || servicesError) return;
     if (selectedService && isWalkInDetailedIntake(serviceCode)) return;
     await encodeRequest({
       serviceCode,
@@ -124,6 +144,7 @@ export function WalkInIntakeDialog({
   }
 
   async function encodeRequest(data: Parameters<typeof encodeWalkInFn>[0]["data"]) {
+    if (loadingServices || servicesError) return;
     if (submissionPending.current) return;
     submissionPending.current = true;
     setSubmitting(true);
@@ -171,15 +192,15 @@ export function WalkInIntakeDialog({
       >
         <DialogContent aria-describedby={undefined} className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Department walk-in intake</DialogTitle>
+            <DialogTitle className={FORM_TITLE_CLASS}>Department walk-in intake</DialogTitle>
           </DialogHeader>
 
           {!encodedRequest ? (
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="[&_h2]:text-[15px] [&_h2]:font-semibold [&_h3]:text-[15px] [&_h3]:font-semibold [&_h3]:border-t [&_h3]:border-border-light [&_h3]:pt-5">
               <FieldGroup>
                 <Field>
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <FieldLabel htmlFor="walkin-service">
+                    <FieldLabel className={WIZARD_LABEL_CLASS} htmlFor="walkin-service">
                       Service requested
                     </FieldLabel>
                     {selectedService && isWalkInDetailedIntake(serviceCode) ? (
@@ -190,9 +211,9 @@ export function WalkInIntakeDialog({
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <Select
-                      items={services.map((service) => ({ value: service.serviceCode, label: service.name }))}
+                      items={currentServices.map((service) => ({ value: service.serviceCode, label: service.name }))}
                       value={serviceCode}
-                      disabled={submitting}
+                      disabled={submitting || loadingServices || servicesError}
                       onValueChange={(value) => { setServiceCode(value ?? ""); setRegistrationAnswers({}); }}
                     >
                       <SelectTrigger
@@ -204,7 +225,7 @@ export function WalkInIntakeDialog({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
-                          {services.map((service) => (
+                          {currentServices.map((service) => (
                             <SelectItem
                               key={service.serviceCode}
                               value={service.serviceCode}
@@ -228,8 +249,10 @@ export function WalkInIntakeDialog({
                   </div>
                 </Field>
 
-                {selectedService && isWalkInDetailedIntake(serviceCode) ? (
-                  <WalkInRegistrationFields key={serviceCode} service={selectedService} submitting={submitting}
+                {loadingServices ? <p role="status">Loading current forms…</p> : servicesError ? (
+                  <p role="alert">Could not load the current forms. Close and reopen this dialog to try again.</p>
+                ) : selectedService && isWalkInDetailedIntake(serviceCode) ? (
+                  <WalkInRegistrationFields key={`${serviceCode}:${selectedService.registrationForm?.versionId}`} service={selectedService} submitting={submitting}
                     onSubmit={encodeRequest} onAnswersChange={setRegistrationAnswers} onCancel={() => setDialogOpen(false)} />
                 ) : <>
                 {selectedService?.feePerCopy ? (
@@ -241,15 +264,15 @@ export function WalkInIntakeDialog({
                 ) : null}
 
                 {subjects.map((subject, index) => (
-                  <div key={index} className="space-y-3">
+                  <div key={index} className="space-y-3 border-t border-border-light pt-5">
                     {showRoleLabels && (
-                      <p className="text-sm font-medium text-foreground">
+                      <p className={WIZARD_LABEL_CLASS}>
                         {subject.role}
                       </p>
                     )}
                     <div className="grid gap-4 sm:grid-cols-2">
                       <Field>
-                        <FieldLabel htmlFor={`walkin-first-${index}`}>
+                        <FieldLabel className={WIZARD_LABEL_CLASS} htmlFor={`walkin-first-${index}`}>
                           First name
                         </FieldLabel>
                         <Input
@@ -264,7 +287,7 @@ export function WalkInIntakeDialog({
                         />
                       </Field>
                       <Field>
-                        <FieldLabel htmlFor={`walkin-last-${index}`}>
+                        <FieldLabel className={WIZARD_LABEL_CLASS} htmlFor={`walkin-last-${index}`}>
                           Last name
                         </FieldLabel>
                         <Input
@@ -284,7 +307,7 @@ export function WalkInIntakeDialog({
 
                 {serviceCode.startsWith("CTC-") || serviceCode === "CTC_ISSUANCE" ? (
                   <Field>
-                    <FieldLabel htmlFor="walkin-father-name">Father's full name (birth records, optional)</FieldLabel>
+                    <FieldLabel className={WIZARD_LABEL_CLASS} htmlFor="walkin-father-name">Father's full name (birth records, optional)</FieldLabel>
                     <Input id="walkin-father-name" value={fatherName} maxLength={240}
                       onChange={(event) => setFatherName(event.target.value)} />
                   </Field>
@@ -292,7 +315,7 @@ export function WalkInIntakeDialog({
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field>
-                    <FieldLabel htmlFor="walkin-contact">
+                    <FieldLabel className={WIZARD_LABEL_CLASS} htmlFor="walkin-contact">
                       Contact number (optional)
                     </FieldLabel>
                     <Input
@@ -306,7 +329,7 @@ export function WalkInIntakeDialog({
                     />
                   </Field>
                   <Field>
-                    <FieldLabel htmlFor="walkin-purpose">
+                    <FieldLabel className={WIZARD_LABEL_CLASS} htmlFor="walkin-purpose">
                       Purpose (optional)
                     </FieldLabel>
                     <Input

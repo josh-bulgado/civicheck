@@ -54,6 +54,8 @@ import {
   WIZARD_CONTROL_CLASS,
   WIZARD_GROUP_CLASS,
   WIZARD_LABEL_CLASS,
+  FORM_SECTION_CLASS,
+  FORM_GROUP_CLASS,
   WIZARD_TEXTAREA_CLASS,
   WizardFieldError,
 } from "./wizard-field";
@@ -230,6 +232,12 @@ function planFieldSpans(
     if (field.key === "father_first_name") closeRun();
   }
   closeRun();
+  for (const prefix of ["mother", "wife"]) {
+    for (const part of ["first", "middle", "last"]) {
+      const key = `${prefix}_${part}_name`;
+      if (keys.has(key)) spans.set(key, "third");
+    }
+  }
   for (const key of ["father_last_name", "father_middle_name", "father_first_name"]) {
     if (keys.has(key)) spans.set(key, "third");
   }
@@ -293,6 +301,14 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
     if (!fields.length && !lead) return null;
     const choicePlacements = planChoiceLayout(fields);
     const spans = planFieldSpans(fields, choicePlacements);
+    // Keep the record date and place together, with contact below the date.
+    if (fields.find((field) => field.key === "event_date")?.labelByAnswer?.field === "record_type" &&
+      fields.some((field) => field.key === "event_place") &&
+      fields.some((field) => field.key === "contact_number")) {
+      spans.set("event_date", "pair-start");
+      spans.set("event_place", "pair-end");
+      spans.set("contact_number", "pair-start");
+    }
     // A section (or the whole call) can ask for one field per row; fields marked
     // `inline` still share a row, which is how a first/middle/last name sits on
     // one line.
@@ -302,9 +318,8 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
         spans.set(field.key, field.inline ? "inline" : "full");
     }
     const titled = !hideSectionTitles && (showSectionTitles || sections.length > 1);
-    // Stacked sections after the first are set apart with a rule and generous
-    // room, so the applicant sees where one block ends and the next begins.
-    const setApart = stacked && sectionIndex > 0;
+    // Separate sections with a divider and space before the next fields.
+    const setApart = sectionIndex > 0;
 
     return (
       <section
@@ -312,18 +327,14 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
         className={cn(
           "flex flex-col gap-3",
           setApart &&
-            "mt-8 border-t border-border-light pt-12 sm:mt-10 sm:pt-14",
+            "mt-6 border-t border-border-light pt-6",
           !setApart && step === "details" && sectionIndex > 0 && "pt-2",
         )}
       >
         {titled ? (
           <div className="-mb-2 flex flex-col gap-0.5">
             <h2
-              className={
-                showSectionTitles
-                  ? "text-pretty text-lg leading-tight font-bold text-foreground"
-                  : "text-sm font-semibold text-foreground"
-              }
+              className={FORM_SECTION_CLASS}
             >
               {applicantCopy(section.title)}
             </h2>
@@ -348,13 +359,16 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
           {fields.map((definitionField) => (
             <Fragment key={definitionField.key}>
               {definitionField.key === "mother_first_name" ? (
-                <h3 className="col-span-full text-xl leading-[normal] font-bold text-foreground">Mother's Maiden Name</h3>
+                <h3 className={cn("col-span-full border-t border-border-light pt-5", FORM_GROUP_CLASS)}>Mother's Maiden Name</h3>
+              ) : null}
+              {definitionField.key === "wife_first_name" ? (
+                <h3 className={cn("col-span-full border-t border-border-light pt-5", FORM_GROUP_CLASS)}>Maiden Name of Wife</h3>
               ) : null}
               {definitionField.key === "father_last_name" ? (
-                <h3 className="col-span-full text-xl leading-[normal] font-bold text-foreground">Father's Name</h3>
+                <h3 className={cn("col-span-full border-t border-border-light pt-5", FORM_GROUP_CLASS)}>Father's Name</h3>
               ) : null}
               {section.key === "details_requester" && definitionField.key === "requester_province" ? (
-                <h3 className={cn("col-span-full -mb-3", WIZARD_LABEL_CLASS)}>Address</h3>
+                <h3 className={cn("col-span-full border-t border-border-light pt-5", FORM_GROUP_CLASS)}>Address</h3>
               ) : null}
             <Controller
               key={definitionField.key}
@@ -446,7 +460,10 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                 const legendLabel = (
                   <>
                     {formatFieldLabel(applicantCopy(
-                      ({ mother_first_name: "First name", mother_middle_name: "Middle name", mother_last_name: "Last name" } as Record<string, string>)[definitionField.key]
+                      ({ mother_first_name: "First name", mother_middle_name: "Middle name", mother_last_name: "Last name", wife_first_name: "First name", wife_middle_name: "Middle name", wife_last_name: "Last name" } as Record<string, string>)[definitionField.key]
+                        ?? (definitionField.labelByAnswer
+                          ? definitionField.labelByAnswer.labels[values[definitionField.labelByAnswer.field]]
+                          : undefined)
                         ?? definitionField.label,
                     ))}
                     {!definitionField.required ? " (optional)" : ""}

@@ -43,7 +43,7 @@
         {
           "key": "reference_number",
           "type": "text",
-          "label": "Registry number (if known)",
+          "label": "Registry number",
           "helpText": "Printed on your PSA or local civil registry copy.",
           "required": false
         },
@@ -81,7 +81,53 @@
           "key": "subjects",
           "type": "person_group",
           "label": "Person named on the record",
-          "required": true
+          "required": true,
+          "labelByAnswer": {
+            "field": "record_type",
+            "labels": {
+              "birth": "Full name on the birth certificate",
+              "death": "Full name of the deceased",
+              "other": "Full name of the person named on the record",
+              "marriage": "Name on the marriage certificate"
+            }
+          }
+        },
+        {
+          "key": "mother_first_name",
+          "type": "text",
+          "label": "Mother's first name",
+          "inline": true,
+          "required": true,
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "birth",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "mother_middle_name",
+          "type": "text",
+          "label": "Mother's middle name",
+          "inline": true,
+          "required": true,
+          "noneLabel": "No middle name",
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "birth",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "mother_last_name",
+          "type": "text",
+          "label": "Mother's maiden last name",
+          "inline": true,
+          "required": true,
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "birth",
+            "operator": "equals"
+          }
         },
         {
           "key": "contact_number",

@@ -65,6 +65,10 @@ beforeAll(async () => {
   await db.exec(licenseMigration);
   await db.exec(licenseMigration);
   await db.exec(`insert into services_registry values('MARRIAGE_LICENSE','${other}')`);
+  const otherCertificateMigration = readFileSync(new URL("../../../supabase/migrations/20261112155102_accept_checked_other_certificate_walkins.sql", import.meta.url), "utf8");
+  await db.exec(otherCertificateMigration);
+  await db.exec(otherCertificateMigration);
+  await db.exec(`insert into services_registry values('OTHER_CERT','${other}')`);
   await db.exec(`insert into services_registry values('RA9255_SURNAME','${other}')`);
 }, 30_000);
 afterAll(() => db.close());
@@ -106,6 +110,24 @@ async function insert(patch: Record<string, unknown> = {}) {
   return db.query<{status: string; payment_status: string; walk_in_accepted_by: string; walk_in_accepted_at: string}>(`insert into requests(id,${keys.join(",")}) values($1,${keys.map((_, i) => `$${i+2}`).join(",")}) returning *`,
     [requestId,...Object.values(values).map((value) => value && typeof value === "object" ? JSON.stringify(value) : value)]);
 }
+
+it("accepts Other Certificates physical papers and records staff acceptance", async () => {
+  const result = await insert({ request_type: "OTHER_CERT", form_template_version_id: other,
+    form_data: { intake_channel: "walk_in", physical_documents_confirmed: "true" } });
+  expect(result.rows[0]).toMatchObject({ status: "processing", payment_status: "unpaid", walk_in_accepted_by: actor });
+  const logs = await db.query<{ action_status: string; remarks: string }>("select action_status,remarks from application_logs order by created_at");
+  expect(logs.rows.map(row => row.action_status)).toEqual(["walk_in_accepted", "processing"]);
+  expect(logs.rows.every(row => row.remarks.includes("Other Certificates"))).toBe(true);
+});
+
+it("rejects unchecked or unversioned Other Certificates walk-ins", async () => {
+  const input = { request_type: "OTHER_CERT", form_template_version_id: other,
+    form_data: { intake_channel: "walk_in", physical_documents_confirmed: "true" } };
+  for (const patch of [
+    { form_data: { intake_channel: "walk_in" } }, { form_template_version_id: null },
+    { walk_in_accepted_by: other }, { walk_in_accepted_by: null }, { payment_status: "verified" },
+  ]) await expect(insert({ ...input, ...patch })).rejects.toThrow();
+});
 
 it("accepts Marriage License filing papers and appearance without completing later steps", async () => {
   const result = await insert({ request_type: "MARRIAGE_LICENSE", form_template_version_id: other,

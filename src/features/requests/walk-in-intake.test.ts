@@ -7,6 +7,7 @@ import courtForm from "./fixtures/court-decree-walk-in-form.json";
 import legitimationForm from "./fixtures/legitimation-walk-in-form.json";
 import ra9255Form from "../forms/fixtures/ra9255-charter.json";
 import supplementalForm from "./fixtures/supplemental-walk-in-form.json";
+import otherCertificateForm from "./fixtures/other-certificate-walk-in-form.json";
 import { parseFormTemplateDefinition } from "~/features/forms/form-template.utils";
 import { emptySubject } from "~/lib/subject-fields";
 
@@ -57,6 +58,7 @@ vi.mock("~/features/requests/tracking-number", () => ({
 vi.mock("~/features/services/services.catalogue", () => ({
   loadServiceCatalogue: async () => ({
     formTemplatesByService: new Map([
+      ["OTHER_CERT", { templateId: "other_cert", versionId: "published", definition: parseFormTemplateDefinition(otherCertificateForm) }],
       ["MARRIAGE_LICENSE", { templateId: "marriage_license", versionId: "published", definition: parseFormTemplateDefinition(marriageLicenseForm) }],
       ["RA9255_SURNAME", { templateId: "ra9255", versionId: "published", definition: parseFormTemplateDefinition(ra9255Form.definition) }],
       ["SUPPLEMENTAL_REPORT", { templateId: "supplemental", versionId: "published", definition: parseFormTemplateDefinition(supplementalForm) }],
@@ -82,6 +84,7 @@ vi.mock("~/features/services/services.catalogue", () => ({
       ],
     ]),
     servicesByCode: new Map([
+      ["OTHER_CERT", { party_roles: ["Subject"] }],
       ["MARRIAGE_LICENSE", { party_roles: ["Bride", "Groom"] }],
       ["RA9255_SURNAME", { party_roles: ["Child", "Mother", "Father"] }],
       ["SUPPLEMENTAL_REPORT", { party_roles: ["Subject"] }],
@@ -97,6 +100,44 @@ vi.mock("~/features/services/services.catalogue", () => ({
   }),
 }));
 import { encodeWalkInFn } from "./walk-in-intake.mutations";
+
+it.each(["birth", "death", "marriage"])("encodes a checked Other Certificates %s walk-in without sex or uploads", async record_type => {
+  state.serviceCode = "OTHER_CERT";
+  const people = [{ ...emptySubject("Subject"), firstName: "Ana", middleName: "Santos", lastName: "Cruz" }];
+  const answers = { subjects: people, record_type, event_date: "2000-01-01",
+    event_place: "Legazpi City, Albay", purpose: "Employment", contact_number: "9171234567",
+    registered_late: "no", wife_first_name: "Maria", wife_middle_name: "Santos", wife_last_name: "Reyes",
+    mother_first_name: "Elena", mother_middle_name: "N/A", mother_last_name: "Cruz" };
+  const input = { serviceCode: "OTHER_CERT", subjects: people, answers,
+    templateVersionId: "published", physicalDocumentsConfirmed: true };
+  expect((await encodeWalkInFn({ data: input })).error).toBe(false);
+  expect(state.create).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+    status: "processing", walk_in_accepted_by: "staff", form_template_version_id: "published",
+    form_data: expect.objectContaining({ record_type, subject_first_name: "Ana", purpose: "Employment",
+      physical_documents_confirmed: "true", intake_channel: "walk_in" }),
+  }));
+  state.create.mockClear();
+  for (const patch of [
+    { physicalDocumentsConfirmed: false }, { templateVersionId: "old" }, { answers: undefined },
+    ...["record_type", "event_date", "event_place", "purpose", "registered_late"].map(key => ({ answers: { ...answers, [key]: "" } })),
+    ...(record_type === "marriage" ? ["wife_first_name", "wife_middle_name", "wife_last_name"].map(key => ({ answers: { ...answers, [key]: "" } })) : []),
+    ...(record_type === "birth" ? ["mother_first_name", "mother_middle_name", "mother_last_name"].map(key => ({ answers: { ...answers, [key]: "" } })) : []),
+    { answers: { ...answers, registered_late: "yes", registered_late_when: "" } },
+    { answers: { ...answers, registered_late: "yes", registered_late_when: "1999-01-01" } },
+    { answers: { ...answers, record_type: "other" } },
+    { answers: { ...answers, event_date: "2999-01-01" } },
+    { answers: { ...answers, event_place: "1234" } },
+    { answers: { ...answers, contact_number: "invalid" } },
+    { answers: { ...answers, subjects: [] } },
+  ]) expect((await encodeWalkInFn({ data: { ...input, ...patch } })).error).toBe(true);
+  expect((await encodeWalkInFn({ data: { ...input, answers: {
+    ...answers, registered_late: "yes", registered_late_when: "2001-01-01",
+  } } })).error).toBe(false);
+  state.create.mockClear();
+  state.departmentId = "another-department";
+  expect((await encodeWalkInFn({ data: input })).error).toBe(true);
+  expect(state.create).not.toHaveBeenCalled();
+});
 
 it.each(["yes", "no"])("accepts checked R.A. 9255 walk-ins with acknowledgment %s and no online filer questions", async (fatherOnRecord) => {
   state.serviceCode = "RA9255_SURNAME";
@@ -406,7 +447,8 @@ it.each(["birth", "death", "marriage"])("encodes a checked supplemental %s recor
   state.departmentId = state.serviceDepartment = "legal";
   const people = [{ ...emptySubject("Subject"), firstName: "Ana", middleName: "Santos", lastName: "Cruz" }];
   const answers = { subjects: people, record_type, event_date: "2000-01-01", event_place: "Legazpi City",
-    entry_to_supplement: "Citizenship", information_to_add: "Filipino", purpose: "unused", additional_notes: "unused" };
+    entry_to_supplement: "Citizenship", information_to_add: "Filipino", purpose: "unused", additional_notes: "unused",
+    mother_first_name: "Elena", mother_middle_name: "N/A", mother_last_name: "Cruz" };
   const input = { ...data, serviceCode: "SUPPLEMENTAL_REPORT", subjects: people, answers, personalAppearanceConfirmed: true };
   expect((await encodeWalkInFn({ data: input })).error).toBe(false);
   const saved = state.create.mock.calls.at(-1)?.[1];
@@ -419,6 +461,7 @@ it.each(["birth", "death", "marriage"])("encodes a checked supplemental %s recor
   for (const patch of [
     { physicalDocumentsConfirmed: false }, { personalAppearanceConfirmed: false }, { templateVersionId: "old" },
     ...["record_type", "event_date", "event_place", "entry_to_supplement", "information_to_add"].map(key => ({ answers: { ...answers, [key]: "" } })),
+    ...(record_type === "birth" ? ["mother_first_name", "mother_middle_name", "mother_last_name"].map(key => ({ answers: { ...answers, [key]: "" } })) : []),
     { answers: { ...answers, subjects: [] } }, { answers: { ...answers, record_type: "other" } },
   ]) expect((await encodeWalkInFn({ data: { ...input, ...patch } })).error).toBe(true);
   state.departmentId = "birth";

@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { isDepartmentScopedRole } from "~/lib/permissions";
 import { requireActiveSession } from "~/server/auth";
-import { loadServiceCatalogue } from "~/features/services/services.catalogue";
+import { invalidateServiceCatalogue, loadServiceCatalogue } from "~/features/services/services.catalogue";
 import type { PublishedFormTemplate } from "~/features/forms/form-template.types";
 import { isWalkInDetailedIntake } from "./walk-in-registration";
 
@@ -38,6 +38,8 @@ export const getEncodableServicesFn = createServerFn({ method: "GET" }).handler(
 
     const { data, error } = await query;
     if (error) throw new Error(error.message);
+    // Intake must use the current published forms, including database updates.
+    invalidateServiceCatalogue();
     const catalogue = (data ?? []).some((service) => isWalkInDetailedIntake(service.service_code))
       ? await loadServiceCatalogue()
       : null;

@@ -1,4 +1,5 @@
 const CLEARER_APPLICANT_COPY: Readonly<Record<string, string>> = {
+  "What will the certification be used for?": "Purpose",
   "Informant's relationship to the child":
     "Informant's relationship to the person",
   "Choose whether the person was born in Legazpi City or another city/municipality.": "",
