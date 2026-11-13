@@ -218,7 +218,13 @@ export function WalkInRegistrationFields({
         />
       ) : null}
       <DynamicFormFields
-        definition={displayDefinition}
+        definition={surnameChange ? {
+          ...displayDefinition,
+          sections: displayDefinition.sections.map(section => ({
+            ...section,
+            fields: section.fields.filter(field => !["event_date", "event_place"].includes(field.key)),
+          })),
+        } : displayDefinition}
         staffView
         step="details"
         control={form.control}
@@ -252,6 +258,26 @@ export function WalkInRegistrationFields({
                     husband={(otherCertificate || endorsement) && values.record_type === "marriage"}
                     requireMiddleName
                   />
+                  {surnameChange && role === "Child" ? (
+                    <div className="pt-2">
+                      <DynamicFormFields
+                        definition={{
+                          ...displayDefinition,
+                          sections: displayDefinition.sections.map(section => ({
+                            ...section,
+                            fields: section.fields.filter(field => ["event_date", "event_place"].includes(field.key)),
+                          })),
+                        }}
+                        staffView
+                        step="details"
+                        hideSectionTitles
+                        showRequiredMarks
+                        control={form.control}
+                        values={values}
+                        onFieldChange={(key, value) => form.setValue(key, value, { shouldValidate: true })}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>

@@ -367,7 +367,7 @@ export function ReviewStep({
       <div className="flex flex-col gap-5">
         {caseRows.length > 0 ? (
           <ReviewBlock
-            title="Request details"
+            title={selectedService.service_code === "RA9255_SURNAME" ? "Surname Change Details" : "Request details"}
             onEdit={() =>
               navigate({ to: "/apply/$serviceCode/case", params: { serviceCode } })
             }
@@ -378,7 +378,7 @@ export function ReviewStep({
 
         {detailRows.length > 0 ? (
           <ReviewBlock
-            title="Your details"
+            title={selectedService.service_code === "RA9255_SURNAME" ? "Child and Parent Information" : "Your details"}
             onEdit={() =>
               navigate({ to: "/apply/$serviceCode/details", params: { serviceCode } })
             }

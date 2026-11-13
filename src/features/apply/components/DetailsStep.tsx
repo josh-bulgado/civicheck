@@ -390,6 +390,8 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
   const definition = delayedBirthLayout(selectedService.form_template!.definition, selectedService.service_code);
   const isDelayedBirth = selectedService.service_code === "BIRTH_DELAYED" || selectedService.service_code.startsWith("DCOLB-");
+  const isSurnameChange = selectedService.service_code === "RA9255_SURNAME";
+  const showBirthDetailsWithChild = isDelayedBirth || isSurnameChange;
   const lockRequesterName = requiresAccountRequester(selectedService.service_code);
   const lockAccountParty = requiresMarriageAccountParty(selectedService.service_code);
   const detailsFields = fieldsForStep(definition, "details");
@@ -762,7 +764,8 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
               readOnlyName={lockAccountParty && subjectField.role === accountRole}
               lockedNoMiddleName={accountHasNoMiddleName}
             />
-            {isDelayedBirth && subjectField.role === "Child" ? (
+            {showBirthDetailsWithChild && subjectField.role === "Child" ? (
+              <div className={isSurnameChange ? "pt-1" : undefined}>
               <DynamicFormFields
                 definition={{
                   ...definition,
@@ -782,6 +785,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
                   if (timing?.evaluation.mismatched && timing.rule.behavior === "redirect_confirm") setRedirectOpen(true);
                 }}
               />
+              </div>
             ) : null}
           </PartySection>
         ))}
@@ -819,14 +823,14 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   return (
     <WizardShell
       step={2}
-      title={ownerBlockInSection ? "Your details" : "Who is this document for?"}
+      title={isSurnameChange ? "Child and Parent Information" : ownerBlockInSection ? "Your details" : "Who is this document for?"}
     >
       <div className="flex flex-col gap-6">
         {ownerBlockInSection ? null : ownerBlock}
 
         <DynamicFormFields
           readOnlyKeys={lockRequesterName ? REQUESTER_NAME_KEYS : []}
-          definition={isDelayedBirth && showRoleLabels && subjectFields.fields.some((field) => field.role === "Child") ? {
+          definition={showBirthDetailsWithChild && showRoleLabels && subjectFields.fields.some((field) => field.role === "Child") ? {
             ...definition,
             sections: definition.sections.map((section) => ({
               ...section,

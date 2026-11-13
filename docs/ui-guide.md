@@ -99,10 +99,12 @@ walk-in forms. Completed-event dates use the Philippine calendar day and are
 validated in both the form and submission. Late-registration dates cannot precede
 the selected record's event date. Marriage License age brackets continue to use
 the intended marriage date; registration age brackets continue to use today's date.
-Upload guidance distinguishes one complete uploaded copy from physical copies
-and retains the saved instructions about originals, photocopies, and copies each.
-Valid ID uploads ask for a PDF or clear photos of the ID instead of pages, while
-retaining physical-copy instructions and listed document alternatives.
+Only requirements asking for two or more physical copies say "Upload only one
+(1) copy of each document (all pages)." Single-copy requirements keep ordinary
+upload wording. Apply this distinction across services, including delayed birth
+and Other Certificates. Keep physical quantities after "Bring to CCRO:" and
+preserve original, photocopy, and "each" instructions. Valid IDs keep ID-specific
+wording and alternatives; add the one-copy emphasis only for multiple copies.
 
 Electronic Endorsement asks for the document owner's details without a separate
 requester information or address section. Existing submissions retain their saved
@@ -452,8 +454,11 @@ required personal appearance, signatures, and attestation for the child's age.
 Accepted requests start in Processing and remain unpaid. Display the base fee
 separately from conditional paternity and per-page charges.
 
+Surname-change birth date and place appear directly beneath the child's suffix
+and sex on the details page, with the same spacing as other child details.
+Keep these fields inside the child's section in walk-in intake as well.
 Surname-change case fields omit helper paragraphs in both applicant and walk-in
-forms. Keep the first three applicant controls aligned. Affidavit instructions
+forms. Keep the birth date and place controls aligned. Affidavit instructions
 show only the signer and appearance wording for the entered birth date; age 7
 needs staff verification because the Charter's ranges overlap. Keep the same
 requirement ID and upload slot when the displayed wording changes.

@@ -1,7 +1,8 @@
 import { MapPin } from "lucide-react";
 import type { TemplateAnswers } from "~/features/forms/form-template.types";
 import { conditionRuleMatches } from "~/features/forms/form-template.utils";
-import { surnameChangeRequirementName } from "~/features/services/surname-change";
+import { surnameChangeRequirementName, surnameChangeRequirementDisplay } from "~/features/services/surname-change";
+import { describeRequirement } from "~/features/services/requirement-display";
 import { endorsementRequirementName } from "~/features/services/electronic-endorsement";
 import type { ServiceRequirement } from "~/features/admin/services/services.types";
 import {
@@ -20,15 +21,19 @@ export function RequirementRow({
   tone: "required" | "conditional";
   answers?: TemplateAnswers;
 }) {
-  const { caseLabel, name } = splitCaseLabel(surnameChangeRequirementName(
+  const display = surnameChangeRequirementDisplay(surnameChangeRequirementName(
     requirement.requirement_name,
     requirement.service_code ?? requirement.requirement_group,
     answers?.event_date,
-  ));
-  const { primary, secondary } = parseRequirementName(endorsementRequirementName(
+  ), requirement.service_code ?? requirement.requirement_group);
+  const { caseLabel, name } = splitCaseLabel(display.name);
+  const parsed = parseRequirementName(endorsementRequirementName(
     name, requirement.service_code ?? requirement.requirement_group,
     typeof answers?.record_type === "string" ? answers.record_type : undefined,
   ));
+  const described = display.ageNote ? describeRequirement(name) : null;
+  const primary = described?.title ?? parsed.primary;
+  const secondary = described?.detail ?? parsed.secondary;
   const source = requirement.where_to_secure;
   const caseTag = requirement.applies_when
     ? answers && conditionRuleMatches(requirement.applies_when, answers)
@@ -53,6 +58,11 @@ export function RequirementRow({
       {secondary && (
         <p className="text-xs leading-snug text-body-strong">{secondary}</p>
       )}
+      {display.ageNote ? (
+        <p className="text-sm leading-snug text-body-strong">
+          <strong>{display.ageLabel}:</strong> {display.ageNote}
+        </p>
+      ) : null}
       {source && (
         <p
           className={`flex items-start gap-1.5 text-xs leading-snug ${

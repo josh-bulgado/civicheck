@@ -1,7 +1,8 @@
 import { requiresVerificationSignature } from "~/features/apply/verification-signature";
 import { FORM_SECTION_CLASS } from "~/features/forms/components/wizard-field";
 import { delayedBirthUploadGuidance, physicalCopyGuidance } from "~/features/services/physical-copy-guidance";
-import { surnameChangeRequirementName } from "~/features/services/surname-change";
+import { surnameChangeRequirementName, surnameChangeRequirementDisplay } from "~/features/services/surname-change";
+import { describeRequirement } from "~/features/services/requirement-display";
 import { endorsementRequirementName } from "~/features/services/electronic-endorsement";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -636,15 +637,16 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
 
   function renderUploadSlot(slot: (typeof uploadSlots)[number]) {
     const req = slot.requirement;
+    const display = surnameChangeRequirementDisplay(req.requirement_name, selectedService.service_code);
     const isOnTimeColb =
       ["BIRTH_ONTIME", "OTCOLB-MARITAL", "OTCOLB-NONMARITAL"].includes(selectedService.service_code) &&
       /certificate of live birth/i.test(req.requirement_name);
     const copyGuidance = isDelayedBirth
       ? delayedBirthUploadGuidance(req.requirement_name)
-      : physicalCopyGuidance(req.requirement_name);
+      : physicalCopyGuidance(display.name);
     const primary = isOnTimeColb
       ? "Certificate of Live Birth (COLB)"
-      : documentDisplayName(req.requirement_name);
+      : display.ageNote ? describeRequirement(display.name).title : documentDisplayName(req.requirement_name);
     const documents = documentsByRequirement.get(slot.key) ?? [];
     const isPending = pendingAction?.slotKey === slot.key;
     const uploading = isPending && pendingAction.type === "upload";
@@ -740,7 +742,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
                       pendingAction.total ?? 1,
                     )} of ${pendingAction.total ?? 1}…`}
               </p>
-            ) : selectedService.service_code !== "OTHER_CERT" || isDropTarget ? (
+            ) : Boolean(copyGuidance) || selectedService.service_code !== "OTHER_CERT" || isDropTarget ? (
               <p
                 className={cn(
                   "mt-1 text-[15px] leading-snug",
@@ -761,6 +763,11 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
               </p>
             ) : null}
 
+            {display.ageNote ? (
+              <p className="mt-2 text-[15px] leading-snug text-muted-foreground">
+                <strong className="font-semibold text-foreground">{display.ageLabel}:</strong> {display.ageNote}
+              </p>
+            ) : null}
             {note && !slotFailure ? (
               <p className="mt-1.5 text-[15px] leading-snug text-warning-strong">{note}</p>
             ) : null}

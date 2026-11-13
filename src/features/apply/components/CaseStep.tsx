@@ -442,7 +442,7 @@ export function CaseStep({
                 ? blockingAgeFeedback.notice.title
                 : blockingAgeFeedback.notice.description
               : blockingOptionNotice
-                ? selectedService.service_code === "DEATH_DELAYED"
+                ? ["DEATH_DELAYED", "RA9255_SURNAME"].includes(selectedService.service_code)
                   ? undefined
                   : blockingOptionNotice.description
                 : timingBlocks
