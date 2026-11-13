@@ -30,7 +30,7 @@ function PortalSkeleton() {
       <div className="@container flex flex-col gap-6 md:gap-7" role="status" aria-busy="true" aria-label="Loading your notifications">
         <section className="flex flex-col gap-2.5 md:gap-3">
           <Skeleton className="ml-1 h-4 w-14 rounded-md" />
-          <ul className="divide-y divide-border-lighter overflow-hidden rounded-4xl bg-card shadow-portal-card md:rounded-[28px]">
+          <ul className="overflow-hidden rounded-xl bg-card shadow-portal-card ring-2 ring-border-light">
             {ROWS.map((row) => (
               <PortalRowSkeleton key={row} />
             ))}

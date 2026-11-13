@@ -232,6 +232,11 @@ reference page. The utility named `portal-card` is a separate, quieter 16px
 borderless/shadowless treatment. Do not assume these treatments are identical.
 Use existing responsive padding and `gap-*` for new layouts.
 
+Citizen notification groups, empty states, and their loading view use
+`rounded-xl` corners and `shadow-portal-card` at all viewport sizes. Notification
+groups retain the subtle `ring-2 ring-border-light` outline without divider lines
+between rows; their loading view matches.
+
 **Identity.** Reuse [CiviCheckIdentity and CityGovernmentIdentity](../src/components/brand/civic-identity.tsx).
 They currently render text initials for the office/city marks. Preserve that
 representation when extending the UI; replacing brand artwork is a separate
