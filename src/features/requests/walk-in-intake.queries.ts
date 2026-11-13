@@ -4,11 +4,13 @@ import { requireActiveSession } from "~/server/auth";
 import { invalidateServiceCatalogue, loadServiceCatalogue } from "~/features/services/services.catalogue";
 import type { PublishedFormTemplate } from "~/features/forms/form-template.types";
 import { isWalkInDetailedIntake } from "./walk-in-registration";
+import { parseFeeComponents, type FeeComponent } from "~/features/services/fee-components";
 
 export interface EncodableService {
   serviceCode: string;
   name: string;
   fee: number;
+  feeComponents?: FeeComponent[];
   /** True when `fee` is charged per copy, so intake asks how many copies. */
   feePerCopy: boolean;
   displayGroup: string | null;
@@ -27,7 +29,7 @@ export const getEncodableServicesFn = createServerFn({ method: "GET" }).handler(
     let query = supabase
       .from("services_registry")
       .select(
-        "service_code, name, display_name, fee, fee_per_copy, department_id, display_group, processing_time, party_roles",
+        "service_code, name, display_name, fee, fee_components, fee_per_copy, department_id, display_group, processing_time, party_roles",
       )
       .order("name", { ascending: true });
 
@@ -48,6 +50,7 @@ export const getEncodableServicesFn = createServerFn({ method: "GET" }).handler(
       serviceCode: service.service_code,
       name: service.name,
       fee: Number(service.fee ?? 0),
+      feeComponents: parseFeeComponents(service.fee_components),
       feePerCopy: service.fee_per_copy === true,
       displayGroup: service.display_group,
       processingTime: service.processing_time,

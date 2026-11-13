@@ -23,8 +23,8 @@ import { encodeWalkInFn } from "~/features/requests/walk-in-intake.mutations";
 import { getEncodableServicesFn, type EncodableService } from "~/features/requests/walk-in-intake.queries";
 import { CopiesStepper } from "~/features/services/components/CopiesStepper";
 import { ServiceRequirementsDialog } from "~/features/services/components/ServiceRequirementsDialog";
-import { formatPesoFee } from "~/features/services/service-utils";
 import { WalkInRegistrationFields } from "./WalkInRegistrationFields";
+import { WalkInFee } from "./WalkInFee";
 import { FORM_TITLE_CLASS, WIZARD_LABEL_CLASS } from "~/features/forms/components/wizard-field";
 import { isWalkInDetailedIntake } from "../walk-in-registration";
 import type { TemplateAnswers } from "~/features/forms/form-template.types";
@@ -197,17 +197,18 @@ export function WalkInIntakeDialog({
           </DialogHeader>
 
           {!encodedRequest ? (
-            <form onSubmit={handleSubmit} className="[&_h2]:text-[15px] [&_h2]:font-semibold [&_h3]:text-[15px] [&_h3]:font-semibold">
+            <form onSubmit={handleSubmit} className={serviceCode === "RA9255_SURNAME"
+              ? "[&_h2]:text-[17px] [&_h2]:font-bold [&_h3]:text-[15px] [&_h3]:font-semibold"
+              : "[&_h2]:text-[15px] [&_h2]:font-semibold [&_h3]:text-[15px] [&_h3]:font-semibold"}>
               <FieldGroup>
                 <Field>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <FieldLabel className={WIZARD_LABEL_CLASS} htmlFor="walkin-service">
                       Service requested
                     </FieldLabel>
-                    {selectedService && isWalkInDetailedIntake(serviceCode) ? (
-                      <span role="status" className="rounded-md bg-primary-soft px-3 py-1 text-sm font-semibold text-primary">
-                        Fee: {formatPesoFee(selectedService.fee)}
-                      </span>
+                    {selectedService ? (
+                      <WalkInFee key={serviceCode} fee={selectedService.fee} feeComponents={selectedService.feeComponents}
+                        feePerCopy={selectedService.feePerCopy} copies={isWalkInDetailedIntake(serviceCode) ? 1 : copies} />
                     ) : null}
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row">

@@ -30,15 +30,21 @@ export function surnameChangeRequirementName(
   }
   if (serviceCode !== "RA9255_SURNAME" || !/Subscribed Affidavit to Use the Surname of the Father/i.test(name)) return name;
   const document = name.replace(/,\s*(?:with personal appearance|with the child's personal appearance|signed by the child|Ages?\s+[^:]+:)[\s\S]*$/i, "");
-  if (typeof birthDate !== "string" || !fromDateKey(birthDate) || birthDate > today) {
+  const signing = surnameChangeSigningInstruction(birthDate, today);
+  if (!signing) {
     return `${document}, personal appearance and signing requirements depend on the child's age`;
   }
+  return `${document}, ${signing.label}: ${signing.instruction}`;
+}
+
+export function surnameChangeSigningInstruction(birthDate: unknown, today = todayKeyInTimeZone()) {
+  if (typeof birthDate !== "string" || !fromDateKey(birthDate) || birthDate > today) return null;
   const age = ageInYears(birthDate, today);
-  if (age < 7) return `${document}, Ages 0–6: Mother or legal guardian signs and personally appears.`;
+  if (age < 7) return { label: "Ages 0–6", instruction: "Mother or legal guardian signs and personally appears." };
   // The supplied Charter includes age 7 in both signing ranges.
-  if (age === 7) return `${document}, Age 7: CCRO must verify who signs and personally appears.`;
-  if (age < 18) return `${document}, Ages 8–17: The child signs and personally appears, with notarized attestation from the mother or legal guardian.`;
-  return `${document}, Ages 18+: The child signs and personally appears.`;
+  if (age === 7) return { label: "Age 7", instruction: "CCRO must verify who signs and personally appears." };
+  if (age < 18) return { label: "Ages 8–17", instruction: "The child signs and personally appears, with notarized attestation from the mother or legal guardian." };
+  return { label: "Ages 18+", instruction: "The child signs and personally appears." };
 }
 
 export function surnameChangeRequirementDisplay(name: string, serviceCode: string | null | undefined) {

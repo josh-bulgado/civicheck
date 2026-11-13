@@ -20,7 +20,7 @@ import {
   canonicalizeTemplateAnswers,
 } from "~/features/forms/form-template.utils";
 import { emptySubject, reconcileSubjects } from "~/lib/subject-fields";
-import { surnameChangeCaseDefinition } from "~/features/services/surname-change";
+import { surnameChangeCaseDefinition, surnameChangeSigningInstruction } from "~/features/services/surname-change";
 import type { EncodableService } from "../walk-in-intake.queries";
 import { prepareWalkInBirth } from "../walk-in-birth";
 import { isWalkInPetition, prepareWalkInPetition } from "../walk-in-petition";
@@ -105,7 +105,14 @@ export function WalkInRegistrationFields({
       </Alert>
     );
   const { definition, answers: caseAnswers } = walkInCaseForService(template.definition, service.serviceCode);
-  const displayDefinition = staffFormDefinition(surnameChangeCaseDefinition(definition, service.serviceCode));
+  const staffDefinition = staffFormDefinition(surnameChangeCaseDefinition(definition, service.serviceCode));
+  const displayDefinition = surnameChange ? {
+    ...staffDefinition,
+    sections: staffDefinition.sections.map(section => ({
+      ...section,
+      title: section.step === "case" ? "Surname Change Details" : "Child and Parent Information",
+    })),
+  } : staffDefinition;
   const caseDefinition = {
     ...displayDefinition,
     sections: displayDefinition.sections.map((section) => ({
@@ -137,6 +144,7 @@ export function WalkInRegistrationFields({
     .flatMap((section) => section.fields)
     .filter((field) => field.type === "person_group");
   const timing = evaluateTemplateEventTiming(displayDefinition, values);
+  const signingInstruction = surnameChange ? surnameChangeSigningInstruction(values.event_date) : null;
 
   async function submit() {
     if (petition && !petitionAuthorityConfirmed) {
@@ -200,6 +208,7 @@ export function WalkInRegistrationFields({
         definition={caseDefinition}
         staffView
         step="case"
+        showSectionTitles={surnameChange}
         singleColumn={marriage || death || legitimation || courtDecree || supplemental || surnameChange || petition || endorsement}
         control={form.control}
         values={values}
@@ -227,6 +236,7 @@ export function WalkInRegistrationFields({
         } : displayDefinition}
         staffView
         step="details"
+        showSectionTitles={surnameChange}
         control={form.control}
         values={values}
         showRequiredMarks
@@ -288,7 +298,9 @@ export function WalkInRegistrationFields({
       <label className="flex min-h-11 items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm">
         <Checkbox className="mt-0.5" checked={physicalDocumentsConfirmed}
           onCheckedChange={(checked) => setPhysicalDocumentsConfirmed(checked === true)} />
-        <span>{petition
+        <span>{surnameChange
+          ? <>I checked the required birth-record copies and 3 original copies of the Affidavit to Use the Surname of the Father{values.father_on_record === "no" ? ", plus 3 original copies of the notarized Father's Admission of Paternity" : ""}. The papers are complete and acceptable.</>
+          : petition
           ? "I checked the physical documents required at filing. They are complete and acceptable for initial processing. Publication documents will be checked at the appropriate later step."
           : endorsement
           ? "I checked the physical documents for the selected endorsement type. The required papers are complete and acceptable."
@@ -306,6 +318,12 @@ export function WalkInRegistrationFields({
         </label>
       ) : null}
       {supplemental || surnameChange ? (
+        <div className="space-y-3">
+        {signingInstruction ? (
+          <p className="text-sm leading-relaxed text-body-strong">
+            <strong>{signingInstruction.label}:</strong> {signingInstruction.instruction}
+          </p>
+        ) : null}
         <label className="flex min-h-11 items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm">
           <Checkbox className="mt-0.5" checked={personalAppearanceConfirmed}
             onCheckedChange={(checked) => setPersonalAppearanceConfirmed(checked === true)} />
@@ -313,6 +331,7 @@ export function WalkInRegistrationFields({
             ? "I verified the required personal appearance, signatures, and attestation for the child's age."
             : "The applicant personally appeared."}</span>
         </label>
+        </div>
       ) : null}
       {error ? (
         <Alert variant="destructive">

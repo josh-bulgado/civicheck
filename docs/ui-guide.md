@@ -29,9 +29,13 @@ these fields; death and marriage selections do not show them.
 
 Online forms use heading sizes from `wizard-field.tsx`: page titles 32px,
 section headings 24px, and person-name groups and Address 20px. Walk-in section
-and name-group headings match the 15px field labels. Walk-ins use dividers
+and name-group headings match the 15px field labels, except surname-change
+section headings use 17px bold. Walk-ins use dividers
 between sections, name groups, and the physical-document confirmation.
 Field labels stay 15px, including the optional Father's Full Name field.
+Every selected walk-in service has a clickable fee badge. It opens the configured
+included and additional charges, or a single service-fee line when no breakdown
+is configured. Per-copy services show the unit price, copy count, and total.
 Online and walk-in forms separate sections, person-name groups, and Address
 with full-width borders in normal layout flow. Keep padding after each border
 and a full grid row for name-group headings so controls cannot overlap a divider.
@@ -453,6 +457,9 @@ resolve acknowledgment to Yes or No and confirm physical documents and the
 required personal appearance, signatures, and attestation for the child's age.
 Accepted requests start in Processing and remain unpaid. Display the base fee
 separately from conditional paternity and per-page charges.
+Use "Surname Change Details" and "Child and Parent Information" as the walk-in
+section headings. Show the matching age instruction beside the personal-appearance
+confirmation. Staff check physical copy counts; do not show online upload advice.
 
 Surname-change birth date and place appear directly beneath the child's suffix
 and sex on the details page, with the same spacing as other child details.
