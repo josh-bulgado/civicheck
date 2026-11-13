@@ -39,6 +39,7 @@ import {
 import { applicantCopy } from "~/features/forms/applicant-copy";
 import { surnameChangeCaseDefinition } from "~/features/services/surname-change";
 import { delayedBirthLayout } from "../delayed-birth-layout";
+import { isPetitionService, petitionCaseLayout, petitionSelectionError } from "~/features/services/petition-selection";
 
 function caseAnswersFrom(values: DynamicFieldValues) {
   return {
@@ -100,7 +101,7 @@ export function CaseStep({
   const requestDetailKeys = new Set([
     "event_date", "event_place", "informant_relationship", "informant_name",
   ]);
-  const caseDefinition = surnameChangeCaseDefinition(definition, selectedService.service_code);
+  const caseDefinition = petitionCaseLayout(surnameChangeCaseDefinition(definition, selectedService.service_code), selectedService.service_code);
   const questionDefinition = {
     ...caseDefinition,
     sections: caseDefinition.sections.map((section) => ({
@@ -179,8 +180,9 @@ export function CaseStep({
   // must have a value. The Next button uses this to show when the step is
   // ready, without waiting for a failed submit to find out.
   const hasRequiredAnswers =
+    (!isPetitionService(selectedService.service_code) || !petitionSelectionError(draft.caseSelectorAnswers)) &&
     (!isGroup || Boolean(draft.selectedServiceCode)) &&
-    visibleFieldsForStep(definition, "case", {
+    visibleFieldsForStep(caseDefinition, "case", {
       ...draft.caseSelectorAnswers,
       ...watchedValues,
     }).every((field) => {
@@ -328,7 +330,7 @@ export function CaseStep({
 
   return (
     <WizardShell step={1} title="Tell us about your request">
-      <div className={selectedService.service_code === "RA9255_SURNAME" ? "surname-change-case flex flex-col gap-6" : "flex flex-col gap-6"}>
+      <div className={isPetitionService(selectedService.service_code) ? "flex flex-col gap-6 [&_h2]:text-lg" : selectedService.service_code === "RA9255_SURNAME" ? "surname-change-case flex flex-col gap-6" : "flex flex-col gap-6"}>
         {isGroup ? (
           <CaseSelector
             services={services}
@@ -382,6 +384,7 @@ export function CaseStep({
         <DynamicFormFields
           definition={requestDetailsDefinition}
           step="case"
+          sectionHeadingClassName={isPetitionService(selectedService.service_code) ? "mb-3" : undefined}
           showRequiredMarks
           control={form.control}
           // Case-selector answers can show or hide fields, so they take part in

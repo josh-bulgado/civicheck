@@ -3,6 +3,19 @@ import { formatFieldLabel, formatNameHeading } from "./field-label";
 
 describe("formatFieldLabel", () => {
   it.each([
+    ["New First Name You Want", "New first name you want"],
+    ["First Name As Currently Recorded", "First name as currently recorded"],
+    ["Date Of The Event On The Record", "Date of the event on the record"],
+    ["Is The Record Registered At PSA?", "Is the record registered at PSA?"],
+    ["Submit NBI And PNP Clearances", "Submit NBI and PNP clearances"],
+    ["Birth Day Or Month", "Birth Day Or Month"],
+    ["Mother's Maiden Last Name", "Mother's Maiden Last Name"],
+    ["New First Name You Want (optional)", "New first name you want (optional)"],
+    ["Registry Reference Number (optional)", "Registry Reference Number (Optional)"],
+  ])("formats the word-count boundary and acronyms in %s", (label, expected) => {
+    expect(formatFieldLabel(label)).toBe(expected);
+  });
+  it.each([
     ["Bride’s nationality", "Bride’s Nationality"],
     ["Groom's nationality", "Groom's Nationality"],
   ])("keeps the possessive s lowercase in %s", (label, expected) => {

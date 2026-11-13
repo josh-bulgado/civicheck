@@ -23,7 +23,8 @@ import { emptySubject, reconcileSubjects } from "~/lib/subject-fields";
 import { surnameChangeCaseDefinition, surnameChangeSigningInstruction } from "~/features/services/surname-change";
 import type { EncodableService } from "../walk-in-intake.queries";
 import { prepareWalkInBirth } from "../walk-in-birth";
-import { isWalkInPetition, prepareWalkInPetition } from "../walk-in-petition";
+import { isWalkInPetition, petitionWalkInAnswers, prepareWalkInPetition } from "../walk-in-petition";
+import { petitionDetailsLayout } from "~/features/services/petition-selection";
 import { walkInCaseForService } from "../walk-in-legitimation";
 import { prepareWalkInCourtDecree } from "../walk-in-court-decree";
 import { prepareWalkInSupplemental } from "../walk-in-supplemental";
@@ -44,7 +45,6 @@ export function WalkInRegistrationFields({
     answers: TemplateAnswers;
     templateVersionId: string | null;
     physicalDocumentsConfirmed: boolean;
-    petitionAuthorityConfirmed?: boolean;
     coupleAppearanceConfirmed?: boolean;
     personalAppearanceConfirmed?: boolean;
   }) => Promise<void>;
@@ -53,7 +53,6 @@ export function WalkInRegistrationFields({
 }) {
   const [error, setError] = useState("");
   const [physicalDocumentsConfirmed, setPhysicalDocumentsConfirmed] = useState(false);
-  const [petitionAuthorityConfirmed, setPetitionAuthorityConfirmed] = useState(false);
   const [coupleAppearanceConfirmed, setCoupleAppearanceConfirmed] = useState(false);
   const [personalAppearanceConfirmed, setPersonalAppearanceConfirmed] = useState(false);
   const form = useForm<DetailsValues>({
@@ -84,18 +83,19 @@ export function WalkInRegistrationFields({
       const text = Object.fromEntries(Object.entries(form.getValues()).filter(
         (entry): entry is [string, string] => typeof entry[1] === "string",
       ));
-      onAnswersChange(canonicalizeTemplateAnswers(selectedCase.definition, { ...selectedCase.answers, ...text }));
+      const answers = { ...selectedCase.answers, ...text };
+      onAnswersChange(canonicalizeTemplateAnswers(selectedCase.definition,
+        petition ? petitionWalkInAnswers(answers, service.serviceCode) : answers));
     };
     publish();
     const subscription = form.watch(() => {
       setPhysicalDocumentsConfirmed(false);
-      setPetitionAuthorityConfirmed(false);
       setCoupleAppearanceConfirmed(false);
       setPersonalAppearanceConfirmed(false);
       publish();
     });
     return () => subscription.unsubscribe();
-  }, [form, template, service.serviceCode, onAnswersChange]);
+  }, [form, template, service.serviceCode, onAnswersChange, petition]);
   if (!template)
     return (
       <Alert>
@@ -105,7 +105,20 @@ export function WalkInRegistrationFields({
       </Alert>
     );
   const { definition, answers: caseAnswers } = walkInCaseForService(template.definition, service.serviceCode);
-  const staffDefinition = staffFormDefinition(surnameChangeCaseDefinition(definition, service.serviceCode));
+  const textValues = Object.fromEntries(
+    Object.entries(watched).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string",
+    ),
+  );
+  const intakeAnswers = { ...caseAnswers, ...textValues };
+  const values = Object.fromEntries(
+    Object.entries(deriveTemplateAnswers(definition,
+      petition ? petitionWalkInAnswers(intakeAnswers, service.serviceCode) : intakeAnswers,
+    )).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+  );
+  const staffDefinition = staffFormDefinition(surnameChangeCaseDefinition(
+    petitionDetailsLayout(definition, service.serviceCode, values), service.serviceCode,
+  ));
   const displayDefinition = surnameChange ? {
     ...staffDefinition,
     sections: staffDefinition.sections.map(section => ({
@@ -117,7 +130,7 @@ export function WalkInRegistrationFields({
     ...displayDefinition,
     sections: displayDefinition.sections.map((section) => ({
       ...section,
-      fields: section.fields.map((field) => {
+      fields: section.fields.filter(field => !(petition && service.serviceCode === "RA9048-CCE" && field.key === "primary_petition")).map((field) => {
         if (field.key === "event_date") return { ...field, helpText: undefined };
         if (marriage && field.key === "event_place") return {
           ...field,
@@ -127,18 +140,6 @@ export function WalkInRegistrationFields({
       }),
     })),
   };
-  const textValues = Object.fromEntries(
-    Object.entries(watched).filter(
-      (entry): entry is [string, string] => typeof entry[1] === "string",
-    ),
-  );
-  const values = Object.fromEntries(
-    Object.entries(
-      deriveTemplateAnswers(definition, { ...caseAnswers, ...textValues }),
-    ).filter(
-      (entry): entry is [string, string] => typeof entry[1] === "string",
-    ),
-  );
   const roles = service.partyRoles;
   const personFields = definition.sections
     .flatMap((section) => section.fields)
@@ -147,10 +148,6 @@ export function WalkInRegistrationFields({
   const signingInstruction = surnameChange ? surnameChangeSigningInstruction(values.event_date) : null;
 
   async function submit() {
-    if (petition && !petitionAuthorityConfirmed) {
-      setError("Confirm that the petitioner's identity and authority to file were checked.");
-      return;
-    }
     if (surnameChange && !personalAppearanceConfirmed) {
       setError("Confirm the required personal appearance, signatures, and attestation for the child's age before encoding.");
       return;
@@ -173,7 +170,9 @@ export function WalkInRegistrationFields({
     }
     if (submitting || !template || !(await form.trigger())) return;
     const current = form.getValues();
-    const subjects = reconcileSubjects(current.subjects, roles);
+    const subjects = reconcileSubjects(current.subjects, roles).map(person =>
+      petition && values.record_type === "marriage" ? { ...person, sex: "male" } : person,
+    );
     const answers: TemplateAnswers = {
       ...caseAnswers,
       ...Object.fromEntries(
@@ -183,6 +182,7 @@ export function WalkInRegistrationFields({
       ),
     };
     for (const field of personFields) answers[field.key] = subjects;
+    if (petition) Object.assign(answers, petitionWalkInAnswers(answers, service.serviceCode));
     const prepare = supplemental || otherCertificate || (endorsement && values.record_type === "marriage") ? prepareWalkInSupplemental : courtDecree ? prepareWalkInCourtDecree : prepareWalkInBirth;
     const prepared = (petition ? prepareWalkInPetition : prepare)(definition, answers, roles);
     if (prepared.error) {
@@ -196,7 +196,6 @@ export function WalkInRegistrationFields({
       answers,
       templateVersionId: template.versionId,
       physicalDocumentsConfirmed,
-      ...(petition ? { petitionAuthorityConfirmed } : {}),
       ...(legitimation || marriageLicense ? { coupleAppearanceConfirmed } : {}),
       ...(supplemental || surnameChange ? { personalAppearanceConfirmed } : {}),
     });
@@ -236,6 +235,7 @@ export function WalkInRegistrationFields({
         } : displayDefinition}
         staffView
         step="details"
+        widePair={petition ? ["event_date", "event_place"] : undefined}
         showSectionTitles={surnameChange}
         control={form.control}
         values={values}
@@ -249,7 +249,7 @@ export function WalkInRegistrationFields({
               {roles.map((role, index) => (
                 <div key={role} className="space-y-3">
                   {!otherCertificate || values.record_type === "marriage" ? <h3 className={`${FORM_GROUP_CLASS}${index > 0 ? " border-t border-border-light pt-5" : ""}`}>
-                    {formatNameHeading(otherCertificate ? "Name of Husband" : role.toLowerCase() === "mother"
+                    {formatNameHeading(petition ? (values.record_type === "marriage" ? "Husband's Name" : values.record_type === "death" ? "Deceased Person's Name" : "Name on the birth certificate") : otherCertificate ? "Name of Husband" : role.toLowerCase() === "mother"
                       ? "Mother's Maiden Name"
                       : (petition || supplemental || endorsement) && roles.length === 1
                         ? (definition.sections.flatMap((section) => section.fields)
@@ -265,7 +265,7 @@ export function WalkInRegistrationFields({
                     index={index}
                     role={role}
                     hideSex={courtDecree || supplemental || otherCertificate}
-                    husband={(otherCertificate || endorsement) && values.record_type === "marriage"}
+                    husband={(otherCertificate || endorsement || petition) && values.record_type === "marriage"}
                     requireMiddleName
                   />
                   {surnameChange && role === "Child" ? (
@@ -338,13 +338,6 @@ export function WalkInRegistrationFields({
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
-      {petition ? (
-        <label className="flex min-h-11 items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm">
-          <Checkbox className="mt-0.5" checked={petitionAuthorityConfirmed}
-            onCheckedChange={(checked) => setPetitionAuthorityConfirmed(checked === true)} />
-          <span>I checked the petitioner's identity and authority to file this petition.</span>
-        </label>
-      ) : null}
       <div className="flex justify-end gap-3">
         <Button
           type="button"
@@ -357,7 +350,7 @@ export function WalkInRegistrationFields({
         <Button
           type="button"
           onClick={() => void submit()}
-          disabled={submitting || !physicalDocumentsConfirmed || (petition && !petitionAuthorityConfirmed) || ((legitimation || marriageLicense) && !coupleAppearanceConfirmed) || ((supplemental || surnameChange) && !personalAppearanceConfirmed)}
+          disabled={submitting || !physicalDocumentsConfirmed || ((legitimation || marriageLicense) && !coupleAppearanceConfirmed) || ((supplemental || surnameChange) && !personalAppearanceConfirmed)}
         >
           {submitting ? "Encoding..." : "Encode request"}
         </Button>

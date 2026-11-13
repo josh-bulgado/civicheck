@@ -2,7 +2,7 @@ import { requiresVerificationSignature } from "~/features/apply/verification-sig
 import { FORM_SECTION_CLASS } from "~/features/forms/components/wizard-field";
 import { delayedBirthUploadGuidance, physicalCopyGuidance } from "~/features/services/physical-copy-guidance";
 import { surnameChangeRequirementName, surnameChangeRequirementDisplay } from "~/features/services/surname-change";
-import { describeRequirement } from "~/features/services/requirement-display";
+import { describeRequirement, requirementDisplayName } from "~/features/services/requirement-display";
 import { endorsementRequirementName } from "~/features/services/electronic-endorsement";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -31,7 +31,6 @@ import {
 import {
   isRequirementApplicable,
   parseRequirementName,
-  splitCaseLabel,
 } from "~/features/services/service-utils";
 import type { ServiceDetail } from "~/features/services/services.queries";
 import {
@@ -135,7 +134,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
   const definition = selectedService.form_template!.definition;
   const documentDisplayName = (name: string) => parseRequirementName(
     endorsementRequirementName(
-      selectedService.service_code === "ELEC_ENDORSEMENT" ? splitCaseLabel(name).name : name,
+      requirementDisplayName(name),
       selectedService.service_code,
       draft.caseSelectorAnswers.record_type ?? draft.answers.record_type,
     ),
@@ -1050,7 +1049,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
                     <li key={requirement.id}>
                       {signsVerificationOnline && requirement.requirement_name.startsWith("Verification Form")
                         ? "Verification Form: sign online in the next step. No printing needed."
-                        : isDelayedBirth ? requirement.requirement_name
+                        : isDelayedBirth ? requirementDisplayName(requirement.requirement_name)
                         : documentDisplayName(requirement.requirement_name)}
                     </li>
                   ))}

@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requirementDisplayName } from "~/features/services/requirement-display";
 import { endorsementDetailsOf } from "~/features/requests/electronic-endorsement-release";
 import { isClosedRequestStatus } from "~/features/requests/document-review";
 import {
@@ -89,7 +90,7 @@ export const trackRequestFn = createServerFn({ method: "POST" })
         createdAt: request.created_at,
         attachments: (attachments ?? []).map((a) => ({
           id: a.id,
-          requirementName: a.requirement_name,
+          requirementName: requirementDisplayName(a.requirement_name),
           subjectRole: a.subject_role,
           verificationStatus: a.verification_status,
           rejectionReason: a.rejection_reason,

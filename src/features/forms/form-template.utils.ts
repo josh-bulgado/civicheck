@@ -1,6 +1,6 @@
 import { validateEventPlace } from "./event-place";
 import { ageInYears, diffInDays, fromDateKey, toDateKey } from "~/lib/date";
-import { INVALID_PERSON_NAME, isNameField, validatePersonName } from "~/lib/person-name";
+import { INVALID_PERSON_NAME, isNameField, validateNameField, validatePersonName } from "~/lib/person-name";
 import { flattenSubjects, type SubjectFields } from "~/lib/subject-fields";
 import { addressAreas, addressCities } from "~/lib/requester-address";
 import { countryOptions } from "~/lib/countries";
@@ -808,8 +808,9 @@ export function validateTemplateAnswers(
       if (placeValidation !== true) {
         return { success: false, message: placeValidation };
       }
-      if (isNameField(field) && !(field.noneLabel && value === "N/A") && validatePersonName(value) !== true) {
-        return { success: false, message: `${field.label}: ${INVALID_PERSON_NAME}` };
+      if (isNameField(field) && !(field.noneLabel && value === "N/A")) {
+        const nameValidation = validateNameField(field, value);
+        if (nameValidation !== true) return { success: false, message: `${field.label}: ${nameValidation}` };
       }
 
       if (field.countrySelect && !countryOptions.some((country) => country.name === value)) {

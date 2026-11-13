@@ -2,6 +2,7 @@ import { Document, Font, Image, Page, StyleSheet, Text, View } from "@react-pdf/
 import { getStatusDetails } from "~/features/services/request-status";
 import type { AcknowledgmentPdfData } from "~/features/requests/pdf/types";
 import { documentText } from "~/features/requests/pdf/document-text";
+import { requirementDisplayName } from "~/features/services/requirement-display";
 
 // Wrap whole words instead of splitting them mid-word ("han-dles"). This module
 // only builds the acknowledgment, so the global setting is contained to it.
@@ -344,7 +345,7 @@ export function RequestAcknowledgmentPdf({ data, qrDataUrl, generatedAt }: Reque
             <Text style={styles.documentIndex}>{index + 1}.</Text>
             <View style={styles.documentBody}>
               <Text style={styles.documentName}>
-                {documentText(document.requirementName)}{document.subjectRole?.trim() ? ` (${documentText(document.subjectRole)})` : ""}
+                {documentText(requirementDisplayName(document.requirementName))}{document.subjectRole?.trim() ? ` (${documentText(document.subjectRole)})` : ""}
               </Text>
               {document.verificationStatus === "rejected" ? (
                 <>

@@ -1,5 +1,6 @@
 import { FilePreviewDialogContent } from "~/components/file-preview/FilePreviewDialogContent";
 import { Dialog } from "~/components/ui/dialog";
+import { requirementDisplayName } from "~/features/services/requirement-display";
 import { AttachmentPreview, getFileKind } from "~/features/requests/components/AttachmentPreview";
 
 /**
@@ -21,13 +22,13 @@ export function AttachmentViewerDialog({
     <Dialog open={url != null} onOpenChange={(open) => !open && onClose()}>
       {url && (
         <FilePreviewDialogContent
-          title={`${subjectRole ? `${subjectRole}: ` : ""}${requirementName}`}
+          title={`${subjectRole ? `${subjectRole}: ` : ""}${requirementDisplayName(requirementName)}`}
           kind={getFileKind(url)}
           url={url}
         >
           <AttachmentPreview
             url={url}
-            name={requirementName}
+            name={requirementDisplayName(requirementName)}
             className="min-h-0 flex-1"
           />
         </FilePreviewDialogContent>

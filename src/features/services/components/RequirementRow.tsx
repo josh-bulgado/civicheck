@@ -2,13 +2,12 @@ import { MapPin } from "lucide-react";
 import type { TemplateAnswers } from "~/features/forms/form-template.types";
 import { conditionRuleMatches } from "~/features/forms/form-template.utils";
 import { surnameChangeRequirementName, surnameChangeRequirementDisplay } from "~/features/services/surname-change";
-import { describeRequirement } from "~/features/services/requirement-display";
+import { describeRequirement, requirementDisplayName } from "~/features/services/requirement-display";
 import { endorsementRequirementName } from "~/features/services/electronic-endorsement";
 import type { ServiceRequirement } from "~/features/admin/services/services.types";
 import {
   CASE_TAG_LABELS,
   parseRequirementName,
-  splitCaseLabel,
 } from "~/features/services/service-utils";
 
 /** One checklist row — document name, where to secure it, and who it applies to. */
@@ -26,7 +25,7 @@ export function RequirementRow({
     requirement.service_code ?? requirement.requirement_group,
     answers?.event_date,
   ), requirement.service_code ?? requirement.requirement_group);
-  const { caseLabel, name } = splitCaseLabel(display.name);
+  const name = requirementDisplayName(display.name);
   const parsed = parseRequirementName(endorsementRequirementName(
     name, requirement.service_code ?? requirement.requirement_group,
     typeof answers?.record_type === "string" ? answers.record_type : undefined,
@@ -49,9 +48,9 @@ export function RequirementRow({
         <p className="text-sm font-semibold leading-snug text-body-strong">
           {primary}
         </p>
-        {(caseLabel || caseTag) && (
+        {caseTag && (
           <span className="rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-bold text-primary">
-            {caseLabel ?? caseTag}
+            {caseTag}
           </span>
         )}
       </div>

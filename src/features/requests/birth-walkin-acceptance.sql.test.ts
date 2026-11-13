@@ -74,11 +74,19 @@ beforeAll(async () => {
   await db.exec(endorsementMigration);
   await db.exec(endorsementMigration);
   await db.exec(`insert into services_registry values('ELEC_ENDORSEMENT','${other}')`);
+  await db.exec(`create table form_templates(id uuid primary key default gen_random_uuid(),template_key text,active_version_id uuid,updated_at timestamptz);
+    create table form_template_versions(id uuid primary key default gen_random_uuid(),template_id uuid,version int,status text,definition jsonb,published_at timestamptz);
+    insert into form_templates(template_key) values('ra9048_10172');
+    insert into form_template_versions(template_id,version,status,definition) select id,1,'published','{"schemaVersion":1,"sections":[]}'::jsonb from form_templates;
+    update form_templates t set active_version_id=v.id from form_template_versions v where v.template_id=t.id;`);
+  const charterFieldsMigration = readFileSync(new URL("../../../supabase/migrations/20261113075722_petition_charter_fields_only.sql", import.meta.url), "utf8");
+  await db.exec(charterFieldsMigration);
+  await db.exec(charterFieldsMigration);
 }, 30_000);
 afterAll(() => db.close());
 it.each(["RA9048-CFN", "RA9048-CCE"])("accepts checked %s filings with pending publication and immutable audit", async request_type => {
   const input = { request_type, form_template_version_id: other, form_data: {
-    intake_channel: "walk_in", physical_documents_confirmed: "true", petition_authority_confirmed: "true",
+    intake_channel: "walk_in", physical_documents_confirmed: "true",
   } };
   const result = await insert(input);
   expect(result.rows[0]).toMatchObject({ status: "processing", payment_status: "unpaid", walk_in_accepted_by: actor });
@@ -90,11 +98,10 @@ it.each(["RA9048-CFN", "RA9048-CCE"])("accepts checked %s filings with pending p
 });
 it("rejects unconfirmed petition intake, other departments, and paid-at-creation requests", async () => {
   const input = { request_type: "RA9048-CCE", form_template_version_id: other, form_data: {
-    intake_channel: "walk_in", physical_documents_confirmed: "true", petition_authority_confirmed: "true",
+    intake_channel: "walk_in", physical_documents_confirmed: "true",
   } };
   for (const patch of [
     { form_data: { ...input.form_data, physical_documents_confirmed: "false" } },
-    { form_data: { ...input.form_data, petition_authority_confirmed: "false" } },
     { form_template_version_id: null }, { payment_status: "verified" }, { walk_in_accepted_by: null },
   ]) await expect(insert({ ...input, ...patch })).rejects.toThrow();
   await db.exec("reset role; update services_registry set department_id=null where service_code='RA9048-CCE'; set role authenticated");

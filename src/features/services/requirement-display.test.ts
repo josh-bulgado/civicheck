@@ -1,5 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { describeRequirement } from "./requirement-display";
+import { describeRequirement, requirementDisplayName } from "./requirement-display";
+import { parseRequirementName } from "./service-utils";
+
+it.each(["RA 10172 Sex/DOB Correction", "Change of First Name", "Reconstruction", "Foreign applicant", "Father did not acknowledge the child", "Decision not issued by the RTC of Legazpi City"])("removes the %s prefix across document displays", prefix => {
+  const name = `[${prefix}] Certified true copy, all pages`;
+  expect(requirementDisplayName(name)).toBe("Certified true copy, all pages");
+  expect(parseRequirementName(name).primary).toBe("Certified true copy, all pages");
+  expect(describeRequirement(name)).toEqual({title:"Certified true copy",detail:"all pages"});
+});
+
+it("preserves document wording, copy counts, and brackets within the actual title", () => {
+  expect(requirementDisplayName("Certificate of Indigency")).toBe("Certificate of Indigency");
+  expect(requirementDisplayName("[Reconstruction] Record [original], 2 copies")).toBe("Record [original], 2 copies");
+});
 
 describe("describeRequirement", () => {
   it("keeps a plain document title intact", () => {
@@ -28,9 +41,9 @@ describe("describeRequirement", () => {
     });
   });
 
-  it("preserves conditional case information", () => {
+  it("omits the prefix while preserving copy information", () => {
     expect(describeRequirement("[Change of First Name] Supporting documents (3 copies)")).toEqual({
-      title: "Supporting documents", detail: "(3 copies); Change of First Name",
+      title: "Supporting documents", detail: "(3 copies)",
     });
   });
 

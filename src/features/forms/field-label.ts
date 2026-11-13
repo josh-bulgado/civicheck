@@ -22,6 +22,16 @@ export function formatNameHeading(label: string): string {
 export function formatFieldLabel(label: string): string {
   label = label.replace(/^requester['’]s (first|middle|last) name$/i, "$1 Name");
 
+  const words = label.replace(/\s*\((?:optional|required)\)\s*$/i, "").trim().split(/\s+/)
+    .filter(word => /[A-Za-z0-9]/.test(word));
+  if (words.length > 4) {
+    const sentence = label.toLowerCase()
+      .replace(/\b(?:psa|nbi|pnp|ccro|lcro|lcr|ctc|colb|brap|id|sss|gsis|bir|dfa|rtc|rhu|doh|dswd|tin|ra|dob)\b/gi, word => word.toUpperCase())
+      .replace(/\bids\b/gi, "IDs")
+      .replace(/\br\.a\./gi, "R.A.");
+    return sentence.replace(/[A-Za-z]/, letter => letter.toUpperCase());
+  }
+
   if (label.trim() === "Registered late?") return "Registered Late?";
 
   if (label.trimEnd().endsWith("?")) return label;

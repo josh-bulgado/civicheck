@@ -1,4 +1,5 @@
 import { REQUESTER_NAME_KEYS, requesterNameAnswers, requiresAccountRequester } from "~/features/apply/requester-name";
+import { isPetitionService, petitionSelectionError } from "./petition-selection";
 import { ACCOUNT_PARTY_ROLE, accountPartyName, isMarriageAccountRole, requiresMarriageAccountParty } from "~/features/apply/marriage-account-party";
 import { requiresVerificationSignature } from "~/features/apply/verification-signature";
 import { createServerFn } from "@tanstack/react-start";
@@ -218,6 +219,10 @@ export const submitRequestFn = createServerFn({ method: "POST" })
       }
     }
     const answerBag = canonicalizeTemplateAnswers(definition, answers);
+    if (isPetitionService(data.serviceCode) && definition.sections.some(section => section.fields.some(field => field.key === "primary_petition"))) {
+      const error = petitionSelectionError(answerBag);
+      if (error) return { error: true, message: error };
+    }
     const selectorValidation = validateCaseSelectorAnswers(
       definition,
       answerBag,

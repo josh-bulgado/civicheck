@@ -1,11 +1,68 @@
 # Civicheck UI guide
 
-Legal staff use petition walk-in intake for R.A. 9048/10172. Record the scope,
-record owner's name and sex as recorded, record reference, and proposed changes.
-Clerical correction uses the selected service directly; combined petitions keep
-the scope choices needed for their fields and checklist. Do not ask online
-eligibility questions or require uploads. Staff confirm the filing papers and
-authority to file before the request starts Processing. Publication and PSA
+Across service forms and walk-ins, field labels longer than four words use
+sentence case, preserving acronyms such as PSA, NBI, and PNP. Shorter labels keep
+their existing formatting. Petition details uses the same 24px heading-to-field
+gap as Petition type.
+
+Online petition intake uses one primary-petition radio group. Its fields and
+checklist follow that primary choice. Put required petition fields before
+optional fields. The birth-date option reads Day or month of birth. Review shows
+Petition Type first, once, instead of the four legacy yes/no questions.
+Its review sections use Petition details and Person and record details.
+Use Charter item 11, PDF pages 16-19, as the service-policy
+source. Do not collect relationship/representative authority, first-name legal
+grounds, registration-location eligibility, additional correction concerns,
+or extra contact/notes. Keep basic record identification, current/proposed
+entries, employment alternatives, and the documented indigency question.
+On the petition case page, Petition details matches the 18px Petition type
+heading. Omit the help text under corrected birth date, recorded event date,
+filing-fee exemption, registry number, and employment status.
+Petition record date and place appear on the next page after the person's name,
+using the existing event_date/event_place keys once. The proposed corrected
+birth date stays in Petition details on the first page.
+First-name petitions collect the current name only through the name group on
+page 2. Page 1 asks for the proposed first name. The petition's page-2 name
+heading follows primary_petition so stale record-type answers cannot show a
+deceased-person heading for a birth-record petition.
+The petition details page is titled Person and record details. Birth-specific
+petitions label the recorded date/place as Date of Birth and Place of Birth,
+then reuse CTC's split mother's maiden name and optional Father's Full Name.
+Clerical-error petition details follow the chosen record type: marriage uses
+Husband's Name, the shared split Wife's Maiden Name, and marriage date/place;
+death uses Deceased Person's Name and death date/place. Neither uses account-name
+autofill, birth-name help text, or birth-parent fields. Ignore stale record types
+when the primary petition is specific to birth records.
+The Which entry has the error? example also follows the selected record type.
+Across all services, omit bracketed case prefixes from document names in online
+uploads, review lists, camera/attachment previews, service checklists, walk-in
+requirements, request details, tracking, and acknowledgment PDFs. Reuse
+requirementDisplayName or parseRequirementName; keep stored names, copy counts,
+source notes, and applicability rules. Conditional badges describe applicability
+without repeating the old prefix. This also covers older uploads.
+The petition details page keeps record date and place beside each other: date
+uses one-third of the row and place uses two-thirds. Both stack on mobile.
+Keep these paired controls aligned when one label wraps, including walk-ins.
+Birth-record petitions seed a blank owner's name from the account once and keep
+it editable. Preserve saved names. Omit the extra owner-name heading and keep
+First Name with the help text: Use the first name shown on your birth certificate.
+Birth-specific petitions ask Registered late? below Father's Full Name, following
+the supplied CCRO reference form's order.
+Yes requires the registration date, with the existing estimated year/range option
+and checks against the birth date and future dates.
+Marriage and death petitions also ask Registered late? after their record date
+and place, using the same conditional date and estimate controls. Marriage
+husband/wife names remain manual; do not seed them from the account.
+
+Legal staff use petition walk-in intake for R.A. 9048/10172. Choose one petition
+type for first-name, sex, or birth-day/month correction. Clerical correction uses
+the selected service directly and asks the record type. Retain the matching
+record names, dates/place, birth parents, registration timing, and proposed
+changes. Current first name is collected once in the person's name group.
+Marriage uses manual husband/wife names and does not ask sex separately.
+Do not autofill from the staff account, ask online eligibility/indigency questions,
+or require uploads. Staff confirm the filing papers
+before the request starts Processing. Publication and PSA
 affirmation remain later office steps; intake does not mark payment or release
 complete. The existing limitation on applying indigency exemptions remains.
 
@@ -33,6 +90,8 @@ and name-group headings match the 15px field labels, except surname-change
 section headings use 17px bold. Walk-ins use dividers
 between sections, name groups, and the physical-document confirmation.
 Field labels stay 15px, including the optional Father's Full Name field.
+Father's full-name fields allow periods for initials and suffixes such as Jr.
+Use the same rule for applicant forms, walk-ins, and submission validation.
 Every selected walk-in service has a clickable fee badge. It opens the configured
 included and additional charges, or a single service-fee line when no breakdown
 is configured. Per-copy services show the unit price, copy count, and total.

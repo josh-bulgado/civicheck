@@ -10,6 +10,8 @@ import type { CaseSelectorDefinition } from "~/features/forms/form-template.type
 import { conditionRuleMatches } from "~/features/forms/form-template.utils";
 import { formatPesoFee } from "~/features/services/service-utils";
 import { applicantCopy } from "~/features/forms/applicant-copy";
+import { isPetitionSelector } from "../petition-selection";
+import { PrimaryPetitionSelection } from "./PetitionSelection";
 
 interface Service {
   service_code: string;
@@ -371,8 +373,9 @@ function ConfiguredCaseSelector({
   const selectedService = services.find(
     (service) => service.service_code === selectedCode,
   );
-  const sectionTitle = applicantCopy(definition.title);
-  const description = applicantCopy(definition.description);
+  const petition = isPetitionSelector(definition);
+  const sectionTitle = petition ? "Petition type" : applicantCopy(definition.title);
+  const description = petition ? "" : applicantCopy(definition.description);
   const showDescription = description && ![
     "Your answers help us select the right service.",
     "Your answers help us select the correct service, fee, process, and requirements.",
@@ -412,7 +415,7 @@ function ConfiguredCaseSelector({
       </div>
 
       <div className="mt-6 flex flex-col gap-6">
-        {visibleQuestions.map((question, index) => {
+        {petition ? <PrimaryPetitionSelection answers={answers} onChange={publishAnswers} /> : visibleQuestions.map((question, index) => {
           // A lone question that just restates the section title would show the
           // same sentence twice in a row, so the title names the group instead.
           const repeatsTitle =

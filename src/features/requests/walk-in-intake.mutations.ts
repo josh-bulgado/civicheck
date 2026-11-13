@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { INVALID_PERSON_NAME, validatePersonName } from "~/lib/person-name";
+import { INVALID_PERSON_NAME, validateNameField, validatePersonName } from "~/lib/person-name";
 import { isDepartmentScopedRole } from "~/lib/permissions";
 import { insertRequestWithTrackingNumber } from "~/features/requests/tracking-number";
 import { flattenSubjects, type SubjectFields } from "~/lib/subject-fields";
@@ -27,7 +27,6 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       answers?: TemplateAnswers;
       templateVersionId?: string | null;
       physicalDocumentsConfirmed?: boolean;
-      petitionAuthorityConfirmed?: boolean;
       coupleAppearanceConfirmed?: boolean;
       personalAppearanceConfirmed?: boolean;
     }) => data,
@@ -71,15 +70,12 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
     const copies = service.fee_per_copy ? clampCopies(data.copies ?? 1) : 1;
     const isCtc = service.service_code.startsWith("CTC-") || service.service_code === "CTC_ISSUANCE";
     const fatherName = isCtc ? data.fatherName?.trim() || "" : "";
-    if (fatherName.length > 240 || validatePersonName(fatherName) !== true) {
+    if (fatherName.length > 240 || validateNameField({ key: "father_name" }, fatherName) !== true) {
       return { error: true, message: "Enter a valid father's full name (240 characters or fewer)." };
     }
     let registrationFormData: Record<string, string> | null = null;
     let templateVersionId: string | null = null;
     if (isWalkInDetailedIntake(service.service_code)) {
-      if (isWalkInPetition(service.service_code) && data.petitionAuthorityConfirmed !== true) {
-        return { error: true, message: "Confirm that the petitioner's identity and authority to file were checked." };
-      }
       if (service.service_code === "RA9255_SURNAME" && data.personalAppearanceConfirmed !== true) {
         return { error: true, message: "Confirm the required personal appearance, signatures, and attestation for the child's age before encoding." };
       }
@@ -137,7 +133,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
         encoded_by: user.id,
         intake_channel: "walk_in",
         ...(["OTHER_CERT", "ELEC_ENDORSEMENT"].includes(service.service_code) ? { physical_documents_confirmed: "true" } : {}),
-        ...(isWalkInPetition(service.service_code) ? { petition_authority_confirmed: "true", physical_documents_confirmed: "true" } : {}),
+        ...(isWalkInPetition(service.service_code) ? { physical_documents_confirmed: "true" } : {}),
         ...(service.service_code === "SUPPLEMENTAL_REPORT" ? { personal_appearance_confirmed: "true" } : {}),
         ...(service.service_code === "LEGITIMATION" ? { couple_appearance_confirmed: "true" } : {}),
         ...(service.service_code === "MARRIAGE_LICENSE" ? { couple_appearance_confirmed: "true", physical_documents_confirmed: "true" } : {}),

@@ -356,8 +356,8 @@ it("uses the selected service without asking for its case answers again", async 
 
 it("saves the optional father full name on CTC walk-ins and rejects invalid names", async () => {
   state.serviceCode = "CTC-LOCAL";
-  expect((await encodeWalkInFn({data: {...data, serviceCode: "CTC-LOCAL", fatherName: "Juan Santos Cruz"}})).error).toBe(false);
-  expect(state.create).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({form_data: expect.objectContaining({father_name: "Juan Santos Cruz"})}));
+  expect((await encodeWalkInFn({data: {...data, serviceCode: "CTC-LOCAL", fatherName: "Juan S. Cruz Jr."}})).error).toBe(false);
+  expect(state.create).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({form_data: expect.objectContaining({father_name: "Juan S. Cruz Jr."})}));
   expect(state.create.mock.calls[0][1].status).toBeUndefined();
   expect(state.create.mock.calls[0][1].walk_in_accepted_by).toBeUndefined();
   state.create.mockClear();

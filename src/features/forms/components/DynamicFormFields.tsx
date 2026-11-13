@@ -1,6 +1,6 @@
 import { eventPlacePlaceholder, validateEventPlace } from "../event-place";
 import { formatFieldLabel } from "~/features/forms/field-label";
-import { isNameField, validatePersonName } from "~/lib/person-name";
+import { isNameField, validateNameField } from "~/lib/person-name";
 import { Fragment, type ReactNode } from "react";
 import { addressDescendants } from "~/lib/requester-address";
 import { AddressLocationField } from "./AddressLocationField";
@@ -174,7 +174,9 @@ type FieldSpan =
   | "inline"
   | "follow-up"
   | "pair-start"
-  | "pair-end";
+  | "pair-end"
+  | "narrow-start"
+  | "wide-end";
 
 // The grid has six columns so a row can hold two fields (3 + 3) or three
 // (2 + 2 + 2). Every field gets a span from the plan below; nothing is left to
@@ -192,6 +194,8 @@ const SPAN_CLASS: Record<FieldSpan, string> = {
   // A pair always starts its own row, even after an odd number of half fields.
   "pair-start": "sm:col-start-1 sm:col-span-3",
   "pair-end": "sm:col-span-3",
+  "narrow-start": "sm:col-start-1 sm:col-span-2 sm:self-end",
+  "wide-end": "sm:col-span-4 sm:self-end",
 };
 
 function planFieldSpans(
@@ -254,7 +258,9 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
   showRequiredMarks = false,
   showSectionTitles = false,
   hideSectionTitles = false,
+  sectionHeadingClassName,
   singleColumn = false,
+  widePair,
   staffView = false,
   readOnlyKeys = [],
   renderSectionLead,
@@ -278,8 +284,10 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
    */
   showSectionTitles?: boolean;
   hideSectionTitles?: boolean;
+  sectionHeadingClassName?: string;
   /** Stacks every field on its own row instead of pairing short inputs. */
   singleColumn?: boolean;
+  widePair?: readonly [string, string];
   staffView?: boolean;
   readOnlyKeys?: readonly string[];
   /**
@@ -319,6 +327,10 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
       for (const field of fields)
         spans.set(field.key, field.inline ? "inline" : "full");
     }
+    if (widePair) {
+      spans.set(widePair[0], "narrow-start");
+      spans.set(widePair[1], "wide-end");
+    }
     const titled = !hideSectionTitles && (showSectionTitles || sections.length > 1);
     // Separate sections with a divider and space before the next fields.
     const setApart = sectionIndex > 0;
@@ -334,7 +346,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
         )}
       >
         {titled ? (
-          <div className="-mb-2 flex flex-col gap-0.5">
+          <div className={cn("-mb-2 flex flex-col gap-0.5", sectionHeadingClassName)}>
             <h2
               className={FORM_SECTION_CLASS}
             >
@@ -391,7 +403,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                   const placeValidation = validateEventPlace(definitionField, value);
                   if (placeValidation !== true) return placeValidation;
                   if (definitionField.noneLabel && value === NONE_ANSWER) return true;
-                  if (isNameField(definitionField)) return validatePersonName(value);
+                  if (isNameField(definitionField)) return validateNameField(definitionField, value);
                   if (definitionField.type === "date") {
                     return validateDateAnswer(definitionField, value, values, todayKeyInTimeZone());
                   }
@@ -424,7 +436,13 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                   locationKey += ":" + values.requester_city;
                 }
 
-                const placeholder = eventPlacePlaceholder(definitionField, values.record_type);
+                const placeholder = definitionField.key === "other_entry"
+                  ? ({
+                    birth: "e.g. Mother's maiden name, place of birth",
+                    marriage: "e.g. Husband's name, wife's maiden name, place of marriage",
+                    death: "e.g. Deceased person's name, place of death",
+                  } as Record<string, string>)[values.record_type] ?? definitionField.placeholder
+                  : eventPlacePlaceholder(definitionField, values.record_type);
 
                 const selectedNotice =
                   definitionField.type === "select"

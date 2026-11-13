@@ -1,8 +1,12 @@
 import { parseRequirementName, splitCaseLabel } from "~/features/services/service-utils";
 
+export function requirementDisplayName(name: string): string {
+  return splitCaseLabel(name).name;
+}
+
 /** Separate a document's name from examples, copy counts, and collection notes. */
 export function describeRequirement(requirementName: string): { title: string; detail: string | null } {
-  const { caseLabel, name } = splitCaseLabel(requirementName);
+  const name = requirementDisplayName(requirementName);
   const { primary, secondary } = parseRequirementName(name);
   const details: string[] = [];
   let title = primary;
@@ -29,7 +33,6 @@ export function describeRequirement(requirementName: string): { title: string; d
     details.unshift(copies[1]);
   }
   if (secondary) details.push(secondary);
-  if (caseLabel) details.push(caseLabel);
 
   return { title: title || name || "Document", detail: details.filter(Boolean).join("; ") || null };
 }

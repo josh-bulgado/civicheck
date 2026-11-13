@@ -50,6 +50,7 @@ import {
 } from "~/features/forms/form-template.utils";
 import { delayedBirthLayout } from "../delayed-birth-layout";
 import { isRequirementApplicable } from "~/features/services/service-utils";
+import { isPetitionService, petitionDetailsLayout, petitionRecordType } from "~/features/services/petition-selection";
 import type { ServiceDetail } from "~/features/services/services.queries";
 import {
   impliedSex,
@@ -225,6 +226,7 @@ export function SubjectFieldGrid({
   hideSex = false,
   readOnlyName = false,
   lockedNoMiddleName = false,
+  firstNameHelp,
 }: {
   control: Control<DetailsValues>;
   setValue: UseFormSetValue<DetailsValues>;
@@ -235,6 +237,7 @@ export function SubjectFieldGrid({
   hideSex?: boolean;
   readOnlyName?: boolean;
   lockedNoMiddleName?: boolean;
+  firstNameHelp?: string;
 }) {
   const watchedSex = useWatch({ control, name: `subjects.${index}.sex` });
   const { showSuffix, showSex } = subjectFieldVisibility(role, watchedSex);
@@ -255,9 +258,11 @@ export function SubjectFieldGrid({
               maxLength={120}
               autoComplete="off"
               aria-invalid={fieldState.invalid}
+              aria-describedby={firstNameHelp ? `subject-${index}-firstName-help` : undefined}
               className={cn(WIZARD_CONTROL_CLASS, readOnlyName && "cursor-default border-border-light bg-portal-panel text-portal-ink-2")}
               {...field}
             />
+            {firstNameHelp ? <p id={`subject-${index}-firstName-help`} className="text-sm text-muted-foreground">{firstNameHelp}</p> : null}
             {fieldState.invalid && <WizardFieldError error={fieldState.error} />}
           </Field>
         )}
@@ -388,7 +393,11 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   const [redirectOpen, setRedirectOpen] = useState(false);
   const selectedService =
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
-  const definition = delayedBirthLayout(selectedService.form_template!.definition, selectedService.service_code);
+  const petitionAnswers = { ...draft.answers, ...draft.caseSelectorAnswers };
+  const definition = petitionDetailsLayout(
+    delayedBirthLayout(selectedService.form_template!.definition, selectedService.service_code),
+    selectedService.service_code, petitionAnswers,
+  );
   const isDelayedBirth = selectedService.service_code === "BIRTH_DELAYED" || selectedService.service_code.startsWith("DCOLB-");
   const isSurnameChange = selectedService.service_code === "RA9255_SURNAME";
   const showBirthDetailsWithChild = isDelayedBirth || isSurnameChange;
@@ -397,7 +406,12 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   const detailsFields = fieldsForStep(definition, "details");
   const personGroupField = detailsFields.find((field) => field.type === "person_group");
   const hasPersonGroup = Boolean(personGroupField);
-  const recordType = draft.caseSelectorAnswers.record_type ?? draft.answers.record_type;
+  const recordType = isPetitionService(selectedService.service_code) ? petitionRecordType(petitionAnswers)
+    : draft.caseSelectorAnswers.record_type ?? draft.answers.record_type;
+  const primaryPetition = draft.caseSelectorAnswers.primary_petition ?? draft.answers.primary_petition;
+  const isBirthPetition = isPetitionService(selectedService.service_code) &&
+    (primaryPetition === "change_first_name" || primaryPetition === "correct_sex" ||
+      primaryPetition === "correct_birth_day_month" || (primaryPetition === "correct_other" && recordType === "birth"));
   const isMarriageRecord = recordType === "marriage";
   const useSpouseLabels =
     selectedService.service_code === "MARRIAGE_ONTIME" ||
@@ -461,6 +475,19 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   }, [hydrated, user, lockRequesterName, detailsFields, draft.answers, update]);
 
   const subjectFields = useFieldArray({ control: form.control, name: "subjects" });
+  const seededPetition = useRef<string | null>(null);
+  useEffect(() => {
+    if (!hydrated || !user || !isBirthPetition || roles.length !== 1) return;
+    if (seededPetition.current === selectedService.service_code) return;
+    seededPetition.current = selectedService.service_code;
+    const current = reconcileSubjects(draft.subjects, roles);
+    const owner = current[0];
+    if (owner.firstName.trim() || owner.middleName.trim() || owner.lastName.trim() || owner.noMiddleName) return;
+    current[0] = { ...owner, ...accountPartyName(user) };
+    update({ subjects: current });
+    // Seed a blank draft once; later edits belong to the applicant.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, user, isBirthPetition, selectedService.service_code, roles.join("|"), draft.subjects, update]);
   const showRoleLabels = hasPersonGroup && subjectFields.fields.length > 1;
 
   // Every starred input is filled in — the same set the form validates on
@@ -729,7 +756,9 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   }
 
   const labelRule = personGroupField?.labelByAnswer;
-  const ownerLabel = labelRule
+  const ownerLabel = isPetitionService(selectedService.service_code) && !isBirthPetition
+    ? (recordType === "marriage" ? "Husband's Name" : recordType === "death" ? "Deceased Person's Name" : undefined)
+    : labelRule
     ? (labelRule.labels[String(visibilityValues[labelRule.field] ?? "")] ?? undefined)
     : undefined;
 
@@ -792,7 +821,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       </div>
     ) : hasPersonGroup ? (
       subjectFields.fields.map((subjectField, index) =>
-        ownerLabel ? (
+        ownerLabel && (!isPetitionService(selectedService.service_code) || !isBirthPetition) ? (
           // A heading that names whose name this is ("Full name of the deceased").
           <div key={subjectField.id} className="flex flex-col gap-3 border-t border-border-light pt-6">
             <span className={FORM_GROUP_CLASS}>{formatNameHeading(ownerLabel)}</span>
@@ -814,6 +843,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
               role={subjectField.role}
               husband={isMarriageRecord}
               requireMiddleName={requireMiddleName}
+              firstNameHelp={isBirthPetition ? "Use the first name shown on your birth certificate." : undefined}
             />
           </FieldGroup>
         ),
@@ -823,13 +853,14 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   return (
     <WizardShell
       step={2}
-      title={isSurnameChange ? "Child and Parent Information" : ownerBlockInSection ? "Your details" : "Who is this document for?"}
+      title={isPetitionService(selectedService.service_code) ? "Person and record details" : isSurnameChange ? "Child and Parent Information" : ownerBlockInSection ? "Your details" : "Who is this document for?"}
     >
       <div className="flex flex-col gap-6">
         {ownerBlockInSection ? null : ownerBlock}
 
         <DynamicFormFields
           readOnlyKeys={lockRequesterName ? REQUESTER_NAME_KEYS : []}
+          widePair={isPetitionService(selectedService.service_code) ? ["event_date", "event_place"] : undefined}
           definition={showBirthDetailsWithChild && showRoleLabels && subjectFields.fields.some((field) => field.role === "Child") ? {
             ...definition,
             sections: definition.sections.map((section) => ({

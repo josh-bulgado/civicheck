@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requirementDisplayName } from "~/features/services/requirement-display";
 import { endorsementDetailsOf } from "./electronic-endorsement-release";
 import { parsePreviousUploads } from "./previous-uploads";
 import { z } from "zod";
@@ -644,7 +645,7 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       claim: claimOf(row, staffNames, user.id),
       attachments: (attachments.data ?? []).map((a) => ({
         id: a.id,
-        requirementName: a.requirement_name,
+        requirementName: requirementDisplayName(a.requirement_name),
         subjectRole: a.subject_role,
         fileUrl: a.file_url,
         verificationStatus: a.verification_status,

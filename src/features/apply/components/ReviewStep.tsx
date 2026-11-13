@@ -6,6 +6,8 @@ import { VerificationFormPreview } from "./VerificationFormPreview";
 import { requiresVerificationSignature } from "../verification-signature";
 import { formatFieldLabel } from "~/features/forms/field-label";
 import { surnameChangeRequirementName } from "~/features/services/surname-change";
+import { requirementDisplayName } from "~/features/services/requirement-display";
+import { isPetitionService, PETITION_OPTIONS } from "~/features/services/petition-selection";
 import { useNavigate } from "@tanstack/react-router";
 import { SubmittedRequestRedirect } from "./SubmittedRequestRedirect";
 import { QuietLink } from "~/components/quiet-link";
@@ -307,7 +309,8 @@ export function ReviewStep({
 
   // Everything the applicant said, in the two places they said it. The service
   // and its fee are in the docket above, so they are not repeated here.
-  const caseQuestions = visibleCaseSelectorQuestions(definition, answerBag).map((question) => {
+  const petition = isPetitionService(selectedService.service_code);
+  const caseQuestions = (petition ? [] : visibleCaseSelectorQuestions(definition, answerBag)).map((question) => {
     const answer = answerBag[question.key];
     const value = typeof answer === "string" ? answer : "";
     return (
@@ -326,7 +329,7 @@ export function ReviewStep({
       .filter((section) => (step === "case" ? section.step === "case" : section.step !== "case"))
       .flatMap((section) =>
         section.fields
-          .filter((field) => isFieldVisible(field, answerBag))
+          .filter((field) => isFieldVisible(field, answerBag) && !(petition && field.key === "primary_petition"))
           .flatMap((field) => {
             if (field.type === "person_group") {
               return [
@@ -359,7 +362,11 @@ export function ReviewStep({
           }),
       );
 
-  const caseRows = [...caseQuestions, ...rowsForStep("case")];
+  const caseRows = [
+    ...(petition ? [<ReviewRow key="primary_petition" label="Petition Type"
+      value={PETITION_OPTIONS.find(option => option.value === answerBag.primary_petition)?.label ?? "—"} />] : caseQuestions),
+    ...rowsForStep("case"),
+  ];
   const detailRows = rowsForStep("details");
 
   return (
@@ -367,7 +374,7 @@ export function ReviewStep({
       <div className="flex flex-col gap-5">
         {caseRows.length > 0 ? (
           <ReviewBlock
-            title={selectedService.service_code === "RA9255_SURNAME" ? "Surname Change Details" : "Request details"}
+            title={petition ? "Petition details" : selectedService.service_code === "RA9255_SURNAME" ? "Surname Change Details" : "Request details"}
             onEdit={() =>
               navigate({ to: "/apply/$serviceCode/case", params: { serviceCode } })
             }
@@ -378,7 +385,7 @@ export function ReviewStep({
 
         {detailRows.length > 0 ? (
           <ReviewBlock
-            title={selectedService.service_code === "RA9255_SURNAME" ? "Child and Parent Information" : "Your details"}
+            title={petition ? "Person and record details" : selectedService.service_code === "RA9255_SURNAME" ? "Child and Parent Information" : "Your details"}
             onEdit={() =>
               navigate({ to: "/apply/$serviceCode/details", params: { serviceCode } })
             }
@@ -401,7 +408,9 @@ export function ReviewStep({
             <div className="flex flex-col gap-3.5 sm:col-span-2">
               {activeDocumentsWithPositions.map(
                 ({ document: doc, fileNumber, fileTotal }) => {
-                  const name = surnameChangeRequirementName(doc.requirementName, selectedService.service_code, answerBag.event_date).replace(/\s*[—–]\s*/g, " - ");
+                  const name = requirementDisplayName(
+                    surnameChangeRequirementName(doc.requirementName, selectedService.service_code, answerBag.event_date),
+                  ).replace(/\s*[—–]\s*/g, " - ");
                   const suffix = fileTotal > 1 ? ` · file ${fileNumber} of ${fileTotal}` : "";
                   return (
                     <div key={doc.storagePath} className="flex items-center gap-3.5">
