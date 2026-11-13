@@ -2,7 +2,9 @@
 
 import { useEffect } from "react";
 import { useRouter } from "@tanstack/react-router";
-import { X } from "lucide-react";
+import { ChevronRight, X } from "lucide-react";
+import { QuietLink } from "~/components/quiet-link";
+import { useMediaQuery } from "~/hooks/use-media-query";
 import { cn } from "~/lib/utils";
 import {
   TYPE_STYLE,
@@ -37,23 +39,33 @@ interface NewNotificationToastsProps {
 export function NewNotificationToasts({ userId, lifted = false }: NewNotificationToastsProps) {
   useEffect(() => bindNotificationToasts(userId), [userId]);
   const toasts = useNotificationToasts(userId);
+  const isMobile = useMediaQuery("(max-width: 767px)");
+  const visibleToasts = isMobile ? toasts.slice(-1) : toasts;
 
   return (
     // Always in the page so a screen reader hears arrivals. An empty stack lets
-    // clicks through; a full stack scrolls without dropping older notifications.
+    // clicks through. Phones show the latest preview; older arrivals remain in
+    // the queue until dismissed or opened together in Notifications.
     <div
       role="region"
       aria-label="New notifications"
       aria-live="polite"
       className={cn(
-        "fixed inset-x-3 z-60 flex max-h-[min(28rem,calc(100dvh-2rem))] flex-col items-end gap-3 overflow-y-auto overscroll-contain p-1 md:inset-x-auto md:right-5 md:bottom-5 md:max-h-[min(28rem,calc(100dvh-3rem))]",
+        "fixed inset-x-3 z-60 flex max-h-[min(28rem,calc(100dvh-2rem))] flex-col items-end gap-2 overflow-y-auto overscroll-contain p-1 md:inset-x-auto md:right-5 md:bottom-5 md:max-h-[min(28rem,calc(100dvh-3rem))] md:gap-3",
         toasts.length > 0 ? "pointer-events-auto" : "pointer-events-none",
         lifted
-          ? "bottom-[calc(env(safe-area-inset-bottom)+6.25rem)] max-h-[min(28rem,calc(100dvh-env(safe-area-inset-bottom)-7.5rem))] md:max-h-[min(28rem,calc(100dvh-3rem))]"
+          ? "bottom-[calc(max(1.25rem,env(safe-area-inset-bottom))+5rem)] max-h-[min(28rem,calc(100dvh-env(safe-area-inset-bottom)-7.5rem))] md:max-h-[min(28rem,calc(100dvh-3rem))]"
           : "bottom-3",
       )}
     >
-      {toasts.map((toast) => (
+      {isMobile && toasts.length > 1 ? (
+        <QuietLink to="/notifications"
+          onClick={() => toasts.forEach((toast) => dismissNotificationToast(toast.key))}
+          className="civic-press flex min-h-11 max-w-full items-center gap-2 rounded-full bg-card px-3.5 text-xs font-semibold text-primary shadow-portal-hairline outline-none focus-visible:ring-2 focus-visible:ring-primary">
+          {toasts.length} new notifications<ChevronRight className="size-3.5 shrink-0" aria-hidden="true" />
+        </QuietLink>
+      ) : null}
+      {visibleToasts.map((toast) => (
         <ToastCard key={toast.key} toast={toast} userId={userId} />
       ))}
     </div>
@@ -84,34 +96,34 @@ function ToastCard({ toast, userId }: { toast: NotificationToast; userId: string
     >
       {linkFor(notification.target, open, {
         className:
-          "civic-interactive flex items-start gap-3 rounded-2xl bg-card p-4 pr-12 shadow-portal-popover ring-1 ring-border-light outline-none hover:bg-[#f1f6fd] focus-visible:ring-2 focus-visible:ring-primary dark:hover:bg-primary-soft",
+          "civic-interactive flex items-start gap-2.5 rounded-2xl bg-card p-3 pr-12 shadow-portal-popover ring-1 ring-border-light outline-none hover:bg-[#f1f6fd] focus-visible:ring-2 focus-visible:ring-primary dark:hover:bg-primary-soft max-md:shadow-portal-hairline md:gap-3 md:p-4 md:pr-12",
         children: (
           <>
             <span
               className={cn(
-                "flex size-10 shrink-0 items-center justify-center rounded-full",
+                "flex size-8 shrink-0 items-center justify-center rounded-full md:size-10",
                 unreadClass,
               )}
               aria-hidden="true"
             >
-              <TypeIcon className="size-5" />
+              <TypeIcon className="size-4 md:size-5" />
             </span>
 
             <span className="min-w-0 flex-1">
-              <span className="block text-[15px] leading-snug font-semibold text-foreground">
+              <span className="block text-sm leading-snug font-semibold text-foreground max-md:line-clamp-2 md:text-[15px]">
                 {feedTitle(notification.subject)}
               </span>
               {label ? (
-                <span className="mt-1 line-clamp-2 text-[13.5px] leading-snug wrap-break-word text-body-2">
+                <span className="mt-1 line-clamp-1 text-xs leading-snug wrap-anywhere text-body-2 md:line-clamp-2 md:text-[13.5px]">
                   {label}
                 </span>
               ) : null}
               {detail ? (
-                <span className="mt-0.5 line-clamp-2 block text-[14px] leading-[1.35] text-body-2">
+                <span className="mt-0.5 block text-[13px] leading-[1.125rem] text-body-2 wrap-anywhere max-md:line-clamp-2 md:text-[14px] md:leading-[1.35]">
                   {detail}
                 </span>
               ) : null}
-              <span className="mt-2 flex items-center gap-1.5 text-xs leading-snug text-muted-foreground">
+              <span className="mt-2 hidden items-center gap-1.5 text-xs leading-snug text-muted-foreground md:flex">
                 <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
                 <time dateTime={notification.sentAt}>
                   {timeFormat.format(new Date(notification.sentAt))}
@@ -127,7 +139,7 @@ function ToastCard({ toast, userId }: { toast: NotificationToast; userId: string
         type="button"
         onClick={dismiss}
         aria-label="Dismiss notification"
-        className="civic-press absolute top-2 right-2 flex size-8 items-center justify-center rounded-lg text-muted-foreground outline-none transition-colors hover:bg-primary-soft hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary"
+        className="civic-press absolute top-0.5 right-0.5 flex size-11 items-center justify-center rounded-xl text-muted-foreground outline-none transition-colors hover:bg-primary-soft hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary md:top-2 md:right-2 md:size-8 md:rounded-lg"
       >
         <X className="size-4" aria-hidden="true" />
       </button>

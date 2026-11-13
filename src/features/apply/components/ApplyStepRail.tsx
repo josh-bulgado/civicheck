@@ -28,6 +28,8 @@ interface ApplyStepRailProps {
    * with it instead of leaving. Without it the mark simply goes to the dashboard.
    */
   onLeave?: () => void;
+  /** Disabled while the saved draft is loading. */
+  onChangeService?: () => void;
 }
 
 /**
@@ -38,12 +40,13 @@ export function ApplyStepRail({
   currentStep,
   draftUpdatedAt,
   onLeave,
+  onChangeService,
 }: ApplyStepRailProps) {
   const savedLabel = formatSavedAt(draftUpdatedAt);
 
   return (
     <header className="grid gap-4 px-5 pt-5 pb-4 sm:px-8 sm:pt-6 md:gap-5 md:px-10 md:pt-7 md:pb-6 2xl:grid-cols-[15rem_minmax(0,1fr)_15rem] 2xl:items-center 2xl:gap-6 2xl:px-14">
-      <div className="flex min-w-0 items-center justify-between gap-4">
+      <div className="flex min-w-0 items-center justify-between gap-2 md:gap-4">
         <QuietLink
           to="/dashboard"
           aria-label="CiviCheck, back to your dashboard"
@@ -61,11 +64,14 @@ export function ApplyStepRail({
           <CiviCheckIdentity compact prominent />
         </QuietLink>
 
-        {/* On phones the card title names the current step; this compact count
-            gives the circles context without forcing four labels into one row. */}
-        <span className="shrink-0 rounded-full border border-border-strong bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground md:hidden">
-          Step {currentStep} of {STEPS.length}
-        </span>
+        <button
+          type="button"
+          onClick={onChangeService}
+          disabled={!onChangeService}
+          className="civic-press min-h-11 shrink-0 rounded-full border border-border-strong bg-card px-2.5 text-[13px] font-semibold whitespace-nowrap text-body-2 transition-colors hover:border-primary hover:text-primary focus-visible:ring-4 focus-visible:ring-primary/20 disabled:opacity-50 md:hidden"
+        >
+          Change service
+        </button>
       </div>
 
       {/* Kept for assistive tech only: the draft-saved status is tracked and

@@ -67,6 +67,7 @@ import {
 import { buildSummaryRows } from "~/features/apply/summary-rows";
 import { evictCachedFile, primeCachedFile } from "~/lib/file-preview-cache";
 import { cn } from "~/lib/utils";
+import { useMediaQuery } from "~/hooks/use-media-query";
 
 const ACCEPTED_TYPES = new Set([
   "image/jpeg",
@@ -122,6 +123,7 @@ interface DocumentsStepProps {
 
 export function DocumentsStep({ serviceCode, requirements: savedRequirements, services }: DocumentsStepProps) {
   const navigate = useNavigate();
+  const isMobile = useMediaQuery("(max-width: 767px)");
   const { draft, update, hydrated } = useApplyDraft(serviceCode);
   // The draft as of the latest render. A "Try again" button keeps the
   // `handleFiles` of the render it was made in, so reading `draft` there would
@@ -206,6 +208,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
   // open it, replacing the wizard. Swallow those misses for as long as this
   // step is on screen; the slots handle their own drops before this runs.
   useEffect(() => {
+    if (isMobile) return;
     function swallowFileDrop(event: DragEvent) {
       if (!isFileDrag(event) || event.defaultPrevented) return;
       event.preventDefault();
@@ -219,7 +222,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
       window.removeEventListener("dragover", swallowFileDrop);
       window.removeEventListener("drop", swallowFileDrop);
     };
-  }, []);
+  }, [isMobile]);
 
   const mandatoryReqs = useMemo(
     () =>
@@ -655,7 +658,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
     const pageCount = documents.length;
     const captureInputKey = `${slot.key}:capture`;
     const filesInputKey = `${slot.key}:files`;
-    const isDropTarget = dragSlotKey === slot.key;
+    const isDropTarget = !isMobile && dragSlotKey === slot.key;
     const isMissing = showMissing && pageCount === 0;
 
     // Dropped files take the same path as chosen ones, so the type, size and
@@ -672,16 +675,16 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
         key={slot.key}
         id={`slot-${slot.key}`}
         aria-busy={isPending}
-        onDragEnter={handleDragOver}
-        onDragOver={handleDragOver}
-        onDragLeave={(event) => {
+        onDragEnter={isMobile ? undefined : handleDragOver}
+        onDragOver={isMobile ? undefined : handleDragOver}
+        onDragLeave={isMobile ? undefined : (event) => {
           // Moving between the card's own children fires this too.
           if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
             return;
           }
           setDragSlotKey((current) => (current === slot.key ? null : current));
         }}
-        onDrop={(event) => {
+        onDrop={isMobile ? undefined : (event) => {
           if (!isFileDrag(event)) return;
           event.preventDefault();
           setDragSlotKey(null);
@@ -695,7 +698,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
             : pageCount > 0
               ? "border border-solid border-border-light"
               : cn(
-                  "border-2 border-dashed",
+                  "border border-solid md:border-2 md:border-dashed",
                   isMissing ? "border-destructive" : "border-[#b9c7de] dark:border-border-strong",
                 ),
         )}
@@ -981,7 +984,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
             {pageCount > 0 ? "Add files" : "Choose files"}
           </button>
           {/* Dragging needs a mouse or trackpad, so touch screens skip the hint. */}
-          <p className="hidden text-[15px] text-muted-foreground pointer-fine:sm:block">
+          <p className="hidden text-[15px] text-muted-foreground pointer-fine:md:block">
             or drag and drop files here
           </p>
         </div>
@@ -993,7 +996,13 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
     <WizardShell
       step={3}
       title="Upload your documents"
-      description="Take photos one at a time, or choose or drag in several JPG, PNG, or PDF files, up to 10&nbsp;MB each."
+      description={
+        <>
+          <span className="md:hidden">Take photos one at a time, or choose several JPG, PNG, or PDF files, up to 10&nbsp;MB each.</span>
+          <span className="hidden md:inline">Take photos one at a time, or choose or drag in several JPG, PNG, or PDF files, up to 10&nbsp;MB each.</span>
+        </>
+      }
+      hideSidebarOnMobile
       sidebar={
         summaryRows.length > 0 ? <RequestSummaryCard rows={summaryRows} /> : null
       }
@@ -1127,7 +1136,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
                 </AlertDialogDescription>
               )}
 
-              <div className="mt-6 flex justify-end gap-2.5">
+              <div className="mt-6 grid min-w-0 grid-cols-1 gap-2.5 sm:flex sm:flex-wrap sm:justify-end">
                 {/* Both stay focusable while busy (`aria-disabled`, not `disabled`),
                     so focus doesn't drop to the page mid-request. A press does
                     nothing: the dialog ignores a close until the request ends. */}
@@ -1135,7 +1144,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
                   ref={keepFile}
                   aria-disabled={removeBusy}
                   className={cn(
-                    "civic-press h-13 rounded-full border bg-card px-7 text-base font-semibold shadow-none",
+                    "civic-press h-auto min-h-13 min-w-0 max-w-full rounded-full border bg-card px-7 py-3 text-base leading-snug font-semibold whitespace-normal wrap-anywhere shadow-none",
                     removeBusy
                       ? "cursor-default border-border-light text-[#8a97a8] dark:text-muted-foreground opacity-100"
                       : "border-primary text-foreground hover:bg-primary-tint focus-visible:ring-4 focus-visible:ring-primary/20",
@@ -1148,7 +1157,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
                   onClick={() => void confirmRemoval()}
                   aria-disabled={removeBusy}
                   className={cn(
-                    "civic-press inline-flex h-13 items-center justify-center gap-2.5 rounded-full bg-destructive px-7 text-base font-semibold text-white dark:text-background",
+                    "civic-press inline-flex min-h-13 min-w-0 max-w-full items-center justify-center gap-2.5 rounded-full bg-destructive px-7 py-3 text-base leading-snug font-semibold whitespace-normal wrap-anywhere text-white dark:text-background",
                     removeBusy ? "cursor-default opacity-85" : "hover:bg-destructive/90",
                   )}
                 >

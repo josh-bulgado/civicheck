@@ -9,8 +9,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { CitizenDashboardSkeleton } from "./CitizenDashboardSkeleton";
 import type { ReactNode } from "react";
 import { CiviCheckIdentity, CityGovernmentIdentity } from "~/components/brand/civic-identity";
-import { Bell, ClipboardList, Compass, LayoutDashboard, Search } from "lucide-react";
-import { ThemeSwitch } from "~/components/theme-switch";
+import { Bell, ClipboardList, Compass, LayoutDashboard, Search, UserRound } from "lucide-react";
 
 /**
  * The applicant frame while parent loaders run: fixed navigation and branding,
@@ -35,7 +34,7 @@ export function CitizenPortalFrameSkeleton({ children }: { children?: ReactNode 
           <div className="flex items-center gap-2.5 px-2.5 pt-2 pb-10">
             <CiviCheckIdentity compact prominent />
           </div>
-          {/* Home, Services, My requests, Notifications */}
+          {/* Desktop retains the existing account menu instead of a Profile page. */}
           <div className="flex flex-col gap-2">
             {[{ label: "Dashboard", icon: LayoutDashboard }, { label: "Browse Services", icon: Compass }, { label: "My Requests", icon: ClipboardList }, { label: "Notifications", icon: Bell }].map(({ label, icon: Icon }) => (
               <div key={label} className="flex h-12 items-center gap-4 rounded-full px-5 text-sm text-foreground"><Icon className="size-5" aria-hidden="true" />{label}</div>
@@ -56,14 +55,13 @@ export function CitizenPortalFrameSkeleton({ children }: { children?: ReactNode 
             <Search className="ml-auto size-5" />
             <Bell className="size-5" />
           </div>
-          {/* Desktop's top bar: the search pill, then the bell, theme and seal. */}
+          {/* Desktop's top bar: the search pill, then the bell and seal. */}
           <div
             className="hidden items-center gap-3 md:flex"
           >
             <div className="flex h-12.5 w-full max-w-100 items-center gap-3 rounded-full bg-muted px-5 text-sm text-muted-foreground"><Search className="size-5" />Search services or tracking no.</div>
             <div className="flex-1" />
             <Bell className="size-5" />
-            <ThemeSwitch />
             <CityGovernmentIdentity compact />
           </div>
           <main className={CITIZEN_MAIN_CLASS}>
@@ -74,7 +72,7 @@ export function CitizenPortalFrameSkeleton({ children }: { children?: ReactNode 
 
       {/* A phone's navigation bar. */}
       <div aria-hidden="true" className="fixed inset-x-4 bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-40 flex h-17 items-center justify-around rounded-[34px] bg-card text-[10px] font-medium md:hidden">
-        {[{ label: "Dashboard", icon: LayoutDashboard }, { label: "Services", icon: Compass }, { label: "Requests", icon: ClipboardList }, { label: "Notifications", icon: Bell }].map(({ label, icon: Icon }) => (
+        {[{ label: "Home", icon: LayoutDashboard }, { label: "Services", icon: Compass }, { label: "Requests", icon: ClipboardList }, { label: "Profile", icon: UserRound }].map(({ label, icon: Icon }) => (
           <span key={label} className="flex flex-col items-center gap-1"><Icon className="size-5" />{label}</span>
         ))}
       </div>

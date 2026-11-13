@@ -48,7 +48,6 @@ export default function MyRequestDetailPage({
         <MyRequestHeader
           serviceName={request.serviceName}
           trackingNumber={request.trackingNumber}
-          status={request.status}
           note={request.status === "cancelled" ? "You cancelled this request. To continue, submit a new request. It will have a new tracking number." : request.status === "rejected" ? getRejectionNotice(request.logs) : null}
         />
       </div>
@@ -63,6 +62,19 @@ export default function MyRequestDetailPage({
             postingStartDate={request.postingStartDate} postingEndDate={request.postingEndDate} />
         </div>
 
+        <div className="flex min-w-0 flex-col gap-5 md:gap-6 @4xl:col-start-1 @4xl:row-start-2" style={staggerStyle(2, 60)}>
+          <MyRequestDocumentsCard
+            requestId={request.id}
+            documents={request.attachments}
+            addable={request.addableUploads}
+            closed={isClosedRequestStatus(request.status)}
+            onChanged={onUpdated}
+          />
+          {canCancelCtcRequest(request.status, request.serviceCode, request.formData) && (
+            <CancelRequestCard requestId={request.id} onCancelled={onUpdated} />
+          )}
+        </div>
+
         <div className="@container flex min-w-0 flex-col gap-5 md:gap-6 @4xl:col-start-2 @4xl:row-span-2 @4xl:row-start-1" style={staggerStyle(1, 60)}>
           <MyRequestSummary request={request} />
           <RequestStatusHistory logs={request.logs} />
@@ -74,19 +86,6 @@ export default function MyRequestDetailPage({
           {request.allowsMessages && (
             <RequestMessagesCard requestId={request.id} messages={request.messages}
               viewer="applicant" onSent={onUpdated} variant="portal" />
-          )}
-        </div>
-
-        <div className="flex min-w-0 flex-col gap-5 md:gap-6 @4xl:col-start-1 @4xl:row-start-2" style={staggerStyle(2, 60)}>
-          <MyRequestDocumentsCard
-            requestId={request.id}
-            documents={request.attachments}
-            addable={request.addableUploads}
-            closed={isClosedRequestStatus(request.status)}
-            onChanged={onUpdated}
-          />
-          {canCancelCtcRequest(request.status, request.serviceCode, request.formData) && (
-            <CancelRequestCard requestId={request.id} onCancelled={onUpdated} />
           )}
         </div>
       </div>

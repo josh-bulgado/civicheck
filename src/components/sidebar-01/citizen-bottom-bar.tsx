@@ -3,27 +3,27 @@
 import { QuietLink } from "~/components/quiet-link";
 import { usePermissions } from "~/hooks/usePermissions";
 import { cn } from "~/lib/utils";
-import { buildNavGroups } from "./nav-config";
+import { buildCitizenMobileNav } from "./nav-config";
 
 // The sidebar's own words are longer than a bar has room for.
 const SHORT_LABEL: Record<string, string> = {
   "applicant-dashboard": "Home",
   services: "Services",
   "my-requests": "Requests",
-  notifications: "Alerts",
+  profile: "Profile",
 };
 
 /**
- * The applicant's navigation on a phone: the sidebar's four destinations, in
- * the sidebar's order and with its icons, as a floating bar. The page you are
+ * The applicant's navigation on a phone: Home, Services, Requests and Profile.
+ * Notifications are reached from the top bell. The page you are
  * on is a blue pill that names itself; the others are round buttons.
  *
  * A fade from the page ground sits behind it so content scrolled underneath
  * never meets the bar's edge. The page leaves 130px under its content for it.
  */
-export function CitizenBottomBar({ unreadNotifications }: { unreadNotifications: number }) {
-  const { can, role } = usePermissions();
-  const items = buildNavGroups(role, can, unreadNotifications).flatMap((group) => group.items);
+export function CitizenBottomBar() {
+  const { can } = usePermissions();
+  const items = buildCitizenMobileNav(can);
 
   return (
     <div className="md:hidden">
@@ -33,7 +33,7 @@ export function CitizenBottomBar({ unreadNotifications }: { unreadNotifications:
       />
       <nav
         aria-label="Main"
-        className="fixed inset-x-4 bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-40 flex h-17 items-center justify-between rounded-[34px] bg-card/94 p-2 shadow-[0_10px_30px_rgba(15,27,45,0.16)]"
+        className="@container/citizen-nav fixed inset-x-4 bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-40 flex h-17 items-center justify-between rounded-[34px] bg-card/94 p-2 shadow-[0_10px_30px_rgba(15,27,45,0.16)]"
       >
         {items.map((item) => {
           const Icon = item.icon;
@@ -43,21 +43,14 @@ export function CitizenBottomBar({ unreadNotifications }: { unreadNotifications:
               to={item.url}
               aria-label={item.title}
               className={cn(
-                "group/tab civic-press relative flex h-13 w-13 items-center justify-center gap-2 rounded-full text-portal-ink-2 outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                "data-[status=active]:w-auto data-[status=active]:bg-primary-fill data-[status=active]:px-4.5 data-[status=active]:text-white",
+                "group/tab civic-press relative flex h-13 w-13 min-w-[44px] items-center justify-center gap-2 rounded-full text-portal-ink-2 outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                "data-[status=active]:bg-primary-fill data-[status=active]:text-white @min-[17rem]/citizen-nav:data-[status=active]:w-auto @min-[17rem]/citizen-nav:data-[status=active]:shrink-0 @min-[17rem]/citizen-nav:data-[status=active]:px-4.5",
               )}
             >
               <Icon className="size-5.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
-              <span className="hidden text-sm font-semibold group-data-[status=active]/tab:inline">
+              <span className="hidden text-sm font-semibold @min-[17rem]/citizen-nav:group-data-[status=active]/tab:inline">
                 {SHORT_LABEL[item.id] ?? item.title}
               </span>
-              {/* Gold is for what is unread: here, the Alerts tab. */}
-              {item.badge ? (
-                <span
-                  className="absolute top-3.25 right-3.5 size-2.5 rounded-full bg-brand-gold ring-2 ring-card"
-                  aria-hidden="true"
-                />
-              ) : null}
             </QuietLink>
           );
         })}

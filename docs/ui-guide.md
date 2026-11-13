@@ -5,6 +5,20 @@ sentence case, preserving acronyms such as PSA, NBI, and PNP. Shorter labels kee
 their existing formatting. Petition details uses the same 24px heading-to-field
 gap as Petition type.
 
+Date-of-birth questions across online service applications and walk-ins use
+Month, Day, Year dropdowns through `BirthDatePicker`, including record-dependent
+birth questions and proposed corrected birth dates. Month names are written out;
+days follow the chosen month and leap year. In narrow fields, Month sits above
+Day and Year to keep every value readable. Incomplete selections do not count
+as an answered date. Saved answers remain `YYYY-MM-DD` for existing validation,
+age calculations, drafts, and submission.
+Validate missing birth-date parts separately after each dropdown is closed or
+left empty. Opening Month must not flag untouched Day and Year controls. Form
+submission validates all missing parts; selecting a value clears that part's
+error while incomplete dates still block progress.
+Use the individual control highlights for missing birth-date parts without the
+generic "Enter a value." message. Keep specific date-validation messages.
+
 Online petition intake uses one primary-petition radio group. Its fields and
 checklist follow that primary choice. Put required petition fields before
 optional fields. The birth-date option reads Day or month of birth. Review shows
@@ -215,6 +229,7 @@ intake omits this account-role question.
 | --- | --- | --- |
 | Citizen home | [CitizenDashboard](../src/features/dashboard/pages/CitizenDashboard.tsx) | `portal-page`, `portal-title`, one current request and its next useful action, then attention items and secondary requests. |
 | Citizen request list | [MyRequestsPage](../src/features/requests/pages/MyRequestsPage.tsx) | Readable request rows, status pills, transaction references, and an actionable first-use empty state. |
+| Citizen profile | [ProfilePage](../src/features/account/pages/ProfilePage.tsx) | Account identity, Settings, persistent Light/Dark preference, Report a problem, and Log out. Reuse the existing settings dialog and sign-out route. |
 | Citizen request detail | [MyRequestDetailPage](../src/features/requests/pages/MyRequestDetailPage.tsx) | Status pill in the header; independent desktop columns keep documents below progress and guidance, with status history in its own tile directly below the compact details/acknowledgment card. On smaller screens, keep details and history together between progress and documents. Show rejected files first with re-upload highlighting, followed by missing uploads and the remaining files. Preserve file numbering across those sections, actual image thumbnails, short document titles, and supporting text for examples and copy requirements. |
 | Citizen feedback | [RequestFeedbackCard](../src/features/feedback/components/RequestFeedbackCard.tsx) | Released requests offer an optional survey in a dialog. Five stars use labelled radio choices, a required overall rating, and optional ease rating, topics, and comment. Submitted responses are read-only. |
 | Feedback and problem review | [AdminFeedbackPage](../src/features/feedback/components/AdminFeedbackPage.tsx) | Separate survey and problem-report tabs, service/date filters, server pagination, full filtered survey summaries, and a review dialog. Only admins can read other citizens' submissions. |
@@ -245,7 +260,34 @@ router preloading, modified clicks, file downloads, and native context menus.
 Keep composed primitives' supplied role and tab index; never bypass the shared
 component with a plain router `Link` or `<a>` in UI source.
 
-Problem reporting is available from the citizen sidebar, mobile account menu,
+Citizen mobile navigation shows Home, Services, Requests, then Profile. The top
+bell sits at the far right, opens the full Notifications page, and retains its
+unread dot. Profile is accessed through the bottom navigation without a duplicate
+header avatar. Profile is mobile-only: omit it from desktop navigation and search
+destinations, and send desktop visits to the dashboard, including after a resize.
+Desktop keeps Settings and Log out in the existing account menu, with the theme
+switch in Settings. On mobile, theme controls live in Profile, alongside
+the account name/email, the existing Settings dialog, Report a problem, and
+Log out. Both reuse the stored theme; staff controls are unchanged.
+Keep the citizen frame and page loading views aligned with these destinations.
+The Profile page and its loading view show the Profile heading above the account
+card, without an introductory subtitle.
+When enlarged text leaves too little room in the bottom bar, collapse the active
+label to its icon while preserving every accessible name and a 44px minimum tap
+target. Base this on the bar's available width so all four destinations fit.
+At enlarged text sizes, the Profile account identity and theme choices stack
+within the card. Let action labels wrap without clipping, including in loading.
+Settings suffix and password controls use the same 48px mobile height as the
+other fields, with 44px password reveal buttons. Keep footer actions in one grid
+row with equal heights and wrapping labels; they must remain reachable on short
+screens. Desktop settings controls retain their 44px height.
+Settings keeps unsaved edits in both tabs. Saving one tab returns to the other
+if it still has edits; close only after both are saved or explicitly discarded.
+Cancel uses the same discard confirmation as the close button and Escape.
+While a save is pending, disable its fields, tab switching, and dismissal. Show
+request failures inside Settings, preserve the entered values, and allow retry.
+
+Problem reporting is available from the citizen sidebar, Profile page,
 and application footer. These open the same dialog mounted in the authenticated
 layout, preserving the current page and the applicant's request context when
 available. Record only the page path, without search parameters or submitted form
@@ -320,6 +362,14 @@ design change.
 | Request status | [StatusPill](../src/features/requests/components/StatusPill.tsx) and [request-status.ts](../src/features/services/request-status.ts). Reuse `getStatusDetails`, audience-specific notes, and timeline helpers instead of inventing labels or colors. |
 | Other status badges | [Badge](../src/components/ui/badge.tsx): `info`, `progress`, `success`, `warning`, `neutral`, `destructive`; service classifications have their own variants. |
 | Notifications | Existing [Sonner wrapper](../src/components/ui/sonner.tsx) and `toast` from `sonner`. The root already mounts the toaster. Generic Base UI examples recommending a different toast system do not describe this project. |
+
+Realtime notification arrivals use the existing persistent
+`NewNotificationToasts` preview. On mobile, show only the latest card, with a
+two-line message, a single-line service label, and a 44px dismiss target. Keep
+the card above the bottom navigation and its safe area. Older arrivals stay
+queued: dismissing the latest reveals the previous one; the count link opens
+Notifications and clears the pop-ups without marking the other messages read.
+Desktop keeps the full stack and timestamps.
 | Empty/error states | [Empty](../src/components/ui/empty.tsx), [Alert](../src/components/ui/alert.tsx), and the feature's existing error handling. Distinguish no records yet from no filter matches. |
 | Loading | [PageSkeleton / TablePageSkeleton](../src/components/feedback/PageSkeleton.tsx), feature skeletons, [Skeleton](../src/components/ui/skeleton.tsx), and [Spinner](../src/components/ui/spinner.tsx). Match the loaded layout and preserve the router's pending timing. |
 | Unsaved changes | [DiscardChangesDialog](../src/components/feedback/DiscardChangesDialog.tsx) and the feature's existing navigation guard. |
@@ -354,6 +404,21 @@ separated by spaces or hyphens) submits one server check. Typed, partial, and
 longer codes keep the manual confirm action. Code entry and resend pause while
 checking; only server acceptance continues to the dashboard. Digit fill,
 checking, and rejection motion respects reduced-motion preferences.
+Sign-up keeps the horizontal checkbox CAPTCHA, with its logo beside the checkbox.
+Center it within the form at every screen size. On containers narrower than its
+304px width, scale the complete widget
+to fit and reserve its scaled height. Resizing preserves the same widget and its
+verification; retry, expiry, and submitted tokens keep their existing behavior.
+Keep signup checkbox labels at least 44px tall. Mobile sign-in helper notes and
+field errors stay in normal flow so wrapped text cannot overlap other controls.
+Shared auth fields remain at least 44px tall. Code entry focuses automatically
+only for a fine pointer, keeping the mobile keyboard closed until the user taps.
+Auth mobile layout and verification regressions run with
+`pnpm.cmd exec playwright test --config=tests/auth/playwright.config.ts`.
+The browser suite uses controlled CAPTCHA and account-service responses to check
+responsive sizes, loading and retry states, single-use tokens, and code entry.
+The floating development toolbar mounts only on development screens at least
+768px wide with a fine pointer, so it cannot obscure mobile controls.
 
 The citizen's full-details dialog uses `SubmittedDetailsCard` with
 `variant="dialog"`: sentence-case labels, compact grouped answers, and two
@@ -383,7 +448,9 @@ Keep authorization notes and the existing upload/review instructions visible.
 Omit standalone name-entry, account-requester, court-scope, death-date, fee-origin,
 petition-introduction, and deferred-date explanations. Marriage-license age
 notices show only blocking titles; registration-window notices keep their titles
-and switch actions without explanatory bodies. Validation, account-name locks,
+and switch actions without explanatory bodies. Center the registration-window
+notice's icon, title, and switch action together within its full-width panel.
+Validation, account-name locks,
 service routing, and requirement rules still apply.
 Do not show a posting-period warning beside the intended wedding date or impose
 a minimum lead-time cutoff. Keep posting guidance in the service instructions
@@ -419,6 +486,32 @@ each is enforced on the server and recorded separately in staff History.
 Online inquiries require identity verification but no physical handover.
 
 ## Interaction and responsive behavior
+
+On mobile, the application header shows Change service beside the CiviCheck
+identity, with the numbered progress rail below. Omit the redundant Step X of 4
+badge and the service card's extra mobile options menu. Desktop keeps Change
+service in the service card. Both actions share the same draft choices: keeping
+progress or confirming discard before switching services. The mobile loading
+header keeps Change service visible and disabled until the draft is ready.
+
+On the document-upload step, hide Details so far below the 768px mobile breakpoint,
+including its sidebar space. Mobile uses Take photo and Choose files with solid
+upload-card borders; omit drag-and-drop instructions and handlers. Desktop keeps
+the summary, instructions, dashed empty cards, and drag-and-drop behavior.
+The wizard's main card must shrink within its mobile grid column. Long file
+names truncate inside upload rows during and after upload; they must not widen
+the page or push preview, remove, and upload actions outside the phone viewport.
+After submission, keep the acknowledgment download, optional Verification Form,
+and View my requests actions stacked within the mobile tracking card. Labels
+wrap and buttons grow vertically while retaining at least a 52px touch target.
+Desktop keeps its existing wrapping action row and button dimensions.
+
+Application confirmations keep a single shrinkable content column, wrap long
+titles and action labels, and stack actions on phones. Shared Dialog and
+AlertDialog panels stay within the dynamic viewport height and scroll when
+content is taller, including at larger text sizes. Keep mobile gutters on
+centered panels; draft bottom sheets retain their full-width mobile layout.
+The registration-switch dialog applies this layout to every service using it.
 
 The [welcome tutorial](../src/features/onboarding/components/WelcomeTutorial.tsx)
 fits the mobile viewport without scrolling. Mobile slides use compact artwork,
@@ -465,6 +558,12 @@ then staggers its guidance, summary, documents, and history groups with
 `civic-stagger` and `staggerStyle`. Key the page content by request ID so opening
 a different request replays the entrance while updates to the same request
 preserve the current content and interactions.
+Keep the citizen request header focused on the service name and tracking number;
+omit the duplicate status badge from both the header and its loading view.
+Status history and the stage tracker continue to show request progress.
+In the single-column mobile request view, show What to do next, Documents,
+Submitted details, then Status history. Match that order in the loading view.
+Keep the existing two-column desktop placement of these sections.
 
 Status history keeps its original solid circles: 16px for the current entry,
 12px for earlier entries, with no icons. Animate only a halo in the circle's
@@ -481,6 +580,13 @@ removes the halo. Preserve the original spacing, labels, and timestamps.
 The request-page `StageTracker` uses `civic-live-step` for a gentle outward ripple
 around the current stage. Completed, future, rejected, and cancelled stages stay
 still. This halo also stops when reduced motion is enabled.
+On mobile, center all four stage labels beneath 32px nodes, with continuous,
+visible connectors and stronger completed segments. Keep complete labels at
+320px and allow wrapping when text is enlarged. Mobile request titles use 22px,
+tracking numbers 13px, and next-step instructions 14px with 22px line spacing.
+Documents and Status history headings use 18px on mobile to stay below the title.
+Use the tighter mobile progress-card padding and gaps in the loading view too.
+Keep desktop request typography and tracker spacing unchanged.
 
 - Make the current stage and next useful action clear to a citizen. Keep staff
   screens efficient for scanning and repeated work. Preserve existing role-aware
@@ -491,6 +597,14 @@ still. This halo also stops when reduced motion is enabled.
 - Keep the applicant dashboard's compact hero, single-column request rows, and
   two-column service strip through tablet widths. Its desktop sidebar reduces
   the page's usable width, so the wide dashboard composition starts at `xl`.
+  On phones with existing requests, the current request is the visual focus.
+  Show all four service shortcuts in a quiet two-column grid with small artwork,
+  a muted Start a new request heading, a compact View request action, and a
+  lightweight How it works action. Keep both actions at least 44px tall. Preserve
+  the larger illustrated service chooser for first-time applicants and the
+  existing desktop presentation. Match the loading view to these sizes.
+  The mobile greeting reads Welcome back without the person's name; keep the
+  personalized greeting from `md` upward.
 - The wizard keeps a consistent main-card width when adding a sidebar, stacks
   the sidebar below on smaller screens, and offsets it below the sticky service
   band. Preserve that behavior and the `.apply-wizard` scroll-padding rules.
@@ -585,6 +699,18 @@ These use controlled delayed reads to check that headings and navigation remain
 visible before data resolves, and check loading layouts at mobile and desktop
 widths in both themes.
 
+Birth-date entry regressions run without authentication:
+`pnpm.cmd exec playwright test --config=tests/birth-date/playwright.config.ts`.
+These exercise the shared service form, saved dates, partial entries, month
+lengths, leap years, keyboard selection, future-date limits, and both themes at
+mobile and desktop widths.
+
+Application-dialog regressions run without authentication:
+`pnpm.cmd exec playwright test --config=tests/mobile-dialogs/playwright.config.ts`.
+These cover registration switching across birth, marriage, and death services,
+draft and exit confirmations, shared alert dialogs, narrow and short mobile
+viewports, larger text, and focus return in both themes.
+
 Court-decree selection distinguishes adoption, foreign decree, and annulment/nullity.
 The application docket uses the full Charter group title as its main title,
 without a duplicate family subtitle, even after a court-decree type is selected.
@@ -634,8 +760,9 @@ Do not ask for purpose, sex, or uploads. The RTC
 Legazpi answer must be Yes or No. Physical acceptance records the staff member
 and starts Processing; payment and release keep their existing checks.
 
-The shared applicant What to do next card uses 15px regular instructions with
-28px line spacing and small numbered markers across all services. Keep the
+The shared applicant What to do next card uses 14px regular instructions with
+22px line spacing on mobile, and 15px with 28px line spacing on desktop, with
+small numbered markers across all services. Keep the
 section heading distinct without making the full instruction bold. Each sentence
 starts on its own line and wraps naturally on smaller screens.
 
@@ -643,6 +770,8 @@ Service forms use the same typography for online applications and staff walk-ins
 32px titles, 24px section headings, 20px group headings, 17px inputs and dropdown
 options (including phone numbers), 15px labels, choices, instructions,
 confirmations and buttons, and 14px helper text and validation errors.
+Phone-number input groups use the same 56px height and grid column widths as
+neighboring form controls; keep this height above the input group's size preset.
 Scope these rules with `data-service-form`; portalled dropdowns and location
 searches use `service-form-options`. Shared heading constants identify their
 role even when a group heading uses an h2 element.

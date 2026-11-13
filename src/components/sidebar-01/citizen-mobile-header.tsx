@@ -1,50 +1,29 @@
 "use client";
 
-import { useState } from "react";
 import { useLocation } from "@tanstack/react-router";
 import { QuietLink } from "~/components/quiet-link";
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
-import { Bug, LogOut, Search, Settings } from "lucide-react";
-import { openProblemReport } from "~/features/feedback/problem-report-events";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
+import { Search } from "lucide-react";
 import { openCommandPalette } from "~/components/sidebar-01/command-palette";
-import { SettingsDialog } from "~/features/account/components/SettingsDialog";
-import {
-  getDisplayName,
-  getInitials,
-  type AccountProfile,
-  type SettingsTab,
-} from "~/features/account/account.types";
-import { ThemeSwitch } from "~/components/theme-switch";
-import { NotificationsPopover } from "~/features/notifications/components/NotificationsPopover";
+import { NotificationBellLink } from "~/features/notifications/components/NotificationBellLink";
 import { loadPaletteDefaults } from "~/features/search/palette-defaults";
 
 interface CitizenMobileHeaderProps {
-  account: AccountProfile | null;
-  /** Keys the bell popover's cache, so one person's list never shows to another. */
+  /** Keys the search suggestions to the signed-in person. */
   userId: string;
   unreadNotifications: number;
 }
 
 /**
- * The phone's top row, in place of the desktop top bar: the mark, the bell and
- * the person's photo (or initials). The bell opens its feed as a sheet across the
- * screen; the photo opens Settings and Log out. Home also has a search button, since
+ * The phone's top row, in place of the desktop top bar: the mark and the bell.
+ * The bell opens Notifications; Profile lives in the bottom navigation.
+ * Home also has a search button, since
  * every other page already has its own field or none.
  */
 export function CitizenMobileHeader({
-  account,
   userId,
   unreadNotifications,
 }: CitizenMobileHeaderProps) {
   const { pathname } = useLocation();
-  const [settingsTab, setSettingsTab] = useState<SettingsTab | null>(null);
-  const name = account ? getDisplayName(account) : "CiviCheck User";
 
   return (
     <header className="flex w-full min-w-0 max-w-full items-center gap-2.5 md:hidden">
@@ -79,62 +58,7 @@ export function CitizenMobileHeader({
         </button>
       ) : null}
 
-      <NotificationsPopover userId={userId} unreadCount={unreadNotifications} />
-
-      <ThemeSwitch />
-
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          nativeButton
-          disabled={!account}
-          aria-label={`${name}, account menu`}
-          className="civic-press flex size-11 shrink-0 items-center justify-center rounded-full"
-        >
-          <Avatar className="size-11" aria-hidden="true">
-            {account?.avatarUrl ? (
-              <AvatarImage src={account.avatarUrl} alt="" />
-            ) : null}
-            <AvatarFallback className="bg-primary-soft text-sm font-bold text-primary">
-              {account ? getInitials(name) : ""}
-            </AvatarFallback>
-          </Avatar>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          side="bottom"
-          align="end"
-          sideOffset={8}
-          className="w-56 rounded-[20px] bg-popover p-2 shadow-portal-menu ring-0"
-        >
-          <DropdownMenuItem
-            onClick={() => setSettingsTab("profile")}
-            className="h-12 gap-3 rounded-[14px] px-3.5 text-[15px] font-medium focus:bg-portal-panel"
-          >
-            <Settings className="size-5 text-primary!" aria-hidden="true" />
-            Settings
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            variant="destructive"
-            render={<QuietLink to="/logout" />}
-            className="h-12 gap-3 rounded-[14px] px-3.5 text-[15px] font-medium"
-          >
-            <LogOut className="size-5" aria-hidden="true" />
-            Log out
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={openProblemReport} className="h-12 gap-3 rounded-[14px] px-3.5 text-[15px] font-medium">
-            <Bug className="size-5 text-primary" aria-hidden="true" />Report a problem
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      {account ? (
-        <SettingsDialog
-          open={settingsTab !== null}
-          onOpenChange={(open) => setSettingsTab(open ? "profile" : null)}
-          tab={settingsTab ?? "profile"}
-          onTabChange={setSettingsTab}
-          account={account}
-        />
-      ) : null}
+      <NotificationBellLink unreadCount={unreadNotifications} />
     </header>
   );
 }

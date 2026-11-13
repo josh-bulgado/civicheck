@@ -133,8 +133,19 @@ test("privacy notice stays readable in both themes and badge uses visibility", a
   await expect(page.locator(".grecaptcha-badge")).toHaveCSS("visibility", "hidden");
   await expect(page.locator(".grecaptcha-badge")).not.toHaveCSS("display", "none");
   await expect(notice).toHaveCSS("color", "rgb(100, 116, 139)");
-  await expect(notice.getByRole("link", { name: "Privacy Policy" })).toHaveAttribute("href", "https://policies.google.com/privacy");
-  await expect(notice.getByRole("link", { name: "Terms of Service" })).toHaveAttribute("href", "https://policies.google.com/terms");
+  // QuietAnchor keeps link activation while removing hover destinations after
+  // hydration. Check the destination by opening the link, as a user does.
+  for (const [label, url] of [
+    ["Privacy Policy", "https://policies.google.com/privacy"],
+    ["Terms of Service", "https://policies.google.com/terms"],
+  ]) {
+    await page.context().route(url, route => route.fulfill({ contentType: "text/html", body: `<h1>${label}</h1>` }));
+    const opened = page.waitForEvent("popup");
+    await notice.getByRole("link", { name: label, exact: true }).click();
+    const popup = await opened;
+    await expect(popup).toHaveURL(url);
+    await popup.close();
+  }
   await page.screenshot({ path: "artifacts/login-light.png", fullPage: true });
   await page.evaluate(() => document.documentElement.classList.add("dark"));
   await expect(notice).toHaveCSS("color", "rgb(168, 181, 199)");

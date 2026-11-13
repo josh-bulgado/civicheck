@@ -1,13 +1,12 @@
 import { useEffect, useMemo } from "react";
 import { QuietLink } from "~/components/quiet-link";
-import { cn } from "~/lib/utils";
-import { pillButton } from "~/components/portal/styles";
 import { useRealtimeRefresh } from "~/hooks/useRealtimeRefresh";
 import { useContinuableApplication } from "~/features/apply/hooks/useApplyDraft";
 import { useWelcomeTutorialAutoOpen } from "~/features/onboarding/components/WelcomeTutorial";
 import { StatusPill } from "~/features/requests/components/StatusPill";
 import { CitizenDashboardBodySkeleton } from "../CitizenDashboardSkeleton";
 import { AttentionPanel } from "../components/AttentionPanel";
+import { CitizenDashboardHeader } from "../components/CitizenDashboardHeader";
 import { ContinueApplicationCard } from "../components/ContinueApplicationCard";
 import { HeroRequestCard } from "../components/HeroRequestCard";
 import { QuickStartPanel } from "../components/QuickStartPanel";
@@ -60,17 +59,7 @@ const CitizenDashboard = ({
       className="portal-page min-w-0 max-w-full flex-1 gap-4.5 md:gap-5"
       aria-busy={!ready}
     >
-      <div className="flex items-center justify-between gap-4 md:gap-6">
-        <h1 className="portal-title min-w-0 max-xl:truncate">
-          Welcome back
-          {firstName ? `, ${firstName}` : ""}
-        </h1>
-        {hasRequests && (
-          <QuietLink to="/my-requests" className={cn(pillButton.light, "max-xl:hidden")}>
-            All requests
-          </QuietLink>
-        )}
-      </div>
+      <CitizenDashboardHeader firstName={firstName} />
 
       {!ready ? (
         // Held back a beat, so a reload that hydrates straight away never shows

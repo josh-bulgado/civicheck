@@ -79,7 +79,7 @@ export function RequestStatusHistory({ logs }: { logs: LogEntry[] }) {
     >
       <h2
         id="status-history-heading"
-        className="text-[22px] leading-[normal] font-semibold text-foreground"
+        className="text-[22px] leading-[normal] font-semibold text-foreground max-md:text-lg"
       >
         Status history
       </h2>

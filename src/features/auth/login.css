@@ -230,3 +230,16 @@
   .login-options [data-slot="field"] { gap: 8px; }
   .login-options [data-slot="field-label"], .login-options .login-link { font-size: 13px; }
 }
+
+/* Keep the session note in the flow when the options wrap on a phone. */
+@media (max-width: 639px) {
+  .login-options { align-items: flex-start; row-gap: 8px; }
+  .login-options > [data-slot="field"] { min-height: 44px; max-width: 100%; align-items: flex-start; }
+  .login-session-label { min-width: 0; }
+  .login-options [data-slot="field-label"],
+  .login-options > .login-link { display: flex; min-height: 44px; align-items: center; }
+  .login-options [data-slot="checkbox"] { margin-top: 12px; }
+  .login-session-note { position: static; max-width: 28ch; margin-top: 4px; white-space: normal; }
+  .login-field-error { position: static; margin: 6px 20px 0; }
+  .login-field { padding-bottom: 20px; }
+}

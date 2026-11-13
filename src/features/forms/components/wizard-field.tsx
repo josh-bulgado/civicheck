@@ -33,7 +33,7 @@ export const WIZARD_TEXTAREA_CLASS = `rounded-[14px] border-border bg-card px-4.
 
 /** Mobile number: the same face as single-line controls, with a 17px prefix and input. */
 export const WIZARD_GROUP_CLASS =
-  "h-14 rounded-[14px] border-border bg-card shadow-none *:data-[slot=input-group-control]:text-[17px] md:*:data-[slot=input-group-control]:text-[17px] [&_[data-slot=input-group-addon]>span]:text-[17px]";
+  "h-14! rounded-[14px] border-border bg-card shadow-none *:data-[slot=input-group-control]:text-[17px] md:*:data-[slot=input-group-control]:text-[17px] [&_[data-slot=input-group-addon]>span]:text-[17px]";
 
 /** Error line under a field: icon plus message, 14px semibold in the error ink. */
 export function WizardFieldError({

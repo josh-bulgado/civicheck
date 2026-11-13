@@ -59,6 +59,9 @@ interface ReviewStepProps {
   requirements: ServiceDetail["requirements"];
 }
 
+const SUBMITTED_ACTION_CLASS =
+  "h-13 rounded-full px-6 text-base font-semibold max-md:h-auto max-md:min-h-13 max-md:w-full max-md:min-w-0 max-md:whitespace-normal max-md:px-4 max-md:py-3";
+
 export function ReviewStep({
   serviceCode,
   services,
@@ -252,12 +255,12 @@ export function ReviewStep({
         title="Request submitted"
         description="CCRO staff will pre-check your documents. You'll be notified in-system and by email as your request moves forward."
       >
-        <div className="flex flex-col items-start gap-5 rounded-[20px] border border-success/25 bg-success-soft-2 p-6">
-          <div className="flex items-center gap-3">
-            <CheckCircle2 className="size-8 text-success" />
-            <div>
+        <div className="flex flex-col items-start gap-5 rounded-[20px] border border-success/25 bg-success-soft-2 p-6 max-md:min-w-0">
+          <div className="flex items-center gap-3 max-md:w-full max-md:min-w-0">
+            <CheckCircle2 className="size-8 text-success max-md:shrink-0" />
+            <div className="max-md:min-w-0">
               <p className="text-sm text-muted-foreground">Your tracking number</p>
-              <p className="text-2xl font-bold text-foreground">{result.trackingNumber}</p>
+              <p className="text-2xl font-bold text-foreground max-md:wrap-break-word">{result.trackingNumber}</p>
             </div>
           </div>
           {result.registrationNotice && (
@@ -270,11 +273,11 @@ export function ReviewStep({
           {result.documentWarning && (
             <p className="text-sm text-warning-strong">{result.documentWarning}</p>
           )}
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-3 max-md:w-full max-md:min-w-0 max-md:flex-col max-md:items-stretch">
             <Button
               size="lg"
               variant="outline"
-              className="h-13 rounded-full px-6 text-base font-semibold"
+              className={SUBMITTED_ACTION_CLASS}
               disabled={downloadingPdf}
               onClick={() => downloadAcknowledgmentPdf(result.pdfData)}
             >
@@ -285,7 +288,7 @@ export function ReviewStep({
               <Button
                 size="lg"
                 variant="outline"
-                className="h-13 rounded-full px-6 text-base font-semibold"
+                className={SUBMITTED_ACTION_CLASS}
                 disabled={downloadingVerificationForm}
                 onClick={() => downloadVerificationForm(result.verificationData!)}
               >
@@ -297,7 +300,7 @@ export function ReviewStep({
               to="/my-requests"
               className={buttonVariants({
                 size: "lg",
-                className: "h-13 rounded-full px-6 text-base font-semibold",
+                className: SUBMITTED_ACTION_CLASS,
               })}
             >
               View my requests

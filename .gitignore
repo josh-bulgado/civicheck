@@ -79,3 +79,5 @@ temp/
 *.tsbuildinfo
 .eslintcache
 # /docs/
+tests/birth-date/playwright.config.ts
+tests/auth/playwright.config.ts

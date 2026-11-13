@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { ThemeSwitch } from "~/components/theme-switch";
 import { useIsMobile } from "~/hooks/use-mobile";
 import {
   getDisplayName,
@@ -68,25 +69,42 @@ export function SettingsDialog({
   // Each tab reports whether it holds edits that haven't been saved.
   const [profileDirty, setProfileDirty] = React.useState(false);
   const [securityDirty, setSecurityDirty] = React.useState(false);
+  const [profilePending, setProfilePending] = React.useState(false);
+  const [securityPending, setSecurityPending] = React.useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = React.useState(false);
   const dirty = profileDirty || securityDirty;
+  const pending = profilePending || securityPending;
 
   // The tabs unmount with the dialog and can't say they're clean any more.
   React.useEffect(() => {
     if (open) return;
     setProfileDirty(false);
     setSecurityDirty(false);
+    setProfilePending(false);
+    setSecurityPending(false);
     setConfirmingDiscard(false);
   }, [open]);
 
-  // Saving and Cancel close directly; the X, Esc and a click outside ask first.
+  // Only an explicit discard or a save with no other edits closes directly.
   const close = () => onOpenChange(false);
   const requestOpenChange = (next: boolean) => {
+    if (!next && pending) return;
     if (!next && dirty) {
       setConfirmingDiscard(true);
       return;
     }
     onOpenChange(next);
+  };
+
+  const finishProfile = () => {
+    setProfileDirty(false);
+    if (securityDirty) onTabChange("security");
+    else close();
+  };
+  const finishSecurity = () => {
+    setSecurityDirty(false);
+    if (profileDirty) onTabChange("profile");
+    else close();
   };
 
   const name = getDisplayName(account);
@@ -111,7 +129,7 @@ export function SettingsDialog({
 
         <Tabs
           value={tab}
-          onValueChange={(value) => onTabChange(value as SettingsTab)}
+          onValueChange={(value) => { if (!pending) onTabChange(value as SettingsTab); }}
           orientation={isMobile ? "horizontal" : "vertical"}
           className="min-h-0 flex-1 gap-0"
         >
@@ -145,13 +163,19 @@ export function SettingsDialog({
                 aria-label="Settings sections"
               >
                 {sections.map(({ value, label, icon: Icon }) => (
-                  <TabsTrigger key={value} value={value}>
+                  <TabsTrigger key={value} value={value} disabled={pending}>
                     <Icon className="size-4.5 max-md:hidden" aria-hidden="true" />
                     {label}
                   </TabsTrigger>
                 ))}
               </TabsList>
             </div>
+            {account.role === "applicant" ? (
+              <div className="mt-auto hidden items-center justify-between gap-3 px-2 md:flex">
+                <span className="text-sm font-medium text-foreground">Dark mode</span>
+                <ThemeSwitch />
+              </div>
+            ) : null}
           </div>
 
           <div className="flex min-h-0 min-w-0 flex-1 flex-col pt-4 md:pt-7">
@@ -173,8 +197,10 @@ export function SettingsDialog({
             >
               <SettingsProfilePanel
                 account={account}
-                onClose={close}
+                onClose={() => requestOpenChange(false)}
+                onSaved={finishProfile}
                 onDirtyChange={setProfileDirty}
+                onPendingChange={setProfilePending}
               />
             </TabsContent>
 
@@ -185,14 +211,17 @@ export function SettingsDialog({
             >
               <SettingsSecurityPanel
                 account={account}
-                onClose={close}
+                onClose={() => requestOpenChange(false)}
+                onSaved={finishSecurity}
                 onDirtyChange={setSecurityDirty}
+                onPendingChange={setSecurityPending}
               />
             </TabsContent>
           </div>
         </Tabs>
 
         <DialogClose
+          disabled={pending}
           render={
             <button
               type="button"

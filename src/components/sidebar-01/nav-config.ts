@@ -15,6 +15,7 @@ import {
   Shield,
   ShieldAlert,
   UsersRound,
+  UserRound,
 } from "lucide-react";
 import type { Permission, Role } from "~/lib/permissions";
 import type { NavGroup, NavItem } from "./types";
@@ -96,6 +97,12 @@ const NAV_ENTRIES = {
     url: "/my-requests",
     icon: ClipboardList,
     anyOf: ["requests:view_own"],
+  },
+  profile: {
+    title: "Profile",
+    url: "/profile",
+    icon: UserRound,
+    anyOf: ["dashboard:applicant"],
   },
 
   // ── Payments ──────────────────────────────────────────────────────────────
@@ -284,4 +291,16 @@ export function buildNavGroups(
       }),
     }))
     .filter((group) => group.items.length > 0);
+}
+
+/** Profile replaces Notifications only in the citizen's mobile bottom bar. */
+export function buildCitizenMobileNav(can: (permission: Permission) => boolean): NavItem[] {
+  const items = buildNavGroups("applicant", can)
+    .flatMap((group) => group.items)
+    .filter((item) => item.id !== "notifications");
+  const profile = NAV_ENTRIES.profile;
+  if (profile.anyOf.some((permission) => can(permission))) {
+    items.push({ id: "profile", ...navLink("profile", "applicant"), icon: profile.icon });
+  }
+  return items;
 }

@@ -31,6 +31,7 @@ import { Route as AuthedDashboardCashierRouteImport } from './routes/_authed/_da
 import { Route as AuthedDashboardDashboardRouteImport } from './routes/_authed/_dashboard/dashboard'
 import { Route as AuthedDashboardNotificationsRouteImport } from './routes/_authed/_dashboard/notifications'
 import { Route as AuthedDashboardPaymentHistoryRouteImport } from './routes/_authed/_dashboard/payment-history'
+import { Route as AuthedDashboardProfileRouteImport } from './routes/_authed/_dashboard/profile'
 import { Route as AuthedDashboardStaffDashboardRouteImport } from './routes/_authed/_dashboard/staff-dashboard'
 import { Route as AuthedApplyServiceCodeRouteRouteImport } from './routes/_authed/apply/$serviceCode/route'
 import { Route as AuthedDashboardserviceServicesRouteImport } from './routes/_authed/_dashboard/(service)/services'
@@ -168,6 +169,11 @@ const AuthedDashboardPaymentHistoryRoute =
     path: '/payment-history',
     getParentRoute: () => AuthedDashboardRouteRoute,
   } as any)
+const AuthedDashboardProfileRoute = AuthedDashboardProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthedDashboardRouteRoute,
+} as any)
 const AuthedDashboardStaffDashboardRoute =
   AuthedDashboardStaffDashboardRouteImport.update({
     id: '/staff-dashboard',
@@ -341,6 +347,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthedDashboardDashboardRoute
   '/notifications': typeof AuthedDashboardNotificationsRoute
   '/payment-history': typeof AuthedDashboardPaymentHistoryRoute
+  '/profile': typeof AuthedDashboardProfileRoute
   '/staff-dashboard': typeof AuthedDashboardStaffDashboardRoute
   '/services': typeof AuthedDashboardserviceServicesRoute
   '/admin/feedback': typeof AuthedDashboardAdminFeedbackRoute
@@ -387,6 +394,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthedDashboardDashboardRoute
   '/notifications': typeof AuthedDashboardNotificationsRoute
   '/payment-history': typeof AuthedDashboardPaymentHistoryRoute
+  '/profile': typeof AuthedDashboardProfileRoute
   '/staff-dashboard': typeof AuthedDashboardStaffDashboardRoute
   '/services': typeof AuthedDashboardserviceServicesRoute
   '/admin/feedback': typeof AuthedDashboardAdminFeedbackRoute
@@ -437,6 +445,7 @@ export interface FileRoutesById {
   '/_authed/_dashboard/dashboard': typeof AuthedDashboardDashboardRoute
   '/_authed/_dashboard/notifications': typeof AuthedDashboardNotificationsRoute
   '/_authed/_dashboard/payment-history': typeof AuthedDashboardPaymentHistoryRoute
+  '/_authed/_dashboard/profile': typeof AuthedDashboardProfileRoute
   '/_authed/_dashboard/staff-dashboard': typeof AuthedDashboardStaffDashboardRoute
   '/_authed/_dashboard/(service)/services': typeof AuthedDashboardserviceServicesRoute
   '/_authed/_dashboard/admin/feedback': typeof AuthedDashboardAdminFeedbackRoute
@@ -486,6 +495,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/notifications'
     | '/payment-history'
+    | '/profile'
     | '/staff-dashboard'
     | '/services'
     | '/admin/feedback'
@@ -532,6 +542,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/notifications'
     | '/payment-history'
+    | '/profile'
     | '/staff-dashboard'
     | '/services'
     | '/admin/feedback'
@@ -581,6 +592,7 @@ export interface FileRouteTypes {
     | '/_authed/_dashboard/dashboard'
     | '/_authed/_dashboard/notifications'
     | '/_authed/_dashboard/payment-history'
+    | '/_authed/_dashboard/profile'
     | '/_authed/_dashboard/staff-dashboard'
     | '/_authed/_dashboard/(service)/services'
     | '/_authed/_dashboard/admin/feedback'
@@ -782,6 +794,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedDashboardPaymentHistoryRouteImport
       parentRoute: typeof AuthedDashboardRouteRoute
     }
+    '/_authed/_dashboard/profile': {
+      id: '/_authed/_dashboard/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthedDashboardProfileRouteImport
+      parentRoute: typeof AuthedDashboardRouteRoute
+    }
     '/_authed/_dashboard/staff-dashboard': {
       id: '/_authed/_dashboard/staff-dashboard'
       path: '/staff-dashboard'
@@ -965,6 +984,7 @@ interface AuthedDashboardRouteRouteChildren {
   AuthedDashboardDashboardRoute: typeof AuthedDashboardDashboardRoute
   AuthedDashboardNotificationsRoute: typeof AuthedDashboardNotificationsRoute
   AuthedDashboardPaymentHistoryRoute: typeof AuthedDashboardPaymentHistoryRoute
+  AuthedDashboardProfileRoute: typeof AuthedDashboardProfileRoute
   AuthedDashboardStaffDashboardRoute: typeof AuthedDashboardStaffDashboardRoute
   AuthedDashboardserviceServicesRoute: typeof AuthedDashboardserviceServicesRoute
   AuthedDashboardAdminFeedbackRoute: typeof AuthedDashboardAdminFeedbackRoute
@@ -991,6 +1011,7 @@ const AuthedDashboardRouteRouteChildren: AuthedDashboardRouteRouteChildren = {
   AuthedDashboardDashboardRoute: AuthedDashboardDashboardRoute,
   AuthedDashboardNotificationsRoute: AuthedDashboardNotificationsRoute,
   AuthedDashboardPaymentHistoryRoute: AuthedDashboardPaymentHistoryRoute,
+  AuthedDashboardProfileRoute: AuthedDashboardProfileRoute,
   AuthedDashboardStaffDashboardRoute: AuthedDashboardStaffDashboardRoute,
   AuthedDashboardserviceServicesRoute: AuthedDashboardserviceServicesRoute,
   AuthedDashboardAdminFeedbackRoute: AuthedDashboardAdminFeedbackRoute,

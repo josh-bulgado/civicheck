@@ -1,14 +1,4 @@
-import { useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import { MoreHorizontal } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "~/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
-import { KeepDraftDialog } from "~/features/apply/components/KeepDraftDialog";
 import {
   parseFeeComponents,
   splitFeeComponents,
@@ -31,12 +21,8 @@ interface ApplicationDocketProps {
   copies?: number;
   feePerCopy?: boolean;
   selectionPending: boolean;
-  /**
-   * The applicant has entered something worth keeping. Only then does leaving
-   * ask what to do with the draft; with nothing in it there is nothing to ask.
-   */
-  hasProgress: boolean;
-  onDiscard: () => void;
+  /** Shared with the mobile header; disabled while the draft is loading. */
+  onChangeService?: () => void;
 }
 
 /**
@@ -52,18 +38,8 @@ export function ApplicationDocket({
   copies = 1,
   feePerCopy = false,
   selectionPending,
-  hasProgress,
-  onDiscard,
+  onChangeService,
 }: ApplicationDocketProps) {
-  const navigate = useNavigate();
-  const [changing, setChanging] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  function changeService() {
-    if (hasProgress) setChanging(true);
-    else void navigate({ to: "/services" });
-  }
-
   const showCopies = feePerCopy && fee !== undefined && copies > 1;
   // A per-copy service already shows "₱X × n copies"; it carries no breakdown.
   const { included, alsoPayable } = splitFeeComponents(
@@ -147,52 +123,13 @@ export function ApplicationDocket({
 
         <button
           type="button"
-          onClick={changeService}
-          className="civic-press hidden h-10 shrink-0 items-center rounded-full border border-border bg-card px-4.5 text-[15px] font-semibold whitespace-nowrap text-body-2 transition-colors duration-150 hover:border-primary hover:text-primary md:inline-flex"
+          onClick={onChangeService}
+          disabled={!onChangeService}
+          className="civic-press hidden h-10 shrink-0 items-center rounded-full border border-border bg-card px-4.5 text-[15px] font-semibold whitespace-nowrap text-body-2 transition-colors duration-150 hover:border-primary hover:text-primary disabled:opacity-50 md:inline-flex"
         >
           Change service
         </button>
-        <button
-          type="button"
-          aria-label="More about this application"
-          onClick={() => setMenuOpen(true)}
-          className="civic-press flex size-11 shrink-0 items-center justify-center rounded-full bg-portal-panel text-body-2 hover:bg-border-light md:hidden"
-        >
-          <MoreHorizontal className="size-5" aria-hidden="true" />
-        </button>
       </div>
-
-      {/* A phone's "…" opens a sheet that holds only the one safe action. */}
-      <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
-        <DialogContent
-          showCloseButton={false}
-          overlayClassName="bg-[rgba(15,27,45,0.28)] backdrop-blur-sm"
-          className="apply-wizard top-auto bottom-0 left-0 w-full max-w-none translate-x-0 translate-y-0 gap-0 rounded-[28px] rounded-b-none bg-card p-4 pb-6 shadow-portal-dialog ring-0 sm:max-w-none"
-        >
-          <DialogTitle className="sr-only">Application options</DialogTitle>
-          <DialogDescription className="sr-only">
-            Change the service you are applying for.
-          </DialogDescription>
-          <button
-            type="button"
-            onClick={() => {
-              setMenuOpen(false);
-              changeService();
-            }}
-            className="civic-press h-13.5 w-full rounded-full border border-border bg-card text-base font-semibold text-foreground hover:bg-primary-tint"
-          >
-            Change service
-          </button>
-        </DialogContent>
-      </Dialog>
-
-      <KeepDraftDialog
-        open={changing}
-        onOpenChange={setChanging}
-        serviceName={serviceName}
-        destination="/services"
-        onDiscard={onDiscard}
-      />
     </section>
   );
 }

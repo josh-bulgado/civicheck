@@ -21,6 +21,7 @@ import {
   SETTINGS_GROUP_CLASS,
   SettingsFormFooter,
   SettingsRow,
+  SettingsSubmitError,
 } from "./settings-form";
 import { SettingsPanelBody } from "./SettingsPanelBody";
 
@@ -116,12 +117,16 @@ function PasswordRules({ password }: { password: string }) {
 export function SettingsSecurityPanel({
   account,
   onClose,
+  onSaved,
   onDirtyChange,
+  onPendingChange,
 }: {
   account: AccountProfile;
   onClose: () => void;
+  onSaved: () => void;
   /** Lets the dialog warn before unsaved edits are thrown away. */
   onDirtyChange: (dirty: boolean) => void;
+  onPendingChange: (pending: boolean) => void;
 }) {
   const changePasswordMutation = useChangePassword();
   // Each field's eye reveals only that field.
@@ -140,14 +145,25 @@ export function SettingsSecurityPanel({
   });
 
   const isDirty = form.formState.isDirty;
+  const pending = form.formState.isSubmitting || changePasswordMutation.status === "pending";
   React.useEffect(() => {
     onDirtyChange(isDirty);
   }, [isDirty, onDirtyChange]);
+  React.useEffect(() => {
+    onPendingChange(pending);
+  }, [pending, onPendingChange]);
+
+  const saveError = changePasswordMutation.status === "error"
+    ? "Unable to update your password. Check your connection and try again."
+    : changePasswordMutation.status === "success" && changePasswordMutation.data?.error
+      ? changePasswordMutation.data.message
+      : null;
 
   const newPassword = form.watch("newPassword");
   const lastSignIn = formatSignIn(account.lastLoginAt);
 
   async function onSubmit(data: FormValues) {
+    if (pending) return;
     const result = await changePasswordMutation.mutate({
       data: {
         currentPassword: data.currentPassword,
@@ -157,7 +173,7 @@ export function SettingsSecurityPanel({
 
     if (result && !result.error) {
       form.reset(emptyValues);
-      onClose();
+      onSaved();
     }
   }
 
@@ -166,7 +182,7 @@ export function SettingsSecurityPanel({
       onSubmit={form.handleSubmit(onSubmit)}
       className="flex min-h-0 flex-1 flex-col"
     >
-      <SettingsPanelBody>
+      <SettingsPanelBody disabled={pending} label="Password">
         <div className="flex flex-col gap-5 pt-4 pb-3 md:max-w-md">
           <div>
             <p className="text-[17px] leading-6 font-bold text-foreground">
@@ -209,7 +225,7 @@ export function SettingsSecurityPanel({
                           : undefined
                       }
                     />
-                    <InputGroupAddon align="inline-end">
+                    <InputGroupAddon align="inline-end" className="py-0">
                       <InputGroupButton
                         size="icon-sm"
                         onClick={() =>
@@ -222,7 +238,7 @@ export function SettingsSecurityPanel({
                           revealed[passwordField.name] ? "Hide" : "Show"
                         } ${passwordField.label.toLowerCase()}`}
                         aria-pressed={revealed[passwordField.name]}
-                        className="text-body-2 max-md:size-10"
+                        className="text-body-2 max-md:size-11"
                       >
                         {revealed[passwordField.name] ? (
                           <EyeClosed size={16} aria-hidden="true" />
@@ -253,10 +269,11 @@ export function SettingsSecurityPanel({
         </div>
       </SettingsPanelBody>
 
+      <SettingsSubmitError message={saveError} />
       <SettingsFormFooter
         onCancel={onClose}
         canSave={isDirty}
-        pending={changePasswordMutation.status === "pending"}
+        pending={pending}
         submitLabel="Update password"
         pendingLabel="Updating…"
       />

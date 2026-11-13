@@ -5,8 +5,9 @@ import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 import { clearCurrentUser } from "~/features/auth/current-user";
 import { markWelcomeTutorialSeenFn } from "../onboarding.mutations";
+import { openWelcomeTutorial, WELCOME_TUTORIAL_OPEN_EVENT } from "../welcome-tutorial.events";
 
-const OPEN_EVENT = "civicheck:open-tutorial";
+export { openWelcomeTutorial } from "../welcome-tutorial.events";
 
 // Lets the dashboard finish drawing first, so the tutorial reads as arriving
 // on top of it rather than flashing in mid-load.
@@ -15,11 +16,6 @@ const AUTO_OPEN_DELAY_MS = 450;
 // Guards against a second automatic open in the same page load: the cached
 // profile can still say "not seen" until the save below lands.
 let autoOpened = false;
-
-/** Call from anywhere (e.g. a "How it works" button) to open the tutorial. */
-export function openWelcomeTutorial() {
-  window.dispatchEvent(new Event(OPEN_EVENT));
-}
 
 /**
  * Opens the tutorial automatically one time only: the first time an applicant
@@ -88,8 +84,8 @@ export function WelcomeTutorial() {
       setIndex(0);
       setOpen(true);
     };
-    window.addEventListener(OPEN_EVENT, show);
-    return () => window.removeEventListener(OPEN_EVENT, show);
+    window.addEventListener(WELCOME_TUTORIAL_OPEN_EVENT, show);
+    return () => window.removeEventListener(WELCOME_TUTORIAL_OPEN_EVENT, show);
   }, []);
 
   const close = useCallback(() => {
@@ -205,7 +201,7 @@ export function WelcomeTutorial() {
               {isFirst ? "Skip" : "Back"}
             </Button>
             <Button type="button" size="touch" onClick={next} className="font-bold sm:h-13 sm:px-5.5 sm:text-[17px] [@media(max-height:540px)]:h-11 [@media(max-height:540px)]:text-sm">
-              {isFirst ? "Show me" : isLast ? "Find my document" : "Next"}
+              {isFirst ? "Next" : isLast ? "Find my document" : "Next"}
             </Button>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { CircleAlert } from "lucide-react";
 import type * as React from "react";
 import { Button } from "~/components/ui/button";
+import { Alert, AlertDescription } from "~/components/ui/alert";
 import { DialogFooter } from "~/components/ui/dialog";
 import { Field, FieldLabel } from "~/components/ui/field";
 import { RequiredMark } from "~/components/ui/required-mark";
@@ -29,7 +30,7 @@ export const SETTINGS_CONTROL_CLASS =
 
 /** A control made of an input and a trailing button (the password fields). */
 export const SETTINGS_GROUP_CLASS =
-  "h-12 rounded-xl border-(--settings-line) bg-card shadow-none md:h-11 *:data-[slot=input-group-control]:h-full *:data-[slot=input-group-control]:px-3.5 *:data-[slot=input-group-control]:text-base md:*:data-[slot=input-group-control]:text-[15px]";
+  "rounded-xl border-(--settings-line) bg-card shadow-none data-[field-size=lg]:h-12 md:data-[field-size=lg]:h-11 *:data-[slot=input-group-control]:h-full *:data-[slot=input-group-control]:px-3.5 *:data-[slot=input-group-control]:text-base md:*:data-[slot=input-group-control]:text-[15px]";
 
 /** The date picker's trigger, to match the other controls. */
 export const SETTINGS_PICKER_CLASS =
@@ -89,6 +90,15 @@ export function SettingsRow({
  * changed, and keeps its colour while saving so the spinner does not read as a
  * disabled button.
  */
+export function SettingsSubmitError({ message }: { message: string | null }) {
+  if (!message) return null;
+  return (
+    <Alert variant="destructive" className="mx-5 mb-3 w-auto shrink-0 md:mx-8">
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
+  );
+}
+
 export function SettingsFormFooter({
   onCancel,
   canSave,
@@ -103,7 +113,7 @@ export function SettingsFormFooter({
   pendingLabel?: string;
 }) {
   return (
-    <DialogFooter className="shrink-0 flex-row items-center gap-2 border-t border-border-lighter px-5 pt-4 pb-5 md:gap-3 md:px-8">
+    <DialogFooter className="grid shrink-0 grid-cols-[auto_minmax(0,1fr)] gap-2 border-t border-border-lighter px-5 pt-4 pb-5 *:min-h-12 md:flex md:items-center md:gap-3 md:px-8 md:*:min-h-11">
       <p
         role="status"
         className="hidden flex-1 items-center gap-2 text-sm text-body-2 md:flex"
@@ -122,9 +132,10 @@ export function SettingsFormFooter({
         type="button"
         variant="outline"
         onClick={onCancel}
+        disabled={pending}
         className={cn(
           pillButton.outline,
-          "h-12 flex-1 px-5 text-base md:h-11 md:flex-none md:text-[15px]",
+          "h-12 px-3 text-base md:h-11 md:flex-none md:px-5 md:text-[15px]",
         )}
       >
         Cancel
@@ -134,7 +145,7 @@ export function SettingsFormFooter({
         disabled={!canSave || pending}
         className={cn(
           pillButton.primary,
-          "h-12 flex-2 px-6 text-base disabled:opacity-100 md:h-11 md:flex-none md:text-[15px]",
+          "h-12 px-3 text-base disabled:opacity-100 md:h-11 md:flex-none md:px-6 md:text-[15px]",
           pending
             ? "disabled:bg-primary-fill disabled:text-primary-foreground"
             : "disabled:bg-(--settings-disabled-bg) disabled:text-(--settings-disabled-ink)",

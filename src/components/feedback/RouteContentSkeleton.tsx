@@ -1,5 +1,6 @@
 import { useRouterState } from "@tanstack/react-router";
 import { peekCurrentUser } from "~/features/auth/current-user";
+import { ProfilePageSkeleton } from "~/features/account/pages/ProfilePageSkeleton";
 import { CitizenDashboardSkeleton } from "~/features/dashboard/CitizenDashboardSkeleton";
 import { StaffDashboardSkeleton } from "~/features/dashboard/StaffDashboardSkeleton";
 import { AdminOverviewSkeleton } from "~/features/admin/overview/components/AdminOverviewSkeleton";
@@ -16,6 +17,7 @@ import { CatalogPageSkeleton, EditorPageSkeleton, PageSkeleton, TablePageSkeleto
 export function RouteContentSkeleton() {
   const pathname = useRouterState({ select: (state) => state.location.pathname.replace(/\/$/, "") || "/" });
   if (pathname === "/my-requests") return <MyRequestsPageSkeleton />;
+  if (pathname === "/profile") return <ProfilePageSkeleton />;
   if (pathname.startsWith("/my-requests/")) return <MyRequestDetailPageSkeleton />;
   if (pathname === "/notifications") return <NotificationsPageSkeleton audience={peekCurrentUser()?.role === "applicant" ? "applicant" : "staff"} />;
   if (pathname === "/dashboard" && peekCurrentUser()?.role === "applicant") return <CitizenDashboardSkeleton />;

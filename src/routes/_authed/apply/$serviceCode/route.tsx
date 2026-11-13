@@ -4,6 +4,7 @@ import {
   Outlet,
   redirect,
   useMatches,
+  useNavigate,
 } from "@tanstack/react-router";
 import { hasPermission } from "~/lib/permissions";
 import { getServiceDetail } from "~/features/services/services.queries";
@@ -56,10 +57,15 @@ const STEP_PATHS = ["case", "details", "documents", "review"] as const;
 function ApplyLayout() {
   const { routeCode, displayName, isGroup, services } = Route.useLoaderData();
   const { draft, update, discard, hydrated } = useApplyDraft(routeCode);
-  // The CiviCheck mark in the rail leads to the dashboard; with something to
-  // lose, it asks what to do with the draft first.
-  const [leavingToDashboard, setLeavingToDashboard] = useState(false);
+  const navigate = useNavigate();
+  // The logo and both Change service buttons share the existing draft choices.
+  const [leavingTo, setLeavingTo] = useState<"/dashboard" | "/services" | null>(null);
   const hasProgress = hydrated && draftHasProgress(draft);
+
+  function changeService() {
+    if (hasProgress) setLeavingTo("/services");
+    else void navigate({ to: "/services" });
+  }
 
   // Remember what this application is called, so the dashboard can offer to
   // continue it by name. Only once the draft holds something: a cleared draft
@@ -107,13 +113,14 @@ function ApplyLayout() {
       <ApplyStepRail
         currentStep={currentStep}
         draftUpdatedAt={hydrated ? draft.updatedAt : null}
-        onLeave={hasProgress ? () => setLeavingToDashboard(true) : undefined}
+        onLeave={hasProgress ? () => setLeavingTo("/dashboard") : undefined}
+        onChangeService={hydrated ? changeService : undefined}
       />
       <KeepDraftDialog
-        open={leavingToDashboard}
-        onOpenChange={setLeavingToDashboard}
+        open={leavingTo !== null}
+        onOpenChange={(open) => { if (!open) setLeavingTo(null); }}
         serviceName={serviceName}
-        destination="/dashboard"
+        destination={leavingTo ?? "/dashboard"}
         onDiscard={handleDiscard}
       />
 
@@ -132,8 +139,7 @@ function ApplyLayout() {
           copies={draft.copies}
           feePerCopy={selectedService?.fee_per_copy === true}
           selectionPending={selectionPending}
-          hasProgress={hasProgress}
-          onDiscard={handleDiscard}
+          onChangeService={hydrated ? changeService : undefined}
         />
       </div>
 

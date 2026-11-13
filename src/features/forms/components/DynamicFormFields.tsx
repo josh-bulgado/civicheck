@@ -13,6 +13,7 @@ import {
 import { Checkbox } from "~/components/ui/checkbox";
 import { Phone } from "lucide-react";
 import { DatePicker } from "~/components/ui/date-picker";
+import { BirthDatePicker } from "~/components/ui/birth-date-picker";
 import { EstimatedDateField } from "./EstimatedDateField";
 import { registrationEventDate, validateDateAnswer } from "../date-validation";
 import { selectableFieldOptions, todayKeyInTimeZone } from "../form-template.utils";
@@ -423,7 +424,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                       : "Use 240 characters or fewer.",
                 },
               }}
-              render={({ field, fieldState }) => {
+              render={({ field, fieldState, formState }) => {
                 const addressLevel = definitionField.philippineAddressLevel;
                 const locationLevel = definitionField.countrySelect ? "country" : addressLevel;
 
@@ -450,7 +451,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         (option) => option.value === field.value,
                       )?.notice
                     : undefined;
-                const common = (
+                const common = (showError = fieldState.invalid) => (
                   <>
                     {!isRegistryNumberField(definitionField) && applicantCopy(definitionField.helpText) ? (
                       <FieldDescription>
@@ -467,7 +468,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         </NoticeAlert>
                       </div>
                     ) : null}
-                    {fieldState.invalid ? (
+                    {showError ? (
                       <WizardFieldError error={fieldState.error} />
                     ) : null}
                   </>
@@ -477,15 +478,21 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                   ...option,
                   label: applicantCopy(option.label),
                 }));
+                const fieldLabel = applicantCopy(
+                  ({ mother_first_name: "First name", mother_middle_name: "Middle name", mother_last_name: "Last name", wife_first_name: "First name", wife_middle_name: "Middle name", wife_last_name: "Last name" } as Record<string, string>)[definitionField.key]
+                    ?? (definitionField.labelByAnswer
+                      ? definitionField.labelByAnswer.labels[values[definitionField.labelByAnswer.field]]
+                      : undefined)
+                    ?? definitionField.label,
+                );
+                const isBirthDate = /date.of.birth|birth.?date/i.test(fieldLabel)
+                  || /date_of_birth|birth_date/.test(definitionField.key)
+                  || (definitionField.key === "event_date" && values.record_type === "birth");
+                const usesBirthDatePicker = definitionField.type === "date"
+                  && !definitionField.allowEstimate && isBirthDate;
                 const legendLabel = (
                   <>
-                    {formatFieldLabel(applicantCopy(
-                      ({ mother_first_name: "First name", mother_middle_name: "Middle name", mother_last_name: "Last name", wife_first_name: "First name", wife_middle_name: "Middle name", wife_last_name: "Last name" } as Record<string, string>)[definitionField.key]
-                        ?? (definitionField.labelByAnswer
-                          ? definitionField.labelByAnswer.labels[values[definitionField.labelByAnswer.field]]
-                          : undefined)
-                        ?? definitionField.label,
-                    ))}
+                    {formatFieldLabel(fieldLabel)}
                     {!definitionField.required ? " (optional)" : ""}
                     {showRequiredMarks && definitionField.required ? (
                       <>
@@ -553,14 +560,14 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         invalid={fieldState.invalid}
                         labelledBy={legendId}
                       />
-                      {common}
+                      {common()}
                     </FieldSet>
                   );
                 }
 
                 return (
                   <Field
-                    data-invalid={fieldState.invalid}
+                    data-invalid={usesBirthDatePicker ? undefined : fieldState.invalid}
                     className={cn(
                       SPAN_CLASS[spans.get(definitionField.key) ?? "half"],
                       !stacked && ["reference_number", "marriage_date"].includes(definitionField.key) &&
@@ -576,6 +583,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                   >
                     <FieldLabel
                       htmlFor={`dynamic-${definitionField.key}`}
+                      id={`dynamic-${definitionField.key}-label`}
                       className={WIZARD_LABEL_CLASS}
                     >
                       {legendLabel}
@@ -624,6 +632,23 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                           }}
                           onBlur={field.onBlur}
                           invalid={fieldState.invalid}
+                        />
+                      ) : isBirthDate ? (
+                        <BirthDatePicker
+                          id={`dynamic-${definitionField.key}`}
+                          labelledBy={`dynamic-${definitionField.key}-label`}
+                          ref={field.ref}
+                          value={field.value ?? ""}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            onDateChange?.(definitionField.key, value);
+                          }}
+                          onBlur={field.onBlur}
+                          max={todayKeyInTimeZone()}
+                          invalid={fieldState.invalid}
+                          validateAll={formState.isSubmitted}
+                          renderFeedback={(invalid) => common(invalid && fieldState.error?.type !== "required")}
+                          className={cn(WIZARD_CONTROL_CLASS, "px-3")}
                         />
                       ) : (
                         <DatePicker
@@ -733,7 +758,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         fieldSize="touch"
                       />
                     )}
-                    {common}
+                    {!usesBirthDatePicker && common()}
                   </Field>
                 );
               }}

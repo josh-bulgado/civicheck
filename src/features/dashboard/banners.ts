@@ -80,9 +80,7 @@ const BANNERS: Record<string, Banner> = {
     // The picture's edge colours (#dcebfb, #e1eefc) after `filter`.
     top: "#d6eaff",
     bottom: "#ddeeff",
-    // The "See all services" button sits at the card's right edge, which is
-    // where this art used to be. Smaller and pulled in, it sits in the gap
-    // between the headline and that button.
+    // Keep the art small and pulled in, clear of the headline.
     scale: 0.75,
     shift: 0.2,
     // The art is pale against the card. Stretching contrast around the card's

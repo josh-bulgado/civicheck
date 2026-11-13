@@ -13,25 +13,31 @@ export function MyRequestDetailPageSkeleton() {
         </QuietLink>
         <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-6">
           <div className="flex w-full min-w-0 flex-1 flex-col gap-2.5">
-            <Skeleton className="h-10 w-80 max-w-full rounded-xl" />
+            <Skeleton className="h-7 w-80 max-w-full rounded-xl md:h-10" />
             <Skeleton className="h-4 w-36 rounded-md" />
           </div>
-          <Skeleton className="h-10 w-28 shrink-0 rounded-full" />
         </div>
       </div>
       <div className="grid grid-cols-1 items-start gap-5 md:gap-6 @4xl:grid-cols-[minmax(0,1fr)_22rem] @4xl:grid-rows-[auto_1fr] @5xl:grid-cols-[minmax(0,1fr)_24rem] @6xl:grid-cols-[minmax(0,1fr)_28rem]">
         <div className="min-w-0">
-          <section className="rounded-hero bg-(image:--portal-hero) px-5 py-7 md:px-13 md:pt-11 md:pb-12">
-            <div className="grid grid-cols-4 gap-2" aria-hidden="true">
-              {["Submission", "Validation", "Processing", "Release"].map((stage) => (
-                <div key={stage} className="flex min-w-0 flex-col gap-4">
-                  <Skeleton className="size-8 rounded-full" />
-                  <span className="text-[10px] font-semibold text-muted-foreground sm:text-sm">{stage}</span>
+          <section className="rounded-hero bg-(image:--portal-hero) px-4 py-5 md:px-13 md:pt-11 md:pb-12">
+            <div className="grid grid-cols-4 md:gap-2" aria-hidden="true">
+              {["Submission", "Validation", "Processing", "Release"].map((stage, index) => (
+                <div key={stage} className="relative flex min-w-0 flex-col gap-2 max-md:items-center md:gap-4">
+                  <Skeleton className="relative z-10 size-8 rounded-full" />
+                  {index < 3 ? <span className="absolute top-4 left-1/2 h-0.75 w-full -translate-y-1/2 bg-primary/65 md:hidden" /> : null}
+                  <span className="text-[0.6875rem] font-semibold text-foreground min-[360px]:text-xs md:text-sm max-md:w-full max-md:text-center max-md:wrap-anywhere">{stage}</span>
                 </div>
               ))}
             </div>
-            <h2 className="mt-8 text-[17px] font-semibold text-body-strong md:mt-10">What to do next</h2>
-            <Skeleton aria-hidden="true" className="mt-4 h-28 rounded-[20px]" />
+            <h2 className="mt-6 text-base font-semibold text-body-strong md:mt-10 md:text-[17px]">What to do next</h2>
+            <Skeleton aria-hidden="true" className="mt-3 h-28 rounded-[20px] md:mt-4" />
+          </section>
+        </div>
+        <div className="min-w-0 @4xl:col-start-1 @4xl:row-start-2">
+          <section className="rounded-3xl border border-border-light bg-card p-5 sm:p-6">
+            <h2 className="text-[22px] font-semibold max-md:text-lg">Documents</h2>
+            <Skeleton aria-hidden="true" className="mt-4 h-80 rounded-xl" />
           </section>
         </div>
         <div className="flex min-w-0 flex-col gap-5 md:gap-6 @4xl:col-start-2 @4xl:row-span-2 @4xl:row-start-1">
@@ -50,14 +56,8 @@ export function MyRequestDetailPageSkeleton() {
             </div>
           </section>
           <section className="rounded-3xl border border-border-light bg-card p-5 sm:p-6">
-            <h2 className="text-[22px] font-semibold">Status history</h2>
+            <h2 className="text-[22px] font-semibold max-md:text-lg">Status history</h2>
             <Skeleton aria-hidden="true" className="mt-4 h-24 rounded-xl" />
-          </section>
-        </div>
-        <div className="min-w-0 @4xl:col-start-1 @4xl:row-start-2">
-          <section className="rounded-3xl border border-border-light bg-card p-5 sm:p-6">
-            <h2 className="text-[22px] font-semibold">Documents</h2>
-            <Skeleton aria-hidden="true" className="mt-4 h-80 rounded-xl" />
           </section>
         </div>
       </div>

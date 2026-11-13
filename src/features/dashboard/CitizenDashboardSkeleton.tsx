@@ -2,6 +2,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { peekCurrentUser } from "~/features/auth/current-user";
 import { cn } from "~/lib/utils";
 import { CertificateTiles } from "./components/CertificateTiles";
+import { CitizenDashboardHeader } from "./components/CitizenDashboardHeader";
 import {
   EMPTY_SHAPE,
   readDashboardShape,
@@ -41,9 +42,7 @@ function PromptSkeleton() {
         <div className="w-full min-w-0 flex-1">
           <h2 className="text-[28px] leading-[1.15] font-bold text-foreground xl:text-[42px]">What do you need today?</h2>
           <p className="mt-3.5 text-[17px] text-body-2 xl:text-[19px]">Pick a document. You'll see what to bring first.</p>
-          <span className="mt-4 inline-flex py-2 text-[17px] font-bold text-primary">How it works</span>
         </div>
-        <span className="inline-flex h-13.5 w-full shrink-0 items-center justify-center rounded-full bg-card/78 px-7.5 text-[17px] font-semibold text-foreground xl:h-13 xl:w-auto">See all services</span>
       </section>
       <TilesSkeleton />
     </>
@@ -75,7 +74,7 @@ function TrackerSkeleton({
         return (
           <div
             key={stage}
-            className={cn("min-w-0", stage < 4 ? "flex-1 pr-2 xl:pr-3" : "shrink-0")}
+            className={cn("min-w-0 max-md:flex-1 max-md:pr-0", stage < 4 ? "flex-1 pr-2 xl:pr-3" : "shrink-0")}
           >
             <div className="flex items-center">
               <Mark
@@ -93,7 +92,7 @@ function TrackerSkeleton({
                 />
               )}
             </div>
-            <span className="mt-2.5 block text-[10px] font-semibold text-muted-foreground sm:text-xs xl:text-base">{["Submission", "Validation", "Processing", "Release"][stage - 1]}</span>
+            <span className="mt-2.5 block text-[10px] font-semibold text-muted-foreground max-md:text-[clamp(10px,3.2vw,11px)] sm:text-xs xl:text-base">{["Submission", "Validation", "Processing", "Release"][stage - 1]}</span>
             {hasCaption || hasTag ? (
               // Release is only as wide as its label: what hangs under it takes
               // no width, as in the tracker.
@@ -150,7 +149,7 @@ function HeroSkeleton({
         <Mark className="mt-2 h-5 w-3/5 xl:mt-[clamp(0.375rem,1vh,0.75rem)] xl:h-[clamp(1.0625rem,2.4vh,1.5rem)] xl:w-2/5" />
       ) : null}
       {/* In the compact layout the button closes the card, under the tracker. */}
-      <Mark className="mt-4.5 h-13.5 w-40 rounded-full max-xl:order-last max-xl:w-full xl:mt-[clamp(0.75rem,2.2vh,1.5rem)] xl:h-[clamp(2.75rem,5vh,3.5rem)]" />
+      <Mark className="mt-4.5 h-13.5 w-40 rounded-full max-md:h-11 max-md:w-34 max-xl:order-last md:max-xl:w-full xl:mt-[clamp(0.75rem,2.2vh,1.5rem)] xl:h-[clamp(2.75rem,5vh,3.5rem)]" />
       <TrackerSkeleton
         done={done}
         captioned={captioned}
@@ -222,14 +221,10 @@ function StartRequestSkeleton() {
     <section
       data-part="start"
       aria-hidden="true"
-      className="flex flex-col gap-3.5 md:gap-2.5"
+      className="flex flex-col gap-3.5 max-md:gap-2.5 md:gap-2.5"
     >
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-        <h2 className="px-1.5 text-xl font-semibold text-foreground md:text-[15px] md:text-muted-foreground">Start a new request</h2>
-        <div className="flex items-center gap-2 md:gap-4">
-          <span className="text-sm font-semibold text-primary">How it works</span>
-          <span className="text-sm font-semibold text-primary">See all services</span>
-        </div>
+        <h2 className="px-1.5 text-xl font-semibold text-foreground max-md:text-sm max-md:text-muted-foreground md:text-[15px] md:text-muted-foreground">Start a new request</h2>
       </div>
       <TilesSkeleton strip />
     </section>
@@ -293,13 +288,7 @@ export function CitizenDashboardSkeleton() {
 
   return (
     <div className="portal-page flex-1 gap-4.5 md:gap-5" aria-busy="true">
-      <div className="flex items-center justify-between gap-4 md:gap-6">
-        <h1 className="portal-title min-w-0 max-xl:truncate">Welcome back</h1>
-        {/* "All requests" only exists once there are requests. */}
-        {shape.kind === "requests" && (
-          <span className="hidden text-sm font-semibold text-primary xl:block">All requests</span>
-        )}
-      </div>
+      <CitizenDashboardHeader />
       <CitizenDashboardBodySkeleton shape={shape} />
     </div>
   );

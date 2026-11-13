@@ -49,6 +49,7 @@ function trackingNumberOf(loaderData: unknown): string | undefined {
 const TRAILS: Record<string, Trail> = {
   "/staff-dashboard": page("staff-dashboard"),
   "/notifications": page("notifications"),
+  "/profile": page("profile"),
   "/(service)/services": page("services"),
   "/cashier": page("cashier-counter"),
   "/payment-history": page("payment-history"),

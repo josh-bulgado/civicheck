@@ -42,7 +42,9 @@ function render() {
   return renderToStaticMarkup(createElement(SettingsProfilePanel, {
     account,
     onClose: vi.fn(),
+    onSaved: vi.fn(),
     onDirtyChange: vi.fn(),
+    onPendingChange: vi.fn(),
   }));
 }
 
