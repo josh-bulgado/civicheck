@@ -558,6 +558,10 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
 
     if (error || !found) throw new Error(error?.message ?? "Request not found");
     const row = found as RequestDetailRow;
+    const accountProfile = row.applicant_id ? one<PersonName>(row.profiles) : null;
+    const accountHolderName = accountProfile
+      ? `${accountProfile.first_name ?? ""} ${accountProfile.last_name ?? ""}`.trim() || null
+      : null;
 
     const service = one<ServiceEmbed>(row.services_registry);
     // Same "not found" phrasing as a missing row — a department-scoped staff
@@ -613,6 +617,7 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       // `unknown` values as potentially non-serializable.
       formData: (row.form_data ?? {}) as Record<string, string | number | boolean | null>,
       isWalkIn: row.applicant_id == null,
+      accountHolderName,
       serviceCode: row.request_type as string,
       serviceName: service?.display_name || service?.name || row.request_type,
       ...departmentOf(service),
