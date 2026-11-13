@@ -1,4 +1,5 @@
 import { canVerifyPayment } from "./payment-eligibility";
+import { endorsementDetailsOf, endorsementReadyBlockedReason } from "./electronic-endorsement-release";
 import { createServerFn } from "@tanstack/react-start";
 import { loadAddableUploads } from "./missing-uploads.server";
 import { attachmentVersionSchema } from "./previous-uploads";
@@ -37,6 +38,8 @@ const advanceRequestStatusSchema = z.object({
   originalsConfirmed: z.boolean().optional(),
   identityVerified: z.boolean().optional(),
   handoverConfirmed: z.boolean().optional(),
+  psaCertificateAvailableConfirmed: z.boolean().optional(),
+  expectedUpdatedAt: z.string().optional(),
   remarks: z.string().optional(),
 });
 const verifyPaymentSchema = z.object({
@@ -239,7 +242,7 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
     const { data: request, error: fetchError } = await supabase
       .from("requests")
       .select(
-        "id, status, payment_status, fees_due, tracking_number, request_type, form_data, registration_conversion, posting_start_date, claimed_by, claimed_stage, claim_expires_at, services_registry(department_id)",
+        "id, status, payment_status, fees_due, tracking_number, request_type, form_data, registration_conversion, posting_start_date, claimed_by, claimed_stage, claim_expires_at, updated_at, psa_endorsed_on, claiming_location, claiming_instructions, psa_certificate_available_at, services_registry(department_id)",
       )
       .eq("id", data.requestId)
       .single();
@@ -324,6 +327,17 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
       if (blocked) return { error: true, message: blocked };
     }
 
+    if (request.request_type === "ELEC_ENDORSEMENT" && toStatus === "ready_for_release") {
+      const blocked = endorsementReadyBlockedReason(endorsementDetailsOf(request));
+      if (blocked) return { error: true, message: blocked };
+      if (data.psaCertificateAvailableConfirmed !== true) {
+        return { error: true, message: "Confirm that the final PSA certificate is available for collection." };
+      }
+      if (data.expectedUpdatedAt !== request.updated_at) {
+        return { error: true, message: "This request changed. Refresh and review the claiming instructions." };
+      }
+    }
+
     let originalsAlreadyChecked = false;
     if (toStatus === "released" && needsOriginalDocumentCheck(request.request_type, "ready_for_release")) {
       const { data: checked, error } = await supabase.rpc("has_current_original_document_check", {
@@ -363,6 +377,8 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
         originals_confirmed: data.originalsConfirmed === true,
         identity_verified: data.identityVerified === true,
         handover_confirmed: data.handoverConfirmed === true,
+        psa_certificate_available_confirmed: data.psaCertificateAvailableConfirmed === true,
+        expected_updated_at: data.expectedUpdatedAt,
       },
       p_remarks: remarks || `Advanced from "${getStatusDetails(from).label}".`,
     });
@@ -375,10 +391,45 @@ export const advanceRequestStatusFn = createServerFn({ method: "POST" })
       request.request_type,
       { paymentStatus: request.payment_status, feesDue: Number(request.fees_due ?? 0) },
       data.requestId,
+      request.request_type === "ELEC_ENDORSEMENT" ? endorsementDetailsOf(request) : undefined,
     );
     await dispatchApplicantNotification(supabase, data.requestId, notificationContent);
 
     return { error: false, status: toStatus, trackingNumber: request.tracking_number };
+  });
+
+export const saveElectronicEndorsementFn = createServerFn({ method: "POST" })
+  .validator(z.object({
+    requestId: z.string().uuid(),
+    endorsedOn: z.string().refine(value => Boolean(fromDateKey(value)), "Enter a valid endorsement date"),
+    claimingLocation: z.string().trim().max(240),
+    claimingInstructions: z.string().trim().max(1000),
+    expectedUpdatedAt: z.string(),
+  }))
+  .handler(async ({ data }) => {
+    const { supabase, user, role, departmentId } = await requireActiveSession("requests:process");
+    const { data: request, error } = await supabase.from("requests")
+      .select("id, request_type, status, tracking_number, created_at, updated_at, claimed_by, claimed_stage, claim_expires_at, services_registry(department_id)")
+      .eq("id", data.requestId).single();
+    if (error || !request || requestIsOutsideDepartment(request, role, departmentId)) {
+      return { error: true, message: "That request no longer exists." };
+    }
+    const claimError = requestClaimError(request, user.id);
+    if (claimError) return { error: true, message: claimError };
+    if (request.request_type !== "ELEC_ENDORSEMENT" || request.status !== "processing") {
+      return { error: true, message: "Record PSA endorsement details during Processing for Electronic Endorsement." };
+    }
+    if (data.endorsedOn > postingToday() || data.endorsedOn < postingToday(new Date(request.created_at))) {
+      return { error: true, message: "Enter the actual PSA endorsement date between submission and today." };
+    }
+    const { error: saveError } = await supabase.rpc("save_staff_request_action", {
+      p_request_id: data.requestId, p_expected_status: "processing", p_action: "endorsement_updated",
+      p_values: { psa_endorsed_on: data.endorsedOn, claiming_location: data.claimingLocation,
+        claiming_instructions: data.claimingInstructions, expected_updated_at: data.expectedUpdatedAt },
+      p_remarks: "PSA endorsement details recorded.",
+    });
+    if (saveError) return { error: true, message: saveError.message };
+    return { error: false };
   });
 
 export const saveMarriagePostingFn = createServerFn({ method: "POST" })
@@ -429,7 +480,7 @@ export const verifyPaymentFn = createServerFn({ method: "POST" })
 
     const { data: request, error: fetchError } = await supabase
       .from("requests")
-      .select("id, status, fees_due, tracking_number, request_type, posting_start_date")
+      .select("id, status, fees_due, tracking_number, request_type, posting_start_date, psa_endorsed_on, claiming_location, claiming_instructions, psa_certificate_available_at")
       .eq("id", data.requestId)
       .single();
 
@@ -440,7 +491,7 @@ export const verifyPaymentFn = createServerFn({ method: "POST" })
       return {
         error: true,
         message:
-          "Payment requires readiness for release, or delayed death processing with a recorded notice-posting date.",
+          "Payment requires readiness for release, Electronic Endorsement processing, or delayed death processing with a recorded posting date.",
       };
     }
 
@@ -474,7 +525,10 @@ export const verifyPaymentFn = createServerFn({ method: "POST" })
     }
 
     if (request.status === "ready_for_release" && request.request_type !== "EMAIL_INQUIRY" && request.tracking_number) {
-      await dispatchApplicantNotification(supabase, data.requestId, buildCashierClearedEmail(request.tracking_number));
+      const content = request.request_type === "ELEC_ENDORSEMENT"
+        ? buildCashierClearedEmail(request.tracking_number, endorsementDetailsOf(request))
+        : buildCashierClearedEmail(request.tracking_number);
+      await dispatchApplicantNotification(supabase, data.requestId, content);
     }
     return { error: false };
   });

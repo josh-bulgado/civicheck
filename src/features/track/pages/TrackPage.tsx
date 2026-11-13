@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { ElectronicEndorsementPanel } from "~/features/requests/components/ElectronicEndorsementPanel";
+import type { EndorsementDetails } from "~/features/requests/electronic-endorsement-release";
 import { MarriagePostingPanel } from "~/features/requests/components/MarriagePostingPanel";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -63,6 +65,7 @@ type TrackAttachment = {
 };
 
 type TrackResult = {
+  endorsement?: EndorsementDetails;
   serviceCode: string;
   postingStartDate: string | null;
   postingEndDate: string | null;
@@ -302,6 +305,7 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
             <div className="mt-5">
               <MarriagePostingPanel serviceCode={result.serviceCode} status={result.status}
                 postingStartDate={result.postingStartDate} postingEndDate={result.postingEndDate} />
+              <ElectronicEndorsementPanel serviceCode={result.serviceCode} status={result.status} details={result.endorsement} />
             </div>
             {result.attachments.length > 0 && (
               <div className="mt-6 border-t border-border-lighter pt-5">

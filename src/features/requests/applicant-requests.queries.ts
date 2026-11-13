@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { endorsementDetailsOf } from "./electronic-endorsement-release";
 import { parsePreviousUploads } from "./previous-uploads";
 import { requireActiveSession } from "~/server/auth";
 import { one } from "~/lib/embed";
@@ -60,6 +61,7 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
       .select(
         `id, tracking_number, request_type, status, payment_status,
          fees_due, copies, form_data, created_at, updated_at, posting_start_date, posting_end_date,
+         psa_endorsed_on, claiming_location, claiming_instructions, psa_certificate_available_at,
          services_registry(name, display_name, processing_time, departments(name),
            event_date_label, event_place_label, reference_number_label, allows_messages),
          form_template_versions(definition)`,
@@ -133,6 +135,7 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
       serviceCode: row.request_type as string | null,
       postingStartDate: row.posting_start_date as string | null,
       postingEndDate: row.posting_end_date as string | null,
+      ...(row.request_type === "ELEC_ENDORSEMENT" ? { endorsement: endorsementDetailsOf(row) } : {}),
       status: row.status,
       paymentStatus: row.payment_status,
       feesDue: Number(row.fees_due ?? 0),

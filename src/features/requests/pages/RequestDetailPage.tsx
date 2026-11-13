@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ElectronicEndorsementPanel } from "../components/ElectronicEndorsementPanel";
 import { MarriagePostingPanel } from "../components/MarriagePostingPanel";
 import { usePostingToday } from "../hooks/usePostingToday";
 import { needsMarriagePosting } from "../marriage-posting";
@@ -62,6 +63,7 @@ const CONFIRM_REJECTION_SERVICE_CODES = ["OTCOLB-MARITAL", "OTCOLB-NONMARITAL"];
 const CHAT_HOTKEY: HotkeyChord = "C";
 
 const DIALOG_TARGET: Record<TransitionDialog, RequestStatus> = {
+  endorsement: "ready_for_release",
   return: "under_validation",
   court: "processing",
   originals: "ready_for_release",
@@ -158,6 +160,7 @@ export default function RequestDetailPage({
       : doc;
   });
   const planInput = {
+    endorsement: request.endorsement,
     postingStartDate: request.postingStartDate,
     today,
     serviceCode: request.serviceCode,
@@ -202,7 +205,9 @@ export default function RequestDetailPage({
         return false;
       }
       const res = await advanceRequestStatusFn({
-        data: { requestId: request.id, toStatus: to, remarks, ...confirmations },
+        data: { requestId: request.id, toStatus: to, remarks, ...confirmations,
+          ...(request.serviceCode === "ELEC_ENDORSEMENT" && to === "ready_for_release" ? { expectedUpdatedAt: request.updatedAt } : {}),
+        },
       });
       if (res.error) {
         toast.error("Could not update this request", { description: res.message });
@@ -309,6 +314,11 @@ export default function RequestDetailPage({
           requestId: request.id, updatedAt: request.updatedAt, createdAt: request.createdAt, onSaved: onUpdated,
         } : undefined}
       />
+
+      <ElectronicEndorsementPanel key={JSON.stringify([request.id, request.endorsement])} serviceCode={request.serviceCode}
+        status={request.status} details={request.endorsement}
+        editor={ownsStageClaim ? { requestId: request.id, updatedAt: request.updatedAt,
+          createdAt: request.createdAt, onSaved: onUpdated } : undefined} />
 
       <RequestHandoffConcerns
         status={request.status}
@@ -423,6 +433,7 @@ export default function RequestDetailPage({
         busy={busy}
         context={{
           serviceCode: request.serviceCode,
+          endorsement: request.endorsement,
           applicantName: request.applicantName,
           originalsAlreadyChecked: hasCurrentOriginalDocumentCheck(request.logs),
           copies: request.copies,

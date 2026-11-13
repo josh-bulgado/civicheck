@@ -22,7 +22,7 @@ export interface VerifiedPayment {
 
 /** Mirrors the rules `verifyPaymentFn` enforces, so the slip never offers what the server refuses. */
 export function getSlipPhase(
-  result: Pick<CashierLookupResult, "status" | "paymentStatus" | "feesDue" | "serviceCode" | "postingStartDate">,
+  result: Pick<CashierLookupResult, "status" | "paymentStatus" | "feesDue" | "serviceCode" | "postingStartDate" | "psaEndorsedOn">,
   verified: VerifiedPayment | null,
 ): SlipPhase {
   if (verified) return "just-verified";

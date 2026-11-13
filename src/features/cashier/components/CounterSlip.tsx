@@ -197,7 +197,7 @@ export function CounterSlip({
                 Payment can&rsquo;t be collected yet. This request is still{" "}
                 {status.label.toLowerCase()}. {result.serviceCode === "DEATH_DELAYED"
                   ? "Staff must record the notice-posting date during processing first."
-                  : "It needs to be marked ready for release first."}
+                  : result.serviceCode === "ELEC_ENDORSEMENT" ? "Payment is available during Processing." : "It needs to be marked ready for release first."}
               </p>
             </>
           ) : null}
@@ -225,8 +225,10 @@ export function CounterSlip({
                   ? "Fee-free request confirmed."
                   : `${formatPeso(result.feesDue)} recorded.`}{" "}
                 {result.status === "ready_for_release"
-                  ? "The applicant claims the document at the release window."
-                  : "The applicant must wait for posting and registration to finish before claiming."}
+                  ? result.serviceCode === "ELEC_ENDORSEMENT"
+                    ? "Follow the confirmed claiming instructions in the request."
+                    : "The applicant claims the document at the release window."
+                  : result.serviceCode === "ELEC_ENDORSEMENT" ? "Wait for staff to confirm the final PSA certificate is available before claiming." : "The applicant must wait for posting and registration to finish before claiming."}
               </p>
             </>
           ) : null}

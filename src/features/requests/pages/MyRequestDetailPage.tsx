@@ -30,6 +30,7 @@ export default function MyRequestDetailPage({
   onFeedbackRequestHandled = () => {},
 }: MyRequestDetailPageProps) {
   const next = nextSteps({
+    endorsement: request.endorsement,
     postingStartDate: request.postingStartDate,
     status: request.status,
     serviceCode: request.serviceCode,

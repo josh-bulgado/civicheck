@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  heroNote,
   dashboardPlan,
   heroHeadline,
   heroLead,
@@ -9,6 +10,15 @@ import {
   trackerProgress,
 } from "./hero";
 import type { CitizenDashboardRequest } from "./types";
+
+it("keeps PSA endorsement waiting and claiming messages accurate", () => {
+  const waiting = {...request("processing"),request_type:"ELEC_ENDORSEMENT"};
+  expect(heroNote(waiting)).toContain("one month after endorsement to PSA");
+  expect(trackerDetails(waiting).note).not.toContain("Bring your original");
+  const ready = {...waiting,status:"ready_for_release",payment_status:"verified"};
+  expect(heroNote(ready)).toContain("confirmed claiming location");
+  expect(trackerDetails(ready).note).not.toContain("CCRO staff");
+});
 
 function request(
   status: string,

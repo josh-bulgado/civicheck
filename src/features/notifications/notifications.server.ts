@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DOCUMENT_RELEASED, READY_TO_CLAIM, readyForReleaseInstruction } from "~/features/services/release-instructions";
+import { endorsementClaimingSteps, type EndorsementDetails } from "~/features/requests/electronic-endorsement-release";
 import { sendEmail } from "~/utils/resend";
 import { getAppUrl } from "~/utils/app-url";
 import { getStatusDetails } from "~/features/services/request-status";
@@ -54,6 +55,7 @@ export function buildStatusChangeEmail(
   serviceCode?: string | null,
   payment?: { paymentStatus: string | null; feesDue: number },
   requestId?: string,
+  endorsement?: EndorsementDetails,
 ): NotificationContent {
   if (status === "processing") {
     return composeContent(
@@ -75,6 +77,10 @@ export function buildStatusChangeEmail(
         `Your CiviCheck request ${trackingNumber} is now "Ready for Release".`,
         serviceCode === "EMAIL_INQUIRY"
           ? "Read CCRO's reply in the messages."
+          : serviceCode === "ELEC_ENDORSEMENT"
+            ? ["Your final PSA certificate is available.",
+              ...(payment?.paymentStatus !== "verified" ? [readyForReleaseInstruction(payment?.paymentStatus, payment?.feesDue)] : []),
+              ...endorsementClaimingSteps(endorsement)].join("\n")
           : readyForReleaseInstruction(payment?.paymentStatus, payment?.feesDue),
         remarks || "",
       ].filter(Boolean),
@@ -109,9 +115,10 @@ export function buildStatusChangeEmail(
   return composeContent("status_change", subject, lines, `open "My Requests" for the full details.`);
 }
 
-export function buildCashierClearedEmail(trackingNumber: string): NotificationContent {
+export function buildCashierClearedEmail(trackingNumber: string, endorsement?: EndorsementDetails): NotificationContent {
   return composeContent("status_change", `Request ${trackingNumber}: Ready for Release`,
-    [`Your CiviCheck request ${trackingNumber} is "Ready for Release".`, READY_TO_CLAIM],
+    [`Your CiviCheck request ${trackingNumber} is "Ready for Release".`,
+      endorsement ? endorsementClaimingSteps(endorsement).join("\n") : READY_TO_CLAIM],
     'open "My Requests" for the full details.');
 }
 

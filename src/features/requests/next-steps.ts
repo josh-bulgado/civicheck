@@ -1,4 +1,5 @@
 import { onTimeRegistrationNotice } from "./on-time-registration";
+import { endorsementClaimingSteps, endorsementWaitingMessage, type EndorsementDetails } from "./electronic-endorsement-release";
 import { getLogNote } from "~/features/requests/request-workflow";
 import { readyForReleaseInstruction } from "~/features/services/release-instructions";
 
@@ -8,6 +9,7 @@ export type NextStepsView =
   | { kind: "line"; text: string };
 
 interface NextStepsInput {
+  endorsement?: EndorsementDetails | null;
   postingStartDate?: string | null;
   status: string;
   serviceCode?: string | null;
@@ -41,6 +43,11 @@ export function nextSteps(input: NextStepsInput): NextStepsView | null {
 
   // Requirements accepted online; the hard copies still need the final check.
   if (status === "processing") {
+    if (input.serviceCode === "ELEC_ENDORSEMENT" && input.endorsement?.endorsedOn) {
+      return { kind: "steps", steps: [endorsementWaitingMessage(input.endorsement),
+        ...(input.paymentStatus !== "verified" ? ["Pay the service fee at the CCRO cashier. Payment does not mean the final certificate is ready."] : []),
+      ] };
+    }
     return {
       kind: "steps",
       ...notice,
@@ -48,6 +55,8 @@ export function nextSteps(input: NextStepsInput): NextStepsView | null {
         "Go to the CCRO office for final validation",
         "Bring your original documents and hard copies of your requirements",
         "Bring your tracking number (a printout of your acknowledgment, or write it down)",
+        ...(input.serviceCode === "ELEC_ENDORSEMENT" && input.paymentStatus !== "verified"
+          ? ["Pay the service fee at the CCRO cashier. Payment does not mean the final certificate is ready."] : []),
         ...(input.serviceCode === "DEATH_DELAYED" && input.postingStartDate
           ? [input.paymentStatus === "verified"
             ? "Payment is verified. Wait for the posting period and registration to finish before claiming."
@@ -80,6 +89,13 @@ export function nextSteps(input: NextStepsInput): NextStepsView | null {
   }
 
   if (status === "ready_for_release") {
+    if (input.serviceCode === "ELEC_ENDORSEMENT") {
+      return { kind: "steps", steps: [
+        "Your final PSA certificate is available.",
+        ...(input.paymentStatus !== "verified" ? [readyForReleaseInstruction(input.paymentStatus, input.feesDue)] : []),
+        ...endorsementClaimingSteps(input.endorsement),
+      ] };
+    }
     // Staff have completed the office check, so the countdown stops here.
     // An inquiry is answered in the thread: no visit, so no originals.
     if (input.allowsMessages) {

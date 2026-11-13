@@ -1,6 +1,14 @@
-import { RegistrationNoticeText } from "./RegistrationNoticeText";
 import { StageTracker } from "~/features/dashboard/components/StageTracker";
 import type { NextStepsView } from "~/features/requests/next-steps";
+
+const sentences = new Intl.Segmenter("en", { granularity: "sentence" });
+
+function InstructionText({ text }: { text: string }) {
+  const lines = text.split("\n").flatMap(line =>
+    Array.from(sentences.segment(line), part => part.segment.trim()).filter(Boolean),
+  );
+  return <>{lines.map((line, index) => <span key={index} className="block">{line}</span>)}</>;
+}
 
 /**
  * The blue card at the top of an applicant's request page: the four stages as
@@ -30,32 +38,32 @@ export function NextStepsCard({
           </h2>
 
           {next.kind === "steps" ? (
-            <ol className="mt-4 grid grid-cols-1 gap-3 md:gap-4">
+            <ol className="mt-4 grid grid-cols-1 gap-3">
               {next.steps.map((step, index) => (
                 <li
                   key={step}
-                  className="flex min-w-0 items-start gap-4 rounded-[20px] bg-card/78 px-5 py-4"
+                  className="flex min-w-0 items-start gap-3 rounded-2xl bg-card/78 p-4"
                 >
                   <span
-                    className="flex size-10.5 shrink-0 items-center justify-center rounded-full bg-primary-fill text-lg font-bold text-white"
+                    className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-fill text-sm font-semibold text-white"
                     aria-hidden="true"
                   >
                     {index + 1}
                   </span>
-                  <span className="min-w-0 flex-1 text-[19px] leading-snug font-semibold text-foreground break-words">
-                    {step}
+                  <span className="min-w-0 flex-1 text-[15px] leading-7 font-normal text-foreground break-words">
+                    <InstructionText text={step} />
                   </span>
                 </li>
               ))}
             </ol>
           ) : (
-            <p className="mt-4 rounded-[20px] bg-card/78 px-5 py-4 text-[19px] leading-snug font-semibold text-foreground">
-              <RegistrationNoticeText text={next.text} />
+            <p className="mt-4 rounded-2xl bg-card/78 p-4 text-[15px] leading-7 font-normal text-foreground">
+              <InstructionText text={next.text} />
             </p>
           )}
           {next.kind === "steps" && next.registrationNotice ? (
-            <p className="mt-4 rounded-[20px] bg-card/78 px-5 py-4 text-[19px] leading-snug font-semibold text-foreground">
-              <RegistrationNoticeText text={next.registrationNotice} />
+            <p className="mt-4 rounded-2xl bg-card/78 p-4 text-[15px] leading-7 font-normal text-foreground">
+              <InstructionText text={next.registrationNotice} />
             </p>
           ) : null}
         </div>

@@ -55,6 +55,13 @@ does not ask for Sex. Omit requester/address fields and uploads. The checklist i
 View requirements. Accepted walk-ins start Processing and unpaid, with the
 accepting staff member and physical check recorded. PSA transmission remains a
 later office action. Charter item 10, PDF pages 15-16, is the policy reference.
+During Processing, the handling staff member records the actual date sent to
+PSA. The applicant sees an estimated availability date one calendar month later;
+this estimate never advances the request automatically. Before Ready for Release,
+staff save the confirmed claiming location and instructions and confirm that the
+final PSA certificate is available. These details appear in the applicant tracker,
+public tracking, and release notifications, without assuming collection at CCRO.
+The date, claiming details, availability confirmation, and actor are audited.
 
 Other Certificates walk-in intake records the selected birth, death, or marriage
 record, the person's name, event date and place, optional registry number and
@@ -514,3 +521,8 @@ the decision date, issuing court, optional docket number, names on the decree,
 and optional contact/notes. Do not ask for purpose, sex, or uploads. The RTC
 Legazpi answer must be Yes or No. Physical acceptance records the staff member
 and starts Processing; payment and release keep their existing checks.
+
+The shared applicant What to do next card uses 15px regular instructions with
+28px line spacing and small numbered markers across all services. Keep the
+section heading distinct without making the full instruction bold. Each sentence
+starts on its own line and wraps naturally on smaller screens.

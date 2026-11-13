@@ -47,3 +47,8 @@ describe("isTakingPayment", () => {
     expect(isTakingPayment("just-verified")).toBe(false);
   });
 });
+
+it("collects Electronic Endorsement payment during Processing without an endorsement date", () => {
+  expect(getSlipPhase({status:"processing",paymentStatus:"unpaid",feesDue:100,serviceCode:"ELEC_ENDORSEMENT"},null)).toBe("collect");
+  expect(getSlipPhase({status:"under_validation",paymentStatus:"unpaid",feesDue:100,serviceCode:"ELEC_ENDORSEMENT"},null)).toBe("not-ready");
+});

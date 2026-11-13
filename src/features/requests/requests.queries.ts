@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { endorsementDetailsOf } from "./electronic-endorsement-release";
 import { parsePreviousUploads } from "./previous-uploads";
 import { z } from "zod";
 import { requireActiveSession } from "~/server/auth";
@@ -156,6 +157,7 @@ export interface RequestQueuePage {
 
 /** A `requests` row as `lookupRequestsByTrackingFn` selects it. */
 interface CashierLookupRow {
+  psa_endorsed_on: string | null;
   request_type: string;
   posting_start_date: string | null;
   id: string;
@@ -197,6 +199,10 @@ interface PaymentLogRow {
 
 /** A `requests` row as `getRequestDetailFn` selects it. */
 interface RequestDetailRow extends RequestReadRow {
+  psa_endorsed_on: string | null;
+  claiming_location: string | null;
+  claiming_instructions: string | null;
+  psa_certificate_available_at: string | null;
   posting_start_date: string | null;
   posting_end_date: string | null;
   or_number: string | null;
@@ -364,6 +370,7 @@ export const getAllRequestsFn = createServerFn({ method: "GET" }).handler(async 
 });
 
 export interface CashierLookupResult {
+  psaEndorsedOn?: string | null;
   serviceCode?: string;
   postingStartDate?: string | null;
   id: string;
@@ -387,6 +394,7 @@ function toCashierLookupResult(row: CashierLookupRow): CashierLookupResult {
   return {
     id: row.id,
     serviceCode: row.request_type,
+    psaEndorsedOn: row.psa_endorsed_on,
     postingStartDate: row.posting_start_date,
     trackingNumber: row.tracking_number,
     status: row.status,
@@ -413,7 +421,7 @@ export const lookupRequestsByTrackingFn = createServerFn({ method: "GET" })
     const { data: found, error } = await supabase
       .from("requests")
       .select(
-        `id, tracking_number, request_type, posting_start_date, status, payment_status, or_number, fees_due,
+        `id, tracking_number, request_type, posting_start_date, psa_endorsed_on, status, payment_status, or_number, fees_due,
          subject_first_name:form_data->>subject_first_name,
          subject_last_name:form_data->>subject_last_name,
          services_registry(name, display_name),
@@ -433,7 +441,7 @@ export const getAwaitingPaymentCountFn = createServerFn({ method: "GET" }).handl
   const { count, error } = await supabase
     .from("requests")
     .select("id", { count: "exact", head: true })
-    .or("status.eq.ready_for_release,and(status.eq.processing,request_type.eq.DEATH_DELAYED,posting_start_date.not.is.null)")
+    .or("status.eq.ready_for_release,and(status.eq.processing,request_type.eq.DEATH_DELAYED,posting_start_date.not.is.null),and(status.eq.processing,request_type.eq.ELEC_ENDORSEMENT)")
     .neq("payment_status", "verified");
 
   if (error) throw new Error(error.message);
@@ -547,6 +555,7 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       .select(
         `id, tracking_number, request_type, status, payment_status, or_number,
          fees_due, copies, form_data, applicant_id, created_at, updated_at, posting_start_date, posting_end_date,
+         psa_endorsed_on, claiming_location, claiming_instructions, psa_certificate_available_at,
          claimed_by, claimed_stage, claimed_at, claim_expires_at,
          services_registry(name, display_name, processing_time, department_id, departments(id, name),
            event_date_label, event_place_label, reference_number_label, allows_messages),
@@ -611,6 +620,7 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       orNumber: row.or_number,
       postingStartDate: row.posting_start_date,
       postingEndDate: row.posting_end_date,
+      ...(row.request_type === "ELEC_ENDORSEMENT" ? { endorsement: endorsementDetailsOf(row) } : {}),
       feesDue: Number(row.fees_due ?? 0),
       copies: Number(row.copies ?? 1),
       // Narrowed to primitives: TanStack's server-fn return validator rejects

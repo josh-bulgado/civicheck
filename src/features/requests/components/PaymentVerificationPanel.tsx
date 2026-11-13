@@ -80,7 +80,7 @@ export function PaymentVerificationPanel({
           Payment can't be collected yet — this request is still{" "}
           {getStatusDetails(status).label.toLowerCase()}. {serviceCode === "DEATH_DELAYED"
             ? "Staff must record the notice-posting date during processing first."
-            : "It needs to be marked ready for release first."}
+            : serviceCode === "ELEC_ENDORSEMENT" ? "Payment is available during Processing." : "It needs to be marked ready for release first."}
         </p>
       ) : canCollect && isFree ? (
         <div className="flex flex-col gap-3">

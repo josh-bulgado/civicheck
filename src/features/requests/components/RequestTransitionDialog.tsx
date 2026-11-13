@@ -23,8 +23,10 @@ import {
 } from "~/features/requests/request-actions";
 import { needsOriginalDocumentCheck } from "~/features/requests/request-workflow";
 import { REQUEST_REJECTION_REASONS } from "~/features/requests/rejection-reasons";
+import { endorsementClaimingSteps, type EndorsementDetails } from "../electronic-endorsement-release";
 
 interface RequestContext {
+  endorsement?: EndorsementDetails | null;
   serviceCode: string;
   originalsAlreadyChecked?: boolean;
   applicantName: string;
@@ -145,7 +147,9 @@ function ReleaseForm({ busy, context, onConfirm }: FormProps) {
       ? ["I checked the originals and hard copies against the submitted details and any uploaded copies."]
       : []),
     "I verified the claimant’s identity and authority to receive the document.",
-    `I am handing over ${copies} to the claimant.`,
+    context.serviceCode === "ELEC_ENDORSEMENT"
+      ? "I confirmed that the applicant received the final PSA certificate."
+      : `I am handing over ${copies} to the claimant.`,
   ];
   const [checked, setChecked] = useState(() => items.map(() => false));
 
@@ -295,7 +299,33 @@ function CourtForm({ busy, onConfirm }: FormProps) {
   );
 }
 
+function EndorsementForm({ busy, context, onConfirm }: FormProps) {
+  const id = useId();
+  const [checked, setChecked] = useState(false);
+  return <>
+    <AlertDialogHeader>
+      <AlertDialogTitle>Confirm PSA certificate availability</AlertDialogTitle>
+      <AlertDialogDescription>Mark ready only when the final PSA certificate is available. The applicant will receive these claiming instructions.</AlertDialogDescription>
+    </AlertDialogHeader>
+    <section className="space-y-2 text-sm" aria-label="Instructions the applicant will receive">
+      <h3 className="font-medium">Instructions the applicant will receive</h3>
+      <blockquote className="space-y-2 whitespace-pre-wrap break-words rounded-lg border border-border bg-muted/40 p-3 leading-relaxed">
+        {endorsementClaimingSteps(context.endorsement).map(step => <p key={step}>{step}</p>)}
+      </blockquote>
+    </section>
+    <div className="flex items-start gap-3">
+      <Checkbox id={id} checked={checked} disabled={busy} onCheckedChange={value => setChecked(value === true)} />
+      <Label htmlFor={id} className="leading-snug">I confirmed that the final PSA certificate is available for collection.</Label>
+    </div>
+    <AlertDialogFooter>
+      <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+      <AlertDialogAction disabled={busy || !checked} onClick={() => onConfirm("", { psaCertificateAvailableConfirmed: checked })}>Mark ready for release</AlertDialogAction>
+    </AlertDialogFooter>
+  </>;
+}
+
 const FORMS = {
+  endorsement: EndorsementForm,
   court: CourtForm,
   return: ReturnForm,
   originals: OriginalsForm,

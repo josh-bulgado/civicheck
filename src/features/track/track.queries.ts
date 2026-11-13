@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { endorsementDetailsOf } from "~/features/requests/electronic-endorsement-release";
 import { isClosedRequestStatus } from "~/features/requests/document-review";
 import {
   allowAttempt,
@@ -31,7 +32,7 @@ async function verifyTrackingAccess(trackingNumberRaw: string, lastNameRaw: stri
   const { data: request, error } = await supabase
     .from("requests")
     .select(
-      "id, applicant_id, tracking_number, request_type, status, payment_status, created_at, fees_due, form_data, posting_start_date, posting_end_date, services_registry(name)",
+      "id, applicant_id, tracking_number, request_type, status, payment_status, created_at, fees_due, form_data, posting_start_date, posting_end_date, psa_endorsed_on, claiming_location, claiming_instructions, psa_certificate_available_at, services_registry(name)",
     )
     .eq("tracking_number", trackingNumber)
     .maybeSingle();
@@ -80,6 +81,7 @@ export const trackRequestFn = createServerFn({ method: "POST" })
         serviceCode: request.request_type as string,
         postingStartDate: request.posting_start_date as string | null,
         postingEndDate: request.posting_end_date as string | null,
+        ...(request.request_type === "ELEC_ENDORSEMENT" ? { endorsement: endorsementDetailsOf(request) } : {}),
         serviceName: serviceName || request.request_type,
         status: request.status,
         paymentStatus: request.payment_status,
