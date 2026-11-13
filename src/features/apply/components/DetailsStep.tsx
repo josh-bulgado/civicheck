@@ -1,6 +1,6 @@
 import { REQUESTER_NAME_KEYS, requesterNameAnswers, requiresAccountRequester } from "../requester-name";
 import { ACCOUNT_PARTY_ROLE, accountPartyName, isMarriageAccountRole, requiresMarriageAccountParty } from "../marriage-account-party";
-import { formatFieldLabel } from "~/features/forms/field-label";
+import { formatNameHeading } from "~/features/forms/field-label";
 import { validatePersonName } from "~/lib/person-name";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useRouteContext } from "@tanstack/react-router";
@@ -109,7 +109,7 @@ function PartySection({ role, children }: { role: string; children: ReactNode })
   return (
     <div role="group" aria-labelledby={headingId} className="flex flex-col gap-4 border-t border-border-light pt-6">
       <h2 id={headingId} className={FORM_GROUP_CLASS}>
-        {role.trim().toLowerCase() === "mother" ? "Mother’s Maiden Name" : formatFieldLabel(role)}
+        {formatNameHeading(role)}
       </h2>
       {children}
     </div>
@@ -791,7 +791,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
         ownerLabel ? (
           // A heading that names whose name this is ("Full name of the deceased").
           <div key={subjectField.id} className="flex flex-col gap-3 border-t border-border-light pt-6">
-            <span className={FORM_GROUP_CLASS}>{formatFieldLabel(ownerLabel)}</span>
+            <span className={FORM_GROUP_CLASS}>{formatNameHeading(ownerLabel)}</span>
             <SubjectFieldGrid
               control={form.control}
               setValue={form.setValue}

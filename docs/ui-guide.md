@@ -17,6 +17,10 @@ affected guidance rather than treating this snapshot as a second implementation.
 
 ## Project foundation
 
+Online and walk-in name headings use Husband's Name, Wife's Maiden Name,
+Child's Name, Groom's Name, and Bride's Name. These display labels do not change
+the labels in generated Verification Forms.
+
 Birth registration uses its existing Mother person group for the mother's maiden
 name; do not add a duplicate name group. Birth-record selections in Electronic
 Endorsement, Other Certificates, and Supplemental Report use the same three
@@ -32,6 +36,25 @@ Online and walk-in forms separate sections, person-name groups, and Address
 with full-width borders in normal layout flow. Keep padding after each border
 and a full grid row for name-group headings so controls cannot overlap a divider.
 Optional Father's Full Name remains a field without its own divider.
+Electronic Endorsement birth records show this optional field after the mother's
+name, using the same 15px label as the other fields.
+Their birth date and place appear after the owner's details, before the mother's
+name.
+Electronic Endorsement asks Registered late? for birth, death, and marriage
+records. Yes shows the registration date, using the existing date checks and
+estimated-date option from Other Certificates.
+Its document upload step omits the bracketed endorsement-case prefix from upload
+titles, camera titles, and the in-person checklist.
+When the record type is selected, its Form 1A/2A/3A requirement displays only
+Form 1A for birth, Form 2A for death, or Form 3A for marriage.
+Electronic Endorsement walk-ins reuse the active case and owner fields, including
+birth parents' names and late-registration questions for all three record types.
+Staff confirm the physical papers for the selected endorsement type. Birth and
+death records ask for Sex beside Suffix and save the selected value. Marriage
+does not ask for Sex. Omit requester/address fields and uploads. The checklist is available in
+View requirements. Accepted walk-ins start Processing and unpaid, with the
+accepting staff member and physical check recorded. PSA transmission remains a
+later office action. Charter item 10, PDF pages 15-16, is the policy reference.
 
 Other Certificates walk-in intake records the selected birth, death, or marriage
 record, the person's name, event date and place, optional registry number and
@@ -54,6 +77,12 @@ papers and record search; the digital intake fields are system behavior.
 Walk-in intake starts with the service selection and fields. Omit generic
 introductory instructions; retain field guidance, service-specific notices,
 validation messages, and required confirmations.
+Before a service is selected, hide the generic name, contact, and purpose inputs.
+Walk-in labels, options, and notices use the staff's point of view, naming the
+applicant or document owner. The estimated-date checkbox says Exact date unknown.
+Keep staff confirmations such as I checked and I verified. Apply this wording
+only at display time; online forms, saved answers, and Verification Forms retain
+their existing wording.
 
 When a requester is the record owner, name autofill includes the applicable
 suffix and preserves names the applicant has edited. Existing separate middle-name
@@ -65,8 +94,14 @@ the selected record's event date. Marriage License age brackets continue to use
 the intended marriage date; registration age brackets continue to use today's date.
 Upload guidance distinguishes one complete uploaded copy from physical copies
 and retains the saved instructions about originals, photocopies, and copies each.
+Valid ID uploads ask for a PDF or clear photos of the ID instead of pages, while
+retaining physical-copy instructions and listed document alternatives.
 
-For CTC issuance, Email Inquiry, and Electronic Endorsement online applications,
+Electronic Endorsement asks for the document owner's details without a separate
+requester information or address section. Existing submissions retain their saved
+form version and answers.
+
+For CTC issuance and Email Inquiry online applications,
 requester names come from the signed-in account profile.
 Autofilled requester names select No middle name when the saved middle name is
 blank or the account's no-middle-name flag is set; owner autofill carries this

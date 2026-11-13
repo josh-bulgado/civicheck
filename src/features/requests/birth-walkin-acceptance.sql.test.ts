@@ -70,6 +70,10 @@ beforeAll(async () => {
   await db.exec(otherCertificateMigration);
   await db.exec(`insert into services_registry values('OTHER_CERT','${other}')`);
   await db.exec(`insert into services_registry values('RA9255_SURNAME','${other}')`);
+  const endorsementMigration = readFileSync(new URL("../../../supabase/migrations/20261113010832_accept_checked_electronic_endorsement_walkins.sql", import.meta.url), "utf8");
+  await db.exec(endorsementMigration);
+  await db.exec(endorsementMigration);
+  await db.exec(`insert into services_registry values('ELEC_ENDORSEMENT','${other}')`);
 }, 30_000);
 afterAll(() => db.close());
 it.each(["RA9048-CFN", "RA9048-CCE"])("accepts checked %s filings with pending publication and immutable audit", async request_type => {
@@ -110,6 +114,31 @@ async function insert(patch: Record<string, unknown> = {}) {
   return db.query<{status: string; payment_status: string; walk_in_accepted_by: string; walk_in_accepted_at: string}>(`insert into requests(id,${keys.join(",")}) values($1,${keys.map((_, i) => `$${i+2}`).join(",")}) returning *`,
     [requestId,...Object.values(values).map((value) => value && typeof value === "object" ? JSON.stringify(value) : value)]);
 }
+
+it.each(["advance", "negative", "blurred"])("accepts checked %s endorsement papers with staff audit", async endorsement_type => {
+  const result = await insert({ request_type: "ELEC_ENDORSEMENT", form_template_version_id: other,
+    form_data: { intake_channel: "walk_in", physical_documents_confirmed: "true", endorsement_type, record_type: "birth" } });
+  expect(result.rows[0]).toMatchObject({ status: "processing", payment_status: "unpaid", walk_in_accepted_by: actor });
+  const logs = (await db.query<{remarks: string}>("select remarks from application_logs")).rows;
+  expect(logs).toHaveLength(2);
+  expect(logs.every(log => log.remarks.includes("Electronic Endorsement") && log.remarks.includes("payment remain pending"))).toBe(true);
+  await expect(db.exec("update requests set walk_in_accepted_by=null")).rejects.toThrow(/cannot be changed/);
+});
+
+it("rejects unchecked endorsement papers, missing case choices, other departments, and payment at intake", async () => {
+  const form_data = { intake_channel: "walk_in", physical_documents_confirmed: "true", endorsement_type: "negative", record_type: "death" };
+  const input = { request_type: "ELEC_ENDORSEMENT", form_template_version_id: other, form_data };
+  for (const patch of [
+    { form_data: { ...form_data, physical_documents_confirmed: "false" } },
+    { form_data: { ...form_data, endorsement_type: "" } }, { form_data: { ...form_data, record_type: "other" } },
+    { form_template_version_id: null }, { payment_status: "verified" }, { walk_in_accepted_by: null }, { applicant_id: actor },
+  ]) await expect(insert({ ...input, ...patch })).rejects.toThrow();
+  await db.exec("reset role; update services_registry set department_id=null where service_code='ELEC_ENDORSEMENT'; set role authenticated");
+  await expect(insert(input)).rejects.toThrow(/department/);
+  await db.exec(`reset role; update services_registry set department_id='${other}' where service_code='ELEC_ENDORSEMENT'; set role authenticated; set test.fail_history='yes'`);
+  await expect(insert(input)).rejects.toThrow(/History unavailable/);
+  expect((await db.query("select * from requests")).rows).toHaveLength(0);
+});
 
 it("accepts Other Certificates physical papers and records staff acceptance", async () => {
   const result = await insert({ request_type: "OTHER_CERT", form_template_version_id: other,

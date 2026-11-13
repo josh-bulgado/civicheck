@@ -8,6 +8,7 @@ import legitimationForm from "./fixtures/legitimation-walk-in-form.json";
 import ra9255Form from "../forms/fixtures/ra9255-charter.json";
 import supplementalForm from "./fixtures/supplemental-walk-in-form.json";
 import otherCertificateForm from "./fixtures/other-certificate-walk-in-form.json";
+import endorsementForm from "./fixtures/electronic-endorsement-walk-in-form.json";
 import { parseFormTemplateDefinition } from "~/features/forms/form-template.utils";
 import { emptySubject } from "~/lib/subject-fields";
 
@@ -36,7 +37,7 @@ vi.mock("~/server/auth", () => ({
           maybeSingle: async () => ({
             data: {
               service_code: state.serviceCode,
-              fee: state.serviceCode === "RA9255_SURNAME" ? 355 : 500,
+              fee: state.serviceCode === "ELEC_ENDORSEMENT" ? 100 : state.serviceCode === "RA9255_SURNAME" ? 355 : 500,
               fee_per_copy: false,
               department_id: state.serviceDepartment,
             },
@@ -58,6 +59,7 @@ vi.mock("~/features/requests/tracking-number", () => ({
 vi.mock("~/features/services/services.catalogue", () => ({
   loadServiceCatalogue: async () => ({
     formTemplatesByService: new Map([
+      ["ELEC_ENDORSEMENT", { templateId: "elec_endorsement", versionId: "published", definition: parseFormTemplateDefinition(endorsementForm) }],
       ["OTHER_CERT", { templateId: "other_cert", versionId: "published", definition: parseFormTemplateDefinition(otherCertificateForm) }],
       ["MARRIAGE_LICENSE", { templateId: "marriage_license", versionId: "published", definition: parseFormTemplateDefinition(marriageLicenseForm) }],
       ["RA9255_SURNAME", { templateId: "ra9255", versionId: "published", definition: parseFormTemplateDefinition(ra9255Form.definition) }],
@@ -84,6 +86,7 @@ vi.mock("~/features/services/services.catalogue", () => ({
       ],
     ]),
     servicesByCode: new Map([
+      ["ELEC_ENDORSEMENT", { party_roles: ["Subject"] }],
       ["OTHER_CERT", { party_roles: ["Subject"] }],
       ["MARRIAGE_LICENSE", { party_roles: ["Bride", "Groom"] }],
       ["RA9255_SURNAME", { party_roles: ["Child", "Mother", "Father"] }],
@@ -100,6 +103,54 @@ vi.mock("~/features/services/services.catalogue", () => ({
   }),
 }));
 import { encodeWalkInFn } from "./walk-in-intake.mutations";
+
+it.each(["advance", "negative", "blurred"].flatMap(endorsement_type =>
+  ["birth", "death", "marriage"].map(record_type => ({ endorsement_type, record_type })),
+))("encodes a checked $endorsement_type $record_type endorsement walk-in", async ({ endorsement_type, record_type }) => {
+  state.serviceCode = "ELEC_ENDORSEMENT";
+  state.departmentId = state.serviceDepartment = "archives";
+  const people = [{ ...emptySubject("Subject"), firstName: "Ana", middleName: "Santos", lastName: "Cruz", sex: record_type === "marriage" ? "" : "male" }];
+  const dateKey = record_type === "birth" ? "event_date" : `${record_type}_date`;
+  const placeKey = record_type === "birth" ? "event_place" : `${record_type}_place`;
+  const answers = { subjects: people, endorsement_type, record_type, [dateKey]: "2000-01-01", [placeKey]: "Legazpi City",
+    mother_first_name: "Maria", mother_middle_name: "N/A", mother_last_name: "Santos", father_name: "Juan Cruz",
+    wife_first_name: "Maria", wife_middle_name: "N/A", wife_last_name: "Reyes", registered_late: "no",
+    reference_number: "2000-123", additional_notes: "For follow-up", requester_first_name: "Ignored", requester_city: "Ignored" };
+  const input = { serviceCode: "ELEC_ENDORSEMENT", subjects: people, answers,
+    templateVersionId: "published", physicalDocumentsConfirmed: true };
+  expect(await encodeWalkInFn({ data: input })).toMatchObject({ error: false, status: "processing" });
+  const saved = state.create.mock.calls.at(-1)?.[1];
+  expect(saved).toMatchObject({ applicant_id: null, request_type: "ELEC_ENDORSEMENT", status: "processing", fees_due: 100,
+    walk_in_accepted_by: "staff", form_template_version_id: "published", form_data: {
+      endorsement_type, record_type, [dateKey]: "2000-01-01", [placeKey]: "Legazpi City", registered_late: "no",
+      physical_documents_confirmed: "true", encoded_by: "staff", intake_channel: "walk_in",
+    } });
+  if (record_type === "marriage") expect(saved.form_data.subject_sex).toBeFalsy();
+  else expect(saved.form_data.subject_sex).toBe("male");
+  for (const key of ["requester_first_name", "requester_city", "purpose"])
+    expect(saved.form_data).not.toHaveProperty(key);
+  if (record_type !== "birth") expect(saved.form_data).not.toHaveProperty("mother_first_name");
+  if (record_type !== "marriage") expect(saved.form_data).not.toHaveProperty("wife_first_name");
+  state.create.mockClear();
+  for (const patch of [
+    { physicalDocumentsConfirmed: false }, { templateVersionId: "old" }, { answers: undefined },
+    ...["endorsement_type", "record_type", dateKey, placeKey, "registered_late"].map(key => ({ answers: { ...answers, [key]: "" } })),
+    { answers: { ...answers, subjects: [] } }, { answers: { ...answers, [dateKey]: "2999-01-01" } },
+    { answers: { ...answers, endorsement_type: "unknown" } }, { answers: { ...answers, record_type: "other" } },
+    { answers: { ...answers, registered_late: "yes", registered_late_when: "1999-01-01" } },
+    ...(record_type === "marriage" ? ["wife_first_name", "wife_middle_name", "wife_last_name"].map(key => ({ answers: { ...answers, [key]: "" } })) : []),
+    ...(record_type === "birth" ? ["mother_first_name", "mother_middle_name", "mother_last_name"].map(key => ({ answers: { ...answers, [key]: "" } })) : []),
+    ...(record_type !== "marriage" ? ["", "unknown"].map(sex => ({ answers: { ...answers, subjects: people.map(person => ({ ...person, sex })) } })) : []),
+  ]) expect((await encodeWalkInFn({ data: { ...input, ...patch } })).error).toBe(true);
+  expect(state.create).not.toHaveBeenCalled();
+  expect((await encodeWalkInFn({ data: { ...input, answers: {
+    ...answers, registered_late: "yes", registered_late_when: "2001-01-01",
+  } } })).error).toBe(false);
+  state.create.mockClear();
+  state.departmentId = "another-department";
+  expect((await encodeWalkInFn({ data: input })).error).toBe(true);
+  expect(state.create).not.toHaveBeenCalled();
+});
 
 it.each(["birth", "death", "marriage"])("encodes a checked Other Certificates %s walk-in without sex or uploads", async record_type => {
   state.serviceCode = "OTHER_CERT";

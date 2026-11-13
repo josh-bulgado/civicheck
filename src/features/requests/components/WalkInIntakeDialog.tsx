@@ -29,6 +29,7 @@ import { FORM_TITLE_CLASS, WIZARD_LABEL_CLASS } from "~/features/forms/component
 import { isWalkInDetailedIntake } from "../walk-in-registration";
 import type { TemplateAnswers } from "~/features/forms/form-template.types";
 import { digitsOnly } from "~/lib/phone";
+import { staffCopy } from "~/features/forms/staff-copy";
 import {
   emptySubject,
   reconcileSubjects,
@@ -153,7 +154,7 @@ export function WalkInIntakeDialog({
 
       if (result.error) {
         toast.error("Could not encode this walk-in", {
-          description: result.message,
+          description: staffCopy(result.message),
         });
         return;
       }
@@ -196,7 +197,7 @@ export function WalkInIntakeDialog({
           </DialogHeader>
 
           {!encodedRequest ? (
-            <form onSubmit={handleSubmit} className="[&_h2]:text-[15px] [&_h2]:font-semibold [&_h3]:text-[15px] [&_h3]:font-semibold [&_h3]:border-t [&_h3]:border-border-light [&_h3]:pt-5">
+            <form onSubmit={handleSubmit} className="[&_h2]:text-[15px] [&_h2]:font-semibold [&_h3]:text-[15px] [&_h3]:font-semibold">
               <FieldGroup>
                 <Field>
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -255,6 +256,7 @@ export function WalkInIntakeDialog({
                   <WalkInRegistrationFields key={`${serviceCode}:${selectedService.registrationForm?.versionId}`} service={selectedService} submitting={submitting}
                     onSubmit={encodeRequest} onAnswersChange={setRegistrationAnswers} onCancel={() => setDialogOpen(false)} />
                 ) : <>
+                {selectedService ? <>
                 {selectedService?.feePerCopy ? (
                   <CopiesStepper
                     value={copies}
@@ -340,6 +342,8 @@ export function WalkInIntakeDialog({
                   </Field>
                 </div>
 
+                </> : null}
+
                 <div className="flex justify-end gap-3">
                   <Button
                     type="button"
@@ -390,6 +394,7 @@ export function WalkInIntakeDialog({
 
       {selectedService && (
         <ServiceRequirementsDialog
+          staffView
           serviceCode={
             isWalkInDetailedIntake(serviceCode) ? selectedService.serviceCode : selectedService.displayGroup ?? selectedService.serviceCode
           }

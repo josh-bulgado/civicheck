@@ -9,6 +9,8 @@ import {
 } from "~/features/apply/components/DetailsStep";
 import { DynamicFormFields } from "~/features/forms/components/DynamicFormFields";
 import { FORM_GROUP_CLASS } from "~/features/forms/components/wizard-field";
+import { formatNameHeading } from "~/features/forms/field-label";
+import { staffCopy, staffFormDefinition } from "~/features/forms/staff-copy";
 import { DerivedAnswerAlerts } from "~/features/forms/components/DerivedAnswerAlerts";
 import { EventTimingNotice } from "~/features/forms/components/EventTimingNotice";
 import type { TemplateAnswers } from "~/features/forms/form-template.types";
@@ -74,6 +76,7 @@ export function WalkInRegistrationFields({
   const surnameChange = service.serviceCode === "RA9255_SURNAME";
   const supplemental = service.serviceCode === "SUPPLEMENTAL_REPORT";
   const otherCertificate = service.serviceCode === "OTHER_CERT";
+  const endorsement = service.serviceCode === "ELEC_ENDORSEMENT";
   useEffect(() => {
     if (!template) return;
     const selectedCase = walkInCaseForService(template.definition, service.serviceCode);
@@ -102,7 +105,7 @@ export function WalkInRegistrationFields({
       </Alert>
     );
   const { definition, answers: caseAnswers } = walkInCaseForService(template.definition, service.serviceCode);
-  const displayDefinition = surnameChangeCaseDefinition(definition, service.serviceCode);
+  const displayDefinition = staffFormDefinition(surnameChangeCaseDefinition(definition, service.serviceCode));
   const caseDefinition = {
     ...displayDefinition,
     sections: displayDefinition.sections.map((section) => ({
@@ -133,7 +136,7 @@ export function WalkInRegistrationFields({
   const personFields = definition.sections
     .flatMap((section) => section.fields)
     .filter((field) => field.type === "person_group");
-  const timing = evaluateTemplateEventTiming(definition, values);
+  const timing = evaluateTemplateEventTiming(displayDefinition, values);
 
   async function submit() {
     if (petition && !petitionAuthorityConfirmed) {
@@ -172,10 +175,10 @@ export function WalkInRegistrationFields({
       ),
     };
     for (const field of personFields) answers[field.key] = subjects;
-    const prepare = supplemental || otherCertificate ? prepareWalkInSupplemental : courtDecree ? prepareWalkInCourtDecree : prepareWalkInBirth;
+    const prepare = supplemental || otherCertificate || (endorsement && values.record_type === "marriage") ? prepareWalkInSupplemental : courtDecree ? prepareWalkInCourtDecree : prepareWalkInBirth;
     const prepared = (petition ? prepareWalkInPetition : prepare)(definition, answers, roles);
     if (prepared.error) {
-      setError(prepared.message);
+      setError(staffCopy(prepared.message));
       return;
     }
     setError("");
@@ -195,8 +198,9 @@ export function WalkInRegistrationFields({
     <fieldset disabled={submitting} className="min-w-0 space-y-6 [&>section]:border-t [&>section]:border-border-light [&>section]:pt-5">
       <DynamicFormFields
         definition={caseDefinition}
+        staffView
         step="case"
-        singleColumn={marriage || death || legitimation || courtDecree || supplemental || surnameChange || petition}
+        singleColumn={marriage || death || legitimation || courtDecree || supplemental || surnameChange || petition || endorsement}
         control={form.control}
         values={values}
         showRequiredMarks
@@ -204,7 +208,7 @@ export function WalkInRegistrationFields({
           form.setValue(key, value, { shouldValidate: true })
         }
       />
-      <DerivedAnswerAlerts definition={definition} answers={values} compact={marriageLicense} />
+      <DerivedAnswerAlerts definition={displayDefinition} answers={values} compact={marriageLicense} />
       {timing?.evaluation.mismatched ? (
         <EventTimingNotice
           behavior={timing.rule.behavior}
@@ -214,7 +218,8 @@ export function WalkInRegistrationFields({
         />
       ) : null}
       <DynamicFormFields
-        definition={definition}
+        definition={displayDefinition}
+        staffView
         step="details"
         control={form.control}
         values={values}
@@ -227,16 +232,16 @@ export function WalkInRegistrationFields({
             <div className="space-y-6">
               {roles.map((role, index) => (
                 <div key={role} className="space-y-3">
-                  {!otherCertificate || values.record_type === "marriage" ? <h3 className={FORM_GROUP_CLASS}>
-                    {otherCertificate ? "Name of Husband" : role.toLowerCase() === "mother"
+                  {!otherCertificate || values.record_type === "marriage" ? <h3 className={`${FORM_GROUP_CLASS}${index > 0 ? " border-t border-border-light pt-5" : ""}`}>
+                    {formatNameHeading(otherCertificate ? "Name of Husband" : role.toLowerCase() === "mother"
                       ? "Mother's Maiden Name"
-                      : (petition || supplemental) && roles.length === 1
+                      : (petition || supplemental || endorsement) && roles.length === 1
                         ? (definition.sections.flatMap((section) => section.fields)
                           .find((field) => field.type === "person_group")?.labelByAnswer?.labels[String(values.record_type ?? "")]
                           ?? "Person named on the record")
                       : surnameChange && role === "Child" ? "Child's name on the birth certificate"
                       : death ? "Name of the deceased"
-                      : marriage ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[role] ?? role) : role}
+                      : marriage ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[role] ?? role) : role)}
                   </h3> : null}
                   <SubjectFieldGrid
                     control={form.control}
@@ -244,7 +249,7 @@ export function WalkInRegistrationFields({
                     index={index}
                     role={role}
                     hideSex={courtDecree || supplemental || otherCertificate}
-                    husband={otherCertificate && values.record_type === "marriage"}
+                    husband={(otherCertificate || endorsement) && values.record_type === "marriage"}
                     requireMiddleName
                   />
                 </div>
@@ -259,6 +264,8 @@ export function WalkInRegistrationFields({
           onCheckedChange={(checked) => setPhysicalDocumentsConfirmed(checked === true)} />
         <span>{petition
           ? "I checked the physical documents required at filing. They are complete and acceptable for initial processing. Publication documents will be checked at the appropriate later step."
+          : endorsement
+          ? "I checked the physical documents for the selected endorsement type. The required papers are complete and acceptable."
           : otherCertificate
           ? "I checked the original Application/Verification Form and the agency letter-request. Both are complete and acceptable for processing."
           : courtDecree

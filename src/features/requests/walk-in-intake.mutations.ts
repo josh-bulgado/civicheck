@@ -65,7 +65,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       isDepartmentScopedRole(role) &&
       (!departmentId || service.department_id !== departmentId)
     ) {
-      return { error: true, message: "Pick a service assigned to your department." };
+      return { error: true, message: "Pick a service assigned to this department." };
     }
 
     const copies = service.fee_per_copy ? clampCopies(data.copies ?? 1) : 1;
@@ -104,10 +104,11 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       const { data: active, error: activeError } = await supabase.from("form_templates")
         .select("active_version_id").eq("id", template.templateId).single();
       if (activeError || active.active_version_id !== template.versionId || data.templateVersionId !== template.versionId) {
-        return { error: true, message: "The registration form has changed. Reload the page and review your answers." };
+        return { error: true, message: "The registration form has changed. Reload the page and review the entered answers." };
       }
       const selectedCase = walkInCaseForService(template.definition, service.service_code);
-      const prepare = ["SUPPLEMENTAL_REPORT", "OTHER_CERT"].includes(service.service_code) ? prepareWalkInSupplemental
+      const prepare = ["SUPPLEMENTAL_REPORT", "OTHER_CERT"].includes(service.service_code)
+        || (service.service_code === "ELEC_ENDORSEMENT" && data.answers.record_type === "marriage") ? prepareWalkInSupplemental
         : isWalkInCourtDecree(service.service_code) ? prepareWalkInCourtDecree : prepareWalkInBirth;
       const prepared = (isWalkInPetition(service.service_code) ? prepareWalkInPetition : prepare)(selectedCase.definition, { ...data.answers, ...selectedCase.answers }, registryService.party_roles?.length ? registryService.party_roles : ["Subject"]);
       if (prepared.error) return prepared;
@@ -135,7 +136,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
         }),
         encoded_by: user.id,
         intake_channel: "walk_in",
-        ...(service.service_code === "OTHER_CERT" ? { physical_documents_confirmed: "true" } : {}),
+        ...(["OTHER_CERT", "ELEC_ENDORSEMENT"].includes(service.service_code) ? { physical_documents_confirmed: "true" } : {}),
         ...(isWalkInPetition(service.service_code) ? { petition_authority_confirmed: "true", physical_documents_confirmed: "true" } : {}),
         ...(service.service_code === "SUPPLEMENTAL_REPORT" ? { personal_appearance_confirmed: "true" } : {}),
         ...(service.service_code === "LEGITIMATION" ? { couple_appearance_confirmed: "true" } : {}),

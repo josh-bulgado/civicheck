@@ -14,7 +14,7 @@ it.each([
 
 it("does not turn a number of documents into a physical-copy count", () => {
   expect(physicalCopyGuidance("At least 3 supporting documents")).toBeNull();
-  expect(physicalCopyGuidance("Valid ID")).toBeNull();
+  expect(physicalCopyGuidance("Valid ID")).toBe("Add a PDF or clear photos of the ID.");
 });
 
 it.each([
@@ -24,4 +24,22 @@ it.each([
   ["Acknowledgement / Admission of Paternity + Affidavit to Use Surname of Father - with IDs of parents and child (for Non-Marital Child)", "IDs of parents and child"],
 ])("keeps delayed-birth physical instructions visible: %s", (name, detail) => {
   expect(delayedBirthUploadGuidance(name)).toContain(detail);
+});
+
+it.each(["[Advance Endorsement] Valid ID", "[Negative to PSA CRS] Valid ID", "[Blurred/Illegible Entries] Valid ID", "Valid IDs"])("uses ID wording for %s", (name) => {
+  expect(physicalCopyGuidance(name)).toBe("Add a PDF or clear photos of the ID.");
+});
+
+it("keeps ID copy requirements without page wording", () => {
+  const guidance = physicalCopyGuidance("Valid ID, 1 photocopy with picture and signature");
+  expect(guidance).toContain("clear photos of the ID");
+  expect(guidance).toContain("1 photocopy with picture and signature");
+  expect(guidance).not.toContain("pages");
+});
+
+it("keeps ID alternatives and delayed-birth instructions", () => {
+  const guidance = delayedBirthUploadGuidance("Parent's valid ID / Birth Certificate / Death Certificate if deceased — 1 original to be presented and 1 certified photocopy");
+  expect(guidance).toContain("ID or listed alternative");
+  expect(guidance).toContain("1 original to be presented and 1 certified photocopy");
+  expect(guidance).not.toContain("pages");
 });

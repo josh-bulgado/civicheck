@@ -2,6 +2,7 @@ import { MapPin } from "lucide-react";
 import type { TemplateAnswers } from "~/features/forms/form-template.types";
 import { conditionRuleMatches } from "~/features/forms/form-template.utils";
 import { surnameChangeRequirementName } from "~/features/services/surname-change";
+import { endorsementRequirementName } from "~/features/services/electronic-endorsement";
 import type { ServiceRequirement } from "~/features/admin/services/services.types";
 import {
   CASE_TAG_LABELS,
@@ -24,7 +25,10 @@ export function RequirementRow({
     requirement.service_code ?? requirement.requirement_group,
     answers?.event_date,
   ));
-  const { primary, secondary } = parseRequirementName(name);
+  const { primary, secondary } = parseRequirementName(endorsementRequirementName(
+    name, requirement.service_code ?? requirement.requirement_group,
+    typeof answers?.record_type === "string" ? answers.record_type : undefined,
+  ));
   const source = requirement.where_to_secure;
   const caseTag = requirement.applies_when
     ? answers && conditionRuleMatches(requirement.applies_when, answers)

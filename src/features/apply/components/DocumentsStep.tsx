@@ -2,6 +2,7 @@ import { requiresVerificationSignature } from "~/features/apply/verification-sig
 import { FORM_SECTION_CLASS } from "~/features/forms/components/wizard-field";
 import { delayedBirthUploadGuidance, physicalCopyGuidance } from "~/features/services/physical-copy-guidance";
 import { surnameChangeRequirementName } from "~/features/services/surname-change";
+import { endorsementRequirementName } from "~/features/services/electronic-endorsement";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Camera, Check, ClipboardCheck, Files, FileText, FileX, X } from "lucide-react";
@@ -29,6 +30,7 @@ import {
 import {
   isRequirementApplicable,
   parseRequirementName,
+  splitCaseLabel,
 } from "~/features/services/service-utils";
 import type { ServiceDetail } from "~/features/services/services.queries";
 import {
@@ -130,6 +132,13 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
   const selectedService =
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
   const definition = selectedService.form_template!.definition;
+  const documentDisplayName = (name: string) => parseRequirementName(
+    endorsementRequirementName(
+      selectedService.service_code === "ELEC_ENDORSEMENT" ? splitCaseLabel(name).name : name,
+      selectedService.service_code,
+      draft.caseSelectorAnswers.record_type ?? draft.answers.record_type,
+    ),
+  ).primary;
   const isDelayedBirth = selectedService.service_code === "BIRTH_DELAYED" || selectedService.service_code.startsWith("DCOLB-");
   const requirements = useMemo(() => savedRequirements.map(requirement => ({
     ...requirement,
@@ -635,7 +644,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
       : physicalCopyGuidance(req.requirement_name);
     const primary = isOnTimeColb
       ? "Certificate of Live Birth (COLB)"
-      : parseRequirementName(req.requirement_name).primary;
+      : documentDisplayName(req.requirement_name);
     const documents = documentsByRequirement.get(slot.key) ?? [];
     const isPending = pendingAction?.slotKey === slot.key;
     const uploading = isPending && pendingAction.type === "upload";
@@ -1035,7 +1044,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
                       {signsVerificationOnline && requirement.requirement_name.startsWith("Verification Form")
                         ? "Verification Form: sign online in the next step. No printing needed."
                         : isDelayedBirth ? requirement.requirement_name
-                        : parseRequirementName(requirement.requirement_name).primary}
+                        : documentDisplayName(requirement.requirement_name)}
                     </li>
                   ))}
                 </ul>
@@ -1052,8 +1061,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
         }}
         documentName={
           cameraSlot
-            ? parseRequirementName(cameraSlot.requirement.requirement_name)
-                .primary
+            ? documentDisplayName(cameraSlot.requirement.requirement_name)
             : "your document"
         }
         onCapture={(file) => {

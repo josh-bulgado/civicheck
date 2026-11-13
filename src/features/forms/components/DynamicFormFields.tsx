@@ -255,6 +255,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
   showSectionTitles = false,
   hideSectionTitles = false,
   singleColumn = false,
+  staffView = false,
   readOnlyKeys = [],
   renderSectionLead,
 }: {
@@ -279,6 +280,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
   hideSectionTitles?: boolean;
   /** Stacks every field on its own row instead of pairing short inputs. */
   singleColumn?: boolean;
+  staffView?: boolean;
   readOnlyKeys?: readonly string[];
   /**
    * Content drawn under a section's heading, before its fields. The details step
@@ -362,7 +364,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                 <h3 className={cn("col-span-full border-t border-border-light pt-5", FORM_GROUP_CLASS)}>Mother's Maiden Name</h3>
               ) : null}
               {definitionField.key === "wife_first_name" ? (
-                <h3 className={cn("col-span-full border-t border-border-light pt-5", FORM_GROUP_CLASS)}>Maiden Name of Wife</h3>
+                <h3 className={cn("col-span-full border-t border-border-light pt-5", FORM_GROUP_CLASS)}>Wife's Maiden Name</h3>
               ) : null}
               {definitionField.key === "father_last_name" ? (
                 <h3 className={cn("col-span-full border-t border-border-light pt-5", FORM_GROUP_CLASS)}>Father's Name</h3>
@@ -512,7 +514,20 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         {legendLabel}
                       </FieldLegend>
                       <ChoiceGroup
-                        options={options}
+                        options={options.map((option) => {
+                          if (definitionField.key !== "endorsement_type") return option;
+                          const separator = option.label.indexOf(": ");
+                          if (separator < 0) return option;
+                          const description = option.label.slice(separator + 2);
+                          return {
+                            ...option,
+                            label: option.label.slice(0, separator),
+                            description: description.charAt(0).toUpperCase() + description.slice(1),
+                          };
+                        })}
+                        className={definitionField.key === "endorsement_type"
+                          ? "[&_[data-slot=field-label]]:justify-start [&_[data-slot=field]]:items-start! [&_[role=radio]]:mt-px! [&_[data-slot=field-content]]:gap-1.5 [&_[data-slot=field-content]>.font-medium]:font-semibold [&_[data-slot=field-content]>.text-xs]:text-sm [&_[data-slot=field-content]>.text-xs]:font-normal [&_[data-slot=field-content]>.text-xs]:leading-relaxed"
+                          : undefined}
                         value={field.value ?? ""}
                         onValueChange={field.onChange}
                         idPrefix={`dynamic-${definitionField.key}`}
@@ -581,6 +596,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                     ) : definitionField.type === "date" ? (
                       definitionField.allowEstimate ? (
                         <EstimatedDateField
+                          staffView={staffView}
                           min={definitionField.key === "registered_late_when" ? registrationEventDate(values) : undefined}
                           id={`dynamic-${definitionField.key}`}
                           value={field.value ?? ""}

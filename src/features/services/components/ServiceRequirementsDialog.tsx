@@ -20,6 +20,7 @@ import { FactsStrip } from "~/features/services/components/FactsStrip";
 import { useServiceOverview } from "~/features/services/hooks/useServiceOverview";
 import type { ServiceRequirement } from "~/features/admin/services/services.types";
 import type { TemplateAnswers } from "~/features/forms/form-template.types";
+import { staffCopy } from "~/features/forms/staff-copy";
 import {
   cleanStepText,
   formatFee,
@@ -45,6 +46,7 @@ interface ServiceRequirementsDialogProps {
    */
   onApply?: () => void;
   answers?: TemplateAnswers;
+  staffView?: boolean;
 }
 
 const badgeToneClasses = {
@@ -62,6 +64,7 @@ export function ServiceRequirementsDialog({
   onOpenChange,
   onApply,
   answers,
+  staffView = false,
 }: ServiceRequirementsDialogProps) {
   const { overview, loading, error, retry } = useServiceOverview(serviceCode, open);
 
@@ -78,6 +81,7 @@ export function ServiceRequirementsDialog({
     overview && !isGroup
       ? ((overview.services[0].steps_description ?? []) as string[])
           .map(cleanStepText)
+          .map(step => staffView ? staffCopy(step) : step)
           .filter((step) => step.length > 0)
       : [];
 
@@ -99,7 +103,9 @@ export function ServiceRequirementsDialog({
             {title}
           </DialogTitle>
           <DialogDescription>
-            {answers
+            {staffView
+              ? "Requirements to check before accepting the walk-in."
+              : answers
               ? "Requirements based on the selected service and current answers. Unanswered questions may still change this list."
               : "Everything you need to prepare before filing this request at the City Civil Registrar Office."}
           </DialogDescription>
@@ -172,7 +178,7 @@ export function ServiceRequirementsDialog({
                 </section>
               )}
 
-              <RequiredDocuments requirements={mandatoryReqs} answers={answers} />
+              <RequiredDocuments requirements={mandatoryReqs} answers={answers} heading={staffView ? "Documents to check" : undefined} />
 
               <ConditionalDocuments requirements={conditionalReqs} answers={answers} />
 
