@@ -432,6 +432,7 @@ export default function RequestDetailPage({
         type={dialog}
         busy={busy}
         context={{
+          isWalkIn: request.isWalkIn,
           serviceCode: request.serviceCode,
           endorsement: request.endorsement,
           applicantName: request.applicantName,

@@ -330,7 +330,7 @@ export function CaseStep({
 
   return (
     <WizardShell step={1} title="Tell us about your request">
-      <div className={isPetitionService(selectedService.service_code) ? "flex flex-col gap-6 [&_h2]:text-lg" : selectedService.service_code === "RA9255_SURNAME" ? "surname-change-case flex flex-col gap-6" : "flex flex-col gap-6"}>
+      <div className={isPetitionService(selectedService.service_code) ? "flex flex-col gap-6" : selectedService.service_code === "RA9255_SURNAME" ? "surname-change-case flex flex-col gap-6" : "flex flex-col gap-6"}>
         {isGroup ? (
           <CaseSelector
             services={services}

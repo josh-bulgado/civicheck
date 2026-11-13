@@ -26,6 +26,7 @@ import { REQUEST_REJECTION_REASONS } from "~/features/requests/rejection-reasons
 import { endorsementClaimingSteps, type EndorsementDetails } from "../electronic-endorsement-release";
 
 interface RequestContext {
+  isWalkIn?: boolean;
   endorsement?: EndorsementDetails | null;
   serviceCode: string;
   originalsAlreadyChecked?: boolean;
@@ -144,7 +145,9 @@ function ReleaseForm({ busy, context, onConfirm }: FormProps) {
         : "The cashier confirmed no fee was due.",
   ] : [
     ...(needsOriginals
-      ? ["I checked the originals and hard copies against the submitted details and any uploaded copies."]
+      ? [context.isWalkIn
+          ? "I checked the originals and hard copies against the submitted details."
+          : "I checked the originals and hard copies against the submitted details and any uploaded copies."]
       : []),
     "I verified the claimant’s identity and authority to receive the document.",
     context.serviceCode === "ELEC_ENDORSEMENT"
@@ -224,7 +227,9 @@ function OriginalsForm({ busy, context, onConfirm }: FormProps) {
           className="mt-0.5"
         />
         <Label htmlFor={checkboxId} className="leading-snug">
-          I checked the originals and hard copies against the submitted details and any uploaded copies.
+          {context.isWalkIn
+            ? "I checked the originals and hard copies against the submitted details."
+            : "I checked the originals and hard copies against the submitted details and any uploaded copies."}
         </Label>
       </div>
       <AlertDialogFooter>

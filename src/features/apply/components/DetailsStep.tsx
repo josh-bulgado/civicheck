@@ -317,7 +317,7 @@ export function SubjectFieldGrid({
                 >
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="service-form-options">
                   <SelectGroup>
                     {SUFFIXES.map((suffix) => (
                       <SelectItem key={suffix.label} value={suffix.value}>
@@ -360,7 +360,7 @@ export function SubjectFieldGrid({
                 >
                   <SelectValue placeholder="Select sex" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="service-form-options">
                   <SelectGroup>
                     {SEX_ITEMS.map((sex) => (
                       <SelectItem key={sex.value} value={sex.value}>

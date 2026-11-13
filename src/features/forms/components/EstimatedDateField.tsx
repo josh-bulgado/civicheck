@@ -43,7 +43,7 @@ export function EstimatedDateField({ id, value, onChange, onBlur, invalid, min, 
           min={min} max={todayKeyInTimeZone()} invalid={invalid} icon="calendar"
           className={`${WIZARD_CONTROL_CLASS} h-10 px-3`} />
       )}
-      <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm">
+      <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-[15px]">
         <Checkbox checked={estimated} onCheckedChange={(checked) => onChange(checked === true ? UNKNOWN_DATE : "")} />
         {staffView ? "Exact date unknown" : "I don’t remember the exact date"}
       </label>

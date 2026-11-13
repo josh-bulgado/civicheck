@@ -21,7 +21,7 @@ export function WizardShell({
     // Every wizard step renders through here, so keying on the step number is
     // what makes moving between them feel like a step rather than a redraw: the
     // card is torn down and rebuilt, which replays the entrance.
-    <div key={step} className="mx-auto w-full px-3 pt-4 pb-10 sm:px-8 md:px-14 md:pt-5">
+    <div key={step} data-service-form className="mx-auto w-full px-3 pt-4 pb-10 sm:px-8 md:px-14 md:pt-5">
       {/* The card is the same 1054px on every step; a step with a sidebar
           adds the sidebar's column beside it instead of narrowing the card. */}
       <div

@@ -10,9 +10,9 @@ import { FieldError } from "~/components/ui/field";
 /** Label above a field, and the legend above a group of choice tiles. */
 export const WIZARD_LABEL_CLASS = "text-[15px] font-semibold text-portal-ink-2";
 
-export const FORM_TITLE_CLASS = "text-[32px] leading-[1.15] font-semibold tracking-[-0.02em] text-foreground";
-export const FORM_SECTION_CLASS = "text-[24px] leading-tight font-bold text-foreground";
-export const FORM_GROUP_CLASS = "text-[20px] leading-normal font-bold text-foreground";
+export const FORM_TITLE_CLASS = "service-form-title text-[32px] leading-[1.15] font-semibold tracking-[-0.02em] text-foreground";
+export const FORM_SECTION_CLASS = "service-form-section text-[24px] leading-tight font-bold text-foreground";
+export const FORM_GROUP_CLASS = "service-form-group text-[20px] leading-normal font-bold text-foreground";
 
 // An invalid control gets a tinted face and a solid 1px ring on top of the red
 // border, so the error is visible without relying on the border hue alone.
@@ -31,11 +31,11 @@ export const WIZARD_CONTROL_CLASS = `h-14! rounded-[14px] border-border bg-card 
 
 export const WIZARD_TEXTAREA_CLASS = `rounded-[14px] border-border bg-card px-4.5 py-3.5 text-[17px] shadow-none placeholder:text-[#8a97a8] dark:placeholder:text-muted-foreground md:text-[17px] ${INVALID_CONTROL_CLASS}`;
 
-/** Mobile number: the same face as single-line controls, with an 18px prefix and input. */
+/** Mobile number: the same face as single-line controls, with a 17px prefix and input. */
 export const WIZARD_GROUP_CLASS =
-  "h-14 rounded-[14px] border-border bg-card shadow-none *:data-[slot=input-group-control]:text-lg md:*:data-[slot=input-group-control]:text-lg [&_[data-slot=input-group-addon]>span]:text-lg";
+  "h-14 rounded-[14px] border-border bg-card shadow-none *:data-[slot=input-group-control]:text-[17px] md:*:data-[slot=input-group-control]:text-[17px] [&_[data-slot=input-group-addon]>span]:text-[17px]";
 
-/** Error line under a field: icon plus message, 15px semibold in the error ink. */
+/** Error line under a field: icon plus message, 14px semibold in the error ink. */
 export function WizardFieldError({
   error,
 }: {
@@ -45,7 +45,7 @@ export function WizardFieldError({
   return (
     <FieldError
       errors={[error]}
-      className="flex items-center gap-1.5 text-[15px] font-semibold"
+      className="flex items-center gap-1.5 text-sm font-semibold"
     >
       <CircleAlert className="size-4 shrink-0" aria-hidden="true" />
       {error.message}

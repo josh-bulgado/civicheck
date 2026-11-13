@@ -15,8 +15,7 @@ source. Do not collect relationship/representative authority, first-name legal
 grounds, registration-location eligibility, additional correction concerns,
 or extra contact/notes. Keep basic record identification, current/proposed
 entries, employment alternatives, and the documented indigency question.
-On the petition case page, Petition details matches the 18px Petition type
-heading. Omit the help text under corrected birth date, recorded event date,
+On the petition case page, Petition details uses the shared section-heading size. Omit the help text under corrected birth date, recorded event date,
 filing-fee exemption, registry number, and employment status.
 Petition record date and place appear on the next page after the person's name,
 using the existing event_date/event_place keys once. The proposed corrected
@@ -602,3 +601,11 @@ The shared applicant What to do next card uses 15px regular instructions with
 28px line spacing and small numbered markers across all services. Keep the
 section heading distinct without making the full instruction bold. Each sentence
 starts on its own line and wraps naturally on smaller screens.
+
+Service forms use the same typography for online applications and staff walk-ins:
+32px titles, 24px section headings, 20px group headings, 17px inputs and dropdown
+options (including phone numbers), 15px labels, choices, instructions,
+confirmations and buttons, and 14px helper text and validation errors.
+Scope these rules with `data-service-form`; portalled dropdowns and location
+searches use `service-form-options`. Shared heading constants identify their
+role even when a group heading uses an h2 element.

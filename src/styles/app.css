@@ -2268,3 +2268,37 @@ input[aria-hidden="true"][tabindex="-1"] {
     animation: civic-shimmer 1.5s var(--ease-civic) infinite;
   }
 }
+
+/* Shared typography for online and walk-in service forms. */
+[data-service-form] {
+  font-size: 15px;
+}
+
+[data-service-form] :is(p, label, legend, button, [data-slot="field-label"], [data-slot="alert-description"], .text-base) {
+  font-size: 15px;
+}
+
+[data-service-form] :is(h1, [data-slot="dialog-title"], .service-form-title) {
+  font-size: 32px;
+}
+
+[data-service-form] :is(h2, .service-form-section) {
+  font-size: 24px;
+}
+
+[data-service-form] :is(h3, .service-form-group) {
+  font-size: 20px;
+}
+
+[data-service-form] :is([data-slot="field-description"], [data-slot="field-error"], .text-xs, p.text-sm.text-muted-foreground, p[id$="-help"]) {
+  font-size: 14px;
+}
+
+[data-service-form] :is(input:not([type="checkbox"]):not([type="radio"]), textarea, [data-slot="select-trigger"], [data-slot="input-group-addon"], [data-slot="input-group-addon"] > span, [data-slot="popover-trigger"]) {
+  font-size: 17px;
+}
+
+/* Dropdowns and location searches render outside the form in a portal. */
+.service-form-options :is([data-slot="select-item"], [data-slot="command-item"], [data-slot="command-input"], input) {
+  font-size: 17px;
+}

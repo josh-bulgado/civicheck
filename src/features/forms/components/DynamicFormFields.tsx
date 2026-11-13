@@ -674,7 +674,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         >
                           <SelectValue placeholder="Select one" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="service-form-options">
                           <SelectGroup>
                             {(definitionField.options ?? []).map((option) => (
                               <SelectItem

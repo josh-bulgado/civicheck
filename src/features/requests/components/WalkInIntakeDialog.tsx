@@ -191,15 +191,13 @@ export function WalkInIntakeDialog({
         open={open ?? internalOpen}
         onOpenChange={setDialogOpen}
       >
-        <DialogContent aria-describedby={undefined} className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+        <DialogContent data-service-form aria-describedby={undefined} className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle className={FORM_TITLE_CLASS}>Department walk-in intake</DialogTitle>
           </DialogHeader>
 
           {!encodedRequest ? (
-            <form onSubmit={handleSubmit} className={serviceCode === "RA9255_SURNAME"
-              ? "[&_h2]:text-[17px] [&_h2]:font-bold [&_h3]:text-[15px] [&_h3]:font-semibold"
-              : "[&_h2]:text-[15px] [&_h2]:font-semibold [&_h3]:text-[15px] [&_h3]:font-semibold"}>
+            <form onSubmit={handleSubmit}>
               <FieldGroup>
                 <Field>
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -225,7 +223,7 @@ export function WalkInIntakeDialog({
                       >
                         <SelectValue className="min-w-0 truncate" placeholder="Select a department service" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="service-form-options">
                         <SelectGroup>
                           {currentServices.map((service) => (
                             <SelectItem
