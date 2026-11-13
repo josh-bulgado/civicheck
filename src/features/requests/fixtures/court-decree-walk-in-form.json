@@ -6,26 +6,6 @@
       "title": "Case details",
       "fields": [
         {
-          "key": "event_date",
-          "type": "date",
-          "label": "Date of the court decision",
-          "required": true,
-          "dateDirection": "past"
-        },
-        {
-          "key": "event_place",
-          "type": "text",
-          "label": "Court that issued the decision",
-          "required": true,
-          "placeholder": "e.g. Legazpi City, Albay"
-        },
-        {
-          "key": "reference_number",
-          "type": "text",
-          "label": "Case/docket number (if known)",
-          "required": false
-        },
-        {
           "key": "issued_by_rtc_legazpi",
           "type": "select",
           "label": "Was the decision issued by the RTC of Legazpi City?",
@@ -68,6 +48,41 @@
           "required": true
         },
         {
+          "key": "birth_date",
+          "type": "date",
+          "label": "Date of birth",
+          "required": true,
+          "dateDirection": "past"
+        },
+        {
+          "key": "birth_place",
+          "type": "text",
+          "label": "Place of birth",
+          "required": true,
+          "placeholder": "Enter the place shown on the birth record"
+        },
+        {
+          "key": "marriage_date",
+          "type": "date",
+          "label": "Date of marriage",
+          "required": true,
+          "dateDirection": "past"
+        },
+        {
+          "key": "marriage_place",
+          "type": "text",
+          "label": "Place of marriage",
+          "required": true,
+          "placeholder": "Enter the place shown on the marriage record"
+        },
+        {
+          "key": "reference_number",
+          "type": "text",
+          "label": "Registry number",
+          "required": false,
+          "helpText": "Use the birth or marriage registry number, if known."
+        },
+        {
           "key": "contact_number",
           "type": "phone",
           "label": "Contact number",
@@ -78,5 +93,91 @@
       ]
     }
   ],
-  "schemaVersion": 1
+  "schemaVersion": 1,
+  "caseSelector": {
+    "title": "Court decree type",
+    "questions": [
+      {
+        "key": "court_decree_type",
+        "label": "Which court decree are you registering?",
+        "options": [
+          {
+            "value": "adoption",
+            "label": "Adoption"
+          },
+          {
+            "value": "foreign_decree",
+            "label": "Foreign decree",
+            "notice": {
+              "variant": "default",
+              "title": "Foreign decree",
+              "description": "A foreign decree is issued by a court in another country. CCRO will review the applicable court papers.",
+              "blocksProgress": false
+            }
+          },
+          {
+            "value": "annulment_nullity",
+            "label": "Annulment / Declaration of nullity of marriage"
+          }
+        ]
+      },
+      {
+        "key": "record_type",
+        "label": "Which record is affected?",
+        "visibleWhen": {
+          "match": "all",
+          "conditions": [
+            {
+              "field": "court_decree_type",
+              "operator": "equals",
+              "value": "foreign_decree"
+            }
+          ]
+        },
+        "options": [
+          {
+            "value": "birth",
+            "label": "Birth record"
+          },
+          {
+            "value": "marriage",
+            "label": "Marriage record"
+          }
+        ]
+      }
+    ],
+    "outcomes": [
+      {
+        "serviceCode": "COURT-FOREIGN-ADOPTION",
+        "when": {
+          "match": "any",
+          "conditions": [
+            {
+              "field": "court_decree_type",
+              "operator": "equals",
+              "value": "adoption"
+            },
+            {
+              "field": "court_decree_type",
+              "operator": "equals",
+              "value": "foreign_decree"
+            }
+          ]
+        }
+      },
+      {
+        "serviceCode": "COURT-ANNULMENT",
+        "when": {
+          "match": "all",
+          "conditions": [
+            {
+              "field": "court_decree_type",
+              "operator": "equals",
+              "value": "annulment_nullity"
+            }
+          ]
+        }
+      }
+    ]
+  }
 }

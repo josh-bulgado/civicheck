@@ -25,8 +25,9 @@ import { CopiesStepper } from "~/features/services/components/CopiesStepper";
 import { ServiceRequirementsDialog } from "~/features/services/components/ServiceRequirementsDialog";
 import { WalkInRegistrationFields } from "./WalkInRegistrationFields";
 import { WalkInFee } from "./WalkInFee";
+import { walkInServiceChoices } from "../walk-in-court-decree";
 import { FORM_TITLE_CLASS, WIZARD_LABEL_CLASS } from "~/features/forms/components/wizard-field";
-import { isWalkInDetailedIntake } from "../walk-in-registration";
+import { isWalkInCourtDecree, isWalkInDetailedIntake } from "../walk-in-registration";
 import type { TemplateAnswers } from "~/features/forms/form-template.types";
 import { digitsOnly } from "~/lib/phone";
 import { staffCopy } from "~/features/forms/staff-copy";
@@ -60,6 +61,7 @@ export function WalkInIntakeDialog({
   const submissionPending = useRef(false);
   const [requirementsOpen, setRequirementsOpen] = useState(false);
   const [serviceCode, setServiceCode] = useState("");
+  const [courtDecreeType, setCourtDecreeType] = useState("");
   const [registrationAnswers, setRegistrationAnswers] = useState<TemplateAnswers>({});
   const [subjects, setSubjects] = useState<SubjectFields[]>([
     emptySubject("Subject"),
@@ -76,6 +78,8 @@ export function WalkInIntakeDialog({
   const selectedService = currentServices.find(
     (service) => service.serviceCode === serviceCode,
   );
+  const serviceChoices = walkInServiceChoices(currentServices);
+  const selectedChoice = serviceChoices.find((choice) => choice.serviceCode === serviceCode && choice.courtDecreeType === courtDecreeType);
 
   useEffect(() => {
     if (!(open ?? internalOpen)) return;
@@ -113,6 +117,7 @@ export function WalkInIntakeDialog({
 
   function reset() {
     setServiceCode("");
+    setCourtDecreeType("");
     setRegistrationAnswers({});
     setSubjects([emptySubject("Subject")]);
     setPurpose("");
@@ -193,7 +198,8 @@ export function WalkInIntakeDialog({
       >
         <DialogContent data-service-form aria-describedby={undefined} className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle className={FORM_TITLE_CLASS}>Department walk-in intake</DialogTitle>
+            <DialogTitle className={FORM_TITLE_CLASS}>{selectedService && isWalkInCourtDecree(serviceCode)
+              ? selectedService.displayName ?? selectedService.name : "Department walk-in intake"}</DialogTitle>
           </DialogHeader>
 
           {!encodedRequest ? (
@@ -211,10 +217,15 @@ export function WalkInIntakeDialog({
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <Select
-                      items={currentServices.map((service) => ({ value: service.serviceCode, label: service.name }))}
-                      value={serviceCode}
+                      items={serviceChoices.map((choice) => ({ value: choice.value, label: choice.label }))}
+                      value={selectedChoice?.value ?? ""}
                       disabled={submitting || loadingServices || servicesError}
-                      onValueChange={(value) => { setServiceCode(value ?? ""); setRegistrationAnswers({}); }}
+                      onValueChange={(value) => {
+                        const choice = serviceChoices.find((item) => item.value === value);
+                        setServiceCode(choice?.serviceCode ?? "");
+                        setCourtDecreeType(choice?.courtDecreeType ?? "");
+                        setRegistrationAnswers({});
+                      }}
                     >
                       <SelectTrigger
                         id="walkin-service"
@@ -225,12 +236,12 @@ export function WalkInIntakeDialog({
                       </SelectTrigger>
                       <SelectContent className="service-form-options">
                         <SelectGroup>
-                          {currentServices.map((service) => (
+                          {serviceChoices.map((service) => (
                             <SelectItem
-                              key={service.serviceCode}
-                              value={service.serviceCode}
+                              key={service.value}
+                              value={service.value}
                             >
-                              {service.name} — ₱{service.fee.toFixed(2)}
+                              {service.label} — ₱{service.fee.toFixed(2)}
                               {service.feePerCopy ? " per copy" : ""}
                             </SelectItem>
                           ))}
@@ -252,7 +263,8 @@ export function WalkInIntakeDialog({
                 {loadingServices ? <p role="status">Loading current forms…</p> : servicesError ? (
                   <p role="alert">Could not load the current forms. Close and reopen this dialog to try again.</p>
                 ) : selectedService && isWalkInDetailedIntake(serviceCode) ? (
-                  <WalkInRegistrationFields key={`${serviceCode}:${selectedService.registrationForm?.versionId}`} service={selectedService} submitting={submitting}
+                  <WalkInRegistrationFields key={`${serviceCode}:${courtDecreeType}:${selectedService.registrationForm?.versionId}`} service={selectedService} submitting={submitting}
+                    courtDecreeType={courtDecreeType}
                     onSubmit={encodeRequest} onAnswersChange={setRegistrationAnswers} onCancel={() => setDialogOpen(false)} />
                 ) : <>
                 {selectedService ? <>

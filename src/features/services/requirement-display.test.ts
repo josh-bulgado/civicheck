@@ -15,6 +15,13 @@ it("preserves document wording, copy counts, and brackets within the actual titl
 });
 
 describe("describeRequirement", () => {
+  it("keeps the Charter's court-document list together and separates only the copy count", () => {
+    const old = "Certified Xerox copy of the Certificate of Finality / Entry of Judgment / Decree of Adoption or Nullity of Marriage, 4 original copies";
+    const title = "Certified Xerox copy of the Certificate of Finality, Entry of Judgment, Decree of Adoption and Nullity/Annulment of Marriage";
+    expect(requirementDisplayName(old)).toBe(`${title}, 4 original copies`);
+    expect(describeRequirement(old)).toEqual({ title, detail: "4 original copies" });
+    expect(describeRequirement(`${title}, 4 original copies`)).toEqual({ title, detail: "4 original copies" });
+  });
   it("keeps a plain document title intact", () => {
     expect(describeRequirement("Birth Certificate of Parents")).toEqual({ title: "Birth Certificate of Parents", detail: null });
   });

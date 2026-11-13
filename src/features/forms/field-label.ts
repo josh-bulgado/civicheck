@@ -1,3 +1,8 @@
+export function isRegistryNumberField(field: { key: string; label: string }) {
+  return ["reference_number", "registry_number"].includes(field.key) ||
+    /\b(?:registry|registration)\b.*\b(?:number|no)\b/i.test(field.label);
+}
+
 export function formatNameHeading(label: string): string {
   const names: Record<string, string> = {
     child: "Child's Name",
@@ -28,7 +33,8 @@ export function formatFieldLabel(label: string): string {
     const sentence = label.toLowerCase()
       .replace(/\b(?:psa|nbi|pnp|ccro|lcro|lcr|ctc|colb|brap|id|sss|gsis|bir|dfa|rtc|rhu|doh|dswd|tin|ra|dob)\b/gi, word => word.toUpperCase())
       .replace(/\bids\b/gi, "IDs")
-      .replace(/\br\.a\./gi, "R.A.");
+      .replace(/\br\.a\./gi, "R.A.")
+      .replace(/\blegazpi city\b/gi, "Legazpi City");
     return sentence.replace(/[A-Za-z]/, letter => letter.toUpperCase());
   }
 

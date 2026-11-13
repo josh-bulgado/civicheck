@@ -82,9 +82,10 @@ function ApplyLayout() {
     : isGroup
       ? undefined
       : services[0];
-  const serviceName = selectedService?.name ?? displayName;
+  const courtDecree = services.some((service) => service.display_group === "court_decree");
+  const serviceName = courtDecree ? displayName : selectedService?.name ?? displayName;
   const serviceFamily =
-    selectedService && selectedService.name !== displayName
+    !courtDecree && selectedService && selectedService.name !== displayName
       ? displayName
       : undefined;
   const selectionPending = isGroup && !selectedService;

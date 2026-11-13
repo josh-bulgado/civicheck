@@ -470,12 +470,13 @@ it.each(["COURT-ANNULMENT", "COURT-FOREIGN-ADOPTION"])("encodes checked %s court
   const people=(serviceCode === "COURT-ANNULMENT" ? ["Husband","Wife"] : ["Subject"]).map(role => ({
     ...emptySubject(role),firstName:"Ana",middleName:"Santos",lastName:"Cruz",sex:"",
   }));
-  const answers={subjects:people,event_date:"2000-01-01",event_place:"RTC Legazpi City",issued_by_rtc_legazpi:"yes"};
+  const answers={subjects:people,issued_by_rtc_legazpi:"yes",court_decree_type:serviceCode === "COURT-ANNULMENT" ? "annulment_nullity" : "adoption",
+    birth_date:"2000-01-01",birth_place:"Legazpi City, Albay",marriage_date:"2020-01-01",marriage_place:"Legazpi City, Albay"};
   const input={...data,serviceCode,subjects:people,answers};
   expect((await encodeWalkInFn({data:input})).error).toBe(false);
   expect(state.create).toHaveBeenCalledWith(expect.anything(),expect.objectContaining({
     status:"processing",walk_in_accepted_by:"staff",form_template_version_id:"published",
-    form_data:expect.objectContaining({event_date:"2000-01-01",issued_by_rtc_legazpi:"yes",subject_first_name:"Ana"}),
+    form_data:expect.objectContaining({issued_by_rtc_legazpi:"yes",subject_first_name:"Ana"}),
   }));
   expect(state.create.mock.calls.at(-1)?.[1].form_data).not.toHaveProperty("purpose");
   state.create.mockClear();
@@ -483,11 +484,22 @@ it.each(["COURT-ANNULMENT", "COURT-FOREIGN-ADOPTION"])("encodes checked %s court
     {physicalDocumentsConfirmed:false}, {templateVersionId:"old"},
     {answers:{...answers,issued_by_rtc_legazpi:"not_sure"}},
     {answers:{...answers,issued_by_rtc_legazpi:""}},
-    {answers:{...answers,event_date:""}}, {answers:{...answers,event_place:""}},
+    ...(serviceCode === "COURT-FOREIGN-ADOPTION" ? [
+      {answers:{...answers,court_decree_type:"legal_separation"}},
+      {answers:{...answers,court_decree_type:""}},
+    ] : []),
     {answers:{...answers,subjects:[]}},
   ]) expect((await encodeWalkInFn({data:{...input,...patch}})).error).toBe(true);
   expect(state.create).not.toHaveBeenCalled();
   expect((await encodeWalkInFn({data:{...input,answers:{...answers,issued_by_rtc_legazpi:"no"}}})).error).toBe(false);
+  if (serviceCode === "COURT-FOREIGN-ADOPTION") {
+    expect((await encodeWalkInFn({data:{...input,answers:{...answers,court_decree_type:"foreign_decree",record_type:"birth"}}})).error).toBe(false);
+    expect(state.create.mock.calls.at(-1)?.[1].form_data.court_decree_type).toBe("foreign_decree");
+    const spouses = ["Husband", "Wife"].map(role => ({ ...emptySubject(role), firstName:"Ana",middleName:"Santos",lastName:"Cruz" }));
+    expect((await encodeWalkInFn({data:{...input,subjects:spouses,answers:{...answers,subjects:spouses,court_decree_type:"foreign_decree",record_type:"marriage"}}})).error).toBe(false);
+    expect(state.create.mock.calls.at(-1)?.[1].form_data).toMatchObject({ subject_role:"Husband",subject_first_name:"Ana",party2_role:"Wife",party2_first_name:"Ana",marriage_date:"2020-01-01" });
+    expect(state.create.mock.calls.at(-1)?.[1].form_data).not.toHaveProperty("birth_date");
+  }
   state.create.mockClear();state.departmentId="birth";
   expect((await encodeWalkInFn({data:input})).error).toBe(true);
   expect(state.create).not.toHaveBeenCalled();

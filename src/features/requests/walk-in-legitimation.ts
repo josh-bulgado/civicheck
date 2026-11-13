@@ -3,6 +3,7 @@ import { ACCOUNT_PARTY_ROLE, requiresMarriageAccountParty } from "~/features/app
 import { marriageLicenseWalkInDefinition } from "./walk-in-marriage-license";
 import { isWalkInCourtDecree } from "./walk-in-registration";
 import { birthCaseForService } from "./walk-in-birth";
+import { conditionRuleMatches } from "~/features/forms/form-template.utils";
 import { isWalkInPetition, petitionCaseForService } from "./walk-in-petition";
 
 export function walkInCaseForService(definition: FormTemplateDefinition, serviceCode: string) {
@@ -65,13 +66,27 @@ export function walkInCaseForService(definition: FormTemplateDefinition, service
       },
     };
   }
-  if (isWalkInCourtDecree(serviceCode)) return {
-    answers: {} as Record<string, string>,
+  if (isWalkInCourtDecree(serviceCode)) {
+    const question = definition.caseSelector?.questions.find((item) => item.key === "court_decree_type");
+    const outcome = definition.caseSelector?.outcomes.find((item) => item.serviceCode === serviceCode);
+    const options = question?.options.filter((option) => outcome && conditionRuleMatches(outcome.when, { court_decree_type: option.value }));
+    const typeField: FormFieldDefinition[] = options?.length ? [{
+      key: "court_decree_type", type: "select", label: "Court decree type", required: true, options,
+    }] : [];
+    const recordQuestion = definition.caseSelector?.questions.find((item) => item.key === "record_type");
+    if (recordQuestion && serviceCode === "COURT-FOREIGN-ADOPTION") typeField.push({
+      key: "record_type", type: "select", label: recordQuestion.label, required: true,
+      options: recordQuestion.options,
+      visibleWhen: { field: "court_decree_type", operator: "equals", value: "foreign_decree" },
+    });
+    return {
+    answers: options?.length === 1 ? { court_decree_type: options[0].value } : {} as Record<string, string>,
     definition: {
       ...definition,
+      caseSelector: undefined,
       sections: definition.sections.map((section) => ({
         ...section,
-        fields: section.fields.filter((field) => !["purpose", "purpose_other"].includes(field.key))
+        fields: [...(section.step === "case" ? typeField : []), ...section.fields.filter((field) => !["purpose", "purpose_other"].includes(field.key))]
           .map((field) => field.key === "issued_by_rtc_legazpi" ? {
             ...field,
             options: field.options?.filter((option) => option.value !== "not_sure"),
@@ -80,6 +95,7 @@ export function walkInCaseForService(definition: FormTemplateDefinition, service
       })),
     },
   };
+  }
   const surnameChange = serviceCode === "RA9255_SURNAME";
   if (serviceCode !== "LEGITIMATION" && !surnameChange) return birthCaseForService(definition, serviceCode);
 

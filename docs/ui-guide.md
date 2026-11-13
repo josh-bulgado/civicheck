@@ -585,15 +585,52 @@ These use controlled delayed reads to check that headings and navigation remain
 visible before data resolves, and check loading layouts at mobile and desktop
 widths in both themes.
 
-Court-decree online options cover foreign decree/adoption and annulment/nullity;
-show the legal-separation coverage note beside the application case selector.
+Court-decree selection distinguishes adoption, foreign decree, and annulment/nullity.
+The application docket uses the full Charter group title as its main title,
+without a duplicate family subtitle, even after a court-decree type is selected.
+Court-document requirement labels follow the comma-separated checklist on Charter
+PDF page 20. Do not turn Certificate of Finality, Entry of Judgment, and the
+applicable decrees into slash-separated alternatives. Preserve the list in titles
+and separate only the copy-count instruction.
+Legal separation is not an available choice. Save court_decree_type separately from the fee-group code.
+Keep the choice tiles label-only; show fees in the existing service summary.
+Render "Which court decree are you registering?" as a regular field legend,
+not a section/group heading. Omit the "Court decree type" heading.
+Match that question to the 15px semibold field labels and omit the court-decree
+case step's "Request details" section heading.
+Adoption details uses "Adopted person’s details" as a 20px
+section heading above the name fields, without a main page heading. Enter the name as recorded on the
+birth certificate and collect birth date/place and optional registry number.
+Keep a 4px gap between the adoption heading and its instruction.
+Never show or add help text beneath registry-number fields in any service,
+including staff walk-ins. The shared renderer omits it even for older templates.
+Annulment/nullity collects both spouses' recorded names, marriage date/place,
+under the main form title "Marriage record details",
+with no introductory spouse-name instruction or divider above the first spouse.
+and optional registry number. Foreign decree asks which record is affected
+(birth or marriage), then uses the matching names and record fields. Do not
+reuse birth details as marriage details when switching cases. Keep suffix and
+contact optional and omit Sex for adoption/foreign-decree intake. These are
+supporting archive-search details, not additional documentary requirements or
+a Legazpi residency rule. Review and submission preserve both spouses when a
+foreign decree affects a marriage record.
+Adoption and foreign decree share the configured ₱500 fee group; annulment/nullity
+uses ₱700. Do not include a legal-separation option or its former guidance box.
+Checked walk-ins under the ₱500 group must choose adoption or foreign decree.
 When the issuing court is uncertain, the Processing confirmation requires staff
 to verify the court and the additional certificate if applicable. The check is
 recorded in request history.
 
+Court-decree forms omit the decision date, issuing court name, and docket number;
+staff read these details from the court papers. Keep the RTC Legazpi question
+for the conditional certificate requirement.
 Legal staff encode court-decree walk-ins from checked physical papers. Ask for
-the decision date, issuing court, optional docket number, names on the decree,
-and optional contact/notes. Do not ask for purpose, sex, or uploads. The RTC
+three separate service choices (Adoption, Foreign decree, Annulment/nullity) in
+the staff service picker. Open the matching form directly without a repeated
+decree-type question; preserve the shared underlying fee group. Use the full
+Charter service title as the selected court-decree dialog title. Collect
+the matching birth/marriage identification details and optional contact/notes.
+Do not ask for purpose, sex, or uploads. The RTC
 Legazpi answer must be Yes or No. Physical acceptance records the staff member
 and starts Processing; payment and release keep their existing checks.
 

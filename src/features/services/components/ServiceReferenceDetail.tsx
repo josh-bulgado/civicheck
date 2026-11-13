@@ -124,7 +124,7 @@ export function ServiceReferenceDetail({
       </header>
 
       {routeCode === "court_decree" ? (
-        <p className="text-sm text-muted-foreground">Online applications cover foreign decrees or adoption and annulment or declaration of nullity of marriage. Legal separation is listed in the Citizen&apos;s Charter but is not available as an online option. For legal separation, visit CCRO for guidance.</p>
+        <p className="text-sm text-muted-foreground">Available court decree types are adoption, foreign decree, and annulment or declaration of nullity of marriage. Adoption and foreign decree share the listed ₱500 fee; annulment or nullity is ₱700.</p>
       ) : null}
 
       {isGroup ? (

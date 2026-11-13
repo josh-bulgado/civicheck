@@ -12,6 +12,7 @@ import { formatPesoFee } from "~/features/services/service-utils";
 import { applicantCopy } from "~/features/forms/applicant-copy";
 import { isPetitionSelector } from "../petition-selection";
 import { PrimaryPetitionSelection } from "./PetitionSelection";
+import { NoticeAlert } from "~/features/forms/components/NoticeAlert";
 
 interface Service {
   service_code: string;
@@ -374,6 +375,7 @@ function ConfiguredCaseSelector({
     (service) => service.service_code === selectedCode,
   );
   const petition = isPetitionSelector(definition);
+  const courtQuestion = definition.questions.find((question) => question.key === "court_decree_type");
   const sectionTitle = petition ? "Petition type" : applicantCopy(definition.title);
   const description = petition ? "" : applicantCopy(definition.description);
   const showDescription = description && ![
@@ -386,12 +388,13 @@ function ConfiguredCaseSelector({
 
   return (
     <section
-      aria-labelledby="case-selector-title"
+      aria-labelledby={courtQuestion ? undefined : "case-selector-title"}
+      aria-label={courtQuestion ? "Court decree questions" : undefined}
       className={hideBottomDivider
         ? "border-t border-border-light pt-5 sm:pt-6"
         : "border-y border-border-light py-5 sm:py-6"}
     >
-      <div>
+      {!courtQuestion ? <div>
         <h2
           id="case-selector-title"
           className="text-pretty text-lg leading-tight font-bold text-foreground"
@@ -412,21 +415,22 @@ function ConfiguredCaseSelector({
             {description}
           </p>
         ) : null}
-      </div>
+      </div> : null}
 
-      <div className="mt-6 flex flex-col gap-6">
+      <div className={courtQuestion ? "flex flex-col gap-6" : "mt-6 flex flex-col gap-6"}>
         {petition ? <PrimaryPetitionSelection answers={answers} onChange={publishAnswers} /> : visibleQuestions.map((question, index) => {
+          const notice = question.options.find((option) => option.value === answers[question.key])?.notice;
           // A lone question that just restates the section title would show the
           // same sentence twice in a row, so the title names the group instead.
           const repeatsTitle =
-            visibleQuestions.length === 1 &&
+            !courtQuestion && visibleQuestions.length === 1 &&
             sameSentence(applicantCopy(question.label), sectionTitle);
           return (
             <div key={question.key} className="flex flex-col gap-6">
             <FieldSet className="civic-enter-sm gap-3">
               {repeatsTitle ? null : (
                 <FieldLegend variant="label" className={choiceLegendClass}>
-                  {showQuestionNumbers && visibleQuestions.length > 1 ? `${index + 1}. ` : ""}
+                  {showQuestionNumbers && !courtQuestion && visibleQuestions.length > 1 ? `${index + 1}. ` : ""}
                   {formatFieldLabel(applicantCopy(question.label))} <RequiredMark />
                 </FieldLegend>
               )}
@@ -438,6 +442,7 @@ function ConfiguredCaseSelector({
               <ChoiceGroup
                 wide
                 idPrefix={`case-${question.key}`}
+                className={question.key === "court_decree_type" ? "outline-1 -outline-offset-1 outline-control-border" : undefined}
                 value={answers[question.key] ?? ""}
                 onValueChange={(value) =>
                   publishAnswers({ ...answers, [question.key]: value })
@@ -448,6 +453,7 @@ function ConfiguredCaseSelector({
                 }))}
                 labelledBy={repeatsTitle ? "case-selector-title" : undefined}
               />
+              {notice ? <NoticeAlert variant={notice.variant} title={notice.title}>{notice.description}</NoticeAlert> : null}
             </FieldSet>
             {renderAfterQuestion?.(question.key)}
             </div>

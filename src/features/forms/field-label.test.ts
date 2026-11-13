@@ -7,6 +7,7 @@ describe("formatFieldLabel", () => {
     ["First Name As Currently Recorded", "First name as currently recorded"],
     ["Date Of The Event On The Record", "Date of the event on the record"],
     ["Is The Record Registered At PSA?", "Is the record registered at PSA?"],
+    ["Was the decision issued by the RTC of Legazpi City?", "Was the decision issued by the RTC of Legazpi City?"],
     ["Submit NBI And PNP Clearances", "Submit NBI and PNP clearances"],
     ["Birth Day Or Month", "Birth Day Or Month"],
     ["Mother's Maiden Last Name", "Mother's Maiden Last Name"],

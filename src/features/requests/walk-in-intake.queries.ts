@@ -9,6 +9,7 @@ import { parseFeeComponents, type FeeComponent } from "~/features/services/fee-c
 export interface EncodableService {
   serviceCode: string;
   name: string;
+  displayName?: string | null;
   fee: number;
   feeComponents?: FeeComponent[];
   /** True when `fee` is charged per copy, so intake asks how many copies. */
@@ -49,6 +50,7 @@ export const getEncodableServicesFn = createServerFn({ method: "GET" }).handler(
     return (data ?? []).map((service) => ({
       serviceCode: service.service_code,
       name: service.name,
+      displayName: service.display_name,
       fee: Number(service.fee ?? 0),
       feeComponents: parseFeeComponents(service.fee_components),
       feePerCopy: service.fee_per_copy === true,

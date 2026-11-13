@@ -32,17 +32,19 @@ export function WizardShell({
         }
       >
         <div className="civic-enter rounded-[28px] bg-card p-5 shadow-portal-card sm:p-7 md:px-10 md:pt-9 md:pb-8">
-          <div className="flex flex-col gap-2 pb-6">
+          {title || description ? <div className="flex flex-col gap-2 pb-6">
+            {title ? (
             <h1 className={FORM_TITLE_CLASS}>
               {title}
             </h1>
+            ) : null}
             {description ? (
               // No width cap: the intros are one short sentence, and a cap
               // narrower than the card only left a gap on the right while the
               // last few words dropped to a second line.
               <p className="text-base leading-relaxed text-body-2">{description}</p>
             ) : null}
-          </div>
+          </div> : null}
           {children}
         </div>
         {sidebar && (

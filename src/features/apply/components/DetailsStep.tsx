@@ -60,6 +60,7 @@ import {
   SUFFIXES,
 } from "~/lib/subject-fields";
 import { cn } from "~/lib/utils";
+import { courtDecreeRoles, courtRecordLayout, isCourtDecree } from "~/features/forms/court-decree";
 
 type DetailsSubject = {
   role: string;
@@ -95,7 +96,7 @@ function subjectFieldVisibility(role: string, sex: string | undefined) {
     // don't ask for one on a role that's implied to be a woman, or once the
     // applicant has picked "Female" for a role (like Child) where sex isn't
     // implied and is chosen instead.
-    showSuffix: (implied ?? sex) !== "female",
+    showSuffix: role.toLowerCase() !== "wife" && (implied ?? sex) !== "female",
     showSex: implied === null,
   };
 }
@@ -105,10 +106,10 @@ function subjectFieldVisibility(role: string, sex: string | undefined) {
  * plain labels ("First name") instead of repeating "Mother's …" on every row.
  * The group is named for assistive tech, which announces the role on entry.
  */
-function PartySection({ role, children }: { role: string; children: ReactNode }) {
+function PartySection({ role, children, divider = true }: { role: string; children: ReactNode; divider?: boolean }) {
   const headingId = useId();
   return (
-    <div role="group" aria-labelledby={headingId} className="flex flex-col gap-4 border-t border-border-light pt-6">
+    <div role="group" aria-labelledby={headingId} className={cn("flex flex-col gap-4", divider && "border-t border-border-light pt-6")}>
       <h2 id={headingId} className={FORM_GROUP_CLASS}>
         {formatNameHeading(role)}
       </h2>
@@ -240,7 +241,7 @@ export function SubjectFieldGrid({
   firstNameHelp?: string;
 }) {
   const watchedSex = useWatch({ control, name: `subjects.${index}.sex` });
-  const { showSuffix, showSex } = subjectFieldVisibility(role, watchedSex);
+  const { showSuffix, showSex } = subjectFieldVisibility(role, hideSex ? undefined : watchedSex);
 
   return (
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-6 sm:*:col-span-3 md:*:col-span-2">
@@ -394,12 +395,17 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   const selectedService =
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
   const petitionAnswers = { ...draft.answers, ...draft.caseSelectorAnswers };
-  const definition = petitionDetailsLayout(
+  const definition = courtRecordLayout(petitionDetailsLayout(
     delayedBirthLayout(selectedService.form_template!.definition, selectedService.service_code),
     selectedService.service_code, petitionAnswers,
-  );
+  ), petitionAnswers);
   const isDelayedBirth = selectedService.service_code === "BIRTH_DELAYED" || selectedService.service_code.startsWith("DCOLB-");
   const isSurnameChange = selectedService.service_code === "RA9255_SURNAME";
+  const isAdoption = selectedService.service_code === "COURT-FOREIGN-ADOPTION" &&
+    (draft.caseSelectorAnswers.court_decree_type ?? draft.answers.court_decree_type) === "adoption";
+  const isForeignDecree = selectedService.service_code === "COURT-FOREIGN-ADOPTION" &&
+    (draft.caseSelectorAnswers.court_decree_type ?? draft.answers.court_decree_type) === "foreign_decree";
+  const courtNameOnly = isAdoption || isForeignDecree || selectedService.service_code === "COURT-ANNULMENT";
   const showBirthDetailsWithChild = isDelayedBirth || isSurnameChange;
   const lockRequesterName = requiresAccountRequester(selectedService.service_code);
   const lockAccountParty = requiresMarriageAccountParty(selectedService.service_code);
@@ -412,14 +418,14 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   const isBirthPetition = isPetitionService(selectedService.service_code) &&
     (primaryPetition === "change_first_name" || primaryPetition === "correct_sex" ||
       primaryPetition === "correct_birth_day_month" || (primaryPetition === "correct_other" && recordType === "birth"));
-  const isMarriageRecord = recordType === "marriage";
+  const isMarriageRecord = recordType === "marriage" && !isCourtDecree(selectedService.service_code);
   const useSpouseLabels =
     selectedService.service_code === "MARRIAGE_ONTIME" ||
     selectedService.service_code === "MARRIAGE_DELAYED";
   const requireMiddleName = true;
-  const roles = selectedService?.party_roles?.length
+  const roles = courtDecreeRoles(selectedService.service_code, petitionAnswers, selectedService?.party_roles?.length
     ? selectedService.party_roles
-    : ["Subject"];
+    : ["Subject"]);
 
   // Most services ask about one person; Marriage License asks about two. Keep
   // `draft.subjects` in sync with whichever service is selected, preserving
@@ -677,7 +683,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
           subject.lastName?.trim() &&
           (!requireMiddleName || subject.middleName?.trim() || subject.noMiddleName ||
             (lockAccountParty && field.role === accountRole && accountHasNoMiddleName)) &&
-          (isMarriageRecord || impliedSex(field.role) !== null || subject.sex),
+          (courtNameOnly || isMarriageRecord || impliedSex(field.role) !== null || subject.sex),
       );
     });
   const hasRequiredAnswers =
@@ -700,7 +706,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     // the submitted rows back to complete SubjectFields objects before saving
     // them in either `subjects` location in the draft.
     const subjects = reconcileSubjects(values.subjects, roles).map((subject) => {
-      const next = isMarriageRecord ? { ...subject, sex: "male" } : subject;
+      const next = courtNameOnly ? { ...subject, sex: "" } : isMarriageRecord ? { ...subject, sex: "male" } : subject;
       return lockAccountParty && subject.role === values[ACCOUNT_PARTY_ROLE] && user
         ? { ...next, ...accountPartyName(user), suffix: subject.role === "Bride" ? "" : (user.suffix ?? "") }
         : next;
@@ -777,6 +783,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
           .map(({ subjectField, index }) => (
           <PartySection
             key={subjectField.id}
+            divider={!isCourtDecree(selectedService.service_code) || index > 0}
             role={
               useSpouseLabels
                 ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[subjectField.role] ?? subjectField.role)
@@ -792,6 +799,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
               requireMiddleName={requireMiddleName}
               readOnlyName={lockAccountParty && subjectField.role === accountRole}
               lockedNoMiddleName={accountHasNoMiddleName}
+              hideSex={courtNameOnly}
             />
             {showBirthDetailsWithChild && subjectField.role === "Child" ? (
               <div className={isSurnameChange ? "pt-1" : undefined}>
@@ -836,6 +844,12 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
           </div>
         ) : (
           <FieldGroup key={subjectField.id}>
+            {courtNameOnly ? (
+              <div className="flex flex-col gap-1">
+                <h2 className={FORM_GROUP_CLASS}>{isAdoption ? "Adopted person’s details" : "Name on the birth record"}</h2>
+                <p className="text-[15px] text-body-2">Enter the name as recorded on the birth certificate.</p>
+              </div>
+            ) : null}
             <SubjectFieldGrid
               control={form.control}
               setValue={form.setValue}
@@ -844,6 +858,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
               husband={isMarriageRecord}
               requireMiddleName={requireMiddleName}
               firstNameHelp={isBirthPetition ? "Use the first name shown on your birth certificate." : undefined}
+              hideSex={courtNameOnly}
             />
           </FieldGroup>
         ),
@@ -853,7 +868,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   return (
     <WizardShell
       step={2}
-      title={isPetitionService(selectedService.service_code) ? "Person and record details" : isSurnameChange ? "Child and Parent Information" : ownerBlockInSection ? "Your details" : "Who is this document for?"}
+      title={selectedService.service_code === "COURT-ANNULMENT" ? "Marriage record details" : courtNameOnly ? "" : isPetitionService(selectedService.service_code) ? "Person and record details" : isSurnameChange ? "Child and Parent Information" : ownerBlockInSection ? "Your details" : "Who is this document for?"}
     >
       <div className="flex flex-col gap-6">
         {ownerBlockInSection ? null : ownerBlock}

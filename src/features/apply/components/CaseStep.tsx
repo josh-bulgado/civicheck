@@ -384,6 +384,7 @@ export function CaseStep({
         <DynamicFormFields
           definition={requestDetailsDefinition}
           step="case"
+          hideSectionTitles={Boolean(caseSelectorDefinition?.questions.some((question) => question.key === "court_decree_type"))}
           sectionHeadingClassName={isPetitionService(selectedService.service_code) ? "mb-3" : undefined}
           showRequiredMarks
           control={form.control}

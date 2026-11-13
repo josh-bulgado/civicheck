@@ -1,5 +1,5 @@
 import { eventPlacePlaceholder, validateEventPlace } from "../event-place";
-import { formatFieldLabel } from "~/features/forms/field-label";
+import { formatFieldLabel, isRegistryNumberField } from "~/features/forms/field-label";
 import { isNameField, validateNameField } from "~/lib/person-name";
 import { Fragment, type ReactNode } from "react";
 import { addressDescendants } from "~/lib/requester-address";
@@ -452,7 +452,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                     : undefined;
                 const common = (
                   <>
-                    {applicantCopy(definitionField.helpText) ? (
+                    {!isRegistryNumberField(definitionField) && applicantCopy(definitionField.helpText) ? (
                       <FieldDescription>
                         {applicantCopy(definitionField.helpText)}
                       </FieldDescription>

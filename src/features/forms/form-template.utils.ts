@@ -1,4 +1,5 @@
 import { validateEventPlace } from "./event-place";
+import { courtRecordLayout, courtRecordType } from "./court-decree";
 import { ageInYears, diffInDays, fromDateKey, toDateKey } from "~/lib/date";
 import { INVALID_PERSON_NAME, isNameField, validateNameField, validatePersonName } from "~/lib/person-name";
 import { flattenSubjects, type SubjectFields } from "~/lib/subject-fields";
@@ -688,6 +689,7 @@ export function canonicalizeTemplateAnswers(
   answers: TemplateAnswers | Record<string, string>,
   todayKey: string = todayKeyInTimeZone(definition.eventTiming?.timezone),
 ): TemplateAnswers {
+  definition = courtRecordLayout(definition, answers);
   return pruneHiddenAnswers(
     definition,
     deriveTemplateAnswers(
@@ -711,6 +713,7 @@ export function validateTemplateAnswers(
   answers: TemplateAnswers,
   todayKey: string = todayKeyInTimeZone(definition.eventTiming?.timezone),
 ): { success: true } | { success: false; message: string } {
+  definition = courtRecordLayout(definition, answers);
   const effectiveAnswers = deriveTemplateAnswers(definition, answers, todayKey);
   const derivedValidation = validateDerivedAnswers(definition, effectiveAnswers, todayKey);
   if (!derivedValidation.success) return derivedValidation;
@@ -764,6 +767,14 @@ export function validateTemplateAnswers(
 
       if (field.type === "person_group") {
         const subjects = Array.isArray(answer) ? answer : [];
+        if (definition.sections.some((section) => section.fields.some((item) => ["birth_date", "marriage_date"].includes(item.key))) &&
+          definition.caseSelector?.questions.some((question) => question.key === "court_decree_type")) {
+          const record = courtRecordType(effectiveAnswers);
+          const roles = record === "marriage" ? ["Husband", "Wife"] : ["Subject"];
+          if (subjects.length !== roles.length || roles.some((role) => subjects.filter((subject) => subject.role === role).length !== 1)) {
+            return { success: false, message: record === "marriage" ? "Enter both spouses' names as recorded on the marriage record." : "Enter the person's name as recorded on the birth record." };
+          }
+        }
         if (field.required && subjects.length === 0) {
           return { success: false, message: `${field.label} is required.` };
         }
@@ -779,7 +790,10 @@ export function validateTemplateAnswers(
               message: `First and last name are required for ${subject.role || "each person"}.`,
             };
           }
-          if (!subject.sex || !["male", "female"].includes(subject.sex)) {
+          const courtNameOnly = ["COURT-ANNULMENT", "COURT-FOREIGN-ADOPTION"].includes(
+            resolveCaseSelectorServiceCode(definition, effectiveAnswers) ?? "",
+          );
+          if (!courtNameOnly && (!subject.sex || !["male", "female"].includes(subject.sex))) {
             return {
               success: false,
               message: `Select the sex on record for ${subject.role || "each person"}.`,
@@ -869,6 +883,7 @@ export function flattenTemplateAnswers(
   definition: FormTemplateDefinition,
   answers: TemplateAnswers,
 ): Record<string, string> {
+  definition = courtRecordLayout(definition, answers);
   const effectiveAnswers = deriveTemplateAnswers(definition, answers);
   const output: Record<string, string> = {};
   for (const question of visibleCaseSelectorQuestions(definition, effectiveAnswers)) {

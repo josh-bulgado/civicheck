@@ -1,4 +1,5 @@
 import { RegistrationNoticeText } from "~/features/requests/components/RegistrationNoticeText";
+import { courtDecreeRoles, courtRecordLayout, isCourtDecree } from "~/features/forms/court-decree";
 import { onTimeRegistrationNotice } from "~/features/requests/on-time-registration";
 import { SignaturePad } from "./SignaturePad";
 import { FORM_SECTION_CLASS } from "~/features/forms/components/wizard-field";
@@ -90,9 +91,9 @@ export function ReviewStep({
     () => services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0],
     [services, draft.selectedServiceCode],
   );
-  const roles = selectedService?.party_roles?.length
+  const roles = courtDecreeRoles(selectedService.service_code, { ...draft.answers, ...draft.caseSelectorAnswers }, selectedService?.party_roles?.length
     ? selectedService.party_roles
-    : ["Subject"];
+    : ["Subject"]);
   // Also normalize here so drafts saved before this fix can be submitted
   // directly from the review page without making the applicant re-enter data.
   const subjects = reconcileSubjects(draft.subjects, roles);
@@ -106,7 +107,7 @@ export function ReviewStep({
   const sexLabel = (sex: string) =>
     sex === "male" ? "Male" : sex === "female" ? "Female" : "—";
 
-  const definition = selectedService.form_template!.definition;
+  const definition = courtRecordLayout(selectedService.form_template!.definition, { ...draft.answers, ...draft.caseSelectorAnswers });
   const personGroupAnswers = Object.fromEntries(
     definition.sections
       .flatMap((section) => section.fields)
@@ -341,7 +342,7 @@ export function ReviewStep({
                   />
                 )),
                 ...subjects
-                  .filter((subject) => answerBag.record_type !== "marriage" && impliedSex(subject.role) === null)
+                  .filter((subject) => !isCourtDecree(selectedService.service_code) && answerBag.record_type !== "marriage" && impliedSex(subject.role) === null)
                   .map((subject, index) => (
                     <ReviewRow
                       key={`${field.key}-sex-${index}`}

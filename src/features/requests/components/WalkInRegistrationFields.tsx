@@ -19,7 +19,8 @@ import {
   evaluateTemplateEventTiming,
   canonicalizeTemplateAnswers,
 } from "~/features/forms/form-template.utils";
-import { emptySubject, reconcileSubjects } from "~/lib/subject-fields";
+import { emptySubject, reconcileSubjects, subjectsMatchRoles } from "~/lib/subject-fields";
+import { courtDecreeRoles, courtRecordLayout, courtRecordType } from "~/features/forms/court-decree";
 import { surnameChangeCaseDefinition, surnameChangeSigningInstruction } from "~/features/services/surname-change";
 import type { EncodableService } from "../walk-in-intake.queries";
 import { prepareWalkInBirth } from "../walk-in-birth";
@@ -36,8 +37,10 @@ export function WalkInRegistrationFields({
   onSubmit,
   onCancel,
   onAnswersChange,
+  courtDecreeType,
 }: {
   service: EncodableService;
+  courtDecreeType?: string;
   submitting: boolean;
   onSubmit: (data: {
     serviceCode: string;
@@ -55,12 +58,15 @@ export function WalkInRegistrationFields({
   const [physicalDocumentsConfirmed, setPhysicalDocumentsConfirmed] = useState(false);
   const [coupleAppearanceConfirmed, setCoupleAppearanceConfirmed] = useState(false);
   const [personalAppearanceConfirmed, setPersonalAppearanceConfirmed] = useState(false);
+  const initialCase = service.registrationForm ? walkInCaseForService(service.registrationForm.definition, service.serviceCode) : null;
   const form = useForm<DetailsValues>({
     defaultValues: {
-      ...Object.fromEntries((service.registrationForm?.definition.sections ?? [])
+      ...Object.fromEntries((initialCase?.definition.sections ?? [])
         .flatMap((section) => section.fields)
         .filter((field) => field.type !== "person_group")
         .map((field) => [field.key, ""])),
+      ...initialCase?.answers,
+      ...(courtDecreeType ? { court_decree_type: courtDecreeType } : {}),
       subjects: service.partyRoles.map(emptySubject),
     },
   });
@@ -76,6 +82,17 @@ export function WalkInRegistrationFields({
   const supplemental = service.serviceCode === "SUPPLEMENTAL_REPORT";
   const otherCertificate = service.serviceCode === "OTHER_CERT";
   const endorsement = service.serviceCode === "ELEC_ENDORSEMENT";
+  const recordRoles = courtDecreeRoles(service.serviceCode, {
+    court_decree_type: String(watched.court_decree_type ?? (service.serviceCode === "COURT-ANNULMENT" ? "annulment_nullity" : "")),
+    record_type: String(watched.record_type ?? ""),
+  }, service.partyRoles);
+  useEffect(() => {
+    if (!courtDecree) return;
+    const people = form.getValues("subjects");
+    if (!subjectsMatchRoles(people, recordRoles)) form.setValue("subjects", reconcileSubjects(people, recordRoles));
+    // Compare the roles by value so typing into a name does not reset it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courtDecree, form, recordRoles.join("|")]);
   useEffect(() => {
     if (!template) return;
     const selectedCase = walkInCaseForService(template.definition, service.serviceCode);
@@ -116,9 +133,9 @@ export function WalkInRegistrationFields({
       petition ? petitionWalkInAnswers(intakeAnswers, service.serviceCode) : intakeAnswers,
     )).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
   );
-  const staffDefinition = staffFormDefinition(surnameChangeCaseDefinition(
+  const staffDefinition = courtRecordLayout(staffFormDefinition(surnameChangeCaseDefinition(
     petitionDetailsLayout(definition, service.serviceCode, values), service.serviceCode,
-  ));
+  )), values);
   const displayDefinition = surnameChange ? {
     ...staffDefinition,
     sections: staffDefinition.sections.map(section => ({
@@ -130,7 +147,8 @@ export function WalkInRegistrationFields({
     ...displayDefinition,
     sections: displayDefinition.sections.map((section) => ({
       ...section,
-      fields: section.fields.filter(field => !(petition && service.serviceCode === "RA9048-CCE" && field.key === "primary_petition")).map((field) => {
+        fields: section.fields.filter(field => !(courtDecree && courtDecreeType && field.key === "court_decree_type") &&
+          !(petition && service.serviceCode === "RA9048-CCE" && field.key === "primary_petition")).map((field) => {
         if (field.key === "event_date") return { ...field, helpText: undefined };
         if (marriage && field.key === "event_place") return {
           ...field,
@@ -140,7 +158,7 @@ export function WalkInRegistrationFields({
       }),
     })),
   };
-  const roles = service.partyRoles;
+  const roles = courtDecree ? form.getValues("subjects").map((person) => person.role) : recordRoles;
   const personFields = definition.sections
     .flatMap((section) => section.fields)
     .filter((field) => field.type === "person_group");
@@ -249,7 +267,7 @@ export function WalkInRegistrationFields({
               {roles.map((role, index) => (
                 <div key={role} className="space-y-3">
                   {!otherCertificate || values.record_type === "marriage" ? <h3 className={`${FORM_GROUP_CLASS}${index > 0 ? " border-t border-border-light pt-5" : ""}`}>
-                    {formatNameHeading(petition ? (values.record_type === "marriage" ? "Husband's Name" : values.record_type === "death" ? "Deceased Person's Name" : "Name on the birth certificate") : otherCertificate ? "Name of Husband" : role.toLowerCase() === "mother"
+                    {courtDecree && values.court_decree_type === "adoption" ? "Adopted person’s details" : formatNameHeading(courtDecree && courtRecordType(values) === "birth" ? "Name on the birth record" : petition ? (values.record_type === "marriage" ? "Husband's Name" : values.record_type === "death" ? "Deceased Person's Name" : "Name on the birth certificate") : otherCertificate ? "Name of Husband" : role.toLowerCase() === "mother"
                       ? "Mother's Maiden Name"
                       : (petition || supplemental || endorsement) && roles.length === 1
                         ? (definition.sections.flatMap((section) => section.fields)
