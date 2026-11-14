@@ -1,6 +1,5 @@
 import { formatFieldLabel } from "~/features/forms/field-label";
-import { useEffect, useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 import { FieldLegend, FieldSet } from "~/components/ui/field";
 import { RequiredMark } from "~/components/ui/required-mark";
 import {
@@ -11,6 +10,9 @@ import type { CaseSelectorDefinition } from "~/features/forms/form-template.type
 import { conditionRuleMatches } from "~/features/forms/form-template.utils";
 import { formatPesoFee } from "~/features/services/service-utils";
 import { applicantCopy } from "~/features/forms/applicant-copy";
+import { isPetitionSelector } from "../petition-selection";
+import { PrimaryPetitionSelection } from "./PetitionSelection";
+import { NoticeAlert } from "~/features/forms/components/NoticeAlert";
 
 interface Service {
   service_code: string;
@@ -26,6 +28,10 @@ interface CaseSelectorProps {
   answers?: Record<string, string>;
   contextAnswers?: Record<string, string>;
   onAnswersChange?: (answers: Record<string, string>) => void;
+  showQuestionNumbers?: boolean;
+  hideBottomDivider?: boolean;
+  hideTitle?: boolean;
+  renderAfterQuestion?: (key: string) => ReactNode;
   /**
    * Pre-answered dimensions — set when the applicant arrived here via the
    * On-Time/Delayed birth-registration redirect, which already knows the
@@ -78,6 +84,7 @@ function matches(name: string, age: string | null, program: string | null, marit
   if (age === "80+" && !n.includes("80")) return false;
   if (program === "brap" && !n.includes("brap")) return false;
   if (program === "normal" && !n.includes("normal")) return false;
+  if (program === "brap") return true;
   if (marital === "marital" && (n.includes("non-marital") || n.includes("nonmarital"))) return false;
   if (marital === "marital" && !(n.includes("marital"))) return false;
   if (marital === "non-marital" && !(n.includes("non-marital") || n.includes("nonmarital"))) return false;
@@ -91,22 +98,14 @@ function sameSentence(a: string, b: string) {
   return normalize(a) === normalize(b);
 }
 
-/**
- * Quiet confirmation of the service the answers resolved to. The docket above
- * the form already carries the name and fee, so this stays a single muted line
- * (and the live region still announces the result to screen readers).
- */
+// The service summary shows the name; announce changes for screen readers.
 function SelectedServiceNote({ name }: { name: string }) {
   return (
     <p
       role="status"
       aria-live="polite"
-      className="civic-enter-sm flex items-start gap-2 text-sm text-muted-foreground"
+      className="sr-only"
     >
-      <CheckCircle2
-        className="mt-0.5 size-4 shrink-0 text-success"
-        aria-hidden="true"
-      />
       <span>
         Service selected: <span className="font-medium text-foreground">{name}</span>
       </span>
@@ -120,12 +119,14 @@ function LegacyCaseSelector({
   onSelect,
   presetAge = null,
   presetMarital = null,
+  onAnswersChange,
+  answers = {},
 }: CaseSelectorProps) {
   const steps = parseSelectionSteps(services);
 
-  const [age, setAge] = useState<string | null>(presetAge);
-  const [program, setProgram] = useState<string | null>(null);
-  const [marital, setMarital] = useState<string | null>(presetMarital);
+  const [age, setAge] = useState<string | null>(presetAge ?? answers.age ?? null);
+  const [program, setProgram] = useState<string | null>(answers.program ?? null);
+  const [marital, setMarital] = useState<string | null>(presetMarital ?? answers.marital ?? null);
 
   const showAge = steps.hasAge && !presetAge;
   const showMarital = steps.hasMarital && !presetMarital;
@@ -145,22 +146,25 @@ function LegacyCaseSelector({
     setAge(val);
     setProgram(null);
     setMarital(null);
+    onAnswersChange?.({ age: val });
     onSelect(""); // clear selection
   };
 
   const handleProgram = (val: string) => {
     setProgram(val);
     setMarital(null);
+    onAnswersChange?.({ ...(age ? { age } : {}), program: val, ...(presetMarital ? { marital: presetMarital } : {}) });
     onSelect("");
     // If no marital step needed, auto-resolve
-    if (!steps.hasMarital || val === "brap") {
-      const match = services.find((s) => matches(s.name, age, val, null));
+    if (!steps.hasMarital || presetMarital) {
+      const match = services.find((s) => matches(s.name, age, val, presetMarital));
       if (match) onSelect(match.service_code);
     }
   };
 
   const handleMarital = (val: string) => {
     setMarital(val);
+    onAnswersChange?.({ ...(age ? { age } : {}), ...(program ? { program } : {}), marital: val });
     const match = services.find((s) => matches(s.name, age, program, val));
     // Fallback for groups with only marital dimension (no age/program)
     if (match) {
@@ -207,9 +211,6 @@ function LegacyCaseSelector({
         >
           Answer a few questions
         </h2>
-        <p className="mt-0.5 max-w-2xl text-pretty text-sm leading-snug text-muted-foreground">
-          Your answers help us select the right service.
-        </p>
       </div>
 
       <div className="mt-6 flex flex-col gap-6">
@@ -276,8 +277,7 @@ function LegacyCaseSelector({
           </FieldSet>
         )}
 
-        {/* Step 3: Marital status — shown after program=normal, OR directly if no age/program steps */}
-        {showMarital && (program === "normal" || (!steps.hasAge && !steps.hasProgram)) && (
+        {showMarital && (Boolean(program) || (!steps.hasAge && !steps.hasProgram)) && (
           <FieldSet className="civic-enter-sm gap-3">
             <FieldLegend variant="label" className={choiceLegendClass}>
               {stepPrefix(true)}Are the child&rsquo;s parents legally married?{" "}
@@ -312,6 +312,10 @@ function ConfiguredCaseSelector({
   onAnswersChange,
   presetAge,
   presetMarital,
+  showQuestionNumbers = true,
+  hideBottomDivider = false,
+  hideTitle = false,
+  renderAfterQuestion,
 }: CaseSelectorProps & { definition: CaseSelectorDefinition }) {
   function resolve(nextAnswers: Record<string, string>) {
     const answerBag = { ...contextAnswers, ...nextAnswers };
@@ -377,14 +381,27 @@ function ConfiguredCaseSelector({
   const selectedService = services.find(
     (service) => service.service_code === selectedCode,
   );
-  const sectionTitle = applicantCopy(definition.title);
+  const petition = isPetitionSelector(definition);
+  const courtQuestion = definition.questions.find((question) => question.key === "court_decree_type");
+  const sectionTitle = petition ? "Petition type" : applicantCopy(definition.title);
+  const description = petition ? "" : applicantCopy(definition.description);
+  const showDescription = description && ![
+    "Your answers help us select the right service.",
+    "Your answers help us select the correct service, fee, process, and requirements.",
+    "Select the child’s case so we can apply the correct fee, parties, and requirements.",
+    "The fee depends on whether the request originates in the Philippines or abroad.",
+    "Answer each question; at least one must be Yes. Online submission is for staff review. Staff must verify all applicable requirements before accepting the petition. Publication documents are submitted later, as described in the service steps.",
+  ].includes(description);
 
   return (
     <section
-      aria-labelledby="case-selector-title"
-      className="border-y border-border-light py-5 sm:py-6"
+      aria-labelledby={courtQuestion || hideTitle ? undefined : "case-selector-title"}
+      aria-label={courtQuestion ? "Court decree questions" : hideTitle ? "Registration questions" : undefined}
+      className={hideBottomDivider
+        ? "border-t border-border-light pt-5 sm:pt-6"
+        : "border-y border-border-light py-5 sm:py-6"}
     >
-      <div>
+      {!courtQuestion && !hideTitle ? <div>
         <h2
           id="case-selector-title"
           className="text-pretty text-lg leading-tight font-bold text-foreground"
@@ -400,24 +417,27 @@ function ConfiguredCaseSelector({
             </>
           ) : null}
         </h2>
-        <p className="mt-0.5 max-w-2xl text-pretty text-sm leading-snug text-muted-foreground">
-          {applicantCopy(definition.description) ??
-            "Your answers help us select the right service."}
-        </p>
-      </div>
+        {showDescription ? (
+          <p className="mt-0.5 max-w-2xl text-pretty text-sm leading-snug text-muted-foreground">
+            {description}
+          </p>
+        ) : null}
+      </div> : null}
 
-      <div className="mt-6 flex flex-col gap-6">
-        {visibleQuestions.map((question, index) => {
+      <div className={courtQuestion || hideTitle ? "flex flex-col gap-6" : "mt-6 flex flex-col gap-6"}>
+        {petition ? <PrimaryPetitionSelection answers={answers} onChange={publishAnswers} /> : visibleQuestions.map((question, index) => {
+          const notice = question.options.find((option) => option.value === answers[question.key])?.notice;
           // A lone question that just restates the section title would show the
           // same sentence twice in a row, so the title names the group instead.
           const repeatsTitle =
-            visibleQuestions.length === 1 &&
+            !courtQuestion && !hideTitle && visibleQuestions.length === 1 &&
             sameSentence(applicantCopy(question.label), sectionTitle);
           return (
-            <FieldSet key={question.key} className="civic-enter-sm gap-3">
+            <div key={question.key} className="flex flex-col gap-6">
+            <FieldSet className="civic-enter-sm gap-3">
               {repeatsTitle ? null : (
                 <FieldLegend variant="label" className={choiceLegendClass}>
-                  {visibleQuestions.length > 1 ? `${index + 1}. ` : ""}
+                  {showQuestionNumbers && !courtQuestion && visibleQuestions.length > 1 ? `${index + 1}. ` : ""}
                   {formatFieldLabel(applicantCopy(question.label))} <RequiredMark />
                 </FieldLegend>
               )}
@@ -429,6 +449,7 @@ function ConfiguredCaseSelector({
               <ChoiceGroup
                 wide
                 idPrefix={`case-${question.key}`}
+                className={question.key === "court_decree_type" ? "outline-1 -outline-offset-1 outline-control-border" : undefined}
                 value={answers[question.key] ?? ""}
                 onValueChange={(value) =>
                   publishAnswers({ ...answers, [question.key]: value })
@@ -439,7 +460,10 @@ function ConfiguredCaseSelector({
                 }))}
                 labelledBy={repeatsTitle ? "case-selector-title" : undefined}
               />
+              {notice ? <NoticeAlert variant={notice.variant} title={notice.title}>{notice.description}</NoticeAlert> : null}
             </FieldSet>
+            {renderAfterQuestion?.(question.key)}
+            </div>
           );
         })}
 

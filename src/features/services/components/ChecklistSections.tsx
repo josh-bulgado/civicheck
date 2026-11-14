@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { TemplateAnswers } from "~/features/forms/form-template.types";
 import { AlertTriangle, ChevronDown } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -39,9 +40,11 @@ export function ChecklistLoadError({
 export function RequiredDocuments({
   requirements,
   heading = "Documents to bring",
+  answers,
 }: {
   requirements: ServiceRequirement[];
   heading?: string;
+  answers?: TemplateAnswers;
 }) {
   return (
     <section className="flex flex-col gap-2.5">
@@ -55,7 +58,7 @@ export function RequiredDocuments({
       ) : (
         <ul className="divide-y divide-border-lighter rounded-[10px] border border-border-light">
           {requirements.map((req) => (
-            <RequirementRow key={req.id} requirement={req} tone="required" />
+            <RequirementRow key={req.id} requirement={req} tone="required" answers={answers} />
           ))}
         </ul>
       )}
@@ -66,8 +69,10 @@ export function RequiredDocuments({
 /** Documents asked for only in some situations, folded away until opened. */
 export function ConditionalDocuments({
   requirements,
+  answers,
 }: {
   requirements: ServiceRequirement[];
+  answers?: TemplateAnswers;
 }) {
   const [open, setOpen] = useState(false);
   if (requirements.length === 0) return null;
@@ -100,7 +105,7 @@ export function ConditionalDocuments({
       <CollapsibleContent>
         <ul className="divide-y divide-warning-border/40 rounded-[10px] border border-warning-border bg-warning-soft">
           {requirements.map((req) => (
-            <RequirementRow key={req.id} requirement={req} tone="conditional" />
+            <RequirementRow key={req.id} requirement={req} tone="conditional" answers={answers} />
           ))}
         </ul>
       </CollapsibleContent>

@@ -1,0 +1,183 @@
+{
+  "sections": [
+    {
+      "key": "case",
+      "step": "case",
+      "title": "Case details",
+      "fields": [
+        {
+          "key": "issued_by_rtc_legazpi",
+          "type": "select",
+          "label": "Was the decision issued by the RTC of Legazpi City?",
+          "options": [
+            {
+              "label": "Yes, the RTC of Legazpi City issued it",
+              "value": "yes"
+            },
+            {
+              "label": "No, another court issued it",
+              "value": "no"
+            },
+            {
+              "label": "Not sure",
+              "value": "not_sure"
+            }
+          ],
+          "helpText": "If another court issued it, you also need a Certificate of Registration and Authenticity from the Local Civil Registrar where that court is located.",
+          "required": true
+        },
+        {
+          "key": "additional_notes",
+          "type": "textarea",
+          "label": "Additional notes",
+          "blockKey": "additional_notes",
+          "required": false,
+          "placeholder": "Any special requests or instructions…"
+        }
+      ]
+    },
+    {
+      "key": "details",
+      "step": "details",
+      "title": "Your details",
+      "fields": [
+        {
+          "key": "subjects",
+          "type": "person_group",
+          "label": "Person named on the record",
+          "required": true
+        },
+        {
+          "key": "birth_date",
+          "type": "date",
+          "label": "Date of birth",
+          "required": true,
+          "dateDirection": "past"
+        },
+        {
+          "key": "birth_place",
+          "type": "text",
+          "label": "Place of birth",
+          "required": true,
+          "placeholder": "Enter the place shown on the birth record"
+        },
+        {
+          "key": "marriage_date",
+          "type": "date",
+          "label": "Date of marriage",
+          "required": true,
+          "dateDirection": "past"
+        },
+        {
+          "key": "marriage_place",
+          "type": "text",
+          "label": "Place of marriage",
+          "required": true,
+          "placeholder": "Enter the place shown on the marriage record"
+        },
+        {
+          "key": "reference_number",
+          "type": "text",
+          "label": "Registry number",
+          "required": false,
+          "helpText": "Use the birth or marriage registry number, if known."
+        },
+        {
+          "key": "contact_number",
+          "type": "phone",
+          "label": "Contact number",
+          "blockKey": "contact_number",
+          "required": false,
+          "placeholder": "9171234567"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1,
+  "caseSelector": {
+    "title": "Court decree type",
+    "questions": [
+      {
+        "key": "court_decree_type",
+        "label": "Which court decree are you registering?",
+        "options": [
+          {
+            "value": "adoption",
+            "label": "Adoption"
+          },
+          {
+            "value": "foreign_decree",
+            "label": "Foreign decree",
+            "notice": {
+              "variant": "default",
+              "title": "Foreign decree",
+              "description": "A foreign decree is issued by a court in another country. CCRO will review the applicable court papers.",
+              "blocksProgress": false
+            }
+          },
+          {
+            "value": "annulment_nullity",
+            "label": "Annulment / Declaration of nullity of marriage"
+          }
+        ]
+      },
+      {
+        "key": "record_type",
+        "label": "Which record is affected?",
+        "visibleWhen": {
+          "match": "all",
+          "conditions": [
+            {
+              "field": "court_decree_type",
+              "operator": "equals",
+              "value": "foreign_decree"
+            }
+          ]
+        },
+        "options": [
+          {
+            "value": "birth",
+            "label": "Birth record"
+          },
+          {
+            "value": "marriage",
+            "label": "Marriage record"
+          }
+        ]
+      }
+    ],
+    "outcomes": [
+      {
+        "serviceCode": "COURT-FOREIGN-ADOPTION",
+        "when": {
+          "match": "any",
+          "conditions": [
+            {
+              "field": "court_decree_type",
+              "operator": "equals",
+              "value": "adoption"
+            },
+            {
+              "field": "court_decree_type",
+              "operator": "equals",
+              "value": "foreign_decree"
+            }
+          ]
+        }
+      },
+      {
+        "serviceCode": "COURT-ANNULMENT",
+        "when": {
+          "match": "all",
+          "conditions": [
+            {
+              "field": "court_decree_type",
+              "operator": "equals",
+              "value": "annulment_nullity"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

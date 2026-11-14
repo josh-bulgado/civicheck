@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { INVALID_PERSON_NAME, validatePersonName } from "./person-name";
+import { INVALID_PERSON_NAME, validateNameField, validatePersonName } from "./person-name";
 import { validateTemplateAnswers } from "../features/forms/form-template.utils";
 import type { FormTemplateDefinition } from "../features/forms/form-template.types";
 
@@ -21,9 +21,22 @@ describe("service name validation", () => {
       { key: "requester_first_name", type: "text", label: "First name", required: false },
       { key: "requester_middle_name", type: "text", label: "Middle name", required: false, noneLabel: "No middle name" },
       { key: "mother_maiden_name", type: "text", label: "Mother's maiden name", required: false },
+      { key: "father_name", type: "text", label: "Father's Full Name", required: false },
     ] }],
   } as FormTemplateDefinition;
   const subject = { role: "Owner", firstName: "Juan", middleName: "", lastName: "Cruz", suffix: "", sex: "male" };
+
+  it.each(["Raven Angel Paraladop Jr.", "Juan S. Cruz Sr."])("accepts periods in father's full name: %s", name => {
+    expect(validateNameField({ key: "father_name" }, name)).toBe(true);
+    expect(validateNameField({ key: "father_full_name" }, name)).toBe(true);
+    expect(validateTemplateAnswers(definition, { subjects: [subject], father_name: name }).success).toBe(true);
+    expect(validateNameField({ key: "requester_first_name" }, name)).toBe(INVALID_PERSON_NAME);
+  });
+
+  it.each(["...", "Juan 2.", "Juan!"])("rejects invalid father's full names: %s", name => {
+    expect(validateNameField({ key: "father_name" }, name)).not.toBe(true);
+    expect(validateTemplateAnswers(definition, { subjects: [subject], father_name: name }).success).toBe(false);
+  });
 
   it.each(["firstName", "middleName", "lastName"])("checks submitted subject %s", (key) => {
     expect(validateTemplateAnswers(definition, { subjects: [{ ...subject, [key]: "123!" }] }).success).toBe(false);

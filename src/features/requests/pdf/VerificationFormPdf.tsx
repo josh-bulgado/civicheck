@@ -3,6 +3,7 @@ import type { VerificationFormPdfData } from "~/features/requests/pdf/types";
 import { formatRequesterAddress } from "~/lib/requester-address";
 import { isEstimatedDate } from "~/features/forms/estimated-date";
 import { documentText } from "~/features/requests/pdf/document-text";
+import { motherMaidenName, wifeMaidenName } from "~/features/forms/mother-maiden-name";
 
 // Wrap whole words instead of splitting them with a hyphen ("regis-tered"), so
 // names and places stay readable. Set globally, and again on each answer below
@@ -93,7 +94,7 @@ function ownerRows(data: VerificationFormPdfData["formData"], recordType: string
       return {
         rows: [
           { label: "Name of Husband", value: ownerName },
-          { label: "Maiden Name of Wife", value: text(data, "wife_maiden_name") },
+          { label: "Maiden Name of Wife", value: wifeMaidenName(data) },
           { label: "Date of Marriage", value: dateText(text(data, "marriage_date")) },
           { label: "Place of Marriage", value: text(data, "marriage_place") },
         ] satisfies Row[],
@@ -105,7 +106,7 @@ function ownerRows(data: VerificationFormPdfData["formData"], recordType: string
           { label: "Full Name", value: ownerName },
           { label: "Date of Birth", value: dateText(text(data, "event_date")) },
           { label: "Place of Birth", value: text(data, "event_place") },
-          { label: "Maiden Name of Mother", value: text(data, "mother_maiden_name") },
+          { label: "Maiden Name of Mother", value: documentText(motherMaidenName(data)) },
           { label: "Name of Father", value: text(data, "father_name") },
         ] satisfies Row[],
         showsLateRegistration: true,
@@ -161,6 +162,7 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     fontWeight: 700,
     marginTop: 4,
+    marginBottom: 10,
     textDecoration: "underline",
   },
   sectionHeading: { fontSize: 9.5, fontWeight: 700, marginTop: 20, marginBottom: 7 },
@@ -180,6 +182,9 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   fieldValue: { fontSize: 10.5, fontWeight: 700, paddingBottom: 1 },
+  narrative: { marginTop: 4, marginBottom: 10 },
+  narrativeLabel: { fontSize: 10, fontWeight: 700, lineHeight: 1.3, marginBottom: 4 },
+  narrativeValue: { fontSize: 10.5, lineHeight: 1.35, minHeight: 16, borderBottomWidth: 0.7, borderBottomColor: INK, paddingBottom: 4 },
   lateRow: { flexDirection: "row", alignItems: "flex-end", marginTop: 3, marginBottom: 4 },
   lateText: { fontSize: 10, marginRight: 8 },
   certify: { textAlign: "center", fontStyle: "italic", fontSize: 10.5, marginTop: 22 },
@@ -187,6 +192,7 @@ const styles = StyleSheet.create({
   signatureLine: { width: 230, borderBottomWidth: 0.9, borderBottomColor: INK, height: 26 },
   signatureLabel: { width: 230, textAlign: "center", fontSize: 10, marginTop: 3 },
   remarks: { marginTop: 22, fontSize: 9 },
+  emailRemarks: { marginTop: 12, fontSize: 9, lineHeight: 1.35 },
   remarksList: { flexDirection: "row", marginTop: 5 },
   remarksColumn: { flex: 1 },
   footer: {
@@ -214,6 +220,17 @@ function Field({ label, value }: Row) {
   );
 }
 
+function NarrativeField({ label, value }: Row) {
+  return (
+    <View style={styles.narrative}>
+      <Text style={styles.narrativeLabel} minPresenceAhead={30}>{label}:</Text>
+      <Text style={styles.narrativeValue} hyphenationCallback={keepWordsWhole}>
+        {documentText(value)}
+      </Text>
+    </View>
+  );
+}
+
 const box = (ticked: boolean) => (ticked ? "( X )" : "(    )");
 
 export interface VerificationFormPdfProps {
@@ -223,7 +240,7 @@ export interface VerificationFormPdfProps {
   generatedAt: Date;
 }
 
-export function VerificationFormPdf({ data, qrDataUrl, generatedAt }: VerificationFormPdfProps) {
+export function createVerificationFormPdf({ data, qrDataUrl, generatedAt }: VerificationFormPdfProps) {
   const trackingNumber = documentText(data.trackingNumber);
   const answers = data.formData;
   const isEmailInquiry = typeof answers.what_to_verify === "string";
@@ -264,18 +281,18 @@ export function VerificationFormPdf({ data, qrDataUrl, generatedAt }: Verificati
       <Page size="A4" style={styles.page}>
         {SHOW_SAMPLE_MARK ? <Text style={styles.watermark} fixed>SAMPLE</Text> : null}
 
-        <View style={styles.trackingBox}>
+        <View style={styles.trackingBox} fixed>
           <Image src={qrDataUrl} style={styles.qr} />
           <Text style={styles.trackingLabel}>TRACKING NO.</Text>
           <Text style={styles.trackingValue}>{trackingNumber}</Text>
         </View>
 
-        <Text style={styles.headerLine}>Republic of the Philippines</Text>
-        <Text style={styles.headerOffice}>OFFICE OF THE CITY CIVIL REGISTRAR</Text>
-        <Text style={styles.headerCity}>Legazpi City</Text>
+        <Text style={styles.headerLine} fixed>Republic of the Philippines</Text>
+        <Text style={styles.headerOffice} fixed>OFFICE OF THE CITY CIVIL REGISTRAR</Text>
+        <Text style={styles.headerCity} fixed>Legazpi City</Text>
 
-        <Text style={styles.title}>{isEmailInquiry ? "EMAIL ASSISTED INQUIRY / VERIFICATION FORM" : "APPLICATION FOR CERTIFIED TRUE XEROX COPY"}</Text>
-        <Text style={styles.recordType}>{recordTitle(answers, recordType)}</Text>
+        <Text style={styles.title} fixed>{isEmailInquiry ? "EMAIL ASSISTED INQUIRY / VERIFICATION FORM" : "APPLICATION FOR CERTIFIED TRUE XEROX COPY"}</Text>
+        <Text style={styles.recordType} fixed>{recordTitle(answers, recordType)}</Text>
 
         <View style={styles.split}>
           <View style={styles.left}>
@@ -321,10 +338,10 @@ export function VerificationFormPdf({ data, qrDataUrl, generatedAt }: Verificati
 
         {isEmailInquiry ? (
           <View>
-            <Text style={styles.sectionHeading}>Inquiry details:</Text>
+            <Text style={styles.sectionHeading} minPresenceAhead={60}>Inquiry details:</Text>
             <Field label="Registry Number (if known)" value={text(answers, "reference_number")} />
-            <Field label="Details to Verify / Nature of Inquiry" value={text(answers, "what_to_verify")} />
-            <Field label="Additional Information (if any)" value={text(answers, "additional_notes")} />
+            <NarrativeField label="Details to Verify / Nature of Inquiry" value={text(answers, "what_to_verify")} />
+            <NarrativeField label="Additional Information (if any)" value={text(answers, "additional_notes")} />
           </View>
         ) : null}
 
@@ -343,7 +360,7 @@ export function VerificationFormPdf({ data, qrDataUrl, generatedAt }: Verificati
         ) : null}
 
         {isEmailInquiry ? (
-          <Text style={styles.remarks}>Sign your Email Request Letter. If you are requesting on behalf of the document owner, also submit their signed Authorization Letter. This generated verification form does not require a signature or a visit to the CCRO.</Text>
+          <Text style={styles.emailRemarks}>Sign your Email Request Letter. If you are requesting on behalf of the document owner, also submit their signed Authorization Letter. This generated verification form does not require a signature or a visit to the CCRO.</Text>
         ) : <View style={styles.remarks} wrap={false}>
           <Text>
             Remarks: Authorization letter with I.D bearing the signature of the authorizing party is
@@ -368,7 +385,7 @@ export function VerificationFormPdf({ data, qrDataUrl, generatedAt }: Verificati
           <Text>
             Prepared through CiviCheck{SHOW_SAMPLE_MARK ? " (sample, not yet approved by the CCRO)" : ""}.
           </Text>
-          <Text>Generated {stampFormatter.format(generatedAt)} (UTC+8)</Text>
+          <Text render={({ pageNumber, totalPages }) => `Generated ${stampFormatter.format(generatedAt)} (UTC+8) | ${pageNumber}/${totalPages}`} />
         </View>
       </Page>
     </Document>

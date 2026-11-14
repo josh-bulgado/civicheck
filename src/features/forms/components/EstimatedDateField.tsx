@@ -5,13 +5,14 @@ import { todayKeyInTimeZone } from "../form-template.utils";
 import { ESTIMATE_PREFIX, UNKNOWN_DATE, isEstimatedDate } from "../estimated-date";
 import { WIZARD_CONTROL_CLASS } from "./wizard-field";
 
-export function EstimatedDateField({ id, value, onChange, onBlur, invalid, min }: {
+export function EstimatedDateField({ id, value, onChange, onBlur, invalid, min, staffView = false }: {
   id: string;
   value: string;
   onChange: (value: string) => void;
   onBlur: () => void;
   invalid: boolean;
   min?: string;
+  staffView?: boolean;
 }) {
   const estimated = isEstimatedDate(value);
   return (
@@ -32,7 +33,9 @@ export function EstimatedDateField({ id, value, onChange, onBlur, invalid, min }
             className={WIZARD_CONTROL_CLASS}
           />
           <p id={`${id}-help`} className="text-sm text-muted-foreground">
-            Enter your best estimate so CCRO can locate the record in the archive.
+            {staffView
+              ? "Enter the applicant's best estimate to help locate the record in the archive."
+              : "Enter your best estimate so CCRO can locate the record in the archive."}
           </p>
         </div>
       ) : (
@@ -40,9 +43,9 @@ export function EstimatedDateField({ id, value, onChange, onBlur, invalid, min }
           min={min} max={todayKeyInTimeZone()} invalid={invalid} icon="calendar"
           className={`${WIZARD_CONTROL_CLASS} h-10 px-3`} />
       )}
-      <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm">
+      <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-[15px]">
         <Checkbox checked={estimated} onCheckedChange={(checked) => onChange(checked === true ? UNKNOWN_DATE : "")} />
-        I don’t remember the exact date
+        {staffView ? "Exact date unknown" : "I don’t remember the exact date"}
       </label>
     </>
   );

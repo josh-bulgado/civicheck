@@ -23,7 +23,7 @@ export const Route = createFileRoute("/_authed/_dashboard/admin/services")({
     return { services, departments };
   },
   staleTime: 5 * 60_000,
-  pendingComponent: () => <TablePageSkeleton label="Loading services registry" columns={5} />,
+  pendingComponent: () => <TablePageSkeleton title="Services" description="CCRO Administration" actionLabel="Add Service" label="Loading services registry" columnLabels={["Service", "Department", "Class", "Fee", "Actions"]} />,
   component: AdminServicesRoute,
 });
 

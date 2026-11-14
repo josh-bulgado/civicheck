@@ -813,6 +813,48 @@
   }
 }
 
+@keyframes civic-step-pulse {
+  0% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  75%,
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+
+@keyframes civic-history-ripple {
+  0% { opacity: 0; transform: scale(0.9); }
+  15% { opacity: var(--history-halo-opacity, 0.55); }
+  60% { opacity: calc(var(--history-halo-opacity, 0.55) * 0.6); transform: scale(1.4); }
+  85%, 100% { opacity: 0; transform: scale(1.5); }
+}
+
+@keyframes civic-history-working {
+  0%, 100% { opacity: 0; transform: scale(1); }
+  35% { opacity: var(--history-halo-opacity, 0.55); transform: scale(1.4); }
+  70% { opacity: calc(var(--history-halo-opacity, 0.55) * 0.5); transform: scale(1.15); }
+}
+
+@keyframes civic-history-breathe {
+  0%, 100% { opacity: 0; transform: scale(1); }
+  50% { opacity: var(--history-halo-opacity, 0.55); transform: scale(1.5); }
+}
+
+@keyframes civic-history-alert {
+  0%, 50%, 100% { opacity: 0; transform: scale(1); }
+  20%, 70% { opacity: var(--history-halo-opacity, 0.55); transform: scale(1.45); }
+}
+
+@keyframes civic-history-upload-ring {
+  0% { opacity: 0; transform: scale(0.95); }
+  20% { opacity: var(--history-halo-opacity, 0.55); }
+  65% { opacity: calc(var(--history-halo-opacity, 0.55) * 0.6); transform: scale(1.4); }
+  90%, 100% { opacity: 0; transform: scale(1.5); }
+}
+
 /* Caret in the active cell of the verification-code field. A hard on/off blink
    rather than a fade, which is how a text caret behaves. */
 @keyframes civic-caret-blink {
@@ -1834,8 +1876,56 @@
 
   .civic-live-dot::before {
     content: "";
-    @apply absolute inset-0 rounded-full bg-success-dot;
+    @apply pointer-events-none absolute inset-0 rounded-full;
+    background: inherit;
     animation: civic-pulse-ring 2s var(--ease-civic) infinite;
+  }
+
+  .civic-live-step {
+    position: relative;
+  }
+
+  .civic-live-step::before {
+    content: "";
+    @apply pointer-events-none absolute -inset-1 rounded-full border-2 border-primary;
+    animation: civic-step-pulse 2.4s var(--ease-civic) infinite;
+  }
+
+  /* Animate a compact, soft halo while the solid dot stays fixed. */
+  .status-history-dot {
+    --history-halo-opacity: 0.4;
+  }
+
+  .status-history-dot::before {
+    content: "";
+    @apply pointer-events-none absolute -inset-0.75 rounded-full;
+    background: inherit;
+    opacity: 0;
+    animation: var(--history-motion, civic-history-ripple) var(--history-cycle, 2.8s) var(--ease-civic) infinite;
+    animation-delay: var(--enter-delay, 100ms);
+  }
+
+  .status-history-dot[data-motion="process"] { --history-motion: civic-history-working; }
+  .status-history-dot[data-motion="ready"] { --history-motion: civic-history-breathe; }
+  .status-history-dot:is([data-motion="attention"], [data-motion="reject"]) { --history-motion: civic-history-alert; }
+  .status-history-dot[data-motion="cancel"] { --history-motion: civic-history-breathe; }
+  .status-history-dot[data-motion="upload"] { --history-motion: civic-history-upload-ring; }
+
+  .status-history-dot[data-current="false"] {
+    --history-halo-opacity: 0.28;
+    --history-cycle: 4.5s;
+  }
+
+  .status-history-dot[data-current="true"][data-motion="review"] {
+    --history-cycle: 2.4s;
+  }
+
+  .status-history-dot[data-current="true"]:is([data-motion="ready"], [data-motion="complete"], [data-motion="cancel"]) {
+    --history-cycle: 3.6s;
+  }
+
+  .status-history-dot[data-current="true"]:is([data-motion="attention"], [data-motion="reject"]) {
+    --history-cycle: 4s;
   }
 }
 
@@ -1896,7 +1986,9 @@
   }
 
   .civic-skeleton,
-  .civic-live-dot::before {
+  .civic-live-dot::before,
+  .civic-live-step::before,
+  .status-history-dot::before {
     animation: none;
   }
 
@@ -1905,7 +1997,9 @@
     stroke-dashoffset: 0;
   }
 
-  .civic-live-dot::before {
+  .civic-live-dot::before,
+  .civic-live-step::before,
+  .status-history-dot::before {
     display: none;
   }
 }
@@ -2135,20 +2229,95 @@ input[aria-hidden="true"][tabindex="-1"] {
   }
 
   .report-sheet {
+    display: block;
     max-width: none !important;
     padding: 0 !important;
     box-shadow: none !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    font-size: 10pt;
+    line-height: 1.35;
+  }
+
+  .report-sheet > * + *,
+  .report-sheet .report-closing > * + * {
+    margin-top: 3mm;
+  }
+
+  .report-sheet .report-closing {
+    display: block;
+    break-inside: avoid;
+  }
+
+  .report-sheet .overflow-x-auto {
+    overflow: visible !important;
+  }
+
+  .report-sheet table {
+    font-size: 9pt;
+    line-height: 1.25;
+  }
+
+  .report-sheet th,
+  .report-sheet td {
+    padding: 0.9mm 1.5mm;
+    overflow-wrap: anywhere;
+  }
+
+  .report-sheet .report-service-table {
+    table-layout: fixed;
+  }
+
+  .report-sheet .report-service-table :is(th, td):first-child {
+    width: 47%;
+  }
+
+  .report-sheet thead {
+    display: table-header-group;
+  }
+
+  .report-sheet tfoot {
+    display: table-row-group;
+  }
+
+  .report-sheet :is(header, .report-remarks, .report-signatures, footer) {
+    break-inside: avoid;
+  }
+
+  .report-sheet header p {
+    font-size: 8.5pt;
+    line-height: 1.3;
+  }
+
+  .report-sheet header p:last-child {
+    font-size: 13pt;
+    line-height: 1.2;
+  }
+
+  .report-sheet .report-remarks > div {
+    gap: 4mm;
+    padding-top: 2mm;
   }
 
   /* A heading never ends a page, and a table row never splits across two. */
   .report-sheet h3 {
+    font-size: 11pt;
+    line-height: 1.3;
     break-after: avoid;
   }
 
   .report-sheet tr {
     break-inside: avoid;
+  }
+}
+
+@media (min-width: 64rem) {
+  .surname-change-case label:is(
+    [for="dynamic-event_date"],
+    [for="dynamic-event_place"],
+    [for="dynamic-reference_number"]
+  ) {
+    min-height: 2lh;
   }
 }
 
@@ -2163,4 +2332,38 @@ input[aria-hidden="true"][tabindex="-1"] {
   [data-page-skeleton] .civic-skeleton {
     animation: civic-shimmer 1.5s var(--ease-civic) infinite;
   }
+}
+
+/* Shared typography for online and walk-in service forms. */
+[data-service-form] {
+  font-size: 15px;
+}
+
+[data-service-form] :is(p, label, legend, button, [data-slot="field-label"], [data-slot="alert-description"], .text-base) {
+  font-size: 15px;
+}
+
+[data-service-form] :is(h1, [data-slot="dialog-title"], .service-form-title) {
+  font-size: 32px;
+}
+
+[data-service-form] :is(h2, .service-form-section) {
+  font-size: 24px;
+}
+
+[data-service-form] :is(h3, .service-form-group) {
+  font-size: 20px;
+}
+
+[data-service-form] :is([data-slot="field-description"], [data-slot="field-error"], .text-xs, p.text-sm.text-muted-foreground, p[id$="-help"]) {
+  font-size: 14px;
+}
+
+[data-service-form] :is(input:not([type="checkbox"]):not([type="radio"]), textarea, [data-slot="select-trigger"], [data-slot="input-group-addon"], [data-slot="input-group-addon"] > span, [data-slot="popover-trigger"]) {
+  font-size: 17px;
+}
+
+/* Dropdowns and location searches render outside the form in a portal. */
+.service-form-options :is([data-slot="select-item"], [data-slot="command-item"], [data-slot="command-input"], input) {
+  font-size: 17px;
 }

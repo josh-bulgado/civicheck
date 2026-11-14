@@ -1,11 +1,13 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { VerifyEmailPage } from "~/features/auth/components/VerifyEmailPage";
+import { simplePageTransition } from "~/components/motion/simple-page-transition";
 import {
   clearPendingVerification,
   getPendingVerification,
 } from "~/features/auth/pending-verification";
 
 export const Route = createFileRoute("/verify-email")({
+  ...simplePageTransition,
   // The account being confirmed is handed over in memory by the screen that
   // created it, so a reload or a direct visit arrives with nothing to verify.
   // Signing in picks the same step back up: an unconfirmed account gets a fresh

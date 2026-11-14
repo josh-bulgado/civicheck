@@ -24,7 +24,7 @@ describe("account data skeletons", () => {
       expect([...html.matchAll(/data-slot="table-cell"/g)]).toHaveLength(
         6 * columns,
       );
-      expect([...html.matchAll(/aria-hidden="true"/g)]).toHaveLength(6);
+      expect([...html.matchAll(/<tr\b[^>]*aria-hidden="true"/g)]).toHaveLength(6);
       expect(html).toContain('data-slot="skeleton"');
       expect(html).not.toContain('data-slot="spinner"');
       expect(html).not.toContain("No accounts");

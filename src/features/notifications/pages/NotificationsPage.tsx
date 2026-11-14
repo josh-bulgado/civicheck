@@ -24,7 +24,7 @@ import {
   updateNotificationFn,
   type NotificationAction,
 } from "~/features/notifications/notifications.mutations";
-import { MarkAllReadButton } from "~/features/notifications/components/MarkAllReadButton";
+import { PortalNotificationsHeader } from "~/features/notifications/components/PortalNotificationsHeader";
 import {
   NotificationMenuItems,
   type RowHandlers,
@@ -212,7 +212,7 @@ function PortalNotificationGroup({
       <h2 className="mb-2.5 px-1 text-[15px] leading-[normal] font-semibold text-muted-foreground md:mb-3 md:px-1.5 md:text-base">
         {label}
       </h2>
-      <ul className="civic-stagger divide-y divide-border-light overflow-hidden rounded-4xl bg-card shadow-portal-card ring-2 ring-border-light md:rounded-[28px]">
+      <ul className="civic-stagger overflow-hidden rounded-xl bg-card shadow-portal-card ring-2 ring-border-light">
         {items.map((notification, index) => (
           <li key={notification.id} style={staggerStyle(start + index)}>
             <PortalNotificationRow notification={notification} now={now} {...handlers} />
@@ -259,20 +259,10 @@ function PortalNotifications({
 
   return (
     <div className="portal-page gap-4.5 md:gap-7">
-      <div className="flex items-center justify-between gap-x-6 gap-y-3">
-        <h1 className="portal-title">Notifications</h1>
-        {/* Always here. It is lit while something is unread, and quiet (not
-            gone) once nothing is, so it does not come and go under the cursor. */}
-        <MarkAllReadButton
-          hasUnread={unreadCount > 0 && !isMarkingAll}
-          onClick={onMarkAllRead}
-          className="h-10 px-4 text-sm md:h-12 md:px-6 md:text-base"
-          compactLabel="Mark all read"
-        />
-      </div>
+      <PortalNotificationsHeader hasUnread={unreadCount > 0 && !isMarkingAll} onMarkAllRead={onMarkAllRead} />
 
       {notifications.length === 0 ? (
-        <Empty className="civic-enter-scale gap-5 rounded-[28px] bg-card px-8 py-16 shadow-portal-card">
+        <Empty className="civic-enter-scale gap-5 rounded-xl bg-card px-8 py-16 shadow-portal-card">
           <EmptyHeader className="max-w-110 gap-3">
             <EmptyMedia
               variant="icon"
@@ -300,7 +290,7 @@ function PortalNotifications({
         // window's: the sidebar takes a fixed share of the window.
         <div className="@container flex flex-col gap-6 md:gap-7">
           {inbox.length === 0 ? (
-            <p className="rounded-[28px] bg-card px-6 py-12 text-center text-[15px] text-muted-foreground shadow-portal-card">
+            <p className="rounded-xl bg-card px-6 py-12 text-center text-[15px] text-muted-foreground shadow-portal-card">
               You're all caught up. New updates will show up here.
             </p>
           ) : null}

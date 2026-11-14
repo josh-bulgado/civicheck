@@ -30,7 +30,7 @@ interface TrackRedirectDialogProps {
  * A misclicked date must not force an unwanted redirect, which is why it asks.
  *
  * It is guidance, not an error, so it is calm: a plain white panel, a blue
- * glyph, two equal buttons and no X (the buttons, Escape and a click outside
+ * glyph, two buttons and no X (the buttons, Escape and a click outside
  * are the ways out). Focus starts on the switch action, so Enter answers yes only
  * when that is where the person already is.
  */
@@ -53,7 +53,7 @@ export function TrackRedirectDialog({
         initialFocus={switchButton}
         finalFocus={returnFocusTo}
         overlayClassName="bg-[rgba(15,27,45,0.28)] backdrop-blur-sm duration-150 motion-reduce:duration-0"
-        className="apply-wizard w-[min(32.5rem,calc(100%-1.5rem))] max-w-none gap-0 rounded-[28px] bg-card p-8 pb-7 shadow-portal-dialog ring-0 duration-150 sm:max-w-none data-open:zoom-in-100 data-open:slide-in-from-bottom-2 data-closed:zoom-out-100 data-closed:slide-out-to-bottom-2 motion-reduce:duration-0 motion-reduce:data-open:animate-none motion-reduce:data-closed:animate-none"
+        className="apply-wizard w-[calc(100%-1.5rem)] max-w-[32.5rem] gap-0 rounded-[28px] bg-card p-6 shadow-portal-dialog ring-0 duration-150 sm:max-w-[32.5rem] sm:p-8 sm:pb-7 data-open:zoom-in-100 data-open:slide-in-from-bottom-2 data-closed:zoom-out-100 data-closed:slide-out-to-bottom-2 motion-reduce:duration-0 motion-reduce:data-open:animate-none motion-reduce:data-closed:animate-none"
       >
         <span
           className="flex size-10 items-center justify-center rounded-full bg-primary-soft text-primary"
@@ -62,19 +62,18 @@ export function TrackRedirectDialog({
           <CalendarClock className="size-5" />
         </span>
 
-        <DialogTitle className="mt-4.5 font-sans text-[28px] leading-[1.15] font-semibold tracking-[-0.02em] text-foreground">
+        <DialogTitle className="mt-4.5 font-sans text-2xl leading-[1.15] font-semibold tracking-[-0.02em] text-foreground sm:text-[28px]">
           {title}
         </DialogTitle>
         <DialogDescription className="mt-2.5 text-base leading-normal text-body-2">
           {description} Everything you&rsquo;ve entered carries over.
         </DialogDescription>
 
-        {/* Same size and weight: neither answer is the louder one. */}
-        <div className="mt-7 flex gap-2.5">
+        <div className="mt-7 grid min-w-0 grid-cols-1 gap-2.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
           <button
             type="button"
             onClick={onKeepEditing}
-            className="civic-press h-13 min-w-0 flex-1 rounded-full border border-border bg-card px-4 text-base font-semibold whitespace-nowrap text-foreground transition-colors hover:border-primary focus-visible:ring-4 focus-visible:ring-primary/20"
+            className="civic-press min-h-13 min-w-0 rounded-full border border-border bg-card px-4 py-3 text-base leading-snug font-semibold whitespace-normal wrap-anywhere text-foreground transition-colors hover:border-primary focus-visible:ring-4 focus-visible:ring-primary/20"
           >
             Edit date
           </button>
@@ -82,7 +81,7 @@ export function TrackRedirectDialog({
             ref={switchButton}
             type="button"
             onClick={onSwitch}
-            className="civic-press h-13 min-w-0 flex-1 rounded-full border border-primary-fill bg-primary-fill px-4 text-base font-semibold whitespace-nowrap text-white transition-colors hover:bg-primary-fill-hover focus:ring-4 focus:ring-primary/20 focus:outline-none"
+            className="civic-press min-h-13 min-w-0 rounded-full border border-primary-fill bg-primary-fill px-4 py-3 text-base leading-snug font-semibold whitespace-normal wrap-anywhere text-white transition-colors hover:bg-primary-fill-hover focus:ring-4 focus:ring-primary/20 focus:outline-none"
           >
             {switchLabel}
           </button>

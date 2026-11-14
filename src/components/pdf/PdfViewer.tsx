@@ -98,6 +98,7 @@ export function PdfViewer({ url, title, onError, className }: PdfViewerProps) {
   const [zoomIndex, setZoomIndex] = useState(1);
   const [containerWidth, setContainerWidth] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
+  const [fitPage, setFitPage] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const onErrorRef = useRef(onError);
@@ -110,6 +111,7 @@ export function PdfViewer({ url, title, onError, className }: PdfViewerProps) {
     setState({ phase: "loading" });
     setCurrentPage(1);
     setZoomIndex(1);
+    setFitPage(false);
 
     void (async () => {
       try {
@@ -174,10 +176,10 @@ export function PdfViewer({ url, title, onError, className }: PdfViewerProps) {
 
   const zoom = ZOOM_STEPS[zoomIndex];
   const availableWidth = Math.max(0, containerWidth - PAGE_GUTTER_PX * 2);
-  const fitWidth = state.phase === "ready"
+  const fittedPageWidth = state.phase === "ready"
     ? Math.min(availableWidth, Math.max(0, containerHeight - PAGE_GUTTER_PX * 2) / state.aspect)
     : availableWidth;
-  const pageWidth = fitWidth * zoom;
+  const pageWidth = (fitPage ? fittedPageWidth : availableWidth) * zoom;
 
   function goToPage(pageNumber: number) {
     const scroller = scrollerRef.current;
@@ -219,7 +221,13 @@ export function PdfViewer({ url, title, onError, className }: PdfViewerProps) {
         zoom={zoom}
         onZoomOut={() => setZoomIndex((index) => Math.max(0, index - 1))}
         onZoomIn={() => setZoomIndex((index) => Math.min(ZOOM_STEPS.length - 1, index + 1))}
-        onFit={() => setZoomIndex(1)}
+        onFit={() => {
+          setFitPage((value) => !value);
+          setZoomIndex(1);
+          scrollerRef.current?.scrollTo({ top: 0, left: 0 });
+          setCurrentPage(1);
+        }}
+        fitLabel={fitPage ? "Fit to width" : "Fit whole page"}
         canZoomOut={zoomIndex > 0}
         canZoomIn={zoomIndex < ZOOM_STEPS.length - 1}
         disabled={state.phase !== "ready"}

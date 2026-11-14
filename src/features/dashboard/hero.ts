@@ -104,7 +104,7 @@ export function dashboardPlan(
         tone: "success" as const,
         // A fee-free request has nothing to pay, only a visit to confirm.
         message:
-          Number(request.fees_due ?? 0) > 0
+          request.request_type !== "ELEC_ENDORSEMENT" && Number(request.fees_due ?? 0) > 0
             ? `${formatPesoFee(request.fees_due)} due. Pay and claim at the CCRO cashier.`
             : heroNote(request),
         action: "View details",
@@ -227,6 +227,13 @@ export function heroServiceLabel(request: CitizenDashboardRequest): string {
  * card's own title already says.
  */
 export function heroNote(request: CitizenDashboardRequest): string {
+  if (request.request_type === "ELEC_ENDORSEMENT") {
+    if (request.status === "processing") return "CCRO is processing the endorsement. The final PSA certificate is expected about one month after endorsement to PSA. Open the request for updates.";
+    if (request.status === "ready_for_release") return [
+      ...(request.payment_status !== "verified" ? [getLogNote(request.status, null, "applicant", Number(request.fees_due ?? 0), request.payment_status)] : []),
+      "Open this request for the confirmed claiming location and instructions.",
+    ].filter(Boolean).join(" ");
+  }
   if (request.request_type === "EMAIL_INQUIRY") {
     if (request.status === "ready_for_release") return "Read CCRO's reply in the messages.";
     if (request.status === "released") return "Keep CCRO's reply for your records.";
@@ -299,6 +306,7 @@ function owesPayment(request: CitizenDashboardRequest): boolean {
 
 // Originals are checked during Processing; release covers payment and collection.
 function trackerNote(request: CitizenDashboardRequest): string | null {
+  if (request.request_type === "ELEC_ENDORSEMENT" && ["processing", "ready_for_release"].includes(request.status)) return heroNote(request);
   if (request.status === "released" && request.request_type === "EMAIL_INQUIRY") return "Keep CCRO's reply for your records.";
   if (request.status === "ready_for_release" && request.request_type === "EMAIL_INQUIRY") {
     return "Read CCRO's reply in the messages";

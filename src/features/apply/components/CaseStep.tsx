@@ -37,10 +37,12 @@ import {
   inferMaritalStatus,
 } from "~/features/services/components/CaseSelector";
 import { applicantCopy } from "~/features/forms/applicant-copy";
-import {
-  getMarriageLicenseTiming,
-  MARRIAGE_MINIMUM_LEAD_DAYS,
-} from "~/features/apply/marriage-license-timing";
+import { marriageLicenseDateTooSoon } from "../marriage-license-date";
+import { surnameChangeCaseDefinition } from "~/features/services/surname-change";
+import { isOnTimeBirth, onTimeBirthLayout } from "../on-time-birth-layout";
+import { delayedBirthLayout } from "../delayed-birth-layout";
+import { birthRequesterRelationship } from "../birth-requester-relationship";
+import { isPetitionService, petitionCaseLayout, petitionSelectionError } from "~/features/services/petition-selection";
 
 function caseAnswersFrom(values: DynamicFieldValues) {
   return {
@@ -95,7 +97,42 @@ export function CaseStep({
   const selectedService =
     services.find((service) => service.service_code === draft.selectedServiceCode) ??
     services[0];
-  const definition = selectedService.form_template!.definition;
+  const onTimeBirth = isOnTimeBirth(selectedService.service_code);
+  const definition = birthRequesterRelationship(onTimeBirthLayout(delayedBirthLayout(selectedService.form_template!.definition, selectedService.service_code), selectedService.service_code), selectedService.service_code);
+  const isDelayedBirth = serviceCode === "birth_delayed" ||
+    selectedService.service_code === "BIRTH_DELAYED" ||
+    selectedService.service_code.startsWith("DCOLB-");
+  const requestDetailKeys = new Set([
+    "event_date", "event_place", "informant_relationship", "informant_name",
+  ]);
+  const baseCaseDefinition = petitionCaseLayout(surnameChangeCaseDefinition(definition, selectedService.service_code), selectedService.service_code);
+  const caseDefinition = ["MARRIAGE_ONTIME", "MARRIAGE_DELAYED"].includes(selectedService.service_code) ? {
+    ...baseCaseDefinition,
+    sections: baseCaseDefinition.sections.map((section) => ({
+      ...section,
+      fields: section.fields.map((field) => (field.key === "marriage_license_basis" ||
+        (selectedService.service_code === "MARRIAGE_DELAYED" &&
+          ["registration_type", "has_children"].includes(field.key)))
+        ? { ...field, helpText: undefined }
+        : field),
+    })),
+  } : baseCaseDefinition;
+  const questionDefinition = {
+    ...caseDefinition,
+    sections: caseDefinition.sections.map((section) => ({
+      ...section,
+      fields: section.fields.filter((field) => !requestDetailKeys.has(field.key) &&
+        !(isGroup && field.key === "additional_identity"))
+        .sort((a, b) => Number(a.key === "place_type") - Number(b.key === "place_type")),
+    })),
+  };
+  const requestDetailsDefinition = isDelayedBirth ? {
+    ...caseDefinition,
+    sections: caseDefinition.sections.map((section) => ({
+      ...section,
+      fields: section.fields.filter((field) => requestDetailKeys.has(field.key)),
+    })),
+  } : caseDefinition;
   const caseSelectorDefinition =
     services[0]?.form_template?.definition.caseSelector;
   const caseFields = fieldsForStep(definition, "case").filter(
@@ -142,10 +179,12 @@ export function CaseStep({
       typeof value === "string" ? [[key, value]] : [],
     ),
   );
-  const blockingAgeFeedback = getDerivedAnswerFeedback(
+  // The birth date on the next page determines the final age-specific service.
+  if (isDelayedBirth && !selectorContextAnswers.age) selectorContextAnswers.age = "0-79";
+  const blockingAgeFeedback = (isDelayedBirth || selectedService.service_code === "MARRIAGE_LICENSE" ? [] : getDerivedAnswerFeedback(
     definition,
     derivedCaseAnswers,
-  ).find((feedback) => feedback.notice.blocksProgress);
+  )).find((feedback) => feedback.notice.blocksProgress);
   const blockingOptionNotice = getSelectedOptionNotices(
     definition,
     derivedCaseAnswers,
@@ -156,20 +195,15 @@ export function CaseStep({
   // must have a value. The Next button uses this to show when the step is
   // ready, without waiting for a failed submit to find out.
   const hasRequiredAnswers =
+    (!isPetitionService(selectedService.service_code) || !petitionSelectionError(draft.caseSelectorAnswers)) &&
     (!isGroup || Boolean(draft.selectedServiceCode)) &&
-    visibleFieldsForStep(definition, "case", {
+    visibleFieldsForStep(caseDefinition, "case", {
       ...draft.caseSelectorAnswers,
       ...watchedValues,
     }).every((field) => {
       const value = watchedValues[field.key];
       return !field.required || (typeof value === "string" && value.trim() !== "");
     });
-  const watchedEventDate = watchedValues.event_date ?? "";
-  const marriageTimingNotice = getMarriageLicenseTiming(
-    selectedService.service_code,
-    watchedEventDate,
-  );
-  const marriageTimingBlocks = marriageTimingNotice?.blocksProgress === true;
 
   // Data-driven on-time window. The rule and its routing target live in the
   // published form template, so any current or future service can declare one.
@@ -261,8 +295,8 @@ export function CaseStep({
       );
       return {
         answers,
-        eventDate: values.event_date ?? "",
-        eventPlace: values.event_place ?? "",
+        eventDate: values.event_date ?? previous.eventDate,
+        eventPlace: values.event_place ?? previous.eventPlace,
         caseAnswers: caseAnswersFrom(values),
         documents: previous.documents.filter((document) =>
           visibleRequirementIds.has(document.requirementId),
@@ -311,7 +345,7 @@ export function CaseStep({
 
   return (
     <WizardShell step={1} title="Tell us about your request">
-      <div className="flex flex-col gap-6">
+      <div className={isPetitionService(selectedService.service_code) ? "flex flex-col gap-6" : selectedService.service_code === "RA9255_SURNAME" ? "surname-change-case flex flex-col gap-6" : "flex flex-col gap-6"}>
         {isGroup ? (
           <CaseSelector
             services={services}
@@ -320,6 +354,27 @@ export function CaseStep({
             definition={caseSelectorDefinition}
             answers={draft.caseSelectorAnswers}
             contextAnswers={selectorContextAnswers}
+            showQuestionNumbers={!isDelayedBirth}
+            hideBottomDivider={isDelayedBirth || onTimeBirth}
+            hideTitle={onTimeBirth || isDelayedBirth}
+            renderAfterQuestion={isDelayedBirth ? (key) => key === "program" ? (
+              <div className="w-full min-w-0 [&_fieldset]:min-w-0 [&_[data-slot=radio-group]]:min-w-0">
+              <DynamicFormFields
+                definition={{
+                  ...caseDefinition,
+                  sections: caseDefinition.sections.map((section) => ({
+                    ...section,
+                    fields: section.fields.filter((field) => field.key === "additional_identity"),
+                  })),
+                }}
+                step="case"
+                showRequiredMarks
+                hideSectionTitles
+                control={form.control}
+                values={{ ...draft.caseSelectorAnswers, ...watchedValues }}
+              />
+              </div>
+            ) : null : undefined}
             onAnswersChange={(caseSelectorAnswers) =>
               update((previous) => ({
                 caseSelectorAnswers,
@@ -331,26 +386,30 @@ export function CaseStep({
           />
         ) : null}
 
+        {isDelayedBirth ? (
+          <DynamicFormFields
+            definition={questionDefinition}
+            step="case"
+            showRequiredMarks
+            hideSectionTitles
+            control={form.control}
+            values={{ ...draft.caseSelectorAnswers, ...watchedValues }}
+          />
+        ) : null}
+
         <DynamicFormFields
-          definition={definition}
+          definition={requestDetailsDefinition}
           step="case"
+          hideSectionTitles={isDelayedBirth || onTimeBirth || Boolean(caseSelectorDefinition?.questions.some((question) => question.key === "court_decree_type"))}
+          sectionHeadingClassName={isPetitionService(selectedService.service_code) ? "mb-3" : undefined}
           showRequiredMarks
           control={form.control}
           // Case-selector answers can show or hide fields, so they take part in
           // visibility alongside the form's own values.
           values={{ ...draft.caseSelectorAnswers, ...watchedValues }}
           onDateChange={handleEventDateChange}
-          renderSectionLead={(section) =>
-            ["DEATH_ONTIME", "DEATH_DELAYED"].includes(selectedService.service_code) &&
-            section.fields.some((field) => field.key === "event_date") ? (
-              <p className="text-sm text-muted-foreground">
-                Enter the date and place of death exactly as shown on the
-                completed Certificate of Death.
-              </p>
-            ) : null
-          }
           // With the service questions above, head the fields as their own block.
-          showSectionTitles={isGroup}
+          showSectionTitles={isGroup || isDelayedBirth}
         />
 
         {draft.selectedServiceCode && selectedService.fee_per_copy ? (
@@ -362,27 +421,22 @@ export function CaseStep({
           />
         ) : null}
 
-        <DerivedAnswerAlerts
-          definition={definition}
-          answers={derivedCaseAnswers}
-        />
-
-        {marriageTimingNotice ? (
-          <NoticeAlert
-            variant="warning"
-            role="status"
-            icon={CalendarClock}
-            title={marriageTimingNotice.title}
-          >
-            {marriageTimingNotice.description}
+        {marriageLicenseDateTooSoon(selectedService.service_code, watchedValues.event_date ?? "") ? (
+          <NoticeAlert variant="warning" title="Wedding date is too soon">
+            CCRO must post the notice for 10 days before issuing the license.
           </NoticeAlert>
         ) : null}
+
+        {selectedService.service_code !== "MARRIAGE_LICENSE" ? <DerivedAnswerAlerts
+          definition={definition}
+          answers={derivedCaseAnswers}
+        /> : null}
 
         {timingMismatch && timingRule ? (
           <EventTimingNotice
             behavior={timingRule.behavior}
             title={applicantCopy(timingRule.title)}
-            description={applicantCopy(timingRule.description)}
+            description=""
             ctaLabel={timingRule.ctaLabel}
             onCta={() => setRedirectOpen(true)}
           />
@@ -394,10 +448,7 @@ export function CaseStep({
             role="status"
             icon={CalendarClock}
             title={applicantCopy(timingDeferredNotice.rule.title)}
-          >
-            {applicantCopy(timingDeferredNotice.rule.description)} We&rsquo;ll check the date
-            against your supporting document before processing your request.
-          </NoticeAlert>
+          >{null}</NoticeAlert>
         ) : null}
 
         <WizardFooterActions
@@ -406,21 +457,22 @@ export function CaseStep({
           continueReady={hasRequiredAnswers}
           continueDisabled={
             (isGroup && !draft.selectedServiceCode) ||
-            marriageTimingBlocks ||
             timingBlocks ||
             Boolean(blockingAgeFeedback) ||
             Boolean(blockingOptionNotice)
           }
           note={
             blockingAgeFeedback
-              ? blockingAgeFeedback.notice.description
+              ? selectedService.service_code === "MARRIAGE_LICENSE"
+                ? blockingAgeFeedback.notice.title
+                : blockingAgeFeedback.notice.description
               : blockingOptionNotice
-                ? blockingOptionNotice.description
-                : marriageTimingBlocks
-                  ? `Choose a marriage date at least ${MARRIAGE_MINIMUM_LEAD_DAYS} days from today.`
-                  : timingBlocks
-                    ? "Update the date or switch services before continuing."
-                    : undefined
+                ? ["DEATH_DELAYED", "RA9255_SURNAME"].includes(selectedService.service_code)
+                  ? undefined
+                  : blockingOptionNotice.description
+                : timingBlocks
+                  ? "Update the date or switch services before continuing."
+                  : undefined
           }
         />
       </div>
@@ -429,7 +481,7 @@ export function CaseStep({
         open={redirectOpen}
         onOpenChange={setRedirectOpen}
         title={timingRule ? trackRedirectCopy(timingRule).title : ""}
-        description={timingRule ? trackRedirectCopy(timingRule).description : ""}
+        description=""
         switchLabel={timingRule?.ctaLabel || "Switch service"}
         onKeepEditing={() => setRedirectOpen(false)}
         onSwitch={handleSwitchTrack}

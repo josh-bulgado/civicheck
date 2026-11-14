@@ -18,7 +18,7 @@ export function useAcknowledgmentPdfDownload() {
   async function download(data: AcknowledgmentPdfData) {
     setDownloading(true);
     try {
-      const [{ pdf }, { default: QRCode }, { RequestAcknowledgmentPdf }] = await Promise.all([
+      const [{ pdf }, { default: QRCode }, { createRequestAcknowledgmentPdf }] = await Promise.all([
         import("@react-pdf/renderer"),
         import("qrcode"),
         import("~/features/requests/pdf/RequestAcknowledgmentPdf"),
@@ -27,7 +27,7 @@ export function useAcknowledgmentPdfDownload() {
       // Rendered at 168pt (~59mm), with a four-module quiet zone for scanning.
       const qrDataUrl = await QRCode.toDataURL(data.trackingNumber, { margin: 4, width: 720 });
       const blob = await pdf(
-        RequestAcknowledgmentPdf({ data, qrDataUrl, generatedAt: new Date() }),
+        createRequestAcknowledgmentPdf({ data, qrDataUrl, generatedAt: new Date() }),
       ).toBlob();
 
       downloadBlob(blob, `CiviCheck-${data.trackingNumber}.pdf`);

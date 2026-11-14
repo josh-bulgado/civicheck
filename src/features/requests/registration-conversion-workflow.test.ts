@@ -71,3 +71,17 @@ it("rejects physical release without handover confirmation on the server",async(
   expect(result.message).toContain("handing over");
   expect(state.writes).not.toHaveBeenCalled();
 });
+
+it("blocks uncertain court validation without staff confirmation", async () => {
+  state.service="COURT-ANNULMENT";state.missing=false;
+  const result=await advanceRequestStatusFn({data:{requestId:"request",toStatus:"processing"}});
+  expect(result.error).toBe(true);
+  expect(result.message).toContain("Verify the issuing court");
+  expect(state.writes).not.toHaveBeenCalled();
+});
+it("passes the court confirmation to the database", async () => {
+  state.service="COURT-FOREIGN-ADOPTION";state.missing=false;
+  const result=await advanceRequestStatusFn({data:{requestId:"request",toStatus:"processing",courtIssuerConfirmed:true}});
+  expect(result.error).toBe(false);
+  expect(state.writes).toHaveBeenCalledWith(expect.objectContaining({court_issuer_confirmed:true}));
+});

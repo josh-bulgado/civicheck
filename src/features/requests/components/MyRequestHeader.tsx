@@ -1,26 +1,34 @@
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Copy } from "lucide-react";
+import { toast } from "sonner";
 import { QuietLink } from "~/components/quiet-link";
-import { buttonVariants } from "~/components/ui/button";
-import { StatusPill } from "~/features/requests/components/StatusPill";
+import { Button, buttonVariants } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 
 /**
  * The top of an applicant's request page: the way back, then what it is for
- * (the service, with the tracking number under it) and where it stands. A
- * `note` is one muted line under the tracking number: for a rejected request,
+ * (the service, with the tracking number under it). Status history shows where
+ * the request stands. A `note` is one muted line under the tracking number:
+ * for a rejected request,
  * why, since the page has no other place that says.
  */
 export function MyRequestHeader({
   serviceName,
   trackingNumber,
-  status,
   note,
 }: {
   serviceName: string;
   trackingNumber: string;
-  status: string;
   note?: string | null;
 }) {
+  async function copyTrackingNumber() {
+    try {
+      await navigator.clipboard.writeText(trackingNumber);
+      toast.success(`Copied ${trackingNumber}`);
+    } catch {
+      toast.error("Could not copy. Select the number and copy it instead.");
+    }
+  }
+
   return (
     <header>
       <QuietLink
@@ -35,22 +43,32 @@ export function MyRequestHeader({
         Back
       </QuietLink>
       <div className="mt-4 flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-6">
-        {/* `min-w-0` lets a long service name wrap here instead of pushing the
-            status off the edge. */}
+        {/* Keep long service names within the page width. */}
         <div className="min-w-0 flex-1">
-          <h1 className="portal-title text-pretty">
+          <h1 className="portal-title text-pretty max-md:text-[22px] max-md:leading-tight">
             {serviceName}
           </h1>
-          <p className="mt-2 font-mono text-[15px] leading-[normal] text-muted-foreground wrap-anywhere">
-            {trackingNumber}
-          </p>
+          <div className="mt-2 flex min-w-0 items-center gap-1">
+            <p className="min-w-0 font-mono text-[15px] leading-[normal] text-muted-foreground select-all wrap-anywhere max-md:text-[13px]">
+              {trackingNumber}
+            </p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Copy tracking number"
+              title="Copy tracking number"
+              onClick={copyTrackingNumber}
+            >
+              <Copy aria-hidden="true" />
+            </Button>
+          </div>
           {note && (
-            <p className="mt-3 max-w-prose text-[17px] leading-snug text-body-2 text-pretty">
+            <p className="mt-3 max-w-prose text-[17px] leading-snug text-body-2 text-pretty max-md:text-sm max-md:leading-relaxed">
               {note}
             </p>
           )}
         </div>
-        <StatusPill status={status} className="h-10 shrink-0 text-base sm:mt-1" />
       </div>
     </header>
   );

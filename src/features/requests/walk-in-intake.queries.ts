@@ -1,17 +1,24 @@
 import { createServerFn } from "@tanstack/react-start";
 import { isDepartmentScopedRole } from "~/lib/permissions";
 import { requireActiveSession } from "~/server/auth";
+import { invalidateServiceCatalogue, loadServiceCatalogue } from "~/features/services/services.catalogue";
+import type { PublishedFormTemplate } from "~/features/forms/form-template.types";
+import { isWalkInDetailedIntake } from "./walk-in-registration";
+import { parseFeeComponents, type FeeComponent } from "~/features/services/fee-components";
 
 export interface EncodableService {
   serviceCode: string;
   name: string;
+  displayName?: string | null;
   fee: number;
+  feeComponents?: FeeComponent[];
   /** True when `fee` is charged per copy, so intake asks how many copies. */
   feePerCopy: boolean;
   displayGroup: string | null;
   processingTime: string;
   /** Who this service asks about, e.g. ["Subject"] or ["Bride", "Groom"]. */
   partyRoles: string[];
+  registrationForm?: PublishedFormTemplate;
 }
 
 export const getEncodableServicesFn = createServerFn({ method: "GET" }).handler(
@@ -23,7 +30,7 @@ export const getEncodableServicesFn = createServerFn({ method: "GET" }).handler(
     let query = supabase
       .from("services_registry")
       .select(
-        "service_code, name, display_name, fee, fee_per_copy, department_id, display_group, processing_time, party_roles",
+        "service_code, name, display_name, fee, fee_components, fee_per_copy, department_id, display_group, processing_time, party_roles",
       )
       .order("name", { ascending: true });
 
@@ -34,15 +41,23 @@ export const getEncodableServicesFn = createServerFn({ method: "GET" }).handler(
 
     const { data, error } = await query;
     if (error) throw new Error(error.message);
+    // Intake must use the current published forms, including database updates.
+    invalidateServiceCatalogue();
+    const catalogue = (data ?? []).some((service) => isWalkInDetailedIntake(service.service_code))
+      ? await loadServiceCatalogue()
+      : null;
 
     return (data ?? []).map((service) => ({
       serviceCode: service.service_code,
       name: service.name,
+      displayName: service.display_name,
       fee: Number(service.fee ?? 0),
+      feeComponents: parseFeeComponents(service.fee_components),
       feePerCopy: service.fee_per_copy === true,
       displayGroup: service.display_group,
       processingTime: service.processing_time,
       partyRoles: service.party_roles?.length ? service.party_roles : ["Subject"],
+      registrationForm: isWalkInDetailedIntake(service.service_code) ? catalogue?.formTemplatesByService.get(service.service_code) : undefined,
     }));
   },
 );

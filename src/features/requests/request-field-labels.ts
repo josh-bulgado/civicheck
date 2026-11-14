@@ -48,7 +48,15 @@ export function requestFieldDisplayOf(row: {
         }
       }
     }
-    return { fieldLabels: templateFieldLabels(definition), fieldDisplayValues };
+    // Keep old submissions readable with the current wording, without rewriting their form version.
+    const fieldLabels = Object.fromEntries(Object.entries(templateFieldLabels(definition)).map(([key, label]) => {
+      if (/^place where the child was born or registered$/i.test(label)) label = "Child's Place of Birth";
+      if (/^date of the parents' marriage$/i.test(label)) label = "Parent's Date of Marriage";
+      if (/^place of the parents' marriage$/i.test(label)) label = "Parent's Place of Marriage";
+      if (/registry/i.test(label)) label = label.replace(/\s*\(if known\)/gi, "");
+      return [key, label];
+    }));
+    return { fieldLabels, fieldDisplayValues };
   } catch {
     return empty;
   }

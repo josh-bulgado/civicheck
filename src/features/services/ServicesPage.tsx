@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { QuietLink } from "~/components/quiet-link";
-import { Search, ChevronDown } from "lucide-react";
+import { enterDelay, staggerStyle } from "~/components/motion/stagger";
+import { Search, ChevronDown, Printer } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "~/components/ui/empty";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "~/components/ui/input-group";
 import { Skeleton } from "~/components/ui/skeleton";
+import { Spinner } from "~/components/ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import SiteHeader from "~/features/landing/components/SiteHeader";
 import SiteFooter from "~/features/landing/components/SiteFooter";
@@ -15,6 +17,7 @@ import { getAllServicesWithRequirements } from "~/features/services/services.que
 import { cachedServiceRead, invalidateServiceCache, serviceCacheKeys } from "~/features/services/services.cache";
 import type { Service, ServiceRequirement } from "~/features/admin/services/services.types";
 import { parseRequirementName, cleanStepText, formatPesoFee, sortChecklist } from "~/features/services/service-utils";
+import { useChecklistPdfPrint } from "~/features/services/pdf/useChecklistPdfPrint";
 
 interface ServicesPageProps {
   selectedCode?: string;
@@ -45,6 +48,7 @@ function scrollWithinPage(id: string) {
 
 export default function ServicesPage({ selectedCode }: ServicesPageProps) {
   const resetApplyChoices = useResetApplyChoices();
+  const { printChecklist, printingCode } = useChecklistPdfPrint();
   const [services, setServices] = useState<Service[]>([]);
   const [requirements, setRequirements] = useState<ServiceRequirement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -130,9 +134,9 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
     <div className="public-service-page">
       <SiteHeader />
       <main className="public-requirements-main">
-        <h1 className="public-page-title">List of requirements</h1>
+        <h1 className="public-page-title civic-enter-sm">List of requirements</h1>
 
-        <InputGroup className="requirements-search">
+        <InputGroup className="requirements-search civic-enter-sm" style={enterDelay(60)}>
           <InputGroupInput
             type="search"
             aria-label="Search for a service or requirement"
@@ -153,7 +157,8 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
           variant="outline"
           size="lg"
           spacing={2}
-          className="requirements-filters"
+          className="requirements-filters civic-enter-sm"
+          style={enterDelay(120)}
         >
           {pills.map((pill) => (
             <ToggleGroupItem key={pill.key} value={pill.key} className="requirements-filter">
@@ -169,7 +174,7 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
         )}
 
         {!loading && error && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="civic-content-in">
             <AlertTitle>Unable to load services</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
             <Button
@@ -185,7 +190,7 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
         )}
 
         {!loading && !error && filteredServices.length === 0 && (
-          <Empty className="rounded-3xl border">
+          <Empty className="civic-content-in rounded-3xl border">
             <EmptyHeader>
               <EmptyTitle>No services found</EmptyTitle>
               <EmptyDescription>Try clearing the search or filters and browse the full list instead.</EmptyDescription>
@@ -198,8 +203,8 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
         )}
 
         {!loading && !error && filteredServices.length > 0 && (
-          <div className="requirements-list">
-            {filteredServices.map((service) => {
+          <div className="requirements-list civic-stagger">
+            {filteredServices.map((service, index) => {
               const isExpanded = !!expandedCodes[service.service_code];
               const isConditionalOpen = !!conditionalOpen[service.service_code];
               const serviceReqs = requirementsByService.get(service.service_code) ?? [];
@@ -215,6 +220,7 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                   open={isExpanded}
                   onOpenChange={(open) => setExpandedCodes((previous) => ({ ...previous, [service.service_code]: open }))}
                   className="requirement-service"
+                  style={staggerStyle(Math.min(index, 5))}
                   data-expanded={isExpanded}
                 >
                   <h2>
@@ -225,7 +231,7 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                   </h2>
 
                   <CollapsibleContent>
-                    <div className="requirement-details">
+                    <div className="requirement-details civic-content-in">
                       <dl className="requirement-facts">
                         <div>
                           <dt>Total fees</dt>
@@ -281,9 +287,20 @@ export default function ServicesPage({ selectedCode }: ServicesPageProps) {
                           <p>Sign in to apply, or create a free account.</p>
                         </div>
                         <div className="requirement-apply-actions">
-                          <QuietLink to="/login" search={{ redirect: "/requirements" }} className="landing-button requirement-save">
-                            Save checklist
-                          </QuietLink>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="landing-button requirement-print"
+                            disabled={printingCode !== null}
+                            aria-busy={printingCode === service.service_code}
+                            title="Open a printable PDF checklist"
+                            onClick={() => void printChecklist(service, serviceReqs)}
+                          >
+                            {printingCode === service.service_code
+                              ? <Spinner data-icon="inline-start" aria-hidden="true" />
+                              : <Printer data-icon="inline-start" aria-hidden="true" />}
+                            {printingCode === service.service_code ? "Preparing PDF..." : "Print"}
+                          </Button>
                           <QuietLink
                             to="/apply/$serviceCode/case"
                             params={{ serviceCode: applicationCode }}

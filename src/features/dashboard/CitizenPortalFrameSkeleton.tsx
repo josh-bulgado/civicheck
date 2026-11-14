@@ -7,17 +7,20 @@ import {
 import { Sidebar, SidebarInset, SidebarProvider } from "~/components/ui/sidebar";
 import { Skeleton } from "~/components/ui/skeleton";
 import { CitizenDashboardSkeleton } from "./CitizenDashboardSkeleton";
+import type { ReactNode } from "react";
+import { CiviCheckIdentity, CityGovernmentIdentity } from "~/components/brand/civic-identity";
+import { Bell, ClipboardList, Compass, LayoutDashboard, Search, UserRound } from "lucide-react";
 
 /**
- * The applicant's whole screen while the dashboard layout's own loader runs:
- * the sidebar, the panel with its top bar, and the dashboard's skeleton in it.
+ * The applicant frame while parent loaders run: fixed navigation and branding,
+ * an account placeholder, and the destination's data-loading view.
  *
  * The layout renders nothing, not even its chrome, until that loader is done, so
  * without this a fresh sign-in first paints a neutral page placeholder and then
  * swaps it for the dashboard's. This is the frame the layout will draw, in the
  * layout's own sizes (see workspace.ts), so the swap only fills it in.
  */
-export function CitizenPortalFrameSkeleton() {
+export function CitizenPortalFrameSkeleton({ children }: { children?: ReactNode } = {}) {
   return (
     <SidebarProvider className="citizen-portal" style={WORKSPACE_SIDEBAR_STYLE}>
       <Sidebar
@@ -29,13 +32,12 @@ export function CitizenPortalFrameSkeleton() {
         <div className="flex min-h-0 flex-1 flex-col pt-1.5 pr-2 pb-1 pl-1.5">
           {/* The mark and name */}
           <div className="flex items-center gap-2.5 px-2.5 pt-2 pb-10">
-            <Skeleton className="size-10.5 shrink-0 rounded-full" />
-            <Skeleton className="h-6 w-28 rounded-lg" />
+            <CiviCheckIdentity compact prominent />
           </div>
-          {/* Home, Services, My requests, Notifications */}
+          {/* Desktop retains the existing account menu instead of a Profile page. */}
           <div className="flex flex-col gap-2">
-            {[0, 1, 2, 3].map((item) => (
-              <Skeleton key={item} className="h-12 w-full rounded-full" />
+            {[{ label: "Dashboard", icon: LayoutDashboard }, { label: "Browse Services", icon: Compass }, { label: "My Requests", icon: ClipboardList }, { label: "Notifications", icon: Bell }].map(({ label, icon: Icon }) => (
+              <div key={label} className="flex h-12 items-center gap-4 rounded-full px-5 text-sm text-foreground"><Icon className="size-5" aria-hidden="true" />{label}</div>
             ))}
           </div>
           {/* The account card */}
@@ -47,36 +49,33 @@ export function CitizenPortalFrameSkeleton() {
         <div className={CITIZEN_PANEL_CLASS}>
           {/* A phone's top row: the mark and name, the search and the bell. */}
           <div
-            aria-hidden="true"
             className="flex items-center gap-2.5 md:hidden"
           >
-            <Skeleton className="size-10 shrink-0 rounded-full" />
-            <Skeleton className="h-6 w-28 flex-1 rounded-lg" />
-            <Skeleton className="size-11 shrink-0 rounded-full" />
-            <Skeleton className="size-11 shrink-0 rounded-full" />
+            <CiviCheckIdentity compact prominent />
+            <Search className="ml-auto size-5" />
+            <Bell className="size-5" />
           </div>
-          {/* Desktop's top bar: the search pill, then the bell, theme and seal. */}
+          {/* Desktop's top bar: the search pill, then the bell and seal. */}
           <div
-            aria-hidden="true"
             className="hidden items-center gap-3 md:flex"
           >
-            <Skeleton className="h-12.5 w-full max-w-100 rounded-full" />
+            <div className="flex h-12.5 w-full max-w-100 items-center gap-3 rounded-full bg-muted px-5 text-sm text-muted-foreground"><Search className="size-5" />Search services or tracking no.</div>
             <div className="flex-1" />
-            <Skeleton className="size-12.5 shrink-0 rounded-full" />
-            <Skeleton className="h-8 w-14 shrink-0 rounded-full" />
-            <Skeleton className="size-12.5 shrink-0 rounded-full" />
+            <Bell className="size-5" />
+            <CityGovernmentIdentity compact />
           </div>
           <main className={CITIZEN_MAIN_CLASS}>
-            <CitizenDashboardSkeleton />
+            {children ?? <CitizenDashboardSkeleton />}
           </main>
         </div>
       </SidebarInset>
 
       {/* A phone's navigation bar. */}
-      <Skeleton
-        aria-hidden="true"
-        className="fixed inset-x-4 bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-40 h-17 rounded-[34px] md:hidden"
-      />
+      <div aria-hidden="true" className="fixed inset-x-4 bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-40 flex h-17 items-center justify-around rounded-[34px] bg-card text-[10px] font-medium md:hidden">
+        {[{ label: "Home", icon: LayoutDashboard }, { label: "Services", icon: Compass }, { label: "Requests", icon: ClipboardList }, { label: "Profile", icon: UserRound }].map(({ label, icon: Icon }) => (
+          <span key={label} className="flex flex-col items-center gap-1"><Icon className="size-5" />{label}</span>
+        ))}
+      </div>
     </SidebarProvider>
   );
 }

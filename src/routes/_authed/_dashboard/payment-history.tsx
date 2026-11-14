@@ -24,7 +24,7 @@ export const Route = createFileRoute("/_authed/_dashboard/payment-history")({
     payments: await getPaymentHistoryFn({ data: deps }),
   }),
   staleTime: 30_000,
-  pendingComponent: () => <TablePageSkeleton label="Loading payment history" />,
+  pendingComponent: () => <TablePageSkeleton title="Payment History" label="Loading payment history" actionLabel="Export CSV" columnLabels={["Tracking No.", "Applicant", "Service", "OR No.", "Fee", "Verified At", "Verified By"]} />,
   component: PaymentHistoryRoute,
 });
 

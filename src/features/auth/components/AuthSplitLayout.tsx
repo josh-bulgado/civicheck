@@ -28,7 +28,7 @@ export function AuthSplitLayout({
 }) {
   return (
     <div className="auth-scope flex min-h-dvh bg-(--auth-bg)">
-      <div className="flex flex-1 flex-col px-5 py-8 sm:px-10">
+      <div className="flex min-w-0 flex-1 flex-col px-5 py-5 sm:px-10 sm:py-8">
         <div className="civic-enter-fade flex items-center justify-between">
           <Link to="/" className="w-fit">
             <CiviCheckIdentity compact />
@@ -38,7 +38,7 @@ export function AuthSplitLayout({
 
         <div
           className={cn(
-            "civic-enter mx-auto flex w-full max-w-88 flex-1 flex-col justify-center py-10",
+            "civic-enter mx-auto flex w-full min-w-0 max-w-88 flex-1 flex-col justify-center py-6 sm:py-10",
             className,
           )}
         >
@@ -72,7 +72,7 @@ export function AuthCenteredLayout({
   className?: string;
 }) {
   return (
-    <div className="auth-scope flex min-h-dvh flex-col bg-(--auth-bg) px-5 py-8 sm:px-10">
+    <div className="auth-scope flex min-h-dvh min-w-0 flex-col bg-(--auth-bg) px-5 py-5 sm:px-10 sm:py-8">
       <div className="civic-enter-fade flex items-center justify-between">
         <Link to="/" className="w-fit">
           <CiviCheckIdentity compact />
@@ -82,7 +82,7 @@ export function AuthCenteredLayout({
 
       <div
         className={cn(
-          "civic-enter mx-auto flex w-full max-w-85 flex-1 flex-col justify-center py-10",
+          "civic-enter-fade mx-auto flex w-full min-w-0 max-w-85 flex-1 flex-col justify-center py-6 sm:py-10",
           className,
         )}
       >
@@ -137,7 +137,7 @@ export function AuthStepHeading({
 /** An email address inside running text — bold, and free to break if it is long. */
 export function AuthEmphasis({ children }: { children: ReactNode }) {
   return (
-    <strong className="font-semibold wrap-break-word text-foreground">
+    <strong className="font-semibold wrap-anywhere text-foreground">
       {children}
     </strong>
   );
@@ -149,7 +149,7 @@ export function AuthEmphasis({ children }: { children: ReactNode }) {
  * control comfortably above the 44px minimum hit target. The pill shape is
  * shared by every auth input and select.
  */
-export const authFieldClass = "h-11 rounded-full px-3.5 text-sm shadow-none";
+export const authFieldClass = "h-11! rounded-full px-3.5 text-base shadow-none md:text-sm";
 
 /**
  * Softly filled variant used on the create-account screen. With six controls

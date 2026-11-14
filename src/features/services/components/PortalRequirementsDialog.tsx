@@ -21,9 +21,9 @@ import {
   isFullyOnline,
   parseRequirementName,
   portalWait,
-  splitCaseLabel,
 } from "~/features/services/service-utils";
 import { cn } from "~/lib/utils";
+import { requirementDisplayName } from "~/features/services/requirement-display";
 
 interface PortalRequirementsDialogProps {
   /** `display_group ?? service_code` — the same code the apply flow routes on. */
@@ -146,11 +146,10 @@ function Stat({
 
 /**
  * One document: its name, what to bring of it, where to secure it, and whether
- * it depends on the case. The stored text is shown as it is; `parseRequirementName`
- * only decides which line each part sits on.
+ * it depends on the case. Prefixes are omitted from the document's display name.
  */
 function RequirementRow({ requirement }: { requirement: ServiceRequirement }) {
-  const { caseLabel, name } = splitCaseLabel(requirement.requirement_name);
+  const name = requirementDisplayName(requirement.requirement_name);
   const { primary, secondary } = parseRequirementName(name);
 
   // After the dash is usually what to bring ("1 original"). A few rows put the
@@ -189,9 +188,9 @@ function RequirementRow({ requirement }: { requirement: ServiceRequirement }) {
             {location}
           </p>
         )}
-        {(caseLabel || pill) && (
+        {pill && (
           <span className="mt-2 inline-flex h-6.5 items-center rounded-full bg-primary-soft px-3 text-[13px] font-semibold text-primary-hover">
-            {caseLabel ?? pill}
+            {pill}
           </span>
         )}
       </div>

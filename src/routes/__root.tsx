@@ -140,25 +140,8 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      {
-        rel: "apple-touch-icon",
-        sizes: "180x180",
-        href: "/apple-touch-icon.png",
-      },
-      {
-        rel: "icon",
-        type: "image/png",
-        sizes: "32x32",
-        href: "/favicon-32x32.png",
-      },
-      {
-        rel: "icon",
-        type: "image/png",
-        sizes: "16x16",
-        href: "/favicon-16x16.png",
-      },
+      { rel: "icon", href: "data:," },
       { rel: "manifest", href: "/site.webmanifest" },
-      { rel: "icon", href: "/favicon.ico" },
     ],
   }),
   errorComponent: (props) => {
@@ -173,10 +156,16 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
-  const [mounted, setMounted] = React.useState(false);
+  const [showDevtools, setShowDevtools] = React.useState(false);
 
   React.useEffect(() => {
-    setMounted(true);
+    if (!import.meta.env.DEV) return;
+    // The floating development trigger covers form controls on touch screens.
+    const desktop = window.matchMedia("(min-width: 768px) and (pointer: fine)");
+    const update = () => setShowDevtools(desktop.matches);
+    update();
+    desktop.addEventListener("change", update);
+    return () => desktop.removeEventListener("change", update);
   }, []);
 
   return (
@@ -190,7 +179,7 @@ function RootComponent() {
         mobileOffset={{ bottom: 96, left: 16, right: 16 }}
         style={{ "--width": "30rem" } as React.CSSProperties}
       />
-      {mounted && import.meta.env.DEV && (
+      {showDevtools && import.meta.env.DEV && (
         <TanStackDevtools
           config={{ position: "bottom-left", inspectHotkey: ["Alt"] }}
           plugins={[

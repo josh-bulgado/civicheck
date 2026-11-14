@@ -21,6 +21,12 @@ function RequestSummary({ request }: { request: RequestDetail }) {
     ["Service", request.serviceName ?? "—"],
     ["Department", request.departmentName],
     ["Channel", request.isWalkIn ? "Walk-in, encoded by staff" : "Online"],
+    [
+      "Account holder",
+      request.isWalkIn
+        ? "No linked account (walk-in)"
+        : request.accountHolderName || "Account name unavailable",
+    ],
     ["Copies", String(request.copies)],
     ["Fee", request.feesDue > 0 ? `₱${request.feesDue.toFixed(2)}` : "No fee"],
   ];

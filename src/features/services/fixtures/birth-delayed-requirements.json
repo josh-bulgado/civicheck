@@ -359,6 +359,32 @@
         "label": "Age at registration",
         "required": true,
         "dateField": "event_date"
+      },
+      {
+        "key": "attestation_age",
+        "kind": "age_band",
+        "dateField": "event_date",
+        "label": "Age for sworn attestation",
+        "required": true,
+        "bands": [
+          {
+            "value": "under7",
+            "label": "Under 7",
+            "minAge": 0,
+            "maxAge": 6
+          },
+          {
+            "value": "7-17",
+            "label": "7-17",
+            "minAge": 7,
+            "maxAge": 17
+          },
+          {
+            "value": "18plus",
+            "label": "18 and above",
+            "minAge": 18
+          }
+        ]
       }
     ]
   },
@@ -532,7 +558,7 @@
       "upload_scope": "request",
       "requires_upload": true,
       "where_to_secure": "Local Civil Registrar",
-      "requirement_name": "Acknowledgement / Admission of Paternity + Affidavit to Use Surname of Father + Sworn Attestation of mother/guardian for ages 7-17 - with IDs of parents and child (for Non-Marital Child)",
+      "requirement_name": "Acknowledgement / Admission of Paternity + Affidavit to Use Surname of Father - with IDs of parents and child (for Non-Marital Child)",
       "requirement_group": "birth_delayed"
     },
     {
@@ -631,6 +657,34 @@
       "where_to_secure": "Government / Private Sector",
       "requirement_name": "Any additional proof of identity, such as Barangay certification or Driver's License — 1 photocopy (BRAP, if applicable)",
       "requirement_group": "birth_delayed"
+    },
+    {
+      "id": "b7d4b2f0-0a07-4717-8000-000000000001",
+      "service_code": null,
+      "requirement_group": "birth_delayed",
+      "requirement_name": "Sworn Attestation of mother/guardian (ages 7-17) - with IDs of parents and child",
+      "where_to_secure": "Local Civil Registrar Office / Philippine Statistics Authority",
+      "is_mandatory": true,
+      "requires_upload": true,
+      "upload_scope": "request",
+      "subject_role": null,
+      "sort_order": 11,
+      "case_tag": "non_marital_only",
+      "applies_when": {
+        "match": "all",
+        "conditions": [
+          {
+            "field": "marital",
+            "operator": "equals",
+            "value": "non-marital"
+          },
+          {
+            "field": "attestation_age",
+            "operator": "equals",
+            "value": "7-17"
+          }
+        ]
+      }
     }
   ],
   "fees": {

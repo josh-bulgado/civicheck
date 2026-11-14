@@ -123,6 +123,10 @@ export function ServiceReferenceDetail({
         </Button>
       </header>
 
+      {routeCode === "court_decree" ? (
+        <p className="text-sm text-muted-foreground">Available court decree types are adoption, foreign decree, and annulment or declaration of nullity of marriage. Adoption and foreign decree share the listed ₱500 fee; annulment or nullity is ₱700.</p>
+      ) : null}
+
       {isGroup ? (
         <div className="flex flex-col gap-2">
           <p

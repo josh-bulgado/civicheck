@@ -25,15 +25,17 @@ export function isUnauthorizedError(error: unknown): boolean {
   return /^unauthorized\b/i.test(messageOf(error));
 }
 
-/**
- * The request never reached the server. `navigator.onLine === false` is a
- * reliable "offline"; the message check covers a flaky connection that the
- * browser still reports as online.
- */
+/** A failed JavaScript import needs a fresh page, not an offline message. */
+export function isModuleLoadError(error: unknown): boolean {
+  return /dynamically imported module|importing a module script|loading (?:css )?chunk|chunkloaderror|outdated optimize dep/i.test(messageOf(error));
+}
+
+/** Browser-confirmed offline state takes priority over the error message. */
 export function isNetworkError(error: unknown): boolean {
   if (typeof navigator !== "undefined" && navigator.onLine === false) {
     return true;
   }
+  if (isModuleLoadError(error)) return false;
   return /failed to fetch|networkerror|network request failed|load failed|fetch failed/i.test(
     messageOf(error),
   );

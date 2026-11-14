@@ -9,12 +9,18 @@ import type * as React from "react";
  */
 export function SettingsPanelBody({
   children,
+  disabled,
+  label,
 }: {
   children: React.ReactNode;
+  disabled: boolean;
+  label: string;
 }) {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-5 py-1 md:px-8">
-      {children}
+      <fieldset disabled={disabled} aria-label={label} className="min-w-0 border-0 p-0">
+        {children}
+      </fieldset>
     </div>
   );
 }

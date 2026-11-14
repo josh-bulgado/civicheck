@@ -11,9 +11,11 @@ import {
   History,
   LayoutDashboard,
   ListChecks,
+  MessageSquare,
   Shield,
   ShieldAlert,
   UsersRound,
+  UserRound,
 } from "lucide-react";
 import type { Permission, Role } from "~/lib/permissions";
 import type { NavGroup, NavItem } from "./types";
@@ -82,7 +84,9 @@ const NAV_ENTRIES = {
   services: {
     // Personnel use the catalog as a reference; applicants browse it to apply.
     title: (role) =>
-      role === "staff" || role === "supervisor" ? "Service Reference" : "Browse Services",
+      role === "staff" || role === "supervisor"
+        ? "Service Reference"
+        : "Browse Services",
     url: "/services",
     icon: BookOpen,
     applicantIcon: Compass,
@@ -93,6 +97,12 @@ const NAV_ENTRIES = {
     url: "/my-requests",
     icon: ClipboardList,
     anyOf: ["requests:view_own"],
+  },
+  profile: {
+    title: "Profile",
+    url: "/profile",
+    icon: UserRound,
+    anyOf: ["dashboard:applicant"],
   },
 
   // ── Payments ──────────────────────────────────────────────────────────────
@@ -123,9 +133,15 @@ const NAV_ENTRIES = {
     anyOf: ["users:invite_staff"],
   },
   "admin-reports": {
-    title: "Reports",
+    title: "Request Reports",
     url: "/admin/reports",
     icon: BarChart3,
+    anyOf: ["dashboard:admin"],
+  },
+  "admin-feedback": {
+    title: "Citizen Feedback",
+    url: "/admin/feedback",
+    icon: MessageSquare,
     anyOf: ["dashboard:admin"],
   },
 
@@ -159,7 +175,10 @@ const NAV_ENTRIES = {
 export type NavItemId = keyof typeof NAV_ENTRIES;
 
 /** A nav link's title and URL for `role`, for anything that names a page the way the sidebar does. */
-export function navLink(id: NavItemId, role: Role): { title: string; url: string } {
+export function navLink(
+  id: NavItemId,
+  role: Role,
+): { title: string; url: string } {
   const entry: NavEntry = NAV_ENTRIES[id];
   return {
     title: typeof entry.title === "function" ? entry.title(role) : entry.title,
@@ -189,25 +208,50 @@ const ROLE_LAYOUTS: Record<Role, GroupLayout[]> = {
   applicant: [
     {
       id: "home",
-      itemIds: ["applicant-dashboard", "services", "my-requests", "notifications"],
+      itemIds: [
+        "applicant-dashboard",
+        "services",
+        "my-requests",
+        "notifications",
+      ],
     },
   ],
   staff: PERSONNEL_LAYOUT,
   supervisor: PERSONNEL_LAYOUT,
   cashier: [
-    { id: "payments", label: "Payments", itemIds: ["cashier-counter", "payment-history"] },
+    {
+      id: "payments",
+      label: "Payments",
+      itemIds: ["cashier-counter", "payment-history"],
+    },
     { id: "notifications", itemIds: ["notifications"] },
   ],
   admin: [
     { id: "home", itemIds: ["admin-overview"] },
     { id: "operations", label: "Operations", itemIds: ["request-queue"] },
-    { id: "management", label: "Management", itemIds: ["admin-services", "admin-staff"] },
-    { id: "insights", label: "Insights", itemIds: ["admin-reports", "payment-history"] },
+    {
+      id: "management",
+      label: "Management",
+      itemIds: ["admin-services", "admin-staff"],
+    },
+    {
+      id: "insights",
+      label: "Insights",
+      itemIds: ["admin-reports", "admin-feedback", "payment-history"],
+    },
     { id: "notifications", itemIds: ["notifications"] },
   ],
   system_admin: [
-    { id: "monitoring", label: "Monitoring", itemIds: ["system-health", "system-security"] },
-    { id: "access-audit", label: "Access & Audit", itemIds: ["system-accounts", "system-audit"] },
+    {
+      id: "monitoring",
+      label: "Monitoring",
+      itemIds: ["system-health", "system-security"],
+    },
+    {
+      id: "access-audit",
+      label: "Access & Audit",
+      itemIds: ["system-accounts", "system-audit"],
+    },
   ],
 };
 
@@ -231,10 +275,15 @@ export function buildNavGroups(
         return [
           {
             id,
-            title: typeof entry.title === "function" ? entry.title(role) : entry.title,
+            title:
+              typeof entry.title === "function"
+                ? entry.title(role)
+                : entry.title,
             url: entry.url,
             icon:
-              role === "applicant" ? (entry.applicantIcon ?? entry.icon) : entry.icon,
+              role === "applicant"
+                ? (entry.applicantIcon ?? entry.icon)
+                : entry.icon,
             ...(id === "notifications" ? { badge: unreadNotifications } : {}),
             ...(attentionIds.includes(id) ? { attention: true } : {}),
           },
@@ -242,4 +291,16 @@ export function buildNavGroups(
       }),
     }))
     .filter((group) => group.items.length > 0);
+}
+
+/** Profile replaces Notifications only in the citizen's mobile bottom bar. */
+export function buildCitizenMobileNav(can: (permission: Permission) => boolean): NavItem[] {
+  const items = buildNavGroups("applicant", can)
+    .flatMap((group) => group.items)
+    .filter((item) => item.id !== "notifications");
+  const profile = NAV_ENTRIES.profile;
+  if (profile.anyOf.some((permission) => can(permission))) {
+    items.push({ id: "profile", ...navLink("profile", "applicant"), icon: profile.icon });
+  }
+  return items;
 }

@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { endorsementDetailsOf } from "./electronic-endorsement-release";
 import { parsePreviousUploads } from "./previous-uploads";
 import { requireActiveSession } from "~/server/auth";
 import { one } from "~/lib/embed";
@@ -6,6 +7,8 @@ import { requestFieldDisplayOf } from "~/features/requests/request-field-labels"
 import { loadAddableUploads } from "~/features/requests/missing-uploads.server";
 import { readRequestMessages } from "~/features/requests/request-messages.server";
 import { loadServiceCatalogue } from "~/features/services/services.catalogue";
+import { readRequestFeedback } from "~/features/feedback/feedback.server";
+import type { RequestFeedback } from "~/features/feedback/feedback";
 
 /** The service a request is for, as the applicant's list embeds it. */
 export interface RequestServiceName {
@@ -58,6 +61,7 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
       .select(
         `id, tracking_number, request_type, status, payment_status,
          fees_due, copies, form_data, created_at, updated_at, posting_start_date, posting_end_date,
+         psa_endorsed_on, claiming_location, claiming_instructions, psa_certificate_available_at,
          services_registry(name, display_name, processing_time, departments(name),
            event_date_label, event_place_label, reference_number_label, allows_messages),
          form_template_versions(definition)`,
@@ -114,12 +118,24 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
           )
         : [];
 
+    // An optional survey must not block access to a completed request.
+    let feedback: RequestFeedback | null = null;
+    let feedbackUnavailable = false;
+    if (row.status === "released") {
+      try {
+        feedback = await readRequestFeedback(supabase, row.id);
+      } catch {
+        feedbackUnavailable = true;
+      }
+    }
+
     return {
       id: row.id,
       trackingNumber: row.tracking_number,
       serviceCode: row.request_type as string | null,
       postingStartDate: row.posting_start_date as string | null,
       postingEndDate: row.posting_end_date as string | null,
+      ...(row.request_type === "ELEC_ENDORSEMENT" ? { endorsement: endorsementDetailsOf(row) } : {}),
       status: row.status,
       paymentStatus: row.payment_status,
       feesDue: Number(row.fees_due ?? 0),
@@ -133,6 +149,8 @@ export const getMyRequestDetailFn = createServerFn({ method: "GET" })
       referenceNumberLabel: service?.reference_number_label ?? null,
       allowsMessages,
       messages,
+      feedback,
+      feedbackUnavailable,
       ...requestFieldDisplayOf(row),
       createdAt: row.created_at,
       updatedAt: row.updated_at,

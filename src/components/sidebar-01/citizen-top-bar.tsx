@@ -8,12 +8,11 @@ import {
 import { Button } from "~/components/ui/button";
 import { Kbd } from "~/components/ui/kbd";
 import { useHotkeyLabel } from "~/hooks/useHotkeyLabel";
-import { ThemeSwitch } from "~/components/theme-switch";
-import { NotificationsPopover } from "~/features/notifications/components/NotificationsPopover";
+import { NotificationBellLink } from "~/features/notifications/components/NotificationBellLink";
 import { loadPaletteDefaults } from "~/features/search/palette-defaults";
 
 interface CitizenTopBarProps {
-  /** Keys the bell popover's cache, so one person's list never shows to another. */
+  /** Keys the search suggestions to the signed-in person. */
   userId: string;
   /** Any unread at all puts the gold dot on the bell. */
   unreadNotifications: number;
@@ -57,8 +56,7 @@ export function CitizenTopBar({ userId, unreadNotifications }: CitizenTopBarProp
         </Kbd>
       </Button>
       <div className="flex-1" aria-hidden="true" />
-      <NotificationsPopover userId={userId} unreadCount={unreadNotifications} />
-      <ThemeSwitch />
+      <NotificationBellLink unreadCount={unreadNotifications} />
       {/* Text stand-in for the city seal, which isn't cleared for use yet. */}
       <span
         className="hidden size-12.5 shrink-0 items-center justify-center rounded-full border-2 border-brand-gold bg-card text-[10px] font-extrabold tracking-[0.02em] text-primary sm:flex"

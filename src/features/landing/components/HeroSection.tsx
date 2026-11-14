@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Pause, Play } from "lucide-react";
 import { QuietLink as Link } from "~/components/quiet-link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { Skeleton } from "~/components/ui/skeleton";
+import { enterDelay, staggerStyle } from "~/components/motion/stagger";
 import type { FeaturedChecklist } from "../landing.queries";
 import { landingAssets } from "../landing-assets";
 
@@ -14,7 +16,7 @@ const documentTypes = [
 
 const CHECKLIST_INTERVAL_MS = 5000;
 
-function ChecklistCard({ checklists }: { checklists: FeaturedChecklist[] }) {
+function ChecklistCard({ checklists, loading = false }: { checklists: FeaturedChecklist[]; loading?: boolean }) {
   const [activeGroup, setActiveGroup] = useState(documentTypes[0].group);
   const [rotationEnabled, setRotationEnabled] = useState(true);
   const [hovered, setHovered] = useState(false);
@@ -69,7 +71,7 @@ function ChecklistCard({ checklists }: { checklists: FeaturedChecklist[] }) {
       }}
       className="landing-checklist"
     >
-      <TabsList variant="soft" aria-label="Document requirements" className="landing-document-tabs">
+      <TabsList variant="glide" aria-label="Document requirements" className="landing-document-tabs">
         {documentTypes.map(({ group, label }) => (
           <TabsTrigger key={group} value={group} className="landing-document-tab">
             {label}
@@ -85,10 +87,14 @@ function ChecklistCard({ checklists }: { checklists: FeaturedChecklist[] }) {
             <div className="landing-checklist-body">
               <h2>{title}</h2>
               {checklist ? <p className="sr-only">{checklist.displayName}</p> : null}
-              {checklist ? (
-                <ol className="landing-requirements">
+              {loading ? (
+                <div role="status" aria-busy="true" aria-label="Loading requirements" className="flex flex-col gap-4 py-4">
+                  {[0, 1, 2].map((row) => <Skeleton key={row} aria-hidden="true" className="h-8 w-full" />)}
+                </div>
+              ) : checklist ? (
+                <ol className="landing-requirements civic-stagger">
                   {checklist.items.map((item, index) => (
-                    <li key={item.name}>
+                    <li key={item.name} style={staggerStyle(index)}>
                       <span className="landing-requirement-number" aria-hidden="true">{index + 1}</span>
                       <span>{item.name}</span>
                     </li>
@@ -135,16 +141,16 @@ function ChecklistCard({ checklists }: { checklists: FeaturedChecklist[] }) {
   );
 }
 
-const HeroSection = ({ checklists }: { checklists: FeaturedChecklist[] }) => (
+const HeroSection = ({ checklists, loading = false }: { checklists: FeaturedChecklist[]; loading?: boolean }) => (
   <section className="landing-hero" aria-labelledby="landing-title">
     <img className="landing-hero-background" src={landingAssets.background} alt="" aria-hidden="true" draggable={false} />
     <div className="landing-hero-content">
       <div className="landing-hero-copy">
-        <h1 id="landing-title">
+        <h1 id="landing-title" className="civic-enter">
           Know what<br />you need.
           <span>Before you need it.</span>
         </h1>
-        <div className="landing-hero-actions">
+        <div className="landing-hero-actions civic-enter" style={enterDelay(100)}>
           <Link to="/requirements" className="landing-button landing-button-primary">
             Check requirements
           </Link>
@@ -156,7 +162,9 @@ const HeroSection = ({ checklists }: { checklists: FeaturedChecklist[] }) => (
       <div className="landing-hero-preview">
         <img className="landing-certificate-art" src={landingAssets.certificate} alt="" aria-hidden="true" draggable={false} />
         <img className="landing-id-art" src={landingAssets.id} alt="" aria-hidden="true" draggable={false} />
-        <ChecklistCard checklists={checklists} />
+        <div className="landing-checklist-entrance civic-enter" style={enterDelay(180)}>
+          <ChecklistCard checklists={checklists} loading={loading} />
+        </div>
       </div>
     </div>
   </section>

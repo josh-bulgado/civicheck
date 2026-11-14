@@ -1,0 +1,486 @@
+import { DatePicker } from "~/components/ui/date-picker";
+import { Field, FieldLabel } from "~/components/ui/field";
+import { RequiredMark } from "~/components/ui/required-mark";
+import { validateDateAnswer } from "~/features/forms/date-validation";
+import { isOnTimeBirth } from "~/features/apply/on-time-birth-layout";
+import { useEffect, useState } from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
+import { Button } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
+import { Alert, AlertDescription } from "~/components/ui/alert";
+import {
+  SubjectFieldGrid,
+  type DetailsValues,
+} from "~/features/apply/components/DetailsStep";
+import { DynamicFormFields } from "~/features/forms/components/DynamicFormFields";
+import { FORM_GROUP_CLASS, WIZARD_CONTROL_CLASS, WIZARD_LABEL_CLASS, WizardFieldError } from "~/features/forms/components/wizard-field";
+import { formatNameHeading } from "~/features/forms/field-label";
+import { staffCopy, staffFormDefinition } from "~/features/forms/staff-copy";
+import { DerivedAnswerAlerts } from "~/features/forms/components/DerivedAnswerAlerts";
+import { EventTimingNotice } from "~/features/forms/components/EventTimingNotice";
+import type { TemplateAnswers } from "~/features/forms/form-template.types";
+import {
+  todayKeyInTimeZone,
+  deriveTemplateAnswers,
+  evaluateTemplateEventTiming,
+  canonicalizeTemplateAnswers,
+} from "~/features/forms/form-template.utils";
+import { emptySubject, reconcileSubjects, subjectsMatchRoles } from "~/lib/subject-fields";
+import { courtDecreeRoles, courtRecordLayout, courtRecordType } from "~/features/forms/court-decree";
+import { surnameChangeCaseDefinition, surnameChangeSigningInstruction } from "~/features/services/surname-change";
+import type { EncodableService } from "../walk-in-intake.queries";
+import { prepareWalkInBirth } from "../walk-in-birth";
+import { isWalkInPetition, petitionWalkInAnswers, prepareWalkInPetition } from "../walk-in-petition";
+import { petitionDetailsLayout } from "~/features/services/petition-selection";
+import { walkInCaseForService } from "../walk-in-legitimation";
+import { prepareWalkInCourtDecree } from "../walk-in-court-decree";
+import { prepareWalkInSupplemental } from "../walk-in-supplemental";
+import { isWalkInCourtDecree, isWalkInDeath, isWalkInMarriage } from "../walk-in-registration";
+
+export function WalkInRegistrationFields({
+  service,
+  submitting,
+  onSubmit,
+  onCancel,
+  onAnswersChange,
+  courtDecreeType,
+}: {
+  service: EncodableService;
+  courtDecreeType?: string;
+  submitting: boolean;
+  onSubmit: (data: {
+    serviceCode: string;
+    subjects: ReturnType<typeof emptySubject>[];
+    answers: TemplateAnswers;
+    templateVersionId: string | null;
+    physicalDocumentsConfirmed: boolean;
+    coupleAppearanceConfirmed?: boolean;
+    personalAppearanceConfirmed?: boolean;
+  }) => Promise<void>;
+  onCancel: () => void;
+  onAnswersChange: (answers: TemplateAnswers) => void;
+}) {
+  const [error, setError] = useState("");
+  const [physicalDocumentsConfirmed, setPhysicalDocumentsConfirmed] = useState(false);
+  const [coupleAppearanceConfirmed, setCoupleAppearanceConfirmed] = useState(false);
+  const [personalAppearanceConfirmed, setPersonalAppearanceConfirmed] = useState(false);
+  const initialCase = service.registrationForm ? walkInCaseForService(service.registrationForm.definition, service.serviceCode) : null;
+  const form = useForm<DetailsValues>({
+    defaultValues: {
+      ...Object.fromEntries((initialCase?.definition.sections ?? [])
+        .flatMap((section) => section.fields)
+        .filter((field) => field.type !== "person_group")
+        .map((field) => [field.key, ""])),
+      ...initialCase?.answers,
+      ...(courtDecreeType ? { court_decree_type: courtDecreeType } : {}),
+      subjects: service.partyRoles.map(emptySubject),
+    },
+  });
+  const watched = useWatch({ control: form.control });
+  const template = service.registrationForm;
+  const courtDecree = isWalkInCourtDecree(service.serviceCode);
+  const marriage = isWalkInMarriage(service.serviceCode);
+  const marriageLicense = service.serviceCode === "MARRIAGE_LICENSE";
+  const death = isWalkInDeath(service.serviceCode);
+  const onTimeBirth = isOnTimeBirth(service.serviceCode);
+  const delayedBirth = service.serviceCode === "BIRTH_DELAYED" || service.serviceCode.startsWith("DCOLB-");
+  const birthLayout = onTimeBirth || delayedBirth;
+  const legitimation = service.serviceCode === "LEGITIMATION";
+  const petition = isWalkInPetition(service.serviceCode);
+  const surnameChange = service.serviceCode === "RA9255_SURNAME";
+  const supplemental = service.serviceCode === "SUPPLEMENTAL_REPORT";
+  const otherCertificate = service.serviceCode === "OTHER_CERT";
+  const endorsement = service.serviceCode === "ELEC_ENDORSEMENT";
+  const recordRoles = courtDecreeRoles(service.serviceCode, {
+    court_decree_type: String(watched.court_decree_type ?? (service.serviceCode === "COURT-ANNULMENT" ? "annulment_nullity" : "")),
+    record_type: String(watched.record_type ?? ""),
+  }, service.partyRoles);
+  useEffect(() => {
+    if (!courtDecree) return;
+    const people = form.getValues("subjects");
+    if (!subjectsMatchRoles(people, recordRoles)) form.setValue("subjects", reconcileSubjects(people, recordRoles));
+    // Compare the roles by value so typing into a name does not reset it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courtDecree, form, recordRoles.join("|")]);
+  useEffect(() => {
+    if (!template) return;
+    const selectedCase = walkInCaseForService(template.definition, service.serviceCode);
+    const publish = () => {
+      const text = Object.fromEntries(Object.entries(form.getValues()).filter(
+        (entry): entry is [string, string] => typeof entry[1] === "string",
+      ));
+      const answers = { ...selectedCase.answers, ...text };
+      onAnswersChange(canonicalizeTemplateAnswers(selectedCase.definition,
+        petition ? petitionWalkInAnswers(answers, service.serviceCode) : answers));
+    };
+    publish();
+    const subscription = form.watch(() => {
+      setPhysicalDocumentsConfirmed(false);
+      setCoupleAppearanceConfirmed(false);
+      setPersonalAppearanceConfirmed(false);
+      publish();
+    });
+    return () => subscription.unsubscribe();
+  }, [form, template, service.serviceCode, onAnswersChange, petition]);
+  if (!template)
+    return (
+      <Alert>
+        <AlertDescription>
+          The registration form is unavailable. Reload the page and try again.
+        </AlertDescription>
+      </Alert>
+    );
+  const { definition, answers: caseAnswers } = walkInCaseForService(template.definition, service.serviceCode);
+  const textValues = Object.fromEntries(
+    Object.entries(watched).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string",
+    ),
+  );
+  const intakeAnswers = { ...caseAnswers, ...textValues };
+  const values = Object.fromEntries(
+    Object.entries(deriveTemplateAnswers(definition,
+      petition ? petitionWalkInAnswers(intakeAnswers, service.serviceCode) : intakeAnswers,
+    )).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+  );
+  const staffDefinition = courtRecordLayout(staffFormDefinition(surnameChangeCaseDefinition(
+    petitionDetailsLayout(definition, service.serviceCode, values), service.serviceCode,
+  )), values);
+  const displayDefinition = surnameChange ? {
+    ...staffDefinition,
+    sections: staffDefinition.sections.map(section => ({
+      ...section,
+      title: section.step === "case" ? "Surname Change Details" : "Child and Parent Information",
+    })),
+  } : staffDefinition;
+  const caseDefinition = {
+    ...displayDefinition,
+    sections: displayDefinition.sections.map((section) => ({
+      ...section,
+        fields: section.fields.filter(field => !(courtDecree && courtDecreeType && field.key === "court_decree_type") &&
+          !(petition && service.serviceCode === "RA9048-CCE" && field.key === "primary_petition")).map((field) => {
+        if (field.key === "event_date") return { ...field, helpText: undefined };
+        if ((service.serviceCode === "MARRIAGE_ONTIME" && field.key === "marriage_license_basis") ||
+          (service.serviceCode === "MARRIAGE_DELAYED" &&
+            ["registration_type", "marriage_license_basis", "has_children"].includes(field.key))) {
+          return { ...field, helpText: undefined };
+        }
+        if (marriage && field.key === "event_place") return {
+          ...field,
+          placeholder: "e.g. St. Gregory the Great Cathedral, Legazpi City, Albay",
+        };
+        return field;
+      }),
+    })),
+  };
+  const roles = courtDecree ? form.getValues("subjects").map((person) => person.role) : recordRoles;
+  const personFields = definition.sections
+    .flatMap((section) => section.fields)
+    .filter((field) => field.type === "person_group");
+  const timing = evaluateTemplateEventTiming(displayDefinition, values);
+  const signingInstruction = surnameChange ? surnameChangeSigningInstruction(values.event_date) : null;
+  const inlineRecordLayout = death || (supplemental && ["birth", "death"].includes(values.record_type));
+  const inlineRecordField = (key: "event_date" | "event_place") => (
+    <DynamicFormFields
+      definition={{
+        ...displayDefinition,
+        sections: displayDefinition.sections.map(section => ({
+          ...section,
+          fields: section.fields.filter(field => field.key === key),
+        })),
+      }}
+      staffView
+      singleColumn
+      step="details"
+      hideSectionTitles
+      showRequiredMarks
+      control={form.control}
+      values={values}
+      onFieldChange={(field, value) => form.setValue(field, value, { shouldValidate: true })}
+    />
+  );
+
+  async function submit() {
+    if (surnameChange && !personalAppearanceConfirmed) {
+      setError("Confirm the required personal appearance, signatures, and attestation for the child's age before encoding.");
+      return;
+    }
+    if (supplemental && !personalAppearanceConfirmed) {
+      setError("Confirm the applicant's personal appearance before encoding.");
+      return;
+    }
+    if (legitimation && !coupleAppearanceConfirmed) {
+      setError("Confirm that both parents personally appeared before encoding.");
+      return;
+    }
+    if (marriageLicense && !coupleAppearanceConfirmed) {
+      setError("Confirm that both applicants personally appeared before encoding.");
+      return;
+    }
+    if (!physicalDocumentsConfirmed) {
+      setError("Check and accept the physical documents before encoding.");
+      return;
+    }
+    if (submitting || !template || !(await form.trigger())) return;
+    const current = form.getValues();
+    const subjects = reconcileSubjects(current.subjects, roles).map(person =>
+      petition && values.record_type === "marriage" ? { ...person, sex: "male" } : person,
+    );
+    const answers: TemplateAnswers = {
+      ...caseAnswers,
+      ...Object.fromEntries(
+        Object.entries(current).filter(
+          (entry): entry is [string, string] => typeof entry[1] === "string",
+        ),
+      ),
+    };
+    for (const field of personFields) answers[field.key] = subjects;
+    if (petition) Object.assign(answers, petitionWalkInAnswers(answers, service.serviceCode));
+    const prepare = supplemental || otherCertificate || (endorsement && values.record_type === "marriage") ? prepareWalkInSupplemental : courtDecree ? prepareWalkInCourtDecree : prepareWalkInBirth;
+    const prepared = (petition ? prepareWalkInPetition : prepare)(definition, answers, roles);
+    if (prepared.error) {
+      setError(staffCopy(prepared.message));
+      return;
+    }
+    setError("");
+    await onSubmit({
+      serviceCode: service.serviceCode,
+      subjects,
+      answers,
+      templateVersionId: template.versionId,
+      physicalDocumentsConfirmed,
+      ...(legitimation || marriageLicense ? { coupleAppearanceConfirmed } : {}),
+      ...(supplemental || surnameChange ? { personalAppearanceConfirmed } : {}),
+    });
+  }
+
+  return (
+    <fieldset disabled={submitting} className="min-w-0 space-y-6 [&>section]:border-t [&>section]:border-border-light [&>section]:pt-5">
+      <DynamicFormFields
+        definition={marriageLicense ? {
+          ...caseDefinition,
+          sections: caseDefinition.sections.map(section => ({
+            ...section,
+            fields: section.fields.filter(field => !["bride_date_of_birth", "groom_date_of_birth"].includes(field.key)),
+          })),
+        } : caseDefinition}
+        staffView
+        step="case"
+        showSectionTitles={surnameChange}
+        singleColumn={marriage || death || legitimation || courtDecree || surnameChange || petition || endorsement}
+        control={form.control}
+        values={values}
+        showRequiredMarks
+        onFieldChange={(key, value) =>
+          form.setValue(key, value, { shouldValidate: true })
+        }
+      />
+      {!marriageLicense ? <DerivedAnswerAlerts definition={displayDefinition} answers={values} /> : null}
+      {timing?.evaluation.mismatched ? (
+        <EventTimingNotice
+          behavior={timing.rule.behavior}
+          title={timing.rule.title}
+          description={`${timing.rule.description} Choose the matching registration under Service requested above.`}
+          ctaLabel=""
+        />
+      ) : null}
+      <DynamicFormFields
+        definition={marriageLicense ? {
+          ...displayDefinition,
+          sections: displayDefinition.sections.map(section => ({
+            ...section,
+            fields: section.fields.filter(field => !["bride_date_of_birth", "groom_date_of_birth"].includes(field.key)),
+          })),
+        } : legitimation || surnameChange || birthLayout || inlineRecordLayout ? {
+          ...displayDefinition,
+          sections: displayDefinition.sections.map(section => ({
+            ...section,
+            fields: section.fields.filter(field => !(legitimation
+              ? ["event_date", "event_place", "marriage_date", "marriage_place"]
+              : ["event_date", "event_place"]).includes(field.key)),
+          })),
+        } : displayDefinition}
+        staffView
+        step="details"
+        widePair={petition || marriage ? ["event_date", "event_place"] : undefined}
+        showSectionTitles={surnameChange}
+        control={form.control}
+        values={values}
+        showRequiredMarks
+        onFieldChange={(key, value) =>
+          form.setValue(key, value, { shouldValidate: true })
+        }
+        renderSectionLead={(section) =>
+          section.fields.some((field) => field.type === "person_group") ? (
+            <div className={`space-y-6${marriage ? " border-b border-border-light pb-6" : ""}`}>
+              {roles.map((role, index) => ({ role, index }))
+                .sort((a, b) => marriage
+                  ? Number(b.role === "Groom") - Number(a.role === "Groom")
+                  : a.index - b.index)
+                .map(({ role, index }, position) => (
+                <div key={role} className="space-y-3">
+                  {(!otherCertificate || values.record_type === "marriage") && !(supplemental && values.record_type === "marriage") ? <h3 className={`${FORM_GROUP_CLASS}${position > 0 ? " border-t border-border-light pt-5" : ""}`}>
+                    {courtDecree && values.court_decree_type === "adoption" ? "Adopted person’s details" : formatNameHeading(courtDecree && courtRecordType(values) === "birth" ? "Name on the birth record" : petition ? (values.record_type === "marriage" ? "Husband's Name" : values.record_type === "death" ? "Deceased Person's Name" : "Name on the birth certificate") : otherCertificate ? "Name of Husband" : role.toLowerCase() === "mother"
+                      ? "Mother's Maiden Name"
+                      : (petition || supplemental || endorsement) && roles.length === 1
+                        ? (definition.sections.flatMap((section) => section.fields)
+                          .find((field) => field.type === "person_group")?.labelByAnswer?.labels[String(values.record_type ?? "")]
+                          ?? "Person named on the record")
+                      : delayedBirth && role === "Child" ? "Registrant’s Information"
+                      : onTimeBirth && role === "Child" ? "Child's Information"
+                      : surnameChange && role === "Child" ? "Child's name on the birth certificate"
+                      : death ? "Registrant’s Information"
+                      : marriageLicense ? `${role}'s Information`
+                      : marriage ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[role] ?? role) : role)}
+                  </h3> : null}
+                  {supplemental && values.record_type === "marriage" ? <h3 className={FORM_GROUP_CLASS}>Husband's Name</h3> : null}
+                  <SubjectFieldGrid
+                    control={form.control}
+                    setValue={form.setValue}
+                    index={index}
+                    role={role}
+                    hideSex={courtDecree || supplemental || otherCertificate}
+                    husband={(otherCertificate || endorsement || petition || supplemental) && values.record_type === "marriage"}
+                    requireMiddleName
+                  >
+                    {marriageLicense ? (
+                      <DynamicFormFields
+                        definition={{
+                          ...displayDefinition,
+                          sections: displayDefinition.sections.map(section => ({
+                            ...section,
+                            step: "details" as const,
+                            fields: section.fields.filter(field => field.key ===
+                              (role === "Bride" ? "bride_date_of_birth" : "groom_date_of_birth"))
+                              .map(field => ({ ...field, label: "Date of Birth" })),
+                          })).filter(section => section.fields.length > 0),
+                        }}
+                        staffView
+                        singleColumn
+                        step="details"
+                        hideSectionTitles
+                        showRequiredMarks
+                        control={form.control}
+                        values={values}
+                        onFieldChange={(key, value) => form.setValue(key, value, { shouldValidate: true })}
+                      />
+                    ) : null}
+                    {inlineRecordLayout ? inlineRecordField("event_date") : null}
+                    {birthLayout && role === "Child" ? (
+                      <Controller
+                        control={form.control}
+                        name="event_date"
+                        rules={{ required: "Enter a value.", validate: (value) => {
+                          const dateField = definition.sections.flatMap(section => section.fields).find(field => field.key === "event_date");
+                          return dateField ? validateDateAnswer(dateField, String(value ?? ""), values, todayKeyInTimeZone()) : true;
+                        } }}
+                        render={({ field, fieldState }) => (
+                          <Field data-invalid={fieldState.invalid}>
+                            <FieldLabel htmlFor="dynamic-event_date" className={WIZARD_LABEL_CLASS}>Date of Birth <RequiredMark /></FieldLabel>
+                            <DatePicker id="dynamic-event_date" shape="split" icon="calendar"
+                              value={String(field.value ?? "")} onValueChange={field.onChange} onBlur={field.onBlur}
+                              max={todayKeyInTimeZone()} invalid={fieldState.invalid} className={WIZARD_CONTROL_CLASS} />
+                            {fieldState.invalid ? <WizardFieldError error={fieldState.error} /> : null}
+                          </Field>
+                        )}
+                      />
+                    ) : null}
+                  </SubjectFieldGrid>
+                  {inlineRecordLayout ? (
+                    <div className="pt-3">{inlineRecordField("event_place")}</div>
+                  ) : null}
+                  {((legitimation || surnameChange || birthLayout) && role === "Child") || (legitimation && role === "Father") ? (
+                    <div className={legitimation && role === "Father"
+                      ? "border-t border-border-light pt-5"
+                      : birthLayout ? "pt-3" : "pt-2"}>
+                      <DynamicFormFields
+                        definition={{
+                          ...displayDefinition,
+                          sections: displayDefinition.sections.map(section => ({
+                            ...section,
+                            fields: section.fields.filter(field => (legitimation && role === "Father"
+                              ? ["marriage_date", "marriage_place"]
+                              : birthLayout ? ["event_place"] : ["event_date", "event_place"]).includes(field.key)),
+                          })),
+                        }}
+                        staffView
+                        singleColumn={birthLayout}
+                        step="details"
+                        hideSectionTitles
+                        showRequiredMarks
+                        control={form.control}
+                        values={values}
+                        onFieldChange={(key, value) => form.setValue(key, value, { shouldValidate: true })}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : null
+        }
+      />
+      {marriageLicense ? <DerivedAnswerAlerts definition={displayDefinition} answers={values} compact /> : null}
+      <div className="border-t border-border-light" role="separator" />
+      <label className="flex min-h-11 items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm">
+        <Checkbox className="mt-0.5" checked={physicalDocumentsConfirmed}
+          onCheckedChange={(checked) => setPhysicalDocumentsConfirmed(checked === true)} />
+        <span>{surnameChange
+          ? <>I checked the required birth-record copies and 3 original copies of the Affidavit to Use the Surname of the Father{values.father_on_record === "no" ? ", plus 3 original copies of the notarized Father's Admission of Paternity" : ""}. The papers are complete and acceptable.</>
+          : petition
+          ? "I checked the physical documents required at filing. They are complete and acceptable for initial processing. Publication documents will be checked at the appropriate later step."
+          : endorsement
+          ? "I checked the physical documents for the selected endorsement type. The required papers are complete and acceptable."
+          : otherCertificate
+          ? "I checked the original Application/Verification Form and the agency letter-request. Both are complete and acceptable for processing."
+          : courtDecree
+          ? "I checked the required four copies of the court papers and, for a decision outside RTC Legazpi, the Certificate of Registration and Authenticity. The papers are complete and acceptable."
+          : "I checked the physical documents. The required papers are complete and acceptable."}</span>
+      </label>
+      {legitimation || marriageLicense ? (
+        <label className="flex min-h-11 items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm">
+          <Checkbox className="mt-0.5" checked={coupleAppearanceConfirmed}
+            onCheckedChange={(checked) => setCoupleAppearanceConfirmed(checked === true)} />
+          <span>{marriageLicense ? "Both applicants personally appeared." : "Both parents personally appeared."}</span>
+        </label>
+      ) : null}
+      {supplemental || surnameChange ? (
+        <div className="space-y-3">
+        {signingInstruction ? (
+          <p className="text-sm leading-relaxed text-body-strong">
+            <strong>{signingInstruction.label}:</strong> {signingInstruction.instruction}
+          </p>
+        ) : null}
+        <label className="flex min-h-11 items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm">
+          <Checkbox className="mt-0.5" checked={personalAppearanceConfirmed}
+            onCheckedChange={(checked) => setPersonalAppearanceConfirmed(checked === true)} />
+          <span>{surnameChange
+            ? "I verified the required personal appearance, signatures, and attestation for the child's age."
+            : "The applicant personally appeared."}</span>
+        </label>
+        </div>
+      ) : null}
+      {error ? (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+      <div className="flex justify-end gap-3">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={onCancel}
+          disabled={submitting}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          onClick={() => void submit()}
+          disabled={submitting || !physicalDocumentsConfirmed || ((legitimation || marriageLicense) && !coupleAppearanceConfirmed) || ((supplemental || surnameChange) && !personalAppearanceConfirmed)}
+        >
+          {submitting ? "Encoding..." : "Encode request"}
+        </Button>
+      </div>
+    </fieldset>
+  );
+}

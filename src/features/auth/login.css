@@ -99,7 +99,7 @@
 .login-page .login-google-icon { width: 32px; height: 32px; }
 .login-footer { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 9px; margin-top: 28px; color: var(--login-muted); font-size: 20px; line-height: 1.5; }
 .login-artwork { position: relative; top: -64px; min-width: 0; pointer-events: none; user-select: none; }
-.login-artwork > img { display: block; width: calc(100% + 20px); max-width: 660px; height: auto; }
+.login-artwork > :is(img, [data-slot="skeleton"]) { display: block; width: calc(100% + 20px); max-width: 660px; height: auto; }
 
 .dark .login-page {
   --login-ink: #eef3fb;
@@ -116,7 +116,7 @@
 .dark .login-page .login-google { border-color: var(--login-border); }
 
 @media (min-width: 1400px) {
-  .login-artwork > img { width: calc(100% + 60px); }
+  .login-artwork > :is(img, [data-slot="skeleton"]) { width: calc(100% + 60px); }
 }
 
 @media (max-width: 1199px) {
@@ -229,4 +229,17 @@
   .login-options { column-gap: 8px; }
   .login-options [data-slot="field"] { gap: 8px; }
   .login-options [data-slot="field-label"], .login-options .login-link { font-size: 13px; }
+}
+
+/* Keep the session note in the flow when the options wrap on a phone. */
+@media (max-width: 639px) {
+  .login-options { align-items: flex-start; row-gap: 8px; }
+  .login-options > [data-slot="field"] { min-height: 44px; max-width: 100%; align-items: flex-start; }
+  .login-session-label { min-width: 0; }
+  .login-options [data-slot="field-label"],
+  .login-options > .login-link { display: flex; min-height: 44px; align-items: center; }
+  .login-options [data-slot="checkbox"] { margin-top: 12px; }
+  .login-session-note { position: static; max-width: 28ch; margin-top: 4px; white-space: normal; }
+  .login-field-error { position: static; margin: 6px 20px 0; }
+  .login-field { padding-bottom: 20px; }
 }

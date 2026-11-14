@@ -7,6 +7,7 @@
  * `advanceRequestStatusFn`; the server stays the authority.
  */
 import { marriagePostingBlockedReason, marriagePostingMessage, needsMarriagePosting } from "./marriage-posting";
+import { endorsementReadyBlockedReason, endorsementWaitingMessage, type EndorsementDetails } from "./electronic-endorsement-release";
 import {
   getStatusDetails,
   getTransitionLabel,
@@ -17,9 +18,11 @@ import {
 } from "~/features/requests/request-workflow";
 
 /** Actions that need more than a click open one of these first. */
-export type TransitionDialog = "incomplete" | "reject" | "release" | "originals" | "return";
+export type TransitionDialog = "incomplete" | "reject" | "release" | "originals" | "return" | "court" | "endorsement";
 
 export interface TransitionConfirmations {
+  psaCertificateAvailableConfirmed?: boolean;
+  courtIssuerConfirmed?: boolean;
   originalsConfirmed?: boolean;
   identityVerified?: boolean;
   handoverConfirmed?: boolean;
@@ -44,6 +47,7 @@ export interface RequestActionPlan {
 }
 
 export interface RequestActionInput {
+  endorsement?: EndorsementDetails | null;
   postingStartDate?: string | null;
   today?: string;
   serviceCode?: string;
@@ -140,6 +144,9 @@ function blockedReason(
       ? "Waiting for the cashier to verify payment"
       : "Waiting for the cashier to confirm this fee-free request";
   }
+  if (input.serviceCode === "ELEC_ENDORSEMENT" && to === "ready_for_release") {
+    return endorsementReadyBlockedReason(input.endorsement) ?? undefined;
+  }
   return undefined;
 }
 
@@ -171,7 +178,9 @@ export function planRequestActions(input: RequestActionInput): RequestActionPlan
         ? "Mark the archive check ready for completion after the cashier's fee confirmation."
         : effectOf(input.status, to, paymentSettled),
     blocked: blockedReason(to, input, paymentSettled),
-    dialog: to === "under_validation" && ["processing", "ready_for_release"].includes(input.status ?? "")
+    dialog: input.serviceCode === "ELEC_ENDORSEMENT" && to === "ready_for_release"
+      ? "endorsement"
+      : to === "under_validation" && ["processing", "ready_for_release"].includes(input.status ?? "")
       ? "return"
       : to === "ready_for_release" && needsOriginalDocumentCheck(input.serviceCode, to)
         ? "originals" : DIALOG_OF[to],
@@ -207,6 +216,15 @@ export function planRequestActions(input: RequestActionInput): RequestActionPlan
  * during validation.
  */
 export function describeRequestProgress(input: RequestActionInput): string {
+  if (input.serviceCode === "ELEC_ENDORSEMENT" && input.status === "ready_for_release") {
+    return isPaymentSettled(input.paymentStatus)
+      ? "The final PSA certificate is available. Follow the saved claiming instructions and record Released after the applicant receives it."
+      : "The final PSA certificate is available. Waiting for cashier verification; follow the saved claiming instructions.";
+  }
+  if (input.serviceCode === "ELEC_ENDORSEMENT" && input.status === "processing") {
+    return input.endorsement?.endorsedOn ? endorsementWaitingMessage(input.endorsement)
+      : "Verify the record and save the actual date it was endorsed to PSA. Keep Processing until the final PSA certificate is available.";
+  }
   if (input.serviceCode === "EMAIL_INQUIRY") {
     if (input.status === "processing") return "Check the archive, then mark the inquiry ready.";
     if (input.status === "ready_for_release") return isPaymentSettled(input.paymentStatus)
@@ -244,9 +262,7 @@ export function describeRequestProgress(input: RequestActionInput): string {
       if (!isPaymentSettled(input.paymentStatus)) {
         return "Prepared. Waiting for the cashier to verify payment.";
       }
-      return total > 0
-        ? "Paid. Check the claimant’s ID and match the originals to the uploads, then hand over the document."
-        : "Paid. Check the claimant’s ID and hand over the document.";
+      return "Paid. Check the claimant’s ID, then hand over the document.";
     case "released":
       return "Released. Nothing left to do.";
     case "rejected":

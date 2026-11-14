@@ -1,0 +1,144 @@
+{
+  "sections": [
+    {
+      "key": "case",
+      "step": "case",
+      "title": "Case details",
+      "fields": [
+        {
+          "key": "record_type",
+          "type": "select",
+          "label": "Which record has the omitted entry?",
+          "options": [
+            {
+              "label": "Birth certificate",
+              "value": "birth"
+            },
+            {
+              "label": "Death certificate",
+              "value": "death"
+            },
+            {
+              "label": "Marriage certificate",
+              "value": "marriage"
+            }
+          ],
+          "required": true
+        },
+        {
+          "key": "event_date",
+          "type": "date",
+          "label": "Date of the event on the record",
+          "helpText": "Date of birth, death, or marriage as written on the record.",
+          "required": true,
+          "dateDirection": "past"
+        },
+        {
+          "key": "event_place",
+          "type": "text",
+          "label": "Place of the event on the record",
+          "required": true,
+          "placeholder": "e.g. Legazpi City, Albay"
+        },
+        {
+          "key": "reference_number",
+          "type": "text",
+          "label": "Registry number",
+          "helpText": "Printed on your PSA or local civil registry copy.",
+          "required": false
+        },
+        {
+          "key": "entry_to_supplement",
+          "type": "text",
+          "label": "Which entry needs to be added?",
+          "helpText": "The item that was left blank when the record was first registered.",
+          "required": true,
+          "placeholder": "e.g. Father's name, time of birth, citizenship"
+        },
+        {
+          "key": "information_to_add",
+          "type": "text",
+          "label": "What should be added?",
+          "helpText": "Write it exactly as it should appear on the record. A document showing the correct information is also needed.",
+          "required": true
+        },
+        {
+          "key": "additional_notes",
+          "type": "textarea",
+          "label": "Additional notes",
+          "blockKey": "additional_notes",
+          "required": false,
+          "placeholder": "Any special requests or instructions…"
+        }
+      ]
+    },
+    {
+      "key": "details",
+      "step": "details",
+      "title": "Your details",
+      "fields": [
+        {
+          "key": "subjects",
+          "type": "person_group",
+          "label": "Person named on the record",
+          "required": true,
+          "labelByAnswer": {
+            "field": "record_type",
+            "labels": {
+              "birth": "Full name on the birth certificate",
+              "death": "Full name of the deceased",
+              "other": "Full name of the person named on the record",
+              "marriage": "Name on the marriage certificate"
+            }
+          }
+        },
+        {
+          "key": "mother_first_name",
+          "type": "text",
+          "label": "Mother's first name",
+          "inline": true,
+          "required": true,
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "birth",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "mother_middle_name",
+          "type": "text",
+          "label": "Mother's middle name",
+          "inline": true,
+          "required": true,
+          "noneLabel": "No middle name",
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "birth",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "mother_last_name",
+          "type": "text",
+          "label": "Mother's maiden last name",
+          "inline": true,
+          "required": true,
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "birth",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "contact_number",
+          "type": "phone",
+          "label": "Contact number",
+          "blockKey": "contact_number",
+          "required": false,
+          "placeholder": "9171234567"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1
+}

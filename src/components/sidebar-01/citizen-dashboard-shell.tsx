@@ -27,7 +27,6 @@ export function CitizenDashboardShell({
       <SidebarInset className={CITIZEN_INSET_CLASS}>
         <div className={CITIZEN_PANEL_CLASS}>
           <CitizenMobileHeader
-            account={account}
             userId={userId}
             unreadNotifications={unreadNotifications}
           />
@@ -40,7 +39,7 @@ export function CitizenDashboardShell({
           </main>
         </div>
       </SidebarInset>
-      <CitizenBottomBar unreadNotifications={unreadNotifications} />
+      <CitizenBottomBar />
     </>
   );
 }

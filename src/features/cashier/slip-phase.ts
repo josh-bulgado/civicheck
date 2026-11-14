@@ -1,12 +1,13 @@
+import { canVerifyPayment } from "~/features/requests/payment-eligibility";
 import type { CashierLookupResult } from "~/features/requests/requests.queries";
 
 /** What the counter slip lets the cashier do with the request in front of them. */
 export type SlipPhase =
-  /** Ready for release with a fee: take the official receipt number. */
+  /** Eligible with a fee: take the official receipt number. */
   | "collect"
-  /** Ready for release, no fee: tick that nothing is due. */
+  /** Eligible, no fee: tick that nothing is due. */
   | "confirm-free"
-  /** Not at Ready for Release yet, so payment cannot be taken. */
+  /** Not eligible for payment yet. */
   | "not-ready"
   /** Verified earlier, before this lookup. */
   | "settled"
@@ -21,12 +22,12 @@ export interface VerifiedPayment {
 
 /** Mirrors the rules `verifyPaymentFn` enforces, so the slip never offers what the server refuses. */
 export function getSlipPhase(
-  result: Pick<CashierLookupResult, "status" | "paymentStatus" | "feesDue">,
+  result: Pick<CashierLookupResult, "status" | "paymentStatus" | "feesDue" | "serviceCode" | "postingStartDate" | "psaEndorsedOn">,
   verified: VerifiedPayment | null,
 ): SlipPhase {
   if (verified) return "just-verified";
   if (result.paymentStatus === "verified") return "settled";
-  if (result.status !== "ready_for_release") return "not-ready";
+  if (!canVerifyPayment(result.status, result.serviceCode, result.postingStartDate)) return "not-ready";
   return result.feesDue > 0 ? "collect" : "confirm-free";
 }
 

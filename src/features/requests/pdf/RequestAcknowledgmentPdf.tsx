@@ -2,6 +2,7 @@ import { Document, Font, Image, Page, StyleSheet, Text, View } from "@react-pdf/
 import { getStatusDetails } from "~/features/services/request-status";
 import type { AcknowledgmentPdfData } from "~/features/requests/pdf/types";
 import { documentText } from "~/features/requests/pdf/document-text";
+import { requirementDisplayName } from "~/features/services/requirement-display";
 
 // Wrap whole words instead of splitting them mid-word ("han-dles"). This module
 // only builds the acknowledgment, so the global setting is contained to it.
@@ -209,6 +210,8 @@ const styles = StyleSheet.create({
   documentRow: {
     flexDirection: "row",
     alignItems: "flex-start",
+  },
+  documentEntry: {
     paddingVertical: 7,
     borderBottomWidth: 0.5,
     borderBottomColor: BRAND.border,
@@ -217,6 +220,7 @@ const styles = StyleSheet.create({
   documentBody: { flex: 1, minWidth: 0, paddingRight: 12 },
   documentName: { fontSize: 10, lineHeight: 1.4 },
   documentNote: { fontSize: 8, color: BRAND.muted, marginTop: 3, lineHeight: 1.45 },
+  feedback: { marginLeft: 19 },
   documentStatus: { width: 105, fontSize: 8, textAlign: "right", color: BRAND.muted, marginTop: 2, lineHeight: 1.4 },
   correctionText: { color: BRAND.attention },
   visit: { flexDirection: "row", marginTop: 4 },
@@ -271,7 +275,7 @@ function SectionTitle({ children }: { children: string }) {
   );
 }
 
-export function RequestAcknowledgmentPdf({ data, qrDataUrl, generatedAt }: RequestAcknowledgmentPdfProps) {
+export function createRequestAcknowledgmentPdf({ data, qrDataUrl, generatedAt }: RequestAcknowledgmentPdfProps) {
   const trackingNumber = documentText(data.trackingNumber);
   const status = getStatusDetails(data.status);
   const action = nextAction(data.status);
@@ -340,24 +344,27 @@ export function RequestAcknowledgmentPdf({ data, qrDataUrl, generatedAt }: Reque
           <Text style={[styles.sectionHint, styles.correctionText]}>{documentText(data.documentWarning)}</Text>
         ) : null}
         {data.documents.map((document, index) => (
-          <View key={document.id} style={styles.documentRow} wrap={false}>
-            <Text style={styles.documentIndex}>{index + 1}.</Text>
-            <View style={styles.documentBody}>
-              <Text style={styles.documentName}>
-                {documentText(document.requirementName)}{document.subjectRole?.trim() ? ` (${documentText(document.subjectRole)})` : ""}
+          <View key={document.id} style={styles.documentEntry}
+            wrap={(document.rejectionReason?.length ?? 0) > 2000 || (document.rejectionReason?.split(/\r?\n/).length ?? 0) > 25}>
+            <View style={styles.documentRow} wrap={false} minPresenceAhead={document.verificationStatus === "rejected" ? 24 : 0}>
+              <Text style={styles.documentIndex}>{index + 1}.</Text>
+              <View style={styles.documentBody}>
+                <Text style={styles.documentName}>
+                  {documentText(requirementDisplayName(document.requirementName))}{document.subjectRole?.trim() ? ` (${documentText(document.subjectRole)})` : ""}
+                </Text>
+              </View>
+              <Text style={[styles.documentStatus, ...(document.verificationStatus === "rejected" ? [styles.correctionText] : [])]}>
+                {documentStatusLabel(document.verificationStatus)}
               </Text>
-              {document.verificationStatus === "rejected" ? (
-                <>
-                  <Text style={[styles.documentNote, styles.correctionText]}>
-                    Staff feedback: {documentText(document.rejectionReason?.trim() || "Review the staff instructions in My Requests or contact the CCRO for details.")}
-                  </Text>
-                  {!isClosed ? <Text style={styles.documentNote}>Upload a corrected file in My Requests.</Text> : null}
-                </>
-              ) : null}
             </View>
-            <Text style={[styles.documentStatus, ...(document.verificationStatus === "rejected" ? [styles.correctionText] : [])]}>
-              {documentStatusLabel(document.verificationStatus)}
-            </Text>
+            {document.verificationStatus === "rejected" ? (
+              <View style={styles.feedback}>
+                <Text style={[styles.documentNote, styles.correctionText]}>
+                  Staff feedback: {documentText(document.rejectionReason?.trim() || "Review the staff instructions in My Requests or contact the CCRO for details.")}
+                </Text>
+                {!isClosed ? <Text style={styles.documentNote}>Upload a corrected file in My Requests.</Text> : null}
+              </View>
+            ) : null}
           </View>
         ))}
 

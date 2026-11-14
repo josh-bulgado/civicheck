@@ -1,0 +1,258 @@
+{
+  "death_ontime": {
+    "sections": [
+      {
+        "key": "case",
+        "step": "case",
+        "title": "Case details",
+        "fields": [
+          {
+            "key": "died_in_legazpi",
+            "type": "select",
+            "label": "Did the person pass away in Legazpi City?",
+            "options": [
+              {
+                "label": "Yes",
+                "value": "yes"
+              },
+              {
+                "label": "No",
+                "value": "no",
+                "notice": {
+                  "title": "We can only register deaths that occurred in Legazpi City",
+                  "variant": "destructive",
+                  "description": "On-time registration here covers deaths that occurred in Legazpi City. Register at the Local Civil Registrar of the city or municipality where the death occurred.",
+                  "blocksProgress": true
+                }
+              }
+            ],
+            "required": true
+          },
+          {
+            "key": "disposal_method",
+            "type": "select",
+            "label": "Was the deceased person buried or cremated?",
+            "options": [
+              {
+                "label": "Buried",
+                "value": "buried"
+              },
+              {
+                "label": "Cremated",
+                "value": "cremated"
+              }
+            ],
+            "blockKey": "death_disposal",
+            "helpText": "This information helps us identify the certificates required for registration.",
+            "required": true
+          },
+          {
+            "key": "embalmed",
+            "type": "select",
+            "label": "Were the remains embalmed?",
+            "options": [
+              {
+                "label": "Yes",
+                "value": "yes"
+              },
+              {
+                "label": "No",
+                "value": "no"
+              }
+            ],
+            "blockKey": "death_disposal",
+            "helpText": "If the remains were not embalmed, a Certification of Not Embalmed is also required.",
+            "required": true
+          },
+          {
+            "key": "additional_notes",
+            "type": "textarea",
+            "label": "Additional notes",
+            "blockKey": "additional_notes",
+            "required": false,
+            "placeholder": "Any special requests or instructions…"
+          }
+        ]
+      },
+      {
+        "key": "details",
+        "step": "details",
+        "title": "Your details",
+        "fields": [
+          {
+            "key": "subjects",
+            "type": "person_group",
+            "label": "Person named on the record",
+            "required": true
+          },
+          {
+            "key": "event_date",
+            "type": "date",
+            "label": "Date of death",
+            "required": true,
+            "dateDirection": "past"
+          },
+          {
+            "key": "event_place",
+            "type": "text",
+            "label": "Place of death",
+            "required": true,
+            "placeholder": "e.g. Hospital name or house/street, barangay, city/municipality, province"
+          }
+        ]
+      }
+    ],
+    "eventTiming": {
+      "title": "This date is more than 30 days ago",
+      "behavior": "redirect_confirm",
+      "ctaLabel": "Switch to Delayed Registration",
+      "mismatch": "outside_window",
+      "timezone": "Asia/Manila",
+      "windowDays": 30,
+      "description": "Use the registration track that matches the death date.",
+      "triggerField": "event_date",
+      "targetServiceCode": "DEATH_DELAYED",
+      "requireDocumentFirst": false
+    },
+    "schemaVersion": 1
+  },
+  "death_delayed": {
+    "sections": [
+      {
+        "key": "case",
+        "step": "case",
+        "title": "Case details",
+        "fields": [
+          {
+            "key": "death_registration_basis",
+            "type": "select",
+            "label": "Reason for delayed registration",
+            "options": [
+              {
+                "label": "More than 30 days since the death",
+                "value": "beyond_30_days"
+              },
+              {
+                "label": "No existing record at the LCR or PSA",
+                "value": "no_existing_record"
+              }
+            ],
+            "helpText": "Staff will verify the record status and supporting documents.",
+            "required": true
+          },
+          {
+            "key": "died_in_legazpi",
+            "type": "select",
+            "label": "Did the person pass away in Legazpi City?",
+            "options": [
+              {
+                "label": "Yes",
+                "value": "yes"
+              },
+              {
+                "label": "No",
+                "value": "no",
+                "notice": {
+                  "title": "We can only register deaths that occurred in Legazpi City",
+                  "variant": "destructive",
+                  "description": "Delayed registration here covers deaths that occurred in Legazpi City. Register at the Local Civil Registrar of the city or municipality where the death occurred.",
+                  "blocksProgress": true
+                }
+              }
+            ],
+            "required": true
+          },
+          {
+            "key": "disposal_method",
+            "type": "select",
+            "label": "Was the deceased person buried or cremated?",
+            "options": [
+              {
+                "label": "Buried",
+                "value": "buried"
+              },
+              {
+                "label": "Cremated",
+                "value": "cremated"
+              }
+            ],
+            "blockKey": "death_disposal",
+            "helpText": "This information helps us identify the certificates required for registration.",
+            "required": true
+          },
+          {
+            "key": "embalmed",
+            "type": "select",
+            "label": "Were the remains embalmed?",
+            "options": [
+              {
+                "label": "Yes",
+                "value": "yes"
+              },
+              {
+                "label": "No",
+                "value": "no"
+              }
+            ],
+            "blockKey": "death_disposal",
+            "helpText": "If the remains were not embalmed, a Certification of Not Embalmed is also required.",
+            "required": true
+          },
+          {
+            "key": "event_date",
+            "type": "date",
+            "label": "Date of death",
+            "required": true,
+            "dateDirection": "past"
+          },
+          {
+            "key": "event_place",
+            "type": "text",
+            "label": "Place of death",
+            "required": true,
+            "placeholder": "e.g. Legazpi City, Albay"
+          }
+        ]
+      },
+      {
+        "key": "details",
+        "step": "details",
+        "title": "Your details",
+        "fields": [
+          {
+            "key": "subjects",
+            "type": "person_group",
+            "label": "Person named on the record",
+            "required": true
+          },
+          {
+            "key": "contact_number",
+            "type": "phone",
+            "label": "Contact number",
+            "blockKey": "contact_number",
+            "required": false,
+            "placeholder": "9171234567"
+          }
+        ]
+      }
+    ],
+    "eventTiming": {
+      "title": "This date is within the last 30 days",
+      "behavior": "redirect_confirm",
+      "ctaLabel": "Switch to On-Time Registration",
+      "mismatch": "inside_window",
+      "timezone": "Asia/Manila",
+      "windowDays": 30,
+      "appliesWhen": {
+        "field": "death_registration_basis",
+        "value": "beyond_30_days",
+        "operator": "equals"
+      },
+      "description": "Use the registration track that matches the death date.",
+      "triggerField": "event_date",
+      "targetServiceCode": "DEATH_ONTIME",
+      "requireDocumentFirst": false
+    },
+    "schemaVersion": 1
+  }
+}

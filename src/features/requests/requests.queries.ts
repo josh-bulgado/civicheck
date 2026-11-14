@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requirementDisplayName } from "~/features/services/requirement-display";
+import { endorsementDetailsOf } from "./electronic-endorsement-release";
 import { parsePreviousUploads } from "./previous-uploads";
 import { z } from "zod";
 import { requireActiveSession } from "~/server/auth";
@@ -156,6 +158,9 @@ export interface RequestQueuePage {
 
 /** A `requests` row as `lookupRequestsByTrackingFn` selects it. */
 interface CashierLookupRow {
+  psa_endorsed_on: string | null;
+  request_type: string;
+  posting_start_date: string | null;
   id: string;
   tracking_number: string;
   status: string;
@@ -195,6 +200,10 @@ interface PaymentLogRow {
 
 /** A `requests` row as `getRequestDetailFn` selects it. */
 interface RequestDetailRow extends RequestReadRow {
+  psa_endorsed_on: string | null;
+  claiming_location: string | null;
+  claiming_instructions: string | null;
+  psa_certificate_available_at: string | null;
   posting_start_date: string | null;
   posting_end_date: string | null;
   or_number: string | null;
@@ -362,6 +371,9 @@ export const getAllRequestsFn = createServerFn({ method: "GET" }).handler(async 
 });
 
 export interface CashierLookupResult {
+  psaEndorsedOn?: string | null;
+  serviceCode?: string;
+  postingStartDate?: string | null;
   id: string;
   trackingNumber: string;
   status: string;
@@ -382,6 +394,9 @@ function toCashierLookupResult(row: CashierLookupRow): CashierLookupResult {
 
   return {
     id: row.id,
+    serviceCode: row.request_type,
+    psaEndorsedOn: row.psa_endorsed_on,
+    postingStartDate: row.posting_start_date,
     trackingNumber: row.tracking_number,
     status: row.status,
     paymentStatus: row.payment_status,
@@ -407,7 +422,7 @@ export const lookupRequestsByTrackingFn = createServerFn({ method: "GET" })
     const { data: found, error } = await supabase
       .from("requests")
       .select(
-        `id, tracking_number, status, payment_status, or_number, fees_due,
+        `id, tracking_number, request_type, posting_start_date, psa_endorsed_on, status, payment_status, or_number, fees_due,
          subject_first_name:form_data->>subject_first_name,
          subject_last_name:form_data->>subject_last_name,
          services_registry(name, display_name),
@@ -420,14 +435,14 @@ export const lookupRequestsByTrackingFn = createServerFn({ method: "GET" })
     return ((found ?? []) as CashierLookupRow[]).map(toCashierLookupResult);
   });
 
-/** How many requests are ready for release but still unpaid, for the cashier dashboard. */
+/** Requests eligible for payment that remain unpaid. */
 export const getAwaitingPaymentCountFn = createServerFn({ method: "GET" }).handler(async () => {
   const { supabase } = await requireActiveSession("requests:collect_payment");
 
   const { count, error } = await supabase
     .from("requests")
     .select("id", { count: "exact", head: true })
-    .eq("status", "ready_for_release")
+    .or("status.eq.ready_for_release,and(status.eq.processing,request_type.eq.DEATH_DELAYED,posting_start_date.not.is.null),and(status.eq.processing,request_type.eq.ELEC_ENDORSEMENT)")
     .neq("payment_status", "verified");
 
   if (error) throw new Error(error.message);
@@ -541,6 +556,7 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       .select(
         `id, tracking_number, request_type, status, payment_status, or_number,
          fees_due, copies, form_data, applicant_id, created_at, updated_at, posting_start_date, posting_end_date,
+         psa_endorsed_on, claiming_location, claiming_instructions, psa_certificate_available_at,
          claimed_by, claimed_stage, claimed_at, claim_expires_at,
          services_registry(name, display_name, processing_time, department_id, departments(id, name),
            event_date_label, event_place_label, reference_number_label, allows_messages),
@@ -552,6 +568,10 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
 
     if (error || !found) throw new Error(error?.message ?? "Request not found");
     const row = found as RequestDetailRow;
+    const accountProfile = row.applicant_id ? one<PersonName>(row.profiles) : null;
+    const accountHolderName = accountProfile
+      ? `${accountProfile.first_name ?? ""} ${accountProfile.last_name ?? ""}`.trim() || null
+      : null;
 
     const service = one<ServiceEmbed>(row.services_registry);
     // Same "not found" phrasing as a missing row — a department-scoped staff
@@ -560,6 +580,8 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       throw new Error("Request not found");
     }
 
+    const encodedBy = typeof row.form_data?.encoded_by === "string" ? row.form_data.encoded_by : null;
+    const staffIds = [...new Set([row.claimed_by, encodedBy].filter((id): id is string => Boolean(id)))];
     const [attachments, logs, claimProfiles] = await Promise.all([
       supabase
         .from("requirements_attachments")
@@ -573,8 +595,8 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
         )
         .eq("request_id", data.requestId)
         .order("created_at", { ascending: true }),
-      row.claimed_by
-        ? supabase.from("profiles").select("id, first_name, last_name").eq("id", row.claimed_by)
+      staffIds.length
+        ? supabase.from("profiles").select("id, first_name, last_name").in("id", staffIds)
         : Promise.resolve({ data: [], error: null }),
     ]);
 
@@ -601,12 +623,14 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       orNumber: row.or_number,
       postingStartDate: row.posting_start_date,
       postingEndDate: row.posting_end_date,
+      ...(row.request_type === "ELEC_ENDORSEMENT" ? { endorsement: endorsementDetailsOf(row) } : {}),
       feesDue: Number(row.fees_due ?? 0),
       copies: Number(row.copies ?? 1),
       // Narrowed to primitives: TanStack's server-fn return validator rejects
       // `unknown` values as potentially non-serializable.
       formData: (row.form_data ?? {}) as Record<string, string | number | boolean | null>,
       isWalkIn: row.applicant_id == null,
+      accountHolderName,
       serviceCode: row.request_type as string,
       serviceName: service?.display_name || service?.name || row.request_type,
       ...departmentOf(service),
@@ -617,13 +641,17 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       allowsMessages,
       messages,
       ...requestFieldDisplayOf(row),
+      fieldDisplayValues: {
+        ...requestFieldDisplayOf(row).fieldDisplayValues,
+        ...(encodedBy ? { encoded_by: staffNames.get(encodedBy) ?? "Staff member unavailable" } : {}),
+      },
       applicantName: applicantNameOf(row),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       claim: claimOf(row, staffNames, user.id),
       attachments: (attachments.data ?? []).map((a) => ({
         id: a.id,
-        requirementName: a.requirement_name,
+        requirementName: requirementDisplayName(a.requirement_name),
         subjectRole: a.subject_role,
         fileUrl: a.file_url,
         verificationStatus: a.verification_status,

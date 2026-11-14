@@ -14,8 +14,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
-import { ChevronsUpDown, LogOut, Settings } from "lucide-react";
+import { Bug, ChevronsUpDown, LogOut, Settings } from "lucide-react";
+import { Button } from "~/components/ui/button";
+import { openProblemReport } from "~/features/feedback/problem-report-events";
 import { QuietLink } from "~/components/quiet-link";
+import { SettingsDialog } from "~/features/account/components/SettingsDialog";
 import {
   getDisplayName,
   getInitials,
@@ -23,24 +26,23 @@ import {
   type SettingsTab,
 } from "~/features/account/account.types";
 
-const SettingsDialog = React.lazy(() =>
-  import("~/features/account/components/SettingsDialog").then((module) => ({
-    default: module.SettingsDialog,
-  })),
-);
-
 /** Every role uses the same account card and Settings / Log out menu. */
 export function NavFooter({ account }: { account: AccountProfile | null }) {
   const { state, isMobile } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [settingsTab, setSettingsTab] = React.useState<SettingsTab | null>(null);
-  const [settingsLoaded, setSettingsLoaded] = React.useState(false);
   const name = account ? getDisplayName(account) : "CiviCheck User";
   const initials = getInitials(name);
   const firstName = account?.firstName.trim() || name;
 
   return (
     <SidebarFooter className="gap-0 p-0 pb-1.5">
+      {account?.role === "applicant" && <Tooltip>
+        <TooltipTrigger render={<Button variant="ghost" size="touch" onClick={openProblemReport} className="mb-3 w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center" />}>
+          <Bug data-icon="inline-start" aria-hidden="true" /><span className="group-data-[collapsible=icon]:sr-only">Report a problem</span>
+        </TooltipTrigger>
+        <TooltipContent side="right" hidden={!isCollapsed || isMobile}>Report a problem with Civicheck</TooltipContent>
+      </Tooltip>}
       <DropdownMenu>
         <Tooltip>
           <TooltipTrigger
@@ -78,10 +80,7 @@ export function NavFooter({ account }: { account: AccountProfile | null }) {
           className="flex min-w-52 flex-col gap-0.5 rounded-[20px] bg-card p-2 shadow-portal-menu ring-0"
         >
           <DropdownMenuItem
-            onClick={() => {
-              setSettingsLoaded(true);
-              setSettingsTab("profile");
-            }}
+            onClick={() => setSettingsTab("profile")}
             className="h-12 gap-3 rounded-[14px] px-3.5 text-[15px] font-medium focus:bg-portal-panel"
           >
             <Settings className="size-5 text-primary!" aria-hidden="true" />
@@ -98,16 +97,14 @@ export function NavFooter({ account }: { account: AccountProfile | null }) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {account && settingsLoaded && (
-        <React.Suspense fallback={null}>
-          <SettingsDialog
-            open={settingsTab !== null}
-            onOpenChange={(open) => setSettingsTab(open ? "profile" : null)}
-            tab={settingsTab ?? "profile"}
-            onTabChange={setSettingsTab}
-            account={account}
-          />
-        </React.Suspense>
+      {account && (
+        <SettingsDialog
+          open={settingsTab !== null}
+          onOpenChange={(open) => setSettingsTab(open ? "profile" : null)}
+          tab={settingsTab ?? "profile"}
+          onTabChange={setSettingsTab}
+          account={account}
+        />
       )}
     </SidebarFooter>
   );

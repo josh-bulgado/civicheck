@@ -12,6 +12,7 @@ export function PreviewToolbar({
   onFit,
   canZoomOut,
   canZoomIn,
+  fitLabel = "Fit to window",
   disabled = false,
   children,
 }: {
@@ -21,6 +22,7 @@ export function PreviewToolbar({
   onFit: () => void;
   canZoomOut: boolean;
   canZoomIn: boolean;
+  fitLabel?: string;
   disabled?: boolean;
   children?: ReactNode;
 }) {
@@ -67,7 +69,7 @@ export function PreviewToolbar({
           onClick={onFit}
         >
           <Maximize data-icon="inline-start" aria-hidden="true" />
-          Fit to window
+          {fitLabel}
         </Button>
       </div>
       {children}

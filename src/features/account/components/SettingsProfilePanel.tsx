@@ -27,6 +27,7 @@ import {
   SETTINGS_PICKER_CLASS,
   SettingsFormFooter,
   SettingsRow,
+  SettingsSubmitError,
 } from "./settings-form";
 import { SettingsAvatar } from "./SettingsAvatar";
 import { SettingsPanelBody } from "./SettingsPanelBody";
@@ -61,12 +62,16 @@ type FormValues = z.infer<typeof formSchema>;
 export function SettingsProfilePanel({
   account,
   onClose,
+  onSaved,
   onDirtyChange,
+  onPendingChange,
 }: {
   account: AccountProfile;
   onClose: () => void;
+  onSaved: () => void;
   /** Lets the dialog warn before unsaved edits are thrown away. */
   onDirtyChange: (dirty: boolean) => void;
+  onPendingChange: (pending: boolean) => void;
 }) {
   const updateMutation = useUpdateProfile();
   const avatar = useAvatar(account.id, account.avatarUrl);
@@ -94,6 +99,15 @@ export function SettingsProfilePanel({
   React.useEffect(() => {
     onDirtyChange(isDirty);
   }, [isDirty, onDirtyChange]);
+  React.useEffect(() => {
+    onPendingChange(pending);
+  }, [pending, onPendingChange]);
+
+  const saveError = updateMutation.status === "error"
+    ? "Unable to save your profile. Check your connection and try again."
+    : updateMutation.status === "success" && updateMutation.data?.error
+      ? updateMutation.data.message
+      : null;
 
   const hasNoMiddleName = form.watch("hasNoMiddleName");
 
@@ -104,7 +118,7 @@ export function SettingsProfilePanel({
       // If the photo fails afterwards, retry only the remaining photo change.
       form.reset(data);
     }
-    if (await avatar.save()) onClose();
+    if (await avatar.save()) onSaved();
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -124,7 +138,7 @@ export function SettingsProfilePanel({
       onSubmit={handleSubmit}
       className="flex min-h-0 flex-1 flex-col"
     >
-      <SettingsPanelBody>
+      <SettingsPanelBody disabled={pending} label="Personal details">
         <SettingsAvatar
           account={account}
           avatarUrl={avatar.avatarUrl}
@@ -264,7 +278,7 @@ export function SettingsProfilePanel({
                     id="profile-suffix"
                     className={cn(
                       SETTINGS_CONTROL_CLASS,
-                      "w-full data-[size=default]:h-12 md:data-[size=default]:h-11",
+                      "w-full data-[size=lg]:h-12 md:data-[size=lg]:h-11",
                     )}
                   >
                     <SelectValue />
@@ -341,6 +355,7 @@ export function SettingsProfilePanel({
         </div>
       </SettingsPanelBody>
 
+      <SettingsSubmitError message={saveError} />
       <SettingsFormFooter
         onCancel={onClose}
         canSave={isDirty}
