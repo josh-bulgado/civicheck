@@ -432,6 +432,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       primaryPetition === "correct_birth_day_month" || (primaryPetition === "correct_other" && recordType === "birth"));
   const isMarriageRecord = recordType === "marriage" && !isCourtDecree(selectedService.service_code);
   const inlineRecordLayout = isOtherCertificate || ["DEATH_ONTIME", "DEATH_DELAYED"].includes(selectedService.service_code) ||
+    (selectedService.service_code === "ELEC_ENDORSEMENT" && recordType === "birth") ||
     (isSupplemental && ["birth", "death"].includes(recordType ?? ""));
   const useSpouseLabels =
     selectedService.service_code === "MARRIAGE_ONTIME" ||
@@ -931,8 +932,8 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       subjectFields.fields.map((subjectField, index) =>
         ownerLabel && (!isPetitionService(selectedService.service_code) || !isBirthPetition) ? (
           // A heading that names whose name this is ("Full name of the deceased").
-          <div key={subjectField.id} className={cn("flex flex-col gap-3", !isOtherCertificate && !["DEATH_ONTIME", "DEATH_DELAYED"].includes(selectedService.service_code) && (!isSupplemental || ownerBlockInSection) && "border-t border-border-light pt-6")}>
-            {!(isSupplemental && isMarriageRecord) ? <span className={FORM_GROUP_CLASS}>{formatNameHeading(ownerLabel)}</span> : null}
+          <div key={subjectField.id} className={cn("flex flex-col gap-3", selectedService.service_code !== "ELEC_ENDORSEMENT" && !isOtherCertificate && !["DEATH_ONTIME", "DEATH_DELAYED"].includes(selectedService.service_code) && (!isSupplemental || ownerBlockInSection) && "border-t border-border-light pt-6")}>
+            {!(isSupplemental && isMarriageRecord) ? <span className={FORM_GROUP_CLASS}>{selectedService.service_code === "ELEC_ENDORSEMENT" ? (isMarriageRecord ? "Husband's Information" : "Owner's Information") : formatNameHeading(ownerLabel)}</span> : null}
             {isSupplemental && isMarriageRecord ? <h3 className={FORM_GROUP_CLASS}>Husband's Name</h3> : null}
             <SubjectFieldGrid
               control={form.control}

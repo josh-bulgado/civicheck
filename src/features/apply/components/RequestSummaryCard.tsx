@@ -31,12 +31,12 @@ export function RequestSummaryCard({ rows }: RequestSummaryCardProps) {
   );
 }
 
-/** Labels and answers wrap within separate columns, keeping answers on the right. */
+/** Each answer sits below its label. */
 function SummaryRow({ label, value }: SummaryRow) {
   return (
-    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-baseline gap-3 text-[15px]">
+    <div className="flex min-w-0 flex-col gap-1 text-[15px]">
       <span className="min-w-0 wrap-anywhere text-muted-foreground">{label}</span>
-      <span className="min-w-0 wrap-anywhere text-right font-bold text-foreground">{value}</span>
+      <span className="min-w-0 wrap-anywhere font-bold text-foreground">{value}</span>
     </div>
   );
 }

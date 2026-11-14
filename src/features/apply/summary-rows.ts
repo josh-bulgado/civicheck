@@ -1,6 +1,8 @@
 import { formatFieldAnswer } from "~/features/forms/answer-format";
 import { isFieldVisible } from "~/features/forms/form-template.utils";
 import { isOnTimeBirth } from "./on-time-birth-layout";
+import { formatNameHeading } from "~/features/forms/field-label";
+import { isPetitionService, petitionRecordType } from "~/features/services/petition-selection";
 import type {
   FormTemplateDefinition,
   TemplateAnswers,
@@ -45,11 +47,35 @@ export function buildSummaryRows({
   const onTimeBirth = isOnTimeBirth(serviceCode ?? "");
   const fatherParts: Record<string, string> = {};
 
-  const single = subjects.length === 1 && subjects[0].role === "Subject";
+  const personField = definition.sections.flatMap(section => section.fields).find(field => field.type === "person_group");
+  const recordType = isPetitionService(serviceCode ?? "") ? petitionRecordType(answers) : answers.record_type;
+  const nameLabel = (role: string) => {
+    if (subjects.length > 1) {
+      if (["MARRIAGE_ONTIME", "MARRIAGE_DELAYED"].includes(serviceCode ?? "")) {
+        return role === "Bride" ? "Wife's Maiden Name" : role === "Groom" ? "Husband's Name" : formatNameHeading(role);
+      }
+      if (serviceCode === "MARRIAGE_LICENSE") return `${role}'s Information`;
+      if (role === "Child" && onTimeBirth) return "Child's Information";
+      if (role === "Child" && (serviceCode === "BIRTH_DELAYED" || serviceCode?.startsWith("DCOLB-"))) return "Registrant’s Information";
+      return formatNameHeading(role);
+    }
+    if (serviceCode === "ELEC_ENDORSEMENT") return recordType === "marriage" ? "Husband's Information" : "Owner's Information";
+    if (serviceCode === "OTHER_CERT") return recordType === "marriage" ? "Husband's Information" : "Owner's Information";
+    if (["DEATH_ONTIME", "DEATH_DELAYED"].includes(serviceCode ?? "")) return "Registrant’s Information";
+    if (serviceCode === "SUPPLEMENTAL_REPORT") return recordType === "marriage" ? "Husband's Name" : "Document Owner's Information";
+    if (isPetitionService(serviceCode ?? "")) {
+      return recordType === "marriage" ? "Husband's Name" : recordType === "death" ? "Deceased Person's Name" : "First Name";
+    }
+    if (serviceCode === "COURT-FOREIGN-ADOPTION" && answers.court_decree_type === "adoption") return "Adopted person's name";
+    if (["COURT-FOREIGN-ADOPTION", "COURT-ANNULMENT"].includes(serviceCode ?? "")) return "Name on the birth record";
+    const rule = personField?.labelByAnswer;
+    const label = rule?.labels[String(answers[rule.field] ?? "")];
+    return formatNameHeading(label ?? personField?.label ?? role);
+  };
   for (const subject of subjects) {
     const name = subjectFullName(subject);
     if (name) {
-      rows.push({ key: subject.role, label: single ? "Record subject" : subject.role, value: name });
+      rows.push({ key: subject.role, label: nameLabel(subject.role), value: name });
     }
   }
   for (const subject of subjects) {
