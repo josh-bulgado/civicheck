@@ -84,6 +84,7 @@ function matches(name: string, age: string | null, program: string | null, marit
   if (age === "80+" && !n.includes("80")) return false;
   if (program === "brap" && !n.includes("brap")) return false;
   if (program === "normal" && !n.includes("normal")) return false;
+  if (program === "brap") return true;
   if (marital === "marital" && (n.includes("non-marital") || n.includes("nonmarital"))) return false;
   if (marital === "marital" && !(n.includes("marital"))) return false;
   if (marital === "non-marital" && !(n.includes("non-marital") || n.includes("nonmarital"))) return false;
@@ -118,12 +119,14 @@ function LegacyCaseSelector({
   onSelect,
   presetAge = null,
   presetMarital = null,
+  onAnswersChange,
+  answers = {},
 }: CaseSelectorProps) {
   const steps = parseSelectionSteps(services);
 
-  const [age, setAge] = useState<string | null>(presetAge);
-  const [program, setProgram] = useState<string | null>(null);
-  const [marital, setMarital] = useState<string | null>(presetMarital);
+  const [age, setAge] = useState<string | null>(presetAge ?? answers.age ?? null);
+  const [program, setProgram] = useState<string | null>(answers.program ?? null);
+  const [marital, setMarital] = useState<string | null>(presetMarital ?? answers.marital ?? null);
 
   const showAge = steps.hasAge && !presetAge;
   const showMarital = steps.hasMarital && !presetMarital;
@@ -143,22 +146,25 @@ function LegacyCaseSelector({
     setAge(val);
     setProgram(null);
     setMarital(null);
+    onAnswersChange?.({ age: val });
     onSelect(""); // clear selection
   };
 
   const handleProgram = (val: string) => {
     setProgram(val);
     setMarital(null);
+    onAnswersChange?.({ ...(age ? { age } : {}), program: val, ...(presetMarital ? { marital: presetMarital } : {}) });
     onSelect("");
     // If no marital step needed, auto-resolve
-    if (!steps.hasMarital || val === "brap") {
-      const match = services.find((s) => matches(s.name, age, val, null));
+    if (!steps.hasMarital || presetMarital) {
+      const match = services.find((s) => matches(s.name, age, val, presetMarital));
       if (match) onSelect(match.service_code);
     }
   };
 
   const handleMarital = (val: string) => {
     setMarital(val);
+    onAnswersChange?.({ ...(age ? { age } : {}), ...(program ? { program } : {}), marital: val });
     const match = services.find((s) => matches(s.name, age, program, val));
     // Fallback for groups with only marital dimension (no age/program)
     if (match) {
@@ -271,8 +277,7 @@ function LegacyCaseSelector({
           </FieldSet>
         )}
 
-        {/* Step 3: Marital status — shown after program=normal, OR directly if no age/program steps */}
-        {showMarital && (program === "normal" || (!steps.hasAge && !steps.hasProgram)) && (
+        {showMarital && (Boolean(program) || (!steps.hasAge && !steps.hasProgram)) && (
           <FieldSet className="civic-enter-sm gap-3">
             <FieldLegend variant="label" className={choiceLegendClass}>
               {stepPrefix(true)}Are the child&rsquo;s parents legally married?{" "}

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 import { expect, it } from "vitest";
-import { parseFormTemplateDefinition, isFieldVisible, validateTemplateAnswers, flattenTemplateAnswers } from "./form-template.utils";
+import { parseFormTemplateDefinition, isFieldVisible, validateTemplateAnswers, flattenTemplateAnswers, visibleCaseSelectorQuestions, canonicalizeTemplateAnswers, resolveCaseSelectorServiceCode } from "./form-template.utils";
 import { birthCaseForService } from "~/features/requests/walk-in-birth";
 import delayedFixture from "~/features/services/fixtures/birth-delayed-requirements.json";
 
@@ -47,6 +47,21 @@ it("publishes required marital names and optional non-marital/CTC full names wit
       expect(flattenTemplateAnswers(fatherForm, answers)).toMatchObject({father_last_name: "Cruz", father_middle_name: "Santos", father_first_name: "Juan"});
       const walkIn = birthCaseForService(definition, "DCOLB-0079-BRAP");
       expect(walkIn.definition.sections.some((section) => section.fields.some((field) => field.key === "marital" && field.required))).toBe(true);
+      for (const code of ["DCOLB-0079-BRAP", "DCOLB-80UP-BRAP"]) {
+        const selected = birthCaseForService(definition, code);
+        for (const marital of ["marital", "non-marital"]) {
+          const answers = canonicalizeTemplateAnswers(definition, {
+            event_date: code.includes("80UP") ? "1940-01-01" : "2000-01-01", program: "brap", marital,
+          }, "2026-11-15");
+          expect(visibleCaseSelectorQuestions(definition, answers).some((q) => q.key === "marital")).toBe(true);
+          expect(resolveCaseSelectorServiceCode(definition, answers)).toBe(code);
+          for (const form of [definition, selected.definition]) {
+            const visible = form.sections.flatMap((s) => s.fields).filter((f) => f.key.startsWith("father_") && isFieldVisible(f, answers));
+            expect(visible.map((f) => f.key)).toEqual(marital === "marital" ? ["father_last_name", "father_middle_name", "father_first_name"] : ["father_name"]);
+            expect(visible.every((f) => f.required === (marital === "marital"))).toBe(true);
+          }
+        }
+      }
       const normal = birthCaseForService(definition, "DCOLB-0079-NORMAL-MARITAL");
       expect(normal.answers.marital).toBe("marital");
     }

@@ -14,6 +14,10 @@ Marriage registration walk-ins use the same husband-first order, divider before
 the marriage date/place, wider place field, and contact row below. Names remain
 manual. Omit the on-time license-basis help text and retain timing checks.
 
+BRAP applications retain the parents' marriage question in both selectors and
+walk-in intake. Married parents use the required father-name fields; unmarried
+parents use the optional Father's Full Name field.
+
 Delayed-birth applicant and walk-in forms replace the optional informant name
 and relationship inputs with requester relationship or role. Relationship is
 required online and optional for birth walk-ins. Include I am the person being

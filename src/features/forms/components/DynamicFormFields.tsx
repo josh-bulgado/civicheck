@@ -534,10 +534,6 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                             fields.some((item) => item.key === "has_marriage_agreement") &&
                             fields.some((item) => item.key === "solemnized_in_legazpi") &&
                             "sm:float-left sm:flex-1",
-                          ["additional_identity", "marital"].includes(definitionField.key) &&
-                            fields.some((item) => item.key === "additional_identity") &&
-                            fields.some((item) => item.key === "marital") &&
-                            "sm:min-h-[2lh]",
                         )}
                       >
                         {legendLabel}
