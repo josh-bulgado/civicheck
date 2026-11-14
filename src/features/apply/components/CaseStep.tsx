@@ -356,7 +356,7 @@ export function CaseStep({
             contextAnswers={selectorContextAnswers}
             showQuestionNumbers={!isDelayedBirth}
             hideBottomDivider={isDelayedBirth || onTimeBirth}
-            hideTitle={onTimeBirth}
+            hideTitle={onTimeBirth || isDelayedBirth}
             renderAfterQuestion={isDelayedBirth ? (key) => key === "program" ? (
               <div className="w-full min-w-0 [&_fieldset]:min-w-0 [&_[data-slot=radio-group]]:min-w-0">
               <DynamicFormFields

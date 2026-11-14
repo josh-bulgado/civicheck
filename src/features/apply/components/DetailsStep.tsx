@@ -824,7 +824,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
             key={subjectField.id}
             divider={useSpouseLabels
               ? subjectField.role !== "Groom"
-              : (!onTimeBirth && !isLegitimation && !isCourtDecree(selectedService.service_code)) || index > 0}
+              : (!onTimeBirth && !isDelayedBirth && !isLegitimation && !isCourtDecree(selectedService.service_code)) || index > 0}
             role={
               useSpouseLabels
                 ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[subjectField.role] ?? subjectField.role)
