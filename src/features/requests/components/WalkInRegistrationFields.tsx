@@ -178,6 +178,26 @@ export function WalkInRegistrationFields({
     .filter((field) => field.type === "person_group");
   const timing = evaluateTemplateEventTiming(displayDefinition, values);
   const signingInstruction = surnameChange ? surnameChangeSigningInstruction(values.event_date) : null;
+  const supplementalRecordLayout = supplemental && ["birth", "death"].includes(values.record_type);
+  const supplementalRecordField = (key: "event_date" | "event_place") => (
+    <DynamicFormFields
+      definition={{
+        ...displayDefinition,
+        sections: displayDefinition.sections.map(section => ({
+          ...section,
+          fields: section.fields.filter(field => field.key === key),
+        })),
+      }}
+      staffView
+      singleColumn
+      step="details"
+      hideSectionTitles
+      showRequiredMarks
+      control={form.control}
+      values={values}
+      onFieldChange={(field, value) => form.setValue(field, value, { shouldValidate: true })}
+    />
+  );
 
   async function submit() {
     if (surnameChange && !personalAppearanceConfirmed) {
@@ -246,7 +266,7 @@ export function WalkInRegistrationFields({
         staffView
         step="case"
         showSectionTitles={surnameChange}
-        singleColumn={marriage || death || legitimation || courtDecree || supplemental || surnameChange || petition || endorsement}
+        singleColumn={marriage || death || legitimation || courtDecree || surnameChange || petition || endorsement}
         control={form.control}
         values={values}
         showRequiredMarks
@@ -270,7 +290,7 @@ export function WalkInRegistrationFields({
             ...section,
             fields: section.fields.filter(field => !["bride_date_of_birth", "groom_date_of_birth"].includes(field.key)),
           })),
-        } : legitimation || surnameChange || birthLayout ? {
+        } : legitimation || surnameChange || birthLayout || supplementalRecordLayout ? {
           ...displayDefinition,
           sections: displayDefinition.sections.map(section => ({
             ...section,
@@ -344,6 +364,7 @@ export function WalkInRegistrationFields({
                         onFieldChange={(key, value) => form.setValue(key, value, { shouldValidate: true })}
                       />
                     ) : null}
+                    {supplementalRecordLayout ? supplementalRecordField("event_date") : null}
                     {birthLayout && role === "Child" ? (
                       <Controller
                         control={form.control}
@@ -364,6 +385,9 @@ export function WalkInRegistrationFields({
                       />
                     ) : null}
                   </SubjectFieldGrid>
+                  {supplementalRecordLayout ? (
+                    <div className="pt-3">{supplementalRecordField("event_place")}</div>
+                  ) : null}
                   {((legitimation || surnameChange || birthLayout) && role === "Child") || (legitimation && role === "Father") ? (
                     <div className={legitimation && role === "Father"
                       ? "border-t border-border-light pt-5"

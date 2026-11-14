@@ -52,6 +52,10 @@ Wife's Maiden Name before marriage date/place. Both names are entered manually;
 do not autofill them from the account. Reuse these fields in staff walk-ins.
 Omit Document Owner's Information for this marriage option; keep the husband
 and wife's headings only.
+Supplemental Report walk-ins keep required case questions before optional registry
+number. For birth/death records, put the date beside the suffix and place full-width
+below, with the same small gap as online. Keep sex omitted, names manual, and no
+uploads. Retain physical-document acceptance and personal-appearance confirmation.
 
 Across service forms and walk-ins, field labels longer than four words use
 sentence case, preserving acronyms such as PSA, NBI, and PNP. Shorter labels keep
