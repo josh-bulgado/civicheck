@@ -234,7 +234,13 @@ export function WalkInRegistrationFields({
   return (
     <fieldset disabled={submitting} className="min-w-0 space-y-6 [&>section]:border-t [&>section]:border-border-light [&>section]:pt-5">
       <DynamicFormFields
-        definition={caseDefinition}
+        definition={marriageLicense ? {
+          ...caseDefinition,
+          sections: caseDefinition.sections.map(section => ({
+            ...section,
+            fields: section.fields.filter(field => !["bride_date_of_birth", "groom_date_of_birth"].includes(field.key)),
+          })),
+        } : caseDefinition}
         staffView
         step="case"
         showSectionTitles={surnameChange}
@@ -246,7 +252,7 @@ export function WalkInRegistrationFields({
           form.setValue(key, value, { shouldValidate: true })
         }
       />
-      <DerivedAnswerAlerts definition={displayDefinition} answers={values} compact={marriageLicense} />
+      {!marriageLicense ? <DerivedAnswerAlerts definition={displayDefinition} answers={values} /> : null}
       {timing?.evaluation.mismatched ? (
         <EventTimingNotice
           behavior={timing.rule.behavior}
@@ -256,7 +262,13 @@ export function WalkInRegistrationFields({
         />
       ) : null}
       <DynamicFormFields
-        definition={legitimation || surnameChange || birthLayout ? {
+        definition={marriageLicense ? {
+          ...displayDefinition,
+          sections: displayDefinition.sections.map(section => ({
+            ...section,
+            fields: section.fields.filter(field => !["bride_date_of_birth", "groom_date_of_birth"].includes(field.key)),
+          })),
+        } : legitimation || surnameChange || birthLayout ? {
           ...displayDefinition,
           sections: displayDefinition.sections.map(section => ({
             ...section,
@@ -294,6 +306,7 @@ export function WalkInRegistrationFields({
                       : onTimeBirth && role === "Child" ? "Child's Information"
                       : surnameChange && role === "Child" ? "Child's name on the birth certificate"
                       : death ? "Name of the deceased"
+                      : marriageLicense ? `${role}'s Information`
                       : marriage ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[role] ?? role) : role)}
                   </h3> : null}
                   {supplemental && values.record_type === "marriage" ? <h3 className={FORM_GROUP_CLASS}>Husband's Name</h3> : null}
@@ -306,6 +319,28 @@ export function WalkInRegistrationFields({
                     husband={(otherCertificate || endorsement || petition || supplemental) && values.record_type === "marriage"}
                     requireMiddleName
                   >
+                    {marriageLicense ? (
+                      <DynamicFormFields
+                        definition={{
+                          ...displayDefinition,
+                          sections: displayDefinition.sections.map(section => ({
+                            ...section,
+                            step: "details" as const,
+                            fields: section.fields.filter(field => field.key ===
+                              (role === "Bride" ? "bride_date_of_birth" : "groom_date_of_birth"))
+                              .map(field => ({ ...field, label: "Date of Birth" })),
+                          })).filter(section => section.fields.length > 0),
+                        }}
+                        staffView
+                        singleColumn
+                        step="details"
+                        hideSectionTitles
+                        showRequiredMarks
+                        control={form.control}
+                        values={values}
+                        onFieldChange={(key, value) => form.setValue(key, value, { shouldValidate: true })}
+                      />
+                    ) : null}
                     {birthLayout && role === "Child" ? (
                       <Controller
                         control={form.control}
@@ -357,6 +392,7 @@ export function WalkInRegistrationFields({
           ) : null
         }
       />
+      {marriageLicense ? <DerivedAnswerAlerts definition={displayDefinition} answers={values} compact /> : null}
       <div className="border-t border-border-light" role="separator" />
       <label className="flex min-h-11 items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm">
         <Checkbox className="mt-0.5" checked={physicalDocumentsConfirmed}
