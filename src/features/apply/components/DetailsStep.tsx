@@ -407,6 +407,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   const onTimeBirth = isOnTimeBirth(selectedService.service_code);
   const isDelayedBirth = selectedService.service_code === "BIRTH_DELAYED" || selectedService.service_code.startsWith("DCOLB-");
   const isSurnameChange = selectedService.service_code === "RA9255_SURNAME";
+  const isSupplemental = selectedService.service_code === "SUPPLEMENTAL_REPORT";
   const isAdoption = selectedService.service_code === "COURT-FOREIGN-ADOPTION" &&
     (draft.caseSelectorAnswers.court_decree_type ?? draft.answers.court_decree_type) === "adoption";
   const isForeignDecree = selectedService.service_code === "COURT-FOREIGN-ADOPTION" &&
@@ -487,11 +488,12 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   }, [hydrated, user, lockRequesterName, detailsFields, draft.answers, update]);
 
   const subjectFields = useFieldArray({ control: form.control, name: "subjects" });
-  const seededPetition = useRef<string | null>(null);
+  const autofillOwnerName = isBirthPetition || (isSupplemental && recordType === "birth");
+  const seededOwner = useRef<string | null>(null);
   useEffect(() => {
-    if (!hydrated || !user || !isBirthPetition || roles.length !== 1) return;
-    if (seededPetition.current === selectedService.service_code) return;
-    seededPetition.current = selectedService.service_code;
+    if (!hydrated || !user || !autofillOwnerName || roles.length !== 1) return;
+    if (seededOwner.current === selectedService.service_code) return;
+    seededOwner.current = selectedService.service_code;
     const current = reconcileSubjects(draft.subjects, roles);
     const owner = current[0];
     if (owner.firstName.trim() || owner.middleName.trim() || owner.lastName.trim() || owner.noMiddleName) return;
@@ -499,7 +501,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     update({ subjects: current });
     // Seed a blank draft once; later edits belong to the applicant.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated, user, isBirthPetition, selectedService.service_code, roles.join("|"), draft.subjects, update]);
+  }, [hydrated, user, autofillOwnerName, selectedService.service_code, roles.join("|"), draft.subjects, update]);
   const showRoleLabels = hasPersonGroup && subjectFields.fields.length > 1;
 
   // Every starred input is filled in — the same set the form validates on
@@ -864,7 +866,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       subjectFields.fields.map((subjectField, index) =>
         ownerLabel && (!isPetitionService(selectedService.service_code) || !isBirthPetition) ? (
           // A heading that names whose name this is ("Full name of the deceased").
-          <div key={subjectField.id} className="flex flex-col gap-3 border-t border-border-light pt-6">
+          <div key={subjectField.id} className={cn("flex flex-col gap-3", (!isSupplemental || ownerBlockInSection) && "border-t border-border-light pt-6")}>
             <span className={FORM_GROUP_CLASS}>{formatNameHeading(ownerLabel)}</span>
             <SubjectFieldGrid
               control={form.control}

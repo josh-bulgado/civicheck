@@ -1,5 +1,13 @@
 # Civicheck UI guide
 
+Supplemental Report asks Which certificate needs additional information? on the
+case page. Its event date and place appear on the details page directly below
+the person's suffix and sex, before the mother's information. Labels follow the selected birth,
+death, or marriage certificate. Keep the event_date/event_place keys for saved answers.
+For Supplemental Report birth records, seed a blank person's name from the
+account once and keep it editable. Preserve entered names. Keep only the page
+header divider above the first name group; avoid a second divider on that group.
+
 The staff dashboard's parent loading fallback uses `StaffDashboardFrameSkeleton`
 on `/staff-dashboard` and for known staff on `/dashboard`. Keep its sidebar width,
 header height, and content padding aligned with the dashboard layout. The child
