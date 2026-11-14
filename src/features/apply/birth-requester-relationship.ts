@@ -25,20 +25,24 @@ export function birthRequesterRelationship(definition: FormTemplateDefinition, s
       visibleWhen: { field: "requester_relationship", operator: "equals", value: "other" },
     },
   ];
-  return {
-    ...definition,
-    sections: definition.sections.map((originalSection) => {
-      const section = delayed ? { ...originalSection, fields: originalSection.fields.filter((field) =>
-        !["informant_name", "informant_relationship"].includes(field.key),
-      ) } : originalSection;
-      if (section.step !== "details" || !section.fields.some((field) => field.type === "person_group")) return section;
-      const existing = section.fields.filter((field) => !fields.some((item) => item.key === field.key));
-      let fatherIndex = -1;
-      existing.forEach((field, index) => {
-        if (field.key.startsWith("father_")) fatherIndex = index;
-      });
-      const index = fatherIndex < 0 ? existing.length : fatherIndex + 1;
-      return { ...section, fields: [...existing.slice(0, index), ...fields, ...existing.slice(index)] };
-    }),
-  };
+  const sections = definition.sections.map((section) => ({
+    ...section,
+    fields: section.fields.filter((field) =>
+      field.key !== "place_type" &&
+      !fields.some((item) => item.key === field.key) &&
+      !(delayed && ["informant_name", "informant_relationship"].includes(field.key)),
+    ),
+  }));
+  const caseIndex = sections.findIndex((section) => section.step === "case");
+  if (caseIndex < 0) {
+    sections.unshift({ key: "case", title: "Request details", step: "case", fields });
+  } else {
+    const section = sections[caseIndex];
+    section.fields = [
+      ...section.fields.filter((field) => field.required),
+      ...fields,
+      ...section.fields.filter((field) => !field.required),
+    ];
+  }
+  return { ...definition, sections };
 }

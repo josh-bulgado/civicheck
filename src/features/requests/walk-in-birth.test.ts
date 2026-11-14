@@ -43,8 +43,9 @@ it.each(["OTCOLB-MARITAL", "OTCOLB-NONMARITAL", "BIRTH_ONTIME"])("validates and 
   ] };
   const { definition } = birthCaseForService(original, code);
   const detailKeys = definition.sections.find((section) => section.step === "details")!.fields.map((field) => field.key);
-  expect(detailKeys.slice(-5)).toEqual(["father_first_name", "father_middle_name", "father_last_name", "requester_relationship", "requester_relationship_other"]);
-  expect(definition.sections.find((section) => section.step === "case")!.fields).toHaveLength(0);
+  expect(detailKeys.slice(-3)).toEqual(["father_first_name", "father_middle_name", "father_last_name"]);
+  expect(definition.sections.find((section) => section.step === "case")!.fields.map((field) => field.key))
+    .toEqual(["requester_relationship", "requester_relationship_other"]);
   const data = { event_date: today, event_place: "Legazpi City", subjects };
   expect(prepareWalkInBirth(definition, data, roles).error).toBe(false);
   expect(prepareWalkInBirth(definition, { ...data, requester_relationship: "other" }, roles).error).toBe(true);
@@ -58,6 +59,10 @@ describe("birth walk-in alignment", () => {
   it.each(Object.keys(config.fees))("matches applicant birth fields and requester role for %s", (code) => {
     const { definition, answers: selected } = birthCaseForService(delayed, code);
     const caseFields = definition.sections.filter((section) => section.step === "case").flatMap((section) => section.fields);
+    expect(caseFields.slice(-2).map((field) => field.key)).toEqual(["requester_relationship", "requester_relationship_other"]);
+    expect(caseFields.find((field) => field.key === "requester_relationship")?.required).toBe(false);
+    expect(definition.sections.filter((section) => section.step === "details")
+      .flatMap((section) => section.fields).some((field) => field.key.startsWith("requester_relationship"))).toBe(false);
     expect(caseFields.some((field) => ["event_date", "event_place", "informant_name", "informant_relationship"].includes(field.key))).toBe(false);
     const result = prepareWalkInBirth(definition, {
       ...answers, ...selected, event_date: code.includes("80UP") ? "1939-11-01" : "2000-01-01",

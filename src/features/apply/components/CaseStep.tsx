@@ -106,11 +106,13 @@ export function CaseStep({
     "event_date", "event_place", "informant_relationship", "informant_name",
   ]);
   const baseCaseDefinition = petitionCaseLayout(surnameChangeCaseDefinition(definition, selectedService.service_code), selectedService.service_code);
-  const caseDefinition = selectedService.service_code === "MARRIAGE_ONTIME" ? {
+  const caseDefinition = ["MARRIAGE_ONTIME", "MARRIAGE_DELAYED"].includes(selectedService.service_code) ? {
     ...baseCaseDefinition,
     sections: baseCaseDefinition.sections.map((section) => ({
       ...section,
-      fields: section.fields.map((field) => field.key === "marriage_license_basis"
+      fields: section.fields.map((field) => (field.key === "marriage_license_basis" ||
+        (selectedService.service_code === "MARRIAGE_DELAYED" &&
+          ["registration_type", "has_children"].includes(field.key)))
         ? { ...field, helpText: undefined }
         : field),
     })),

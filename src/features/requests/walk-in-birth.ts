@@ -25,11 +25,19 @@ export function birthCaseForService(definition: FormTemplateDefinition, serviceC
   if (isWalkInBirth(serviceCode)) {
     definition = {
       ...definition,
-      sections: definition.sections.map((section) => section.step === "details" ? {
+      sections: definition.sections.map((section) => ({
+        ...section,
+        fields: section.fields.filter((field) => field.key !== "place_type")
+          .map((field) => field.key === "requester_relationship" ? { ...field, required: false } : field)
+          .sort((a, b) => section.step === "case"
+            ? Number(a.key === "additional_notes") - Number(b.key === "additional_notes") ||
+              Number(a.key.startsWith("requester_relationship")) - Number(b.key.startsWith("requester_relationship")) ||
+              (a.key.startsWith("requester_relationship") ? 0 : Number(b.required) - Number(a.required))
+            : 0),
+      })).map((section) => section.step === "details" ? {
         ...section,
         fields: [...section.fields.filter((field) => field.key !== "contact_number"),
-          ...section.fields.filter((field) => field.key === "contact_number")]
-          .map((field) => field.key === "requester_relationship" ? { ...field, required: false } : field),
+          ...section.fields.filter((field) => field.key === "contact_number")],
       } : section),
     };
   }
@@ -49,7 +57,7 @@ export function birthCaseForService(definition: FormTemplateDefinition, serviceC
       ...definition,
       sections: needsMarital ? definition.sections.map((section) => section.step === "case" ? {
         ...section,
-        fields: [...section.fields, { key: "marital", type: "select" as const, label: maritalQuestion.label, required: true, options: maritalQuestion.options }],
+        fields: [{ key: "marital", type: "select" as const, label: maritalQuestion.label, required: true, options: maritalQuestion.options }, ...section.fields],
       } : section) : definition.sections,
       caseSelector: {
         ...selector,

@@ -829,6 +829,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
               useSpouseLabels
                 ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[subjectField.role] ?? subjectField.role)
                 : isMarriageLicense ? `${subjectField.role}'s Information`
+                : isDelayedBirth && subjectField.role === "Child" ? "Registrant’s Information"
                 : onTimeBirth && subjectField.role === "Child" ? "Child's Information"
                 : subjectField.role === "Mother" ? "Mother's Maiden Name" : subjectField.role
             }

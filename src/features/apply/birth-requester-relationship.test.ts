@@ -8,10 +8,11 @@ const original: FormTemplateDefinition = { schemaVersion: 1, sections: [{ key: "
   { key: "father_name", type: "text", label: "Father", required: false },
 ] }] };
 
-it.each(["BIRTH_ONTIME", "OTCOLB-MARITAL", "OTCOLB-NONMARITAL"])("places required requester fields after the father for %s", (code) => {
+it.each(["BIRTH_ONTIME", "OTCOLB-MARITAL", "OTCOLB-NONMARITAL"])("places required requester fields on the case page for %s", (code) => {
   const definition = birthRequesterRelationship(original, code);
-  expect(fieldsForStep(definition, "details").map((field) => field.key)).toEqual(["subjects", "father_name", "requester_relationship", "requester_relationship_other"]);
-  expect(fieldsForStep(definition, "details").find((field) => field.key === "requester_relationship")?.options).toHaveLength(8);
+  expect(fieldsForStep(definition, "details").map((field) => field.key)).toEqual(["subjects", "father_name"]);
+  expect(fieldsForStep(definition, "case").map((field) => field.key)).toEqual(["requester_relationship", "requester_relationship_other"]);
+  expect(fieldsForStep(definition, "case").find((field) => field.key === "requester_relationship")?.options).toHaveLength(8);
   const relationshipOnly = { ...definition, sections: definition.sections.map((section) => ({ ...section, fields: section.fields.filter((field) => field.key.startsWith("requester_")) })) };
   expect(validateTemplateAnswers(relationshipOnly, {}).success).toBe(false);
   expect(validateTemplateAnswers(relationshipOnly, { requester_relationship: "mother" }).success).toBe(true);
@@ -33,8 +34,9 @@ it.each(["BIRTH_DELAYED", "DCOLB-0079-BRAP", "DCOLB-80UP-BRAP", "DCOLB-0079-NORM
     { key: "informant_relationship", type: "text" as const, label: "Relationship", required: false },
   ] }, ...original.sections] };
   const definition = birthRequesterRelationship(source, code);
-  expect(fieldsForStep(definition, "case")).toHaveLength(0);
-  const relationship = fieldsForStep(definition, "details").find((field) => field.key === "requester_relationship")!;
+  expect(fieldsForStep(definition, "case").map((field) => field.key)).toEqual(["requester_relationship", "requester_relationship_other"]);
+  expect(fieldsForStep(definition, "details").some((field) => field.key.startsWith("requester_relationship"))).toBe(false);
+  const relationship = fieldsForStep(definition, "case").find((field) => field.key === "requester_relationship")!;
   expect(relationship.options?.map((option) => option.value)).toEqual(expect.arrayContaining(["self", "informant", "other"]));
   const onlyRelationship = { ...definition, sections: definition.sections.map((section) => ({ ...section,
     fields: section.fields.filter((field) => field.key.startsWith("requester_")),

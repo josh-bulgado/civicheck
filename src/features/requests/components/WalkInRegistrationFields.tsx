@@ -159,7 +159,9 @@ export function WalkInRegistrationFields({
         fields: section.fields.filter(field => !(courtDecree && courtDecreeType && field.key === "court_decree_type") &&
           !(petition && service.serviceCode === "RA9048-CCE" && field.key === "primary_petition")).map((field) => {
         if (field.key === "event_date") return { ...field, helpText: undefined };
-        if (service.serviceCode === "MARRIAGE_ONTIME" && field.key === "marriage_license_basis") {
+        if ((service.serviceCode === "MARRIAGE_ONTIME" && field.key === "marriage_license_basis") ||
+          (service.serviceCode === "MARRIAGE_DELAYED" &&
+            ["registration_type", "marriage_license_basis", "has_children"].includes(field.key))) {
           return { ...field, helpText: undefined };
         }
         if (marriage && field.key === "event_place") return {
@@ -303,6 +305,7 @@ export function WalkInRegistrationFields({
                         ? (definition.sections.flatMap((section) => section.fields)
                           .find((field) => field.type === "person_group")?.labelByAnswer?.labels[String(values.record_type ?? "")]
                           ?? "Person named on the record")
+                      : delayedBirth && role === "Child" ? "Registrant’s Information"
                       : onTimeBirth && role === "Child" ? "Child's Information"
                       : surnameChange && role === "Child" ? "Child's name on the birth certificate"
                       : death ? "Name of the deceased"
