@@ -538,6 +538,28 @@ Online inquiries require identity verification but no physical handover.
 
 ## Interaction and responsive behavior
 
+The public List of requirements offers Print for each service without requiring
+sign-in. It generates an A4 PDF from that service's displayed checklist and office
+steps, including collapsed conditional requirements, copy/source notes, fees, and
+processing time. The PDF opens in a new tab for printing or saving; blocked tabs
+fall back to a named download. Keep a disabled Preparing PDF state during
+generation and show failures through Sonner so the user can retry.
+Use compact, readable print spacing and keep each document's checkbox, full name,
+copy/source notes, and applicability together across page breaks. Office steps
+also stay with their number; long checklists continue on additional A4 pages.
+
+Printable documents keep full text at a readable size. Acknowledgment document
+titles stay with their review status while long staff feedback may continue onto
+another page. Verification forms use full-width paragraphs for inquiry details
+and notes, with identifying headers and page counts on continuation pages.
+The report sheet uses compact print typography, repeats column headings, and
+prints each table's totals once. Keep remarks, signatures, and the final stamp
+together so the last page does not contain only an orphaned sign-off.
+Print regressions cover A4 and Letter reports and the actual print-frame and PDF
+download flows: `pnpm.cmd exec playwright test --config=tests/printables/playwright.config.ts`.
+PDF layout regressions cover short and long names, addresses, requirements,
+feedback and inquiry text: `pnpm.cmd exec vitest run src/features/requests/pdf/printable-layout.test.ts src/features/services/pdf/ServiceChecklistPdf.test.ts`.
+
 On mobile, the application header shows Change service beside the CiviCheck
 identity, with the numbered progress rail below. Omit the redundant Step X of 4
 badge and the service card's extra mobile options menu. Desktop keeps Change
@@ -839,3 +861,37 @@ Online on-time birth details ask Requester's relationship to the child below the
 On-time birth walk-ins reuse the applicant birth layout and requester relationship fields. Show Child's Information with calendar DOB beside suffix/sex on desktop, full-width birth place below, then mother's maiden name and father fields in first/middle/last order. Keep the divider above relationship/contact, required Other specification, Maria placeholder, and physical-document acceptance. Client and server use the same walk-in definition and date checks.
 
 The shared walk-in intake dialog uses a wider desktop layout. Service picker options and the selected service wrap long names; keep them readable within the mobile viewport without reducing the standard font size.
+
+## Office notices and document rejection guidance
+
+CCRO administrators manage these features at **Office Settings**, below Insights
+in the sidebar. The navigation data groups it under Configuration; the existing
+admin sidebar renders a single destination directly. Keep its two tabs named
+Office advisories and Rejection reasons. System Administrators do not manage
+this operational content.
+
+Use the shared [OfficeAdvisories](../src/features/office/components/OfficeAdvisories.tsx)
+region below the public header, above portal/staff content, and below the
+application's service band before its form. Important notices remain expanded;
+other active notices share a count-labelled disclosure. Routine-only notices
+start collapsed. Do not add a carousel, dismissal control, extra sticky row, or
+notification-bell dependency. Empty feeds leave no layout gap. Failed reads show
+a retry and preserve any known, still-current notice.
+
+Notice display dates are inclusive Asia/Manila calendar dates. Draft, archived,
+future, and ended notices are absent from the public feed. Publishing a future
+notice schedules it; the last display date expires it automatically. Display
+dates do not establish office hours, pause submissions, or extend statutory
+deadlines. Administrators include the actual affected dates and next steps in
+the title/message. The editor preview uses the real citizen notice component.
+
+Document rejection reasons come from Office Settings. Each reason drafts its
+problem description plus correction instruction into Message to the applicant.
+Staff review/edit the message before the existing document decision is saved.
+Other and a custom message remain usable during loading or failure. The first
+five active presets retain shortcuts 1–5. Historical decisions keep their saved
+wording; changing or deactivating a preset never rewrites them. Whole-request
+rejection choices remain separate.
+
+See [feature and deployment notes](office-advisories-and-rejection-presets.md)
+and the [design/implementation plan](office-advisories-and-rejection-presets-plan.md).
