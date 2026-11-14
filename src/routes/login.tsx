@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { LoginForm } from "~/features/auth/components/LoginForm";
+import { getUserFn } from "~/features/auth/auth.queries";
 import { simplePageTransition } from "~/components/motion/simple-page-transition";
 
 type LoginSearch = {
@@ -11,6 +12,9 @@ type LoginSearch = {
 export const Route = createFileRoute("/login")({
   component: LoginPage,
   ...simplePageTransition,
+  beforeLoad: async () => {
+    if (await getUserFn()) throw redirect({ to: "/dashboard" });
+  },
   validateSearch: (search: Record<string, unknown>): LoginSearch => ({
     redirect: (search.redirect as string) || undefined,
     error: (search.error as string) || undefined,
