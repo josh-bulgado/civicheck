@@ -54,7 +54,7 @@ export function walkInCaseForService(definition: FormTemplateDefinition, service
     // The sworn affidavit already explains why the entry was omitted.
     const keys = ["record_type", "event_date", "event_place", "reference_number",
       "entry_to_supplement", "information_to_add", "subjects", "contact_number",
-      "mother_first_name", "mother_middle_name", "mother_last_name"];
+      "mother_first_name", "mother_middle_name", "mother_last_name", "father_name"];
     return {
       answers: {} as Record<string, string>,
       definition: {

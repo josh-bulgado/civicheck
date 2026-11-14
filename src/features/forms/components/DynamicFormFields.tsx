@@ -372,8 +372,10 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
         >
           {fields.map((definitionField) => (
             <Fragment key={definitionField.key}>
-              {definitionField.key === "father_name" && values.marital === "non-marital" &&
-              section.fields.some((field) => field.key === "requester_relationship_other") ? (
+              {definitionField.key === "father_name" && (
+                (values.marital === "non-marital" && section.fields.some((field) => field.key === "requester_relationship_other")) ||
+                (values.record_type === "birth" && definition.sections.some((item) => item.fields.some((field) => field.key === "entry_to_supplement")))
+              ) ? (
                 <div role="separator" className="col-span-full border-t border-border-light" />
               ) : null}
               {definitionField.key === "requester_relationship" &&

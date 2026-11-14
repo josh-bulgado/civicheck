@@ -419,7 +419,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   const courtNameOnly = isAdoption || isForeignDecree || selectedService.service_code === "COURT-ANNULMENT";
   const showBirthDetailsWithChild = onTimeBirth || isDelayedBirth || isLegitimation || isSurnameChange;
   const lockRequesterName = requiresAccountRequester(selectedService.service_code);
-  const lockAccountParty = requiresMarriageAccountParty(selectedService.service_code);
+  const lockAccountParty = selectedService.service_code === "MARRIAGE_LICENSE";
   const detailsFields = fieldsForStep(definition, "details");
   const personGroupField = detailsFields.find((field) => field.type === "person_group");
   const hasPersonGroup = Boolean(personGroupField);
@@ -430,6 +430,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     (primaryPetition === "change_first_name" || primaryPetition === "correct_sex" ||
       primaryPetition === "correct_birth_day_month" || (primaryPetition === "correct_other" && recordType === "birth"));
   const isMarriageRecord = recordType === "marriage" && !isCourtDecree(selectedService.service_code);
+  const supplementalRecordLayout = isSupplemental && ["birth", "death"].includes(recordType ?? "");
   const useSpouseLabels =
     selectedService.service_code === "MARRIAGE_ONTIME" ||
     selectedService.service_code === "MARRIAGE_DELAYED";
@@ -787,6 +788,25 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     ? (labelRule.labels[String(visibilityValues[labelRule.field] ?? "")] ?? undefined)
     : undefined;
 
+  const supplementalRecordField = (key: "event_date" | "event_place") => (
+    <DynamicFormFields
+      singleColumn
+      definition={{
+        ...definition,
+        sections: definition.sections.map((section) => ({
+          ...section,
+          fields: section.fields.filter((field) => field.key === key),
+        })),
+      }}
+      step="details"
+      hideSectionTitles
+      showRequiredMarks
+      control={form.control}
+      values={visibilityValues}
+      onFieldChange={(field, value) => form.setValue(field, value, { shouldDirty: true, shouldValidate: true })}
+    />
+  );
+
   const ownerBlock =
     hasPersonGroup && showRoleLabels ? (
       // Each party is its own headed section, stacked, so its name parts
@@ -802,7 +822,9 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
           .map(({ subjectField, index }) => (
           <PartySection
             key={subjectField.id}
-            divider={(!onTimeBirth && !isLegitimation && !isCourtDecree(selectedService.service_code)) || index > 0}
+            divider={useSpouseLabels
+              ? subjectField.role !== "Groom"
+              : (!onTimeBirth && !isLegitimation && !isCourtDecree(selectedService.service_code)) || index > 0}
             role={
               useSpouseLabels
                 ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[subjectField.role] ?? subjectField.role)
@@ -908,7 +930,12 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
               role={subjectField.role}
               husband={isMarriageRecord}
               requireMiddleName={requireMiddleName}
-            />
+            >
+              {supplementalRecordLayout ? supplementalRecordField("event_date") : null}
+            </SubjectFieldGrid>
+            {supplementalRecordLayout ? (
+              <div className="pt-3">{supplementalRecordField("event_place")}</div>
+            ) : null}
           </div>
         ) : (
           <FieldGroup key={subjectField.id} className={isAdoption ? "gap-3" : undefined}>
@@ -947,8 +974,14 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
 
         <DynamicFormFields
           readOnlyKeys={lockRequesterName ? REQUESTER_NAME_KEYS : []}
-          widePair={isPetitionService(selectedService.service_code) ? ["event_date", "event_place"] : undefined}
-          definition={isMarriageLicense ? {
+          widePair={isPetitionService(selectedService.service_code) || useSpouseLabels ? ["event_date", "event_place"] : undefined}
+          definition={supplementalRecordLayout ? {
+            ...definition,
+            sections: definition.sections.map((section) => ({
+              ...section,
+              fields: section.fields.filter((field) => !["event_date", "event_place"].includes(field.key)),
+            })),
+          } : isMarriageLicense ? {
             ...definition,
             sections: definition.sections.map((section) => ({
               ...section,
@@ -971,13 +1004,17 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
           }}
           showRequiredMarks
           showSectionTitles={detailSections.length > 1}
-          hideSectionTitles={lockAccountParty}
+          hideSectionTitles={requiresMarriageAccountParty(selectedService.service_code)}
           control={form.control}
           onFieldChange={(key, value) => form.setValue(key, value, { shouldDirty: true, shouldValidate: true })}
           values={visibilityValues}
           renderSectionLead={
             ownerBlockInSection
-              ? (section) => (section.key === personSection?.key ? ownerBlock : null)
+              ? (section) => (section.key === personSection?.key
+                ? useSpouseLabels
+                  ? <div className="border-b border-border-light pb-6">{ownerBlock}</div>
+                  : ownerBlock
+                : null)
               : undefined
           }
         />

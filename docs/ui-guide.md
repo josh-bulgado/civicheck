@@ -1,5 +1,16 @@
 # Civicheck UI guide
 
+On-time and delayed marriage registration retain the required husband/wife role
+question. Both spouses' names are entered manually, including the wife's maiden
+name; neither the form nor submission replaces them with the account name.
+Keep one divider between the role question and Husband's Name.
+Date and place of marriage appear on page 2 after both spouses' names and before
+contact number. Keep event_date/event_place and the existing timing rules,
+including license-based windows, reconstruction exemption, and track switching.
+Separate these record fields from the spouse names with a divider. On desktop,
+the date takes one-third of the row and place takes two-thirds; contact is below.
+Stack the fields on mobile.
+
 Delayed-birth applicant and walk-in forms replace the optional informant name
 and relationship inputs with requester relationship or role. Relationship is
 required online and optional for birth walk-ins. Include I am the person being
@@ -17,11 +28,17 @@ preload `/staff-dashboard` before navigating so the sign-in form stays visible
 while the data loads.
 
 Supplemental Report asks Which certificate needs additional information? on the
-case page. Its event date and place appear on the details page directly below
-the person's suffix and sex, before the mother's information. Labels follow the selected birth,
+case page. Use Document Owner's Information for the person-information heading
+for birth, death, and marriage records, including staff walk-in intake. Its event
+date and place appear on the details page directly below
+the person's suffix and sex, before the mother's information. For birth and death records,
+reuse on-time birth's layout: date beside suffix/sex and full-width place below.
+Labels follow the selected birth,
 death, or marriage certificate. Keep the event_date/event_place keys for saved answers.
 For Supplemental Report birth records, seed a blank person's name from the
-account once and keep it editable. Preserve entered names. Keep only the page
+account once and keep it editable. Show a divider after the mother's information,
+then an optional Father's Full Name field for birth records, including walk-ins.
+Preserve entered names. Keep only the page
 header divider above the first name group; avoid a second divider on that group.
 
 Across service forms and walk-ins, field labels longer than four words use

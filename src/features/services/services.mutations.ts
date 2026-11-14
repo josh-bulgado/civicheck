@@ -1,7 +1,7 @@
 import { birthRequesterRelationship } from "~/features/apply/birth-requester-relationship";
 import { REQUESTER_NAME_KEYS, requesterNameAnswers, requiresAccountRequester } from "~/features/apply/requester-name";
 import { isPetitionService, petitionSelectionError } from "./petition-selection";
-import { ACCOUNT_PARTY_ROLE, accountPartyName, isMarriageAccountRole, requiresMarriageAccountParty } from "~/features/apply/marriage-account-party";
+import { ACCOUNT_PARTY_ROLE, accountPartyName, isMarriageAccountRole } from "~/features/apply/marriage-account-party";
 import { requiresVerificationSignature } from "~/features/apply/verification-signature";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -180,7 +180,7 @@ export const submitRequestFn = createServerFn({ method: "POST" })
     const requesterKeys = REQUESTER_NAME_KEYS.filter((key) => requiresAccountRequester(data.serviceCode) &&
       definition.sections.some((section) => section.fields.some((field) => field.key === key)),
     );
-    const marriageAccountParty = requiresMarriageAccountParty(data.serviceCode);
+    const marriageAccountParty = data.serviceCode === "MARRIAGE_LICENSE";
     if (requesterKeys.length || marriageAccountParty) {
       const { data: profile, error } = await supabase.from("profiles")
         .select("first_name, middle_name, last_name, suffix, has_no_middle_name")

@@ -645,11 +645,16 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
     const isOnTimeBirth = ["BIRTH_ONTIME", "OTCOLB-MARITAL", "OTCOLB-NONMARITAL"].includes(selectedService.service_code);
     const isOnTimeColb = isOnTimeBirth &&
       /certificate of live birth/i.test(req.requirement_name);
+    const isRegistrationCertificate =
+      (["MARRIAGE_ONTIME", "MARRIAGE_DELAYED"].includes(selectedService.service_code) &&
+        /(?:certificate of marriage|marriage certificate)/i.test(req.requirement_name)) ||
+      (["DEATH_ONTIME", "DEATH_DELAYED"].includes(selectedService.service_code) &&
+        /(?:certificate of death|death certificate)/i.test(req.requirement_name));
     const uploadGuidance = isDelayedBirth
       ? /certificate of live birth/i.test(req.requirement_name)
         ? delayedBirthUploadGuidance(req.requirement_name)?.replace("each document", "this document")
         : delayedBirthUploadGuidance(req.requirement_name)
-      : isOnTimeColb
+      : isOnTimeColb || isRegistrationCertificate
         ? physicalCopyGuidance(display.name)?.replace("each document", "this document")
         : physicalCopyGuidance(display.name)?.replace(/;?\s*for a marital child\.?/gi, "");
     const copyGuidance = isOnTimeBirth
