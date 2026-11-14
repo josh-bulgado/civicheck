@@ -2229,15 +2229,80 @@ input[aria-hidden="true"][tabindex="-1"] {
   }
 
   .report-sheet {
+    display: block;
     max-width: none !important;
     padding: 0 !important;
     box-shadow: none !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    font-size: 10pt;
+    line-height: 1.35;
+  }
+
+  .report-sheet > * + *,
+  .report-sheet .report-closing > * + * {
+    margin-top: 3mm;
+  }
+
+  .report-sheet .report-closing {
+    display: block;
+    break-inside: avoid;
+  }
+
+  .report-sheet .overflow-x-auto {
+    overflow: visible !important;
+  }
+
+  .report-sheet table {
+    font-size: 9pt;
+    line-height: 1.25;
+  }
+
+  .report-sheet th,
+  .report-sheet td {
+    padding: 0.9mm 1.5mm;
+    overflow-wrap: anywhere;
+  }
+
+  .report-sheet .report-service-table {
+    table-layout: fixed;
+  }
+
+  .report-sheet .report-service-table :is(th, td):first-child {
+    width: 47%;
+  }
+
+  .report-sheet thead {
+    display: table-header-group;
+  }
+
+  .report-sheet tfoot {
+    display: table-row-group;
+  }
+
+  .report-sheet :is(header, .report-remarks, .report-signatures, footer) {
+    break-inside: avoid;
+  }
+
+  .report-sheet header p {
+    font-size: 8.5pt;
+    line-height: 1.3;
+  }
+
+  .report-sheet header p:last-child {
+    font-size: 13pt;
+    line-height: 1.2;
+  }
+
+  .report-sheet .report-remarks > div {
+    gap: 4mm;
+    padding-top: 2mm;
   }
 
   /* A heading never ends a page, and a table row never splits across two. */
   .report-sheet h3 {
+    font-size: 11pt;
+    line-height: 1.3;
     break-after: avoid;
   }
 

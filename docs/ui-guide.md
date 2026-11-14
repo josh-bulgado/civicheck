@@ -861,37 +861,3 @@ Online on-time birth details ask Requester's relationship to the child below the
 On-time birth walk-ins reuse the applicant birth layout and requester relationship fields. Show Child's Information with calendar DOB beside suffix/sex on desktop, full-width birth place below, then mother's maiden name and father fields in first/middle/last order. Keep the divider above relationship/contact, required Other specification, Maria placeholder, and physical-document acceptance. Client and server use the same walk-in definition and date checks.
 
 The shared walk-in intake dialog uses a wider desktop layout. Service picker options and the selected service wrap long names; keep them readable within the mobile viewport without reducing the standard font size.
-
-## Office notices and document rejection guidance
-
-CCRO administrators manage these features at **Office Settings**, below Insights
-in the sidebar. The navigation data groups it under Configuration; the existing
-admin sidebar renders a single destination directly. Keep its two tabs named
-Office advisories and Rejection reasons. System Administrators do not manage
-this operational content.
-
-Use the shared [OfficeAdvisories](../src/features/office/components/OfficeAdvisories.tsx)
-region below the public header, above portal/staff content, and below the
-application's service band before its form. Important notices remain expanded;
-other active notices share a count-labelled disclosure. Routine-only notices
-start collapsed. Do not add a carousel, dismissal control, extra sticky row, or
-notification-bell dependency. Empty feeds leave no layout gap. Failed reads show
-a retry and preserve any known, still-current notice.
-
-Notice display dates are inclusive Asia/Manila calendar dates. Draft, archived,
-future, and ended notices are absent from the public feed. Publishing a future
-notice schedules it; the last display date expires it automatically. Display
-dates do not establish office hours, pause submissions, or extend statutory
-deadlines. Administrators include the actual affected dates and next steps in
-the title/message. The editor preview uses the real citizen notice component.
-
-Document rejection reasons come from Office Settings. Each reason drafts its
-problem description plus correction instruction into Message to the applicant.
-Staff review/edit the message before the existing document decision is saved.
-Other and a custom message remain usable during loading or failure. The first
-five active presets retain shortcuts 1–5. Historical decisions keep their saved
-wording; changing or deactivating a preset never rewrites them. Whole-request
-rejection choices remain separate.
-
-See [feature and deployment notes](office-advisories-and-rejection-presets.md)
-and the [design/implementation plan](office-advisories-and-rejection-presets-plan.md).

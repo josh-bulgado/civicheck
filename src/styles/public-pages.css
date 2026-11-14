@@ -122,8 +122,8 @@
 .requirement-apply p { color: var(--body); font-size: 14px; line-height: 1.5; }
 .requirement-apply-actions { display: flex; flex-shrink: 0; flex-wrap: wrap; gap: 12px; }
 .requirement-apply .landing-button { min-height: 50px; padding: 13px 24px; font-size: 14px; }
-.requirement-save { border-color: var(--border-strong); color: var(--foreground); background: var(--card); }
-.requirement-save:hover { background: var(--background); }
+.requirement-print { border-color: var(--border-strong); color: var(--foreground); background: var(--card); }
+.requirement-print:hover { background: var(--background); }
 
 .public-track-main {
   width: 100%;
