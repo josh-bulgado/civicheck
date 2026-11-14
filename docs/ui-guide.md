@@ -1,13 +1,5 @@
 # Civicheck UI guide
 
-Supplemental Report asks Which certificate needs additional information? on the
-case page. Its event date and place appear on the details page directly below
-the person's suffix and sex, before the mother's information. Labels follow the selected birth,
-death, or marriage certificate. Keep the event_date/event_place keys for saved answers.
-For Supplemental Report birth records, seed a blank person's name from the
-account once and keep it editable. Preserve entered names. Keep only the page
-header divider above the first name group; avoid a second divider on that group.
-
 Delayed-birth applicant and walk-in forms replace the optional informant name
 and relationship inputs with requester relationship or role. Relationship is
 required online and optional for birth walk-ins. Include I am the person being
@@ -20,6 +12,14 @@ The staff dashboard's parent loading fallback uses `StaffDashboardFrameSkeleton`
 on `/staff-dashboard` and for known staff on `/dashboard`. Keep its sidebar width,
 header height, and content padding aligned with the dashboard layout. The child
 route uses `StaffDashboardSkeleton` inside the existing frame.
+
+Supplemental Report asks Which certificate needs additional information? on the
+case page. Its event date and place appear on the details page directly below
+the person's suffix and sex, before the mother's information. Labels follow the selected birth,
+death, or marriage certificate. Keep the event_date/event_place keys for saved answers.
+For Supplemental Report birth records, seed a blank person's name from the
+account once and keep it editable. Preserve entered names. Keep only the page
+header divider above the first name group; avoid a second divider on that group.
 
 Across service forms and walk-ins, field labels longer than four words use
 sentence case, preserving acronyms such as PSA, NBI, and PNP. Shorter labels keep
@@ -51,7 +51,9 @@ First-name petitions collect the current name only through the name group on
 page 2. Page 1 asks for the proposed first name. The petition's page-2 name
 heading follows primary_petition so stale record-type answers cannot show a
 deceased-person heading for a birth-record petition.
-The petition details page is titled Person and record details. Birth-specific
+Every online service uses Person and Record Details as its second-page title
+and Person and record details as its review-block heading. Keep service-specific
+headings within the page and keep walk-in titles unchanged. Birth-specific
 petitions label the recorded date/place as Date of Birth and Place of Birth,
 then reuse CTC's split mother's maiden name and optional Father's Full Name.
 Clerical-error petition details follow the chosen record type: marriage uses
@@ -397,7 +399,7 @@ Citizen request headers place a copy button beside the tracking number. Copy
 the complete number, confirm success with Sonner, and keep the number selectable
 with a helpful error if clipboard access fails.
 
-Logout uses an immediate, full-page â€œSigning outâ€¦â€ status with the shared
+Logout uses an immediate, full-page “Signing out…” status with the shared
 `Spinner` in [the logout route](../src/routes/logout.tsx). Keep that transition
 consistent across portal pages instead of showing a content skeleton.
 
@@ -737,14 +739,14 @@ Render "Which court decree are you registering?" as a regular field legend,
 not a section/group heading. Omit the "Court decree type" heading.
 Match that question to the 15px semibold field labels and omit the court-decree
 case step's "Request details" section heading.
-Adoption details uses "Adopted personâ€™s details" as a 20px
-section heading above the name fields, without a main page heading. Enter the name as recorded on the
+Adoption details uses "Adopted person's name" as a 20px
+group heading beneath the shared Person and Record Details page title. Enter the name as recorded on the
 birth certificate and collect birth date/place and optional registry number.
 Keep a 4px gap between the adoption heading and its instruction.
 Never show or add help text beneath registry-number fields in any service,
 including staff walk-ins. The shared renderer omits it even for older templates.
 Annulment/nullity collects both spouses' recorded names, marriage date/place,
-under the main form title "Marriage record details",
+under the shared Person and Record Details form title,
 with no introductory spouse-name instruction or divider above the first spouse.
 and optional registry number. Foreign decree asks which record is affected
 (birth or marriage), then uses the matching names and record fields. Do not
@@ -753,9 +755,9 @@ contact optional and omit Sex for adoption/foreign-decree intake. These are
 supporting archive-search details, not additional documentary requirements or
 a Legazpi residency rule. Review and submission preserve both spouses when a
 foreign decree affects a marriage record.
-Adoption and foreign decree share the configured â‚±500 fee group; annulment/nullity
-uses â‚±700. Do not include a legal-separation option or its former guidance box.
-Checked walk-ins under the â‚±500 group must choose adoption or foreign decree.
+Adoption and foreign decree share the configured ₱500 fee group; annulment/nullity
+uses ₱700. Do not include a legal-separation option or its former guidance box.
+Checked walk-ins under the ₱500 group must choose adoption or foreign decree.
 When the issuing court is uncertain, the Processing confirmation requires staff
 to verify the court and the additional certificate if applicable. The check is
 recorded in request history.
@@ -801,5 +803,3 @@ Online on-time birth details ask Requester's relationship to the child below the
 On-time birth walk-ins reuse the applicant birth layout and requester relationship fields. Show Child's Information with calendar DOB beside suffix/sex on desktop, full-width birth place below, then mother's maiden name and father fields in first/middle/last order. Keep the divider above relationship/contact, required Other specification, Maria placeholder, and physical-document acceptance. Client and server use the same walk-in definition and date checks.
 
 The shared walk-in intake dialog uses a wider desktop layout. Service picker options and the selected service wrap long names; keep them readable within the mobile viewport without reducing the standard font size.
-
-All online review sections use Person and record details. Details so far keeps labels and values in separate columns with values right-aligned. On-time birth summaries combine father name fields into one row after Mother. Non-marital on-time birth forms include a divider above the optional father full-name field in online and walk-in intake.

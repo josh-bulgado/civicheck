@@ -35,7 +35,7 @@ export function WizardShell({
         }
       >
         <div className="civic-enter rounded-[28px] bg-card p-5 shadow-portal-card max-md:min-w-0 sm:p-7 md:px-10 md:pt-9 md:pb-8">
-          {title || description ? <div className="flex flex-col gap-2 pb-6">
+          {title || description ? <div className={step === 2 ? "mb-4 flex flex-col gap-2 border-b border-border-light pb-4" : "flex flex-col gap-2 pb-6"}>
             {title ? (
             <h1 className={FORM_TITLE_CLASS}>
               {title}

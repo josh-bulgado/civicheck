@@ -21,13 +21,16 @@ export function FeeLines({
           <div
             // Labels are admin-authored and may repeat, so the position is part of the key.
             key={`${line.label}-${index}`}
-            className="flex justify-between gap-3 text-[15px]"
+            className={cn(
+              "grid min-w-0 gap-x-3 gap-y-1 text-[15px]",
+              muted ? "grid-cols-1" : "grid-cols-[minmax(0,1fr)_auto]",
+            )}
           >
-            <dt className={muted ? "text-muted-foreground" : "text-body-2"}>{line.label}</dt>
+            <dt className={cn("min-w-0 [overflow-wrap:anywhere]", muted ? "text-muted-foreground" : "text-body-2")}>{line.label}</dt>
             <dd
               className={cn(
-                "shrink-0 tabular-nums",
-                muted ? "text-muted-foreground" : "font-semibold text-foreground",
+                "min-w-0 tabular-nums",
+                muted ? "[overflow-wrap:anywhere] text-muted-foreground" : "whitespace-nowrap font-semibold text-foreground",
               )}
             >
               {/* Only "also payable" lines (muted) carry a unit and a note. */}

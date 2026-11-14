@@ -406,6 +406,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   ), petitionAnswers);
   const onTimeBirth = isOnTimeBirth(selectedService.service_code);
   const isDelayedBirth = selectedService.service_code === "BIRTH_DELAYED" || selectedService.service_code.startsWith("DCOLB-");
+  const isLegitimation = selectedService.service_code === "LEGITIMATION";
   const isSurnameChange = selectedService.service_code === "RA9255_SURNAME";
   const isSupplemental = selectedService.service_code === "SUPPLEMENTAL_REPORT";
   const isAdoption = selectedService.service_code === "COURT-FOREIGN-ADOPTION" &&
@@ -413,7 +414,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   const isForeignDecree = selectedService.service_code === "COURT-FOREIGN-ADOPTION" &&
     (draft.caseSelectorAnswers.court_decree_type ?? draft.answers.court_decree_type) === "foreign_decree";
   const courtNameOnly = isAdoption || isForeignDecree || selectedService.service_code === "COURT-ANNULMENT";
-  const showBirthDetailsWithChild = onTimeBirth || isDelayedBirth || isSurnameChange;
+  const showBirthDetailsWithChild = onTimeBirth || isDelayedBirth || isLegitimation || isSurnameChange;
   const lockRequesterName = requiresAccountRequester(selectedService.service_code);
   const lockAccountParty = requiresMarriageAccountParty(selectedService.service_code);
   const detailsFields = fieldsForStep(definition, "details");
@@ -833,8 +834,8 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
                 />
               ) : null}
             </SubjectFieldGrid>
-            {showBirthDetailsWithChild && subjectField.role === "Child" ? (
-              <div className={onTimeBirth || isDelayedBirth ? "pt-3" : isSurnameChange ? "pt-1" : undefined}>
+            {(showBirthDetailsWithChild && subjectField.role === "Child") || (isLegitimation && subjectField.role === "Father") ? (
+              <div className={onTimeBirth || isDelayedBirth ? "pt-3" : isLegitimation || isSurnameChange ? "pt-1" : undefined}>
               <DynamicFormFields
                 singleColumn={onTimeBirth || isDelayedBirth}
                 definition={{
@@ -842,7 +843,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
                   sections: definition.sections.map((section) => ({
                     ...section,
                     fields: section.fields.filter((field) => (
-                      onTimeBirth || isDelayedBirth ? ["event_place"] : ["event_date", "event_place"]
+                      subjectField.role === "Father" ? ["marriage_date", "marriage_place"] : onTimeBirth || isDelayedBirth ? ["event_place"] : ["event_date", "event_place"]
                     ).includes(field.key)),
                   })),
                 }}
@@ -878,10 +879,14 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
             />
           </div>
         ) : (
-          <FieldGroup key={subjectField.id}>
+          <FieldGroup key={subjectField.id} className={isAdoption ? "gap-3" : undefined}>
             {courtNameOnly ? (
               <div className="flex flex-col gap-1">
-                <h2 className={FORM_GROUP_CLASS}>{isAdoption ? "Adopted person’s details" : "Name on the birth record"}</h2>
+                {isAdoption ? (
+                  <h2 className={FORM_GROUP_CLASS}>Adopted person's name</h2>
+                ) : (
+                  <h2 className={FORM_GROUP_CLASS}>Name on the birth record</h2>
+                )}
                 <p className="text-[15px] text-body-2">Enter the name as recorded on the birth certificate.</p>
               </div>
             ) : null}
@@ -903,7 +908,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   return (
     <WizardShell
       step={2}
-      title={onTimeBirth ? "Person and Record Details" : selectedService.service_code === "COURT-ANNULMENT" ? "Marriage record details" : courtNameOnly ? "" : isPetitionService(selectedService.service_code) ? "Person and record details" : isSurnameChange ? "Child and Parent Information" : ownerBlockInSection ? "Your details" : "Who is this document for?"}
+      title="Person and Record Details"
     >
       <div className="flex flex-col gap-6">
         {ownerBlockInSection ? null : ownerBlock}
@@ -915,7 +920,9 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
             ...definition,
             sections: definition.sections.map((section) => ({
               ...section,
-              fields: section.fields.filter((field) => !["event_date", "event_place"].includes(field.key)),
+              fields: section.fields.filter((field) => !(isLegitimation
+                ? ["event_date", "event_place", "marriage_date", "marriage_place"]
+                : ["event_date", "event_place"]).includes(field.key)),
             })),
           } : definition}
           step="details"
