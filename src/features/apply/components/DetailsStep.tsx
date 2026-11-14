@@ -30,6 +30,7 @@ import { WizardFooterActions } from "~/features/apply/components/WizardFooterAct
 import { useApplyDraft, useSeedDraftForGroup } from "~/features/apply/hooks/useApplyDraft";
 import { discardRequestUploadDraftFn } from "~/features/apply/apply.mutations";
 import { EventTimingNotice } from "~/features/forms/components/EventTimingNotice";
+import { DerivedAnswerAlerts } from "~/features/forms/components/DerivedAnswerAlerts";
 import { TrackRedirectDialog } from "./TrackRedirectDialog";
 import {
   DynamicFormFields,
@@ -47,6 +48,7 @@ import {
   canonicalizeTemplateAnswers,
   evaluateTemplateEventTiming,
   fieldsForStep,
+  getDerivedAnswerFeedback,
   resolveCaseSelectorServiceCode,
 } from "~/features/forms/form-template.utils";
 import { isOnTimeBirth, onTimeBirthLayout } from "../on-time-birth-layout";
@@ -405,6 +407,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     selectedService.service_code, petitionAnswers,
   ), petitionAnswers);
   const onTimeBirth = isOnTimeBirth(selectedService.service_code);
+  const isMarriageLicense = selectedService.service_code === "MARRIAGE_LICENSE";
   const isDelayedBirth = selectedService.service_code === "BIRTH_DELAYED" || selectedService.service_code.startsWith("DCOLB-");
   const isLegitimation = selectedService.service_code === "LEGITIMATION";
   const isSurnameChange = selectedService.service_code === "RA9255_SURNAME";
@@ -539,9 +542,11 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       form.setValue(`subjects.${subjectIndex}.noMiddleName`, subject.noMiddleName === true);
     });
     form.clearErrors(`subjects.${index}.middleName`);
+    const currentDetails = Object.fromEntries(Object.entries(form.getValues())
+      .filter((entry) => typeof entry[1] === "string"));
     update((previous) => ({
       subjects: current,
-      answers: { ...previous.answers, [ACCOUNT_PARTY_ROLE]: accountRole, ...(personGroupField ? { [personGroupField.key]: current } : {}) },
+      answers: { ...previous.answers, ...currentDetails, [ACCOUNT_PARTY_ROLE]: accountRole, ...(personGroupField ? { [personGroupField.key]: current } : {}) },
     }));
     // Roles are compared by their contents, and form methods are stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -594,6 +599,9 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     : null;
   const timingMismatch = detailsTiming?.evaluation.mismatched ? detailsTiming : null;
   const timingBlocks = timingMismatch && ["block", "redirect_confirm"].includes(timingMismatch.rule.behavior);
+  const blockingMarriageAge = isMarriageLicense
+    ? getDerivedAnswerFeedback(definition, visibilityValues).find((item) => item.notice.blocksProgress)
+    : undefined;
 
   function switchRegistrationTrack() {
     if (!detailsTiming) return;
@@ -703,6 +711,8 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     });
 
   function onSubmit(values: DetailsValues) {
+    if (isMarriageLicense && getDerivedAnswerFeedback(definition, { ...visibilityValues, ...values })
+      .some((item) => item.notice.blocksProgress)) return;
     if (lockAccountParty && !isMarriageAccountRole(values[ACCOUNT_PARTY_ROLE])) {
       form.setError(ACCOUNT_PARTY_ROLE, { message: "Select your role." });
       return;
@@ -796,6 +806,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
             role={
               useSpouseLabels
                 ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[subjectField.role] ?? subjectField.role)
+                : isMarriageLicense ? `${subjectField.role}'s Information`
                 : onTimeBirth && subjectField.role === "Child" ? "Child's Information"
                 : subjectField.role === "Mother" ? "Mother's Maiden Name" : subjectField.role
             }
@@ -831,6 +842,25 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
                     const timing = evaluateTemplateEventTiming(definition, { ...visibilityValues, [key]: value });
                     if (timing?.evaluation.mismatched && timing.rule.behavior === "redirect_confirm") setRedirectOpen(true);
                   }}
+                />
+              ) : null}
+              {isMarriageLicense ? (
+                <DynamicFormFields
+                  singleColumn
+                  definition={{
+                    ...definition,
+                    sections: definition.sections.map((section) => ({
+                      ...section,
+                      fields: section.fields.filter((field) => field.key ===
+                        (subjectField.role === "Bride" ? "bride_date_of_birth" : "groom_date_of_birth"))
+                        .map((field) => ({ ...field, label: "Date of Birth" })),
+                    })).filter((section) => section.fields.length > 0),
+                  }}
+                  step="details"
+                  hideSectionTitles
+                  showRequiredMarks
+                  control={form.control}
+                  values={visibilityValues}
                 />
               ) : null}
             </SubjectFieldGrid>
@@ -918,7 +948,13 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
         <DynamicFormFields
           readOnlyKeys={lockRequesterName ? REQUESTER_NAME_KEYS : []}
           widePair={isPetitionService(selectedService.service_code) ? ["event_date", "event_place"] : undefined}
-          definition={showBirthDetailsWithChild && showRoleLabels && subjectFields.fields.some((field) => field.role === "Child") ? {
+          definition={isMarriageLicense ? {
+            ...definition,
+            sections: definition.sections.map((section) => ({
+              ...section,
+              fields: section.fields.filter((field) => !["bride_date_of_birth", "groom_date_of_birth"].includes(field.key)),
+            })),
+          } : showBirthDetailsWithChild && showRoleLabels && subjectFields.fields.some((field) => field.role === "Child") ? {
             ...definition,
             sections: definition.sections.map((section) => ({
               ...section,
@@ -946,6 +982,8 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
           }
         />
 
+        {isMarriageLicense ? <DerivedAnswerAlerts definition={definition} answers={visibilityValues} compact /> : null}
+
         {timingMismatch ? (
           <EventTimingNotice behavior={timingMismatch.rule.behavior} title={timingMismatch.rule.title}
             description="" ctaLabel={timingMismatch.rule.ctaLabel}
@@ -957,7 +995,8 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
           }
           onContinue={form.handleSubmit(onSubmit)}
           continueLabel="Next"
-          continueReady={hasRequiredAnswers && !timingBlocks}
+          continueReady={hasRequiredAnswers && !timingBlocks && !blockingMarriageAge}
+          continueDisabled={Boolean(blockingMarriageAge)}
         />
       </div>
       <TrackRedirectDialog open={redirectOpen} onOpenChange={setRedirectOpen}

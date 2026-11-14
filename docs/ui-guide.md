@@ -216,6 +216,9 @@ Keep these name fields read-only, including the no-middle-name checkbox;
 document owner fields remain separate. Submission also uses the saved profile name.
 
 Marriage License asks whether the account holder is the Bride or Groom.
+Both birth dates appear with the Bride/Groom names on the details page.
+Show underage warnings and block progression there; keep consent/advice
+requirement calculations and server validation based on those same fields.
 On-time and delayed Marriage Certificate applications ask Husband or Wife.
 The selected party's name comes from the account and is read-only, including
 the no-middle-name choice and suffix. The partner's name stays editable.
@@ -470,9 +473,10 @@ and switch actions without explanatory bodies. Center the registration-window
 notice's icon, title, and switch action together within its full-width panel.
 Validation, account-name locks,
 service routing, and requirement rules still apply.
-Do not show a posting-period warning beside the intended wedding date or impose
-a minimum lead-time cutoff. Keep posting guidance in the service instructions
-and request progress. Keep the Charter's P1,100 total; do not infer a separate solemnization
+Marriage License shows a short warning only when the intended wedding date is
+less than ten calendar days away. This warns without blocking submission or
+promising issuance on later dates; posting starts when CCRO posts the notice.
+Keep the Charter's P1,100 total; do not infer a separate solemnization
 amount from the incomplete fee breakdown on PDF page 12.
 
 The walk-in registration requirements dialog filters by the selected service and current

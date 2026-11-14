@@ -37,6 +37,7 @@ import {
   inferMaritalStatus,
 } from "~/features/services/components/CaseSelector";
 import { applicantCopy } from "~/features/forms/applicant-copy";
+import { marriageLicenseDateTooSoon } from "../marriage-license-date";
 import { surnameChangeCaseDefinition } from "~/features/services/surname-change";
 import { isOnTimeBirth, onTimeBirthLayout } from "../on-time-birth-layout";
 import { delayedBirthLayout } from "../delayed-birth-layout";
@@ -169,7 +170,7 @@ export function CaseStep({
   );
   // The birth date on the next page determines the final age-specific service.
   if (isDelayedBirth && !selectorContextAnswers.age) selectorContextAnswers.age = "0-79";
-  const blockingAgeFeedback = (isDelayedBirth ? [] : getDerivedAnswerFeedback(
+  const blockingAgeFeedback = (isDelayedBirth || selectedService.service_code === "MARRIAGE_LICENSE" ? [] : getDerivedAnswerFeedback(
     definition,
     derivedCaseAnswers,
   )).find((feedback) => feedback.notice.blocksProgress);
@@ -409,11 +410,16 @@ export function CaseStep({
           />
         ) : null}
 
-        <DerivedAnswerAlerts
+        {marriageLicenseDateTooSoon(selectedService.service_code, watchedValues.event_date ?? "") ? (
+          <NoticeAlert variant="warning" title="Wedding date is too soon">
+            CCRO must post the notice for 10 days before issuing the license.
+          </NoticeAlert>
+        ) : null}
+
+        {selectedService.service_code !== "MARRIAGE_LICENSE" ? <DerivedAnswerAlerts
           definition={definition}
           answers={derivedCaseAnswers}
-          compact={selectedService.service_code === "MARRIAGE_LICENSE"}
-        />
+        /> : null}
 
         {timingMismatch && timingRule ? (
           <EventTimingNotice
