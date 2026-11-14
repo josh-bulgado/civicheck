@@ -12,6 +12,9 @@ The staff dashboard's parent loading fallback uses `StaffDashboardFrameSkeleton`
 on `/staff-dashboard` and for known staff on `/dashboard`. Keep its sidebar width,
 header height, and content padding aligned with the dashboard layout. The child
 route uses `StaffDashboardSkeleton` inside the existing frame.
+After password sign-in to the default staff destination or a dashboard return URL,
+preload `/staff-dashboard` before navigating so the sign-in form stays visible
+while the data loads.
 
 Supplemental Report asks Which certificate needs additional information? on the
 case page. Its event date and place appear on the details page directly below
