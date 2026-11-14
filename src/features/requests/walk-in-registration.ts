@@ -19,7 +19,7 @@ export function isWalkInCourtDecree(serviceCode: string) {
 }
 
 export function isWalkInDetailedIntake(serviceCode: string) {
-  if (isCtcService(serviceCode)) return true;
+  if (isCtcService(serviceCode) || serviceCode === "EMAIL_INQUIRY") return true;
   if (isWalkInPetition(serviceCode)) return true;
   return isWalkInRegistration(serviceCode) || ["MARRIAGE_LICENSE", "LEGITIMATION", "SUPPLEMENTAL_REPORT", "RA9255_SURNAME", "OTHER_CERT", "ELEC_ENDORSEMENT"].includes(serviceCode) || isWalkInCourtDecree(serviceCode);
 }

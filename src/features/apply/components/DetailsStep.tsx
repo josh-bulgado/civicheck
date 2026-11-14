@@ -463,7 +463,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     section.fields.some((field) => field.type === "person_group"),
   );
   const ownerBlockInSection =
-    Boolean(personSection) && (isCtc || detailSections.indexOf(personSection!) > 0);
+    Boolean(personSection) && (isCtc || selectedService.service_code === "EMAIL_INQUIRY" || detailSections.indexOf(personSection!) > 0);
 
   const detailAnswers = Object.fromEntries(
     detailsFields

@@ -70,6 +70,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
 
     const copies = service.fee_per_copy ? clampCopies(data.copies ?? 1) : 1;
     const isCtc = service.service_code.startsWith("CTC-") || service.service_code === "CTC_ISSUANCE";
+    const isRecordInquiry = isCtc || service.service_code === "EMAIL_INQUIRY";
     const fatherName = isCtc ? data.fatherName?.trim() || "" : "";
     if (fatherName.length > 240 || validateNameField({ key: "father_name" }, fatherName) !== true) {
       return { error: true, message: "Enter a valid father's full name (240 characters or fewer)." };
@@ -89,7 +90,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       if (service.service_code === "MARRIAGE_LICENSE" && data.coupleAppearanceConfirmed !== true) {
         return { error: true, message: "Confirm that both applicants personally appeared before encoding." };
       }
-      if (!isCtc && data.physicalDocumentsConfirmed !== true) {
+      if (!isRecordInquiry && data.physicalDocumentsConfirmed !== true) {
         return { error: true, message: "Confirm that the physical documents are complete and acceptable before encoding." };
       }
       const catalogue = await loadServiceCatalogue();
@@ -103,9 +104,9 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       if (activeError || active.active_version_id !== template.versionId || data.templateVersionId !== template.versionId) {
         return { error: true, message: "The registration form has changed. Reload the page and review the entered answers." };
       }
-      const selectedCase = isCtc ? ctcWalkInCase(template.definition, service.service_code)
+      const selectedCase = isRecordInquiry ? ctcWalkInCase(template.definition, service.service_code)
         : walkInCaseForService(template.definition, service.service_code);
-      const prepare = isCtc ? prepareWalkInCtc : ["SUPPLEMENTAL_REPORT", "OTHER_CERT"].includes(service.service_code)
+      const prepare = isRecordInquiry ? prepareWalkInCtc : ["SUPPLEMENTAL_REPORT", "OTHER_CERT"].includes(service.service_code)
         || (service.service_code === "ELEC_ENDORSEMENT" && data.answers.record_type === "marriage") ? prepareWalkInSupplemental
         : isWalkInCourtDecree(service.service_code) ? prepareWalkInCourtDecree : prepareWalkInBirth;
       const prepared = (isWalkInPetition(service.service_code) ? prepareWalkInPetition : prepare)(selectedCase.definition, { ...data.answers, ...selectedCase.answers }, registryService.party_roles?.length ? registryService.party_roles : ["Subject"]);
@@ -124,7 +125,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       fees_due: totalFee(service.fee, copies, service.fee_per_copy),
       copies,
       ...(templateVersionId ? { form_template_version_id: templateVersionId } : {}),
-      ...(templateVersionId && !isCtc ? { status: "processing", walk_in_accepted_by: user.id } : {}),
+      ...(templateVersionId && !isRecordInquiry ? { status: "processing", walk_in_accepted_by: user.id } : {}),
       form_data: {
         ...(registrationFormData ?? {
           ...flattenSubjects(subjects),
@@ -145,7 +146,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
 
     if (created.error) return { error: true, message: created.message };
 
-    if (!templateVersionId || isCtc) {
+    if (!templateVersionId || isRecordInquiry) {
       const { error: logError } = await supabase.from("application_logs").insert({
       request_id: created.requestId,
       performed_by_profile_id: user.id,
@@ -160,6 +161,6 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       requestId: created.requestId,
       trackingNumber: created.trackingNumber,
       applicantName: `${subjects[0].firstName} ${subjects[0].lastName}`,
-      status: templateVersionId && !isCtc ? "processing" as const : "submitted" as const,
+      status: templateVersionId && !isRecordInquiry ? "processing" as const : "submitted" as const,
     };
   });

@@ -265,7 +265,7 @@ export function WalkInIntakeDialog({
 
                 {loadingServices ? <p role="status">Loading current forms…</p> : servicesError ? (
                   <p role="alert">Could not load the current forms. Close and reopen this dialog to try again.</p>
-                ) : selectedService && isCtcService(serviceCode) ? (
+                ) : selectedService && (isCtcService(serviceCode) || serviceCode === "EMAIL_INQUIRY") ? (
                   <CtcWalkInFields key={`${serviceCode}:${selectedService.registrationForm?.versionId}`}
                     service={selectedService} submitting={submitting} copies={copies} onCopiesChange={setCopies}
                     onSubmit={encodeRequest} onAnswersChange={setRegistrationAnswers} onCancel={() => setDialogOpen(false)} />

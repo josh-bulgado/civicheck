@@ -46,7 +46,7 @@ export function CtcWalkInFields({ service, submitting, copies, onCopiesChange, o
     return () => subscription.unsubscribe();
   }, [form, template, service.serviceCode, onAnswersChange]);
 
-  if (!template || !selected) return <Alert><AlertDescription>The CTC form is unavailable. Reload the page and try again.</AlertDescription></Alert>;
+  if (!template || !selected) return <Alert><AlertDescription>The form is unavailable. Reload the page and try again.</AlertDescription></Alert>;
   const { definition } = selected;
   const birth = values.record_type === "birth";
   const marriage = values.record_type === "marriage";
