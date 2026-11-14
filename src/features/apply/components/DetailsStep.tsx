@@ -430,7 +430,8 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     (primaryPetition === "change_first_name" || primaryPetition === "correct_sex" ||
       primaryPetition === "correct_birth_day_month" || (primaryPetition === "correct_other" && recordType === "birth"));
   const isMarriageRecord = recordType === "marriage" && !isCourtDecree(selectedService.service_code);
-  const supplementalRecordLayout = isSupplemental && ["birth", "death"].includes(recordType ?? "");
+  const inlineRecordLayout = ["DEATH_ONTIME", "DEATH_DELAYED"].includes(selectedService.service_code) ||
+    (isSupplemental && ["birth", "death"].includes(recordType ?? ""));
   const useSpouseLabels =
     selectedService.service_code === "MARRIAGE_ONTIME" ||
     selectedService.service_code === "MARRIAGE_DELAYED";
@@ -782,7 +783,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   }
 
   const labelRule = personGroupField?.labelByAnswer;
-  const ownerLabel = selectedService.service_code === "DEATH_ONTIME"
+  const ownerLabel = ["DEATH_ONTIME", "DEATH_DELAYED"].includes(selectedService.service_code)
     ? "Registrant’s Information"
     : isPetitionService(selectedService.service_code) && !isBirthPetition
     ? (recordType === "marriage" ? "Husband's Name" : recordType === "death" ? "Deceased Person's Name" : undefined)
@@ -790,7 +791,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     ? (labelRule.labels[String(visibilityValues[labelRule.field] ?? "")] ?? undefined)
     : undefined;
 
-  const supplementalRecordField = (key: "event_date" | "event_place") => (
+  const inlineRecordField = (key: "event_date" | "event_place") => (
     <DynamicFormFields
       singleColumn
       definition={{
@@ -805,6 +806,11 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       showRequiredMarks
       control={form.control}
       values={visibilityValues}
+      onDateChange={(field, value) => {
+        if (field !== definition.eventTiming?.triggerField) return;
+        const timing = evaluateTemplateEventTiming(definition, { ...visibilityValues, [field]: value });
+        if (timing?.evaluation.mismatched && timing.rule.behavior === "redirect_confirm") setRedirectOpen(true);
+      }}
       onFieldChange={(field, value) => form.setValue(field, value, { shouldDirty: true, shouldValidate: true })}
     />
   );
@@ -924,7 +930,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       subjectFields.fields.map((subjectField, index) =>
         ownerLabel && (!isPetitionService(selectedService.service_code) || !isBirthPetition) ? (
           // A heading that names whose name this is ("Full name of the deceased").
-          <div key={subjectField.id} className={cn("flex flex-col gap-3", selectedService.service_code !== "DEATH_ONTIME" && (!isSupplemental || ownerBlockInSection) && "border-t border-border-light pt-6")}>
+          <div key={subjectField.id} className={cn("flex flex-col gap-3", !["DEATH_ONTIME", "DEATH_DELAYED"].includes(selectedService.service_code) && (!isSupplemental || ownerBlockInSection) && "border-t border-border-light pt-6")}>
             {!(isSupplemental && isMarriageRecord) ? <span className={FORM_GROUP_CLASS}>{formatNameHeading(ownerLabel)}</span> : null}
             {isSupplemental && isMarriageRecord ? <h3 className={FORM_GROUP_CLASS}>Husband's Name</h3> : null}
             <SubjectFieldGrid
@@ -935,10 +941,10 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
               husband={isMarriageRecord}
               requireMiddleName={requireMiddleName}
             >
-              {supplementalRecordLayout ? supplementalRecordField("event_date") : null}
+              {inlineRecordLayout ? inlineRecordField("event_date") : null}
             </SubjectFieldGrid>
-            {supplementalRecordLayout ? (
-              <div className="pt-3">{supplementalRecordField("event_place")}</div>
+            {inlineRecordLayout ? (
+              <div className="pt-3">{inlineRecordField("event_place")}</div>
             ) : null}
           </div>
         ) : (
@@ -979,7 +985,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
         <DynamicFormFields
           readOnlyKeys={lockRequesterName ? REQUESTER_NAME_KEYS : []}
           widePair={isPetitionService(selectedService.service_code) || useSpouseLabels ? ["event_date", "event_place"] : undefined}
-          definition={supplementalRecordLayout ? {
+          definition={inlineRecordLayout ? {
             ...definition,
             sections: definition.sections.map((section) => ({
               ...section,

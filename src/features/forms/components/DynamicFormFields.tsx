@@ -379,6 +379,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                 <div role="separator" className="col-span-full border-t border-border-light" />
               ) : null}
               {definitionField.key === "requester_relationship" &&
+              !definitionField.options?.some((option) => option.value === "funeral_representative") &&
               section.fields.some((field) => field.key === "requester_relationship_other") ? (
                 <div role="separator" className="col-span-full border-t border-border-light" />
               ) : null}
@@ -460,10 +461,13 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         (option) => option.value === field.value,
                       )?.notice
                     : undefined;
+                const selectOptions = definitionField.key === "requester_relationship" && !definitionField.required
+                  ? [{ value: "", label: "Leave blank" }, ...(definitionField.options ?? [])]
+                  : definitionField.options ?? [];
                 const common = (showError = fieldState.invalid) => (
                   <>
                     {!isRegistryNumberField(definitionField) &&
-                    !["died_in_legazpi", "disposal_method", "embalmed"].includes(definitionField.key) &&
+                    !["died_in_legazpi", "disposal_method", "embalmed", "death_registration_basis"].includes(definitionField.key) &&
                     applicantCopy(definitionField.helpText) ? (
                       <FieldDescription>
                         {applicantCopy(definitionField.helpText)}
@@ -673,7 +677,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                       )
                     ) : definitionField.type === "select" ? (
                       <Select
-                        items={definitionField.options ?? []}
+                        items={selectOptions}
                         value={field.value ?? ""}
                         onValueChange={field.onChange}
                       >
@@ -686,7 +690,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         </SelectTrigger>
                         <SelectContent className="service-form-options">
                           <SelectGroup>
-                            {(definitionField.options ?? []).map((option) => (
+                            {selectOptions.map((option) => (
                               <SelectItem
                                 key={option.value}
                                 value={option.value}

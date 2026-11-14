@@ -1,10 +1,28 @@
 import type { FormFieldDefinition, FormTemplateDefinition } from "./form-template.types";
 
 export function deathRequesterRelationship(definition: FormTemplateDefinition, serviceCode: string): FormTemplateDefinition {
-  if (serviceCode !== "DEATH_ONTIME") return definition;
+  if (!["DEATH_ONTIME", "DEATH_DELAYED"].includes(serviceCode)) return definition;
+  if (serviceCode === "DEATH_DELAYED") {
+    const eventFields = definition.sections.flatMap((section) => section.fields)
+      .filter((field) => ["event_date", "event_place"].includes(field.key));
+    let moved = false;
+    definition = {
+      ...definition,
+      sections: definition.sections.map((section) => {
+        const remaining = section.fields.filter((field) => !["event_date", "event_place"].includes(field.key));
+        if (section.step !== "details" || moved) return { ...section, fields: remaining };
+        moved = true;
+        const personIndex = remaining.findIndex((field) => field.type === "person_group");
+        const index = personIndex < 0 ? 0 : personIndex + 1;
+        return { ...section, fields: [...remaining.slice(0, index), ...eventFields, ...remaining.slice(index)] };
+      }),
+    };
+  }
+  const contactFields = definition.sections.flatMap((section) => section.fields)
+    .filter((field) => field.key === "contact_number");
   const fields: FormFieldDefinition[] = [
     {
-      key: "requester_relationship", type: "select", label: "Requester's relationship or role", required: false,
+      key: "requester_relationship", type: "select", label: "Requester's relationship to the deceased", required: false,
       options: [
         { value: "spouse", label: "Spouse" },
         { value: "child", label: "Child" },
@@ -20,6 +38,7 @@ export function deathRequesterRelationship(definition: FormTemplateDefinition, s
       key: "requester_relationship_other", type: "text", label: "Please specify", required: true,
       visibleWhen: { field: "requester_relationship", operator: "equals", value: "other" },
     },
+    ...contactFields,
   ];
   let added = false;
   return {

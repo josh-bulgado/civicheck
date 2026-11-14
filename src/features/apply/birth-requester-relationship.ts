@@ -6,7 +6,7 @@ export function birthRequesterRelationship(definition: FormTemplateDefinition, s
   if (!isOnTimeBirth(serviceCode) && !delayed) return definition;
   const fields: FormFieldDefinition[] = [
     {
-      key: "requester_relationship", type: "select", label: delayed ? "Requester's relationship to the person" : "Requester's relationship to the child", required: true,
+      key: "requester_relationship", type: "select", label: delayed ? "Requester's relationship to the registrant" : "Requester's relationship to the child", required: true,
       options: [
         ...(delayed ? [{ value: "self", label: "I am the person being registered" }] : []),
         { value: "mother", label: "Mother" },
