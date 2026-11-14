@@ -275,7 +275,7 @@ export function WalkInRegistrationFields({
             <div className="space-y-6">
               {roles.map((role, index) => (
                 <div key={role} className="space-y-3">
-                  {!otherCertificate || values.record_type === "marriage" ? <h3 className={`${FORM_GROUP_CLASS}${index > 0 ? " border-t border-border-light pt-5" : ""}`}>
+                  {(!otherCertificate || values.record_type === "marriage") && !(supplemental && values.record_type === "marriage") ? <h3 className={`${FORM_GROUP_CLASS}${index > 0 ? " border-t border-border-light pt-5" : ""}`}>
                     {courtDecree && values.court_decree_type === "adoption" ? "Adopted person’s details" : formatNameHeading(courtDecree && courtRecordType(values) === "birth" ? "Name on the birth record" : petition ? (values.record_type === "marriage" ? "Husband's Name" : values.record_type === "death" ? "Deceased Person's Name" : "Name on the birth certificate") : otherCertificate ? "Name of Husband" : role.toLowerCase() === "mother"
                       ? "Mother's Maiden Name"
                       : (petition || supplemental || endorsement) && roles.length === 1
@@ -287,13 +287,14 @@ export function WalkInRegistrationFields({
                       : death ? "Name of the deceased"
                       : marriage ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[role] ?? role) : role)}
                   </h3> : null}
+                  {supplemental && values.record_type === "marriage" ? <h3 className={FORM_GROUP_CLASS}>Husband's Name</h3> : null}
                   <SubjectFieldGrid
                     control={form.control}
                     setValue={form.setValue}
                     index={index}
                     role={role}
                     hideSex={courtDecree || supplemental || otherCertificate}
-                    husband={(otherCertificate || endorsement || petition) && values.record_type === "marriage"}
+                    husband={(otherCertificate || endorsement || petition || supplemental) && values.record_type === "marriage"}
                     requireMiddleName
                   >
                     {birthLayout && role === "Child" ? (

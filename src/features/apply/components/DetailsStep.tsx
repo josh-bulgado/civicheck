@@ -922,7 +922,8 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
         ownerLabel && (!isPetitionService(selectedService.service_code) || !isBirthPetition) ? (
           // A heading that names whose name this is ("Full name of the deceased").
           <div key={subjectField.id} className={cn("flex flex-col gap-3", (!isSupplemental || ownerBlockInSection) && "border-t border-border-light pt-6")}>
-            <span className={FORM_GROUP_CLASS}>{formatNameHeading(ownerLabel)}</span>
+            {!(isSupplemental && isMarriageRecord) ? <span className={FORM_GROUP_CLASS}>{formatNameHeading(ownerLabel)}</span> : null}
+            {isSupplemental && isMarriageRecord ? <h3 className={FORM_GROUP_CLASS}>Husband's Name</h3> : null}
             <SubjectFieldGrid
               control={form.control}
               setValue={form.setValue}

@@ -40,6 +40,11 @@ account once and keep it editable. Show a divider after the mother's information
 then an optional Father's Full Name field for birth records, including walk-ins.
 Preserve entered names. Keep only the page
 header divider above the first name group; avoid a second divider on that group.
+Supplemental Report marriage records collect Husband's Name and the shared split
+Wife's Maiden Name before marriage date/place. Both names are entered manually;
+do not autofill them from the account. Reuse these fields in staff walk-ins.
+Omit Document Owner's Information for this marriage option; keep the husband
+and wife's headings only.
 
 Across service forms and walk-ins, field labels longer than four words use
 sentence case, preserving acronyms such as PSA, NBI, and PNP. Shorter labels keep
