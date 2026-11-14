@@ -178,7 +178,7 @@ export function WalkInRegistrationFields({
     .filter((field) => field.type === "person_group");
   const timing = evaluateTemplateEventTiming(displayDefinition, values);
   const signingInstruction = surnameChange ? surnameChangeSigningInstruction(values.event_date) : null;
-  const inlineRecordLayout = death || (supplemental && ["birth", "death"].includes(values.record_type));
+  const inlineRecordLayout = otherCertificate || death || (supplemental && ["birth", "death"].includes(values.record_type));
   const inlineRecordField = (key: "event_date" | "event_place") => (
     <DynamicFormFields
       definition={{
@@ -318,7 +318,8 @@ export function WalkInRegistrationFields({
                   : a.index - b.index)
                 .map(({ role, index }, position) => (
                 <div key={role} className="space-y-3">
-                  {(!otherCertificate || values.record_type === "marriage") && !(supplemental && values.record_type === "marriage") ? <h3 className={`${FORM_GROUP_CLASS}${position > 0 ? " border-t border-border-light pt-5" : ""}`}>
+                  {otherCertificate ? <h3 className={FORM_GROUP_CLASS}>{values.record_type === "marriage" ? "Husband's Information" : "Owner's Information"}</h3> : null}
+                  {!otherCertificate && !(supplemental && values.record_type === "marriage") ? <h3 className={`${FORM_GROUP_CLASS}${position > 0 ? " border-t border-border-light pt-5" : ""}`}>
                     {courtDecree && values.court_decree_type === "adoption" ? "Adopted person’s details" : formatNameHeading(courtDecree && courtRecordType(values) === "birth" ? "Name on the birth record" : petition ? (values.record_type === "marriage" ? "Husband's Name" : values.record_type === "death" ? "Deceased Person's Name" : "Name on the birth certificate") : otherCertificate ? "Name of Husband" : role.toLowerCase() === "mother"
                       ? "Mother's Maiden Name"
                       : (petition || supplemental || endorsement) && roles.length === 1

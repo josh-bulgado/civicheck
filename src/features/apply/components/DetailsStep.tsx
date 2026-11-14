@@ -412,6 +412,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   const isLegitimation = selectedService.service_code === "LEGITIMATION";
   const isSurnameChange = selectedService.service_code === "RA9255_SURNAME";
   const isSupplemental = selectedService.service_code === "SUPPLEMENTAL_REPORT";
+  const isOtherCertificate = selectedService.service_code === "OTHER_CERT";
   const isAdoption = selectedService.service_code === "COURT-FOREIGN-ADOPTION" &&
     (draft.caseSelectorAnswers.court_decree_type ?? draft.answers.court_decree_type) === "adoption";
   const isForeignDecree = selectedService.service_code === "COURT-FOREIGN-ADOPTION" &&
@@ -430,7 +431,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     (primaryPetition === "change_first_name" || primaryPetition === "correct_sex" ||
       primaryPetition === "correct_birth_day_month" || (primaryPetition === "correct_other" && recordType === "birth"));
   const isMarriageRecord = recordType === "marriage" && !isCourtDecree(selectedService.service_code);
-  const inlineRecordLayout = ["DEATH_ONTIME", "DEATH_DELAYED"].includes(selectedService.service_code) ||
+  const inlineRecordLayout = isOtherCertificate || ["DEATH_ONTIME", "DEATH_DELAYED"].includes(selectedService.service_code) ||
     (isSupplemental && ["birth", "death"].includes(recordType ?? ""));
   const useSpouseLabels =
     selectedService.service_code === "MARRIAGE_ONTIME" ||
@@ -783,7 +784,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   }
 
   const labelRule = personGroupField?.labelByAnswer;
-  const ownerLabel = ["DEATH_ONTIME", "DEATH_DELAYED"].includes(selectedService.service_code)
+  const ownerLabel = isOtherCertificate ? (isMarriageRecord ? "Husband's Information" : "Owner's Information") : ["DEATH_ONTIME", "DEATH_DELAYED"].includes(selectedService.service_code)
     ? "Registrant’s Information"
     : isPetitionService(selectedService.service_code) && !isBirthPetition
     ? (recordType === "marriage" ? "Husband's Name" : recordType === "death" ? "Deceased Person's Name" : undefined)
@@ -930,7 +931,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       subjectFields.fields.map((subjectField, index) =>
         ownerLabel && (!isPetitionService(selectedService.service_code) || !isBirthPetition) ? (
           // A heading that names whose name this is ("Full name of the deceased").
-          <div key={subjectField.id} className={cn("flex flex-col gap-3", !["DEATH_ONTIME", "DEATH_DELAYED"].includes(selectedService.service_code) && (!isSupplemental || ownerBlockInSection) && "border-t border-border-light pt-6")}>
+          <div key={subjectField.id} className={cn("flex flex-col gap-3", !isOtherCertificate && !["DEATH_ONTIME", "DEATH_DELAYED"].includes(selectedService.service_code) && (!isSupplemental || ownerBlockInSection) && "border-t border-border-light pt-6")}>
             {!(isSupplemental && isMarriageRecord) ? <span className={FORM_GROUP_CLASS}>{formatNameHeading(ownerLabel)}</span> : null}
             {isSupplemental && isMarriageRecord ? <h3 className={FORM_GROUP_CLASS}>Husband's Name</h3> : null}
             <SubjectFieldGrid

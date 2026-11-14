@@ -155,11 +155,7 @@ export function CaseStep({
       const value = draft.answers[field.key];
       return [
         field.key,
-        typeof value === "string"
-          ? value
-          : field.key === "purpose"
-            ? "Local Use (ID, Barangay, etc.)"
-            : "",
+        typeof value === "string" ? value : "",
       ];
     }),
   );

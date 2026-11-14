@@ -307,6 +307,13 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
     )).filter(
       (field) => field.type !== "person_group",
     );
+    if (fields.some((field) => field.key === "record_type" && field.label === "Which record does it concern?")) {
+      const purposeIndex = fields.findIndex((field) => field.key === "purpose");
+      const registryIndex = fields.findIndex((field) => field.key === "reference_number");
+      if (registryIndex >= 0 && purposeIndex > registryIndex) {
+        [fields[registryIndex], fields[purposeIndex]] = [fields[purposeIndex], fields[registryIndex]];
+      }
+    }
     const lead = renderSectionLead?.(section) ?? null;
     if (!fields.length && !lead) return null;
     const choicePlacements = planChoiceLayout(fields);
