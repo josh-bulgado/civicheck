@@ -792,7 +792,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
           .map(({ subjectField, index }) => (
           <PartySection
             key={subjectField.id}
-            divider={(!onTimeBirth && !isCourtDecree(selectedService.service_code)) || index > 0}
+            divider={(!onTimeBirth && !isLegitimation && !isCourtDecree(selectedService.service_code)) || index > 0}
             role={
               useSpouseLabels
                 ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[subjectField.role] ?? subjectField.role)
@@ -835,7 +835,9 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
               ) : null}
             </SubjectFieldGrid>
             {(showBirthDetailsWithChild && subjectField.role === "Child") || (isLegitimation && subjectField.role === "Father") ? (
-              <div className={onTimeBirth || isDelayedBirth ? "pt-3" : isLegitimation || isSurnameChange ? "pt-1" : undefined}>
+              <div className={isLegitimation && subjectField.role === "Father"
+                ? "border-t border-border-light pt-4"
+                : onTimeBirth || isDelayedBirth ? "pt-3" : isLegitimation || isSurnameChange ? "pt-1" : undefined}>
               <DynamicFormFields
                 singleColumn={onTimeBirth || isDelayedBirth}
                 definition={{
