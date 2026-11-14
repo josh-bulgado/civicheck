@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
-  router: { preloadRoute: vi.fn(), navigate: vi.fn(), invalidate: vi.fn() },
+  router: {
+    preloadRoute: vi.fn(), navigate: vi.fn(), invalidate: vi.fn(), update: vi.fn(),
+    options: { defaultPendingMs: 250, defaultPendingMinMs: 250 },
+  },
   freshSession: vi.fn(),
   hint: vi.fn(),
 }));
@@ -33,9 +36,31 @@ describe("staff sign-in navigation", () => {
     expect(state.router.preloadRoute).toHaveBeenCalledWith({ to: "/staff-dashboard" });
     expect(state.router.navigate).not.toHaveBeenCalled();
     expect(state.router.invalidate).not.toHaveBeenCalled();
+    expect(state.router.update).toHaveBeenCalledWith({ defaultPendingMs: Infinity, defaultPendingMinMs: 0 });
     finishLoading();
     await signingIn;
     expect(state.router.navigate).toHaveBeenCalledWith({ to: "/staff-dashboard" });
+    expect(state.router.update).toHaveBeenLastCalledWith({ defaultPendingMs: 250, defaultPendingMinMs: 250 });
+  });
+
+  it("keeps sign-in visible when preloading is skipped and navigation is still loading", async () => {
+    let finishNavigation!: () => void;
+    state.router.preloadRoute.mockResolvedValue(undefined);
+    state.router.navigate.mockReturnValue(new Promise<void>((resolve) => { finishNavigation = resolve; }));
+    const signingIn = useLoginOptions().onSuccess({ data: { error: false, userId: "staff", role: "staff" } });
+    await Promise.resolve();
+    expect(state.router.navigate).toHaveBeenCalled();
+    expect(state.router.update).toHaveBeenCalledTimes(1);
+    expect(state.router.update).toHaveBeenLastCalledWith({ defaultPendingMs: Infinity, defaultPendingMinMs: 0 });
+    finishNavigation();
+    await signingIn;
+    expect(state.router.update).toHaveBeenLastCalledWith({ defaultPendingMs: 250, defaultPendingMinMs: 250 });
+  });
+
+  it("restores normal loading feedback after navigation fails", async () => {
+    state.router.navigate.mockRejectedValue(new Error("Navigation failed"));
+    await expect(useLoginOptions().onSuccess({ data: { error: false, userId: "staff", role: "staff" } })).rejects.toThrow("Navigation failed");
+    expect(state.router.update).toHaveBeenLastCalledWith({ defaultPendingMs: 250, defaultPendingMinMs: 250 });
   });
 
   it("preserves an explicit sign-in destination", async () => {

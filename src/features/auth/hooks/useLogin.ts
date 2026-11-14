@@ -20,9 +20,15 @@ export function useLogin(redirectTo?: string) {
         }
         const opensStaffDashboard = !redirectTo || redirectTo === "/dashboard" || redirectTo === "/staff-dashboard";
         if (opensStaffDashboard && ctx.data?.role && hasPermission(ctx.data.role, "dashboard:staff")) {
-          // Keep Signing in visible until the new account's dashboard is ready.
-          await router.preloadRoute({ to: "/staff-dashboard" });
-          await router.navigate({ to: "/staff-dashboard" });
+          const { defaultPendingMs, defaultPendingMinMs } = router.options;
+          // Preloading can be skipped. Keep sign-in visible during navigation too.
+          router.update({ defaultPendingMs: Infinity, defaultPendingMinMs: 0 });
+          try {
+            await router.preloadRoute({ to: "/staff-dashboard" });
+            await router.navigate({ to: "/staff-dashboard" });
+          } finally {
+            router.update({ defaultPendingMs, defaultPendingMinMs });
+          }
           return;
         }
         await router.invalidate();

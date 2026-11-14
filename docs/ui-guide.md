@@ -26,6 +26,10 @@ route uses `StaffDashboardSkeleton` inside the existing frame.
 After password sign-in to the default staff destination or a dashboard return URL,
 preload `/staff-dashboard` before navigating so the sign-in form stays visible
 while the data loads.
+During this staff sign-in transition, disable the router's pending-screen timer
+until navigation finishes, then restore its normal timing even on failure.
+The staff dashboard inherits that timing so skipped preloads cannot flash its
+skeleton on a first browser visit.
 
 Supplemental Report asks Which certificate needs additional information? on the
 case page. Use Document Owner's Information for the person-information heading
