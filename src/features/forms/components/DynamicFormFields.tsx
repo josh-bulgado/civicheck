@@ -479,7 +479,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                 const common = (showError = fieldState.invalid) => (
                   <>
                     {!isRegistryNumberField(definitionField) &&
-                    !["died_in_legazpi", "disposal_method", "embalmed", "death_registration_basis"].includes(definitionField.key) &&
+                    !["died_in_legazpi", "disposal_method", "embalmed", "death_registration_basis", "issued_by_rtc_legazpi"].includes(definitionField.key) &&
                     applicantCopy(definitionField.helpText) ? (
                       <FieldDescription>
                         {applicantCopy(definitionField.helpText)}
