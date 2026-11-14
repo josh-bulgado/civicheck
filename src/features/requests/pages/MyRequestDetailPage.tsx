@@ -2,7 +2,7 @@ import { CancelRequestCard } from "../components/CancelRequestCard";
 import { RegistrationDeadlineCard } from "../components/RegistrationDeadlineCard";
 import { onTimeRegistrationNotice } from "../on-time-registration";
 import { separateRegistrationNotice } from "../separate-registration-notice";
-import { canCancelCtcRequest } from "../request-cancellation";
+import { canCancelOwnRequest } from "../request-cancellation";
 import { MarriagePostingPanel } from "../components/MarriagePostingPanel";
 import { staggerStyle } from "~/components/motion/stagger";
 import type { MyRequestDetail } from "~/features/requests/applicant-requests.queries";
@@ -79,7 +79,7 @@ export default function MyRequestDetailPage({
             closed={isClosedRequestStatus(request.status)}
             onChanged={onUpdated}
           />
-          {canCancelCtcRequest(request.status, request.serviceCode, request.formData) && (
+          {canCancelOwnRequest(request.status, request.formData) && (
             <CancelRequestCard requestId={request.id} onCancelled={onUpdated} />
           )}
         </div>

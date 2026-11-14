@@ -1,6 +1,6 @@
 import { Document, Font, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { VerificationFormPdfData } from "~/features/requests/pdf/types";
-import { formatRequesterAddress } from "~/lib/requester-address";
+import { formatOwnerAddress, formatRequesterAddress } from "~/lib/requester-address";
 import { isEstimatedDate } from "~/features/forms/estimated-date";
 import { documentText } from "~/features/requests/pdf/document-text";
 import { motherMaidenName, wifeMaidenName } from "~/features/forms/mother-maiden-name";
@@ -303,6 +303,7 @@ export function createVerificationFormPdf({ data, qrDataUrl, generatedAt }: Veri
             {owner.rows.map((row) => (
               <Field key={row.label} {...row} />
             ))}
+            {!isEmailInquiry && formatOwnerAddress(answers) ? <Field label="Address" value={formatOwnerAddress(answers)} /> : null}
             {owner.showsLateRegistration ? (
               <View style={styles.lateRow} wrap={false}>
                 <Text style={styles.lateText}>Registered late?</Text>
@@ -329,7 +330,7 @@ export function createVerificationFormPdf({ data, qrDataUrl, generatedAt }: Veri
             <Text style={styles.sectionHeading}>Requester&apos;s Information:</Text>
             <Field label="Full Name" value={requesterName} />
             <Field label="Relationship to the Owner" value={relationship} />
-            <Field label="Address" value={formatRequesterAddress(answers)} />
+            {isEmailInquiry || (!formatOwnerAddress(answers) && formatRequesterAddress(answers)) ? <Field label="Address" value={formatRequesterAddress(answers)} /> : null}
             {!isEmailInquiry ? <Field label="Purpose" value={text(answers, "purpose_of_request") === "Other" ? text(answers, "purpose_of_request_other") : text(answers, "purpose_of_request")} /> : null}
             <Field label="Contact No." value={contact ? `+63 ${contact}` : ""} />
             <Field label="Date" value={todayFormatter.format(generatedAt)} />

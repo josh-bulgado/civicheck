@@ -379,6 +379,10 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
         >
           {fields.map((definitionField) => (
             <Fragment key={definitionField.key}>
+              {definitionField.key === "registered_late" && values.record_type === "birth" &&
+              definition.caseSelector?.outcomes.some((outcome) => outcome.serviceCode.startsWith("CTC-")) ? (
+                <div role="separator" className="col-span-full border-t border-border-light" />
+              ) : null}
               {definitionField.key === "father_name" && (
                 (values.marital === "non-marital" && section.fields.some((field) => field.key === "requester_relationship_other")) ||
                 (values.record_type === "birth" && definition.sections.some((item) => item.fields.some((field) => field.key === "entry_to_supplement")))
@@ -399,7 +403,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
               {definitionField.key === fields.find((field) => ["father_first_name", "father_middle_name", "father_last_name"].includes(field.key))?.key ? (
                 <h3 className={cn("col-span-full border-t border-border-light pt-5", FORM_GROUP_CLASS)}>Father's Name</h3>
               ) : null}
-              {section.key === "details_requester" && definitionField.key === "requester_province" ? (
+              {definitionField.key === "owner_province" || (section.key === "details_requester" && definitionField.key === "requester_province") ? (
                 <h3 className={cn("col-span-full border-t border-border-light pt-5", FORM_GROUP_CLASS)}>Address</h3>
               ) : null}
             <Controller
@@ -443,15 +447,16 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
               }}
               render={({ field, fieldState }) => {
                 const addressLevel = definitionField.philippineAddressLevel;
+                const addressPrefix = definitionField.key.startsWith("owner_") ? "owner" : "requester";
                 const locationLevel = definitionField.countrySelect ? "country" : addressLevel;
 
                 // Start a fresh dropdown when its province or city changes.
                 let locationKey = definitionField.key;
                 if (addressLevel === "city" || addressLevel === "barangay") {
-                  locationKey += ":" + values.requester_province;
+                  locationKey += ":" + values[`${addressPrefix}_province`];
                 }
                 if (addressLevel === "barangay") {
-                  locationKey += ":" + values.requester_city;
+                  locationKey += ":" + values[`${addressPrefix}_city`];
                 }
 
                 const placeholder = definitionField.key === "other_entry"
@@ -606,13 +611,13 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                       <AddressLocationField
                         key={locationKey}
                         level={locationLevel}
-                        area={values.requester_province ?? ""}
-                        city={values.requester_city ?? ""}
+                        area={values[`${addressPrefix}_province`] ?? ""}
+                        city={values[`${addressPrefix}_city`] ?? ""}
                         value={field.value ?? ""}
                         onChange={(value) => {
                           field.onChange(value);
                           if (value !== field.value && addressLevel) {
-                            for (const key of addressDescendants(addressLevel)) {
+                            for (const key of addressDescendants(addressLevel, addressPrefix)) {
                               onFieldChange?.(key, "");
                             }
                           }

@@ -9,6 +9,7 @@ import ra9255Form from "../forms/fixtures/ra9255-charter.json";
 import supplementalForm from "./fixtures/supplemental-walk-in-form.json";
 import otherCertificateForm from "./fixtures/other-certificate-walk-in-form.json";
 import endorsementForm from "./fixtures/electronic-endorsement-walk-in-form.json";
+import ctcForm from "./fixtures/ctc-walk-in-form.json";
 import { parseFormTemplateDefinition } from "~/features/forms/form-template.utils";
 import { emptySubject } from "~/lib/subject-fields";
 
@@ -38,7 +39,7 @@ vi.mock("~/server/auth", () => ({
             data: {
               service_code: state.serviceCode,
               fee: state.serviceCode === "ELEC_ENDORSEMENT" ? 100 : state.serviceCode === "RA9255_SURNAME" ? 355 : 500,
-              fee_per_copy: false,
+              fee_per_copy: state.serviceCode.startsWith("CTC-"),
               department_id: state.serviceDepartment,
             },
           }),
@@ -59,6 +60,9 @@ vi.mock("~/features/requests/tracking-number", () => ({
 vi.mock("~/features/services/services.catalogue", () => ({
   loadServiceCatalogue: async () => ({
     formTemplatesByService: new Map([
+      ...["CTC-LOCAL", "CTC-ABROAD"].map(code => [code, {
+        templateId: "ctc", versionId: "published", definition: parseFormTemplateDefinition(ctcForm),
+      }] as const),
       ["ELEC_ENDORSEMENT", { templateId: "elec_endorsement", versionId: "published", definition: parseFormTemplateDefinition(endorsementForm) }],
       ["OTHER_CERT", { templateId: "other_cert", versionId: "published", definition: parseFormTemplateDefinition(otherCertificateForm) }],
       ["MARRIAGE_LICENSE", { templateId: "marriage_license", versionId: "published", definition: parseFormTemplateDefinition(marriageLicenseForm) }],
@@ -86,6 +90,8 @@ vi.mock("~/features/services/services.catalogue", () => ({
       ],
     ]),
     servicesByCode: new Map([
+      ["CTC-LOCAL", { party_roles: ["Subject"] }],
+      ["CTC-ABROAD", { party_roles: ["Subject"] }],
       ["ELEC_ENDORSEMENT", { party_roles: ["Subject"] }],
       ["OTHER_CERT", { party_roles: ["Subject"] }],
       ["MARRIAGE_LICENSE", { party_roles: ["Bride", "Groom"] }],
@@ -354,14 +360,37 @@ it("uses the selected service without asking for its case answers again", async 
   }));
 });
 
-it("saves the optional father full name on CTC walk-ins and rejects invalid names", async () => {
-  state.serviceCode = "CTC-LOCAL";
-  expect((await encodeWalkInFn({data: {...data, serviceCode: "CTC-LOCAL", fatherName: "Juan S. Cruz Jr."}})).error).toBe(false);
-  expect(state.create).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({form_data: expect.objectContaining({father_name: "Juan S. Cruz Jr."})}));
-  expect(state.create.mock.calls[0][1].status).toBeUndefined();
-  expect(state.create.mock.calls[0][1].walk_in_accepted_by).toBeUndefined();
+it.each(["CTC-LOCAL", "CTC-ABROAD"].flatMap(serviceCode =>
+  ["birth", "death", "marriage"].map(record_type => ({ serviceCode, record_type })),
+))("saves complete $serviceCode $record_type walk-ins as submitted", async ({ serviceCode, record_type }) => {
+  state.serviceCode = serviceCode;
+  const subjects = [{ ...emptySubject("Subject"), firstName: "Ana", middleName: "Santos", lastName: "Cruz",
+    sex: record_type === "marriage" ? "" : "female" }];
+  const answers = { subjects, record_type, event_date: "2000-01-01", event_place: "Legazpi City",
+    death_date: "2020-01-01", death_place: "Legazpi City", marriage_date: "2010-01-01", marriage_place: "Legazpi City",
+    mother_first_name: "Maria", mother_middle_name: "N/A", mother_last_name: "Santos", father_name: "Juan S. Cruz Jr.",
+    wife_first_name: "Maria", wife_middle_name: "N/A", wife_last_name: "Reyes", registered_late: "no",
+    requester_first_name: "Pedro", requester_middle_name: "N/A", requester_last_name: "Reyes",
+    requester_relationship: "representative", requester_province: "Albay", requester_city: "City of Legazpi",
+    requester_barangay: "Rawis", purpose_of_request: "Employment", contact_number: "9171234567" };
+  const input = { serviceCode, subjects, answers, copies: 3, templateVersionId: "published" };
+  expect(await encodeWalkInFn({ data: input })).toMatchObject({ error: false, status: "submitted" });
+  const saved = state.create.mock.calls.at(-1)?.[1];
+  expect(saved).toMatchObject({ applicant_id: null, copies: 3, fees_due: 1500, form_template_version_id: "published",
+    form_data: { record_type, requester_first_name: "Pedro", requester_province: "Albay", intake_channel: "walk_in",
+      origin: serviceCode === "CTC-LOCAL" ? "local" : "abroad" } });
+  expect(saved.status).toBeUndefined();
+  expect(saved.walk_in_accepted_by).toBeUndefined();
+  if (record_type === "birth") expect(saved.form_data.father_name).toBe("Juan S. Cruz Jr.");
+  else expect(saved.form_data).not.toHaveProperty("father_name");
   state.create.mockClear();
-  expect((await encodeWalkInFn({data: {...data, serviceCode: "CTC-LOCAL", fatherName: "123"}})).error).toBe(true);
+  for (const patch of [
+    { templateVersionId: "old" }, { answers: undefined },
+    { answers: { ...answers, requester_city: "Invalid city" } },
+    { answers: { ...answers, requester_first_name: "" } },
+    ...(record_type === "birth" ? [{ answers: { ...answers, father_name: "123" } }] : []),
+    ...(record_type === "death" ? [{ answers: { ...answers, requester_relationship: "owner" } }] : []),
+  ]) expect((await encodeWalkInFn({ data: { ...input, ...patch } })).error).toBe(true);
   expect(state.create).not.toHaveBeenCalled();
 });
 

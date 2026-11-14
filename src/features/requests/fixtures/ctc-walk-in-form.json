@@ -1,0 +1,449 @@
+{
+  "sections": [
+    {
+      "key": "case",
+      "step": "case",
+      "title": "Case details",
+      "fields": [
+        {
+          "key": "record_type",
+          "type": "select",
+          "label": "Type of record requested",
+          "options": [
+            {
+              "label": "Birth Certificate",
+              "value": "birth"
+            },
+            {
+              "label": "Marriage Certificate",
+              "value": "marriage"
+            },
+            {
+              "label": "Death Certificate",
+              "value": "death"
+            }
+          ],
+          "required": true
+        },
+        {
+          "key": "additional_notes",
+          "type": "textarea",
+          "label": "Anything that helps staff find the record",
+          "blockKey": "additional_notes",
+          "required": false,
+          "placeholder": "e.g. approximate year, other spelling of the name"
+        }
+      ],
+      "singleColumn": true
+    },
+    {
+      "key": "details_requester",
+      "step": "details",
+      "title": "Requester's Information",
+      "fields": [
+        {
+          "key": "requester_first_name",
+          "type": "text",
+          "label": "Requester's first name",
+          "inline": true,
+          "required": true
+        },
+        {
+          "key": "requester_middle_name",
+          "type": "text",
+          "label": "Requester's middle name",
+          "inline": true,
+          "required": true,
+          "noneLabel": "I don't have a middle name"
+        },
+        {
+          "key": "requester_last_name",
+          "type": "text",
+          "label": "Requester's last name",
+          "inline": true,
+          "required": true
+        },
+        {
+          "key": "requester_relationship",
+          "type": "select",
+          "label": "Relationship to the document owner",
+          "options": [
+            {
+              "label": "I am the document owner",
+              "value": "owner"
+            },
+            {
+              "label": "Parent of the owner",
+              "value": "parent"
+            },
+            {
+              "label": "Spouse of the owner",
+              "value": "spouse"
+            },
+            {
+              "label": "Son/Daughter of the owner",
+              "value": "child"
+            },
+            {
+              "label": "Institution-in-charge",
+              "value": "institution"
+            },
+            {
+              "label": "Authorized representative (other)",
+              "value": "representative"
+            }
+          ],
+          "helpText": "If you are not the owner, a parent, the spouse, a son/daughter or the institution-in-charge, you must upload an Authorization Letter with an ID bearing the owner's signature.",
+          "required": true
+        },
+        {
+          "key": "requester_province",
+          "type": "text",
+          "label": "Province / Area",
+          "required": true,
+          "philippineAddressLevel": "province"
+        },
+        {
+          "key": "requester_city",
+          "type": "text",
+          "label": "City / Municipality",
+          "required": true,
+          "philippineAddressLevel": "city"
+        },
+        {
+          "key": "requester_barangay",
+          "type": "text",
+          "label": "Barangay",
+          "required": true,
+          "philippineAddressLevel": "barangay"
+        },
+        {
+          "key": "requester_street",
+          "type": "text",
+          "label": "House / Unit No., Street, Subdivision / Sitio / Purok",
+          "required": false
+        },
+        {
+          "key": "purpose_of_request",
+          "type": "select",
+          "label": "Purpose",
+          "options": [
+            {
+              "label": "Local Use (ID, Barangay, etc.)",
+              "value": "Local Use (ID, Barangay, etc.)"
+            },
+            {
+              "label": "Employment",
+              "value": "Employment"
+            },
+            {
+              "label": "Passport / Travel",
+              "value": "Passport / Travel"
+            },
+            {
+              "label": "School Records / Admission",
+              "value": "School Records / Admission"
+            },
+            {
+              "label": "Social Security (SSS/GSIS/etc.)",
+              "value": "Social Security (SSS/GSIS/etc.)"
+            },
+            {
+              "label": "Legal / Court proceedings",
+              "value": "Legal / Court proceedings"
+            },
+            {
+              "label": "Other",
+              "value": "Other"
+            }
+          ],
+          "required": true
+        },
+        {
+          "key": "purpose_of_request_other",
+          "type": "text",
+          "label": "Specify purpose",
+          "required": true,
+          "visibleWhen": {
+            "field": "purpose_of_request",
+            "value": "Other",
+            "operator": "equals"
+          }
+        }
+      ],
+      "singleColumn": true
+    },
+    {
+      "key": "details",
+      "step": "details",
+      "title": "Owner's Information",
+      "fields": [
+        {
+          "key": "subjects",
+          "type": "person_group",
+          "label": "Person named on the record",
+          "required": true,
+          "labelByAnswer": {
+            "field": "record_type",
+            "labels": {
+              "birth": "Full name",
+              "death": "Full name of the deceased",
+              "other": "Full name of the person named on the record",
+              "marriage": "Name of husband"
+            }
+          },
+          "requireMiddleName": true
+        },
+        {
+          "key": "wife_first_name",
+          "type": "text",
+          "label": "Wife's first name",
+          "inline": true,
+          "required": true,
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "marriage",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "wife_middle_name",
+          "type": "text",
+          "label": "Wife's maiden middle name",
+          "inline": true,
+          "required": true,
+          "noneLabel": "No middle name",
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "marriage",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "wife_last_name",
+          "type": "text",
+          "label": "Wife's maiden last name",
+          "inline": true,
+          "required": true,
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "marriage",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "event_date",
+          "type": "date",
+          "label": "Date of birth",
+          "required": true,
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "birth",
+            "operator": "equals"
+          },
+          "dateDirection": "past"
+        },
+        {
+          "key": "event_place",
+          "type": "text",
+          "label": "Place of birth",
+          "required": true,
+          "placeholder": "e.g. Legazpi City, Albay",
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "birth",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "death_date",
+          "type": "date",
+          "label": "Date of death",
+          "required": true,
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "death",
+            "operator": "equals"
+          },
+          "dateDirection": "past"
+        },
+        {
+          "key": "death_place",
+          "type": "text",
+          "label": "Place of death",
+          "required": true,
+          "placeholder": "e.g. Hospital name or house/street, barangay, city/municipality, province",
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "death",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "marriage_date",
+          "type": "date",
+          "label": "Date of marriage",
+          "required": true,
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "marriage",
+            "operator": "equals"
+          },
+          "dateDirection": "past"
+        },
+        {
+          "key": "marriage_place",
+          "type": "text",
+          "label": "Place of marriage",
+          "required": true,
+          "placeholder": "e.g. St. Gregory the Great Cathedral, Legazpi City, Albay",
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "marriage",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "mother_first_name",
+          "type": "text",
+          "label": "Mother's first name",
+          "inline": true,
+          "required": true,
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "birth",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "mother_middle_name",
+          "type": "text",
+          "label": "Mother's middle name",
+          "inline": true,
+          "required": true,
+          "noneLabel": "No middle name",
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "birth",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "mother_last_name",
+          "type": "text",
+          "label": "Mother's maiden last name",
+          "inline": true,
+          "required": true,
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "birth",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "registered_late",
+          "type": "select",
+          "label": "Registered late?",
+          "options": [
+            {
+              "label": "No",
+              "value": "no"
+            },
+            {
+              "label": "Yes",
+              "value": "yes"
+            }
+          ],
+          "required": true,
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "other",
+            "operator": "not_equals"
+          }
+        },
+        {
+          "key": "registered_late_when",
+          "type": "date",
+          "label": "If yes, when was it registered?",
+          "required": true,
+          "visibleWhen": {
+            "field": "registered_late",
+            "value": "yes",
+            "operator": "equals"
+          },
+          "allowEstimate": true,
+          "dateDirection": "past"
+        },
+        {
+          "key": "father_name",
+          "type": "text",
+          "label": "Father's full name",
+          "required": false,
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "birth",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "contact_number",
+          "type": "phone",
+          "label": "Contact number",
+          "blockKey": "contact_number",
+          "required": false,
+          "placeholder": "9171234567"
+        }
+      ],
+      "singleColumn": true
+    }
+  ],
+  "caseSelector": {
+    "title": "Where is this request coming from?",
+    "outcomes": [
+      {
+        "when": {
+          "match": "all",
+          "conditions": [
+            {
+              "field": "origin",
+              "value": "local",
+              "operator": "equals"
+            }
+          ]
+        },
+        "serviceCode": "CTC-LOCAL"
+      },
+      {
+        "when": {
+          "match": "all",
+          "conditions": [
+            {
+              "field": "origin",
+              "value": "abroad",
+              "operator": "equals"
+            }
+          ]
+        },
+        "serviceCode": "CTC-ABROAD"
+      }
+    ],
+    "questions": [
+      {
+        "key": "origin",
+        "label": "Where is this request coming from?",
+        "options": [
+          {
+            "label": "Within the Philippines (Local)",
+            "value": "local"
+          },
+          {
+            "label": "From abroad",
+            "value": "abroad"
+          }
+        ]
+      }
+    ],
+    "description": "The fee depends on whether the request originates in the Philippines or abroad."
+  },
+  "schemaVersion": 1
+}

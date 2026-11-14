@@ -1,4 +1,5 @@
 import { birthRequesterRelationship } from "../birth-requester-relationship";
+import { ctcDetailsLayout } from "../ctc-layout";
 import { REQUESTER_NAME_KEYS, requesterNameAnswers, requiresAccountRequester } from "../requester-name";
 import { ACCOUNT_PARTY_ROLE, accountPartyName, isMarriageAccountRole, requiresMarriageAccountParty } from "../marriage-account-party";
 import { formatNameHeading } from "~/features/forms/field-label";
@@ -402,10 +403,12 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   const selectedService =
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
   const petitionAnswers = { ...draft.answers, ...draft.caseSelectorAnswers };
-  const definition = courtRecordLayout(petitionDetailsLayout(
+  const isCtc = selectedService.service_code === "CTC_ISSUANCE" || selectedService.service_code.startsWith("CTC-");
+  const baseDefinition = courtRecordLayout(petitionDetailsLayout(
     birthRequesterRelationship(onTimeBirthLayout(delayedBirthLayout(selectedService.form_template!.definition, selectedService.service_code), selectedService.service_code), selectedService.service_code),
     selectedService.service_code, petitionAnswers,
   ), petitionAnswers);
+  const definition = ctcDetailsLayout(baseDefinition, isCtc, petitionAnswers.record_type);
   const onTimeBirth = isOnTimeBirth(selectedService.service_code);
   const isMarriageLicense = selectedService.service_code === "MARRIAGE_LICENSE";
   const isDelayedBirth = selectedService.service_code === "BIRTH_DELAYED" || selectedService.service_code.startsWith("DCOLB-");
@@ -431,7 +434,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     (primaryPetition === "change_first_name" || primaryPetition === "correct_sex" ||
       primaryPetition === "correct_birth_day_month" || (primaryPetition === "correct_other" && recordType === "birth"));
   const isMarriageRecord = recordType === "marriage" && !isCourtDecree(selectedService.service_code);
-  const inlineRecordLayout = isOtherCertificate || ["DEATH_ONTIME", "DEATH_DELAYED"].includes(selectedService.service_code) ||
+  const inlineRecordLayout = (isCtc && recordType === "birth") || isOtherCertificate || ["DEATH_ONTIME", "DEATH_DELAYED"].includes(selectedService.service_code) ||
     (selectedService.service_code === "ELEC_ENDORSEMENT" && recordType === "birth") ||
     (isSupplemental && ["birth", "death"].includes(recordType ?? ""));
   const useSpouseLabels =
@@ -454,15 +457,13 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, hasPersonGroup, roles.join("|"), draft.subjects, update]);
 
-  // The owner's block can sit under its own heading after other sections (CTC
-  // asks about the requester first). Then the name inputs are drawn inside that
-  // section, and the page is headed for both people.
+  // Keep the name inputs inside their section when it has its own heading.
   const detailSections = definition.sections.filter((section) => section.step === "details");
   const personSection = detailSections.find((section) =>
     section.fields.some((field) => field.type === "person_group"),
   );
   const ownerBlockInSection =
-    Boolean(personSection) && detailSections.indexOf(personSection!) > 0;
+    Boolean(personSection) && (isCtc || detailSections.indexOf(personSection!) > 0);
 
   const detailAnswers = Object.fromEntries(
     detailsFields
@@ -651,7 +652,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   const requesterLast = textOf(watchedValues.requester_last_name);
   const requesterSuffix = textOf(lockRequesterName && user ? user.suffix : watchedValues.requester_suffix);
   useEffect(() => {
-    if (!hasPersonGroup || roles.length !== 1) return;
+    if (isCtc || !hasPersonGroup || roles.length !== 1) return;
     if ((isMarriageRecord && !emailRecordOwner) || recordType === "death" ||
         (relationship !== "owner" && !emailRecordOwner)) {
       mirroredOwner.current = null;
@@ -691,7 +692,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     mirroredOwner.current = next;
     // `form`, `roles` and `hasPersonGroup` are stable for a given service.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMarriageRecord, recordType, relationship, emailRecordOwner, requesterFirst, requesterMiddle, requesterLast, requesterSuffix]);
+  }, [isCtc, isMarriageRecord, recordType, relationship, emailRecordOwner, requesterFirst, requesterMiddle, requesterLast, requesterSuffix]);
 
   // The role comes from the field array, not the watched values: `role` has no
   // input of its own, so `shouldUnregister` drops it from the watched rows.
@@ -932,8 +933,8 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       subjectFields.fields.map((subjectField, index) =>
         ownerLabel && (!isPetitionService(selectedService.service_code) || !isBirthPetition) ? (
           // A heading that names whose name this is ("Full name of the deceased").
-          <div key={subjectField.id} className={cn("flex flex-col gap-3", selectedService.service_code !== "ELEC_ENDORSEMENT" && !isOtherCertificate && !["DEATH_ONTIME", "DEATH_DELAYED"].includes(selectedService.service_code) && (!isSupplemental || ownerBlockInSection) && "border-t border-border-light pt-6")}>
-            {!(isSupplemental && isMarriageRecord) ? <span className={FORM_GROUP_CLASS}>{selectedService.service_code === "ELEC_ENDORSEMENT" ? (isMarriageRecord ? "Husband's Information" : "Owner's Information") : formatNameHeading(ownerLabel)}</span> : null}
+          <div key={subjectField.id} className={cn("flex flex-col gap-3", !isCtc && selectedService.service_code !== "ELEC_ENDORSEMENT" && !isOtherCertificate && !["DEATH_ONTIME", "DEATH_DELAYED"].includes(selectedService.service_code) && (!isSupplemental || ownerBlockInSection) && "border-t border-border-light pt-6")}>
+            {!isCtc && !(isSupplemental && isMarriageRecord) ? <span className={FORM_GROUP_CLASS}>{selectedService.service_code === "ELEC_ENDORSEMENT" ? (isMarriageRecord ? "Husband's Information" : "Owner's Information") : formatNameHeading(ownerLabel)}</span> : null}
             {isSupplemental && isMarriageRecord ? <h3 className={FORM_GROUP_CLASS}>Husband's Name</h3> : null}
             <SubjectFieldGrid
               control={form.control}

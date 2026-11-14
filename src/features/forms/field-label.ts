@@ -25,6 +25,7 @@ export function formatNameHeading(label: string): string {
 }
 
 export function formatFieldLabel(label: string): string {
+  if (label.trim().toLowerCase() === "type of record requested") return "Type of record requested";
   label = label.replace(/^requester['’]s (first|middle|last) name$/i, "$1 Name");
 
   const words = label.replace(/\s*\((?:optional|required)\)\s*$/i, "").trim().split(/\s+/)

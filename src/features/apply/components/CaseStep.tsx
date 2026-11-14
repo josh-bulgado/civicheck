@@ -98,6 +98,7 @@ export function CaseStep({
     services.find((service) => service.service_code === draft.selectedServiceCode) ??
     services[0];
   const onTimeBirth = isOnTimeBirth(selectedService.service_code);
+  const isCtc = serviceCode === "CTC_ISSUANCE" || selectedService.service_code.startsWith("CTC-");
   const definition = birthRequesterRelationship(onTimeBirthLayout(delayedBirthLayout(selectedService.form_template!.definition, selectedService.service_code), selectedService.service_code), selectedService.service_code);
   const isDelayedBirth = serviceCode === "birth_delayed" ||
     selectedService.service_code === "BIRTH_DELAYED" ||
@@ -351,8 +352,9 @@ export function CaseStep({
             answers={draft.caseSelectorAnswers}
             contextAnswers={selectorContextAnswers}
             showQuestionNumbers={!isDelayedBirth}
-            hideBottomDivider={isDelayedBirth || onTimeBirth}
-            hideTitle={onTimeBirth || isDelayedBirth}
+            hideBottomDivider={isDelayedBirth || onTimeBirth || isCtc}
+            hideTitle={onTimeBirth || isDelayedBirth || isCtc}
+            hideTopDivider={isCtc}
             renderAfterQuestion={isDelayedBirth ? (key) => key === "program" ? (
               <div className="w-full min-w-0 [&_fieldset]:min-w-0 [&_[data-slot=radio-group]]:min-w-0">
               <DynamicFormFields
@@ -396,7 +398,7 @@ export function CaseStep({
         <DynamicFormFields
           definition={requestDetailsDefinition}
           step="case"
-          hideSectionTitles={isDelayedBirth || onTimeBirth || Boolean(caseSelectorDefinition?.questions.some((question) => question.key === "court_decree_type"))}
+          hideSectionTitles={isCtc || isDelayedBirth || onTimeBirth || Boolean(caseSelectorDefinition?.questions.some((question) => question.key === "court_decree_type"))}
           sectionHeadingClassName={isPetitionService(selectedService.service_code) ? "mb-3" : undefined}
           showRequiredMarks
           control={form.control}

@@ -13,6 +13,7 @@ import { walkInCaseForService } from "./walk-in-legitimation";
 import { prepareWalkInCourtDecree } from "./walk-in-court-decree";
 import { prepareWalkInSupplemental } from "./walk-in-supplemental";
 import { isWalkInCourtDecree, isWalkInDetailedIntake } from "./walk-in-registration";
+import { ctcWalkInCase, prepareWalkInCtc } from "./walk-in-ctc";
 
 export const encodeWalkInFn = createServerFn({ method: "POST" })
   .validator(
@@ -88,7 +89,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       if (service.service_code === "MARRIAGE_LICENSE" && data.coupleAppearanceConfirmed !== true) {
         return { error: true, message: "Confirm that both applicants personally appeared before encoding." };
       }
-      if (data.physicalDocumentsConfirmed !== true) {
+      if (!isCtc && data.physicalDocumentsConfirmed !== true) {
         return { error: true, message: "Confirm that the physical documents are complete and acceptable before encoding." };
       }
       const catalogue = await loadServiceCatalogue();
@@ -102,8 +103,9 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       if (activeError || active.active_version_id !== template.versionId || data.templateVersionId !== template.versionId) {
         return { error: true, message: "The registration form has changed. Reload the page and review the entered answers." };
       }
-      const selectedCase = walkInCaseForService(template.definition, service.service_code);
-      const prepare = ["SUPPLEMENTAL_REPORT", "OTHER_CERT"].includes(service.service_code)
+      const selectedCase = isCtc ? ctcWalkInCase(template.definition, service.service_code)
+        : walkInCaseForService(template.definition, service.service_code);
+      const prepare = isCtc ? prepareWalkInCtc : ["SUPPLEMENTAL_REPORT", "OTHER_CERT"].includes(service.service_code)
         || (service.service_code === "ELEC_ENDORSEMENT" && data.answers.record_type === "marriage") ? prepareWalkInSupplemental
         : isWalkInCourtDecree(service.service_code) ? prepareWalkInCourtDecree : prepareWalkInBirth;
       const prepared = (isWalkInPetition(service.service_code) ? prepareWalkInPetition : prepare)(selectedCase.definition, { ...data.answers, ...selectedCase.answers }, registryService.party_roles?.length ? registryService.party_roles : ["Subject"]);
@@ -122,7 +124,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       fees_due: totalFee(service.fee, copies, service.fee_per_copy),
       copies,
       ...(templateVersionId ? { form_template_version_id: templateVersionId } : {}),
-      ...(templateVersionId ? { status: "processing", walk_in_accepted_by: user.id } : {}),
+      ...(templateVersionId && !isCtc ? { status: "processing", walk_in_accepted_by: user.id } : {}),
       form_data: {
         ...(registrationFormData ?? {
           ...flattenSubjects(subjects),
@@ -143,7 +145,7 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
 
     if (created.error) return { error: true, message: created.message };
 
-    if (!templateVersionId) {
+    if (!templateVersionId || isCtc) {
       const { error: logError } = await supabase.from("application_logs").insert({
       request_id: created.requestId,
       performed_by_profile_id: user.id,
@@ -158,6 +160,6 @@ export const encodeWalkInFn = createServerFn({ method: "POST" })
       requestId: created.requestId,
       trackingNumber: created.trackingNumber,
       applicantName: `${subjects[0].firstName} ${subjects[0].lastName}`,
-      status: templateVersionId ? "processing" as const : "submitted" as const,
+      status: templateVersionId && !isCtc ? "processing" as const : "submitted" as const,
     };
   });

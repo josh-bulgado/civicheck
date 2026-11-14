@@ -1,4 +1,5 @@
 import { isWalkInBirth } from "./walk-in-birth";
+import { isCtcService } from "~/features/apply/ctc-layout";
 import { isWalkInPetition } from "./walk-in-petition";
 
 export function isWalkInMarriage(serviceCode: string) {
@@ -18,6 +19,7 @@ export function isWalkInCourtDecree(serviceCode: string) {
 }
 
 export function isWalkInDetailedIntake(serviceCode: string) {
+  if (isCtcService(serviceCode)) return true;
   if (isWalkInPetition(serviceCode)) return true;
   return isWalkInRegistration(serviceCode) || ["MARRIAGE_LICENSE", "LEGITIMATION", "SUPPLEMENTAL_REPORT", "RA9255_SURNAME", "OTHER_CERT", "ELEC_ENDORSEMENT"].includes(serviceCode) || isWalkInCourtDecree(serviceCode);
 }

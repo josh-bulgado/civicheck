@@ -24,6 +24,8 @@ import { getEncodableServicesFn, type EncodableService } from "~/features/reques
 import { CopiesStepper } from "~/features/services/components/CopiesStepper";
 import { ServiceRequirementsDialog } from "~/features/services/components/ServiceRequirementsDialog";
 import { WalkInRegistrationFields } from "./WalkInRegistrationFields";
+import { CtcWalkInFields } from "./CtcWalkInFields";
+import { isCtcService } from "~/features/apply/ctc-layout";
 import { WalkInFee } from "./WalkInFee";
 import { walkInServiceChoices } from "../walk-in-court-decree";
 import { FORM_TITLE_CLASS, WIZARD_LABEL_CLASS } from "~/features/forms/components/wizard-field";
@@ -212,7 +214,7 @@ export function WalkInIntakeDialog({
                     </FieldLabel>
                     {selectedService ? (
                       <WalkInFee key={serviceCode} fee={selectedService.fee} feeComponents={selectedService.feeComponents}
-                        feePerCopy={selectedService.feePerCopy} copies={isWalkInDetailedIntake(serviceCode) ? 1 : copies} />
+                        feePerCopy={selectedService.feePerCopy} copies={isWalkInDetailedIntake(serviceCode) && !isCtcService(serviceCode) ? 1 : copies} />
                     ) : null}
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row">
@@ -263,6 +265,10 @@ export function WalkInIntakeDialog({
 
                 {loadingServices ? <p role="status">Loading current forms…</p> : servicesError ? (
                   <p role="alert">Could not load the current forms. Close and reopen this dialog to try again.</p>
+                ) : selectedService && isCtcService(serviceCode) ? (
+                  <CtcWalkInFields key={`${serviceCode}:${selectedService.registrationForm?.versionId}`}
+                    service={selectedService} submitting={submitting} copies={copies} onCopiesChange={setCopies}
+                    onSubmit={encodeRequest} onAnswersChange={setRegistrationAnswers} onCancel={() => setDialogOpen(false)} />
                 ) : selectedService && isWalkInDetailedIntake(serviceCode) ? (
                   <WalkInRegistrationFields key={`${serviceCode}:${courtDecreeType}:${selectedService.registrationForm?.versionId}`} service={selectedService} submitting={submitting}
                     courtDecreeType={courtDecreeType}

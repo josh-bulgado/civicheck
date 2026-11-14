@@ -838,7 +838,7 @@ export function validateTemplateAnswers(
         }
       }
       if (field.philippineAddressLevel === "city") {
-        const province = answerString(effectiveAnswers, "requester_province");
+        const province = answerString(effectiveAnswers, field.key.startsWith("owner_") ? "owner_province" : "requester_province");
         const cities = addressCities(province);
         const cityExists = cities.some((city) => city.name === value);
         if (!cityExists) {

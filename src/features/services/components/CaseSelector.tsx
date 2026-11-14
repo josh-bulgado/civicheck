@@ -30,6 +30,7 @@ interface CaseSelectorProps {
   onAnswersChange?: (answers: Record<string, string>) => void;
   showQuestionNumbers?: boolean;
   hideBottomDivider?: boolean;
+  hideTopDivider?: boolean;
   hideTitle?: boolean;
   renderAfterQuestion?: (key: string) => ReactNode;
   /**
@@ -314,6 +315,7 @@ function ConfiguredCaseSelector({
   presetMarital,
   showQuestionNumbers = true,
   hideBottomDivider = false,
+  hideTopDivider = false,
   hideTitle = false,
   renderAfterQuestion,
 }: CaseSelectorProps & { definition: CaseSelectorDefinition }) {
@@ -397,7 +399,7 @@ function ConfiguredCaseSelector({
     <section
       aria-labelledby={courtQuestion || hideTitle ? undefined : "case-selector-title"}
       aria-label={courtQuestion ? "Court decree questions" : hideTitle ? "Registration questions" : undefined}
-      className={hideBottomDivider
+      className={hideTopDivider ? (hideBottomDivider ? "" : "border-b border-border-light pb-5 sm:pb-6") : hideBottomDivider
         ? "border-t border-border-light pt-5 sm:pt-6"
         : "border-y border-border-light py-5 sm:py-6"}
     >
