@@ -8,6 +8,14 @@ For Supplemental Report birth records, seed a blank person's name from the
 account once and keep it editable. Preserve entered names. Keep only the page
 header divider above the first name group; avoid a second divider on that group.
 
+Delayed-birth applicant and walk-in forms replace the optional informant name
+and relationship inputs with requester relationship or role. Relationship is
+required online and optional for birth walk-ins. Include I am the person being
+registered and Informant (person reporting the birth), and require a description for
+Other. This intake field does not establish that the requester is the informant
+on the official birth document. In both birth forms, show the birth date beside
+suffix and sex, then show place of birth at full width below the child's inputs.
+
 The staff dashboard's parent loading fallback uses `StaffDashboardFrameSkeleton`
 on `/staff-dashboard` and for known staff on `/dashboard`. Keep its sidebar width,
 header height, and content padding aligned with the dashboard layout. The child
@@ -389,7 +397,7 @@ Citizen request headers place a copy button beside the tracking number. Copy
 the complete number, confirm success with Sonner, and keep the number selectable
 with a helpful error if clipboard access fails.
 
-Logout uses an immediate, full-page “Signing out…” status with the shared
+Logout uses an immediate, full-page â€œSigning outâ€¦â€ status with the shared
 `Spinner` in [the logout route](../src/routes/logout.tsx). Keep that transition
 consistent across portal pages instead of showing a content skeleton.
 
@@ -729,7 +737,7 @@ Render "Which court decree are you registering?" as a regular field legend,
 not a section/group heading. Omit the "Court decree type" heading.
 Match that question to the 15px semibold field labels and omit the court-decree
 case step's "Request details" section heading.
-Adoption details uses "Adopted person’s details" as a 20px
+Adoption details uses "Adopted personâ€™s details" as a 20px
 section heading above the name fields, without a main page heading. Enter the name as recorded on the
 birth certificate and collect birth date/place and optional registry number.
 Keep a 4px gap between the adoption heading and its instruction.
@@ -745,9 +753,9 @@ contact optional and omit Sex for adoption/foreign-decree intake. These are
 supporting archive-search details, not additional documentary requirements or
 a Legazpi residency rule. Review and submission preserve both spouses when a
 foreign decree affects a marriage record.
-Adoption and foreign decree share the configured ₱500 fee group; annulment/nullity
-uses ₱700. Do not include a legal-separation option or its former guidance box.
-Checked walk-ins under the ₱500 group must choose adoption or foreign decree.
+Adoption and foreign decree share the configured â‚±500 fee group; annulment/nullity
+uses â‚±700. Do not include a legal-separation option or its former guidance box.
+Checked walk-ins under the â‚±500 group must choose adoption or foreign decree.
 When the issuing court is uncertain, the Processing confirmation requires staff
 to verify the court and the additional certificate if applicable. The check is
 recorded in request history.

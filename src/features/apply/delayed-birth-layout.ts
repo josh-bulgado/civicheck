@@ -4,7 +4,8 @@ export function delayedBirthLayout(definition: FormTemplateDefinition, serviceCo
   if (serviceCode !== "BIRTH_DELAYED" && !serviceCode.startsWith("DCOLB-")) return definition;
   const birthFields = definition.sections.filter((section) => section.step === "case")
     .flatMap((section) => section.fields)
-    .filter((field) => ["event_date", "event_place"].includes(field.key));
+    .filter((field) => ["event_date", "event_place"].includes(field.key))
+    .map((field) => field.key === "event_date" ? { ...field, helpText: undefined } : field);
   return {
     ...definition,
     sections: definition.sections.map((section) => ({

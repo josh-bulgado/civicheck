@@ -83,6 +83,8 @@ export function WalkInRegistrationFields({
   const marriageLicense = service.serviceCode === "MARRIAGE_LICENSE";
   const death = isWalkInDeath(service.serviceCode);
   const onTimeBirth = isOnTimeBirth(service.serviceCode);
+  const delayedBirth = service.serviceCode === "BIRTH_DELAYED" || service.serviceCode.startsWith("DCOLB-");
+  const birthLayout = onTimeBirth || delayedBirth;
   const legitimation = service.serviceCode === "LEGITIMATION";
   const petition = isWalkInPetition(service.serviceCode);
   const surnameChange = service.serviceCode === "RA9255_SURNAME";
@@ -251,7 +253,7 @@ export function WalkInRegistrationFields({
         />
       ) : null}
       <DynamicFormFields
-        definition={surnameChange || onTimeBirth ? {
+        definition={surnameChange || birthLayout ? {
           ...displayDefinition,
           sections: displayDefinition.sections.map(section => ({
             ...section,
@@ -294,7 +296,7 @@ export function WalkInRegistrationFields({
                     husband={(otherCertificate || endorsement || petition) && values.record_type === "marriage"}
                     requireMiddleName
                   >
-                    {onTimeBirth && role === "Child" ? (
+                    {birthLayout && role === "Child" ? (
                       <Controller
                         control={form.control}
                         name="event_date"
@@ -314,18 +316,18 @@ export function WalkInRegistrationFields({
                       />
                     ) : null}
                   </SubjectFieldGrid>
-                  {(surnameChange || onTimeBirth) && role === "Child" ? (
-                    <div className={onTimeBirth ? "pt-3" : "pt-2"}>
+                  {(surnameChange || birthLayout) && role === "Child" ? (
+                    <div className={birthLayout ? "pt-3" : "pt-2"}>
                       <DynamicFormFields
                         definition={{
                           ...displayDefinition,
                           sections: displayDefinition.sections.map(section => ({
                             ...section,
-                            fields: section.fields.filter(field => (onTimeBirth ? ["event_place"] : ["event_date", "event_place"]).includes(field.key)),
+                            fields: section.fields.filter(field => (birthLayout ? ["event_place"] : ["event_date", "event_place"]).includes(field.key)),
                           })),
                         }}
                         staffView
-                        singleColumn={onTimeBirth}
+                        singleColumn={birthLayout}
                         step="details"
                         hideSectionTitles
                         showRequiredMarks

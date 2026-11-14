@@ -26,6 +26,7 @@ const answers = {
   has_foreign_parent: "no",
   out_of_town: "no",
   additional_identity: "no",
+  requester_relationship: "mother",
   subjects,
 };
 
@@ -45,7 +46,7 @@ it.each(["OTCOLB-MARITAL", "OTCOLB-NONMARITAL", "BIRTH_ONTIME"])("validates and 
   expect(detailKeys.slice(-5)).toEqual(["father_first_name", "father_middle_name", "father_last_name", "requester_relationship", "requester_relationship_other"]);
   expect(definition.sections.find((section) => section.step === "case")!.fields).toHaveLength(0);
   const data = { event_date: today, event_place: "Legazpi City", subjects };
-  expect(prepareWalkInBirth(definition, data, roles).error).toBe(true);
+  expect(prepareWalkInBirth(definition, data, roles).error).toBe(false);
   expect(prepareWalkInBirth(definition, { ...data, requester_relationship: "other" }, roles).error).toBe(true);
   const result = prepareWalkInBirth(definition, { ...data, requester_relationship: "other", requester_relationship_other: "Family friend" }, roles);
   expect(result.error).toBe(false);
@@ -54,6 +55,22 @@ it.each(["OTCOLB-MARITAL", "OTCOLB-NONMARITAL", "BIRTH_ONTIME"])("validates and 
 });
 
 describe("birth walk-in alignment", () => {
+  it.each(Object.keys(config.fees))("matches applicant birth fields and requester role for %s", (code) => {
+    const { definition, answers: selected } = birthCaseForService(delayed, code);
+    const caseFields = definition.sections.filter((section) => section.step === "case").flatMap((section) => section.fields);
+    expect(caseFields.some((field) => ["event_date", "event_place", "informant_name", "informant_relationship"].includes(field.key))).toBe(false);
+    const result = prepareWalkInBirth(definition, {
+      ...answers, ...selected, event_date: code.includes("80UP") ? "1939-11-01" : "2000-01-01",
+      marital: "non-marital", requester_relationship: "informant",
+    }, roles);
+    expect(result.error).toBe(false);
+    if (result.error) throw new Error(result.message);
+    expect(result.formData.requester_relationship).toBe("informant");
+    const data = { ...answers, ...selected, event_date: code.includes("80UP") ? "1939-11-01" : "2000-01-01",
+      marital: "non-marital", requester_relationship: "" };
+    expect(prepareWalkInBirth(definition, data, roles).error).toBe(false);
+    expect(prepareWalkInBirth(definition, { ...data, requester_relationship: "other" }, roles).error).toBe(true);
+  });
   it("limits the full form to on-time and delayed birth services", () => {
     for (const code of [
       "OTCOLB-MARITAL",

@@ -810,7 +810,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
               lockedNoMiddleName={accountHasNoMiddleName}
               hideSex={courtNameOnly}
             >
-              {onTimeBirth && subjectField.role === "Child" ? (
+              {(onTimeBirth || isDelayedBirth) && subjectField.role === "Child" ? (
                 <DynamicFormFields
                   singleColumn
                   definition={{
@@ -834,15 +834,15 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
               ) : null}
             </SubjectFieldGrid>
             {showBirthDetailsWithChild && subjectField.role === "Child" ? (
-              <div className={onTimeBirth ? "pt-3" : isSurnameChange ? "pt-1" : undefined}>
+              <div className={onTimeBirth || isDelayedBirth ? "pt-3" : isSurnameChange ? "pt-1" : undefined}>
               <DynamicFormFields
-                singleColumn={onTimeBirth}
+                singleColumn={onTimeBirth || isDelayedBirth}
                 definition={{
                   ...definition,
                   sections: definition.sections.map((section) => ({
                     ...section,
                     fields: section.fields.filter((field) => (
-                      onTimeBirth ? ["event_place"] : ["event_date", "event_place"]
+                      onTimeBirth || isDelayedBirth ? ["event_place"] : ["event_date", "event_place"]
                     ).includes(field.key)),
                   })),
                 }}

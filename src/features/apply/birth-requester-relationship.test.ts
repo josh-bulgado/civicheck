@@ -24,5 +24,27 @@ it.each(["BIRTH_ONTIME", "OTCOLB-MARITAL", "OTCOLB-NONMARITAL"])("places require
 });
 
 it("does not change other services", () => {
-  expect(birthRequesterRelationship(original, "BIRTH_DELAYED")).toBe(original);
+  expect(birthRequesterRelationship(original, "MARRIAGE_LICENSE")).toBe(original);
+});
+
+it.each(["BIRTH_DELAYED", "DCOLB-0079-BRAP", "DCOLB-80UP-BRAP", "DCOLB-0079-NORMAL-MARITAL", "DCOLB-0079-NORMAL-NONMARITAL", "DCOLB-80UP-NORMAL-MARITAL", "DCOLB-80UP-NORMAL-NONMARITAL"])("replaces informant inputs with requester role for %s", (code) => {
+  const source = { ...original, sections: [{ key: "case", title: "Case", step: "case" as const, fields: [
+    { key: "informant_name", type: "text" as const, label: "Informant", required: false },
+    { key: "informant_relationship", type: "text" as const, label: "Relationship", required: false },
+  ] }, ...original.sections] };
+  const definition = birthRequesterRelationship(source, code);
+  expect(fieldsForStep(definition, "case")).toHaveLength(0);
+  const relationship = fieldsForStep(definition, "details").find((field) => field.key === "requester_relationship")!;
+  expect(relationship.options?.map((option) => option.value)).toEqual(expect.arrayContaining(["self", "informant", "other"]));
+  const onlyRelationship = { ...definition, sections: definition.sections.map((section) => ({ ...section,
+    fields: section.fields.filter((field) => field.key.startsWith("requester_")),
+  })) };
+  for (const requester_relationship of ["self", "informant"]) {
+    expect(validateTemplateAnswers(onlyRelationship, { requester_relationship }).success).toBe(true);
+    expect(flattenTemplateAnswers(onlyRelationship, { requester_relationship, informant_name: "Old draft" }))
+      .toEqual({ requester_relationship });
+  }
+  expect(validateTemplateAnswers(onlyRelationship, {}).success).toBe(false);
+  expect(validateTemplateAnswers(onlyRelationship, { requester_relationship: "other" }).success).toBe(false);
+  expect(birthRequesterRelationship(definition, code)).toEqual(definition);
 });

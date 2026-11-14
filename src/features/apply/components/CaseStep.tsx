@@ -40,6 +40,7 @@ import { applicantCopy } from "~/features/forms/applicant-copy";
 import { surnameChangeCaseDefinition } from "~/features/services/surname-change";
 import { isOnTimeBirth, onTimeBirthLayout } from "../on-time-birth-layout";
 import { delayedBirthLayout } from "../delayed-birth-layout";
+import { birthRequesterRelationship } from "../birth-requester-relationship";
 import { isPetitionService, petitionCaseLayout, petitionSelectionError } from "~/features/services/petition-selection";
 
 function caseAnswersFrom(values: DynamicFieldValues) {
@@ -96,7 +97,7 @@ export function CaseStep({
     services.find((service) => service.service_code === draft.selectedServiceCode) ??
     services[0];
   const onTimeBirth = isOnTimeBirth(selectedService.service_code);
-  const definition = onTimeBirthLayout(delayedBirthLayout(selectedService.form_template!.definition, selectedService.service_code), selectedService.service_code);
+  const definition = birthRequesterRelationship(onTimeBirthLayout(delayedBirthLayout(selectedService.form_template!.definition, selectedService.service_code), selectedService.service_code), selectedService.service_code);
   const isDelayedBirth = serviceCode === "birth_delayed" ||
     selectedService.service_code === "BIRTH_DELAYED" ||
     selectedService.service_code.startsWith("DCOLB-");
@@ -387,7 +388,7 @@ export function CaseStep({
         <DynamicFormFields
           definition={requestDetailsDefinition}
           step="case"
-          hideSectionTitles={onTimeBirth || Boolean(caseSelectorDefinition?.questions.some((question) => question.key === "court_decree_type"))}
+          hideSectionTitles={isDelayedBirth || onTimeBirth || Boolean(caseSelectorDefinition?.questions.some((question) => question.key === "court_decree_type"))}
           sectionHeadingClassName={isPetitionService(selectedService.service_code) ? "mb-3" : undefined}
           showRequiredMarks
           control={form.control}
