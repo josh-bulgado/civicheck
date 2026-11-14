@@ -444,7 +444,7 @@ export function ReviewStep({
 
         {needsSignature && <SignaturePad onChange={setSignature} disabled={submitting} />}
 
-        {needsSignature && answerBag.record_type === "birth" && (
+        {["CTC_ISSUANCE", "CTC-LOCAL", "CTC-ABROAD", "EMAIL_INQUIRY"].includes(selectedService.service_code) && (
           <VerificationFormPreview
             data={{
               trackingNumber: "PREVIEW",
