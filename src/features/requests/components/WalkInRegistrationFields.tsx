@@ -328,6 +328,7 @@ export function WalkInRegistrationFields({
                       : delayedBirth && role === "Child" ? "Registrant’s Information"
                       : onTimeBirth && role === "Child" ? "Child's Information"
                       : surnameChange && role === "Child" ? "Child's name on the birth certificate"
+                      : service.serviceCode === "DEATH_ONTIME" ? "Registrant’s Information"
                       : death ? "Name of the deceased"
                       : marriageLicense ? `${role}'s Information`
                       : marriage ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[role] ?? role) : role)}

@@ -782,7 +782,9 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   }
 
   const labelRule = personGroupField?.labelByAnswer;
-  const ownerLabel = isPetitionService(selectedService.service_code) && !isBirthPetition
+  const ownerLabel = selectedService.service_code === "DEATH_ONTIME"
+    ? "Registrant’s Information"
+    : isPetitionService(selectedService.service_code) && !isBirthPetition
     ? (recordType === "marriage" ? "Husband's Name" : recordType === "death" ? "Deceased Person's Name" : undefined)
     : labelRule
     ? (labelRule.labels[String(visibilityValues[labelRule.field] ?? "")] ?? undefined)
@@ -922,7 +924,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
       subjectFields.fields.map((subjectField, index) =>
         ownerLabel && (!isPetitionService(selectedService.service_code) || !isBirthPetition) ? (
           // A heading that names whose name this is ("Full name of the deceased").
-          <div key={subjectField.id} className={cn("flex flex-col gap-3", (!isSupplemental || ownerBlockInSection) && "border-t border-border-light pt-6")}>
+          <div key={subjectField.id} className={cn("flex flex-col gap-3", selectedService.service_code !== "DEATH_ONTIME" && (!isSupplemental || ownerBlockInSection) && "border-t border-border-light pt-6")}>
             {!(isSupplemental && isMarriageRecord) ? <span className={FORM_GROUP_CLASS}>{formatNameHeading(ownerLabel)}</span> : null}
             {isSupplemental && isMarriageRecord ? <h3 className={FORM_GROUP_CLASS}>Husband's Name</h3> : null}
             <SubjectFieldGrid
