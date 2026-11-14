@@ -1,5 +1,10 @@
 # Civicheck UI guide
 
+The staff dashboard's parent loading fallback uses `StaffDashboardFrameSkeleton`
+on `/staff-dashboard` and for known staff on `/dashboard`. Keep its sidebar width,
+header height, and content padding aligned with the dashboard layout. The child
+route uses `StaffDashboardSkeleton` inside the existing frame.
+
 Across service forms and walk-ins, field labels longer than four words use
 sentence case, preserving acronyms such as PSA, NBI, and PNP. Shorter labels keep
 their existing formatting. Petition details uses the same 24px heading-to-field

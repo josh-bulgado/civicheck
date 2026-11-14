@@ -9,6 +9,8 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { WORKSPACE_SIDEBAR_STYLE } from "~/components/sidebar-01/workspace";
 import { CiviCheckIdentity } from "~/components/brand/civic-identity";
 import { WizardPageSkeleton } from "~/features/apply/components/WizardPageSkeleton";
+import { StaffDashboardFrameSkeleton } from "~/features/dashboard/StaffDashboardFrameSkeleton";
+import { hasPermission } from "~/lib/permissions";
 
 /** Parent loaders (including session restoration) use the destination's tiles. */
 export function RoutePendingSkeleton() {
@@ -18,6 +20,11 @@ export function RoutePendingSkeleton() {
   // including when a parent or a lazy route chunk is still pending.
   if (["/", "/login", "/signup", "/forgot-password", "/verify-email"].includes(pathname)) return null;
   if (pathname.startsWith("/apply/")) return <WizardPageSkeleton />;
+
+  const role = peekCurrentUser()?.role;
+  if (pathname === "/staff-dashboard" || (pathname === "/dashboard" && role && hasPermission(role, "dashboard:staff"))) {
+    return <StaffDashboardFrameSkeleton />;
+  }
 
   // A known applicant gets the same fixed frame on every portal destination.
   // The hint only chooses loading presentation; route guards still own access.

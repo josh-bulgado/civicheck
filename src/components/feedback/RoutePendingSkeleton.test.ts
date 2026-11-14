@@ -5,8 +5,6 @@ import { CitizenPortalFrameSkeleton } from "~/features/dashboard/CitizenPortalFr
 import { SystemHealthSkeleton } from "~/features/system-admin/components/SystemHealthSkeleton";
 import { SecurityCenterSkeleton } from "~/features/system-admin/components/SecurityCenterSkeleton";
 import type { IdentityHint } from "~/features/auth/current-user";
-import { LoginPageSkeleton } from "~/features/auth/components/LoginPageSkeleton";
-import { LandingPageSkeleton } from "~/features/landing/components/LandingPageSkeleton";
 import { PageSkeleton } from "./PageSkeleton";
 import { RoutePendingSkeleton } from "./RoutePendingSkeleton";
 
@@ -33,15 +31,17 @@ beforeEach(() => {
 
 describe("parent route loading", () => {
   it.each([
-    ["/", LandingPageSkeleton],
-    ["/login", LoginPageSkeleton],
-    ["/login/", LoginPageSkeleton],
     ["/system-admin/health", SystemHealthSkeleton],
     ["/system-admin/security", SecurityCenterSkeleton],
     ["/dashboard", PageSkeleton],
   ])("uses the same page skeleton at %s before parent loaders finish", (pathname, component) => {
     location.pathname = pathname;
     expect(render()).toContain(renderToStaticMarkup(createElement(component)));
+  });
+
+  it.each(["/", "/login", "/login/"])("leaves %s visible during loading", (pathname) => {
+    location.pathname = pathname;
+    expect(render()).toBe("");
   });
 });
 
@@ -58,7 +58,7 @@ describe("the applicant's dashboard before parent loaders finish", () => {
     expect(html).not.toContain("data-page-skeleton");
   });
 
-  it.each(["staff", "supervisor", "cashier", "admin", "system_admin"] as const)(
+  it.each(["cashier", "admin", "system_admin"] as const)(
     "keeps the neutral page for a %s, who is sent on from /dashboard",
     (role) => {
       location.pathname = "/dashboard";
@@ -67,6 +67,16 @@ describe("the applicant's dashboard before parent loaders finish", () => {
       expect(render()).toContain(renderToStaticMarkup(createElement(PageSkeleton)));
     },
   );
+
+  it.each(["/dashboard", "/staff-dashboard"])("keeps the staff frame at %s during sign-in loading", (pathname) => {
+    location.pathname = pathname;
+    known.hint = { id: "u2", role: "staff" };
+    const html = render();
+    expect(html).toContain('workspace-frame');
+    expect(html).toContain('data-slot="sidebar"');
+    expect(html).toContain("CCRO Workspace / Staff Dashboard");
+    expect(html).toContain("Longest Wait on You");
+  });
 
   it("keeps the applicant frame and the destination heading on other portal pages", () => {
     location.pathname = "/my-requests";
