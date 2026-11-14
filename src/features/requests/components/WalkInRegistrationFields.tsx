@@ -253,11 +253,13 @@ export function WalkInRegistrationFields({
         />
       ) : null}
       <DynamicFormFields
-        definition={surnameChange || birthLayout ? {
+        definition={legitimation || surnameChange || birthLayout ? {
           ...displayDefinition,
           sections: displayDefinition.sections.map(section => ({
             ...section,
-            fields: section.fields.filter(field => !["event_date", "event_place"].includes(field.key)),
+            fields: section.fields.filter(field => !(legitimation
+              ? ["event_date", "event_place", "marriage_date", "marriage_place"]
+              : ["event_date", "event_place"]).includes(field.key)),
           })),
         } : displayDefinition}
         staffView
@@ -317,14 +319,18 @@ export function WalkInRegistrationFields({
                       />
                     ) : null}
                   </SubjectFieldGrid>
-                  {(surnameChange || birthLayout) && role === "Child" ? (
-                    <div className={birthLayout ? "pt-3" : "pt-2"}>
+                  {((legitimation || surnameChange || birthLayout) && role === "Child") || (legitimation && role === "Father") ? (
+                    <div className={legitimation && role === "Father"
+                      ? "border-t border-border-light pt-5"
+                      : birthLayout ? "pt-3" : "pt-2"}>
                       <DynamicFormFields
                         definition={{
                           ...displayDefinition,
                           sections: displayDefinition.sections.map(section => ({
                             ...section,
-                            fields: section.fields.filter(field => (birthLayout ? ["event_place"] : ["event_date", "event_place"]).includes(field.key)),
+                            fields: section.fields.filter(field => (legitimation && role === "Father"
+                              ? ["marriage_date", "marriage_place"]
+                              : birthLayout ? ["event_place"] : ["event_date", "event_place"]).includes(field.key)),
                           })),
                         }}
                         staffView
