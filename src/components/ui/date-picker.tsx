@@ -253,7 +253,12 @@ export function DatePicker({
       )}
 
       {/* Calendar already pads itself, so the popover adds none. */}
-      <PopoverContent align="start" className="w-auto p-0">
+      <PopoverContent
+        side="bottom"
+        align="start"
+        collisionAvoidance={{ side: "flip", align: "shift", fallbackAxisSide: "none" }}
+        className="w-auto overflow-y-auto p-0"
+      >
         <Calendar
           mode="single"
           captionLayout="dropdown"

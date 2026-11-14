@@ -1,3 +1,4 @@
+import { birthRequesterRelationship } from "../birth-requester-relationship";
 import { REQUESTER_NAME_KEYS, requesterNameAnswers, requiresAccountRequester } from "../requester-name";
 import { ACCOUNT_PARTY_ROLE, accountPartyName, isMarriageAccountRole, requiresMarriageAccountParty } from "../marriage-account-party";
 import { formatNameHeading } from "~/features/forms/field-label";
@@ -48,6 +49,7 @@ import {
   fieldsForStep,
   resolveCaseSelectorServiceCode,
 } from "~/features/forms/form-template.utils";
+import { isOnTimeBirth, onTimeBirthLayout } from "../on-time-birth-layout";
 import { delayedBirthLayout } from "../delayed-birth-layout";
 import { isRequirementApplicable } from "~/features/services/service-utils";
 import { isPetitionService, petitionDetailsLayout, petitionRecordType } from "~/features/services/petition-selection";
@@ -228,6 +230,7 @@ export function SubjectFieldGrid({
   readOnlyName = false,
   lockedNoMiddleName = false,
   firstNameHelp,
+  children,
 }: {
   control: Control<DetailsValues>;
   setValue: UseFormSetValue<DetailsValues>;
@@ -239,6 +242,7 @@ export function SubjectFieldGrid({
   readOnlyName?: boolean;
   lockedNoMiddleName?: boolean;
   firstNameHelp?: string;
+  children?: ReactNode;
 }) {
   const watchedSex = useWatch({ control, name: `subjects.${index}.sex` });
   const { showSuffix, showSex } = subjectFieldVisibility(role, hideSex ? undefined : watchedSex);
@@ -255,7 +259,7 @@ export function SubjectFieldGrid({
             <Input
               id={`subject-${index}-firstName`}
               readOnly={readOnlyName}
-              placeholder="Juan"
+              placeholder={role === "Mother" ? "Maria" : "Juan"}
               maxLength={120}
               autoComplete="off"
               aria-invalid={fieldState.invalid}
@@ -376,6 +380,7 @@ export function SubjectFieldGrid({
           )}
         />
       )}
+      {children}
     </div>
   );
 }
@@ -396,9 +401,10 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
   const petitionAnswers = { ...draft.answers, ...draft.caseSelectorAnswers };
   const definition = courtRecordLayout(petitionDetailsLayout(
-    delayedBirthLayout(selectedService.form_template!.definition, selectedService.service_code),
+    birthRequesterRelationship(onTimeBirthLayout(delayedBirthLayout(selectedService.form_template!.definition, selectedService.service_code), selectedService.service_code), selectedService.service_code),
     selectedService.service_code, petitionAnswers,
   ), petitionAnswers);
+  const onTimeBirth = isOnTimeBirth(selectedService.service_code);
   const isDelayedBirth = selectedService.service_code === "BIRTH_DELAYED" || selectedService.service_code.startsWith("DCOLB-");
   const isSurnameChange = selectedService.service_code === "RA9255_SURNAME";
   const isAdoption = selectedService.service_code === "COURT-FOREIGN-ADOPTION" &&
@@ -406,7 +412,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   const isForeignDecree = selectedService.service_code === "COURT-FOREIGN-ADOPTION" &&
     (draft.caseSelectorAnswers.court_decree_type ?? draft.answers.court_decree_type) === "foreign_decree";
   const courtNameOnly = isAdoption || isForeignDecree || selectedService.service_code === "COURT-ANNULMENT";
-  const showBirthDetailsWithChild = isDelayedBirth || isSurnameChange;
+  const showBirthDetailsWithChild = onTimeBirth || isDelayedBirth || isSurnameChange;
   const lockRequesterName = requiresAccountRequester(selectedService.service_code);
   const lockAccountParty = requiresMarriageAccountParty(selectedService.service_code);
   const detailsFields = fieldsForStep(definition, "details");
@@ -783,10 +789,11 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
           .map(({ subjectField, index }) => (
           <PartySection
             key={subjectField.id}
-            divider={!isCourtDecree(selectedService.service_code) || index > 0}
+            divider={(!onTimeBirth && !isCourtDecree(selectedService.service_code)) || index > 0}
             role={
               useSpouseLabels
                 ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[subjectField.role] ?? subjectField.role)
+                : onTimeBirth && subjectField.role === "Child" ? "Child's Information"
                 : subjectField.role === "Mother" ? "Mother's Maiden Name" : subjectField.role
             }
           >
@@ -800,15 +807,41 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
               readOnlyName={lockAccountParty && subjectField.role === accountRole}
               lockedNoMiddleName={accountHasNoMiddleName}
               hideSex={courtNameOnly}
-            />
+            >
+              {onTimeBirth && subjectField.role === "Child" ? (
+                <DynamicFormFields
+                  singleColumn
+                  definition={{
+                    ...definition,
+                    sections: definition.sections.map((section) => ({
+                      ...section,
+                      fields: section.fields.filter((field) => field.key === "event_date"),
+                    })),
+                  }}
+                  step="details"
+                  hideSectionTitles
+                  showRequiredMarks
+                  control={form.control}
+                  values={visibilityValues}
+                  onDateChange={(key, value) => {
+                    if (key !== definition.eventTiming?.triggerField) return;
+                    const timing = evaluateTemplateEventTiming(definition, { ...visibilityValues, [key]: value });
+                    if (timing?.evaluation.mismatched && timing.rule.behavior === "redirect_confirm") setRedirectOpen(true);
+                  }}
+                />
+              ) : null}
+            </SubjectFieldGrid>
             {showBirthDetailsWithChild && subjectField.role === "Child" ? (
-              <div className={isSurnameChange ? "pt-1" : undefined}>
+              <div className={onTimeBirth ? "pt-3" : isSurnameChange ? "pt-1" : undefined}>
               <DynamicFormFields
+                singleColumn={onTimeBirth}
                 definition={{
                   ...definition,
                   sections: definition.sections.map((section) => ({
                     ...section,
-                    fields: section.fields.filter((field) => ["event_date", "event_place"].includes(field.key)),
+                    fields: section.fields.filter((field) => (
+                      onTimeBirth ? ["event_place"] : ["event_date", "event_place"]
+                    ).includes(field.key)),
                   })),
                 }}
                 step="details"
@@ -868,7 +901,7 @@ export function DetailsStep({ serviceCode, requirements, services }: DetailsStep
   return (
     <WizardShell
       step={2}
-      title={selectedService.service_code === "COURT-ANNULMENT" ? "Marriage record details" : courtNameOnly ? "" : isPetitionService(selectedService.service_code) ? "Person and record details" : isSurnameChange ? "Child and Parent Information" : ownerBlockInSection ? "Your details" : "Who is this document for?"}
+      title={onTimeBirth ? "Person and Record Details" : selectedService.service_code === "COURT-ANNULMENT" ? "Marriage record details" : courtNameOnly ? "" : isPetitionService(selectedService.service_code) ? "Person and record details" : isSurnameChange ? "Child and Parent Information" : ownerBlockInSection ? "Your details" : "Who is this document for?"}
     >
       <div className="flex flex-col gap-6">
         {ownerBlockInSection ? null : ownerBlock}

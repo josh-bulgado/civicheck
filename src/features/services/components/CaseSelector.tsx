@@ -30,6 +30,7 @@ interface CaseSelectorProps {
   onAnswersChange?: (answers: Record<string, string>) => void;
   showQuestionNumbers?: boolean;
   hideBottomDivider?: boolean;
+  hideTitle?: boolean;
   renderAfterQuestion?: (key: string) => ReactNode;
   /**
    * Pre-answered dimensions — set when the applicant arrived here via the
@@ -308,6 +309,7 @@ function ConfiguredCaseSelector({
   presetMarital,
   showQuestionNumbers = true,
   hideBottomDivider = false,
+  hideTitle = false,
   renderAfterQuestion,
 }: CaseSelectorProps & { definition: CaseSelectorDefinition }) {
   function resolve(nextAnswers: Record<string, string>) {
@@ -388,13 +390,13 @@ function ConfiguredCaseSelector({
 
   return (
     <section
-      aria-labelledby={courtQuestion ? undefined : "case-selector-title"}
-      aria-label={courtQuestion ? "Court decree questions" : undefined}
+      aria-labelledby={courtQuestion || hideTitle ? undefined : "case-selector-title"}
+      aria-label={courtQuestion ? "Court decree questions" : hideTitle ? "Registration questions" : undefined}
       className={hideBottomDivider
         ? "border-t border-border-light pt-5 sm:pt-6"
         : "border-y border-border-light py-5 sm:py-6"}
     >
-      {!courtQuestion ? <div>
+      {!courtQuestion && !hideTitle ? <div>
         <h2
           id="case-selector-title"
           className="text-pretty text-lg leading-tight font-bold text-foreground"
@@ -417,13 +419,13 @@ function ConfiguredCaseSelector({
         ) : null}
       </div> : null}
 
-      <div className={courtQuestion ? "flex flex-col gap-6" : "mt-6 flex flex-col gap-6"}>
+      <div className={courtQuestion || hideTitle ? "flex flex-col gap-6" : "mt-6 flex flex-col gap-6"}>
         {petition ? <PrimaryPetitionSelection answers={answers} onChange={publishAnswers} /> : visibleQuestions.map((question, index) => {
           const notice = question.options.find((option) => option.value === answers[question.key])?.notice;
           // A lone question that just restates the section title would show the
           // same sentence twice in a row, so the title names the group instead.
           const repeatsTitle =
-            !courtQuestion && visibleQuestions.length === 1 &&
+            !courtQuestion && !hideTitle && visibleQuestions.length === 1 &&
             sameSentence(applicantCopy(question.label), sectionTitle);
           return (
             <div key={question.key} className="flex flex-col gap-6">

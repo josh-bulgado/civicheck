@@ -1,5 +1,6 @@
 import { formatFieldAnswer } from "~/features/forms/answer-format";
 import { isFieldVisible } from "~/features/forms/form-template.utils";
+import { isOnTimeBirth } from "./on-time-birth-layout";
 import type {
   FormTemplateDefinition,
   TemplateAnswers,
@@ -31,20 +32,24 @@ export function buildSummaryRows({
   answers,
   subjects,
   legacyPurpose,
+  serviceCode,
 }: {
   definition: FormTemplateDefinition;
   answers: TemplateAnswers;
   subjects: readonly SubjectFields[];
   /** The service-level purpose, for services that ask it outside the template. */
   legacyPurpose?: string;
+  serviceCode?: string;
 }): SummaryRow[] {
-  const rows: SummaryRow[] = [];
+  const rows: (SummaryRow & { key?: string })[] = [];
+  const onTimeBirth = isOnTimeBirth(serviceCode ?? "");
+  const fatherParts: Record<string, string> = {};
 
   const single = subjects.length === 1 && subjects[0].role === "Subject";
   for (const subject of subjects) {
     const name = subjectFullName(subject);
     if (name) {
-      rows.push({ label: single ? "Record subject" : subject.role, value: name });
+      rows.push({ key: subject.role, label: single ? "Record subject" : subject.role, value: name });
     }
   }
   for (const subject of subjects) {
@@ -53,7 +58,8 @@ export function buildSummaryRows({
       subject.sex === "male" ? "Male" : subject.sex === "female" ? "Female" : "";
     if (sex) {
       rows.push({
-        label: subjects.length > 1 ? `${subject.role}’s sex` : "Sex",
+        key: `${subject.role}_sex`,
+        label: onTimeBirth && subject.role === "Child" ? "Sex" : subjects.length > 1 ? `${subject.role}’s sex` : "Sex",
         value: sex,
       });
     }
@@ -68,8 +74,12 @@ export function buildSummaryRows({
       const answer = answers[field.key];
       const value = typeof answer === "string" ? answer.trim() : "";
       if (!value) continue;
+      if (onTimeBirth && ["father_first_name", "father_middle_name", "father_last_name", "father_name"].includes(field.key)) {
+        fatherParts[field.key] = value;
+        continue;
+      }
       if (field.key === "purpose") coversPurpose = true;
-      rows.push({ label: field.label, value: formatFieldAnswer(field, value) });
+      rows.push({ key: field.key, label: field.label, value: formatFieldAnswer(field, value) });
     }
   }
 
@@ -77,5 +87,13 @@ export function buildSummaryRows({
     rows.push({ label: "Purpose", value: legacyPurpose.trim() });
   }
 
-  return rows;
+  if (onTimeBirth) {
+    const father = fatherParts.father_name || [fatherParts.father_first_name, fatherParts.father_middle_name, fatherParts.father_last_name]
+      .filter((part) => part && part !== "N/A").join(" ");
+    if (father) rows.push({ key: "Father", label: "Father", value: father });
+    const order = ["Child", "Child_sex", "event_date", "event_place", "place_type", "Mother", "Father"];
+    const rank = (key?: string) => key && order.includes(key) ? order.indexOf(key) : order.length;
+    rows.sort((a, b) => rank(a.key) - rank(b.key));
+  }
+  return rows.map(({ label, value }) => ({ label, value }));
 }

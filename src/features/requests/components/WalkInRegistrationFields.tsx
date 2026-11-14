@@ -1,5 +1,10 @@
+import { DatePicker } from "~/components/ui/date-picker";
+import { Field, FieldLabel } from "~/components/ui/field";
+import { RequiredMark } from "~/components/ui/required-mark";
+import { validateDateAnswer } from "~/features/forms/date-validation";
+import { isOnTimeBirth } from "~/features/apply/on-time-birth-layout";
 import { useEffect, useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Alert, AlertDescription } from "~/components/ui/alert";
@@ -8,13 +13,14 @@ import {
   type DetailsValues,
 } from "~/features/apply/components/DetailsStep";
 import { DynamicFormFields } from "~/features/forms/components/DynamicFormFields";
-import { FORM_GROUP_CLASS } from "~/features/forms/components/wizard-field";
+import { FORM_GROUP_CLASS, WIZARD_CONTROL_CLASS, WIZARD_LABEL_CLASS, WizardFieldError } from "~/features/forms/components/wizard-field";
 import { formatNameHeading } from "~/features/forms/field-label";
 import { staffCopy, staffFormDefinition } from "~/features/forms/staff-copy";
 import { DerivedAnswerAlerts } from "~/features/forms/components/DerivedAnswerAlerts";
 import { EventTimingNotice } from "~/features/forms/components/EventTimingNotice";
 import type { TemplateAnswers } from "~/features/forms/form-template.types";
 import {
+  todayKeyInTimeZone,
   deriveTemplateAnswers,
   evaluateTemplateEventTiming,
   canonicalizeTemplateAnswers,
@@ -76,6 +82,7 @@ export function WalkInRegistrationFields({
   const marriage = isWalkInMarriage(service.serviceCode);
   const marriageLicense = service.serviceCode === "MARRIAGE_LICENSE";
   const death = isWalkInDeath(service.serviceCode);
+  const onTimeBirth = isOnTimeBirth(service.serviceCode);
   const legitimation = service.serviceCode === "LEGITIMATION";
   const petition = isWalkInPetition(service.serviceCode);
   const surnameChange = service.serviceCode === "RA9255_SURNAME";
@@ -244,7 +251,7 @@ export function WalkInRegistrationFields({
         />
       ) : null}
       <DynamicFormFields
-        definition={surnameChange ? {
+        definition={surnameChange || onTimeBirth ? {
           ...displayDefinition,
           sections: displayDefinition.sections.map(section => ({
             ...section,
@@ -273,6 +280,7 @@ export function WalkInRegistrationFields({
                         ? (definition.sections.flatMap((section) => section.fields)
                           .find((field) => field.type === "person_group")?.labelByAnswer?.labels[String(values.record_type ?? "")]
                           ?? "Person named on the record")
+                      : onTimeBirth && role === "Child" ? "Child's Information"
                       : surnameChange && role === "Child" ? "Child's name on the birth certificate"
                       : death ? "Name of the deceased"
                       : marriage ? ({ Bride: "Maiden Name of Wife", Groom: "Husband" }[role] ?? role) : role)}
@@ -285,18 +293,39 @@ export function WalkInRegistrationFields({
                     hideSex={courtDecree || supplemental || otherCertificate}
                     husband={(otherCertificate || endorsement || petition) && values.record_type === "marriage"}
                     requireMiddleName
-                  />
-                  {surnameChange && role === "Child" ? (
-                    <div className="pt-2">
+                  >
+                    {onTimeBirth && role === "Child" ? (
+                      <Controller
+                        control={form.control}
+                        name="event_date"
+                        rules={{ required: "Enter a value.", validate: (value) => {
+                          const dateField = definition.sections.flatMap(section => section.fields).find(field => field.key === "event_date");
+                          return dateField ? validateDateAnswer(dateField, String(value ?? ""), values, todayKeyInTimeZone()) : true;
+                        } }}
+                        render={({ field, fieldState }) => (
+                          <Field data-invalid={fieldState.invalid}>
+                            <FieldLabel htmlFor="dynamic-event_date" className={WIZARD_LABEL_CLASS}>Date of Birth <RequiredMark /></FieldLabel>
+                            <DatePicker id="dynamic-event_date" shape="split" icon="calendar"
+                              value={String(field.value ?? "")} onValueChange={field.onChange} onBlur={field.onBlur}
+                              max={todayKeyInTimeZone()} invalid={fieldState.invalid} className={WIZARD_CONTROL_CLASS} />
+                            {fieldState.invalid ? <WizardFieldError error={fieldState.error} /> : null}
+                          </Field>
+                        )}
+                      />
+                    ) : null}
+                  </SubjectFieldGrid>
+                  {(surnameChange || onTimeBirth) && role === "Child" ? (
+                    <div className={onTimeBirth ? "pt-3" : "pt-2"}>
                       <DynamicFormFields
                         definition={{
                           ...displayDefinition,
                           sections: displayDefinition.sections.map(section => ({
                             ...section,
-                            fields: section.fields.filter(field => ["event_date", "event_place"].includes(field.key)),
+                            fields: section.fields.filter(field => (onTimeBirth ? ["event_place"] : ["event_date", "event_place"]).includes(field.key)),
                           })),
                         }}
                         staffView
+                        singleColumn={onTimeBirth}
                         step="details"
                         hideSectionTitles
                         showRequiredMarks

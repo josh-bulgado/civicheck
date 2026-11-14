@@ -214,7 +214,7 @@ describe("describing where a request stands", () => {
         paymentStatus: "verified",
         attachments: [doc("approved")],
       }),
-    ).toMatch(/match the originals to the uploads/);
+    ).toBe("Paid. Check the claimant’s ID, then hand over the document.");
   });
 });
 

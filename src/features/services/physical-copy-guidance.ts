@@ -10,9 +10,7 @@ function validIdUploadGuidance(requirementName: string): string | null {
   const title = describeRequirement(requirementName).title;
   if (!/\bvalid\s+(?:ids?|identification(?:\s+cards?)?)\b/i.test(title)) return null;
   if (!physicalCopyCounts(requirementName).some(count => count >= 2)) {
-    return /\bvalid\s+(?:ids?|identification(?:\s+cards?)?)\s*(?:or\b|\/)/i.test(title)
-      ? "Add a PDF or clear photos of the ID or listed alternative."
-      : "Add a PDF or clear photos of the ID.";
+    return "Add a PDF or photograph each page.";
   }
   return /\bvalid\s+(?:ids?|identification(?:\s+cards?)?)\s*(?:or\b|\/)/i.test(title)
     ? "Upload only one (1) copy of each required ID or listed alternative as a PDF or clear photos."
@@ -23,25 +21,35 @@ function uploadInstruction(requirementName: string) {
   return validIdUploadGuidance(requirementName) ?? (
     physicalCopyCounts(requirementName).some(count => count >= 2)
       ? "Upload only one (1) copy of each document (all pages)."
-      : "Upload all pages."
+      : "Add a PDF or photograph each page."
   );
+}
+
+function hasOnlyOneCopy(requirementName: string) {
+  // Presenting an original and leaving a copy are separate instructions.
+  if (/\boriginal\s+to be presented\b/i.test(requirementName)) return false;
+  const counts = physicalCopyCounts(requirementName);
+  return counts.length === 0 || (counts.length === 1 && counts[0] === 1);
 }
 
 export function delayedBirthUploadGuidance(requirementName: string): string | null {
   const detail = describeRequirement(requirementName).detail;
   const instruction = uploadInstruction(requirementName);
+  if (hasOnlyOneCopy(requirementName)) return instruction;
   return detail
     ? `${instruction} Bring to CCRO: ${detail.replace(/;\s*secure from (?:the )?/gi, ". From: ")}`
     : physicalCopyGuidance(requirementName);
 }
 
 export function physicalCopyGuidance(requirementName: string): string | null {
+  if (hasOnlyOneCopy(requirementName)) return uploadInstruction(requirementName);
   const idGuidance = validIdUploadGuidance(requirementName);
   const hasCopyCount = physicalCopyCounts(requirementName).length > 0;
   if (!hasCopyCount) return idGuidance;
   // Keep the saved wording: original, photocopy, alternatives, and "each" matter.
   const detail = describeRequirement(requirementName).detail;
   const instruction = uploadInstruction(requirementName);
+  if (hasOnlyOneCopy(requirementName)) return instruction;
   return detail
     ? `${instruction} Bring to CCRO: ${detail.replace(/;\s*secure from (?:the )?/gi, ". From: ")}`
     : `${instruction} Bring the listed copies to CCRO.`;

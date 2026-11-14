@@ -1,4 +1,7 @@
 import { CancelRequestCard } from "../components/CancelRequestCard";
+import { RegistrationDeadlineCard } from "../components/RegistrationDeadlineCard";
+import { onTimeRegistrationNotice } from "../on-time-registration";
+import { separateRegistrationNotice } from "../separate-registration-notice";
 import { canCancelCtcRequest } from "../request-cancellation";
 import { MarriagePostingPanel } from "../components/MarriagePostingPanel";
 import { staggerStyle } from "~/components/motion/stagger";
@@ -42,6 +45,12 @@ export default function MyRequestDetailPage({
     logs: request.logs,
   });
 
+  const registrationNotice = ["submitted", "under_validation", "incomplete", "processing"].includes(request.status)
+    ? onTimeRegistrationNotice(request.serviceCode, request.formData, undefined, request.status !== "processing")
+    : null;
+  const actionOnly = separateRegistrationNotice(next, registrationNotice);
+  const deadlineNotice = registrationNotice?.split("\n").filter((line) => !line.startsWith("Wait for")).join("\n");
+
   return (
     <div key={request.id} className="portal-page @container gap-5 md:gap-6">
       <div className="civic-enter-sm">
@@ -54,7 +63,7 @@ export default function MyRequestDetailPage({
 
       <div className="civic-stagger grid min-w-0 grid-cols-1 items-start gap-5 md:gap-6 @4xl:grid-cols-[minmax(0,1fr)_22rem] @4xl:grid-rows-[auto_1fr] @5xl:grid-cols-[minmax(0,1fr)_24rem] @6xl:grid-cols-[minmax(0,1fr)_28rem]">
         <div className="flex min-w-0 flex-col gap-5 md:gap-6" style={staggerStyle(0, 60)}>
-          <NextStepsCard status={request.status} next={next} />
+          <NextStepsCard status={request.status} next={actionOnly} />
           {request.status === "released" && <RequestFeedbackCard requestId={request.id} feedback={request.feedback}
             feedbackUnavailable={request.feedbackUnavailable}
             requested={feedbackRequested} onRequestHandled={onFeedbackRequestHandled} onUpdated={onUpdated} />}
@@ -76,6 +85,7 @@ export default function MyRequestDetailPage({
         </div>
 
         <div className="@container flex min-w-0 flex-col gap-5 md:gap-6 @4xl:col-start-2 @4xl:row-span-2 @4xl:row-start-1" style={staggerStyle(1, 60)}>
+          {deadlineNotice ? <RegistrationDeadlineCard notice={deadlineNotice} /> : null}
           <MyRequestSummary request={request} />
           <RequestStatusHistory logs={request.logs} />
           <VerificationFormCard

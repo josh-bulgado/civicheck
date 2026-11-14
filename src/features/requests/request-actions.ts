@@ -262,9 +262,7 @@ export function describeRequestProgress(input: RequestActionInput): string {
       if (!isPaymentSettled(input.paymentStatus)) {
         return "Prepared. Waiting for the cashier to verify payment.";
       }
-      return total > 0
-        ? "Paid. Check the claimant’s ID and match the originals to the uploads, then hand over the document."
-        : "Paid. Check the claimant’s ID and hand over the document.";
+      return "Paid. Check the claimant’s ID, then hand over the document.";
     case "released":
       return "Released. Nothing left to do.";
     case "rejected":

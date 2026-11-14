@@ -1,6 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
 import type { SummaryRow } from "~/features/apply/summary-rows";
-import { cn } from "~/lib/utils";
 
 interface RequestSummaryCardProps {
   rows: readonly SummaryRow[];
@@ -28,53 +26,12 @@ export function RequestSummaryCard({ rows }: RequestSummaryCardProps) {
   );
 }
 
-/**
- * A row reads two ways. When the label and the answer fit together the answer
- * sits on the right of the same line. When they don't, the browser drops the
- * answer under the label, and the row is then a label over its answer, both
- * flush left, so a long answer reads as one block instead of a ragged right
- * edge hanging beneath a short label.
- *
- * The browser decides which by itself (the row wraps); `stacked` only follows
- * that decision to pick the alignment. Alignment doesn't change what fits, so
- * the row can't flip back and forth between the two.
- */
+/** Labels and answers wrap within separate columns, keeping answers on the right. */
 function SummaryRow({ label, value }: SummaryRow) {
-  const rowRef = useRef<HTMLDivElement>(null);
-  const [stacked, setStacked] = useState(false);
-
-  useLayoutEffect(() => {
-    const row = rowRef.current;
-    if (!row) return;
-
-    const measure = () => {
-      const [labelEl, valueEl] = Array.from(row.children) as HTMLElement[];
-      setStacked(valueEl.offsetTop >= labelEl.offsetTop + labelEl.offsetHeight);
-    };
-
-    measure();
-    // The card narrows with the window, and a web font arriving late changes
-    // how wide the text is, so the row is re-read whenever its own width moves.
-    const observer = new ResizeObserver(measure);
-    observer.observe(row);
-    return () => observer.disconnect();
-  }, [label, value]);
-
   return (
-    <div
-      ref={rowRef}
-      data-stacked={stacked}
-      className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-[15px]"
-    >
-      <span className="min-w-0 wrap-break-word text-muted-foreground">{label}</span>
-      <span
-        className={cn(
-          "min-w-0 line-clamp-3 wrap-break-word font-bold text-foreground",
-          stacked ? "text-left" : "ml-auto text-right",
-        )}
-      >
-        {value}
-      </span>
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-baseline gap-3 text-[15px]">
+      <span className="min-w-0 wrap-anywhere text-muted-foreground">{label}</span>
+      <span className="min-w-0 wrap-anywhere text-right font-bold text-foreground">{value}</span>
     </div>
   );
 }

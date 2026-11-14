@@ -196,7 +196,7 @@ export function WalkInIntakeDialog({
         open={open ?? internalOpen}
         onOpenChange={setDialogOpen}
       >
-        <DialogContent data-service-form aria-describedby={undefined} className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+        <DialogContent data-service-form aria-describedby={undefined} className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle className={FORM_TITLE_CLASS}>{selectedService && isWalkInCourtDecree(serviceCode)
               ? selectedService.displayName ?? selectedService.name : "Department walk-in intake"}</DialogTitle>
@@ -229,17 +229,18 @@ export function WalkInIntakeDialog({
                     >
                       <SelectTrigger
                         id="walkin-service"
-                        className="w-full min-w-0 max-w-full sm:flex-1"
+                        className="h-auto! min-h-14 w-full min-w-0 max-w-full whitespace-normal sm:flex-1"
                         shape="split"
                       >
-                        <SelectValue className="min-w-0 truncate" placeholder="Select a department service" />
+                        <SelectValue className="min-w-0 whitespace-normal text-left wrap-anywhere" placeholder="Select a department service" />
                       </SelectTrigger>
-                      <SelectContent className="service-form-options">
+                      <SelectContent alignItemWithTrigger={false} className="service-form-options max-w-[calc(100vw-2rem)]">
                         <SelectGroup>
                           {serviceChoices.map((service) => (
                             <SelectItem
                               key={service.value}
                               value={service.value}
+                              className="items-start py-3 [&>*]:min-w-0 [&>*]:shrink! [&>*]:whitespace-normal! [&>*]:wrap-anywhere"
                             >
                               {service.label} — ₱{service.fee.toFixed(2)}
                               {service.feePerCopy ? " per copy" : ""}

@@ -38,6 +38,7 @@ import {
 } from "~/features/services/components/CaseSelector";
 import { applicantCopy } from "~/features/forms/applicant-copy";
 import { surnameChangeCaseDefinition } from "~/features/services/surname-change";
+import { isOnTimeBirth, onTimeBirthLayout } from "../on-time-birth-layout";
 import { delayedBirthLayout } from "../delayed-birth-layout";
 import { isPetitionService, petitionCaseLayout, petitionSelectionError } from "~/features/services/petition-selection";
 
@@ -94,7 +95,8 @@ export function CaseStep({
   const selectedService =
     services.find((service) => service.service_code === draft.selectedServiceCode) ??
     services[0];
-  const definition = delayedBirthLayout(selectedService.form_template!.definition, selectedService.service_code);
+  const onTimeBirth = isOnTimeBirth(selectedService.service_code);
+  const definition = onTimeBirthLayout(delayedBirthLayout(selectedService.form_template!.definition, selectedService.service_code), selectedService.service_code);
   const isDelayedBirth = serviceCode === "birth_delayed" ||
     selectedService.service_code === "BIRTH_DELAYED" ||
     selectedService.service_code.startsWith("DCOLB-");
@@ -340,7 +342,8 @@ export function CaseStep({
             answers={draft.caseSelectorAnswers}
             contextAnswers={selectorContextAnswers}
             showQuestionNumbers={!isDelayedBirth}
-            hideBottomDivider={isDelayedBirth}
+            hideBottomDivider={isDelayedBirth || onTimeBirth}
+            hideTitle={onTimeBirth}
             renderAfterQuestion={isDelayedBirth ? (key) => key === "program" ? (
               <div className="w-full min-w-0 [&_fieldset]:min-w-0 [&_[data-slot=radio-group]]:min-w-0">
               <DynamicFormFields
@@ -384,7 +387,7 @@ export function CaseStep({
         <DynamicFormFields
           definition={requestDetailsDefinition}
           step="case"
-          hideSectionTitles={Boolean(caseSelectorDefinition?.questions.some((question) => question.key === "court_decree_type"))}
+          hideSectionTitles={onTimeBirth || Boolean(caseSelectorDefinition?.questions.some((question) => question.key === "court_decree_type"))}
           sectionHeadingClassName={isPetitionService(selectedService.service_code) ? "mb-3" : undefined}
           showRequiredMarks
           control={form.control}

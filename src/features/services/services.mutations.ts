@@ -1,3 +1,4 @@
+import { birthRequesterRelationship } from "~/features/apply/birth-requester-relationship";
 import { REQUESTER_NAME_KEYS, requesterNameAnswers, requiresAccountRequester } from "~/features/apply/requester-name";
 import { isPetitionService, petitionSelectionError } from "./petition-selection";
 import { ACCOUNT_PARTY_ROLE, accountPartyName, isMarriageAccountRole, requiresMarriageAccountParty } from "~/features/apply/marriage-account-party";
@@ -174,6 +175,7 @@ export const submitRequestFn = createServerFn({ method: "POST" })
     // Hidden questions are dropped before anything reads the bag, so a value
     // sent for a question the applicant was never shown cannot decide which
     // documents are required.
+    definition = birthRequesterRelationship(definition, data.serviceCode);
     const answers = { ...data.answers };
     const requesterKeys = REQUESTER_NAME_KEYS.filter((key) => requiresAccountRequester(data.serviceCode) &&
       definition.sections.some((section) => section.fields.some((field) => field.key === key)),

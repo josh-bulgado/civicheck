@@ -1,3 +1,5 @@
+import { isOnTimeBirth, onTimeBirthLayout } from "~/features/apply/on-time-birth-layout";
+import { birthRequesterRelationship } from "~/features/apply/birth-requester-relationship";
 import type {
   FormTemplateDefinition,
   TemplateAnswers,
@@ -18,6 +20,17 @@ export function isWalkInBirth(serviceCode: string) {
 }
 
 export function birthCaseForService(definition: FormTemplateDefinition, serviceCode: string) {
+  definition = birthRequesterRelationship(onTimeBirthLayout(definition, serviceCode), serviceCode);
+  if (isOnTimeBirth(serviceCode)) {
+    definition = {
+      ...definition,
+      sections: definition.sections.map((section) => section.step === "details" ? {
+        ...section,
+        fields: [...section.fields.filter((field) => field.key !== "contact_number"),
+          ...section.fields.filter((field) => field.key === "contact_number")],
+      } : section),
+    };
+  }
   const selector = definition.caseSelector;
   const outcome = selector?.outcomes.find((item) => item.serviceCode === serviceCode);
   if (!selector || !outcome) return { definition, answers: {} as Record<string, string> };

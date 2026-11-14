@@ -13,7 +13,6 @@ import {
 import { Checkbox } from "~/components/ui/checkbox";
 import { Phone } from "lucide-react";
 import { DatePicker } from "~/components/ui/date-picker";
-import { BirthDatePicker } from "~/components/ui/birth-date-picker";
 import { EstimatedDateField } from "./EstimatedDateField";
 import { registrationEventDate, validateDateAnswer } from "../date-validation";
 import { selectableFieldOptions, todayKeyInTimeZone } from "../form-template.utils";
@@ -217,7 +216,7 @@ function planFieldSpans(
   };
 
   for (const field of fields) {
-    if (field.key === "father_last_name") closeRun();
+    if (field.key === fields.find((item) => ["father_first_name", "father_middle_name", "father_last_name"].includes(item.key))?.key) closeRun();
     const placement =
       field.type === "select" && isChoiceGroup(field.options ?? [])
         ? (choicePlacements.get(field.key) ?? "full")
@@ -234,7 +233,7 @@ function planFieldSpans(
     } else {
       run.push(field.key);
     }
-    if (field.key === "father_first_name") closeRun();
+    if (field.key === fields.filter((item) => ["father_first_name", "father_middle_name", "father_last_name"].includes(item.key)).at(-1)?.key) closeRun();
   }
   closeRun();
   for (const prefix of ["mother", "wife"]) {
@@ -373,13 +372,21 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
         >
           {fields.map((definitionField) => (
             <Fragment key={definitionField.key}>
+              {definitionField.key === "father_name" && values.marital === "non-marital" &&
+              section.fields.some((field) => field.key === "requester_relationship_other") ? (
+                <div role="separator" className="col-span-full border-t border-border-light" />
+              ) : null}
+              {definitionField.key === "requester_relationship" &&
+              section.fields.some((field) => field.key === "requester_relationship_other") ? (
+                <div role="separator" className="col-span-full border-t border-border-light" />
+              ) : null}
               {definitionField.key === "mother_first_name" ? (
                 <h3 className={cn("col-span-full border-t border-border-light pt-5", FORM_GROUP_CLASS)}>Mother's Maiden Name</h3>
               ) : null}
               {definitionField.key === "wife_first_name" ? (
                 <h3 className={cn("col-span-full border-t border-border-light pt-5", FORM_GROUP_CLASS)}>Wife's Maiden Name</h3>
               ) : null}
-              {definitionField.key === "father_last_name" ? (
+              {definitionField.key === fields.find((field) => ["father_first_name", "father_middle_name", "father_last_name"].includes(field.key))?.key ? (
                 <h3 className={cn("col-span-full border-t border-border-light pt-5", FORM_GROUP_CLASS)}>Father's Name</h3>
               ) : null}
               {section.key === "details_requester" && definitionField.key === "requester_province" ? (
@@ -424,7 +431,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                       : "Use 240 characters or fewer.",
                 },
               }}
-              render={({ field, fieldState, formState }) => {
+              render={({ field, fieldState }) => {
                 const addressLevel = definitionField.philippineAddressLevel;
                 const locationLevel = definitionField.countrySelect ? "country" : addressLevel;
 
@@ -485,11 +492,6 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                       : undefined)
                     ?? definitionField.label,
                 );
-                const isBirthDate = /date.of.birth|birth.?date/i.test(fieldLabel)
-                  || /date_of_birth|birth_date/.test(definitionField.key)
-                  || (definitionField.key === "event_date" && values.record_type === "birth");
-                const usesBirthDatePicker = definitionField.type === "date"
-                  && !definitionField.allowEstimate && isBirthDate;
                 const legendLabel = (
                   <>
                     {formatFieldLabel(fieldLabel)}
@@ -567,7 +569,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
 
                 return (
                   <Field
-                    data-invalid={usesBirthDatePicker ? undefined : fieldState.invalid}
+                    data-invalid={fieldState.invalid}
                     className={cn(
                       SPAN_CLASS[spans.get(definitionField.key) ?? "half"],
                       !stacked && ["reference_number", "marriage_date"].includes(definitionField.key) &&
@@ -632,23 +634,6 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                           }}
                           onBlur={field.onBlur}
                           invalid={fieldState.invalid}
-                        />
-                      ) : isBirthDate ? (
-                        <BirthDatePicker
-                          id={`dynamic-${definitionField.key}`}
-                          labelledBy={`dynamic-${definitionField.key}-label`}
-                          ref={field.ref}
-                          value={field.value ?? ""}
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            onDateChange?.(definitionField.key, value);
-                          }}
-                          onBlur={field.onBlur}
-                          max={todayKeyInTimeZone()}
-                          invalid={fieldState.invalid}
-                          validateAll={formState.isSubmitted}
-                          renderFeedback={(invalid) => common(invalid && fieldState.error?.type !== "required")}
-                          className={cn(WIZARD_CONTROL_CLASS, "px-3")}
                         />
                       ) : (
                         <DatePicker
@@ -758,7 +743,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         fieldSize="touch"
                       />
                     )}
-                    {!usesBirthDatePicker && common()}
+                    {common()}
                   </Field>
                 );
               }}

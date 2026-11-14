@@ -6,6 +6,7 @@ import {
 } from "~/features/forms/form-template.utils";
 import { emptySubject } from "~/lib/subject-fields";
 import { birthCaseForService, isWalkInBirth, prepareWalkInBirth } from "./walk-in-birth";
+import type { FormTemplateDefinition } from "~/features/forms/form-template.types";
 
 const delayed = parseFormTemplateDefinition(config.definition);
 const roles = ["Child", "Mother"];
@@ -27,6 +28,30 @@ const answers = {
   additional_identity: "no",
   subjects,
 };
+
+it.each(["OTCOLB-MARITAL", "OTCOLB-NONMARITAL", "BIRTH_ONTIME"])("validates and saves the matching on-time requester fields for %s", (code) => {
+  const original: FormTemplateDefinition = { schemaVersion: 1, sections: [
+    { key: "case", title: "Case", step: "case", fields: [
+      { key: "event_date", type: "date", label: "Date of Birth", required: true },
+      { key: "event_place", type: "text", label: "Place of Birth", required: true },
+    ] },
+    { key: "details", title: "Details", step: "details", fields: [
+      { key: "subjects", type: "person_group", label: "People", required: true },
+      ...["last", "middle", "first"].map((part) => ({ key: `father_${part}_name`, type: "text" as const, label: part, required: false })),
+    ] },
+  ] };
+  const { definition } = birthCaseForService(original, code);
+  const detailKeys = definition.sections.find((section) => section.step === "details")!.fields.map((field) => field.key);
+  expect(detailKeys.slice(-5)).toEqual(["father_first_name", "father_middle_name", "father_last_name", "requester_relationship", "requester_relationship_other"]);
+  expect(definition.sections.find((section) => section.step === "case")!.fields).toHaveLength(0);
+  const data = { event_date: today, event_place: "Legazpi City", subjects };
+  expect(prepareWalkInBirth(definition, data, roles).error).toBe(true);
+  expect(prepareWalkInBirth(definition, { ...data, requester_relationship: "other" }, roles).error).toBe(true);
+  const result = prepareWalkInBirth(definition, { ...data, requester_relationship: "other", requester_relationship_other: "Family friend" }, roles);
+  expect(result.error).toBe(false);
+  if (result.error) throw new Error(result.message);
+  expect(result.formData).toMatchObject({ requester_relationship: "other", requester_relationship_other: "Family friend", event_date: today });
+});
 
 describe("birth walk-in alignment", () => {
   it("limits the full form to on-time and delayed birth services", () => {

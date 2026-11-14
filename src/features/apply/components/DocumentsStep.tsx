@@ -1,3 +1,4 @@
+import { birthRequesterRelationship } from "../birth-requester-relationship";
 import { requiresVerificationSignature } from "~/features/apply/verification-signature";
 import { FORM_SECTION_CLASS } from "~/features/forms/components/wizard-field";
 import { delayedBirthUploadGuidance, physicalCopyGuidance } from "~/features/services/physical-copy-guidance";
@@ -133,7 +134,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
   latestDraft.current = draft;
   const selectedService =
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
-  const definition = selectedService.form_template!.definition;
+  const definition = birthRequesterRelationship(selectedService.form_template!.definition, selectedService.service_code);
   const documentDisplayName = (name: string) => parseRequirementName(
     endorsementRequirementName(
       requirementDisplayName(name),
@@ -157,6 +158,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
   // Everything the applicant has entered so far, as the review step will read
   // it back. Unanswered fields are left out rather than shown as blanks.
   const summaryRows = buildSummaryRows({
+    serviceCode: selectedService?.service_code,
     definition,
     answers: canonicalizeTemplateAnswers(definition, {
       ...draft.answers,
@@ -640,14 +642,19 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
   function renderUploadSlot(slot: (typeof uploadSlots)[number]) {
     const req = slot.requirement;
     const display = surnameChangeRequirementDisplay(req.requirement_name, selectedService.service_code);
-    const isOnTimeColb =
-      ["BIRTH_ONTIME", "OTCOLB-MARITAL", "OTCOLB-NONMARITAL"].includes(selectedService.service_code) &&
+    const isOnTimeBirth = ["BIRTH_ONTIME", "OTCOLB-MARITAL", "OTCOLB-NONMARITAL"].includes(selectedService.service_code);
+    const isOnTimeColb = isOnTimeBirth &&
       /certificate of live birth/i.test(req.requirement_name);
-    const copyGuidance = isDelayedBirth
+    const uploadGuidance = isDelayedBirth
       ? delayedBirthUploadGuidance(req.requirement_name)
-      : physicalCopyGuidance(display.name);
+      : isOnTimeColb
+        ? physicalCopyGuidance(display.name)?.replace("each document", "this document")
+        : physicalCopyGuidance(display.name)?.replace(/;?\s*for a marital child\.?/gi, "");
+    const copyGuidance = isOnTimeBirth
+      ? uploadGuidance?.replace(/\s*From:.*$/i, "")
+      : uploadGuidance;
     const primary = isOnTimeColb
-      ? "Certificate of Live Birth (COLB)"
+      ? "Duly Accomplished Certificate of Live Birth, 4 copies"
       : display.ageNote ? describeRequirement(display.name).title : documentDisplayName(req.requirement_name);
     const documents = documentsByRequirement.get(slot.key) ?? [];
     const isPending = pendingAction?.slotKey === slot.key;
@@ -761,7 +768,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
                     ? copyGuidance
                   : pageCount > 0
                     ? "Keep photos in reading order. A multi-page PDF can stay as one file."
-                    : "Required · add a PDF or photograph each page."}
+                    : "Add a PDF or photograph each page."}
               </p>
             ) : null}
 

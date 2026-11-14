@@ -1,4 +1,6 @@
+import { birthRequesterRelationship } from "../birth-requester-relationship";
 import { RegistrationNoticeText } from "~/features/requests/components/RegistrationNoticeText";
+import { RegistrationDeadlineCard } from "~/features/requests/components/RegistrationDeadlineCard";
 import { courtDecreeRoles, courtRecordLayout, isCourtDecree } from "~/features/forms/court-decree";
 import { onTimeRegistrationNotice } from "~/features/requests/on-time-registration";
 import { SignaturePad } from "./SignaturePad";
@@ -110,7 +112,7 @@ export function ReviewStep({
   const sexLabel = (sex: string) =>
     sex === "male" ? "Male" : sex === "female" ? "Female" : "—";
 
-  const definition = courtRecordLayout(selectedService.form_template!.definition, { ...draft.answers, ...draft.caseSelectorAnswers });
+  const definition = courtRecordLayout(birthRequesterRelationship(selectedService.form_template!.definition, selectedService.service_code), { ...draft.answers, ...draft.caseSelectorAnswers });
   const personGroupAnswers = Object.fromEntries(
     definition.sections
       .flatMap((section) => section.fields)
@@ -389,7 +391,7 @@ export function ReviewStep({
 
         {detailRows.length > 0 ? (
           <ReviewBlock
-            title={petition ? "Person and record details" : selectedService.service_code === "RA9255_SURNAME" ? "Child and Parent Information" : "Your details"}
+            title="Person and record details"
             onEdit={() =>
               navigate({ to: "/apply/$serviceCode/details", params: { serviceCode } })
             }
@@ -577,28 +579,39 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
 }
 
 function WhatHappensNextCard({ registrationNotice }: { registrationNotice: string | null }) {
+  const deadlineNotice = registrationNotice?.split("\n").filter((line) => !line.startsWith("Wait for")).join("\n");
   return (
+    <div className="flex flex-col gap-5">
+      {deadlineNotice ? <RegistrationDeadlineCard notice={deadlineNotice} /> : null}
     <div className="overflow-hidden rounded-[24px] bg-card shadow-portal-card">
       <div className="border-b border-border-light px-5.5 py-4 text-[17px] font-bold text-foreground">
         What happens next
       </div>
       <ol className="flex flex-col gap-4 px-5.5 py-5">
-        {(registrationNotice ? [registrationNotice, "Keep your tracking number for your visit to the CCRO."] : [
-          "Staff check your uploads online. If one needs fixing, you upload it again here.",
+        {[
           <>
-            When it is ready for release, visit the CCRO once with your{" "}
-            <strong className="font-bold">original documents</strong>.
+            {registrationNotice ? <span className="mb-2 block">Wait for CCRO’s notice before visiting the office.</span> : null}
+            Staff check your uploads online. If one needs fixing, you upload it again here.
           </>,
-          "Show your tracking number, pay any fee, and claim it.",
-        ]).map((step, index) => (
+          <>
+            You’ll be notified when to visit the CCRO for the final document check. Bring your{" "}
+            <strong className="font-bold">original documents</strong>, copies of your requirements, and tracking number.
+          </>,
+          "Once ready for release, pay any fee and claim your document.",
+        ].map((step, index) => (
           <li key={index} className="flex items-start gap-3">
             <span className="flex size-6.5 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[13px] font-bold text-primary">
               {index + 1}
             </span>
-            <p className="pt-0.5 text-[15px] leading-snug text-body-strong">{typeof step === "string" ? <RegistrationNoticeText text={step} /> : step}</p>
+            <p className="m-0 text-[15px] leading-6.5 text-body-strong">
+              {typeof step === "string" && step.includes("\n")
+                ? <RegistrationNoticeText text={step} />
+                : step}
+            </p>
           </li>
         ))}
       </ol>
+    </div>
     </div>
   );
 }

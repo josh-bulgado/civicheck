@@ -38,7 +38,7 @@ export function nextSteps(input: NextStepsInput): NextStepsView | null {
 
   if (status === "released" || status === "rejected" || status === "cancelled") return null;
 
-  const registrationNotice = onTimeRegistrationNotice(input.serviceCode, input.formData);
+  const registrationNotice = onTimeRegistrationNotice(input.serviceCode, input.formData, undefined, status !== "processing");
   const notice = registrationNotice ? { registrationNotice } : {};
 
   // Requirements accepted online; the hard copies still need the final check.

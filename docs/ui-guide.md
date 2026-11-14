@@ -10,19 +10,11 @@ sentence case, preserving acronyms such as PSA, NBI, and PNP. Shorter labels kee
 their existing formatting. Petition details uses the same 24px heading-to-field
 gap as Petition type.
 
-Date-of-birth questions across online service applications and walk-ins use
-Month, Day, Year dropdowns through `BirthDatePicker`, including record-dependent
-birth questions and proposed corrected birth dates. Month names are written out;
-days follow the chosen month and leap year. In narrow fields, Month sits above
-Day and Year to keep every value readable. Incomplete selections do not count
-as an answered date. Saved answers remain `YYYY-MM-DD` for existing validation,
-age calculations, drafts, and submission.
-Validate missing birth-date parts separately after each dropdown is closed or
-left empty. Opening Month must not flag untouched Day and Year controls. Form
-submission validates all missing parts; selecting a value clears that part's
-error while incomplete dates still block progress.
-Use the individual control highlights for missing birth-date parts without the
-generic "Enter a value." message. Keep specific date-validation messages.
+Date-of-birth questions across all online services and staff walk-ins use the
+calendar `DatePicker`, including record-dependent birth dates, bride/groom birth
+dates, and proposed corrected birth dates. Do not use Month, Day, Year dropdowns.
+Keep existing date limits, timing callbacks, age calculations, drafts, and
+submission values in `YYYY-MM-DD` format.
 
 Online petition intake uses one primary-petition radio group. Its fields and
 checklist follow that primary choice. Put required petition fields before
@@ -780,3 +772,18 @@ neighboring form controls; keep this height above the input group's size preset.
 Scope these rules with `data-service-form`; portalled dropdowns and location
 searches use `service-form-options`. Shared heading constants identify their
 role even when a group heading uses an h2 element.
+
+On-time birth intake omits the selector title, Request details heading, and birth-date helper.
+Birth date and place appear below the child's name and suffix on page 2, using
+the existing date validation and registration-track switch. The first group reads
+Child's Information and has no extra divider above it.
+
+Applicant request pages show on-time registration deadlines and period reminders in a separate Registration deadline card above Submitted details. On mobile this follows the progress card. Keep review updates and waiting/visit instructions in What to do next. Hide the deadline card once ready for release or closed.
+
+Online on-time birth details ask Requester's relationship to the child below the father's name. The dropdown is required; Other requires Please specify. These describe a relationship or role and do not establish registration authority. Keep the same validation and saved answers in review and server submission.
+
+On-time birth walk-ins reuse the applicant birth layout and requester relationship fields. Show Child's Information with calendar DOB beside suffix/sex on desktop, full-width birth place below, then mother's maiden name and father fields in first/middle/last order. Keep the divider above relationship/contact, required Other specification, Maria placeholder, and physical-document acceptance. Client and server use the same walk-in definition and date checks.
+
+The shared walk-in intake dialog uses a wider desktop layout. Service picker options and the selected service wrap long names; keep them readable within the mobile viewport without reducing the standard font size.
+
+All online review sections use Person and record details. Details so far keeps labels and values in separate columns with values right-aligned. On-time birth summaries combine father name fields into one row after Mother. Non-marital on-time birth forms include a divider above the optional father full-name field in online and walk-in intake.
