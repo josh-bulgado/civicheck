@@ -580,6 +580,8 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       throw new Error("Request not found");
     }
 
+    const encodedBy = typeof row.form_data?.encoded_by === "string" ? row.form_data.encoded_by : null;
+    const staffIds = [...new Set([row.claimed_by, encodedBy].filter((id): id is string => Boolean(id)))];
     const [attachments, logs, claimProfiles] = await Promise.all([
       supabase
         .from("requirements_attachments")
@@ -593,8 +595,8 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
         )
         .eq("request_id", data.requestId)
         .order("created_at", { ascending: true }),
-      row.claimed_by
-        ? supabase.from("profiles").select("id, first_name, last_name").eq("id", row.claimed_by)
+      staffIds.length
+        ? supabase.from("profiles").select("id, first_name, last_name").in("id", staffIds)
         : Promise.resolve({ data: [], error: null }),
     ]);
 
@@ -639,6 +641,10 @@ export const getRequestDetailFn = createServerFn({ method: "GET" })
       allowsMessages,
       messages,
       ...requestFieldDisplayOf(row),
+      fieldDisplayValues: {
+        ...requestFieldDisplayOf(row).fieldDisplayValues,
+        ...(encodedBy ? { encoded_by: staffNames.get(encodedBy) ?? "Staff member unavailable" } : {}),
+      },
       applicantName: applicantNameOf(row),
       createdAt: row.created_at,
       updatedAt: row.updated_at,

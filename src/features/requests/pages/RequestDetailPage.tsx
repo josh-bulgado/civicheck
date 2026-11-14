@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { RegistrationDeadlineNotice } from "../components/RegistrationDeadlineNotice";
 import { ElectronicEndorsementPanel } from "../components/ElectronicEndorsementPanel";
 import { MarriagePostingPanel } from "../components/MarriagePostingPanel";
 import { usePostingToday } from "../hooks/usePostingToday";
@@ -304,6 +305,8 @@ export default function RequestDetailPage({
           </div>
         }
       />
+
+      <RegistrationDeadlineNotice serviceCode={request.serviceCode} status={request.status} formData={request.formData} />
 
       <MarriagePostingPanel
         showGuidance={false}
