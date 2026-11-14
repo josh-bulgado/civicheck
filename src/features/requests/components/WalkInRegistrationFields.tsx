@@ -159,6 +159,9 @@ export function WalkInRegistrationFields({
         fields: section.fields.filter(field => !(courtDecree && courtDecreeType && field.key === "court_decree_type") &&
           !(petition && service.serviceCode === "RA9048-CCE" && field.key === "primary_petition")).map((field) => {
         if (field.key === "event_date") return { ...field, helpText: undefined };
+        if (service.serviceCode === "MARRIAGE_ONTIME" && field.key === "marriage_license_basis") {
+          return { ...field, helpText: undefined };
+        }
         if (marriage && field.key === "event_place") return {
           ...field,
           placeholder: "e.g. St. Gregory the Great Cathedral, Legazpi City, Albay",
@@ -264,7 +267,7 @@ export function WalkInRegistrationFields({
         } : displayDefinition}
         staffView
         step="details"
-        widePair={petition ? ["event_date", "event_place"] : undefined}
+        widePair={petition || marriage ? ["event_date", "event_place"] : undefined}
         showSectionTitles={surnameChange}
         control={form.control}
         values={values}
@@ -274,10 +277,14 @@ export function WalkInRegistrationFields({
         }
         renderSectionLead={(section) =>
           section.fields.some((field) => field.type === "person_group") ? (
-            <div className="space-y-6">
-              {roles.map((role, index) => (
+            <div className={`space-y-6${marriage ? " border-b border-border-light pb-6" : ""}`}>
+              {roles.map((role, index) => ({ role, index }))
+                .sort((a, b) => marriage
+                  ? Number(b.role === "Groom") - Number(a.role === "Groom")
+                  : a.index - b.index)
+                .map(({ role, index }, position) => (
                 <div key={role} className="space-y-3">
-                  {(!otherCertificate || values.record_type === "marriage") && !(supplemental && values.record_type === "marriage") ? <h3 className={`${FORM_GROUP_CLASS}${index > 0 ? " border-t border-border-light pt-5" : ""}`}>
+                  {(!otherCertificate || values.record_type === "marriage") && !(supplemental && values.record_type === "marriage") ? <h3 className={`${FORM_GROUP_CLASS}${position > 0 ? " border-t border-border-light pt-5" : ""}`}>
                     {courtDecree && values.court_decree_type === "adoption" ? "Adopted person’s details" : formatNameHeading(courtDecree && courtRecordType(values) === "birth" ? "Name on the birth record" : petition ? (values.record_type === "marriage" ? "Husband's Name" : values.record_type === "death" ? "Deceased Person's Name" : "Name on the birth certificate") : otherCertificate ? "Name of Husband" : role.toLowerCase() === "mother"
                       ? "Mother's Maiden Name"
                       : (petition || supplemental || endorsement) && roles.length === 1

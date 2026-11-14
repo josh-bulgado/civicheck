@@ -10,6 +10,9 @@ including license-based windows, reconstruction exemption, and track switching.
 Separate these record fields from the spouse names with a divider. On desktop,
 the date takes one-third of the row and place takes two-thirds; contact is below.
 Stack the fields on mobile.
+Marriage registration walk-ins use the same husband-first order, divider before
+the marriage date/place, wider place field, and contact row below. Names remain
+manual. Omit the on-time license-basis help text and retain timing checks.
 
 Delayed-birth applicant and walk-in forms replace the optional informant name
 and relationship inputs with requester relationship or role. Relationship is
