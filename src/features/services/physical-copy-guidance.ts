@@ -10,6 +10,9 @@ function validIdUploadGuidance(requirementName: string): string | null {
   const title = describeRequirement(requirementName).title;
   if (!/\bvalid\s+(?:ids?|identification(?:\s+cards?)?)\b/i.test(title)) return null;
   if (!physicalCopyCounts(requirementName).some(count => count >= 2)) {
+    const singleId = !/\b(?:ids|identification cards)\b/i.test(title) &&
+      !/\bvalid\s+(?:id|identification(?:\s+card)?)\s*(?:or\b|\/)/i.test(title);
+    if (singleId) return "Upload a clear photo or PDF of the valid ID.";
     return "Add a PDF or photograph each page.";
   }
   return /\bvalid\s+(?:ids?|identification(?:\s+cards?)?)\s*(?:or\b|\/)/i.test(title)

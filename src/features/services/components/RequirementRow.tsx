@@ -2,7 +2,7 @@ import { MapPin } from "lucide-react";
 import type { TemplateAnswers } from "~/features/forms/form-template.types";
 import { conditionRuleMatches } from "~/features/forms/form-template.utils";
 import { surnameChangeRequirementName, surnameChangeRequirementDisplay } from "~/features/services/surname-change";
-import { describeRequirement, requirementDisplayName } from "~/features/services/requirement-display";
+import { describeRequirement, requirementDisplayName, ON_TIME_BIRTH_COLB_TITLE } from "~/features/services/requirement-display";
 import { endorsementRequirementName } from "~/features/services/electronic-endorsement";
 import type { ServiceRequirement } from "~/features/admin/services/services.types";
 import {
@@ -31,7 +31,10 @@ export function RequirementRow({
     typeof answers?.record_type === "string" ? answers.record_type : undefined,
   ));
   const described = display.ageNote ? describeRequirement(name) : null;
-  const primary = described?.title ?? parsed.primary;
+  const onTimeBirth = requirement.requirement_group === "birth_ontime" ||
+    requirement.service_code === "BIRTH_ONTIME" || requirement.service_code?.startsWith("OTCOLB-");
+  const primary = onTimeBirth && /certificate of live birth/i.test(name)
+    ? ON_TIME_BIRTH_COLB_TITLE : described?.title ?? parsed.primary;
   const secondary = described?.detail ?? parsed.secondary;
   const source = requirement.where_to_secure;
   const caseTag = requirement.applies_when

@@ -3,7 +3,7 @@ import { requiresVerificationSignature } from "~/features/apply/verification-sig
 import { FORM_SECTION_CLASS } from "~/features/forms/components/wizard-field";
 import { delayedBirthUploadGuidance, physicalCopyGuidance } from "~/features/services/physical-copy-guidance";
 import { surnameChangeRequirementName, surnameChangeRequirementDisplay } from "~/features/services/surname-change";
-import { describeRequirement, requirementDisplayName } from "~/features/services/requirement-display";
+import { describeRequirement, requirementDisplayName, ON_TIME_BIRTH_COLB_TITLE } from "~/features/services/requirement-display";
 import { endorsementRequirementName } from "~/features/services/electronic-endorsement";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -646,7 +646,9 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
     const isOnTimeColb = isOnTimeBirth &&
       /certificate of live birth/i.test(req.requirement_name);
     const uploadGuidance = isDelayedBirth
-      ? delayedBirthUploadGuidance(req.requirement_name)
+      ? /certificate of live birth/i.test(req.requirement_name)
+        ? delayedBirthUploadGuidance(req.requirement_name)?.replace("each document", "this document")
+        : delayedBirthUploadGuidance(req.requirement_name)
       : isOnTimeColb
         ? physicalCopyGuidance(display.name)?.replace("each document", "this document")
         : physicalCopyGuidance(display.name)?.replace(/;?\s*for a marital child\.?/gi, "");
@@ -654,7 +656,7 @@ export function DocumentsStep({ serviceCode, requirements: savedRequirements, se
       ? uploadGuidance?.replace(/\s*From:.*$/i, "")
       : uploadGuidance;
     const primary = isOnTimeColb
-      ? "Duly Accomplished Certificate of Live Birth, 4 copies"
+      ? ON_TIME_BIRTH_COLB_TITLE
       : display.ageNote ? describeRequirement(display.name).title : documentDisplayName(req.requirement_name);
     const documents = documentsByRequirement.get(slot.key) ?? [];
     const isPending = pendingAction?.slotKey === slot.key;

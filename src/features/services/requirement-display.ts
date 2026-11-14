@@ -1,5 +1,7 @@
 import { parseRequirementName, splitCaseLabel } from "~/features/services/service-utils";
 
+export const ON_TIME_BIRTH_COLB_TITLE = "Four (4) copies of duly accomplished Certificate of Live Birth";
+
 export function requirementDisplayName(name: string): string {
   return splitCaseLabel(name).name.replace(
     "Certificate of Finality / Entry of Judgment / Decree of Adoption or Nullity of Marriage",

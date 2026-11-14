@@ -13,11 +13,16 @@ export function RequestSummaryCard({ rows }: RequestSummaryCardProps) {
   if (rows.length === 0) return null;
 
   return (
-    <div className="overflow-hidden rounded-4xl bg-card shadow-portal-card">
-      <div className="border-b border-border-light px-5.5 py-4 text-[17px] font-bold text-foreground">
+    <div className="flex min-h-0 flex-col overflow-hidden rounded-4xl bg-card shadow-portal-card lg:max-h-[calc(100dvh-10rem)]">
+      <div className="shrink-0 border-b border-border-light px-5.5 py-4 text-[17px] font-bold text-foreground">
         Details so far
       </div>
-      <div className="flex flex-col gap-3 px-5.5 py-4.5">
+      <div
+        role="region"
+        aria-label="Details so far"
+        tabIndex={0}
+        className="flex min-h-0 flex-col gap-3 px-5.5 py-4.5 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary lg:overflow-y-auto"
+      >
         {rows.map((row, index) => (
           <SummaryRow key={`${row.label}-${index}`} {...row} />
         ))}

@@ -18,7 +18,7 @@ it.each([
 
 it("does not turn a number of documents into a physical-copy count", () => {
   expect(physicalCopyGuidance("At least 3 supporting documents")).toBe("Add a PDF or photograph each page.");
-  expect(physicalCopyGuidance("Valid ID")).toBe("Add a PDF or photograph each page.");
+  expect(physicalCopyGuidance("Valid ID")).toBe("Upload a clear photo or PDF of the valid ID.");
 });
 
 it.each([
@@ -28,24 +28,23 @@ it.each([
   expect(delayedBirthUploadGuidance(name)?.includes("Upload only one (1) copy")).toBe(name.startsWith("Four (4)"));
 });
 
-it.each(["[Advance Endorsement] Valid ID", "[Negative to PSA CRS] Valid ID", "[Blurred/Illegible Entries] Valid ID", "Valid IDs"])("uses ID wording for %s", (name) => {
-  expect(physicalCopyGuidance(name)).toBe("Add a PDF or photograph each page.");
+it.each(["[Advance Endorsement] Valid ID", "[Negative to PSA CRS] Valid ID", "[Blurred/Illegible Entries] Valid ID", "Valid ID of the registrant / informant with personal appearance"])("uses ID wording for %s", (name) => {
+  expect(physicalCopyGuidance(name)).toBe("Upload a clear photo or PDF of the valid ID.");
+  expect(delayedBirthUploadGuidance(name)).toBe("Upload a clear photo or PDF of the valid ID.");
 });
 
 it("omits the physical-copy reminder for one ID copy", () => {
   const guidance = physicalCopyGuidance("Valid ID, 1 photocopy with picture and signature");
-  expect(guidance).toContain("Add a PDF or photograph each page.");
+  expect(guidance).toContain("Upload a clear photo or PDF of the valid ID.");
   expect(guidance).not.toContain("only one (1)");
   expect(guidance).not.toContain("Bring to CCRO:");
-  expect(guidance).toContain("each page");
+  expect(guidance).not.toContain("each page");
 });
 
 it.each([
   "Birth Certificate, 1 copy",
   "Information Sheet, original copy",
-  "Valid ID",
   "Marriage Contract",
-  "Valid ID of the registrant / informant with personal appearance",
   "Affidavit, one original copy",
   "At least 3 supporting documents, 1 photocopy each",
   "Barangay Certificate — 1 original or certified photocopy",
