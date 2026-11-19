@@ -9,6 +9,7 @@ const state = vi.hoisted(() => ({
   sign: vi.fn(async () => ({ data: { signedUrl: "signed-link" }, error: null })),
   filters: vi.fn(),
   update: vi.fn(),
+  rpc: vi.fn(async () => ({ data: true, error: null })),
 }));
 
 vi.mock("@tanstack/react-start", () => ({
@@ -41,6 +42,7 @@ vi.mock("~/server/auth", () => ({
 }));
 vi.mock("~/utils/supabase", () => ({
   getSupabaseAdminClient: () => ({
+    rpc: state.rpc,
     from: () => {
       const query = {
         update: (values: unknown) => { state.update(values); return query; },
@@ -54,7 +56,7 @@ vi.mock("~/utils/supabase", () => ({
   }),
 }));
 
-import { getMyAttachmentSignedUrlFn, resubmitOwnAttachmentFn } from "./applicant-requests.mutations";
+import { cancelOwnRequestFn, getMyAttachmentSignedUrlFn, resubmitOwnAttachmentFn } from "./applicant-requests.mutations";
 
 const previous = {
   fileUrl: "applicant/old.pdf", rejectionReason: "Blurry",
@@ -72,11 +74,32 @@ beforeEach(() => {
   state.history = [previous];
   state.conflict = false;
   state.uploadError = null;
+  state.rpc.mockResolvedValue({ data: true, error: null });
   state.attachment = {
     id: "attachment", request_id: "request", requirement_name: "Death Certificate",
     file_url: previous.fileUrl, verification_status: "rejected",
     previous_uploads: state.history, requests: { applicant_id: "applicant", status: "incomplete" },
   };
+});
+
+describe("applicant cancellation", () => {
+  const requestId = "00000000-0000-4000-8000-000000000003";
+  it("uses the authenticated applicant for the shared cancellation action", async () => {
+    expect(await cancelOwnRequestFn({ data: { requestId } })).toEqual({ error: false });
+    expect(state.rpc).toHaveBeenCalledWith("cancel_own_ctc_birth_request", {
+      p_request_id: requestId, p_applicant_id: "applicant",
+    });
+  });
+  it("rejects malformed request IDs before calling the database", () => {
+    expect(() => cancelOwnRequestFn({ data: { requestId: "invalid" } })).toThrow();
+    expect(state.rpc).not.toHaveBeenCalled();
+  });
+  it("reports when staff has already started checking", async () => {
+    state.rpc.mockResolvedValue({ data: false, error: null });
+    expect(await cancelOwnRequestFn({ data: { requestId } })).toMatchObject({ error: true,
+      message: "Only your submitted online request can be cancelled before staff starts checking.",
+    });
+  });
 });
 
 describe("applicant replacement file handling", () => {

@@ -8,11 +8,14 @@ import { NoticeAlert } from "./NoticeAlert";
 export function DerivedAnswerAlerts({
   definition,
   answers,
+  compact = false,
 }: {
   definition: FormTemplateDefinition;
   answers: TemplateAnswers | Record<string, string>;
+  compact?: boolean;
 }) {
-  const feedback = getDerivedAnswerFeedback(definition, answers);
+  const feedback = getDerivedAnswerFeedback(definition, answers)
+    .filter((item) => !compact || item.notice.blocksProgress);
   if (feedback.length === 0) return null;
 
   return (
@@ -23,7 +26,7 @@ export function DerivedAnswerAlerts({
           variant={item.notice.variant}
           title={item.notice.title}
         >
-          {item.label}: {item.age}. {item.notice.description}
+          {compact ? null : <>{item.label}: {item.age}. {item.notice.description}</>}
         </NoticeAlert>
       ))}
     </div>

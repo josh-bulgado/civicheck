@@ -33,8 +33,6 @@ export const Route = createFileRoute("/_authed/_dashboard/staff-dashboard")({
     };
   },
   staleTime: 15_000,
-  pendingMs: 250,
-  pendingMinMs: 250,
   pendingComponent: StaffDashboardSkeleton,
   component: StaffDashboardRoute,
 });

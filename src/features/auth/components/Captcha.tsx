@@ -61,12 +61,28 @@ export function Captcha({ onToken, error, resetKey }: {
   resetKey: number;
 }) {
   const container = useRef<HTMLDivElement>(null);
+  const mount = useRef<HTMLDivElement>(null);
   const errorId = useId();
   const [loadError, setLoadError] = useState<string | null>(null);
   const [rendered, setRendered] = useState(false);
   const [retry, setRetry] = useState(0);
+  const [scale, setScale] = useState<number | null>(null);
+  const readyToRender = scale !== null;
 
   useEffect(() => {
+    const element = container.current;
+    if (!element) return;
+    const measure = () => {
+      if (element.clientWidth > 0) setScale(Math.min(1, element.clientWidth / 304));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!readyToRender) return;
     let active = true;
     let widget: { api: RecaptchaApi; id: number; host: HTMLDivElement } | undefined;
     setLoadError(null);
@@ -81,9 +97,9 @@ export function Captcha({ onToken, error, resetKey }: {
           return;
         }
         const api = await loadRecaptcha();
-        if (!active || !container.current) return;
+        if (!active || !mount.current) return;
         const host = document.createElement("div");
-        container.current.append(host);
+        mount.current.append(host);
         const fail = (message: string) => {
           if (!active) return;
           onToken(null);
@@ -92,7 +108,7 @@ export function Captcha({ onToken, error, resetKey }: {
         try {
           const id = api.render(host, {
             sitekey: config.siteKey, theme: "light",
-            size: container.current.clientWidth < 304 ? "compact" : "normal",
+            size: "normal",
             callback: token => {
               if (!active) return;
               setLoadError(null);
@@ -123,16 +139,24 @@ export function Captcha({ onToken, error, resetKey }: {
         finally { widget.host.remove(); }
       }
     };
-  }, [onToken, resetKey, retry]);
+  }, [onToken, resetKey, retry, readyToRender]);
 
   const message = loadError ?? error;
   return (
     <div role="group" aria-label="Security verification" aria-describedby={message ? errorId : undefined}
-      className="grid w-full min-w-0 justify-items-center gap-2 py-1">
-      <div ref={container} className="flex w-full min-w-0 justify-center" />
-      {!rendered && !loadError && <p role="status" className="text-sm text-muted-foreground">Loading security verification…</p>}
+      className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)] justify-items-center gap-2 py-1">
+      <div ref={container} className="relative flex w-full min-w-0 justify-center"
+        style={{ minHeight: !rendered && loadError ? 0 : 78 * (scale ?? 1) }}>
+        {/* Keep the logo beside the checkbox and reserve the scaled footprint.
+            Resizing this same widget preserves an existing verification. */}
+        <div className="relative shrink-0" style={{ width: 304 * (scale ?? 1), height: !rendered && loadError ? 0 : 78 * (scale ?? 1) }}>
+          <div ref={mount} className="absolute top-0 left-0 w-[304px] origin-top-left"
+            style={{ transform: `scale(${scale ?? 1})` }} />
+        </div>
+        {!rendered && !loadError && <p role="status" className="absolute inset-0 flex items-center justify-center px-3 text-center text-sm text-muted-foreground">Loading security verification…</p>}
+      </div>
       {message && <p id={errorId} role="alert" className="text-center text-sm text-destructive">{message}</p>}
-      {message && <button type="button" className="text-sm underline underline-offset-4"
+      {message && <button type="button" className="min-h-11 px-3 text-sm underline underline-offset-4 focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-ring"
         onClick={() => {
           onToken(null);
           setRetry(value => value + 1);

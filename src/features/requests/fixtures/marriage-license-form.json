@@ -1,0 +1,248 @@
+{
+  "sections": [
+    {
+      "key": "case",
+      "step": "case",
+      "title": "Case details",
+      "fields": [
+        {
+          "key": "bride_nationality",
+          "type": "select",
+          "label": "Bride’s nationality",
+          "options": [
+            {
+              "label": "Filipino",
+              "value": "filipino"
+            },
+            {
+              "label": "Foreign national",
+              "value": "foreign"
+            }
+          ],
+          "required": true
+        },
+        {
+          "key": "groom_nationality",
+          "type": "select",
+          "label": "Groom’s nationality",
+          "options": [
+            {
+              "label": "Filipino",
+              "value": "filipino"
+            },
+            {
+              "label": "Foreign national",
+              "value": "foreign"
+            }
+          ],
+          "required": true
+        },
+        {
+          "key": "bride_civil_status",
+          "type": "select",
+          "label": "Bride’s current civil status",
+          "options": [
+            {
+              "label": "Single",
+              "value": "single"
+            },
+            {
+              "label": "Widowed",
+              "value": "widowed"
+            },
+            {
+              "label": "Annulled or divorced",
+              "value": "annulled_divorced"
+            }
+          ],
+          "required": true
+        },
+        {
+          "key": "groom_civil_status",
+          "type": "select",
+          "label": "Groom’s current civil status",
+          "options": [
+            {
+              "label": "Single",
+              "value": "single"
+            },
+            {
+              "label": "Widowed",
+              "value": "widowed"
+            },
+            {
+              "label": "Annulled or divorced",
+              "value": "annulled_divorced"
+            }
+          ],
+          "required": true
+        },
+        {
+          "key": "event_date",
+          "type": "date",
+          "label": "Intended date of marriage",
+          "required": true,
+          "dateDirection": "future"
+        },
+        {
+          "key": "event_place",
+          "type": "text",
+          "label": "Intended place of marriage",
+          "required": true,
+          "placeholder": "e.g. Legazpi City, Albay"
+        },
+        {
+          "key": "bride_date_of_birth",
+          "type": "date",
+          "label": "Bride's date of birth",
+          "required": true,
+          "dateDirection": "past"
+        },
+        {
+          "key": "groom_date_of_birth",
+          "type": "date",
+          "label": "Groom's date of birth",
+          "required": true,
+          "dateDirection": "past"
+        }
+      ]
+    },
+    {
+      "key": "details_account_party",
+      "step": "details",
+      "title": "Your role",
+      "fields": [
+        {
+          "key": "account_party_role",
+          "type": "select",
+          "label": "Are you the bride or groom?",
+          "options": [
+            {
+              "label": "Bride",
+              "value": "Bride"
+            },
+            {
+              "label": "Groom",
+              "value": "Groom"
+            }
+          ],
+          "required": true
+        }
+      ]
+    },
+    {
+      "key": "details",
+      "step": "details",
+      "title": "Your details",
+      "fields": [
+        {
+          "key": "subjects",
+          "type": "person_group",
+          "label": "Person named on the record",
+          "required": true
+        },
+        {
+          "key": "contact_number",
+          "type": "phone",
+          "label": "Contact number",
+          "blockKey": "contact_number",
+          "required": false,
+          "placeholder": "9171234567"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1,
+  "derivedAnswers": [
+    {
+      "key": "bride_age_bracket",
+      "kind": "age_band",
+      "bands": [
+        {
+          "label": "Under 18 years old",
+          "value": "under_18",
+          "maxAge": 17,
+          "minAge": 0,
+          "notice": {
+            "title": "Applicant is under 18",
+            "variant": "destructive",
+            "description": "This case does not fit the configured Marriage License workflow. Correct the birth date or contact the CCRO for guidance.",
+            "blocksProgress": true
+          }
+        },
+        {
+          "label": "18–20 years old",
+          "value": "18_20",
+          "maxAge": 20,
+          "minAge": 18
+        },
+        {
+          "label": "21–24 years old",
+          "value": "21_24",
+          "maxAge": 24,
+          "minAge": 21,
+          "notice": {
+            "title": "Parental advice requirements apply",
+            "variant": "warning",
+            "description": "The checklist will include the documents configured for applicants aged 21–24.",
+            "blocksProgress": false
+          }
+        },
+        {
+          "label": "25 years old or above",
+          "value": "25_plus",
+          "minAge": 25
+        }
+      ],
+      "label": "Bride’s age on the intended marriage date",
+      "required": true,
+      "dateField": "bride_date_of_birth",
+      "referenceDateField": "event_date"
+    },
+    {
+      "key": "groom_age_bracket",
+      "kind": "age_band",
+      "bands": [
+        {
+          "label": "Under 18 years old",
+          "value": "under_18",
+          "maxAge": 17,
+          "minAge": 0,
+          "notice": {
+            "title": "Applicant is under 18",
+            "variant": "destructive",
+            "description": "This case does not fit the configured Marriage License workflow. Correct the birth date or contact the CCRO for guidance.",
+            "blocksProgress": true
+          }
+        },
+        {
+          "label": "18–20 years old",
+          "value": "18_20",
+          "maxAge": 20,
+          "minAge": 18
+        },
+        {
+          "label": "21–24 years old",
+          "value": "21_24",
+          "maxAge": 24,
+          "minAge": 21,
+          "notice": {
+            "title": "Parental advice requirements apply",
+            "variant": "warning",
+            "description": "The checklist will include the documents configured for applicants aged 21–24.",
+            "blocksProgress": false
+          }
+        },
+        {
+          "label": "25 years old or above",
+          "value": "25_plus",
+          "minAge": 25
+        }
+      ],
+      "label": "Groom’s age on the intended marriage date",
+      "required": true,
+      "dateField": "groom_date_of_birth",
+      "referenceDateField": "event_date"
+    }
+  ]
+}

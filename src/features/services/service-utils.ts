@@ -30,6 +30,7 @@ export function parseRequirementName(name: string): {
   primary: string;
   secondary: string | null;
 } {
+  name = splitCaseLabel(name).name;
   const dashIndex = name.indexOf("—");
   if (dashIndex === -1) {
     // Also try the regular hyphen-dash pattern " - " as a fallback

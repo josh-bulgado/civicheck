@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_authed/_dashboard/admin/staff")({
   },
   loader: () => getStaff(),
   staleTime: 30_000,
-  pendingComponent: () => <TablePageSkeleton label="Loading personnel" avatar />,
+  pendingComponent: () => <TablePageSkeleton title="Staff Management" description="CCRO Administration" label="Loading personnel" columnLabels={["Member", "Department", "Employment", "Role", "Status", "Actions"]} avatar />,
   component: AdminStaffRoute,
 });
 

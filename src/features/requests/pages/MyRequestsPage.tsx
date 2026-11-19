@@ -1,5 +1,6 @@
 import { QuietLink } from "~/components/quiet-link";
-import { FileText, Plus } from "lucide-react";
+import { FileText } from "lucide-react";
+import { MyRequestsPageHeader } from "../components/MyRequestsPageHeader";
 import { staggerStyle } from "~/components/motion/stagger";
 import { pillButton } from "~/components/portal/styles";
 import { buttonVariants } from "~/components/ui/button";
@@ -100,22 +101,7 @@ export default function MyRequestsPage({ requests, unreadRequestIds }: MyRequest
 
   return (
     <div className="portal-page gap-4.5 md:gap-7">
-      <div className="flex items-center justify-between gap-x-6 gap-y-3">
-        <h1 className="portal-title">My requests</h1>
-        {/* A round "+" on a phone: the title already says what this page is. */}
-        <QuietLink
-          to="/services"
-          aria-label="New request"
-          className={cn(
-            buttonVariants(),
-            pillButton.primary,
-            "h-14 gap-2.5 px-7 text-base shadow-portal-button max-md:size-12 max-md:gap-0 max-md:px-0",
-          )}
-        >
-          <Plus className="size-4.5 max-md:size-5.5" aria-hidden="true" />
-          <span className="max-md:sr-only">New request</span>
-        </QuietLink>
-      </div>
+      <MyRequestsPageHeader />
 
       {requests.length === 0 ? (
         <Empty className="civic-enter-scale gap-5 rounded-[28px] bg-card px-8 py-16 shadow-portal-card">

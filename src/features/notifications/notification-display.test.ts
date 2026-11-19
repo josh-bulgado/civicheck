@@ -30,6 +30,14 @@ it("keeps inquiries online",()=>{
   expect(feedDetail(releaseNotice({serviceCode:"EMAIL_INQUIRY",feesDue:0,paymentStatus:"unpaid"}))).toBe("Read CCRO's reply in the messages.");
 });
 
+it("keeps endorsement claiming instructions without replacing them with CCRO collection", () => {
+  const body = 'Your CiviCheck request TEST is now "Ready for Release".\n\nYour final PSA certificate is available.\nClaiming location: Confirmed PSA desk\nBring the claim slip.\n\nOpen "My Requests" for the full details.';
+  const detail = feedDetail(releaseNotice({serviceCode:"ELEC_ENDORSEMENT",paymentStatus:"verified",feesDue:100,body}));
+  expect(detail).toContain("Confirmed PSA desk");
+  expect(detail).toContain("Bring the claim slip.");
+  expect(detail).not.toContain("CCRO staff");
+});
+
 describe("on-time registration release instructions", () => {
   it("shows the reminder deadline and office instructions", () => {
     const body = 'Your on-time registration deadline is November 20, 2026 (1 day left).\n\nBring your original documents and hard copies to the CCRO office.\n\nOpen "My Requests" for the full details.';

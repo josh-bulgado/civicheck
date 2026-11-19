@@ -68,7 +68,9 @@ export function NoticeAlert({
       <Icon className={cn("mt-px size-5.5 shrink-0", tone.title)} aria-hidden="true" />
       <div className="min-w-0 flex-1">
         <p className={cn("text-[17px] leading-snug font-bold", tone.title)}>{title}</p>
-        <div className={cn("mt-1 text-[15px] leading-normal", tone.text)}>{children}</div>
+        {children != null ? (
+          <div className={cn("mt-1 text-[15px] leading-normal", tone.text)}>{children}</div>
+        ) : null}
       </div>
     </div>
   );

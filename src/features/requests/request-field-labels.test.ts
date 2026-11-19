@@ -45,6 +45,25 @@ describe("saved request display labels", () => {
     expect(requestFieldDisplayOf({ form_template_versions: embed })).toEqual({ fieldLabels: {}, fieldDisplayValues: {} });
   });
 
+  it("updates old submitted labels without changing the saved form or answers", () => {
+    const definition = { schemaVersion: 1, sections: [{ key: "case", step: "case", title: "Case details", fields: [
+      { key: "subjects", type: "person_group", label: "Person named on the record" },
+      { key: "event_place", type: "text", label: "Place where the child was born or registered" },
+      { key: "marriage_date", type: "date", label: "Date of the parents' marriage" },
+      { key: "marriage_place", type: "text", label: "Place of the parents' marriage" },
+      { key: "reference_number", type: "text", label: "Registry number of the child's birth certificate (if known)" },
+    ] }] };
+    const row = { form_template_versions: { definition }, form_data: { event_place: "Legazpi City", marriage_date: "2020-01-01" } };
+    const snapshot = JSON.stringify(row);
+    expect(requestFieldLabelsOf(row)).toMatchObject({
+      event_place: "Child's Place of Birth",
+      marriage_date: "Parent's Date of Marriage",
+      marriage_place: "Parent's Place of Marriage",
+      reference_number: "Registry number of the child's birth certificate",
+    });
+    expect(JSON.stringify(row)).toBe(snapshot);
+  });
+
   it("keeps the field-label-only API compatible", () => {
     const row = { form_template_versions: { definition: birthFixture.definition } };
     expect(requestFieldLabelsOf(row)).toEqual(requestFieldDisplayOf(row).fieldLabels);

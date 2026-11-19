@@ -97,7 +97,7 @@ const ForgotPasswordForm = () => {
               {RECOVERY_CONFIRMATION}
             </AuthStepHeading>
 
-            <div className="civic-enter-scale">
+            <div className="civic-enter-fade">
               {requestError && <Alert variant="destructive"><AlertDescription>{requestError}</AlertDescription></Alert>}
               <OtpCodeForm
                 isVerifying={verifyOtpMutation.status === "pending"}

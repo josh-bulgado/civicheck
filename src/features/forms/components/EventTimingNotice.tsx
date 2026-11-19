@@ -44,6 +44,7 @@ export function EventTimingNotice({
       icon={tone.icon}
       role={role}
       title={title}
+      className="justify-center [&>div]:flex-initial"
     >
       <span className="flex flex-wrap items-center gap-x-4 gap-y-3">
         {description}

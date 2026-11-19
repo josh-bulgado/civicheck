@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DOCUMENT_RELEASED, READY_TO_CLAIM, readyForReleaseInstruction } from "~/features/services/release-instructions";
+import { endorsementClaimingSteps, type EndorsementDetails } from "~/features/requests/electronic-endorsement-release";
 import { sendEmail } from "~/utils/resend";
+import { getAppUrl } from "~/utils/app-url";
 import { getStatusDetails } from "~/features/services/request-status";
 import type { NotificationType } from "~/features/notifications/notifications.queries";
 import {
@@ -52,6 +54,8 @@ export function buildStatusChangeEmail(
   remarks?: string | null,
   serviceCode?: string | null,
   payment?: { paymentStatus: string | null; feesDue: number },
+  requestId?: string,
+  endorsement?: EndorsementDetails,
 ): NotificationContent {
   if (status === "processing") {
     return composeContent(
@@ -73,6 +77,10 @@ export function buildStatusChangeEmail(
         `Your CiviCheck request ${trackingNumber} is now "Ready for Release".`,
         serviceCode === "EMAIL_INQUIRY"
           ? "Read CCRO's reply in the messages."
+          : serviceCode === "ELEC_ENDORSEMENT"
+            ? ["Your final PSA certificate is available.",
+              ...(payment?.paymentStatus !== "verified" ? [readyForReleaseInstruction(payment?.paymentStatus, payment?.feesDue)] : []),
+              ...endorsementClaimingSteps(endorsement)].join("\n")
           : readyForReleaseInstruction(payment?.paymentStatus, payment?.feesDue),
         remarks || "",
       ].filter(Boolean),
@@ -80,7 +88,7 @@ export function buildStatusChangeEmail(
     );
   }
   if (status === "released") {
-    return composeContent(
+    const content = composeContent(
       "status_change",
       `Request ${trackingNumber}: now Released`,
       [
@@ -92,6 +100,12 @@ export function buildStatusChangeEmail(
       ].filter(Boolean),
       `open "My Requests" for the full details.`,
     );
+    if (!requestId) return content;
+    const feedbackUrl = `${getAppUrl()}/my-requests/${encodeURIComponent(requestId)}?feedback=true`;
+    return { ...content,
+      text: `${content.text}\n\nYou can give optional feedback about Civicheck from this completed request.`,
+      html: `${content.html}<p><a href="${escapeHtml(feedbackUrl)}">Give feedback about your Civicheck experience</a> (optional)</p>`,
+    };
   }
   const label = getStatusDetails(status).label;
   const subject = `Request ${trackingNumber}: now ${label}`;
@@ -101,9 +115,10 @@ export function buildStatusChangeEmail(
   return composeContent("status_change", subject, lines, `open "My Requests" for the full details.`);
 }
 
-export function buildCashierClearedEmail(trackingNumber: string): NotificationContent {
+export function buildCashierClearedEmail(trackingNumber: string, endorsement?: EndorsementDetails): NotificationContent {
   return composeContent("status_change", `Request ${trackingNumber}: Ready for Release`,
-    [`Your CiviCheck request ${trackingNumber} is "Ready for Release".`, READY_TO_CLAIM],
+    [`Your CiviCheck request ${trackingNumber} is "Ready for Release".`,
+      endorsement ? endorsementClaimingSteps(endorsement).join("\n") : READY_TO_CLAIM],
     'open "My Requests" for the full details.');
 }
 

@@ -1,3 +1,8 @@
+import { birthRequesterRelationship } from "~/features/apply/birth-requester-relationship";
+import { deathRequesterRelationship } from "~/features/forms/death-requester-relationship";
+import { REQUESTER_NAME_KEYS, requesterNameAnswers, requiresAccountRequester } from "~/features/apply/requester-name";
+import { isPetitionService, petitionSelectionError } from "./petition-selection";
+import { ACCOUNT_PARTY_ROLE, accountPartyName, isMarriageAccountRole } from "~/features/apply/marriage-account-party";
 import { requiresVerificationSignature } from "~/features/apply/verification-signature";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -171,7 +176,56 @@ export const submitRequestFn = createServerFn({ method: "POST" })
     // Hidden questions are dropped before anything reads the bag, so a value
     // sent for a question the applicant was never shown cannot decide which
     // documents are required.
-    const answerBag = canonicalizeTemplateAnswers(definition, data.answers);
+    definition = deathRequesterRelationship(birthRequesterRelationship(definition, data.serviceCode), data.serviceCode);
+    const answers = { ...data.answers };
+    const requesterKeys = REQUESTER_NAME_KEYS.filter((key) => requiresAccountRequester(data.serviceCode) &&
+      definition.sections.some((section) => section.fields.some((field) => field.key === key)),
+    );
+    const marriageAccountParty = data.serviceCode === "MARRIAGE_LICENSE";
+    if (requesterKeys.length || marriageAccountParty) {
+      const { data: profile, error } = await supabase.from("profiles")
+        .select("first_name, middle_name, last_name, suffix, has_no_middle_name")
+        .eq("id", user.id).maybeSingle();
+      if (error || !profile || !profile.first_name?.trim() || !profile.last_name?.trim()) {
+        return { error: true, message: "Complete your name in your account profile before submitting." };
+      }
+      const names = requesterNameAnswers({
+        firstName: profile.first_name,
+        middleName: profile.middle_name ?? "",
+        lastName: profile.last_name,
+        suffix: profile.suffix ?? "",
+        hasNoMiddleName: profile.has_no_middle_name === true,
+      });
+      for (const key of requesterKeys) answers[key] = names[key];
+      if (marriageAccountParty) {
+        const role = answers[ACCOUNT_PARTY_ROLE];
+        if (!isMarriageAccountRole(role)) {
+          return { error: true, message: "Select whether you are the bride or groom, or husband or wife." };
+        }
+        const personFields = definition.sections.flatMap((section) => section.fields)
+          .filter((field) => field.type === "person_group");
+        const personField = personFields[0];
+        const parties = personField ? answers[personField.key] : undefined;
+        if (personFields.length !== 1 || !Array.isArray(parties) || parties.length !== 2 ||
+          parties.filter((party) => party.role === "Bride").length !== 1 ||
+          parties.filter((party) => party.role === "Groom").length !== 1) {
+          return { error: true, message: "Enter both parties on the marriage application." };
+        }
+        const accountName = accountPartyName({
+          firstName: profile.first_name, middleName: profile.middle_name ?? "",
+          lastName: profile.last_name, suffix: profile.suffix ?? "",
+          hasNoMiddleName: profile.has_no_middle_name === true,
+        });
+        answers[personField.key] = parties.map((party) => party.role === role
+          ? { ...party, ...accountName, suffix: role === "Bride" ? "" : accountName.suffix }
+          : party);
+      }
+    }
+    const answerBag = canonicalizeTemplateAnswers(definition, answers);
+    if (isPetitionService(data.serviceCode) && definition.sections.some(section => section.fields.some(field => field.key === "primary_petition"))) {
+      const error = petitionSelectionError(answerBag);
+      if (error) return { error: true, message: error };
+    }
     const selectorValidation = validateCaseSelectorAnswers(
       definition,
       answerBag,

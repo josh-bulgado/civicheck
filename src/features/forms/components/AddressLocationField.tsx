@@ -100,7 +100,7 @@ export function AddressLocationField({
           <span className="truncate">{value || placeholder}</span>
           <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-(--anchor-width) p-0">
+        <PopoverContent align="start" className="service-form-options w-(--anchor-width) p-0">
           <Command>
             <CommandInput placeholder="Search locations…" />
             <CommandList>

@@ -20,7 +20,7 @@ beforeAll(async () => {
     create function get_user_role() returns text language sql as $$ select current_setting('test.role') $$;
     create table requests(id uuid primary key, request_type text default 'CTC_ISSUANCE', status text, claimed_by uuid, claimed_stage text,
       claimed_at timestamptz, claim_expires_at timestamptz, updated_at timestamptz,
-      posting_start_date date, payment_status text, fees_due numeric, or_number text, copies integer default 1);
+      posting_start_date date, payment_status text, fees_due numeric, or_number text, copies integer default 1, form_data jsonb default '{}');
     create table requirements_attachments(id uuid primary key, request_id uuid, verification_status text, rejection_reason text);
     create table application_logs(created_at timestamptz default clock_timestamp(), request_id uuid, performed_by_profile_id uuid, action_status text, remarks text);
     create function fail_history() returns trigger language plpgsql as $$
@@ -40,6 +40,7 @@ beforeAll(async () => {
   await db.exec(readFileSync(new URL("../../../supabase/migrations/20261106021558_record_original_document_checks.sql", import.meta.url), "utf8"));
   await db.exec(readFileSync(new URL("../../../supabase/migrations/20261106023418_reuse_processing_original_checks.sql", import.meta.url), "utf8"));
   await db.exec(readFileSync(new URL("../../../supabase/migrations/20261106031900_staff_return_and_release_confirmations.sql", import.meta.url), "utf8"));
+  await db.exec(readFileSync(new URL("../../../supabase/migrations/20261111025603_court_decree_validation.sql", import.meta.url), "utf8"));
 }, 30000);
 afterAll(() => db.close());
 beforeEach(async () => {
@@ -206,4 +207,26 @@ it("requires identity online but no physical handover for inquiries", async () =
   await save("status",{status:"released",identity_verified:true},"ready_for_release");
   expect((await db.query("select action_status from application_logs")).rows)
     .toEqual([{action_status:"identity_verified"},{action_status:"released"}]);
+});
+
+it.each(["COURT-ANNULMENT", "COURT-FOREIGN-ADOPTION"])("requires an issuing-court check for uncertain %s", async (service) => {
+  await db.query("update requests set request_type=$1, form_data=$2", [service, {issued_by_rtc_legazpi:"not_sure"}]);
+  await expect(save()).rejects.toThrow(/Verify the issuing court/);
+  expect((await db.query("select status from requests")).rows[0]).toEqual({status:"under_validation"});
+  await save("status", {status:"processing",court_issuer_confirmed:true});
+  expect((await db.query("select remarks from application_logs")).rows[0]).toEqual({remarks:expect.stringContaining("Verified the issuing court")});
+});
+it("blocks a direct transition for a court application with no issuing-court answer", async () => {
+  await db.exec("update requests set request_type='COURT-ANNULMENT'");
+  await expect(db.exec("update requests set status='processing'")).rejects.toThrow(/Verify the issuing court/);
+});
+it.each(["yes", "no"])("preserves validation for an answered court question (%s)", async (answer) => {
+  await db.query("update requests set request_type='COURT-ANNULMENT', form_data=$1", [{issued_by_rtc_legazpi:answer}]);
+  await save();
+  expect((await db.query("select status from requests")).rows[0]).toEqual({status:"processing"});
+});
+it("rolls back an issuing-court confirmation when history fails", async () => {
+  await db.exec("update requests set request_type='COURT-ANNULMENT'; set test.fail_history='yes'");
+  await expect(save("status", {status:"processing",court_issuer_confirmed:true})).rejects.toThrow("History unavailable");
+  expect((await db.query("select status from requests")).rows[0]).toEqual({status:"under_validation"});
 });

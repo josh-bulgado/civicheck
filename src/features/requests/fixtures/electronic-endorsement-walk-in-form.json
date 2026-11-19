@@ -1,0 +1,276 @@
+{
+  "sections": [
+    {
+      "key": "case",
+      "step": "case",
+      "title": "Case details",
+      "fields": [
+        {
+          "key": "endorsement_type",
+          "type": "select",
+          "label": "What do you need?",
+          "options": [
+            {
+              "label": "Advance endorsement: send a newly registered record to PSA for an immediate SECPA copy",
+              "value": "advance"
+            },
+            {
+              "label": "Negative to PSA: PSA issued a negative certification, but the record is on file here",
+              "value": "negative"
+            },
+            {
+              "label": "Blurred or illegible entries: my PSA copy has unreadable entries",
+              "value": "blurred"
+            }
+          ],
+          "required": true
+        },
+        {
+          "key": "record_type",
+          "type": "select",
+          "label": "Which record is it for?",
+          "options": [
+            {
+              "label": "Birth certificate",
+              "value": "birth"
+            },
+            {
+              "label": "Death certificate",
+              "value": "death"
+            },
+            {
+              "label": "Marriage certificate",
+              "value": "marriage"
+            }
+          ],
+          "required": true
+        },
+        {
+          "key": "reference_number",
+          "type": "text",
+          "label": "Registry number",
+          "required": false
+        },
+        {
+          "key": "additional_notes",
+          "type": "textarea",
+          "label": "Additional notes",
+          "blockKey": "additional_notes",
+          "required": false,
+          "placeholder": "Any special requests or instructions…"
+        }
+      ]
+    },
+    {
+      "key": "details",
+      "step": "details",
+      "title": "Owner's Information",
+      "fields": [
+        {
+          "key": "subjects",
+          "type": "person_group",
+          "label": "Person named on the record",
+          "required": true,
+          "labelByAnswer": {
+            "field": "record_type",
+            "labels": {
+              "birth": "Full name",
+              "death": "Full name of the deceased",
+              "other": "Full name of the person named on the record",
+              "marriage": "Name of husband"
+            }
+          },
+          "requireMiddleName": true
+        },
+        {
+          "key": "event_date",
+          "type": "date",
+          "label": "Date of birth",
+          "required": true,
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "birth",
+            "operator": "equals"
+          },
+          "dateDirection": "past"
+        },
+        {
+          "key": "event_place",
+          "type": "text",
+          "label": "Place of birth",
+          "required": true,
+          "placeholder": "e.g. Legazpi City, Albay",
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "birth",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "mother_first_name",
+          "type": "text",
+          "label": "Mother's first name",
+          "inline": true,
+          "required": true,
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "birth",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "mother_middle_name",
+          "type": "text",
+          "label": "Mother's middle name",
+          "inline": true,
+          "required": true,
+          "noneLabel": "No middle name",
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "birth",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "mother_last_name",
+          "type": "text",
+          "label": "Mother's maiden last name",
+          "inline": true,
+          "required": true,
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "birth",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "father_name",
+          "type": "text",
+          "label": "Father's Full Name",
+          "required": false,
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "birth",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "wife_first_name",
+          "type": "text",
+          "label": "Wife's first name",
+          "inline": true,
+          "required": true,
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "marriage",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "wife_middle_name",
+          "type": "text",
+          "label": "Wife's maiden middle name",
+          "inline": true,
+          "required": true,
+          "noneLabel": "No middle name",
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "marriage",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "wife_last_name",
+          "type": "text",
+          "label": "Wife's maiden last name",
+          "inline": true,
+          "required": true,
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "marriage",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "death_date",
+          "type": "date",
+          "label": "Date of death",
+          "required": true,
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "death",
+            "operator": "equals"
+          },
+          "dateDirection": "past"
+        },
+        {
+          "key": "death_place",
+          "type": "text",
+          "label": "Place of death",
+          "required": true,
+          "placeholder": "e.g. Hospital name or house/street, barangay, city/municipality, province",
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "death",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "marriage_date",
+          "type": "date",
+          "label": "Date of marriage",
+          "required": true,
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "marriage",
+            "operator": "equals"
+          },
+          "dateDirection": "past"
+        },
+        {
+          "key": "marriage_place",
+          "type": "text",
+          "label": "Place of marriage",
+          "required": true,
+          "placeholder": "e.g. St. Gregory the Great Cathedral, Legazpi City, Albay",
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "marriage",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "registered_late",
+          "type": "select",
+          "label": "Registered late?",
+          "options": [
+            {
+              "label": "No",
+              "value": "no"
+            },
+            {
+              "label": "Yes",
+              "value": "yes"
+            }
+          ],
+          "required": true
+        },
+        {
+          "key": "registered_late_when",
+          "type": "date",
+          "label": "If yes, when was it registered?",
+          "required": true,
+          "visibleWhen": {
+            "field": "registered_late",
+            "value": "yes",
+            "operator": "equals"
+          },
+          "allowEstimate": true,
+          "dateDirection": "past"
+        }
+      ],
+      "singleColumn": true
+    }
+  ],
+  "schemaVersion": 1
+}

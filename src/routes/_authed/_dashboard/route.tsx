@@ -12,7 +12,7 @@ import {
 } from "~/components/ui/sidebar";
 import { AppSidebar } from "~/components/sidebar-01/app-sidebar";
 import { CommandPalette } from "~/components/sidebar-01/command-palette";
-import { PageSkeleton } from "~/components/feedback/PageSkeleton";
+import { RouteContentSkeleton } from "~/components/feedback/RouteContentSkeleton";
 import { CityGovernmentIdentity } from "~/components/brand/civic-identity";
 import { ThemeSwitch } from "~/components/theme-switch";
 import { DashboardBreadcrumbs } from "~/components/sidebar-01/dashboard-breadcrumbs";
@@ -171,7 +171,7 @@ function DashboardLayout() {
                 id="main-content"
                 className="civic-workspace min-w-0 w-full bg-workspace p-4 text-foreground sm:p-6 lg:p-8"
               >
-                <PageSkeleton />
+                <RouteContentSkeleton />
               </main>
             </SidebarInset>
           }

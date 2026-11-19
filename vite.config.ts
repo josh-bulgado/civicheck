@@ -6,6 +6,8 @@ import { nitro } from "nitro/vite";
 import { devtools } from "@tanstack/devtools-vite";
 
 export default defineConfig({
+  // Standalone preview/test servers must not replace the app's optimized dependencies.
+  cacheDir: "node_modules/.vite/civicheck",
   server: {
     port: 3000,
   },

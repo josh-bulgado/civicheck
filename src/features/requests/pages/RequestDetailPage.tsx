@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { RegistrationDeadlineNotice } from "../components/RegistrationDeadlineNotice";
+import { ElectronicEndorsementPanel } from "../components/ElectronicEndorsementPanel";
 import { MarriagePostingPanel } from "../components/MarriagePostingPanel";
 import { usePostingToday } from "../hooks/usePostingToday";
 import { needsMarriagePosting } from "../marriage-posting";
@@ -62,7 +64,9 @@ const CONFIRM_REJECTION_SERVICE_CODES = ["OTCOLB-MARITAL", "OTCOLB-NONMARITAL"];
 const CHAT_HOTKEY: HotkeyChord = "C";
 
 const DIALOG_TARGET: Record<TransitionDialog, RequestStatus> = {
+  endorsement: "ready_for_release",
   return: "under_validation",
+  court: "processing",
   originals: "ready_for_release",
   incomplete: "incomplete",
   reject: "rejected",
@@ -157,6 +161,7 @@ export default function RequestDetailPage({
       : doc;
   });
   const planInput = {
+    endorsement: request.endorsement,
     postingStartDate: request.postingStartDate,
     today,
     serviceCode: request.serviceCode,
@@ -201,7 +206,9 @@ export default function RequestDetailPage({
         return false;
       }
       const res = await advanceRequestStatusFn({
-        data: { requestId: request.id, toStatus: to, remarks, ...confirmations },
+        data: { requestId: request.id, toStatus: to, remarks, ...confirmations,
+          ...(request.serviceCode === "ELEC_ENDORSEMENT" && to === "ready_for_release" ? { expectedUpdatedAt: request.updatedAt } : {}),
+        },
       });
       if (res.error) {
         toast.error("Could not update this request", { description: res.message });
@@ -218,6 +225,12 @@ export default function RequestDetailPage({
   }
 
   function handleAction(action: PlannedAction) {
+    if (action.to === "processing" &&
+      ["COURT-ANNULMENT", "COURT-FOREIGN-ADOPTION"].includes(request.serviceCode) &&
+      !["yes", "no"].includes(String(request.formData.issued_by_rtc_legazpi ?? ""))) {
+      setDialog("court");
+      return;
+    }
     if (action.dialog) {
       setDialog(action.dialog);
       return;
@@ -293,7 +306,10 @@ export default function RequestDetailPage({
         }
       />
 
+      <RegistrationDeadlineNotice serviceCode={request.serviceCode} status={request.status} formData={request.formData} />
+
       <MarriagePostingPanel
+        showGuidance={false}
         key={`${request.id}-${request.postingStartDate}`}
         serviceCode={request.serviceCode} status={request.status}
         postingStartDate={request.postingStartDate} postingEndDate={request.postingEndDate}
@@ -301,6 +317,11 @@ export default function RequestDetailPage({
           requestId: request.id, updatedAt: request.updatedAt, createdAt: request.createdAt, onSaved: onUpdated,
         } : undefined}
       />
+
+      <ElectronicEndorsementPanel key={JSON.stringify([request.id, request.endorsement])} serviceCode={request.serviceCode}
+        status={request.status} details={request.endorsement}
+        editor={ownsStageClaim ? { requestId: request.id, updatedAt: request.updatedAt,
+          createdAt: request.createdAt, onSaved: onUpdated } : undefined} />
 
       <RequestHandoffConcerns
         status={request.status}
@@ -348,9 +369,11 @@ export default function RequestDetailPage({
             >
               {/* A request with no fee has nothing to collect until the cashier
                   confirms it at release, so the card appears only then. */}
-              {(request.feesDue > 0 || request.status === "ready_for_release") && (
+              {(request.feesDue > 0 || request.status === "ready_for_release" || (request.serviceCode === "DEATH_DELAYED" && request.status === "processing" && request.postingStartDate)) && (
                 <PaymentVerificationPanel
                   requestId={request.id}
+                  serviceCode={request.serviceCode}
+                  postingStartDate={request.postingStartDate}
                   status={request.status}
                   feesDue={request.feesDue}
                   copies={request.copies}
@@ -412,7 +435,9 @@ export default function RequestDetailPage({
         type={dialog}
         busy={busy}
         context={{
+          isWalkIn: request.isWalkIn,
           serviceCode: request.serviceCode,
+          endorsement: request.endorsement,
           applicantName: request.applicantName,
           originalsAlreadyChecked: hasCurrentOriginalDocumentCheck(request.logs),
           copies: request.copies,

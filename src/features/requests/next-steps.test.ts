@@ -13,6 +13,14 @@ const ready = (over: { feesDue: number; paymentStatus: string | null; allowsMess
   });
 
 describe("what to do next once a request is ready for release", () => {
+  it("directs delayed death applicants to pay during posting and wait before claiming", () => {
+    const input = { status: "processing", serviceCode: "DEATH_DELAYED", postingStartDate: "2026-11-10",
+      paymentStatus: "unpaid", feesDue: 620, allowsMessages: false, attachments: [], logs: [] };
+    const unpaid = nextSteps(input);
+    expect(unpaid?.kind === "steps" && unpaid.steps.at(-1)).toBe("Pay at the CCRO cashier, then wait for the posting period and registration to finish before claiming.");
+    const paid = nextSteps({ ...input, paymentStatus: "verified" });
+    expect(paid?.kind === "steps" && paid.steps.at(-1)).toBe("Payment is verified. Wait for the posting period and registration to finish before claiming.");
+  });
   it("adds bringing the fee, with the amount, when one is owed", () => {
     expect(ready({ feesDue: 150, paymentStatus: "unpaid" })).toEqual({
       kind: "steps",
@@ -69,7 +77,7 @@ describe("what to do next once a request is ready for release", () => {
     ).toEqual({
       kind: "steps",
       ...(onTimeRegistrationNotice(serviceCode)
-        ? { registrationNotice: onTimeRegistrationNotice(serviceCode) }
+        ? { registrationNotice: onTimeRegistrationNotice(serviceCode, {}, undefined, false) }
         : {}),
       steps: [
         "Go to the CCRO office for final validation",
@@ -99,8 +107,8 @@ describe("on-time registration deadline", () => {
       try {
         for (const status of ["processing", "ready_for_release"]) {
           for (const [today, expected] of [
-            [dayBefore, "1 day left"],
-            [deadline, "due today"],
+            [dayBefore, "On-time registration deadline:"],
+            [deadline, "On-time registration deadline:"],
             [dayAfter, "deadline has passed"],
           ]) {
             vi.setSystemTime(new Date(`${today}T12:00:00+08:00`));
@@ -147,7 +155,7 @@ describe("on-time registration deadline", () => {
             if (result?.kind !== "steps") throw new Error("Expected office instructions");
             if (status === "processing") {
               expect(result.registrationNotice).toContain(
-                serviceCode === "MARRIAGE_ONTIME" ? "9 days left" : "24 days left",
+                serviceCode === "MARRIAGE_ONTIME" ? "November 20, 2026" : "December 5, 2026",
               );
             } else {
               expect(result.registrationNotice).toBeUndefined();

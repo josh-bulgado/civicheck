@@ -75,14 +75,14 @@ export const DEFAULT_APPLY_DRAFT: ApplyDraft = {
   presetMarital: null,
   subjects: [],
   answers: {
-    purpose: "Local Use (ID, Barangay, etc.)",
+    purpose: "",
   },
   copies: 1,
   contactNumber: "",
   eventDate: "",
   eventPlace: "",
   caseAnswers: {
-    purpose: "Local Use (ID, Barangay, etc.)",
+    purpose: "",
     otherPurpose: "",
     additionalNotes: "",
     referenceNumber: "",
@@ -124,7 +124,7 @@ function withMigratedAnswers(value: Partial<ApplyDraft>): ApplyDraft {
     answers: {
       event_date: value.eventDate ?? "",
       event_place: value.eventPlace ?? "",
-      purpose: legacyCase.purpose ?? "Local Use (ID, Barangay, etc.)",
+      purpose: legacyCase.purpose ?? "",
       purpose_other: legacyCase.otherPurpose ?? "",
       additional_notes: legacyCase.additionalNotes ?? "",
       reference_number: legacyCase.referenceNumber ?? "",

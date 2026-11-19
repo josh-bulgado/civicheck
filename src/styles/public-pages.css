@@ -5,14 +5,8 @@
   background: var(--background);
 }
 
-.public-service-page .landing-header-inner {
-  width: calc(100% - 104px);
-  max-width: 1440px;
-}
-
 .landing-header .public-nav-active {
   color: var(--primary);
-  font-weight: 700;
 }
 
 .public-page-title {
@@ -128,8 +122,8 @@
 .requirement-apply p { color: var(--body); font-size: 14px; line-height: 1.5; }
 .requirement-apply-actions { display: flex; flex-shrink: 0; flex-wrap: wrap; gap: 12px; }
 .requirement-apply .landing-button { min-height: 50px; padding: 13px 24px; font-size: 14px; }
-.requirement-save { border-color: var(--border-strong); color: var(--foreground); background: var(--card); }
-.requirement-save:hover { background: var(--background); }
+.requirement-print { border-color: var(--border-strong); color: var(--foreground); background: var(--card); }
+.requirement-print:hover { background: var(--background); }
 
 .public-track-main {
   width: 100%;
@@ -170,7 +164,6 @@
 .public-service-page .landing-footer-bottom nav { font-size: 13px; }
 
 @media (max-width: 1023px) {
-  .public-service-page .landing-header-inner { width: calc(100% - 40px); }
   .public-service-page .landing-footer-main, .public-service-page .landing-footer-bottom-inner { width: calc(100% - 64px); }
   .public-service-page .landing-footer-main { grid-template-columns: 1.3fr 1fr; gap: 32px; padding-block: 40px; }
   .public-service-page .landing-footer-about { grid-column: 1 / -1; }
@@ -230,7 +223,6 @@
 }
 
 @media (max-width: 370px) {
-  .public-service-page .landing-header-inner { width: calc(100% - 32px); }
   .public-service-page .landing-footer-main { grid-template-columns: 1fr; }
 }
 

@@ -1,4 +1,10 @@
+import { birthRequesterRelationship } from "../birth-requester-relationship";
 import { requiresVerificationSignature } from "~/features/apply/verification-signature";
+import { FORM_SECTION_CLASS } from "~/features/forms/components/wizard-field";
+import { delayedBirthUploadGuidance, physicalCopyGuidance } from "~/features/services/physical-copy-guidance";
+import { surnameChangeRequirementName, surnameChangeRequirementDisplay } from "~/features/services/surname-change";
+import { describeRequirement, requirementDisplayName, ON_TIME_BIRTH_COLB_TITLE } from "~/features/services/requirement-display";
+import { endorsementRequirementName } from "~/features/services/electronic-endorsement";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Camera, Check, ClipboardCheck, Files, FileText, FileX, X } from "lucide-react";
@@ -62,6 +68,7 @@ import {
 import { buildSummaryRows } from "~/features/apply/summary-rows";
 import { evictCachedFile, primeCachedFile } from "~/lib/file-preview-cache";
 import { cn } from "~/lib/utils";
+import { useMediaQuery } from "~/hooks/use-media-query";
 
 const ACCEPTED_TYPES = new Set([
   "image/jpeg",
@@ -115,8 +122,9 @@ interface DocumentsStepProps {
   services: ServiceDetail["services"];
 }
 
-export function DocumentsStep({ serviceCode, requirements, services }: DocumentsStepProps) {
+export function DocumentsStep({ serviceCode, requirements: savedRequirements, services }: DocumentsStepProps) {
   const navigate = useNavigate();
+  const isMobile = useMediaQuery("(max-width: 767px)");
   const { draft, update, hydrated } = useApplyDraft(serviceCode);
   // The draft as of the latest render. A "Try again" button keeps the
   // `handleFiles` of the render it was made in, so reading `draft` there would
@@ -126,7 +134,19 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
   latestDraft.current = draft;
   const selectedService =
     services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0];
-  const definition = selectedService.form_template!.definition;
+  const definition = birthRequesterRelationship(selectedService.form_template!.definition, selectedService.service_code);
+  const documentDisplayName = (name: string) => parseRequirementName(
+    endorsementRequirementName(
+      requirementDisplayName(name),
+      selectedService.service_code,
+      draft.caseSelectorAnswers.record_type ?? draft.answers.record_type,
+    ),
+  ).primary;
+  const isDelayedBirth = selectedService.service_code === "BIRTH_DELAYED" || selectedService.service_code.startsWith("DCOLB-");
+  const requirements = useMemo(() => savedRequirements.map(requirement => ({
+    ...requirement,
+    requirement_name: surnameChangeRequirementName(requirement.requirement_name, selectedService.service_code, draft.answers.event_date),
+  })), [savedRequirements, selectedService.service_code, draft.answers.event_date]);
   const signsVerificationOnline = requiresVerificationSignature(
     selectedService.service_code,
     draft.caseSelectorAnswers.record_type ?? draft.answers.record_type,
@@ -138,6 +158,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
   // Everything the applicant has entered so far, as the review step will read
   // it back. Unanswered fields are left out rather than shown as blanks.
   const summaryRows = buildSummaryRows({
+    serviceCode: selectedService?.service_code,
     definition,
     answers: canonicalizeTemplateAnswers(definition, {
       ...draft.answers,
@@ -189,6 +210,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
   // open it, replacing the wizard. Swallow those misses for as long as this
   // step is on screen; the slots handle their own drops before this runs.
   useEffect(() => {
+    if (isMobile) return;
     function swallowFileDrop(event: DragEvent) {
       if (!isFileDrag(event) || event.defaultPrevented) return;
       event.preventDefault();
@@ -202,7 +224,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
       window.removeEventListener("dragover", swallowFileDrop);
       window.removeEventListener("drop", swallowFileDrop);
     };
-  }, []);
+  }, [isMobile]);
 
   const mandatoryReqs = useMemo(
     () =>
@@ -619,16 +641,28 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
 
   function renderUploadSlot(slot: (typeof uploadSlots)[number]) {
     const req = slot.requirement;
-    const isOnTimeColb =
-      ["BIRTH_ONTIME", "OTCOLB-MARITAL", "OTCOLB-NONMARITAL"].includes(selectedService.service_code) &&
+    const display = surnameChangeRequirementDisplay(req.requirement_name, selectedService.service_code);
+    const isOnTimeBirth = ["BIRTH_ONTIME", "OTCOLB-MARITAL", "OTCOLB-NONMARITAL"].includes(selectedService.service_code);
+    const isOnTimeColb = isOnTimeBirth &&
       /certificate of live birth/i.test(req.requirement_name);
-    const needsFourPhysicalCopies =
-      isOnTimeColb ||
-      (/certificate/i.test(req.requirement_name) &&
-        /\b(?:4\)?|four)\s+(?:original\s+)?copies\b/i.test(req.requirement_name));
+    const isRegistrationCertificate =
+      (["MARRIAGE_ONTIME", "MARRIAGE_DELAYED"].includes(selectedService.service_code) &&
+        /(?:certificate of marriage|marriage certificate)/i.test(req.requirement_name)) ||
+      (["DEATH_ONTIME", "DEATH_DELAYED"].includes(selectedService.service_code) &&
+        /(?:certificate of death|death certificate)/i.test(req.requirement_name));
+    const uploadGuidance = isDelayedBirth
+      ? /certificate of live birth/i.test(req.requirement_name)
+        ? delayedBirthUploadGuidance(req.requirement_name)?.replace("each document", "this document")
+        : delayedBirthUploadGuidance(req.requirement_name)
+      : isOnTimeColb || isRegistrationCertificate
+        ? physicalCopyGuidance(display.name)?.replace("each document", "this document")
+        : physicalCopyGuidance(display.name)?.replace(/;?\s*for a marital child\.?/gi, "");
+    const copyGuidance = isOnTimeBirth
+      ? uploadGuidance?.replace(/\s*From:.*$/i, "")
+      : uploadGuidance;
     const primary = isOnTimeColb
-      ? "Certificate of Live Birth (COLB)"
-      : parseRequirementName(req.requirement_name).primary;
+      ? ON_TIME_BIRTH_COLB_TITLE
+      : display.ageNote ? describeRequirement(display.name).title : documentDisplayName(req.requirement_name);
     const documents = documentsByRequirement.get(slot.key) ?? [];
     const isPending = pendingAction?.slotKey === slot.key;
     const uploading = isPending && pendingAction.type === "upload";
@@ -638,7 +672,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
     const pageCount = documents.length;
     const captureInputKey = `${slot.key}:capture`;
     const filesInputKey = `${slot.key}:files`;
-    const isDropTarget = dragSlotKey === slot.key;
+    const isDropTarget = !isMobile && dragSlotKey === slot.key;
     const isMissing = showMissing && pageCount === 0;
 
     // Dropped files take the same path as chosen ones, so the type, size and
@@ -655,16 +689,16 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
         key={slot.key}
         id={`slot-${slot.key}`}
         aria-busy={isPending}
-        onDragEnter={handleDragOver}
-        onDragOver={handleDragOver}
-        onDragLeave={(event) => {
+        onDragEnter={isMobile ? undefined : handleDragOver}
+        onDragOver={isMobile ? undefined : handleDragOver}
+        onDragLeave={isMobile ? undefined : (event) => {
           // Moving between the card's own children fires this too.
           if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
             return;
           }
           setDragSlotKey((current) => (current === slot.key ? null : current));
         }}
-        onDrop={(event) => {
+        onDrop={isMobile ? undefined : (event) => {
           if (!isFileDrag(event)) return;
           event.preventDefault();
           setDragSlotKey(null);
@@ -678,7 +712,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
             : pageCount > 0
               ? "border border-solid border-border-light"
               : cn(
-                  "border-2 border-dashed",
+                  "border border-solid md:border-2 md:border-dashed",
                   isMissing ? "border-destructive" : "border-[#b9c7de] dark:border-border-strong",
                 ),
         )}
@@ -724,7 +758,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
                       pendingAction.total ?? 1,
                     )} of ${pendingAction.total ?? 1}…`}
               </p>
-            ) : (
+            ) : Boolean(copyGuidance) || selectedService.service_code !== "OTHER_CERT" || isDropTarget ? (
               <p
                 className={cn(
                   "mt-1 text-[15px] leading-snug",
@@ -737,14 +771,19 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
               >
                 {isDropTarget
                   ? "Drop to add to this document."
-                  : needsFourPhysicalCopies
-                    ? "Required · upload one copy (all pages). Bring 4 physical copies to CCRO."
+                  : copyGuidance
+                    ? copyGuidance
                   : pageCount > 0
                     ? "Keep photos in reading order. A multi-page PDF can stay as one file."
-                    : "Required · add a PDF or photograph each page."}
+                    : "Add a PDF or photograph each page."}
               </p>
-            )}
+            ) : null}
 
+            {display.ageNote ? (
+              <p className="mt-2 text-[15px] leading-snug text-muted-foreground">
+                <strong className="font-semibold text-foreground">{display.ageLabel}:</strong> {display.ageNote}
+              </p>
+            ) : null}
             {note && !slotFailure ? (
               <p className="mt-1.5 text-[15px] leading-snug text-warning-strong">{note}</p>
             ) : null}
@@ -959,7 +998,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
             {pageCount > 0 ? "Add files" : "Choose files"}
           </button>
           {/* Dragging needs a mouse or trackpad, so touch screens skip the hint. */}
-          <p className="hidden text-[15px] text-muted-foreground pointer-fine:sm:block">
+          <p className="hidden text-[15px] text-muted-foreground pointer-fine:md:block">
             or drag and drop files here
           </p>
         </div>
@@ -971,7 +1010,13 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
     <WizardShell
       step={3}
       title="Upload your documents"
-      description="Take photos one at a time, or choose or drag in several JPG, PNG, or PDF files, up to 10&nbsp;MB each."
+      description={
+        <>
+          <span className="md:hidden">Take photos one at a time, or choose several JPG, PNG, or PDF files, up to 10&nbsp;MB each.</span>
+          <span className="hidden md:inline">Take photos one at a time, or choose or drag in several JPG, PNG, or PDF files, up to 10&nbsp;MB each.</span>
+        </>
+      }
+      hideSidebarOnMobile
       sidebar={
         summaryRows.length > 0 ? <RequestSummaryCard rows={summaryRows} /> : null
       }
@@ -998,7 +1043,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
           ? uploadGroups.map((group) => (
               <section key={group.role ?? "request"} className="flex flex-col gap-3.5">
                 <div>
-                  <h2 className="text-xl leading-[normal] font-bold text-foreground">
+                  <h2 className={FORM_SECTION_CLASS}>
                     {group.role ? `${group.role}’s documents` : "Shared documents"}
                   </h2>
                   {group.name ? (
@@ -1015,7 +1060,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
             <div className="flex items-start gap-3.5">
               <ClipboardCheck className="mt-0.5 size-5.5 shrink-0 text-primary" />
               <div className="min-w-0">
-                <h2 className="text-lg font-bold text-foreground">
+                <h2 className={FORM_SECTION_CLASS}>
                   {signsVerificationOnline
                     ? "Sign online - no upload needed"
                     : selectedService.service_code === "EMAIL_INQUIRY"
@@ -1027,7 +1072,8 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
                     <li key={requirement.id}>
                       {signsVerificationOnline && requirement.requirement_name.startsWith("Verification Form")
                         ? "Verification Form: sign online in the next step. No printing needed."
-                        : parseRequirementName(requirement.requirement_name).primary}
+                        : isDelayedBirth ? requirementDisplayName(requirement.requirement_name)
+                        : documentDisplayName(requirement.requirement_name)}
                     </li>
                   ))}
                 </ul>
@@ -1044,8 +1090,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
         }}
         documentName={
           cameraSlot
-            ? parseRequirementName(cameraSlot.requirement.requirement_name)
-                .primary
+            ? documentDisplayName(cameraSlot.requirement.requirement_name)
             : "your document"
         }
         onCapture={(file) => {
@@ -1105,7 +1150,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
                 </AlertDialogDescription>
               )}
 
-              <div className="mt-6 flex justify-end gap-2.5">
+              <div className="mt-6 grid min-w-0 grid-cols-1 gap-2.5 sm:flex sm:flex-wrap sm:justify-end">
                 {/* Both stay focusable while busy (`aria-disabled`, not `disabled`),
                     so focus doesn't drop to the page mid-request. A press does
                     nothing: the dialog ignores a close until the request ends. */}
@@ -1113,7 +1158,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
                   ref={keepFile}
                   aria-disabled={removeBusy}
                   className={cn(
-                    "civic-press h-13 rounded-full border bg-card px-7 text-base font-semibold shadow-none",
+                    "civic-press h-auto min-h-13 min-w-0 max-w-full rounded-full border bg-card px-7 py-3 text-base leading-snug font-semibold whitespace-normal wrap-anywhere shadow-none",
                     removeBusy
                       ? "cursor-default border-border-light text-[#8a97a8] dark:text-muted-foreground opacity-100"
                       : "border-primary text-foreground hover:bg-primary-tint focus-visible:ring-4 focus-visible:ring-primary/20",
@@ -1126,7 +1171,7 @@ export function DocumentsStep({ serviceCode, requirements, services }: Documents
                   onClick={() => void confirmRemoval()}
                   aria-disabled={removeBusy}
                   className={cn(
-                    "civic-press inline-flex h-13 items-center justify-center gap-2.5 rounded-full bg-destructive px-7 text-base font-semibold text-white dark:text-background",
+                    "civic-press inline-flex min-h-13 min-w-0 max-w-full items-center justify-center gap-2.5 rounded-full bg-destructive px-7 py-3 text-base leading-snug font-semibold whitespace-normal wrap-anywhere text-white dark:text-background",
                     removeBusy ? "cursor-default opacity-85" : "hover:bg-destructive/90",
                   )}
                 >

@@ -1,20 +1,20 @@
+import type { ReactNode } from "react";
 import { Skeleton } from "~/components/ui/skeleton";
+import { PageHeaderCard } from "~/components/ui/page-header-card";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
 import { cn } from "~/lib/utils";
 
 type SkeletonProps = { label?: string; className?: string };
+type LoadingHeadingProps = { title?: string; description?: ReactNode; actionLabel?: string };
 
-export function SkeletonHeading({ action = true }: { action?: boolean }) {
+/** Fixed page copy is available before its records; only values need placeholders. */
+export function SkeletonHeading({ title, description, actionLabel }: LoadingHeadingProps) {
+  if (!title) return null;
   return (
-    <div
-      className="flex flex-wrap items-center justify-between gap-4"
-      aria-hidden="true"
-    >
-      <div className="min-w-0 space-y-3">
-        <Skeleton className="h-9 w-64 max-w-full" />
-        <Skeleton className="h-4 w-80 max-w-full" />
-      </div>
-      {action ? <Skeleton className="h-10 w-44 rounded-xl" /> : null}
-    </div>
+    <PageHeaderCard title={title} description={description}>
+      {actionLabel ? <Button disabled size="sm">{actionLabel}</Button> : null}
+    </PageHeaderCard>
   );
 }
 
@@ -22,7 +22,10 @@ export function SkeletonHeading({ action = true }: { action?: boolean }) {
 export function PageSkeleton({
   label = "Loading page",
   className,
-}: SkeletonProps) {
+  title,
+  description,
+  actionLabel,
+}: SkeletonProps & LoadingHeadingProps) {
   return (
     <div
       data-page-skeleton
@@ -31,7 +34,7 @@ export function PageSkeleton({
       aria-busy="true"
       className={cn("dashboard-page min-w-0", className)}
     >
-      <SkeletonHeading />
+      <SkeletonHeading title={title} description={description} actionLabel={actionLabel} />
       <div
         aria-hidden="true"
         className="grid gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]"
@@ -53,12 +56,20 @@ export function TablePageSkeleton({
   label = "Loading records",
   columns = 6,
   avatar = false,
+  title,
+  description,
+  actionLabel,
+  columnLabels,
+  searchPlaceholder = "Search records",
 }: {
   label?: string;
   columns?: number;
   avatar?: boolean;
-}) {
-  const style = { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` };
+  columnLabels?: readonly string[];
+  searchPlaceholder?: string;
+} & LoadingHeadingProps) {
+  const columnCount = columnLabels?.length ?? columns;
+  const style = { gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` };
   return (
     <div
       data-page-skeleton
@@ -67,31 +78,30 @@ export function TablePageSkeleton({
       aria-busy="true"
       className="dashboard-page min-w-0"
     >
-      <SkeletonHeading />
+      <SkeletonHeading title={title} description={description} actionLabel={actionLabel} />
       <div
-        aria-hidden="true"
         className="overflow-hidden rounded-[22px] border border-border-strong bg-card"
       >
         <div className="flex flex-wrap justify-between gap-4 border-b border-border-light p-5">
-          <Skeleton className="h-10 w-80 max-w-full rounded-full" />
-          <Skeleton className="h-10 w-64 max-w-full rounded-xl" />
+          <Input disabled aria-label={searchPlaceholder} placeholder={searchPlaceholder} className="h-10 w-80 max-w-full rounded-full" />
         </div>
         <div className="overflow-hidden">
+          {columnLabels ? (
           <div
             className="grid min-w-[760px] gap-6 border-b border-border-light bg-surface-subtle px-6 py-4"
             style={style}
           >
-            {Array.from({ length: columns }, (_, i) => (
-              <Skeleton key={i} className="h-3 w-20 max-w-full" />
-            ))}
+            {columnLabels.map((heading) => <span key={heading} className="text-xs font-semibold text-muted-foreground">{heading}</span>)}
           </div>
+          ) : null}
           {Array.from({ length: 6 }, (_, row) => (
             <div
               key={row}
+              aria-hidden="true"
               className="grid min-h-[68px] min-w-[760px] items-center gap-6 border-b border-border-lighter px-6 py-3 last:border-b-0"
               style={style}
             >
-              {Array.from({ length: columns }, (_, col) => (
+              {Array.from({ length: columnCount }, (_, col) => (
                 <div key={col} className="flex items-center gap-3">
                   {avatar && col === 0 ? (
                     <Skeleton className="size-10 shrink-0 rounded-full" />
@@ -110,22 +120,21 @@ export function TablePageSkeleton({
   );
 }
 
-export function CatalogPageSkeleton() {
+export function CatalogPageSkeleton({ audience = "applicant" }: { audience?: "applicant" | "staff" } = {}) {
   return (
     <div
       data-page-skeleton
       role="status"
       aria-label="Loading services"
       aria-busy="true"
-      className="dashboard-page min-w-0"
+      className={audience === "applicant" ? "portal-page min-w-0 gap-4.5 md:gap-6" : "dashboard-page min-w-0"}
     >
-      <SkeletonHeading action={false} />
-      <div aria-hidden="true" className="space-y-6">
+      {audience === "applicant" ? <h1 className="portal-title">Browse services</h1> : <PageHeaderCard title="Service Reference" description={<Skeleton className="h-4 w-64 max-w-full" />} />}
+      <div className="flex flex-col gap-6">
         <div className="flex flex-wrap gap-3">
-          <Skeleton className="h-11 w-96 max-w-full rounded-full" />
-          <Skeleton className="h-11 w-64 max-w-full rounded-full" />
+          <Input disabled aria-label="Search services" placeholder="Search services" className="h-11 w-96 max-w-full rounded-full" />
         </div>
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <div aria-hidden="true" className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }, (_, i) => (
             <div
               key={i}
@@ -144,7 +153,7 @@ export function CatalogPageSkeleton() {
   );
 }
 
-export function EditorPageSkeleton() {
+export function EditorPageSkeleton({ title }: { title?: string } = {}) {
   return (
     <div
       data-page-skeleton
@@ -153,14 +162,14 @@ export function EditorPageSkeleton() {
       aria-busy="true"
       className="flex min-h-svh min-w-0 w-full flex-col gap-6 p-5 sm:p-8"
     >
-      <SkeletonHeading />
+      {title ? <SkeletonHeading title={title} /> : <Skeleton aria-hidden="true" className="h-9 w-64 max-w-full" />}
       <div
         aria-hidden="true"
         className="grid flex-1 gap-6 lg:grid-cols-[240px_minmax(0,1fr)]"
       >
         <div className="hidden space-y-4 rounded-2xl border border-border-light bg-card p-5 lg:block">
-          {Array.from({ length: 6 }, (_, i) => (
-            <Skeleton key={i} className="h-10 w-full rounded-xl" />
+          {["Registry & Fees", "Citizen Journey", "Timing & Routing", "Application Form", "Requirements", "Relationships"].map((section) => (
+            <div key={section} className="rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground">{section}</div>
           ))}
         </div>
         <div className="space-y-6 rounded-2xl border border-border-light bg-card p-6">

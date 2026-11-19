@@ -3,6 +3,7 @@ import type { CookieOptions } from "@supabase/ssr";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getAppUrl } from "./app-url";
 import { commitSupabaseCookies, getSupabaseServerClient, setSessionScope, secureCookiesEnabled } from "./supabase";
+import { PERSISTENT_SESSION_MAX_AGE_SECONDS } from "~/features/auth/session-scope";
 
 const requestState = vi.hoisted(() => ({
   url: "http://localhost:3000/login",
@@ -101,8 +102,17 @@ describe("Supabase OAuth cookies and callback", () => {
       expect(hasSessionCookies()).toBe(true);
     }
     for (const [name, cookie] of requestState.cookies) {
-      if (name.includes("-auth-token")) expect(cookie.options).toMatchObject({ httpOnly: true, sameSite: "lax" });
+      if (name.includes("-auth-token")) expect(cookie.options).toMatchObject({
+        httpOnly: true, sameSite: "lax", maxAge: PERSISTENT_SESSION_MAX_AGE_SECONDS,
+      });
     }
+
+    // A new request after the browser closes must still read the session.
+    for (const [name, cookie] of requestState.cookies) {
+      if (!cookie.options.maxAge) requestState.cookies.delete(name);
+    }
+    const returningSession = await getSupabaseServerClient().auth.getSession();
+    expect(returningSession.data.session?.access_token).toBe("test-access-token");
 
     const [endpoint, init] = vi.mocked(fetch).mock.calls[0];
     expect(String(endpoint)).toContain("/auth/v1/token?grant_type=pkce");
@@ -111,5 +121,24 @@ describe("Supabase OAuth cookies and callback", () => {
     expect(createHash("sha256").update(body.code_verifier).digest("base64url")).toBe(
       authorizationUrl.searchParams.get("code_challenge"),
     );
+  });
+
+  it.each(["development", "production"])("keeps a password session after a browser restart in %s", async mode => {
+    vi.stubEnv("NODE_ENV", mode);
+    requestState.url = mode === "production" ? "https://civicheck.vercel.app/login" : "http://localhost:3000/login";
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+      access_token: "password-access-token", refresh_token: "password-refresh-token",
+      token_type: "bearer", expires_in: 3600, user: { id: "password-user" },
+    })));
+    const client = getSupabaseServerClient({ sessionOnly: false, deferCookies: true });
+    const result = await client.auth.signInWithPassword({ email: "applicant@example.test", password: "test-password" });
+    expect(result.error).toBeNull();
+    setSessionScope(false);
+    commitSupabaseCookies(client);
+    for (const [name, cookie] of requestState.cookies) {
+      if (!cookie.options.maxAge) requestState.cookies.delete(name);
+    }
+    const returningSession = await getSupabaseServerClient().auth.getSession();
+    expect(returningSession.data.session?.access_token).toBe("password-access-token");
   });
 });

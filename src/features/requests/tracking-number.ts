@@ -12,6 +12,7 @@ export type NewRequestValues = {
   submission_key?: string;
   form_template_version_id?: string | null;
   status?: string;
+  walk_in_accepted_by?: string;
 };
 
 export type InsertRequestResult =

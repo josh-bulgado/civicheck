@@ -1,4 +1,10 @@
 const CLEARER_APPLICANT_COPY: Readonly<Record<string, string>> = {
+  "What will the certification be used for?": "Purpose",
+  "Informant's relationship to the child":
+    "Informant's relationship to the person",
+  "Choose whether the person was born in Legazpi City or another city/municipality.": "",
+  "We use this date to select the correct age group.": "",
+  "Select Yes if additional identity proof is available or requested by CCRO.": "",
   "Case details": "Request details",
   "Find the right service": "Answer a few questions",
   "Find the right delayed-registration service":
@@ -14,7 +20,7 @@ const CLEARER_APPLICANT_COPY: Readonly<Record<string, string>> = {
   "Registration program": "How will the birth be registered?",
   "BRAP-assisted registration": "With BRAP assistance",
   "We calculate the correct 0-79 or 80+ registration track from this date.":
-    "We use this date to select the correct age group.",
+    "",
 };
 
 /** Keeps already-published templates clear while their stored copy is migrated. */

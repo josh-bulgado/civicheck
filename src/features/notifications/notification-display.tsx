@@ -89,6 +89,7 @@ export function linkFor(
         <QuietLink
           to="/my-requests/$requestId"
           params={{ requestId: target.requestId }}
+          search={{ feedback: target.feedback || undefined }}
           onClick={onClick}
           {...props}
         />
@@ -143,6 +144,15 @@ export function feedDetail(notification: NotificationRow): string | null {
     if (!paragraphs.includes(instruction)) paragraphs.unshift(instruction);
   }
   if (notification.type === "status_change" && /^ready (for release|to claim)$/i.test(feedTitle(notification.subject))) {
+    if (notification.serviceCode === "ELEC_ENDORSEMENT") {
+      const notes = paragraphs.join("\n").split(/\n+/).filter(text =>
+        !/^(Please pay |Pay any outstanding fee|Please wait for |Your document is ready|Your final PSA certificate is available|Please claim your requested document from the CCRO staff)/.test(text),
+      );
+      return ["Your final PSA certificate is available.",
+        ...(notification.paymentStatus !== "verified" ? [readyForReleaseInstruction(notification.paymentStatus, notification.feesDue)] : []),
+        ...(notes.length ? notes : ["Follow the claiming instructions provided by staff."]),
+      ].join(" ");
+    }
     const instruction = notification.serviceCode === "EMAIL_INQUIRY"
       ? "Read CCRO's reply in the messages."
       : readyForReleaseInstruction(notification.paymentStatus, notification.feesDue);

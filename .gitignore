@@ -30,6 +30,12 @@ yarn-debug.log*
 yarn-error.log*
 
 # Testing
+/playwright.config.ts
+/playwright.feedback.config.ts
+# Local Playwright verification scripts
+/tests/feedback/
+/tests/file-preview/
+/tests/navigation/
 /test-results/
 /playwright-report/
 /blob-report/
@@ -73,3 +79,6 @@ temp/
 *.tsbuildinfo
 .eslintcache
 # /docs/
+tests/birth-date/playwright.config.ts
+tests/auth/playwright.config.ts
+tests/printables/playwright.config.ts

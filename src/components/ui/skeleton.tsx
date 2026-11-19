@@ -12,6 +12,7 @@ function Skeleton({
     <div
       data-slot="skeleton"
       data-shape={shape}
+      aria-hidden="true"
       // `civic-skeleton` sweeps a highlight across the block instead of fading
       // the whole thing in and out. A moving placeholder reads as progress,
       // where a pulsing one reads as something stuck.

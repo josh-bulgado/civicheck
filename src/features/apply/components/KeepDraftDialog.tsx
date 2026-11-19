@@ -17,10 +17,10 @@ import { cn } from "~/lib/utils";
 // away". The one question is what happens to the draft.
 
 const DIALOG_PANEL =
-  "w-[min(33.75rem,calc(100%-2rem))] max-w-none gap-0 overflow-hidden rounded-[28px] bg-card p-8 pb-7 shadow-portal-dialog ring-0 sm:max-w-none max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:w-full max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none max-sm:px-6";
+  "w-[min(33.75rem,calc(100%-2rem))] max-w-none gap-0 overflow-y-auto rounded-[28px] bg-card p-8 pb-7 shadow-portal-dialog ring-0 sm:max-w-none max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:w-full max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none max-sm:px-6";
 
 const PILL_BASE =
-  "civic-press inline-flex h-13.5 min-w-0 flex-1 items-center justify-center rounded-full px-4 text-base font-semibold whitespace-nowrap";
+  "civic-press inline-flex min-h-13.5 min-w-0 flex-1 items-center justify-center rounded-full px-4 py-3 text-base leading-snug font-semibold whitespace-normal wrap-anywhere";
 
 export function KeepDraftDialog({
   open,
@@ -80,7 +80,7 @@ export function KeepDraftDialog({
           <p className="text-[13px] leading-[normal] font-bold tracking-[0.12em] text-muted-foreground uppercase">
             Your draft
           </p>
-          <p className="mt-1 text-lg leading-snug font-bold text-foreground">{serviceName}</p>
+          <p className="mt-1 text-lg leading-snug font-bold wrap-anywhere text-foreground">{serviceName}</p>
         </div>
 
         {confirmingDiscard ? (

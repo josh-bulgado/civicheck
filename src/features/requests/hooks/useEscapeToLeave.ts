@@ -37,7 +37,8 @@ export function useEscapeToLeave({
         if (document.querySelector(ESCAPE_OWNERS)) return;
         onLeave();
       },
-      options: { enabled },
+      // The document viewer also owns Escape while its inline panel is open.
+      options: { enabled, conflictBehavior: "allow" },
     },
   ]);
 }

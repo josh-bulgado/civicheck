@@ -71,6 +71,16 @@
   min-width: 0;
 }
 
+.register-form fieldset,
+.register-name-row > *,
+.register-middle-row > * {
+  min-width: 0;
+}
+
+.register-page [data-slot="field-error"] {
+  overflow-wrap: anywhere;
+}
+
 .register-name-row,
 .register-middle-row {
   display: grid;
@@ -142,14 +152,14 @@
 }
 
 .register-page .register-checkbox-row {
-  min-height: 28px;
-  align-items: center;
+  min-height: 44px;
+  align-items: flex-start;
   gap: 10px;
   padding-block: 0;
 }
 
 .register-checkbox-row [data-slot="checkbox"] {
-  margin-top: 0;
+  margin-top: 14px;
 }
 
 .register-checkbox-row [data-slot="checkbox"]::after {
@@ -157,11 +167,12 @@
 }
 
 .register-page .register-checkbox-label {
+  min-width: 0;
   color: var(--body);
   font-size: 13px;
   font-weight: 400;
   line-height: 20px;
-  padding-block: 4px;
+  padding-block: 12px;
 }
 
 .register-page .register-input [data-slot="button"] {

@@ -49,7 +49,7 @@ export function LeadTracker({
           <li
             key={stage}
             aria-current={here ? "step" : undefined}
-            className="min-w-0 flex-1 pr-2 md:pr-3"
+            className="min-w-0 flex-1 pr-2 max-md:pr-0 md:pr-3"
           >
             <div className="flex items-center">
               <span
@@ -91,7 +91,7 @@ export function LeadTracker({
             </div>
             {/* Four labels share a phone's width, so they give way with an
                 ellipsis before they could run into each other. */}
-            <p className="mt-2.5 truncate text-[12.5px] leading-[normal] font-bold text-foreground xl:mt-[clamp(0.625rem,1.8vh,1.25rem)] xl:text-[clamp(1rem,2.4vh,1.375rem)]">
+            <p className="mt-2.5 truncate text-[12.5px] leading-[normal] font-bold text-foreground max-md:text-[clamp(10px,3.2vw,11px)] max-md:font-semibold xl:mt-[clamp(0.625rem,1.8vh,1.25rem)] xl:text-[clamp(1rem,2.4vh,1.375rem)]">
               {STAGE_LABELS[stage]}
               <span className="sr-only">
                 {done ? " (done)" : here ? " (current)" : " (pending)"}

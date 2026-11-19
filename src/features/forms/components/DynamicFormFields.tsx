@@ -1,6 +1,6 @@
-import { validateEventPlace } from "../event-place";
-import { formatFieldLabel } from "~/features/forms/field-label";
-import { isNameField, validatePersonName } from "~/lib/person-name";
+import { eventPlacePlaceholder, validateEventPlace } from "../event-place";
+import { formatFieldLabel, isRegistryNumberField } from "~/features/forms/field-label";
+import { isNameField, validateNameField } from "~/lib/person-name";
 import { Fragment, type ReactNode } from "react";
 import { addressDescendants } from "~/lib/requester-address";
 import { AddressLocationField } from "./AddressLocationField";
@@ -14,7 +14,7 @@ import { Checkbox } from "~/components/ui/checkbox";
 import { Phone } from "lucide-react";
 import { DatePicker } from "~/components/ui/date-picker";
 import { EstimatedDateField } from "./EstimatedDateField";
-import { isEstimatedDate, validateEstimatedDate, validateRegistrationDate } from "../estimated-date";
+import { registrationEventDate, validateDateAnswer } from "../date-validation";
 import { selectableFieldOptions, todayKeyInTimeZone } from "../form-template.utils";
 import {
   Field,
@@ -41,7 +41,6 @@ import {
 } from "~/components/ui/select";
 import { RequiredMark } from "~/components/ui/required-mark";
 import { Textarea } from "~/components/ui/textarea";
-import { toDateKey } from "~/lib/date";
 import { mobileDigits } from "~/lib/phone";
 import { cn } from "~/lib/utils";
 import {
@@ -55,6 +54,8 @@ import {
   WIZARD_CONTROL_CLASS,
   WIZARD_GROUP_CLASS,
   WIZARD_LABEL_CLASS,
+  FORM_SECTION_CLASS,
+  FORM_GROUP_CLASS,
   WIZARD_TEXTAREA_CLASS,
   WizardFieldError,
 } from "./wizard-field";
@@ -83,6 +84,7 @@ function TextWithNoneOption({
   placeholder,
   invalid,
   noneLabel,
+  readOnly = false,
 }: {
   field: {
     value: string | undefined;
@@ -95,6 +97,7 @@ function TextWithNoneOption({
   placeholder?: string;
   invalid: boolean;
   noneLabel: string;
+  readOnly?: boolean;
 }) {
   const none = field.value === NONE_ANSWER;
   return (
@@ -107,6 +110,7 @@ function TextWithNoneOption({
         autoComplete="off"
         placeholder={placeholder}
         maxLength={240}
+        readOnly={readOnly}
         disabled={none}
         aria-invalid={invalid}
         className={cn(
@@ -116,6 +120,7 @@ function TextWithNoneOption({
       />
       <label className="-mt-2.5 flex min-h-11 cursor-pointer items-center gap-2.5 text-[15px] leading-none text-portal-ink-2">
         <Checkbox
+          disabled={readOnly}
           checked={none}
           onCheckedChange={(checked) => {
             if (checked === true) {
@@ -169,7 +174,9 @@ type FieldSpan =
   | "inline"
   | "follow-up"
   | "pair-start"
-  | "pair-end";
+  | "pair-end"
+  | "narrow-start"
+  | "wide-end";
 
 // The grid has six columns so a row can hold two fields (3 + 3) or three
 // (2 + 2 + 2). Every field gets a span from the plan below; nothing is left to
@@ -187,6 +194,8 @@ const SPAN_CLASS: Record<FieldSpan, string> = {
   // A pair always starts its own row, even after an odd number of half fields.
   "pair-start": "sm:col-start-1 sm:col-span-3",
   "pair-end": "sm:col-span-3",
+  "narrow-start": "sm:col-start-1 sm:col-span-2 sm:self-end",
+  "wide-end": "sm:col-span-4 sm:self-end",
 };
 
 function planFieldSpans(
@@ -207,6 +216,7 @@ function planFieldSpans(
   };
 
   for (const field of fields) {
+    if (field.key === fields.find((item) => ["father_first_name", "father_middle_name", "father_last_name"].includes(item.key))?.key) closeRun();
     const placement =
       field.type === "select" && isChoiceGroup(field.options ?? [])
         ? (choicePlacements.get(field.key) ?? "full")
@@ -223,8 +233,18 @@ function planFieldSpans(
     } else {
       run.push(field.key);
     }
+    if (field.key === fields.filter((item) => ["father_first_name", "father_middle_name", "father_last_name"].includes(item.key)).at(-1)?.key) closeRun();
   }
   closeRun();
+  for (const prefix of ["mother", "wife"]) {
+    for (const part of ["first", "middle", "last"]) {
+      const key = `${prefix}_${part}_name`;
+      if (keys.has(key)) spans.set(key, "third");
+    }
+  }
+  for (const key of ["father_last_name", "father_middle_name", "father_first_name"]) {
+    if (keys.has(key)) spans.set(key, "third");
+  }
   return spans;
 }
 
@@ -237,7 +257,12 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
   onFieldChange,
   showRequiredMarks = false,
   showSectionTitles = false,
+  hideSectionTitles = false,
+  sectionHeadingClassName,
   singleColumn = false,
+  widePair,
+  staffView = false,
+  readOnlyKeys = [],
   renderSectionLead,
 }: {
   definition: FormTemplateDefinition;
@@ -258,8 +283,13 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
    * the page reads as headed blocks.
    */
   showSectionTitles?: boolean;
+  hideSectionTitles?: boolean;
+  sectionHeadingClassName?: string;
   /** Stacks every field on its own row instead of pairing short inputs. */
   singleColumn?: boolean;
+  widePair?: readonly [string, string];
+  staffView?: boolean;
+  readOnlyKeys?: readonly string[];
   /**
    * Content drawn under a section's heading, before its fields. The details step
    * uses it to place the person-name block (which has its own inputs) inside the
@@ -277,10 +307,25 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
     )).filter(
       (field) => field.type !== "person_group",
     );
+    if (fields.some((field) => field.key === "record_type" && field.label === "Which record does it concern?")) {
+      const purposeIndex = fields.findIndex((field) => field.key === "purpose");
+      const registryIndex = fields.findIndex((field) => field.key === "reference_number");
+      if (registryIndex >= 0 && purposeIndex > registryIndex) {
+        [fields[registryIndex], fields[purposeIndex]] = [fields[purposeIndex], fields[registryIndex]];
+      }
+    }
     const lead = renderSectionLead?.(section) ?? null;
     if (!fields.length && !lead) return null;
     const choicePlacements = planChoiceLayout(fields);
     const spans = planFieldSpans(fields, choicePlacements);
+    // Keep the record date and place together, with contact below the date.
+    if (fields.find((field) => field.key === "event_date")?.labelByAnswer?.field === "record_type" &&
+      fields.some((field) => field.key === "event_place") &&
+      fields.some((field) => field.key === "contact_number")) {
+      spans.set("event_date", "pair-start");
+      spans.set("event_place", "pair-end");
+      spans.set("contact_number", "pair-start");
+    }
     // A section (or the whole call) can ask for one field per row; fields marked
     // `inline` still share a row, which is how a first/middle/last name sits on
     // one line.
@@ -289,10 +334,13 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
       for (const field of fields)
         spans.set(field.key, field.inline ? "inline" : "full");
     }
-    const titled = showSectionTitles || sections.length > 1;
-    // Stacked sections after the first are set apart with a rule and generous
-    // room, so the applicant sees where one block ends and the next begins.
-    const setApart = stacked && sectionIndex > 0;
+    if (widePair) {
+      spans.set(widePair[0], "narrow-start");
+      spans.set(widePair[1], "wide-end");
+    }
+    const titled = !hideSectionTitles && (showSectionTitles || sections.length > 1);
+    // Separate sections with a divider and space before the next fields.
+    const setApart = sectionIndex > 0;
 
     return (
       <section
@@ -300,18 +348,14 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
         className={cn(
           "flex flex-col gap-3",
           setApart &&
-            "mt-8 border-t border-border-light pt-12 sm:mt-10 sm:pt-14",
+            "mt-6 border-t border-border-light pt-6",
           !setApart && step === "details" && sectionIndex > 0 && "pt-2",
         )}
       >
         {titled ? (
-          <div className="-mb-2 flex flex-col gap-0.5">
+          <div className={cn("-mb-2 flex flex-col gap-0.5", sectionHeadingClassName)}>
             <h2
-              className={
-                showSectionTitles
-                  ? "text-pretty text-lg leading-tight font-bold text-foreground"
-                  : "text-sm font-semibold text-foreground"
-              }
+              className={FORM_SECTION_CLASS}
             >
               {applicantCopy(section.title)}
             </h2>
@@ -335,8 +379,32 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
         >
           {fields.map((definitionField) => (
             <Fragment key={definitionField.key}>
-              {section.key === "details_requester" && definitionField.key === "requester_province" ? (
-                <h3 className={cn("col-span-full -mb-3", WIZARD_LABEL_CLASS)}>Address</h3>
+              {definitionField.key === "registered_late" && values.record_type === "birth" &&
+              definition.caseSelector?.outcomes.some((outcome) => outcome.serviceCode.startsWith("CTC-")) ? (
+                <div role="separator" className="col-span-full border-t border-border-light" />
+              ) : null}
+              {definitionField.key === "father_name" && (
+                (values.marital === "non-marital" && section.fields.some((field) => field.key === "requester_relationship_other")) ||
+                (values.record_type === "birth" && definition.sections.some((item) => item.fields.some((field) => field.key === "entry_to_supplement")))
+              ) ? (
+                <div role="separator" className="col-span-full border-t border-border-light" />
+              ) : null}
+              {definitionField.key === "requester_relationship" &&
+              !definitionField.options?.some((option) => option.value === "funeral_representative") &&
+              section.fields.some((field) => field.key === "requester_relationship_other") ? (
+                <div role="separator" className="col-span-full border-t border-border-light" />
+              ) : null}
+              {definitionField.key === "mother_first_name" ? (
+                <h3 className={cn("col-span-full border-t border-border-light pt-5", FORM_GROUP_CLASS)}>Mother's Maiden Name</h3>
+              ) : null}
+              {definitionField.key === "wife_first_name" ? (
+                <h3 className={cn("col-span-full border-t border-border-light pt-5", FORM_GROUP_CLASS)}>Wife's Maiden Name</h3>
+              ) : null}
+              {definitionField.key === fields.find((field) => ["father_first_name", "father_middle_name", "father_last_name"].includes(field.key))?.key ? (
+                <h3 className={cn("col-span-full border-t border-border-light pt-5", FORM_GROUP_CLASS)}>Father's Name</h3>
+              ) : null}
+              {definitionField.key === "owner_province" || (section.key === "details_requester" && definitionField.key === "requester_province") ? (
+                <h3 className={cn("col-span-full border-t border-border-light pt-5", FORM_GROUP_CLASS)}>Address</h3>
               ) : null}
             <Controller
               key={definitionField.key}
@@ -354,20 +422,12 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                     !definitionField.options.some((option) => option.value === value)) {
                     return "Select a valid option";
                   }
-                  if (definitionField.key === "registered_late_when") {
-                    const result = validateRegistrationDate(value, String(values.event_date ?? ""));
-                    if (result !== true) return result;
-                  }
                   const placeValidation = validateEventPlace(definitionField, value);
                   if (placeValidation !== true) return placeValidation;
                   if (definitionField.noneLabel && value === NONE_ANSWER) return true;
-                  if (isNameField(definitionField)) return validatePersonName(value);
-                  if (
-                    definitionField.type === "date" &&
-                    definitionField.allowEstimate &&
-                    isEstimatedDate(value)
-                  ) {
-                    return validateEstimatedDate(value, todayKeyInTimeZone());
+                  if (isNameField(definitionField)) return validateNameField(definitionField, value);
+                  if (definitionField.type === "date") {
+                    return validateDateAnswer(definitionField, value, values, todayKeyInTimeZone());
                   }
                   if (
                     definitionField.type === "phone" &&
@@ -387,21 +447,25 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
               }}
               render={({ field, fieldState }) => {
                 const addressLevel = definitionField.philippineAddressLevel;
+                const addressPrefix = definitionField.key.startsWith("owner_") ? "owner" : "requester";
                 const locationLevel = definitionField.countrySelect ? "country" : addressLevel;
 
                 // Start a fresh dropdown when its province or city changes.
                 let locationKey = definitionField.key;
                 if (addressLevel === "city" || addressLevel === "barangay") {
-                  locationKey += ":" + values.requester_province;
+                  locationKey += ":" + values[`${addressPrefix}_province`];
                 }
                 if (addressLevel === "barangay") {
-                  locationKey += ":" + values.requester_city;
+                  locationKey += ":" + values[`${addressPrefix}_city`];
                 }
 
-                const placeholder =
-                  /place.*\b(birth|born)\b/i.test(definitionField.label)
-                    ? "e.g., Hospital/clinic or house no., street, barangay, city/municipality, province."
-                    : definitionField.placeholder;
+                const placeholder = definitionField.key === "other_entry"
+                  ? ({
+                    birth: "e.g. Mother's maiden name, place of birth",
+                    marriage: "e.g. Husband's name, wife's maiden name, place of marriage",
+                    death: "e.g. Deceased person's name, place of death",
+                  } as Record<string, string>)[values.record_type] ?? definitionField.placeholder
+                  : eventPlacePlaceholder(definitionField, values.record_type);
 
                 const selectedNotice =
                   definitionField.type === "select"
@@ -409,9 +473,14 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         (option) => option.value === field.value,
                       )?.notice
                     : undefined;
-                const common = (
+                const selectOptions = definitionField.key === "requester_relationship" && !definitionField.required
+                  ? [{ value: "", label: "Leave blank" }, ...(definitionField.options ?? [])]
+                  : definitionField.options ?? [];
+                const common = (showError = fieldState.invalid) => (
                   <>
-                    {definitionField.helpText ? (
+                    {!isRegistryNumberField(definitionField) &&
+                    !["died_in_legazpi", "disposal_method", "embalmed", "death_registration_basis", "issued_by_rtc_legazpi"].includes(definitionField.key) &&
+                    applicantCopy(definitionField.helpText) ? (
                       <FieldDescription>
                         {applicantCopy(definitionField.helpText)}
                       </FieldDescription>
@@ -422,11 +491,11 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                           variant={selectedNotice.variant}
                           title={selectedNotice.title}
                         >
-                          {selectedNotice.description}
+                          {definitionField.key === "died_in_legazpi" ? null : selectedNotice.description}
                         </NoticeAlert>
                       </div>
                     ) : null}
-                    {fieldState.invalid ? (
+                    {showError ? (
                       <WizardFieldError error={fieldState.error} />
                     ) : null}
                   </>
@@ -436,9 +505,16 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                   ...option,
                   label: applicantCopy(option.label),
                 }));
+                const fieldLabel = applicantCopy(
+                  ({ mother_first_name: "First name", mother_middle_name: "Middle name", mother_last_name: "Last name", wife_first_name: "First name", wife_middle_name: "Middle name", wife_last_name: "Last name" } as Record<string, string>)[definitionField.key]
+                    ?? (definitionField.labelByAnswer
+                      ? definitionField.labelByAnswer.labels[values[definitionField.labelByAnswer.field]]
+                      : undefined)
+                    ?? definitionField.label,
+                );
                 const legendLabel = (
                   <>
-                    {formatFieldLabel(applicantCopy(definitionField.label))}
+                    {formatFieldLabel(fieldLabel)}
                     {!definitionField.required ? " (optional)" : ""}
                     {showRequiredMarks && definitionField.required ? (
                       <>
@@ -469,12 +545,32 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                       <FieldLegend
                         variant="label"
                         id={legendId}
-                        className={choiceLegendClass}
+                        className={cn(
+                          choiceLegendClass,
+                          !stacked &&
+                          ["has_marriage_agreement", "solemnized_in_legazpi"].includes(definitionField.key) &&
+                            fields.some((item) => item.key === "has_marriage_agreement") &&
+                            fields.some((item) => item.key === "solemnized_in_legazpi") &&
+                            "sm:float-left sm:flex-1",
+                        )}
                       >
                         {legendLabel}
                       </FieldLegend>
                       <ChoiceGroup
-                        options={options}
+                        options={options.map((option) => {
+                          if (definitionField.key !== "endorsement_type") return option;
+                          const separator = option.label.indexOf(": ");
+                          if (separator < 0) return option;
+                          const description = option.label.slice(separator + 2);
+                          return {
+                            ...option,
+                            label: option.label.slice(0, separator),
+                            description: description.charAt(0).toUpperCase() + description.slice(1),
+                          };
+                        })}
+                        className={definitionField.key === "endorsement_type"
+                          ? "[&_[data-slot=field-label]]:justify-start [&_[data-slot=field]]:items-start! [&_[role=radio]]:mt-px! [&_[data-slot=field-content]]:gap-1.5 [&_[data-slot=field-content]>.font-medium]:font-semibold [&_[data-slot=field-content]>.text-xs]:text-sm [&_[data-slot=field-content]>.text-xs]:font-normal [&_[data-slot=field-content]>.text-xs]:leading-relaxed"
+                          : undefined}
                         value={field.value ?? ""}
                         onValueChange={field.onChange}
                         idPrefix={`dynamic-${definitionField.key}`}
@@ -482,7 +578,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         invalid={fieldState.invalid}
                         labelledBy={legendId}
                       />
-                      {common}
+                      {common()}
                     </FieldSet>
                   );
                 }
@@ -492,6 +588,10 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                     data-invalid={fieldState.invalid}
                     className={cn(
                       SPAN_CLASS[spans.get(definitionField.key) ?? "half"],
+                      !stacked && ["reference_number", "marriage_date"].includes(definitionField.key) &&
+                        fields.some((item) => item.key === "father_on_record") &&
+                        fields.some((item) => item.key === "marriage_date") &&
+                        "sm:self-end",
                       // The tiles above a free-text box sit tight against its
                       // label; a few extra pixels keep them apart.
                       stacked &&
@@ -501,6 +601,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                   >
                     <FieldLabel
                       htmlFor={`dynamic-${definitionField.key}`}
+                      id={`dynamic-${definitionField.key}-label`}
                       className={WIZARD_LABEL_CLASS}
                     >
                       {legendLabel}
@@ -510,13 +611,13 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                       <AddressLocationField
                         key={locationKey}
                         level={locationLevel}
-                        area={values.requester_province ?? ""}
-                        city={values.requester_city ?? ""}
+                        area={values[`${addressPrefix}_province`] ?? ""}
+                        city={values[`${addressPrefix}_city`] ?? ""}
                         value={field.value ?? ""}
                         onChange={(value) => {
                           field.onChange(value);
                           if (value !== field.value && addressLevel) {
-                            for (const key of addressDescendants(addressLevel)) {
+                            for (const key of addressDescendants(addressLevel, addressPrefix)) {
                               onFieldChange?.(key, "");
                             }
                           }
@@ -539,7 +640,8 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                     ) : definitionField.type === "date" ? (
                       definitionField.allowEstimate ? (
                         <EstimatedDateField
-                          min={definitionField.key === "registered_late_when" ? String(values.event_date || "") : undefined}
+                          staffView={staffView}
+                          min={definitionField.key === "registered_late_when" ? registrationEventDate(values) : undefined}
                           id={`dynamic-${definitionField.key}`}
                           value={field.value ?? ""}
                           onChange={(value) => {
@@ -561,14 +663,14 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                           onBlur={field.onBlur}
                           max={
                             definitionField.dateDirection === "past"
-                              ? toDateKey()
+                              ? todayKeyInTimeZone()
                               : undefined
                           }
                           min={
                             definitionField.key === "registered_late_when"
-                              ? String(values.event_date || "")
+                              ? registrationEventDate(values)
                               : definitionField.dateDirection === "future"
-                              ? toDateKey()
+                              ? todayKeyInTimeZone()
                               : undefined
                           }
                           // The label is right above, so without a placeholder of its
@@ -587,7 +689,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                       )
                     ) : definitionField.type === "select" ? (
                       <Select
-                        items={definitionField.options ?? []}
+                        items={selectOptions}
                         value={field.value ?? ""}
                         onValueChange={field.onChange}
                       >
@@ -598,9 +700,9 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         >
                           <SelectValue placeholder="Select one" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="service-form-options">
                           <SelectGroup>
-                            {(definitionField.options ?? []).map((option) => (
+                            {selectOptions.map((option) => (
                               <SelectItem
                                 key={option.value}
                                 value={option.value}
@@ -639,6 +741,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         id={`dynamic-${definitionField.key}`}
                         placeholder={placeholder}
                         invalid={fieldState.invalid}
+                        readOnly={readOnlyKeys.includes(definitionField.key)}
                         noneLabel={/(^|_)middle_name$/.test(definitionField.key)
                           ? "No middle name"
                           : definitionField.noneLabel}
@@ -647,6 +750,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                       <Input
                         {...field}
                         id={`dynamic-${definitionField.key}`}
+                        readOnly={readOnlyKeys.includes(definitionField.key)}
                         autoComplete="off"
                         placeholder={placeholder}
                         maxLength={240}
@@ -655,7 +759,7 @@ export function DynamicFormFields<TFieldValues extends FieldValues>({
                         fieldSize="touch"
                       />
                     )}
-                    {common}
+                    {common()}
                   </Field>
                 );
               }}

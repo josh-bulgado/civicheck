@@ -1,5 +1,7 @@
 import { cn } from "~/lib/utils";
 import { WizardSpinner } from "~/features/apply/components/wizard-feedback";
+import { Button } from "~/components/ui/button";
+import { openProblemReport } from "~/features/feedback/problem-report-events";
 
 interface WizardFooterActionsProps {
   onBack?: () => void;
@@ -33,6 +35,7 @@ export function WizardFooterActions({
 
   return (
     <div className="mt-7.5 flex flex-col-reverse items-stretch justify-between gap-3 border-t border-border-light pt-6.5 sm:flex-row sm:items-center sm:gap-4">
+      <div className="flex flex-wrap items-center gap-2">
       {onBack ? (
         <button
           type="button"
@@ -44,6 +47,8 @@ export function WizardFooterActions({
       ) : (
         <span />
       )}
+      <Button variant="ghost" onClick={openProblemReport}>Report a problem</Button>
+      </div>
       <div className="flex flex-col items-stretch justify-end gap-3 sm:flex-row sm:items-center sm:gap-5">
         {note && (
           <p className="text-center text-[15px] text-muted-foreground sm:text-right" aria-live="polite">

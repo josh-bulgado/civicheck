@@ -154,6 +154,8 @@
   pointer-events: none;
 }
 
+.landing-checklist-entrance { width: 100%; max-width: 432px; }
+
 .landing-checklist {
   position: relative;
   width: 100%;
@@ -167,6 +169,8 @@
 }
 
 .landing-document-tabs {
+  position: relative;
+  isolation: isolate;
   display: flex;
   width: 100%;
   flex-wrap: nowrap;
@@ -174,9 +178,11 @@
   gap: 2px;
   padding: 19px 20px 0;
   border-radius: 0;
+  border: 0;
 }
 
 .landing-document-tab {
+  z-index: 1;
   min-width: 0;
   min-height: 40px;
   flex: 0 1 auto;
@@ -188,16 +194,26 @@
   font-weight: 650;
 }
 
-.landing-document-tab[data-active] { color: var(--primary); background: var(--primary-soft); }
+.landing-document-tab[data-active] { color: var(--primary); background: transparent; }
 .landing-document-tab:hover { color: var(--primary); }
-.landing-checklist-panel { display: flex; min-width: 0; flex: 1; flex-direction: column; animation: landing-checklist-enter 380ms ease-out both; }
+.landing-document-tabs [data-slot="tabs-indicator"] {
+  z-index: 0;
+  top: var(--active-tab-top);
+  bottom: auto;
+  height: var(--active-tab-height);
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent);
+  background: var(--primary-soft);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--primary-fill) 16%, transparent);
+}
+.landing-checklist-panel { display: flex; min-width: 0; flex: 1; flex-direction: column; }
 .landing-checklist-panel[hidden] { display: none; }
 
 @keyframes landing-checklist-enter {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateX(28px); }
+  to { opacity: 1; transform: translateX(0); }
 }
-.landing-checklist-body { flex: 1; padding: 17px 26px 25px; }
+.landing-checklist-body { flex: 1; padding: 17px 26px 25px; animation: landing-checklist-enter 420ms var(--ease-civic) both; }
 .landing-checklist-body h2 {
   min-height: 45px;
   padding-bottom: 15px;
@@ -389,7 +405,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .landing-checklist-panel { animation: none; }
+  .landing-checklist-body { animation: none; }
   .landing-button { transition: none; }
   .landing-button:hover { transform: none; }
 }

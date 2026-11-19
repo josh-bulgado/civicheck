@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { ElectronicEndorsementPanel } from "~/features/requests/components/ElectronicEndorsementPanel";
+import type { EndorsementDetails } from "~/features/requests/electronic-endorsement-release";
 import { MarriagePostingPanel } from "~/features/requests/components/MarriagePostingPanel";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,6 +19,7 @@ import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Spinner } from "~/components/ui/spinner";
 import { PanelSkeleton } from "~/components/feedback/PageSkeleton";
+import { enterDelay } from "~/components/motion/stagger";
 import SiteHeader from "~/features/landing/components/SiteHeader";
 import SiteFooter from "~/features/landing/components/SiteFooter";
 import {
@@ -62,6 +65,7 @@ type TrackAttachment = {
 };
 
 type TrackResult = {
+  endorsement?: EndorsementDetails;
   serviceCode: string;
   postingStartDate: string | null;
   postingEndDate: string | null;
@@ -156,12 +160,13 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
       <SiteHeader />
 
       <main className="public-track-main">
-          <h1 className="public-page-title">
-            Track an existing request
-          </h1>
+        <h1 className="public-page-title civic-enter-sm">
+          Track an existing request
+        </h1>
 
         <form
-          className="public-tracking-form"
+          className="public-tracking-form civic-enter"
+          style={enterDelay(80)}
           onSubmit={form.handleSubmit(onSubmit)}
           noValidate
         >
@@ -300,6 +305,7 @@ export default function TrackPage({ initialTrackingNumber }: TrackPageProps) {
             <div className="mt-5">
               <MarriagePostingPanel serviceCode={result.serviceCode} status={result.status}
                 postingStartDate={result.postingStartDate} postingEndDate={result.postingEndDate} />
+              <ElectronicEndorsementPanel serviceCode={result.serviceCode} status={result.status} details={result.endorsement} />
             </div>
             {result.attachments.length > 0 && (
               <div className="mt-6 border-t border-border-lighter pt-5">

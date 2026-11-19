@@ -1,9 +1,16 @@
+import { birthRequesterRelationship } from "../birth-requester-relationship";
 import { RegistrationNoticeText } from "~/features/requests/components/RegistrationNoticeText";
+import { RegistrationDeadlineCard } from "~/features/requests/components/RegistrationDeadlineCard";
+import { courtDecreeRoles, courtRecordLayout, isCourtDecree } from "~/features/forms/court-decree";
 import { onTimeRegistrationNotice } from "~/features/requests/on-time-registration";
 import { SignaturePad } from "./SignaturePad";
+import { FORM_SECTION_CLASS } from "~/features/forms/components/wizard-field";
 import { VerificationFormPreview } from "./VerificationFormPreview";
 import { requiresVerificationSignature } from "../verification-signature";
 import { formatFieldLabel } from "~/features/forms/field-label";
+import { surnameChangeRequirementName } from "~/features/services/surname-change";
+import { requirementDisplayName } from "~/features/services/requirement-display";
+import { isPetitionService, PETITION_OPTIONS } from "~/features/services/petition-selection";
 import { useNavigate } from "@tanstack/react-router";
 import { SubmittedRequestRedirect } from "./SubmittedRequestRedirect";
 import { QuietLink } from "~/components/quiet-link";
@@ -54,6 +61,9 @@ interface ReviewStepProps {
   requirements: ServiceDetail["requirements"];
 }
 
+const SUBMITTED_ACTION_CLASS =
+  "h-13 rounded-full px-6 text-base font-semibold max-md:h-auto max-md:min-h-13 max-md:w-full max-md:min-w-0 max-md:whitespace-normal max-md:px-4 max-md:py-3";
+
 export function ReviewStep({
   serviceCode,
   services,
@@ -86,9 +96,9 @@ export function ReviewStep({
     () => services.find((s) => s.service_code === draft.selectedServiceCode) ?? services[0],
     [services, draft.selectedServiceCode],
   );
-  const roles = selectedService?.party_roles?.length
+  const roles = courtDecreeRoles(selectedService.service_code, { ...draft.answers, ...draft.caseSelectorAnswers }, selectedService?.party_roles?.length
     ? selectedService.party_roles
-    : ["Subject"];
+    : ["Subject"]);
   // Also normalize here so drafts saved before this fix can be submitted
   // directly from the review page without making the applicant re-enter data.
   const subjects = reconcileSubjects(draft.subjects, roles);
@@ -102,7 +112,7 @@ export function ReviewStep({
   const sexLabel = (sex: string) =>
     sex === "male" ? "Male" : sex === "female" ? "Female" : "—";
 
-  const definition = selectedService.form_template!.definition;
+  const definition = courtRecordLayout(birthRequesterRelationship(selectedService.form_template!.definition, selectedService.service_code), { ...draft.answers, ...draft.caseSelectorAnswers });
   const personGroupAnswers = Object.fromEntries(
     definition.sections
       .flatMap((section) => section.fields)
@@ -247,12 +257,12 @@ export function ReviewStep({
         title="Request submitted"
         description="CCRO staff will pre-check your documents. You'll be notified in-system and by email as your request moves forward."
       >
-        <div className="flex flex-col items-start gap-5 rounded-[20px] border border-success/25 bg-success-soft-2 p-6">
-          <div className="flex items-center gap-3">
-            <CheckCircle2 className="size-8 text-success" />
-            <div>
+        <div className="flex flex-col items-start gap-5 rounded-[20px] border border-success/25 bg-success-soft-2 p-6 max-md:min-w-0">
+          <div className="flex items-center gap-3 max-md:w-full max-md:min-w-0">
+            <CheckCircle2 className="size-8 text-success max-md:shrink-0" />
+            <div className="max-md:min-w-0">
               <p className="text-sm text-muted-foreground">Your tracking number</p>
-              <p className="text-2xl font-bold text-foreground">{result.trackingNumber}</p>
+              <p className="text-2xl font-bold text-foreground max-md:wrap-break-word">{result.trackingNumber}</p>
             </div>
           </div>
           {result.registrationNotice && (
@@ -265,11 +275,11 @@ export function ReviewStep({
           {result.documentWarning && (
             <p className="text-sm text-warning-strong">{result.documentWarning}</p>
           )}
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-3 max-md:w-full max-md:min-w-0 max-md:flex-col max-md:items-stretch">
             <Button
               size="lg"
               variant="outline"
-              className="h-13 rounded-full px-6 text-base font-semibold"
+              className={SUBMITTED_ACTION_CLASS}
               disabled={downloadingPdf}
               onClick={() => downloadAcknowledgmentPdf(result.pdfData)}
             >
@@ -280,7 +290,7 @@ export function ReviewStep({
               <Button
                 size="lg"
                 variant="outline"
-                className="h-13 rounded-full px-6 text-base font-semibold"
+                className={SUBMITTED_ACTION_CLASS}
                 disabled={downloadingVerificationForm}
                 onClick={() => downloadVerificationForm(result.verificationData!)}
               >
@@ -292,7 +302,7 @@ export function ReviewStep({
               to="/my-requests"
               className={buttonVariants({
                 size: "lg",
-                className: "h-13 rounded-full px-6 text-base font-semibold",
+                className: SUBMITTED_ACTION_CLASS,
               })}
             >
               View my requests
@@ -305,7 +315,8 @@ export function ReviewStep({
 
   // Everything the applicant said, in the two places they said it. The service
   // and its fee are in the docket above, so they are not repeated here.
-  const caseQuestions = visibleCaseSelectorQuestions(definition, answerBag).map((question) => {
+  const petition = isPetitionService(selectedService.service_code);
+  const caseQuestions = (petition ? [] : visibleCaseSelectorQuestions(definition, answerBag)).map((question) => {
     const answer = answerBag[question.key];
     const value = typeof answer === "string" ? answer : "";
     return (
@@ -324,7 +335,7 @@ export function ReviewStep({
       .filter((section) => (step === "case" ? section.step === "case" : section.step !== "case"))
       .flatMap((section) =>
         section.fields
-          .filter((field) => isFieldVisible(field, answerBag))
+          .filter((field) => isFieldVisible(field, answerBag) && !(petition && field.key === "primary_petition"))
           .flatMap((field) => {
             if (field.type === "person_group") {
               return [
@@ -336,7 +347,7 @@ export function ReviewStep({
                   />
                 )),
                 ...subjects
-                  .filter((subject) => answerBag.record_type !== "marriage" && impliedSex(subject.role) === null)
+                  .filter((subject) => !isCourtDecree(selectedService.service_code) && answerBag.record_type !== "marriage" && impliedSex(subject.role) === null)
                   .map((subject, index) => (
                     <ReviewRow
                       key={`${field.key}-sex-${index}`}
@@ -357,7 +368,11 @@ export function ReviewStep({
           }),
       );
 
-  const caseRows = [...caseQuestions, ...rowsForStep("case")];
+  const caseRows = [
+    ...(petition ? [<ReviewRow key="primary_petition" label="Petition Type"
+      value={PETITION_OPTIONS.find(option => option.value === answerBag.primary_petition)?.label ?? "—"} />] : caseQuestions),
+    ...rowsForStep("case"),
+  ];
   const detailRows = rowsForStep("details");
 
   return (
@@ -365,7 +380,7 @@ export function ReviewStep({
       <div className="flex flex-col gap-5">
         {caseRows.length > 0 ? (
           <ReviewBlock
-            title="Request details"
+            title={petition ? "Petition details" : selectedService.service_code === "RA9255_SURNAME" ? "Surname Change Details" : "Request details"}
             onEdit={() =>
               navigate({ to: "/apply/$serviceCode/case", params: { serviceCode } })
             }
@@ -376,7 +391,7 @@ export function ReviewStep({
 
         {detailRows.length > 0 ? (
           <ReviewBlock
-            title="Your details"
+            title="Person and record details"
             onEdit={() =>
               navigate({ to: "/apply/$serviceCode/details", params: { serviceCode } })
             }
@@ -399,7 +414,9 @@ export function ReviewStep({
             <div className="flex flex-col gap-3.5 sm:col-span-2">
               {activeDocumentsWithPositions.map(
                 ({ document: doc, fileNumber, fileTotal }) => {
-                  const name = doc.requirementName.replace(/\s*[—–]\s*/g, " - ");
+                  const name = requirementDisplayName(
+                    surnameChangeRequirementName(doc.requirementName, selectedService.service_code, answerBag.event_date),
+                  ).replace(/\s*[—–]\s*/g, " - ");
                   const suffix = fileTotal > 1 ? ` · file ${fileNumber} of ${fileTotal}` : "";
                   return (
                     <div key={doc.storagePath} className="flex items-center gap-3.5">
@@ -427,7 +444,7 @@ export function ReviewStep({
 
         {needsSignature && <SignaturePad onChange={setSignature} disabled={submitting} />}
 
-        {needsSignature && answerBag.record_type === "birth" && (
+        {["CTC_ISSUANCE", "CTC-LOCAL", "CTC-ABROAD", "EMAIL_INQUIRY"].includes(selectedService.service_code) && (
           <VerificationFormPreview
             data={{
               trackingNumber: "PREVIEW",
@@ -534,7 +551,7 @@ function ReviewBlock({
   return (
     <section className="overflow-hidden rounded-[18px] border border-border-light">
       <div className="flex items-center justify-between gap-3 bg-portal-panel px-5.5 py-3.5">
-        <h2 className="text-[17px] leading-[normal] font-bold text-foreground">{title}</h2>
+        <h2 className={FORM_SECTION_CLASS}>{title}</h2>
         <button
           type="button"
           onClick={onEdit}
@@ -562,28 +579,39 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
 }
 
 function WhatHappensNextCard({ registrationNotice }: { registrationNotice: string | null }) {
+  const deadlineNotice = registrationNotice?.split("\n").filter((line) => !line.startsWith("Wait for")).join("\n");
   return (
+    <div className="flex flex-col gap-5">
+      {deadlineNotice ? <RegistrationDeadlineCard notice={deadlineNotice} /> : null}
     <div className="overflow-hidden rounded-[24px] bg-card shadow-portal-card">
       <div className="border-b border-border-light px-5.5 py-4 text-[17px] font-bold text-foreground">
         What happens next
       </div>
       <ol className="flex flex-col gap-4 px-5.5 py-5">
-        {(registrationNotice ? [registrationNotice, "Keep your tracking number for your visit to the CCRO."] : [
-          "Staff check your uploads online. If one needs fixing, you upload it again here.",
+        {[
           <>
-            When it is ready for release, visit the CCRO once with your{" "}
-            <strong className="font-bold">original documents</strong>.
+            {registrationNotice ? <span className="mb-2 block">Wait for CCRO’s notice before visiting the office.</span> : null}
+            Staff check your uploads online. If one needs fixing, you upload it again here.
           </>,
-          "Show your tracking number, pay any fee, and claim it.",
-        ]).map((step, index) => (
+          <>
+            You’ll be notified when to visit the CCRO for the final document check. Bring your{" "}
+            <strong className="font-bold">original documents</strong>, copies of your requirements, and tracking number.
+          </>,
+          "Once ready for release, pay any fee and claim your document.",
+        ].map((step, index) => (
           <li key={index} className="flex items-start gap-3">
             <span className="flex size-6.5 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[13px] font-bold text-primary">
               {index + 1}
             </span>
-            <p className="pt-0.5 text-[15px] leading-snug text-body-strong">{typeof step === "string" ? <RegistrationNoticeText text={step} /> : step}</p>
+            <p className="m-0 text-[15px] leading-6.5 text-body-strong">
+              {typeof step === "string" && step.includes("\n")
+                ? <RegistrationNoticeText text={step} />
+                : step}
+            </p>
           </li>
         ))}
       </ol>
+    </div>
     </div>
   );
 }

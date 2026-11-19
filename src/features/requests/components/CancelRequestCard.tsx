@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "~/components/ui/dialog";
-import { cancelOwnCtcBirthRequestFn } from "../applicant-requests.mutations";
+import { cancelOwnRequestFn } from "../applicant-requests.mutations";
 
 export function CancelRequestCard({ requestId, onCancelled }: {
   requestId: string;
@@ -12,7 +12,7 @@ export function CancelRequestCard({ requestId, onCancelled }: {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const cancelRequest = useServerFn(cancelOwnCtcBirthRequestFn);
+  const cancelRequest = useServerFn(cancelOwnRequestFn);
 
   async function handleCancel() {
     if (pending) return;
@@ -46,7 +46,7 @@ export function CancelRequestCard({ requestId, onCancelled }: {
           <DialogHeader>
             <DialogTitle>Cancel this request?</DialogTitle>
             <DialogDescription>
-              If you need to fix a mistake, you?ll need to submit a new request.
+              If you need to fix a mistake, you'll need to submit a new request.
             </DialogDescription>
           </DialogHeader>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}

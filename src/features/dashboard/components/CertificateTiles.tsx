@@ -80,8 +80,8 @@ function Photo({ src }: { src: string }) {
  * underneath. Every tile opens the service catalogue.
  *
  * Two sizes. `strip` is for an applicant who already has a request: starting
- * another is not what they came for, so it is one slim row (a small
- * illustration beside the name) and the page belongs to the tracker. Without it
+ * another is secondary, so small illustrations sit beside the names in compact
+ * shortcuts and the page belongs to the tracker. Without it
  * the tiles use bounded artwork panels so taller screens do not enlarge them.
  */
 export function CertificateTiles({
@@ -96,12 +96,12 @@ export function CertificateTiles({
       className={cn(
         // Four across where there is room; two by two below that, never three
         // and one.
-        // On a phone the tiles are one row that scrolls sideways, running to
-        // the screen's edge so the next one peeks in.
-        "civic-stagger max-md:-mx-5 max-md:flex max-md:snap-x max-md:gap-3 max-md:overflow-x-auto max-md:px-5 max-md:pb-1 max-md:[scrollbar-width:none] md:grid md:grid-cols-2",
+        // Existing requests get compact shortcuts; a first-time applicant
+        // keeps the illustrated, horizontally scrolling service chooser.
+        "civic-stagger md:grid md:grid-cols-2",
         strip
-          ? "auto-rows-[5rem] gap-3 md:auto-rows-[6rem] md:gap-4 xl:grid-cols-4"
-          : "shrink-0 gap-4 md:gap-5 xl:grid-cols-4",
+          ? "grid grid-cols-2 auto-rows-[5rem] gap-3 max-md:auto-rows-auto max-md:gap-2 md:auto-rows-[6rem] md:gap-4 xl:grid-cols-4"
+          : "shrink-0 gap-4 max-md:-mx-5 max-md:flex max-md:snap-x max-md:gap-3 max-md:overflow-x-auto max-md:px-5 max-md:pb-1 max-md:[scrollbar-width:none] md:gap-5 xl:grid-cols-4",
         className,
       )}
     >
@@ -120,10 +120,10 @@ export function CertificateTiles({
             } as CSSProperties
           }
           className={cn(
-            "group/tile relative flex flex-col overflow-hidden bg-card text-foreground max-md:h-47.5 max-md:w-39.5 max-md:shrink-0 max-md:snap-start max-md:rounded-4xl shadow-[0_1px_2px_rgba(15,27,45,0.05)] transition-[transform,box-shadow] duration-200 ease-(--ease-civic) motion-reduce:transition-none motion-reduce:hover:translate-y-0",
+            "group/tile relative flex flex-col overflow-hidden bg-card text-foreground shadow-[0_1px_2px_rgba(15,27,45,0.05)] transition-[transform,box-shadow] duration-200 ease-(--ease-civic) motion-reduce:transition-none motion-reduce:hover:translate-y-0",
             strip
-              ? "rounded-4xl md:flex-row md:items-center hover:-translate-y-0.75 hover:shadow-[0_12px_28px_rgba(11,77,162,0.18)]"
-              : "rounded-[28px] hover:-translate-y-1.25 hover:shadow-[0_20px_44px_rgba(11,77,162,0.2)]",
+              ? "rounded-4xl max-md:min-h-18 max-md:flex-row max-md:items-center max-md:gap-2 max-md:rounded-2xl max-md:px-2.5 max-md:py-3 max-md:shadow-none md:flex-row md:items-center hover:-translate-y-0.75 hover:shadow-[0_12px_28px_rgba(11,77,162,0.18)]"
+              : "rounded-[28px] max-md:h-47.5 max-md:w-39.5 max-md:shrink-0 max-md:snap-start max-md:rounded-4xl hover:-translate-y-1.25 hover:shadow-[0_20px_44px_rgba(11,77,162,0.2)]",
           )}
         >
           <span
@@ -131,7 +131,7 @@ export function CertificateTiles({
             className={cn(
               "tile-wash relative min-h-24 flex-1 overflow-hidden",
               strip
-                ? "md:h-full md:min-h-0 md:w-24 md:flex-none"
+                ? "max-md:size-9 max-md:min-h-0 max-md:flex-none max-md:rounded-lg md:h-full md:min-h-0 md:w-24 md:flex-none"
                 : "md:aspect-[6/5] md:max-h-72 md:w-full md:flex-none md:rounded-[24px]",
             )}
           >
@@ -141,7 +141,7 @@ export function CertificateTiles({
             className={cn(
               "flex items-start justify-between gap-3 px-3.5 pt-3 pb-3.5",
               strip
-                ? "md:flex-1 md:items-center md:p-0 md:pr-4 md:pl-4"
+                ? "max-md:min-w-0 max-md:flex-1 max-md:items-center max-md:p-0 md:flex-1 md:items-center md:p-0 md:pr-4 md:pl-4"
                 : "md:min-h-32 md:px-5 md:pt-4 md:pb-5 xl:px-6 xl:pb-6",
             )}
           >
@@ -149,7 +149,7 @@ export function CertificateTiles({
               <span
                 className={cn(
                   "block leading-[1.2] font-semibold tracking-[-0.015em] max-md:text-base",
-                  strip ? "md:line-clamp-2 md:text-[17px]" : "text-xl xl:text-[22px]",
+                  strip ? "max-md:text-[13px] md:line-clamp-2 md:text-[17px]" : "text-xl xl:text-[22px]",
                 )}
               >
                 {tile.label}

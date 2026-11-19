@@ -9,15 +9,17 @@ export function SecurityCenterSkeleton() {
       aria-busy="true"
       aria-label="Loading Security Center"
     >
-      <div className="security-page-header" aria-hidden="true">
+      <div className="security-page-header">
         <div className="flex flex-col gap-2">
-          <Skeleton className="h-8 w-56 rounded-lg" />
+          <h1>Security Center</h1>
           <Skeleton className="h-4 w-48 rounded-md" />
         </div>
-        <Skeleton className="h-8 w-32 rounded-full" />
+        <span className="security-metadata-chip">Metadata only</span>
       </div>
       <Skeleton className="h-32 rounded-[21px]" />
-      <Skeleton className="h-11 w-full max-w-xl rounded-full" />
+      <div className="flex flex-wrap gap-4 text-sm font-semibold text-muted-foreground">
+        <span>Findings</span><span>Privileged access</span><span>Recent activity</span><span>Controls</span>
+      </div>
       <Skeleton className="h-96 rounded-[21px]" />
     </div>
   );

@@ -4,7 +4,7 @@ import { downloadBlob } from "~/features/requests/pdf/downloadBlob";
 
 /** Build the same PDF for downloads and staff validation previews. */
 export async function buildVerificationFormPdf(data: VerificationFormPdfData) {
-  const [{ pdf }, { default: QRCode }, { VerificationFormPdf }] = await Promise.all([
+  const [{ pdf }, { default: QRCode }, { createVerificationFormPdf }] = await Promise.all([
     import("@react-pdf/renderer"),
     import("qrcode"),
     import("~/features/requests/pdf/VerificationFormPdf"),
@@ -12,7 +12,7 @@ export async function buildVerificationFormPdf(data: VerificationFormPdfData) {
 
   const qrDataUrl = await QRCode.toDataURL(data.trackingNumber, { margin: 2, width: 360 });
   return pdf(
-    VerificationFormPdf({ data, qrDataUrl, generatedAt: new Date() }),
+    createVerificationFormPdf({ data, qrDataUrl, generatedAt: new Date() }),
   ).toBlob();
 
 }

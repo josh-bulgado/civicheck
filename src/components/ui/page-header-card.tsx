@@ -30,7 +30,7 @@ export function PageHeaderCard({
     >
       <div className="min-w-0">
         <h1 className="text-lg font-bold tracking-tight text-foreground">{title}</h1>
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <div className="text-sm text-muted-foreground">{description}</div>
       </div>
       {children}
     </header>

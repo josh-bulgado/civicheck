@@ -1,0 +1,163 @@
+{
+  "definition": {
+    "sections": [
+      {
+        "key": "case",
+        "step": "case",
+        "title": "Case details",
+        "fields": [
+          {
+            "key": "event_date",
+            "type": "date",
+            "label": "Child's date of birth",
+            "helpText": "The child's age decides who signs the Affidavit to Use the Surname of the Father.",
+            "required": true,
+            "dateDirection": "past"
+          },
+          {
+            "key": "event_place",
+            "type": "text",
+            "label": "Place where the child was born or registered",
+            "required": true,
+            "placeholder": "e.g. Legazpi City, Albay"
+          },
+          {
+            "key": "reference_number",
+            "type": "text",
+            "label": "Registry number of the child's birth certificate (if known)",
+            "required": false
+          },
+          {
+            "key": "father_on_record",
+            "type": "select",
+            "label": "Did the father acknowledge the child on the birth certificate?",
+            "options": [
+              {
+                "label": "Yes, the father acknowledged the child",
+                "value": "yes"
+              },
+              {
+                "label": "No, the father's name is blank or he did not sign",
+                "value": "no"
+              },
+              {
+                "label": "Not sure",
+                "value": "not_sure"
+              }
+            ],
+            "helpText": "That means his name is on it and he signed it. If it is blank or unsigned, a notarized Admission of Paternity is also needed.",
+            "required": true
+          },
+          {
+            "key": "filer_relationship",
+            "type": "select",
+            "label": "Your relationship to the child",
+            "options": [
+              {
+                "label": "I am the child (18 years old or above)",
+                "value": "self"
+              },
+              {
+                "label": "The child's mother",
+                "value": "mother"
+              },
+              {
+                "label": "The child's legal guardian",
+                "value": "guardian"
+              },
+              {
+                "label": "Another relative",
+                "value": "other_relative"
+              }
+            ],
+            "helpText": "Children aged 7 to 17 sign with a notarized attestation from the mother or legal guardian. Children aged 18 and above sign for themselves.",
+            "required": true
+          },
+          {
+            "key": "additional_notes",
+            "type": "textarea",
+            "label": "Additional notes",
+            "blockKey": "additional_notes",
+            "required": false,
+            "placeholder": "Any special requests or instructions…"
+          }
+        ]
+      },
+      {
+        "key": "details",
+        "step": "details",
+        "title": "Your details",
+        "fields": [
+          {
+            "key": "subjects",
+            "type": "person_group",
+            "label": "Person named on the record",
+            "required": true
+          },
+          {
+            "key": "contact_number",
+            "type": "phone",
+            "label": "Contact number",
+            "blockKey": "contact_number",
+            "required": false,
+            "placeholder": "9171234567"
+          }
+        ]
+      }
+    ],
+    "schemaVersion": 1
+  },
+  "requirements": [
+    {
+      "id": "65a1b430-9a6e-4968-93c6-975c7b5863db",
+      "case_tag": null,
+      "sort_order": 3,
+      "applies_when": {
+        "match": "all",
+        "conditions": [
+          {
+            "field": "father_on_record",
+            "value": "no",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": "RA9255_SURNAME",
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": null,
+      "requirement_name": "[Father did not acknowledge the child] Notarized Father's Admission of Paternity, 3 original copies",
+      "requirement_group": "RA9255_SURNAME"
+    },
+    {
+      "id": "fe85efbc-5cbc-4695-92a8-df55bc3ea108",
+      "case_tag": null,
+      "sort_order": 1,
+      "applies_when": null,
+      "is_mandatory": true,
+      "service_code": "RA9255_SURNAME",
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": null,
+      "requirement_name": "Certified Xerox copy of the child's LCRO and PSA birth certificate, 1 copy",
+      "requirement_group": "RA9255_SURNAME"
+    },
+    {
+      "id": "ac26e9b9-fbb4-47c8-8db1-42fa089add4f",
+      "case_tag": null,
+      "sort_order": 2,
+      "applies_when": null,
+      "is_mandatory": true,
+      "service_code": "RA9255_SURNAME",
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": null,
+      "requirement_name": "Subscribed Affidavit to Use the Surname of the Father, 3 original copies, with personal appearance (mother/legal guardian for ages 0-7; child with notarized attestation of mother/guardian for ages 7-17; child directly for ages 18+)",
+      "requirement_group": "RA9255_SURNAME"
+    }
+  ]
+}

@@ -5,6 +5,13 @@ import { getSlipPhase, isTakingPayment } from "./slip-phase";
 const ready = { status: "ready_for_release", paymentStatus: "unpaid", feesDue: 1100 };
 
 describe("getSlipPhase", () => {
+  it("collects delayed death payment during posting without opening other services", () => {
+    const posting = { ...ready, status: "processing", serviceCode: "DEATH_DELAYED", postingStartDate: "2026-11-10" };
+    expect(getSlipPhase(posting, null)).toBe("collect");
+    expect(getSlipPhase({ ...posting, postingStartDate: null }, null)).toBe("not-ready");
+    expect(getSlipPhase({ ...posting, serviceCode: "DEATH_ONTIME" }, null)).toBe("not-ready");
+    expect(getSlipPhase({ ...posting, status: "under_validation" }, null)).toBe("not-ready");
+  });
   it("takes a receipt number for a fee, and a tick when nothing is due", () => {
     expect(getSlipPhase(ready, null)).toBe("collect");
     expect(getSlipPhase({ ...ready, feesDue: 0 }, null)).toBe("confirm-free");
@@ -39,4 +46,9 @@ describe("isTakingPayment", () => {
     expect(isTakingPayment("settled")).toBe(false);
     expect(isTakingPayment("just-verified")).toBe(false);
   });
+});
+
+it("collects Electronic Endorsement payment during Processing without an endorsement date", () => {
+  expect(getSlipPhase({status:"processing",paymentStatus:"unpaid",feesDue:100,serviceCode:"ELEC_ENDORSEMENT"},null)).toBe("collect");
+  expect(getSlipPhase({status:"under_validation",paymentStatus:"unpaid",feesDue:100,serviceCode:"ELEC_ENDORSEMENT"},null)).toBe("not-ready");
 });

@@ -251,7 +251,7 @@ export const addMissingAttachmentFn = createServerFn({ method: "POST" })
   });
 
 /** Cancellation and its audit entry are saved in one database transaction. */
-export const cancelOwnCtcBirthRequestFn = createServerFn({ method: "POST" })
+export const cancelOwnRequestFn = createServerFn({ method: "POST" })
   .validator(z.object({ requestId: uuidSchema }))
   .handler(async ({ data }) => {
     const { user } = await requireActiveSession("requests:view_own");
@@ -264,7 +264,7 @@ export const cancelOwnCtcBirthRequestFn = createServerFn({ method: "POST" })
       return { error: true, message: "The request could not be cancelled. Try again." };
     }
     if (!cancelled) {
-      return { error: true, message: "This request cannot be cancelled. Only your submitted CTC birth, marriage or death request can be cancelled before staff starts checking." };
+      return { error: true, message: "Only your submitted online request can be cancelled before staff starts checking." };
     }
     return { error: false };
   });

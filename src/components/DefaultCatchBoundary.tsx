@@ -14,6 +14,7 @@ import { Button } from "~/components/ui/button";
 import { useOnlineStatus } from "~/hooks/useOnlineStatus";
 import {
   isForbiddenError,
+  isModuleLoadError,
   isNetworkError,
   isUnauthorizedError,
 } from "~/lib/access";
@@ -56,6 +57,10 @@ export function DefaultCatchBoundary({ error, reset }: ErrorComponentProps) {
   }
 
   const retry = () => {
+    if (!offline && isModuleLoadError(error)) {
+      window.location.reload();
+      return;
+    }
     reset();
     void router.invalidate();
   };

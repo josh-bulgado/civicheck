@@ -75,6 +75,13 @@ export function OtpCodeForm({
   const [submittedCode, setSubmittedCode] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(resendCooldownSeconds);
   const submissionInFlight = useRef(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // Leave the instructions visible on phones instead of opening the keyboard
+    // as soon as the code-entry page appears.
+    if (window.matchMedia("(pointer: fine)").matches) inputRef.current?.focus();
+  }, []);
 
   useEffect(() => { setCooldown(resendCooldownSeconds); }, [resendCooldownSeconds]);
 
@@ -147,6 +154,7 @@ export function OtpCodeForm({
           {description}
         </FieldDescription>
         <InputOTP
+          ref={inputRef}
           id="otp"
           maxLength={OTP_LENGTH}
           pattern={REGEXP_ONLY_DIGITS}
@@ -159,7 +167,6 @@ export function OtpCodeForm({
           containerClassName="w-full"
           aria-invalid={shownError !== null}
           aria-describedby={shownError ? "otp-description otp-error" : "otp-description"}
-          autoFocus
           disabled={codeInvalid}
           readOnly={isVerifying || isResending}
         >

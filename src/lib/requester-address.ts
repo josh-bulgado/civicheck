@@ -9,15 +9,22 @@ export function addressCities(area: string): LocationOption[] {
   return locations.find((group) => group.name === area)?.cities ?? [];
 }
 
-export function addressDescendants(level: PhilippineAddressLevel): string[] {
+export function addressDescendants(level: PhilippineAddressLevel, prefix = "requester"): string[] {
   // Changing a province clears the city and barangay.
   if (level === "province") {
-    return ["requester_city", "requester_barangay"];
+    return [`${prefix}_city`, `${prefix}_barangay`];
   }
   if (level === "city") {
-    return ["requester_barangay"];
+    return [`${prefix}_barangay`];
   }
   return [];
+}
+
+export function formatOwnerAddress(answers: Record<string, unknown>): string {
+  return formatRequesterAddress(Object.fromEntries(
+    Object.entries(answers).filter(([key]) => key.startsWith("owner_"))
+      .map(([key, value]) => [key.replace(/^owner_/, "requester_"), value]),
+  ));
 }
 
 // Join the address fields into one line for the verification PDF.

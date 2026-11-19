@@ -1,0 +1,450 @@
+{
+  "sections": [
+    {
+      "key": "case",
+      "step": "case",
+      "title": "Petition details",
+      "fields": [
+        {
+          "key": "new_first_name",
+          "type": "text",
+          "label": "New first name you want",
+          "required": true,
+          "visibleWhen": {
+            "field": "change_first_name",
+            "value": "yes",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "employment_status",
+          "type": "select",
+          "label": "Are you currently employed?",
+          "options": [
+            {
+              "label": "Yes, I have an employer",
+              "value": "employed"
+            },
+            {
+              "label": "No, I am self-employed or not employed",
+              "value": "not_employed"
+            }
+          ],
+          "helpText": "Employed petitioners need a certification from their employer. Others need an affidavit of non-employment or self-employment.",
+          "required": true,
+          "visibleWhen": {
+            "field": "change_first_name",
+            "value": "yes",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "corrected_birth_date",
+          "type": "date",
+          "label": "Correct date of birth",
+          "helpText": "Only the day and month can be corrected. The year must match the record.",
+          "required": true,
+          "visibleWhen": {
+            "field": "correct_birth_day_month",
+            "value": "yes",
+            "operator": "equals"
+          },
+          "dateDirection": "past"
+        },
+        {
+          "key": "record_type",
+          "type": "select",
+          "label": "Type of record with the error",
+          "options": [
+            {
+              "label": "Birth Certificate",
+              "value": "birth"
+            },
+            {
+              "label": "Marriage Certificate",
+              "value": "marriage"
+            },
+            {
+              "label": "Death Certificate",
+              "value": "death"
+            }
+          ],
+          "required": true,
+          "visibleWhen": {
+            "field": "correct_other",
+            "value": "yes",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "other_entry",
+          "type": "text",
+          "label": "Which entry has the error?",
+          "required": true,
+          "placeholder": "e.g. Mother's maiden name, place of birth",
+          "visibleWhen": {
+            "field": "correct_other",
+            "value": "yes",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "other_current",
+          "type": "text",
+          "label": "How it is written now",
+          "required": true,
+          "visibleWhen": {
+            "field": "correct_other",
+            "value": "yes",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "other_correct",
+          "type": "text",
+          "label": "How it should be written",
+          "required": true,
+          "visibleWhen": {
+            "field": "correct_other",
+            "value": "yes",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "filing_fee_exemption",
+          "type": "select",
+          "label": "Are you requesting a filing-fee exemption with a Certificate of Indigency?",
+          "options": [
+            {
+              "label": "Yes, I will submit a Certificate of Indigency",
+              "value": "yes"
+            },
+            {
+              "label": "No",
+              "value": "no"
+            }
+          ],
+          "helpText": "The Charter exempts petitioners with a Certificate of Indigency from the filing fee only. Other applicable charges remain payable. The displayed fee remains the standard fee pending staff verification.",
+          "required": true
+        },
+        {
+          "key": "primary_petition",
+          "type": "select",
+          "label": "Primary petition",
+          "options": [
+            {
+              "label": "Change of first name",
+              "value": "change_first_name"
+            },
+            {
+              "label": "Clerical or typographical error",
+              "value": "correct_other"
+            },
+            {
+              "label": "Sex recorded on the birth certificate",
+              "value": "correct_sex"
+            },
+            {
+              "label": "Birth day or month",
+              "value": "correct_birth_day_month"
+            }
+          ],
+          "required": true
+        },
+        {
+          "key": "reference_number",
+          "type": "text",
+          "label": "Registry number",
+          "helpText": "Printed on your PSA or local civil registry copy.",
+          "required": false
+        }
+      ]
+    },
+    {
+      "key": "details",
+      "step": "details",
+      "title": "Person and record details",
+      "fields": [
+        {
+          "key": "subjects",
+          "type": "person_group",
+          "label": "Person named on the record",
+          "required": true,
+          "labelByAnswer": {
+            "field": "primary_petition",
+            "labels": {
+              "correct_sex": "Person named on the birth certificate",
+              "correct_other": "Person named on the record",
+              "change_first_name": "Person named on the birth certificate",
+              "correct_birth_day_month": "Person named on the birth certificate"
+            }
+          }
+        },
+        {
+          "key": "wife_first_name",
+          "type": "text",
+          "label": "Wife's first name",
+          "inline": true,
+          "required": true,
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "marriage",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "wife_middle_name",
+          "type": "text",
+          "label": "Wife's maiden middle name",
+          "inline": true,
+          "required": true,
+          "noneLabel": "No middle name",
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "marriage",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "wife_last_name",
+          "type": "text",
+          "label": "Wife's maiden last name",
+          "inline": true,
+          "required": true,
+          "visibleWhen": {
+            "field": "record_type",
+            "value": "marriage",
+            "operator": "equals"
+          }
+        },
+        {
+          "key": "event_date",
+          "type": "date",
+          "label": "Date of the event on the record",
+          "required": true,
+          "dateDirection": "past",
+          "labelByAnswer": {
+            "field": "primary_petition",
+            "labels": {
+              "correct_sex": "Date of Birth",
+              "change_first_name": "Date of Birth",
+              "correct_birth_day_month": "Date of Birth"
+            }
+          }
+        },
+        {
+          "key": "event_place",
+          "type": "text",
+          "label": "Place of the event on the record",
+          "required": true,
+          "placeholder": "e.g. Legazpi City, Albay",
+          "labelByAnswer": {
+            "field": "primary_petition",
+            "labels": {
+              "correct_sex": "Place of Birth",
+              "change_first_name": "Place of Birth",
+              "correct_birth_day_month": "Place of Birth"
+            }
+          }
+        },
+        {
+          "key": "mother_first_name",
+          "type": "text",
+          "label": "Mother's first name",
+          "inline": true,
+          "required": true,
+          "visibleWhen": {
+            "field": "primary_petition",
+            "value": "correct_other",
+            "operator": "not_equals"
+          }
+        },
+        {
+          "key": "mother_middle_name",
+          "type": "text",
+          "label": "Mother's middle name",
+          "inline": true,
+          "required": true,
+          "noneLabel": "No middle name",
+          "visibleWhen": {
+            "field": "primary_petition",
+            "value": "correct_other",
+            "operator": "not_equals"
+          }
+        },
+        {
+          "key": "mother_last_name",
+          "type": "text",
+          "label": "Mother's maiden last name",
+          "inline": true,
+          "required": true,
+          "visibleWhen": {
+            "field": "primary_petition",
+            "value": "correct_other",
+            "operator": "not_equals"
+          }
+        },
+        {
+          "key": "father_name",
+          "type": "text",
+          "label": "Father's Full Name",
+          "required": false,
+          "visibleWhen": {
+            "field": "primary_petition",
+            "value": "correct_other",
+            "operator": "not_equals"
+          }
+        },
+        {
+          "key": "registered_late",
+          "type": "select",
+          "label": "Registered late?",
+          "options": [
+            {
+              "label": "No",
+              "value": "no"
+            },
+            {
+              "label": "Yes",
+              "value": "yes"
+            }
+          ],
+          "required": true
+        },
+        {
+          "key": "registered_late_when",
+          "type": "date",
+          "label": "If yes, when was it registered?",
+          "required": true,
+          "visibleWhen": {
+            "field": "registered_late",
+            "value": "yes",
+            "operator": "equals"
+          },
+          "allowEstimate": true,
+          "dateDirection": "past"
+        }
+      ]
+    }
+  ],
+  "caseSelector": {
+    "title": "What does your petition cover?",
+    "outcomes": [
+      {
+        "when": {
+          "match": "any",
+          "conditions": [
+            {
+              "field": "change_first_name",
+              "value": "yes",
+              "operator": "equals"
+            },
+            {
+              "field": "correct_sex",
+              "value": "yes",
+              "operator": "equals"
+            },
+            {
+              "field": "correct_birth_day_month",
+              "value": "yes",
+              "operator": "equals"
+            }
+          ]
+        },
+        "serviceCode": "RA9048-CFN"
+      },
+      {
+        "when": {
+          "match": "all",
+          "conditions": [
+            {
+              "field": "change_first_name",
+              "value": "no",
+              "operator": "equals"
+            },
+            {
+              "field": "correct_sex",
+              "value": "no",
+              "operator": "equals"
+            },
+            {
+              "field": "correct_birth_day_month",
+              "value": "no",
+              "operator": "equals"
+            },
+            {
+              "field": "correct_other",
+              "value": "yes",
+              "operator": "equals"
+            }
+          ]
+        },
+        "serviceCode": "RA9048-CCE"
+      }
+    ],
+    "questions": [
+      {
+        "key": "change_first_name",
+        "label": "Do you want to change the first name?",
+        "options": [
+          {
+            "label": "Yes",
+            "value": "yes"
+          },
+          {
+            "label": "No",
+            "value": "no"
+          }
+        ],
+        "description": "Change of first name or nickname under R.A. 9048."
+      },
+      {
+        "key": "correct_sex",
+        "label": "Do you want to correct the sex on the record?",
+        "options": [
+          {
+            "label": "Yes",
+            "value": "yes"
+          },
+          {
+            "label": "No",
+            "value": "no"
+          }
+        ],
+        "description": "Correction of a clerical error in the sex entry under R.A. 10172."
+      },
+      {
+        "key": "correct_birth_day_month",
+        "label": "Do you want to correct the day or month of birth?",
+        "options": [
+          {
+            "label": "Yes",
+            "value": "yes"
+          },
+          {
+            "label": "No",
+            "value": "no"
+          }
+        ],
+        "description": "Under R.A. 10172. Only the day and month can be corrected this way."
+      },
+      {
+        "key": "correct_other",
+        "label": "Do you want to correct another clerical or typographical error?",
+        "options": [
+          {
+            "label": "Yes",
+            "value": "yes"
+          },
+          {
+            "label": "No",
+            "value": "no"
+          }
+        ],
+        "description": "For example a misspelled name or place on a birth, marriage, or death record."
+      }
+    ],
+    "description": "Answer each question; at least one must be Yes. Online submission is for staff review. Staff must verify all applicable requirements before accepting the petition. Publication documents are submitted later, as described in the service steps."
+  },
+  "schemaVersion": 1
+}

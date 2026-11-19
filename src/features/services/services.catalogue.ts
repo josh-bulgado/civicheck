@@ -24,6 +24,8 @@
 //    cookie lifetime.
 
 import { getSupabaseStatelessClient } from "~/utils/supabase";
+import { deathRequesterRelationship } from "~/features/forms/death-requester-relationship";
+import { emailInquiryLayout } from "~/features/forms/email-inquiry-layout";
 import type {
   Service,
   ServiceRequirement,
@@ -208,7 +210,7 @@ async function fetchCatalogue(): Promise<ServiceCatalogue> {
         templateName: template.name,
         versionId: version.id,
         version: version.version,
-        definition: parseFormTemplateDefinition(version.definition),
+        definition: emailInquiryLayout(deathRequesterRelationship(parseFormTemplateDefinition(version.definition), binding.service_code), binding.service_code),
       });
     } catch {
       // A malformed admin-authored definition should not take the entire

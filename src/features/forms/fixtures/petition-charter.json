@@ -1,0 +1,886 @@
+{
+  "definition": {
+    "sections": [
+      {
+        "key": "case",
+        "step": "case",
+        "title": "Petition details",
+        "fields": [
+          {
+            "key": "current_first_name",
+            "type": "text",
+            "label": "First name as currently recorded",
+            "required": true,
+            "visibleWhen": {
+              "field": "change_first_name",
+              "value": "yes",
+              "operator": "equals"
+            }
+          },
+          {
+            "key": "new_first_name",
+            "type": "text",
+            "label": "New first name you want",
+            "required": true,
+            "visibleWhen": {
+              "field": "change_first_name",
+              "value": "yes",
+              "operator": "equals"
+            }
+          },
+          {
+            "key": "first_name_ground",
+            "type": "select",
+            "label": "Why do you want to change the first name?",
+            "options": [
+              {
+                "label": "The current first name is ridiculous, dishonorable, or very hard to write or pronounce",
+                "value": "unbecoming"
+              },
+              {
+                "label": "I have habitually and continuously used the new name and am publicly known by it",
+                "value": "habitual"
+              },
+              {
+                "label": "The change will avoid confusion",
+                "value": "avoid_confusion"
+              }
+            ],
+            "required": true,
+            "visibleWhen": {
+              "field": "change_first_name",
+              "value": "yes",
+              "operator": "equals"
+            }
+          },
+          {
+            "key": "employment_status",
+            "type": "select",
+            "label": "Are you currently employed?",
+            "options": [
+              {
+                "label": "Yes, I have an employer",
+                "value": "employed"
+              },
+              {
+                "label": "No, I am self-employed or not employed",
+                "value": "not_employed"
+              }
+            ],
+            "helpText": "Employed petitioners need a certification from their employer. Others need an affidavit of non-employment or self-employment.",
+            "required": true,
+            "visibleWhen": {
+              "field": "change_first_name",
+              "value": "yes",
+              "operator": "equals"
+            }
+          },
+          {
+            "key": "corrected_birth_date",
+            "type": "date",
+            "label": "Correct date of birth",
+            "helpText": "Only the day and month can be corrected. The year must match the record.",
+            "required": true,
+            "visibleWhen": {
+              "field": "correct_birth_day_month",
+              "value": "yes",
+              "operator": "equals"
+            },
+            "dateDirection": "past"
+          },
+          {
+            "key": "record_type",
+            "type": "select",
+            "label": "Type of record with the error",
+            "options": [
+              {
+                "label": "Birth Certificate",
+                "value": "birth"
+              },
+              {
+                "label": "Marriage Certificate",
+                "value": "marriage"
+              },
+              {
+                "label": "Death Certificate",
+                "value": "death"
+              }
+            ],
+            "required": true,
+            "visibleWhen": {
+              "field": "correct_other",
+              "value": "yes",
+              "operator": "equals"
+            }
+          },
+          {
+            "key": "other_entry",
+            "type": "text",
+            "label": "Which entry has the error?",
+            "required": true,
+            "placeholder": "e.g. Mother's maiden name, place of birth",
+            "visibleWhen": {
+              "field": "correct_other",
+              "value": "yes",
+              "operator": "equals"
+            }
+          },
+          {
+            "key": "other_current",
+            "type": "text",
+            "label": "How it is written now",
+            "required": true,
+            "visibleWhen": {
+              "field": "correct_other",
+              "value": "yes",
+              "operator": "equals"
+            }
+          },
+          {
+            "key": "other_correct",
+            "type": "text",
+            "label": "How it should be written",
+            "required": true,
+            "visibleWhen": {
+              "field": "correct_other",
+              "value": "yes",
+              "operator": "equals"
+            }
+          },
+          {
+            "key": "event_date",
+            "type": "date",
+            "label": "Date of the event on the record",
+            "helpText": "As currently written on the record. For a birth record, this is the date of birth.",
+            "required": true,
+            "dateDirection": "past"
+          },
+          {
+            "key": "event_place",
+            "type": "text",
+            "label": "Place of the event on the record",
+            "required": true,
+            "placeholder": "e.g. Legazpi City, Albay"
+          },
+          {
+            "key": "reference_number",
+            "type": "text",
+            "label": "Registry number (if known)",
+            "helpText": "Printed on your PSA or local civil registry copy.",
+            "required": false
+          },
+          {
+            "key": "registered_in_legazpi",
+            "type": "select",
+            "label": "Is the record registered at the Legazpi City CCRO?",
+            "options": [
+              {
+                "label": "Yes, registered in Legazpi City",
+                "value": "yes"
+              },
+              {
+                "label": "No, registered in another city or municipality",
+                "value": "no",
+                "notice": {
+                  "title": "Record registered elsewhere",
+                  "variant": "warning",
+                  "description": "Petitions for records kept by another local civil registrar are handled differently. CCRO staff will confirm how to proceed when you submit.",
+                  "blocksProgress": false
+                }
+              },
+              {
+                "label": "I am not sure",
+                "value": "unsure",
+                "notice": {
+                  "title": "Check your copy",
+                  "variant": "default",
+                  "description": "The place of registration is printed on your PSA or local civil registry copy. You can also ask at the CCRO window.",
+                  "blocksProgress": false
+                }
+              }
+            ],
+            "required": true
+          },
+          {
+            "key": "petitioner_relationship",
+            "type": "select",
+            "label": "Your relationship to the person named on the record",
+            "options": [
+              {
+                "label": "I am the person named on the record",
+                "value": "owner"
+              },
+              {
+                "label": "Spouse",
+                "value": "spouse"
+              },
+              {
+                "label": "Child",
+                "value": "child"
+              },
+              {
+                "label": "Parent",
+                "value": "parent"
+              },
+              {
+                "label": "Brother or sister",
+                "value": "sibling"
+              },
+              {
+                "label": "Grandparent",
+                "value": "grandparent"
+              },
+              {
+                "label": "Guardian",
+                "value": "guardian"
+              },
+              {
+                "label": "Authorized representative",
+                "value": "representative"
+              }
+            ],
+            "required": true
+          },
+          {
+            "key": "additional_notes",
+            "type": "textarea",
+            "label": "Additional notes",
+            "blockKey": "additional_notes",
+            "required": false,
+            "placeholder": "Any special requests or instructions…"
+          }
+        ]
+      },
+      {
+        "key": "details",
+        "step": "details",
+        "title": "Your details",
+        "fields": [
+          {
+            "key": "subjects",
+            "type": "person_group",
+            "label": "Person named on the record",
+            "required": true
+          },
+          {
+            "key": "contact_number",
+            "type": "phone",
+            "label": "Contact number",
+            "blockKey": "contact_number",
+            "required": false,
+            "placeholder": "9171234567"
+          }
+        ]
+      }
+    ],
+    "caseSelector": {
+      "title": "What does your petition cover?",
+      "outcomes": [
+        {
+          "when": {
+            "match": "any",
+            "conditions": [
+              {
+                "field": "change_first_name",
+                "value": "yes",
+                "operator": "equals"
+              },
+              {
+                "field": "correct_sex",
+                "value": "yes",
+                "operator": "equals"
+              },
+              {
+                "field": "correct_birth_day_month",
+                "value": "yes",
+                "operator": "equals"
+              }
+            ]
+          },
+          "serviceCode": "RA9048-CFN"
+        },
+        {
+          "when": {
+            "match": "all",
+            "conditions": [
+              {
+                "field": "change_first_name",
+                "value": "no",
+                "operator": "equals"
+              },
+              {
+                "field": "correct_sex",
+                "value": "no",
+                "operator": "equals"
+              },
+              {
+                "field": "correct_birth_day_month",
+                "value": "no",
+                "operator": "equals"
+              },
+              {
+                "field": "correct_other",
+                "value": "yes",
+                "operator": "equals"
+              }
+            ]
+          },
+          "serviceCode": "RA9048-CCE"
+        }
+      ],
+      "questions": [
+        {
+          "key": "change_first_name",
+          "label": "Do you want to change the first name?",
+          "options": [
+            {
+              "label": "Yes",
+              "value": "yes"
+            },
+            {
+              "label": "No",
+              "value": "no"
+            }
+          ],
+          "description": "Change of first name or nickname under R.A. 9048."
+        },
+        {
+          "key": "correct_sex",
+          "label": "Do you want to correct the sex on the record?",
+          "options": [
+            {
+              "label": "Yes",
+              "value": "yes"
+            },
+            {
+              "label": "No",
+              "value": "no"
+            }
+          ],
+          "description": "Correction of a clerical error in the sex entry under R.A. 10172."
+        },
+        {
+          "key": "correct_birth_day_month",
+          "label": "Do you want to correct the day or month of birth?",
+          "options": [
+            {
+              "label": "Yes",
+              "value": "yes"
+            },
+            {
+              "label": "No",
+              "value": "no"
+            }
+          ],
+          "description": "Under R.A. 10172. Only the day and month can be corrected this way."
+        },
+        {
+          "key": "correct_other",
+          "label": "Do you want to correct another clerical or typographical error?",
+          "options": [
+            {
+              "label": "Yes",
+              "value": "yes"
+            },
+            {
+              "label": "No",
+              "value": "no"
+            }
+          ],
+          "description": "For example a misspelled name or place on a birth, marriage, or death record."
+        }
+      ],
+      "description": "Answer each question. At least one must be Yes. One petition can combine a change of first name with a correction of sex or birth date."
+    },
+    "schemaVersion": 1
+  },
+  "requirements": [
+    {
+      "id": "f005ebb3-8321-4a9d-adc5-62f250e719e4",
+      "case_tag": null,
+      "sort_order": 1,
+      "applies_when": null,
+      "is_mandatory": false,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": null,
+      "requirement_name": "Additional supporting documents as the petitioner or Local Civil Registrar may deem relevant",
+      "requirement_group": "ra9048_10172"
+    },
+    {
+      "id": "ba4a7d3d-07a8-46d6-9076-aaf51ec31f6c",
+      "case_tag": null,
+      "sort_order": 2,
+      "applies_when": {
+        "match": "any",
+        "conditions": [
+          {
+            "field": "correct_sex",
+            "value": "yes",
+            "operator": "equals"
+          },
+          {
+            "field": "correct_birth_day_month",
+            "value": "yes",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": false,
+      "where_to_secure": null,
+      "requirement_name": "[RA 10172 Sex/DOB Correction] Notice and Certificate of Posting",
+      "requirement_group": "ra9048_10172"
+    },
+    {
+      "id": "9efce73f-940a-401d-9a50-0928d3fa83cf",
+      "case_tag": null,
+      "sort_order": 3,
+      "applies_when": {
+        "match": "all",
+        "conditions": [
+          {
+            "field": "correct_sex",
+            "value": "yes",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": null,
+      "requirement_name": "[RA 10172 Sex/DOB Correction] Certification from the City/Municipal Health Officer that the petitioner has not undergone sex change or transplant",
+      "requirement_group": "ra9048_10172"
+    },
+    {
+      "id": "56ff37c9-cc90-4caa-8308-c97626b431d9",
+      "case_tag": null,
+      "sort_order": 4,
+      "applies_when": {
+        "match": "all",
+        "conditions": [
+          {
+            "field": "correct_other",
+            "value": "yes",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": null,
+      "requirement_name": "[Correction of Clerical Error] Civil registry document with the erroneous entry, 2 PSA copies or certified photocopies",
+      "requirement_group": "ra9048_10172"
+    },
+    {
+      "id": "b303a157-e507-432a-9985-c3dbd4bc590b",
+      "case_tag": null,
+      "sort_order": 5,
+      "applies_when": {
+        "match": "all",
+        "conditions": [
+          {
+            "field": "correct_other",
+            "value": "yes",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": null,
+      "requirement_name": "[Correction of Clerical Error] Petitioner's parents' and siblings' Certificates of Live Birth, 2 certified photocopies",
+      "requirement_group": "ra9048_10172"
+    },
+    {
+      "id": "3ae30fd1-7e57-4c7f-acc8-aeb77ffad1c1",
+      "case_tag": null,
+      "sort_order": 6,
+      "applies_when": {
+        "match": "all",
+        "conditions": [
+          {
+            "field": "change_first_name",
+            "value": "yes",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": null,
+      "requirement_name": "[Change of First Name] Child's Certificate of Live Birth, 2 certified photocopies",
+      "requirement_group": "ra9048_10172"
+    },
+    {
+      "id": "8348d049-62bd-4925-92f8-9fd8d2162685",
+      "case_tag": null,
+      "sort_order": 7,
+      "applies_when": {
+        "match": "all",
+        "conditions": [
+          {
+            "field": "change_first_name",
+            "value": "yes",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": null,
+      "requirement_name": "[Change of First Name] NBI and Police Clearance stating the purpose as Change in First Name, 2 original copies",
+      "requirement_group": "ra9048_10172"
+    },
+    {
+      "id": "a9102c10-5a3a-452e-97ca-a918b5bd8a30",
+      "case_tag": null,
+      "sort_order": 8,
+      "applies_when": {
+        "match": "all",
+        "conditions": [
+          {
+            "field": "change_first_name",
+            "value": "yes",
+            "operator": "equals"
+          },
+          {
+            "field": "employment_status",
+            "value": "employed",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": null,
+      "requirement_name": "[Change of First Name] Employer's Certification of No Pending Administrative Case (if employed), 2 original copies",
+      "requirement_group": "ra9048_10172"
+    },
+    {
+      "id": "960782e1-7921-40c5-9664-ce8820ee3830",
+      "case_tag": null,
+      "sort_order": 9,
+      "applies_when": {
+        "match": "all",
+        "conditions": [
+          {
+            "field": "change_first_name",
+            "value": "yes",
+            "operator": "equals"
+          },
+          {
+            "field": "employment_status",
+            "value": "not_employed",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": null,
+      "requirement_name": "[Change of First Name] Affidavit of Non-Employment/Self-Employment, if applicable, 2 original copies",
+      "requirement_group": "ra9048_10172"
+    },
+    {
+      "id": "642d9e75-ae06-4881-abac-a718552a28fc",
+      "case_tag": null,
+      "sort_order": 10,
+      "applies_when": {
+        "match": "all",
+        "conditions": [
+          {
+            "field": "change_first_name",
+            "value": "yes",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": false,
+      "where_to_secure": null,
+      "requirement_name": "[Change of First Name] Newspaper clippings & Publisher's Affidavit of Publication, 2 original copies",
+      "requirement_group": "ra9048_10172"
+    },
+    {
+      "id": "b6c0c3bc-e3d6-4924-a19b-27fdc16ddf0c",
+      "case_tag": null,
+      "sort_order": 11,
+      "applies_when": {
+        "match": "all",
+        "conditions": [
+          {
+            "field": "change_first_name",
+            "value": "yes",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": null,
+      "requirement_name": "[Change of First Name] At least 3 supporting documents (e.g. baptismal certificate, school records, driver's license, marriage certificate, BIR/SSS/Pag-IBIG record, passbook), originals or certified photocopies",
+      "requirement_group": "ra9048_10172"
+    },
+    {
+      "id": "b39c304c-1e8d-41df-878b-9d877aa7d82e",
+      "case_tag": null,
+      "sort_order": 12,
+      "applies_when": {
+        "match": "any",
+        "conditions": [
+          {
+            "field": "correct_sex",
+            "value": "yes",
+            "operator": "equals"
+          },
+          {
+            "field": "correct_birth_day_month",
+            "value": "yes",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": null,
+      "requirement_name": "[RA 10172 Sex/DOB Correction] Certified true copy of the certificate or registry-book page containing the entry to be corrected",
+      "requirement_group": "ra9048_10172"
+    },
+    {
+      "id": "ffc1a0be-246c-41b7-8ae5-258c97a82fe9",
+      "case_tag": null,
+      "sort_order": 13,
+      "applies_when": {
+        "match": "any",
+        "conditions": [
+          {
+            "field": "correct_sex",
+            "value": "yes",
+            "operator": "equals"
+          },
+          {
+            "field": "correct_birth_day_month",
+            "value": "yes",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": null,
+      "requirement_name": "[RA 10172 Sex/DOB Correction] Earliest school record, or an affidavit that the petitioner never attended school",
+      "requirement_group": "ra9048_10172"
+    },
+    {
+      "id": "2386fc7f-351d-41ff-b197-86445c9ead70",
+      "case_tag": null,
+      "sort_order": 14,
+      "applies_when": null,
+      "is_mandatory": false,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": null,
+      "requirement_name": "Additional supporting documents as the petitioner or Local Civil Registrar may deem relevant",
+      "requirement_group": "ra9048_10172"
+    },
+    {
+      "id": "d3000183-284a-42f6-97b8-1f8cd5ac47a5",
+      "case_tag": null,
+      "sort_order": 15,
+      "applies_when": {
+        "match": "any",
+        "conditions": [
+          {
+            "field": "correct_sex",
+            "value": "yes",
+            "operator": "equals"
+          },
+          {
+            "field": "correct_birth_day_month",
+            "value": "yes",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": null,
+      "requirement_name": "[RA 10172 Sex/DOB Correction] Medical record or baptismal certificate",
+      "requirement_group": "ra9048_10172"
+    },
+    {
+      "id": "930bd4a2-4239-4afa-a8ef-b4a6eeba8660",
+      "case_tag": null,
+      "sort_order": 16,
+      "applies_when": {
+        "match": "any",
+        "conditions": [
+          {
+            "field": "correct_sex",
+            "value": "yes",
+            "operator": "equals"
+          },
+          {
+            "field": "correct_birth_day_month",
+            "value": "yes",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": null,
+      "requirement_name": "[RA 10172 Sex/DOB Correction] Baptismal certificate, or an affidavit plus other documents from religious authorities if none exists",
+      "requirement_group": "ra9048_10172"
+    },
+    {
+      "id": "eef5da26-5422-4670-8dbb-40f575343292",
+      "case_tag": null,
+      "sort_order": 17,
+      "applies_when": {
+        "match": "any",
+        "conditions": [
+          {
+            "field": "correct_sex",
+            "value": "yes",
+            "operator": "equals"
+          },
+          {
+            "field": "correct_birth_day_month",
+            "value": "yes",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": null,
+      "requirement_name": "[RA 10172 Sex/DOB Correction] Clearance/certification of no pending case from employer, NBI, and PNP",
+      "requirement_group": "ra9048_10172"
+    },
+    {
+      "id": "4ffedee4-4a19-4242-9f70-6fc74ee59b59",
+      "case_tag": null,
+      "sort_order": 18,
+      "applies_when": {
+        "match": "any",
+        "conditions": [
+          {
+            "field": "correct_sex",
+            "value": "yes",
+            "operator": "equals"
+          },
+          {
+            "field": "correct_birth_day_month",
+            "value": "yes",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": false,
+      "where_to_secure": null,
+      "requirement_name": "[RA 10172 Sex/DOB Correction] Affidavit of Publication and newspaper clipping, published weekly for 2 consecutive weeks",
+      "requirement_group": "ra9048_10172"
+    },
+    {
+      "id": "990ffe10-89c8-42c5-8c57-d55bca15dc4e",
+      "case_tag": null,
+      "sort_order": 19,
+      "applies_when": {
+        "match": "all",
+        "conditions": [
+          {
+            "field": "correct_other",
+            "value": "yes",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": false,
+      "where_to_secure": null,
+      "requirement_name": "[Correction of Clerical Error] Petitioner's Marriage Certificate (if married) and children's birth certificates, 2 certified photocopies",
+      "requirement_group": "ra9048_10172"
+    },
+    {
+      "id": "28293a76-44d5-418b-abe7-70f308a9933f",
+      "case_tag": null,
+      "sort_order": 20,
+      "applies_when": {
+        "match": "all",
+        "conditions": [
+          {
+            "field": "correct_other",
+            "value": "yes",
+            "operator": "equals"
+          }
+        ]
+      },
+      "is_mandatory": true,
+      "service_code": null,
+      "subject_role": null,
+      "upload_scope": "request",
+      "requires_upload": true,
+      "where_to_secure": null,
+      "requirement_name": "[Correction of Clerical Error] Personal documents bearing the correct entry (e.g. baptismal certificate, school records, government IDs), 2 certified photocopies",
+      "requirement_group": "ra9048_10172"
+    }
+  ]
+}

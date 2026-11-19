@@ -1,8 +1,12 @@
-import { createElement } from "react";
+import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CitizenDashboardBodySkeleton } from "./CitizenDashboardSkeleton";
 import { EMPTY_SHAPE, type DashboardShape } from "./dashboard-shape";
+
+vi.mock("~/components/quiet-link", () => ({
+  QuietLink: ({ children, to, className }: { children?: ReactNode; to?: string; className?: string }) => createElement("a", { href: to, className }, children),
+}));
 
 const render = (shape: DashboardShape) =>
   renderToStaticMarkup(createElement(CitizenDashboardBodySkeleton, { shape }));

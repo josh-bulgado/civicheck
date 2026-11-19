@@ -23,7 +23,7 @@ export const Route = createFileRoute(
     ]);
     return { services, departments };
   },
-  pendingComponent: EditorPageSkeleton,
+  pendingComponent: () => <EditorPageSkeleton title="New service" />,
   component: NewServiceRoute,
 });
 

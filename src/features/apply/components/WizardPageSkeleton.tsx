@@ -1,9 +1,10 @@
 import { WizardBar, WizardSkeleton } from "~/features/apply/components/wizard-feedback";
+import { CiviCheckIdentity } from "~/components/brand/civic-identity";
 
 /** One upload slot as it will look: icon tile, two lines, two pill buttons. */
 export function SlotCardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-[20px] border-2 border-dashed border-border bg-card">
+    <div className="overflow-hidden rounded-[20px] border border-solid border-border bg-card md:border-2 md:border-dashed">
       <div className="flex items-start gap-4 px-6 pt-5.5 pb-4.5">
         <WizardSkeleton className="size-14 shrink-0 rounded-[14px]" />
         <div className="flex min-w-0 flex-1 flex-col gap-2.5 pt-1">
@@ -34,9 +35,15 @@ export function WizardPageSkeleton() {
       <WizardBar className="fixed inset-x-0 top-0 z-50 h-1 rounded-none" />
 
       <div className="flex flex-col gap-4 px-5 pt-5 pb-4 sm:px-8 md:flex-row md:items-center md:gap-6 md:px-14 md:pt-7 md:pb-6.5">
-        <div className="flex items-center gap-2.5 md:w-60">
-          <WizardSkeleton className="size-10.5 rounded-full" />
-          <WizardSkeleton className="h-6 w-28 rounded-full" />
+        <div className="flex items-center justify-between gap-2 md:w-60">
+          <CiviCheckIdentity compact prominent />
+          <button
+            type="button"
+            disabled
+            className="min-h-11 shrink-0 rounded-full border border-border-strong bg-card px-2.5 text-[13px] font-semibold whitespace-nowrap text-body-2 opacity-50 md:hidden"
+          >
+            Change service
+          </button>
         </div>
         <div className="flex items-center gap-3.5 md:mx-auto md:max-w-245 md:flex-1">
           {[0, 1, 2, 3].map((step) => (

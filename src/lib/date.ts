@@ -86,6 +86,31 @@ export function formatDateKey(key: string | null | undefined): string {
   });
 }
 
+/** "08/15/2026" for a YYYY-MM-DD key. "" if unparsable. */
+export function formatDateInput(key: string | null | undefined): string {
+  const date = fromDateKey(key);
+  if (!date) return "";
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${month}/${day}/${date.getFullYear()}`;
+}
+
+/** Add MM/DD/YYYY separators while a date is typed. */
+export function maskDateInput(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+/** Parse an exact MM/DD/YYYY value into a YYYY-MM-DD key. */
+export function parseDateInput(value: string): string | null {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+  if (!match) return null;
+  const key = `${match[3]}-${match[1]}-${match[2]}`;
+  return fromDateKey(key) ? key : null;
+}
+
 /** Whole days from `fromKey` to `toKey` (positive when `toKey` is later). Falls back to 0 for an unparsable key. */
 export function diffInDays(fromKey: string, toKey: string): number {
   const from = fromDateKey(fromKey);

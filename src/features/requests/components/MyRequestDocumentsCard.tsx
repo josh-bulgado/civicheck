@@ -93,7 +93,7 @@ export function MyRequestDocumentsCard({
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <h2
           id="request-documents-heading"
-          className="text-[22px] leading-[normal] font-semibold text-foreground"
+          className="text-[22px] leading-[normal] font-semibold text-foreground max-md:text-lg"
         >
           Documents ({documents.length})
         </h2>

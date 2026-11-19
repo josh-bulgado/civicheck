@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_authed/_dashboard/admin/services_/blocks
     }
   },
   loader: () => listFormFieldBlocksFn(),
-  pendingComponent: () => <PageSkeleton label="Loading shared form blocks" />,
+  pendingComponent: () => <PageSkeleton title="Shared question blocks" label="Loading shared form blocks" />,
   component: FormBlocksRoute,
 });
 

@@ -394,7 +394,7 @@ export function DocumentsWorkbench({
         setReopening(false);
         setReopenReason("");
       },
-      options: { enabled: shortcuts && (rejectingSelected || reopening) },
+      options: { enabled: shortcuts && (rejectingSelected || reopening), conflictBehavior: "allow" },
     },
     ...REASON_HOTKEYS.map((hotkey, index) => ({
       hotkey,
